@@ -283,6 +283,8 @@ EXISTING_META_CLIENT_TOKEN=$(get_existing_gcp_secret "flowmaestro-app-meta-clien
 EXISTING_META_WEBHOOK_VERIFY_TOKEN=$(get_existing_gcp_secret "flowmaestro-app-meta-webhook-verify-token")
 EXISTING_ZENDESK_CLIENT_ID=$(get_existing_gcp_secret "flowmaestro-app-zendesk-client-id")
 EXISTING_ZENDESK_CLIENT_SECRET=$(get_existing_gcp_secret "flowmaestro-app-zendesk-client-secret")
+EXISTING_APOLLO_CLIENT_ID=$(get_existing_gcp_secret "flowmaestro-app-apollo-client-id")
+EXISTING_APOLLO_CLIENT_SECRET=$(get_existing_gcp_secret "flowmaestro-app-apollo-client-secret")
 
 # Try to get from Pulumi outputs as fallback for infrastructure values
 if [ -z "$EXISTING_DB_HOST" ]; then
@@ -311,6 +313,7 @@ FOUND_COUNT=0
 [ -n "$EXISTING_MICROSOFT_CLIENT_ID" ] && ((FOUND_COUNT++))
 [ -n "$EXISTING_META_APP_ID" ] && ((FOUND_COUNT++))
 [ -n "$EXISTING_ZENDESK_CLIENT_ID" ] && ((FOUND_COUNT++))
+[ -n "$EXISTING_APOLLO_CLIENT_ID" ] && ((FOUND_COUNT++))
 
 if [ $FOUND_COUNT -gt 0 ]; then
     print_success "Found $FOUND_COUNT existing secret(s)!"
@@ -328,6 +331,7 @@ if [ $FOUND_COUNT -gt 0 ]; then
     [ -n "$EXISTING_HUBSPOT_CLIENT_ID" ] && print_info "  - HubSpot OAuth: configured"
     [ -n "$EXISTING_MICROSOFT_CLIENT_ID" ] && print_info "  - Microsoft OAuth: configured"
     [ -n "$EXISTING_ZENDESK_CLIENT_ID" ] && print_info "  - Zendesk OAuth: configured"
+    [ -n "$EXISTING_APOLLO_CLIENT_ID" ] && print_info "  - Apollo OAuth: configured"
     echo ""
     if [ "$PROMPT_ALL" = false ]; then
         print_info "Mode: Only prompting for NON-EXISTING secrets"
@@ -735,6 +739,20 @@ else
     echo
 fi
 
+# Apollo OAuth
+if [ -n "$EXISTING_APOLLO_CLIENT_ID" ] && [ "$PROMPT_ALL" = false ]; then
+    print_info "Apollo OAuth: already configured"
+    APOLLO_CLIENT_ID="$EXISTING_APOLLO_CLIENT_ID"
+    APOLLO_CLIENT_SECRET="$EXISTING_APOLLO_CLIENT_SECRET"
+elif [ -n "$EXISTING_APOLLO_CLIENT_ID" ]; then
+    prompt_with_existing "Apollo Client ID" "$EXISTING_APOLLO_CLIENT_ID" "APOLLO_CLIENT_ID"
+    prompt_with_existing "Apollo Client Secret" "$EXISTING_APOLLO_CLIENT_SECRET" "APOLLO_CLIENT_SECRET"
+else
+    read -p "Apollo Client ID: " APOLLO_CLIENT_ID
+    read -p "Apollo Client Secret: " -s APOLLO_CLIENT_SECRET
+    echo
+fi
+
 # Email Service (Resend)
 echo ""
 print_info "Email Service Configuration (Resend)"
@@ -801,6 +819,8 @@ create_or_update_secret "flowmaestro-app-meta-client-token" "$META_CLIENT_TOKEN"
 create_or_update_secret "flowmaestro-app-meta-webhook-verify-token" "$META_WEBHOOK_VERIFY_TOKEN"
 create_or_update_secret "flowmaestro-app-zendesk-client-id" "$ZENDESK_CLIENT_ID"
 create_or_update_secret "flowmaestro-app-zendesk-client-secret" "$ZENDESK_CLIENT_SECRET"
+create_or_update_secret "flowmaestro-app-apollo-client-id" "$APOLLO_CLIENT_ID"
+create_or_update_secret "flowmaestro-app-apollo-client-secret" "$APOLLO_CLIENT_SECRET"
 
 # Email Service (Resend)
 create_or_update_secret "flowmaestro-app-resend-api-key" "$RESEND_API_KEY"

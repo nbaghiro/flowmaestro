@@ -312,6 +312,14 @@ export const ALL_PROVIDERS: Provider[] = [
         methods: ["oauth2"]
     },
     {
+        provider: "apollo",
+        displayName: "Apollo.io",
+        description: "Sales intelligence platform with 210M+ contacts and 35M+ companies",
+        logoUrl: getBrandLogo("apollo.io"),
+        category: "CRM & Sales",
+        methods: ["oauth2"]
+    },
+    {
         provider: "pipedrive",
         displayName: "Pipedrive",
         description: "Manage sales pipelines",
