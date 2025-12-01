@@ -1178,6 +1178,141 @@ export async function generateWorkflow(
     return response.json();
 }
 
+/**
+ * Chat message for conversation history
+ */
+export interface ChatMessage {
+    id: string;
+    role: "user" | "assistant" | "system";
+    content: string;
+    timestamp: Date;
+    proposedChanges?: Array<{
+        type: "add" | "modify" | "remove";
+        nodeId?: string;
+        nodeType?: string;
+        nodeLabel?: string;
+        config?: JsonObject;
+        position?: { x: number; y: number };
+        connectTo?: string;
+        updates?: JsonObject;
+    }>;
+}
+
+/**
+ * Chat with AI about workflow
+ */
+export interface ChatWorkflowRequest {
+    workflowId?: string;
+    action: "add" | "modify" | "remove" | null;
+    message: string;
+    context: {
+        nodes: unknown[];
+        edges: unknown[];
+        selectedNodeId?: string | null;
+        executionHistory?: unknown[];
+    };
+    conversationHistory?: ChatMessage[];
+    connectionId: string;
+    model?: string;
+}
+
+export interface ChatWorkflowResponse {
+    response: string;
+    changes?: Array<{
+        type: "add" | "modify" | "remove";
+        nodeId?: string;
+        nodeType?: string;
+        nodeLabel?: string;
+        config?: JsonObject;
+        position?: { x: number; y: number };
+        connectTo?: string;
+        updates?: JsonObject;
+    }>;
+}
+
+export async function chatWorkflow(
+    request: ChatWorkflowRequest
+): Promise<{ success: boolean; data: { executionId: string }; error?: string }> {
+    const token = getAuthToken();
+
+    const response = await fetch(`${API_BASE_URL}/api/workflows/chat`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` })
+        },
+        body: JSON.stringify(request)
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+            errorData.error?.message ||
+                errorData.error ||
+                `HTTP ${response.status}: ${response.statusText}`
+        );
+    }
+
+    return response.json();
+}
+
+/**
+ * Stream chat response via Server-Sent Events
+ */
+export function streamChatResponse(
+    executionId: string,
+    callbacks: {
+        onToken: (token: string) => void;
+        onComplete: (data: ChatWorkflowResponse) => void;
+        onError: (error: string) => void;
+    }
+): () => void {
+    const token = getAuthToken();
+    const url = new URL(`${API_BASE_URL}/api/workflows/chat-stream/${executionId}`);
+
+    // EventSource doesn't support custom headers, so pass token as query param
+    if (token) {
+        url.searchParams.set("token", token);
+    }
+
+    const eventSource = new EventSource(url.toString());
+
+    eventSource.addEventListener("connected", (event) => {
+        console.log("[SSE] Connected:", event.data);
+    });
+
+    eventSource.addEventListener("token", (event) => {
+        const data = JSON.parse(event.data);
+        callbacks.onToken(data.token);
+    });
+
+    eventSource.addEventListener("complete", (event) => {
+        const data = JSON.parse(event.data);
+        callbacks.onComplete(data as ChatWorkflowResponse);
+        eventSource.close();
+    });
+
+    eventSource.addEventListener("error", (event) => {
+        try {
+            const data = JSON.parse((event as MessageEvent).data);
+            callbacks.onError(data.message);
+        } catch {
+            callbacks.onError("Connection error");
+        }
+        eventSource.close();
+    });
+
+    eventSource.onerror = () => {
+        callbacks.onError("Connection lost");
+        eventSource.close();
+    };
+
+    // Return cleanup function
+    return () => {
+        eventSource.close();
+    };
+}
+
 // ===== Agent API Functions =====
 
 export interface Tool {

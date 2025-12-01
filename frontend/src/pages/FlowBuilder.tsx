@@ -5,7 +5,8 @@ import { ReactFlowProvider, useReactFlow, Node } from "reactflow";
 import { NodeInspector } from "../canvas/panels/NodeInspector";
 import { NodeLibrary } from "../canvas/panels/NodeLibrary";
 import { WorkflowCanvas } from "../canvas/WorkflowCanvas";
-import { AIGenerateButton } from "../components/AIGenerateButton";
+import { AIAskButton } from "../components/AIAskButton";
+import { AIChatPanel } from "../components/AIChatPanel";
 import { BuilderHeader } from "../components/BuilderHeader";
 import { CheckpointPanel } from "../components/CheckpointPanel";
 import { ExecutionPanel } from "../components/ExecutionPanel";
@@ -28,6 +29,7 @@ import {
     findEntryPoint,
     compareWorkflowSnapshots
 } from "../lib/workflowTransformers";
+import { useChatStore } from "../stores/chatStore";
 import { useHistoryStore, initializeHistoryTracking } from "../stores/historyStore";
 import { useWorkflowStore } from "../stores/workflowStore";
 
@@ -85,6 +87,8 @@ export function FlowBuilder() {
 
     const { undo, redo, canUndo, canRedo, clear } = useHistoryStore();
 
+    const { isPanelOpen: isChatOpen, closePanel: closeChatPanel } = useChatStore();
+
     useEffect(() => {
         if (workflowId) {
             listCheckpoints(workflowId).then((cp) => {
@@ -103,6 +107,20 @@ export function FlowBuilder() {
             setIsCheckpointOpen(false);
         }
     }, [selectedNode]);
+
+    // Panel coordination: Close chat panel when a node is selected
+    useEffect(() => {
+        if (selectedNode && isChatOpen) {
+            closeChatPanel();
+        }
+    }, [selectedNode, isChatOpen, closeChatPanel]);
+
+    // Panel coordination: Deselect node when chat panel opens
+    useEffect(() => {
+        if (isChatOpen && selectedNode) {
+            selectNode(null);
+        }
+    }, [isChatOpen]); // Only depend on isChatOpen to avoid infinite loop
 
     useEffect(() => {
         const unsubscribe = initializeHistoryTracking();
@@ -504,7 +522,7 @@ export function FlowBuilder() {
 
                     <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40">
                         <div className="flex items-center gap-2">
-                            <AIGenerateButton />
+                            <AIAskButton />
                             {workflowId && (
                                 <ExecutionPanel workflowId={workflowId} renderButtonOnly />
                             )}
@@ -512,6 +530,7 @@ export function FlowBuilder() {
                     </div>
 
                     {workflowId && <ExecutionPanel workflowId={workflowId} renderPanelOnly />}
+                    <AIChatPanel workflowId={workflowId} />
                     <CheckpointPanel
                         open={isCheckpointOpen}
                         onClose={() => setIsCheckpointOpen(false)}
