@@ -114,10 +114,10 @@ The Account page (`frontend/src/pages/Account.tsx`) currently displays user info
 ### System Components
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                         Frontend                             │
-│  ┌────────────────────────────────────────────────────┐    │
-│  │  Account Page (Account.tsx)                        │    │
+┌───────────────────────────────────────────────────────────┐
+│                         Frontend                          │
+│  ┌───────────────────────────────────────────────────┐    │
+│  │  Account Page (Account.tsx)                       │    │
 │  │  ┌──────────────┐ ┌──────────────┐ ┌────────────┐ │    │
 │  │  │ EditName     │ │ EditEmail    │ │ ChangePwd  │ │    │
 │  │  │ Dialog       │ │ Dialog       │ │ Dialog     │ │    │
@@ -126,46 +126,46 @@ The Account page (`frontend/src/pages/Account.tsx`) currently displays user info
 │  │  │ Enable2FA    │ │ Disable2FA   │                │    │
 │  │  │ Dialog       │ │ Dialog       │                │    │
 │  │  └──────────────┘ └──────────────┘                │    │
-│  └────────────────────────────────────────────────────┘    │
-│                           │                                 │
-│                           │ TanStack Query Mutations        │
-│                           ▼                                 │
-│  ┌────────────────────────────────────────────────────┐    │
-│  │           API Client (lib/api.ts)                  │    │
-│  │  - updateName()       - enableTwoFactor()          │    │
-│  │  - updateEmail()      - verifyTwoFactorPhone()     │    │
-│  │  - updatePassword()   - disableTwoFactor()         │    │
-│  └────────────────────────────────────────────────────┘    │
-└───────────────────────┬─────────────────────────────────────┘
+│  └───────────────────────────────────────────────────┘    │
+│                           │                               │
+│                           │ TanStack Query Mutations      │
+│                           ▼                               │
+│  ┌────────────────────────────────────────────────────┐   │
+│  │           API Client (lib/api.ts)                  │   │
+│  │  - updateName()       - enableTwoFactor()          │   │
+│  │  - updateEmail()      - verifyTwoFactorPhone()     │   │
+│  │  - updatePassword()   - disableTwoFactor()         │   │
+│  └────────────────────────────────────────────────────┘   │
+└───────────────────────┬───────────────────────────────────┘
                         │ HTTPS / Native Fetch
                         ▼
-┌─────────────────────────────────────────────────────────────┐
-│                      Backend (Fastify)                       │
+┌────────────────────────────────────────────────────────────┐
+│                      Backend (Fastify)                     │
 │  ┌────────────────────────────────────────────────────┐    │
 │  │  Profile Routes        │  2FA Routes               │    │
 │  │  /api/profile/name     │  /api/two-factor/enable   │    │
 │  │  /api/profile/email    │  /api/two-factor/verify   │    │
 │  │  /api/profile/password │  /api/two-factor/disable  │    │
 │  └────────────────────────────────────────────────────┘    │
-│                           │                                 │
-│                           ▼                                 │
+│                           │                                │
+│                           ▼                                │
 │  ┌────────────────────────────────────────────────────┐    │
 │  │  Repositories                                      │    │
 │  │  - UserRepository                                  │    │
 │  │  - TwoFactorTokenRepository                        │    │
 │  │  - TwoFactorBackupCodeRepository                   │    │
 │  └────────────────────────────────────────────────────┘    │
-│                           │                                 │
-│                           ▼                                 │
+│                           │                                │
+│                           ▼                                │
 │  ┌────────────────────────────────────────────────────┐    │
 │  │  Services                                          │    │
 │  │  - EmailService  - SmsService (Twilio)             │    │
 │  └────────────────────────────────────────────────────┘    │
-└───────────────────────┬─────────────────────────────────────┘
+└───────────────────────┬────────────────────────────────────┘
                         │
                         ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                      PostgreSQL Database                     │
+│                      PostgreSQL Database                    │
 │  - users (add 2FA columns)                                  │
 │  - two_factor_tokens (new)                                  │
 │  - two_factor_backup_codes (new)                            │
