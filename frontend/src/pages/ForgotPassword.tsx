@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Alert } from "../components/common/Alert";
 import { Button } from "../components/common/Button";
 import { Input } from "../components/common/Input";
+import { Logo } from "../components/common/Logo";
 import { forgotPassword } from "../lib/api";
 
 export function ForgotPassword() {
@@ -31,13 +32,13 @@ export function ForgotPassword() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-background px-4">
             <div className="w-full max-w-md">
-                <div className="bg-white rounded-lg shadow-lg p-8">
+                <div className="bg-card rounded-lg shadow-lg p-8">
                     {/* Logo and Title */}
                     <div className="text-center mb-8">
-                        <div className="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-lg mb-4">
-                            <span className="text-white font-bold text-2xl">FM</span>
+                        <div className="inline-flex mb-4">
+                            <Logo size="lg" />
                         </div>
                         <h1 className="text-2xl font-bold text-foreground mb-2">
                             Forgot password?

@@ -58,7 +58,7 @@ function ConditionalNode({ data, selected }: NodeProps<ConditionalNodeData>) {
                     <Handle
                         type="target"
                         position={Position.Top}
-                        className="!w-2.5 !h-2.5 !bg-white !border-2 !border-primary !shadow-sm"
+                        className="!w-2.5 !h-2.5 !bg-card !border-2 !border-primary !shadow-sm"
                     />
 
                     {/* True Output Handle */}
@@ -66,7 +66,7 @@ function ConditionalNode({ data, selected }: NodeProps<ConditionalNodeData>) {
                         type="source"
                         position={Position.Bottom}
                         id="true"
-                        className="!w-2.5 !h-2.5 !bg-white !border-2 !border-green-500 !shadow-sm"
+                        className="!w-2.5 !h-2.5 !bg-card !border-2 !border-green-500 !shadow-sm"
                         style={{ left: "35%" }}
                     />
 
@@ -75,7 +75,7 @@ function ConditionalNode({ data, selected }: NodeProps<ConditionalNodeData>) {
                         type="source"
                         position={Position.Bottom}
                         id="false"
-                        className="!w-2.5 !h-2.5 !bg-white !border-2 !border-red-500 !shadow-sm"
+                        className="!w-2.5 !h-2.5 !bg-card !border-2 !border-red-500 !shadow-sm"
                         style={{ left: "65%" }}
                     />
                 </>

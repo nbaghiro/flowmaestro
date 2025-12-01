@@ -333,7 +333,7 @@ export function DatabaseNodeConfig({ data, onUpdate }: DatabaseNodeConfigProps) 
                         <button
                             type="button"
                             onClick={() => setIsProviderDialogOpen(true)}
-                            className="w-full flex items-center justify-center gap-2 p-4 text-sm font-medium text-gray-700 bg-white border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-all"
+                            className="w-full flex items-center justify-center gap-2 p-3 text-sm font-medium text-muted-foreground bg-muted/50 border-2 border-dashed border-border rounded-lg hover:border-primary/50 hover:bg-muted transition-all"
                         >
                             <Plus className="w-4 h-4" />
                             Select or Add Connection
@@ -388,7 +388,7 @@ export function DatabaseNodeConfig({ data, onUpdate }: DatabaseNodeConfigProps) 
                             />
                         </FormField>
 
-                        <div className="px-3 py-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <div className="px-3 py-2 bg-amber-500/10 dark:bg-amber-400/20 border border-amber-500/30 dark:border-amber-400/30 text-amber-800 dark:text-amber-400 rounded-lg">
                             <p className="text-xs text-yellow-800">
                                 <strong>Security:</strong> Always use parameterized queries ($1, $2)
                                 to prevent SQL injection attacks.
@@ -398,7 +398,7 @@ export function DatabaseNodeConfig({ data, onUpdate }: DatabaseNodeConfigProps) 
                 )}
 
                 {!isMongoProvider(provider) && operation === "listTables" && (
-                    <div className="px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="px-3 py-2 bg-blue-500/10 dark:bg-blue-400/20 border border-blue-500/30 dark:border-blue-400/30 text-blue-800 dark:text-blue-400 rounded-lg">
                         <p className="text-sm text-blue-800">
                             This operation will list all tables in the database.
                         </p>
@@ -409,7 +409,7 @@ export function DatabaseNodeConfig({ data, onUpdate }: DatabaseNodeConfigProps) 
                     (operation === "insert" ||
                         operation === "update" ||
                         operation === "delete") && (
-                        <div className="px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="px-3 py-2 bg-blue-500/10 dark:bg-blue-400/20 border border-blue-500/30 dark:border-blue-400/30 text-blue-800 dark:text-blue-400 rounded-lg">
                             <p className="text-sm text-blue-800">
                                 For {operation} operations, please use the Query operation with a
                                 custom SQL statement.
@@ -565,7 +565,7 @@ export function DatabaseNodeConfig({ data, onUpdate }: DatabaseNodeConfigProps) 
                                 />
                             </FormField>
 
-                            <div className="px-3 py-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+                            <div className="px-3 py-2 bg-amber-500/10 dark:bg-amber-400/20 border border-amber-500/30 dark:border-amber-400/30 text-amber-800 dark:text-amber-400 rounded-lg">
                                 <p className="text-xs text-yellow-800">
                                     <strong>Warning:</strong> This operation will permanently delete
                                     document(s). Make sure your filter is correct.
@@ -575,7 +575,7 @@ export function DatabaseNodeConfig({ data, onUpdate }: DatabaseNodeConfigProps) 
                     )}
 
                 {isMongoProvider(provider) && operation === "listCollections" && (
-                    <div className="px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="px-3 py-2 bg-blue-500/10 dark:bg-blue-400/20 border border-blue-500/30 dark:border-blue-400/30 text-blue-800 dark:text-blue-400 rounded-lg">
                         <p className="text-sm text-blue-800">
                             This operation will list all collections in the database.
                         </p>
@@ -606,7 +606,7 @@ export function DatabaseNodeConfig({ data, onUpdate }: DatabaseNodeConfigProps) 
                             />
                         </FormField>
 
-                        <div className="px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="px-3 py-2 bg-blue-500/10 dark:bg-blue-400/20 border border-blue-500/30 dark:border-blue-400/30 text-blue-800 dark:text-blue-400 rounded-lg">
                             <p className="text-xs text-blue-800">
                                 <strong>Tip:</strong> Common stages: $match, $group, $sort,
                                 $project, $lookup, $unwind, $limit, $skip

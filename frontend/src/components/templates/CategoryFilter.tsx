@@ -37,10 +37,7 @@ export function CategoryFilter({
         return (
             <div className="flex flex-wrap gap-2">
                 {Array.from({ length: 6 }).map((_, i) => (
-                    <div
-                        key={i}
-                        className="h-9 w-28 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse"
-                    />
+                    <div key={i} className="h-9 w-28 bg-muted rounded-full animate-pulse" />
                 ))}
             </div>
         );
@@ -54,8 +51,8 @@ export function CategoryFilter({
                 className={cn(
                     "inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all",
                     selectedCategory === null
-                        ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 shadow-md"
-                        : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                        ? "bg-primary text-primary-foreground shadow-md"
+                        : "bg-muted text-muted-foreground hover:bg-muted/80"
                 )}
             >
                 <LayoutGrid className="w-4 h-4" />
@@ -64,8 +61,8 @@ export function CategoryFilter({
                     className={cn(
                         "ml-1 px-2 py-0.5 rounded-full text-xs font-semibold",
                         selectedCategory === null
-                            ? "bg-white/20 dark:bg-gray-900/20"
-                            : "bg-gray-200 dark:bg-gray-700"
+                            ? "bg-black/10 dark:bg-white/10"
+                            : "bg-black/5 dark:bg-white/5"
                     )}
                 >
                     {totalCount}
@@ -81,7 +78,7 @@ export function CategoryFilter({
                 const isSelected = selectedCategory === categoryInfo.category;
 
                 // Get category-specific colors - using switch to make classes statically analyzable
-                let categoryColor = "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400";
+                let categoryColor = "bg-muted text-muted-foreground";
 
                 if (!isSelected) {
                     switch (categoryInfo.category) {
@@ -115,7 +112,7 @@ export function CategoryFilter({
                         className={cn(
                             "inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all",
                             isSelected
-                                ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900 shadow-md"
+                                ? "bg-primary text-primary-foreground shadow-md"
                                 : categoryColor
                         )}
                     >
@@ -125,8 +122,8 @@ export function CategoryFilter({
                             className={cn(
                                 "ml-1 px-2 py-0.5 rounded-full text-xs font-semibold",
                                 isSelected
-                                    ? "bg-white/20 dark:bg-gray-900/20"
-                                    : "bg-black/10 dark:bg-white/10"
+                                    ? "bg-black/10 dark:bg-white/10"
+                                    : "bg-black/5 dark:bg-white/5"
                             )}
                         >
                             {categoryInfo.count}

@@ -215,7 +215,7 @@ export function IntegrationNodeConfig({ data, onUpdate }: IntegrationNodeConfigP
                         <button
                             type="button"
                             onClick={() => setIsProviderDialogOpen(true)}
-                            className="w-full flex items-center justify-center gap-2 p-4 text-sm font-medium text-gray-700 bg-white border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-all"
+                            className="w-full flex items-center justify-center gap-2 p-3 text-sm font-medium text-muted-foreground bg-muted/50 border-2 border-dashed border-border rounded-lg hover:border-primary/50 hover:bg-muted transition-all"
                         >
                             <Plus className="w-4 h-4" />
                             Select or Add Connection

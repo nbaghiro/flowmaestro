@@ -11,6 +11,7 @@ import Flow, {
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { generateId } from "../lib/utils";
+import { useThemeStore } from "../stores/themeStore";
 import { useWorkflowStore } from "../stores/workflowStore";
 // Import all node components
 import AudioNode from "./nodes/AudioNode";
@@ -72,6 +73,7 @@ export function WorkflowCanvas({ onInit: onInitProp }: WorkflowCanvasProps) {
     const isDragging = useRef(false);
 
     const { nodes, edges, onNodesChange, onEdgesChange, addNode, selectNode } = useWorkflowStore();
+    const effectiveTheme = useThemeStore((state) => state.effectiveTheme);
 
     const onConnect = useCallback(
         (connection: Connection) => {
@@ -180,16 +182,29 @@ export function WorkflowCanvas({ onInit: onInitProp }: WorkflowCanvasProps) {
                 fitView
                 proOptions={{ hideAttribution: true }}
             >
-                <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
+                <Background
+                    variant={BackgroundVariant.Dots}
+                    gap={12}
+                    size={1}
+                    color={effectiveTheme === "dark" ? "#333" : "#aaa"}
+                />
                 <Controls />
                 <MiniMap
                     className="!absolute !bottom-4 !right-4"
                     style={{
-                        backgroundColor: "rgba(0, 0, 0, 0.05)",
-                        border: "1px solid rgba(0, 0, 0, 0.1)"
+                        backgroundColor:
+                            effectiveTheme === "dark"
+                                ? "rgba(0, 0, 0, 0.3)"
+                                : "rgba(0, 0, 0, 0.05)",
+                        border:
+                            effectiveTheme === "dark"
+                                ? "1px solid rgba(255, 255, 255, 0.1)"
+                                : "1px solid rgba(0, 0, 0, 0.1)"
                     }}
-                    nodeColor="#9ca3af"
-                    maskColor="rgba(0, 0, 0, 0.1)"
+                    nodeColor={effectiveTheme === "dark" ? "#555" : "#9ca3af"}
+                    maskColor={
+                        effectiveTheme === "dark" ? "rgba(0, 0, 0, 0.6)" : "rgba(0, 0, 0, 0.1)"
+                    }
                 />
             </Flow>
         </div>

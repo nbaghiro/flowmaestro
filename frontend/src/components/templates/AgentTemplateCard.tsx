@@ -61,13 +61,13 @@ export function AgentTemplateCard({ template, onClick }: AgentTemplateCardProps)
         <div
             onClick={() => onClick(template)}
             className={cn(
-                "bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700",
-                "hover:shadow-xl hover:border-gray-300 dark:hover:border-gray-600 hover:scale-[1.02]",
+                "bg-card dark:bg-card rounded-xl border border-border dark:border-border",
+                "hover:shadow-xl hover:border-border/60 dark:hover:border-border/60 hover:scale-[1.02]",
                 "transition-all duration-200 cursor-pointer overflow-hidden group"
             )}
         >
             {/* Agent Preview Area */}
-            <div className="h-40 bg-gray-50 dark:bg-gray-900 relative overflow-hidden">
+            <div className="h-40 bg-muted/30 dark:bg-muted relative overflow-hidden">
                 {/* Category badge overlay */}
                 <div className="absolute top-3 left-3 z-10">
                     <span
@@ -82,21 +82,21 @@ export function AgentTemplateCard({ template, onClick }: AgentTemplateCardProps)
 
                 {/* Model badge */}
                 <div className="absolute top-3 right-3 z-10">
-                    <span className="px-2 py-0.5 rounded-md text-xs font-medium bg-white/90 dark:bg-gray-800/90 text-gray-600 dark:text-gray-300 backdrop-blur-sm">
+                    <span className="px-2 py-0.5 rounded-md text-xs font-medium bg-card/90 dark:bg-card/90 text-gray-600 dark:text-gray-300 backdrop-blur-sm">
                         {template.model}
                     </span>
                 </div>
 
                 {/* System prompt preview */}
                 <div className="absolute inset-0 p-4 pt-12 pb-16">
-                    <div className="text-xs text-gray-600 dark:text-gray-400 font-mono leading-relaxed line-clamp-4">
+                    <div className="text-xs text-gray-600 dark:text-muted-foreground font-mono leading-relaxed line-clamp-4">
                         {promptPreview}...
                     </div>
                 </div>
 
                 {/* AI Bot icon */}
                 <div className="absolute bottom-3 right-3 z-10">
-                    <div className="w-10 h-10 rounded-full bg-white dark:bg-gray-800 shadow-lg flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-full bg-card dark:bg-card shadow-lg flex items-center justify-center">
                         {template.provider && providerLogos[template.provider] ? (
                             <img
                                 src={providerLogos[template.provider]}
@@ -116,7 +116,7 @@ export function AgentTemplateCard({ template, onClick }: AgentTemplateCardProps)
                 </div>
 
                 {/* Hover overlay */}
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 dark:group-hover:bg-white/5 transition-colors pointer-events-none" />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 dark:group-hover:bg-card/5 transition-colors pointer-events-none" />
             </div>
 
             {/* Content */}
@@ -138,13 +138,13 @@ export function AgentTemplateCard({ template, onClick }: AgentTemplateCardProps)
                                 />
                             ))
                         ) : template.available_tools.length > 0 ? (
-                            <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground dark:text-muted-foreground">
                                 <Wrench className="w-4 h-4" />
                                 <span>{template.available_tools.length} tools</span>
                             </div>
                         ) : null}
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-gray-400">
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
                         <span className="flex items-center gap-1">
                             <Eye className="w-3 h-3" />
                             {template.view_count}
@@ -157,13 +157,13 @@ export function AgentTemplateCard({ template, onClick }: AgentTemplateCardProps)
                 </div>
 
                 {/* Title */}
-                <h3 className="font-semibold text-gray-900 dark:text-white line-clamp-1 mb-1.5">
+                <h3 className="font-semibold text-foreground dark:text-foreground line-clamp-1 mb-1.5">
                     {template.name}
                 </h3>
 
                 {/* Description */}
                 {template.description && (
-                    <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2">
+                    <p className="text-sm text-muted-foreground dark:text-muted-foreground line-clamp-2">
                         {template.description}
                     </p>
                 )}

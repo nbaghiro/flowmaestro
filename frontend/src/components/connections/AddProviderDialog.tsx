@@ -91,7 +91,7 @@ export function AddProviderDialog({ isOpen, onClose, onProviderAdded }: AddProvi
                 />
 
                 {/* Dialog */}
-                <div className="relative bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col animate-in fade-in zoom-in-95 duration-200">
+                <div className="relative bg-card border border-border rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col animate-in fade-in zoom-in-95 duration-200">
                     {/* Header */}
                     <div className="flex items-center justify-between p-6 pb-4 border-b border-gray-200">
                         <div>

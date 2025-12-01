@@ -294,7 +294,7 @@ export function AgentBuilder() {
     return (
         <div className="h-screen flex flex-col bg-background">
             {/* Top Header */}
-            <div className="h-16 border-b border-border bg-white flex items-center justify-between px-6 flex-shrink-0">
+            <div className="h-16 border-b border-border bg-card flex items-center justify-between px-6 flex-shrink-0">
                 <div className="flex items-center gap-4">
                     <button
                         onClick={() => navigate("/agents")}
@@ -342,7 +342,7 @@ export function AgentBuilder() {
             {/* Main content area */}
             <div className="flex-1 flex overflow-hidden">
                 {/* Left sidebar navigation */}
-                <div className="w-64 border-r border-border bg-white flex-shrink-0">
+                <div className="w-64 border-r border-border bg-card flex-shrink-0">
                     <nav className="p-4 space-y-1">
                         {tabs.map((tab) => {
                             const Icon = tab.icon;
@@ -378,7 +378,7 @@ export function AgentBuilder() {
                     {activeTab === "build" && (
                         <>
                             {/* Left panel: Configuration (scrollable) */}
-                            <div className="w-[500px] border-r border-border bg-white overflow-auto flex-shrink-0">
+                            <div className="w-[500px] border-r border-border bg-card overflow-auto flex-shrink-0">
                                 <div className="p-6 space-y-6">
                                     {/* AI Model Selection */}
                                     <div>
@@ -554,7 +554,7 @@ export function AgentBuilder() {
                     )}
 
                     {activeTab === "slack" && (
-                        <div className="flex-1 flex items-center justify-center bg-white">
+                        <div className="flex-1 flex items-center justify-center bg-card">
                             <div className="text-center text-muted-foreground">
                                 <Slack className="w-12 h-12 mx-auto mb-3 opacity-50" />
                                 <p className="text-sm">Connect your agent to Slack</p>
@@ -564,7 +564,7 @@ export function AgentBuilder() {
                     )}
 
                     {activeTab === "settings" && (
-                        <div className="flex-1 bg-white overflow-auto">
+                        <div className="flex-1 bg-card overflow-auto">
                             <div className="max-w-3xl p-6 space-y-6">
                                 {/* Agent Name */}
                                 <div>

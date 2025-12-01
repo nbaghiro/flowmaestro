@@ -80,7 +80,7 @@ export function AddCustomMCPDialog({ isOpen, onClose, onAdd }: AddCustomMCPDialo
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+            <div className="bg-card border border-border rounded-lg shadow-xl w-full max-w-md mx-4">
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b border-border">
                     <h3 className="text-lg font-semibold text-foreground">

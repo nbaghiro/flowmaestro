@@ -282,7 +282,7 @@ export function Workflows() {
             {isLoading ? (
                 <LoadingState message="Loading workflows..." />
             ) : workflows.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed border-border rounded-lg bg-white">
+                <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed border-border rounded-lg bg-card">
                     <FileText className="w-12 h-12 text-muted-foreground mb-4" />
                     <h3 className="text-lg font-semibold text-foreground mb-2">No workflows yet</h3>
                     <p className="text-sm text-muted-foreground mb-6 text-center max-w-md">
@@ -299,7 +299,7 @@ export function Workflows() {
                     {workflows.map((workflow) => (
                         <div
                             key={workflow.id}
-                            className="bg-white border border-border rounded-lg p-5 hover:border-primary hover:shadow-md transition-all group relative"
+                            className="bg-card border border-border rounded-lg p-5 hover:border-primary hover:shadow-md transition-all group relative"
                         >
                             <div
                                 onClick={() => navigate(`/builder/${workflow.id}`)}
@@ -334,7 +334,7 @@ export function Workflows() {
 
                                             {/* Dropdown Menu */}
                                             {openMenuId === workflow.id && (
-                                                <div className="absolute right-0 mt-1 w-48 bg-white border border-border rounded-lg shadow-lg py-1 z-10">
+                                                <div className="absolute right-0 mt-1 w-48 bg-card border border-border rounded-lg shadow-lg py-1 z-10">
                                                     <button
                                                         onClick={(e) => {
                                                             e.stopPropagation();
@@ -401,7 +401,7 @@ export function Workflows() {
             {/* Delete Confirmation Dialog */}
             {workflowToDelete && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-                    <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+                    <div className="bg-card rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
                         <h3 className="text-lg font-semibold text-foreground mb-2">
                             Delete Workflow
                         </h3>

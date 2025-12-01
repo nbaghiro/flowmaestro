@@ -89,7 +89,7 @@ export function LLMNodeConfig({ data, onUpdate }: LLMNodeConfigProps) {
                         <button
                             type="button"
                             onClick={() => setIsProviderDialogOpen(true)}
-                            className="w-full flex items-start gap-3 p-3 text-left border-2 border-gray-200 rounded-lg hover:border-gray-300 hover:bg-gray-50 transition-all"
+                            className="w-full flex items-start gap-3 p-3 text-left border-2 border-border rounded-lg hover:border-primary/50 hover:bg-muted transition-all bg-card"
                         >
                             {/* Provider Icon */}
                             <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center">
@@ -100,22 +100,22 @@ export function LLMNodeConfig({ data, onUpdate }: LLMNodeConfigProps) {
                                         className="w-10 h-10 object-contain"
                                     />
                                 ) : (
-                                    <div className="w-10 h-10 bg-gray-200 rounded" />
+                                    <div className="w-10 h-10 bg-muted rounded" />
                                 )}
                             </div>
 
                             {/* Connection Info */}
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-1">
-                                    <h3 className="font-medium text-sm text-gray-900">
+                                    <h3 className="font-medium text-sm text-foreground">
                                         {providerInfo?.displayName || provider}
                                     </h3>
                                 </div>
-                                <p className="text-xs text-gray-600 truncate">
+                                <p className="text-xs text-muted-foreground truncate">
                                     {selectedConnection.name}
                                 </p>
                                 {selectedConnection.metadata?.account_info?.email && (
-                                    <p className="text-xs text-gray-500 truncate">
+                                    <p className="text-xs text-muted-foreground/70 truncate">
                                         {selectedConnection.metadata.account_info.email}
                                     </p>
                                 )}
@@ -125,7 +125,7 @@ export function LLMNodeConfig({ data, onUpdate }: LLMNodeConfigProps) {
                         <button
                             type="button"
                             onClick={() => setIsProviderDialogOpen(true)}
-                            className="w-full flex items-center justify-center gap-2 p-4 text-sm font-medium text-gray-700 bg-white border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-all"
+                            className="w-full flex items-center justify-center gap-2 p-3 text-sm font-medium text-muted-foreground bg-muted/50 border-2 border-dashed border-border rounded-lg hover:border-primary/50 hover:bg-muted transition-all"
                         >
                             <Plus className="w-4 h-4" />
                             Select or Add Connection

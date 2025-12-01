@@ -40,7 +40,7 @@ function CommentNodeToolbar({
             <Popover.Trigger asChild>
                 <button
                     data-role="comment-toolbar"
-                    className="pointer-events-auto absolute top-2 right-2 pb- bg-white/70 hover:bg-white rounded p-1 shadow-sm border border-gray-200 text-xs text-gray-800"
+                    className="pointer-events-auto absolute top-2 right-2 pb- bg-card/70 hover:bg-card rounded p-1 shadow-sm border border-gray-200 text-xs text-gray-800"
                     onPointerDown={stopPointer}
                     type="button"
                 >
@@ -55,7 +55,7 @@ function CommentNodeToolbar({
                 onOpenAutoFocus={(e) => e.preventDefault()}
                 onCloseAutoFocus={(e) => e.preventDefault()}
                 onPointerDown={stopPointer}
-                className="rounded-md bg-white shadow-lg border p-3 space-y-3 z-50 text-gray-800"
+                className="rounded-md bg-card shadow-lg border p-3 space-y-3 z-50 text-gray-800"
             >
                 <div>
                     <button

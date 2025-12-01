@@ -181,7 +181,7 @@ export function InputNodeConfig({ data, onUpdate }: InputNodeConfigProps) {
                         </FormField>
 
                         {validation && (
-                            <div className="px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+                            <div className="px-3 py-2 bg-blue-500/10 dark:bg-blue-400/20 border border-blue-500/30 dark:border-blue-400/30 text-blue-800 dark:text-blue-400 rounded-lg">
                                 <p className="text-xs text-blue-800">
                                     <strong>Pattern:</strong>{" "}
                                     <code className="font-mono">{validation}</code>
@@ -215,7 +215,7 @@ export function InputNodeConfig({ data, onUpdate }: InputNodeConfigProps) {
                         </div>
 
                         {(minValue || maxValue) && (
-                            <div className="px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+                            <div className="px-3 py-2 bg-blue-500/10 dark:bg-blue-400/20 border border-blue-500/30 dark:border-blue-400/30 text-blue-800 dark:text-blue-400 rounded-lg">
                                 <p className="text-xs text-blue-800">
                                     <strong>Range:</strong> {minValue || "−∞"} to {maxValue || "+∞"}
                                 </p>
@@ -240,7 +240,7 @@ export function InputNodeConfig({ data, onUpdate }: InputNodeConfigProps) {
                             />
                         </FormField>
 
-                        <div className="px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="px-3 py-2 bg-blue-500/10 dark:bg-blue-400/20 border border-blue-500/30 dark:border-blue-400/30 text-blue-800 dark:text-blue-400 rounded-lg">
                             <p className="text-xs text-blue-800">
                                 Use JSON Schema format to define structure and validation rules
                             </p>
