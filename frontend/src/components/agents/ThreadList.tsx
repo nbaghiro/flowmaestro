@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { cn } from "../../lib/utils";
+import { Input } from "../common/Input";
 import type { Thread } from "../../lib/api";
 
 interface ThreadListProps {
@@ -165,12 +166,16 @@ export function ThreadList({
 
                                         {isEditing ? (
                                             <div className="flex-1 flex items-center gap-1">
-                                                <input
+                                                <Input
                                                     ref={editInputRef}
                                                     type="text"
                                                     value={editTitle}
-                                                    onChange={(e) => setEditTitle(e.target.value)}
-                                                    onKeyDown={(e) => {
+                                                    onChange={(
+                                                        e: React.ChangeEvent<HTMLInputElement>
+                                                    ) => setEditTitle(e.target.value)}
+                                                    onKeyDown={(
+                                                        e: React.KeyboardEvent<HTMLInputElement>
+                                                    ) => {
                                                         if (e.key === "Enter") handleSaveEdit();
                                                         if (e.key === "Escape") handleCancelEdit();
                                                     }}

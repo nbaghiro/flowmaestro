@@ -298,7 +298,7 @@ export function CreateWorkflowDialog({ isOpen, onClose, onCreate }: CreateWorkfl
                                         <span className="text-sm text-muted-foreground">
                                             Upload JSON file
                                         </span>
-                                        <input
+                                        <Input
                                             type="file"
                                             accept=".json"
                                             onChange={handleFileUpload}

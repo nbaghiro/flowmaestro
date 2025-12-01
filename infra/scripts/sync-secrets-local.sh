@@ -163,6 +163,8 @@ ZENDESK_CLIENT_ID=$(get_secret "flowmaestro-app-zendesk-client-id" "")
 ZENDESK_CLIENT_SECRET=$(get_secret "flowmaestro-app-zendesk-client-secret" "")
 APOLLO_CLIENT_ID=$(get_secret "flowmaestro-app-apollo-client-id" "")
 APOLLO_CLIENT_SECRET=$(get_secret "flowmaestro-app-apollo-client-secret" "")
+JIRA_CLIENT_ID=$(get_secret "flowmaestro-app-jira-client-id" "")
+JIRA_CLIENT_SECRET=$(get_secret "flowmaestro-app-jira-client-secret" "")
 
 # Email Service (Resend)
 RESEND_API_KEY=$(get_secret "flowmaestro-app-resend-api-key" "")
@@ -406,6 +408,19 @@ else
     echo "# Apollo.io" >> "$BACKEND_ENV_FILE"
     echo "APOLLO_CLIENT_ID=" >> "$BACKEND_ENV_FILE"
     echo "APOLLO_CLIENT_SECRET=" >> "$BACKEND_ENV_FILE"
+    echo "" >> "$BACKEND_ENV_FILE"
+fi
+
+# Jira Cloud OAuth
+if [ -n "$JIRA_CLIENT_ID" ] || [ -n "$JIRA_CLIENT_SECRET" ]; then
+    echo "# Jira Cloud" >> "$BACKEND_ENV_FILE"
+    echo "JIRA_CLIENT_ID=${JIRA_CLIENT_ID}" >> "$BACKEND_ENV_FILE"
+    echo "JIRA_CLIENT_SECRET=${JIRA_CLIENT_SECRET}" >> "$BACKEND_ENV_FILE"
+    echo "" >> "$BACKEND_ENV_FILE"
+else
+    echo "# Jira Cloud" >> "$BACKEND_ENV_FILE"
+    echo "JIRA_CLIENT_ID=" >> "$BACKEND_ENV_FILE"
+    echo "JIRA_CLIENT_SECRET=" >> "$BACKEND_ENV_FILE"
     echo "" >> "$BACKEND_ENV_FILE"
 fi
 

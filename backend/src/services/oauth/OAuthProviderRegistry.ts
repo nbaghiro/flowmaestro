@@ -1641,6 +1641,70 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
         },
         refreshable: true,
         pkceEnabled: false
+    },
+
+    jira: {
+        name: "jira",
+        displayName: "Jira Cloud",
+        authUrl: "https://auth.atlassian.com/authorize",
+        tokenUrl: "https://auth.atlassian.com/oauth/token",
+        scopes: [
+            "read:jira-work",
+            "write:jira-work",
+            "read:jira-user",
+            "manage:jira-webhook",
+            "offline_access"
+        ],
+        authParams: {
+            audience: "api.atlassian.com",
+            prompt: "consent"
+        },
+        clientId: process.env.JIRA_CLIENT_ID || "",
+        clientSecret: process.env.JIRA_CLIENT_SECRET || "",
+        redirectUri: `${process.env.API_URL || "http://localhost:3001"}/api/oauth/jira/callback`,
+        getUserInfo: async (accessToken: string) => {
+            try {
+                // Get accessible Jira sites (cloudIds)
+                const response = await fetch(
+                    "https://api.atlassian.com/oauth/token/accessible-resources",
+                    {
+                        headers: {
+                            Authorization: `Bearer ${accessToken}`,
+                            Accept: "application/json"
+                        }
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const sites = (await response.json()) as Array<{
+                    id: string;
+                    url: string;
+                    name: string;
+                    scopes: string[];
+                    avatarUrl?: string;
+                }>;
+
+                return {
+                    sites: sites.map((s) => ({
+                        cloudId: s.id,
+                        url: s.url,
+                        name: s.name,
+                        scopes: s.scopes,
+                        avatarUrl: s.avatarUrl
+                    }))
+                };
+            } catch (error) {
+                console.error("[OAuth] Failed to get Jira accessible resources:", error);
+                return {
+                    sites: []
+                };
+            }
+        },
+        refreshable: true,
+        pkceEnabled: false
     }
 };
 

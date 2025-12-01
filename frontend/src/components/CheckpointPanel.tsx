@@ -1,5 +1,6 @@
 import { X, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { Input } from "./common/Input";
 
 interface Checkpoint {
     id: string;
@@ -104,17 +105,19 @@ export function CheckpointPanel({
                                     <div className="flex justify-between items-center">
                                         <div className="flex flex-col gap-1">
                                             {editingId === cp.id ? (
-                                                <input
+                                                <Input
                                                     autoFocus
                                                     value={editingValue}
-                                                    onChange={(e) =>
-                                                        setEditingValue(e.target.value)
-                                                    }
+                                                    onChange={(
+                                                        e: React.ChangeEvent<HTMLInputElement>
+                                                    ) => setEditingValue(e.target.value)}
                                                     onBlur={() => {
                                                         onRename(cp.id, editingValue);
                                                         setEditingId(null);
                                                     }}
-                                                    onKeyDown={(e) => {
+                                                    onKeyDown={(
+                                                        e: React.KeyboardEvent<HTMLInputElement>
+                                                    ) => {
                                                         if (e.key === "Enter") {
                                                             onRename(cp.id, editingValue);
                                                             setEditingId(null);
@@ -123,7 +126,9 @@ export function CheckpointPanel({
                                                             setEditingId(null);
                                                         }
                                                     }}
-                                                    onClick={(e) => e.stopPropagation()}
+                                                    onClick={(
+                                                        e: React.MouseEvent<HTMLInputElement>
+                                                    ) => e.stopPropagation()}
                                                     className="text-sm font-medium bg-transparent border-none outline-none focus:bg-muted/50 px-2 py-0.5 rounded transition-colors w-full"
                                                 />
                                             ) : (
@@ -255,11 +260,13 @@ export function CheckpointPanel({
                     >
                         <p className="text-sm font-medium">Name this checkpoint</p>
 
-                        <input
+                        <Input
                             autoFocus
                             value={nameValue}
-                            onChange={(e) => setNameValue(e.target.value)}
-                            onKeyDown={(e) => {
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                                setNameValue(e.target.value)
+                            }
+                            onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
                                 if (e.key === "Enter") {
                                     setShowNameDialog(false);
                                     onCreate(nameValue || undefined);

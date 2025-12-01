@@ -10,6 +10,7 @@ import { ThreadChat } from "../components/agents/ThreadChat";
 import { ThreadList } from "../components/agents/ThreadList";
 import { ToolsList } from "../components/agents/ToolsList";
 import { ConfirmDialog } from "../components/common/ConfirmDialog";
+import { Input } from "../components/common/Input";
 import { Select } from "../components/common/Select";
 import { Textarea } from "../components/common/Textarea";
 import { cn } from "../lib/utils";
@@ -570,7 +571,7 @@ export function AgentBuilder() {
                                     <label className="block text-sm font-medium text-foreground mb-2">
                                         Agent Name
                                     </label>
-                                    <input
+                                    <Input
                                         type="text"
                                         value={name}
                                         onChange={(e) => setName(e.target.value)}
@@ -638,7 +639,7 @@ export function AgentBuilder() {
                                                     {temperature}
                                                 </span>
                                             </div>
-                                            <input
+                                            <Input
                                                 type="range"
                                                 min="0"
                                                 max="2"
@@ -661,7 +662,7 @@ export function AgentBuilder() {
                                                     {maxTokens}
                                                 </span>
                                             </div>
-                                            <input
+                                            <Input
                                                 type="number"
                                                 min="100"
                                                 max="100000"

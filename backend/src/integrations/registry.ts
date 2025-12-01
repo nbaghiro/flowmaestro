@@ -310,6 +310,18 @@ const apolloEntry: ProviderRegistryEntry = {
     }
 };
 
+// Register Jira provider
+const jiraEntry: ProviderRegistryEntry = {
+    name: "jira",
+    displayName: "Jira Cloud",
+    authMethod: "oauth2",
+    category: "project_management",
+    loader: async () => {
+        const { JiraProvider } = await import("./providers/jira/JiraProvider");
+        return new JiraProvider();
+    }
+};
+
 // Register all providers
 providerRegistry.register(slackEntry);
 providerRegistry.register(codaEntry);
@@ -335,6 +347,7 @@ providerRegistry.register(microsoftWordEntry);
 providerRegistry.register(microsoftTeamsEntry);
 providerRegistry.register(zendeskEntry);
 providerRegistry.register(apolloEntry);
+providerRegistry.register(jiraEntry);
 
 // Export for use in application
 export { providerRegistry };

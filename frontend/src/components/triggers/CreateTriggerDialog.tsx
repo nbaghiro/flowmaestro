@@ -259,7 +259,7 @@ export function CreateTriggerDialog({ workflowId, onClose, onSuccess }: CreateTr
                                     <div className="space-y-2">
                                         {manualInputs.map((input, index) => (
                                             <div key={index} className="flex gap-2">
-                                                <input
+                                                <Input
                                                     type="text"
                                                     value={input.key}
                                                     onChange={(e) => {
@@ -271,7 +271,7 @@ export function CreateTriggerDialog({ workflowId, onClose, onSuccess }: CreateTr
                                                     placeholder="key"
                                                     disabled={loading}
                                                 />
-                                                <input
+                                                <Input
                                                     type="text"
                                                     value={input.value}
                                                     onChange={(e) => {
@@ -543,7 +543,7 @@ export function CreateTriggerDialog({ workflowId, onClose, onSuccess }: CreateTr
 
                                 <div className="space-y-2">
                                     <label className="flex items-center gap-2 cursor-pointer">
-                                        <input
+                                        <Input
                                             type="checkbox"
                                             checked={enableRecording}
                                             onChange={(e) => setEnableRecording(e.target.checked)}
@@ -554,7 +554,7 @@ export function CreateTriggerDialog({ workflowId, onClose, onSuccess }: CreateTr
                                     </label>
 
                                     <label className="flex items-center gap-2 cursor-pointer">
-                                        <input
+                                        <Input
                                             type="checkbox"
                                             checked={businessHoursEnabled}
                                             onChange={(e) =>

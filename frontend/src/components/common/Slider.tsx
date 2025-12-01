@@ -1,3 +1,5 @@
+import { Input } from "./Input";
+
 interface SliderProps {
     value: number;
     onChange: (value: number) => void;
@@ -9,7 +11,7 @@ interface SliderProps {
 export function Slider({ value, onChange, min, max, step }: SliderProps) {
     return (
         <div className="flex items-center gap-3">
-            <input
+            <Input
                 type="range"
                 value={value}
                 onChange={(e) => onChange(parseFloat(e.target.value))}

@@ -502,7 +502,7 @@ export function DatabaseNodeConfig({ data, onUpdate }: DatabaseNodeConfigProps) 
                     (operation === "updateOne" || operation === "updateMany") && (
                         <>
                             <FormField label="Collection" description="Name of the collection">
-                                <input
+                                <Input
                                     type="text"
                                     value={collection}
                                     onChange={(e) => setCollection(e.target.value)}
@@ -543,7 +543,7 @@ export function DatabaseNodeConfig({ data, onUpdate }: DatabaseNodeConfigProps) 
                     (operation === "deleteOne" || operation === "deleteMany") && (
                         <>
                             <FormField label="Collection" description="Name of the collection">
-                                <input
+                                <Input
                                     type="text"
                                     value={collection}
                                     onChange={(e) => setCollection(e.target.value)}

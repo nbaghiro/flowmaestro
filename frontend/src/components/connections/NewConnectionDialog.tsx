@@ -782,7 +782,7 @@ export function NewConnectionDialog({
 
                             {/* SSL Enabled */}
                             <div className="flex items-center gap-2">
-                                <input
+                                <Input
                                     type="checkbox"
                                     id="ssl-enabled"
                                     checked={dbSslEnabled}

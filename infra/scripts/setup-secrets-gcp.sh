@@ -285,6 +285,8 @@ EXISTING_ZENDESK_CLIENT_ID=$(get_existing_gcp_secret "flowmaestro-app-zendesk-cl
 EXISTING_ZENDESK_CLIENT_SECRET=$(get_existing_gcp_secret "flowmaestro-app-zendesk-client-secret")
 EXISTING_APOLLO_CLIENT_ID=$(get_existing_gcp_secret "flowmaestro-app-apollo-client-id")
 EXISTING_APOLLO_CLIENT_SECRET=$(get_existing_gcp_secret "flowmaestro-app-apollo-client-secret")
+EXISTING_JIRA_CLIENT_ID=$(get_existing_gcp_secret "flowmaestro-app-jira-client-id")
+EXISTING_JIRA_CLIENT_SECRET=$(get_existing_gcp_secret "flowmaestro-app-jira-client-secret")
 
 # Try to get from Pulumi outputs as fallback for infrastructure values
 if [ -z "$EXISTING_DB_HOST" ]; then
@@ -314,6 +316,7 @@ FOUND_COUNT=0
 [ -n "$EXISTING_META_APP_ID" ] && ((FOUND_COUNT++))
 [ -n "$EXISTING_ZENDESK_CLIENT_ID" ] && ((FOUND_COUNT++))
 [ -n "$EXISTING_APOLLO_CLIENT_ID" ] && ((FOUND_COUNT++))
+[ -n "$EXISTING_JIRA_CLIENT_ID" ] && ((FOUND_COUNT++))
 
 if [ $FOUND_COUNT -gt 0 ]; then
     print_success "Found $FOUND_COUNT existing secret(s)!"
@@ -332,6 +335,7 @@ if [ $FOUND_COUNT -gt 0 ]; then
     [ -n "$EXISTING_MICROSOFT_CLIENT_ID" ] && print_info "  - Microsoft OAuth: configured"
     [ -n "$EXISTING_ZENDESK_CLIENT_ID" ] && print_info "  - Zendesk OAuth: configured"
     [ -n "$EXISTING_APOLLO_CLIENT_ID" ] && print_info "  - Apollo OAuth: configured"
+    [ -n "$EXISTING_JIRA_CLIENT_ID" ] && print_info "  - Jira OAuth: configured"
     echo ""
     if [ "$PROMPT_ALL" = false ]; then
         print_info "Mode: Only prompting for NON-EXISTING secrets"
@@ -821,6 +825,8 @@ create_or_update_secret "flowmaestro-app-zendesk-client-id" "$ZENDESK_CLIENT_ID"
 create_or_update_secret "flowmaestro-app-zendesk-client-secret" "$ZENDESK_CLIENT_SECRET"
 create_or_update_secret "flowmaestro-app-apollo-client-id" "$APOLLO_CLIENT_ID"
 create_or_update_secret "flowmaestro-app-apollo-client-secret" "$APOLLO_CLIENT_SECRET"
+create_or_update_secret "flowmaestro-app-jira-client-id" "$JIRA_CLIENT_ID"
+create_or_update_secret "flowmaestro-app-jira-client-secret" "$JIRA_CLIENT_SECRET"
 
 # Email Service (Resend)
 create_or_update_secret "flowmaestro-app-resend-api-key" "$RESEND_API_KEY"

@@ -4,6 +4,8 @@ import * as api from "../../lib/api";
 import { cn } from "../../lib/utils";
 import { wsClient } from "../../lib/websocket";
 import { useAgentStore } from "../../stores/agentStore";
+import { Button } from "../common/Button";
+import { Input } from "../common/Input";
 import type { Agent, Thread, ConversationMessage } from "../../lib/api";
 
 interface ThreadChatProps {
@@ -254,33 +256,23 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
             {/* Input */}
             <div className="border-t border-border p-4 flex-shrink-0 bg-white">
                 <div className="flex gap-2">
-                    <input
+                    <Input
                         type="text"
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyPress={handleKeyPress}
                         placeholder="Continue the conversation..."
                         disabled={isSending}
-                        className={cn(
-                            "flex-1 px-4 py-3 rounded-lg",
-                            "bg-muted border border-border",
-                            "text-foreground placeholder:text-muted-foreground",
-                            "focus:outline-none focus:ring-2 focus:ring-primary",
-                            "disabled:opacity-50"
-                        )}
+                        className={cn("flex-1 px-4 py-3", "bg-muted")}
                     />
-                    <button
+                    <Button
+                        variant="primary"
                         onClick={handleSend}
                         disabled={!input.trim() || isSending}
-                        className={cn(
-                            "px-4 py-3 rounded-lg",
-                            "bg-primary text-primary-foreground",
-                            "hover:bg-primary/90 transition-colors",
-                            "disabled:opacity-50 disabled:cursor-not-allowed"
-                        )}
+                        className="px-4 py-3"
                     >
                         <Send className="w-5 h-5" />
-                    </button>
+                    </Button>
                 </div>
             </div>
         </div>

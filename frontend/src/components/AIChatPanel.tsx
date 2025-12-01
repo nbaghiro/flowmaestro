@@ -8,7 +8,9 @@ import { useWorkflowStore } from "../stores/workflowStore";
 import { ChatMessage } from "./chat/ChatMessage";
 import { ConnectionSelector } from "./chat/ConnectionSelector";
 import { SuggestedQuestions } from "./chat/SuggestedQuestions";
+import { Button } from "./common/Button";
 import { ConfirmDialog } from "./common/ConfirmDialog";
+import { Input } from "./common/Input";
 import type { Edge } from "reactflow";
 
 const MIN_WIDTH = 400;
@@ -457,7 +459,7 @@ export function AIChatPanel({ workflowId: _workflowId }: AIChatPanelProps) {
                 {/* Input - Fixed at bottom */}
                 <div className="border-t border-border p-4 flex-shrink-0">
                     <div className="flex gap-2">
-                        <input
+                        <Input
                             type="text"
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
@@ -472,7 +474,7 @@ export function AIChatPanel({ workflowId: _workflowId }: AIChatPanelProps) {
                                 "disabled:opacity-50"
                             )}
                         />
-                        <button
+                        <Button
                             onClick={handleSend}
                             disabled={!input.trim() || isStreaming}
                             data-action="send-chat"
@@ -484,7 +486,7 @@ export function AIChatPanel({ workflowId: _workflowId }: AIChatPanelProps) {
                             )}
                         >
                             <Send className="w-5 h-5" />
-                        </button>
+                        </Button>
                     </div>
                     <p className="text-xs text-muted-foreground mt-2 text-center">
                         Press Enter to send • Shift+Enter for new line
