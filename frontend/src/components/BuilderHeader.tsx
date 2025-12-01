@@ -6,7 +6,7 @@ import { executeTrigger, createTrigger, getTriggers } from "../lib/api";
 import { wsClient } from "../lib/websocket";
 import { useTriggerStore } from "../stores/triggerStore";
 import { useWorkflowStore } from "../stores/workflowStore";
-import { Tooltip } from "./Tooltip";
+import { Tooltip } from "./common/Tooltip";
 
 interface BuilderHeaderProps {
     workflowId?: string;

@@ -5,11 +5,13 @@ import {
     getDefaultModelForProvider,
     ALL_PROVIDERS
 } from "@flowmaestro/shared";
+import { FormField, FormSection } from "../../../components/common/FormField";
+import { Input } from "../../../components/common/Input";
 import { Select } from "../../../components/common/Select";
+import { Slider } from "../../../components/common/Slider";
+import { Textarea } from "../../../components/common/Textarea";
 import { ProviderConnectionDialog } from "../../../components/connections/ProviderConnectionDialog";
-import { FormField, FormSection } from "../../../components/FormField";
 import { OutputSettingsSection } from "../../../components/OutputSettingsSection";
-import { Slider } from "../../../components/Slider";
 import { useConnectionStore } from "../../../stores/connectionStore";
 
 interface LLMNodeConfigProps {
@@ -151,12 +153,11 @@ export function LLMNodeConfig({ data, onUpdate }: LLMNodeConfigProps) {
                     label="System Prompt"
                     description="Instructions for the AI model's behavior"
                 >
-                    <textarea
+                    <Textarea
                         value={systemPrompt}
                         onChange={(e) => setSystemPrompt(e.target.value)}
                         placeholder="You are a helpful assistant..."
                         rows={4}
-                        className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
                     />
                 </FormField>
 
@@ -164,12 +165,12 @@ export function LLMNodeConfig({ data, onUpdate }: LLMNodeConfigProps) {
                     label="User Prompt"
                     description="Use ${variableName} to reference other node outputs"
                 >
-                    <textarea
+                    <Textarea
                         value={prompt}
                         onChange={(e) => setPrompt(e.target.value)}
                         placeholder="Enter your prompt here..."
                         rows={6}
-                        className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none font-mono"
+                        className="font-mono"
                     />
                 </FormField>
             </FormSection>
@@ -189,13 +190,12 @@ export function LLMNodeConfig({ data, onUpdate }: LLMNodeConfigProps) {
                 </FormField>
 
                 <FormField label="Max Tokens" description="Maximum length of the response">
-                    <input
+                    <Input
                         type="number"
                         value={maxTokens}
                         onChange={(e) => setMaxTokens(parseInt(e.target.value) || 0)}
                         min={1}
                         max={32000}
-                        className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                     />
                 </FormField>
 

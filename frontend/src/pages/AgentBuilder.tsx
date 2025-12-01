@@ -11,6 +11,7 @@ import { ThreadList } from "../components/agents/ThreadList";
 import { ToolsList } from "../components/agents/ToolsList";
 import { ConfirmDialog } from "../components/common/ConfirmDialog";
 import { Select } from "../components/common/Select";
+import { Textarea } from "../components/common/Textarea";
 import { cn } from "../lib/utils";
 import { useAgentStore } from "../stores/agentStore";
 import { useConnectionStore } from "../stores/connectionStore";
@@ -422,9 +423,11 @@ export function AgentBuilder() {
                                         <label className="block text-sm font-medium text-foreground mb-2">
                                             Instructions
                                         </label>
-                                        <textarea
+                                        <Textarea
                                             value={systemPrompt}
-                                            onChange={(e) => setSystemPrompt(e.target.value)}
+                                            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                                                setSystemPrompt(e.target.value)
+                                            }
                                             placeholder="Add instructions for the agent..."
                                             className={cn(
                                                 "w-full px-3 py-2 rounded-lg",
@@ -586,9 +589,11 @@ export function AgentBuilder() {
                                     <label className="block text-sm font-medium text-foreground mb-2">
                                         Description (optional)
                                     </label>
-                                    <textarea
+                                    <Textarea
                                         value={description}
-                                        onChange={(e) => setDescription(e.target.value)}
+                                        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                                            setDescription(e.target.value)
+                                        }
                                         placeholder="What does this agent do?"
                                         rows={2}
                                         className={cn(

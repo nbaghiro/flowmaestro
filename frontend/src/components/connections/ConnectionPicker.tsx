@@ -4,6 +4,8 @@ import { ALL_PROVIDERS } from "@flowmaestro/shared";
 import { ConnectionMethod } from "../../lib/api";
 import { cn } from "../../lib/utils";
 import { useConnectionStore } from "../../stores/connectionStore";
+import { Button } from "../common/Button";
+import { Select } from "../common/Select";
 import { NewConnectionDialog } from "./NewConnectionDialog";
 
 interface ConnectionPickerProps {
@@ -108,39 +110,42 @@ export function ConnectionPicker({
                         <p className="text-sm text-gray-600 dark:text-gray-400">
                             No {getProviderName(provider)} connections found
                         </p>
-                        <button
-                            type="button"
+                        <Button
+                            variant="secondary"
                             onClick={() => setIsAddDialogOpen(true)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-md transition-colors"
+                            className="text-xs"
                         >
                             <Plus className="w-3.5 h-3.5" />
                             Add {getProviderName(provider)} Connection
-                        </button>
+                        </Button>
                     </div>
                 </div>
             ) : (
                 <div className="space-y-2">
-                    <select
+                    <Select
                         value={value || ""}
-                        onChange={(e) => onChange(e.target.value || null)}
-                        className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:bg-gray-800 dark:text-white"
-                    >
-                        <option value="">Select a connection</option>
-                        {providerConnections.map((conn) => {
-                            // Clean up connection name by removing "unknown@" pattern
-                            const cleanName = conn.name.replace(/\s*-?\s*unknown@\w+/gi, "").trim();
-                            const displayName = cleanName || conn.name;
+                        onChange={(val) => onChange(val || null)}
+                        options={[
+                            { value: "", label: "Select a connection" },
+                            ...providerConnections.map((conn) => {
+                                // Clean up connection name by removing "unknown@" pattern
+                                const cleanName = conn.name
+                                    .replace(/\s*-?\s*unknown@\w+/gi, "")
+                                    .trim();
+                                const displayName = cleanName || conn.name;
+                                const emailSuffix =
+                                    conn.metadata?.account_info?.email &&
+                                    !conn.metadata.account_info.email.includes("unknown")
+                                        ? ` (${conn.metadata.account_info.email})`
+                                        : "";
 
-                            return (
-                                <option key={conn.id} value={conn.id}>
-                                    {displayName}
-                                    {conn.metadata?.account_info?.email &&
-                                        !conn.metadata.account_info.email.includes("unknown") &&
-                                        ` (${conn.metadata.account_info.email})`}
-                                </option>
-                            );
-                        })}
-                    </select>
+                                return {
+                                    value: conn.id,
+                                    label: displayName + emailSuffix
+                                };
+                            })
+                        ]}
+                    />
 
                     {/* Show method badge for selected connection */}
                     {selectedConnection && (
@@ -176,14 +181,14 @@ export function ConnectionPicker({
                         </div>
                     )}
 
-                    <button
-                        type="button"
+                    <Button
+                        variant="ghost"
                         onClick={() => setIsAddDialogOpen(true)}
-                        className="flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium"
+                        className="text-xs p-0 h-auto"
                     >
                         <Plus className="w-3.5 h-3.5" />
                         Add new connection
-                    </button>
+                    </Button>
                 </div>
             )}
 

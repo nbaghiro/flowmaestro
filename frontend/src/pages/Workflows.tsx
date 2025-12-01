@@ -1,20 +1,14 @@
-import {
-    Plus,
-    FileText,
-    Calendar,
-    Loader2,
-    Sparkles,
-    Trash2,
-    MoreVertical,
-    Copy
-} from "lucide-react";
+import { Plus, FileText, Calendar, Sparkles, Trash2, MoreVertical, Copy } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import type { WorkflowNode } from "@flowmaestro/shared";
 import { AIGenerateDialog } from "../components/AIGenerateDialog";
+import { Badge } from "../components/common/Badge";
+import { Button } from "../components/common/Button";
+import { ErrorDialog } from "../components/common/ErrorDialog";
 import { PageHeader } from "../components/common/PageHeader";
+import { LoadingState } from "../components/common/Spinner";
 import { CreateWorkflowDialog } from "../components/CreateWorkflowDialog";
-import { ErrorDialog } from "../components/ErrorDialog";
 import {
     getWorkflows,
     createWorkflow,
@@ -268,33 +262,25 @@ export function Workflows() {
                 description={`${workflows.length} ${workflows.length === 1 ? "workflow" : "workflows"}`}
                 action={
                     <div className="flex items-center gap-2">
-                        <button
+                        <Button
+                            variant="secondary"
                             onClick={() => setIsAIDialogOpen(true)}
-                            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-foreground bg-background hover:bg-muted border border-border rounded-lg transition-colors shadow-sm"
                             title="Generate workflow with AI"
                         >
                             <Sparkles className="w-4 h-4" />
                             Generate with AI
-                        </button>
-                        <button
-                            onClick={() => setIsDialogOpen(true)}
-                            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-primary/90 rounded-lg transition-colors"
-                        >
+                        </Button>
+                        <Button variant="primary" onClick={() => setIsDialogOpen(true)}>
                             <Plus className="w-4 h-4" />
                             New Workflow
-                        </button>
+                        </Button>
                     </div>
                 }
             />
 
             {/* Workflow Grid */}
             {isLoading ? (
-                <div className="flex items-center justify-center py-20">
-                    <div className="flex flex-col items-center gap-3">
-                        <Loader2 className="w-8 h-8 text-primary animate-spin" />
-                        <p className="text-sm text-muted-foreground">Loading workflows...</p>
-                    </div>
-                </div>
+                <LoadingState message="Loading workflows..." />
             ) : workflows.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed border-border rounded-lg bg-white">
                     <FileText className="w-12 h-12 text-muted-foreground mb-4" />
@@ -303,13 +289,10 @@ export function Workflows() {
                         Get started by creating your first workflow. Build complex AI-powered
                         workflows with our drag-and-drop canvas.
                     </p>
-                    <button
-                        onClick={() => setIsDialogOpen(true)}
-                        className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-primary hover:bg-primary/90 rounded-lg transition-colors"
-                    >
+                    <Button variant="primary" onClick={() => setIsDialogOpen(true)} size="lg">
                         <Plus className="w-4 h-4" />
                         Create Your First Workflow
-                    </button>
+                    </Button>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -325,9 +308,9 @@ export function Workflows() {
                                 <div className="flex items-center justify-between mb-3">
                                     <FileText className="w-5 h-5 text-primary" />
                                     <div className="flex items-center gap-1">
-                                        <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
+                                        <Badge variant="default" size="sm">
                                             Workflow
-                                        </span>
+                                        </Badge>
 
                                         {/* Menu Button */}
                                         <div
@@ -427,30 +410,22 @@ export function Workflows() {
                             cannot be undone.
                         </p>
                         <div className="flex items-center justify-end gap-3">
-                            <button
+                            <Button
+                                variant="ghost"
                                 onClick={() => setWorkflowToDelete(null)}
                                 disabled={isDeleting}
-                                className="px-4 py-2 text-sm font-medium text-foreground hover:bg-muted rounded-lg transition-colors disabled:opacity-50"
                             >
                                 Cancel
-                            </button>
-                            <button
+                            </Button>
+                            <Button
+                                variant="destructive"
                                 onClick={handleDeleteWorkflow}
                                 disabled={isDeleting}
-                                className="px-4 py-2 text-sm font-medium text-white bg-destructive hover:bg-destructive/90 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+                                loading={isDeleting}
                             >
-                                {isDeleting ? (
-                                    <>
-                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                        Deleting...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Trash2 className="w-4 h-4" />
-                                        Delete
-                                    </>
-                                )}
-                            </button>
+                                {!isDeleting && <Trash2 className="w-4 h-4" />}
+                                {isDeleting ? "Deleting..." : "Delete"}
+                            </Button>
                         </div>
                     </div>
                 </div>

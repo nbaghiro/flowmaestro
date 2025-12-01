@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Input } from "../common/Input";
 
 interface AddUrlModalProps {
     isOpen: boolean;
@@ -34,7 +35,7 @@ export function AddUrlModal({ isOpen, onClose, onSubmit, isLoading }: AddUrlModa
                 <div className="space-y-4">
                     <div>
                         <label className="block text-sm font-medium mb-1">URL *</label>
-                        <input
+                        <Input
                             type="url"
                             value={urlInput}
                             onChange={(e) => setUrlInput(e.target.value)}
@@ -46,7 +47,7 @@ export function AddUrlModal({ isOpen, onClose, onSubmit, isLoading }: AddUrlModa
 
                     <div>
                         <label className="block text-sm font-medium mb-1">Name (optional)</label>
-                        <input
+                        <Input
                             type="text"
                             value={urlNameInput}
                             onChange={(e) => setUrlNameInput(e.target.value)}

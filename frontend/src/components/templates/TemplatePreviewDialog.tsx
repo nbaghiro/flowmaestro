@@ -25,6 +25,7 @@ import { VoiceListenNode } from "../../canvas/nodes/VoiceListenNode";
 import { VoiceMenuNode } from "../../canvas/nodes/VoiceMenuNode";
 import WaitNode from "../../canvas/nodes/WaitNode";
 import { cn } from "../../lib/utils";
+import { Button } from "../common/Button";
 
 // Register node types
 const nodeTypes = {
@@ -250,12 +251,9 @@ export function TemplatePreviewDialog({
                             <span className="text-xs">v{template.version}</span>
                         </div>
                     </div>
-                    <button
-                        onClick={onClose}
-                        className="ml-4 p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
-                    >
+                    <Button variant="icon" onClick={onClose} className="ml-4">
                         <X className="w-5 h-5" />
-                    </button>
+                    </Button>
                 </div>
 
                 {/* Content - Split view */}
@@ -400,25 +398,18 @@ export function TemplatePreviewDialog({
                         Updated {new Date(template.updated_at).toLocaleDateString()}
                     </div>
                     <div className="flex items-center gap-3">
-                        <button
-                            onClick={onClose}
-                            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                        >
+                        <Button variant="ghost" onClick={onClose}>
                             Cancel
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                            variant="primary"
                             onClick={() => onUse(template)}
                             disabled={isUsing}
-                            className={cn(
-                                "inline-flex items-center gap-2 px-6 py-2 text-sm font-semibold rounded-lg transition-colors",
-                                "bg-blue-600 text-white hover:bg-blue-700",
-                                "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2",
-                                "disabled:opacity-50 disabled:cursor-not-allowed"
-                            )}
+                            loading={isUsing}
                         >
                             <ExternalLink className="w-4 h-4" />
                             {isUsing ? "Creating..." : "Use Template"}
-                        </button>
+                        </Button>
                     </div>
                 </div>
             </div>

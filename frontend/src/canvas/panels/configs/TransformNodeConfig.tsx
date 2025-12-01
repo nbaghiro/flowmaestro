@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { CodeInput } from "../../../components/CodeInput";
+import { FormField, FormSection } from "../../../components/common/FormField";
+import { Input } from "../../../components/common/Input";
 import { Select } from "../../../components/common/Select";
-import { FormField, FormSection } from "../../../components/FormField";
 import { OutputSettingsSection } from "../../../components/OutputSettingsSection";
 
 interface TransformNodeConfigProps {
@@ -98,12 +99,12 @@ export function TransformNodeConfig({ data, onUpdate }: TransformNodeConfigProps
 
             <FormSection title="Input">
                 <FormField label="Input Data" description="Variable reference to transform">
-                    <input
+                    <Input
                         type="text"
                         value={inputData}
                         onChange={(e) => setInputData(e.target.value)}
                         placeholder="${arrayVariable}"
-                        className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono"
+                        className="font-mono"
                     />
                 </FormField>
             </FormSection>

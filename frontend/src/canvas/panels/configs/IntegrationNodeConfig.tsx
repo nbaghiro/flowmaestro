@@ -2,9 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { ALL_PROVIDERS } from "@flowmaestro/shared";
+import { FormField, FormSection } from "../../../components/common/FormField";
+import { Input } from "../../../components/common/Input";
 import { Select } from "../../../components/common/Select";
+import { Textarea } from "../../../components/common/Textarea";
 import { ProviderConnectionDialog } from "../../../components/connections/ProviderConnectionDialog";
-import { FormField, FormSection } from "../../../components/FormField";
 import { OutputSettingsSection } from "../../../components/OutputSettingsSection";
 import {
     getProviderOperations,
@@ -116,12 +118,12 @@ export function IntegrationNodeConfig({ data, onUpdate }: IntegrationNodeConfigP
         if (param.type === "number") {
             return (
                 <FormField key={param.name} label={param.name} description={param.description}>
-                    <input
+                    <Input
                         type="number"
                         value={(value as number) || ""}
                         onChange={(e) => handleParameterChange(param.name, Number(e.target.value))}
                         placeholder={param.description || `Enter ${param.name}`}
-                        className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono"
+                        className="font-mono"
                     />
                 </FormField>
             );
@@ -134,7 +136,7 @@ export function IntegrationNodeConfig({ data, onUpdate }: IntegrationNodeConfigP
                     label={param.name}
                     description={param.description || "JSON object"}
                 >
-                    <textarea
+                    <Textarea
                         value={
                             typeof value === "string" ? value : JSON.stringify(value || {}, null, 2)
                         }
@@ -149,7 +151,7 @@ export function IntegrationNodeConfig({ data, onUpdate }: IntegrationNodeConfigP
                         }}
                         placeholder={"{ ... } or ${variableName}"}
                         rows={6}
-                        className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none font-mono"
+                        className="font-mono"
                     />
                 </FormField>
             );
@@ -158,12 +160,12 @@ export function IntegrationNodeConfig({ data, onUpdate }: IntegrationNodeConfigP
         // Default to text input for strings and unknown types
         return (
             <FormField key={param.name} label={param.name} description={param.description}>
-                <input
+                <Input
                     type="text"
                     value={(value as string) || ""}
                     onChange={(e) => handleParameterChange(param.name, e.target.value)}
                     placeholder={param.description || `Enter ${param.name}`}
-                    className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono"
+                    className="font-mono"
                 />
             </FormField>
         );

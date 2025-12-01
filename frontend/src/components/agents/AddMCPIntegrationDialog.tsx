@@ -1,9 +1,13 @@
-import { ArrowLeft, Check, Loader2, Plus, Search, X } from "lucide-react";
+import { ArrowLeft, Check, Plus, Search, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { ALL_PROVIDERS, type Provider } from "@flowmaestro/shared";
 import { getConnectionMCPTools } from "../../lib/api";
 import { useConnectionStore } from "../../stores/connectionStore";
+import { Alert } from "../common/Alert";
+import { Button } from "../common/Button";
+import { Input } from "../common/Input";
 import { Select } from "../common/Select";
+import { Spinner } from "../common/Spinner";
 import { NewConnectionDialog } from "../connections/NewConnectionDialog";
 import type { Connection, MCPTool, AddToolRequest } from "../../lib/api";
 
@@ -228,16 +232,16 @@ export function AddMCPIntegrationDialog({
                     <div className="flex items-center justify-between p-6 pb-4 border-b border-gray-200">
                         <div className="flex items-center gap-3">
                             {(view === "connection-list" || view === "tools") && (
-                                <button
+                                <Button
+                                    variant="icon"
                                     onClick={
                                         view === "tools"
                                             ? handleBackToConnections
                                             : handleBackToProviders
                                     }
-                                    className="p-1 hover:bg-gray-100 rounded transition-colors"
                                 >
                                     <ArrowLeft className="w-5 h-5" />
-                                </button>
+                                </Button>
                             )}
                             <div>
                                 <h2 className="text-lg font-semibold text-gray-900">
@@ -258,19 +262,15 @@ export function AddMCPIntegrationDialog({
                                 </p>
                             </div>
                         </div>
-                        <button
-                            onClick={onClose}
-                            className="text-gray-400 hover:text-gray-600 transition-colors"
-                            type="button"
-                        >
+                        <Button variant="icon" onClick={onClose}>
                             <X className="w-5 h-5" />
-                        </button>
+                        </Button>
                     </div>
 
                     {/* Error Message */}
                     {error && (
-                        <div className="mx-6 mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-                            {error}
+                        <div className="mx-6 mt-4">
+                            <Alert variant="error">{error}</Alert>
                         </div>
                     )}
 
@@ -283,13 +283,13 @@ export function AddMCPIntegrationDialog({
                                     <div className="flex flex-col sm:flex-row gap-3">
                                         {/* Search Input */}
                                         <div className="relative sm:flex-1">
-                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                            <input
+                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none z-10" />
+                                            <Input
                                                 type="text"
                                                 placeholder="Search providers..."
                                                 value={searchQuery}
                                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                                className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                                                className="pl-10"
                                             />
                                         </div>
 
@@ -363,9 +363,9 @@ export function AddMCPIntegrationDialog({
                         {view === "connection-list" && (
                             <div className="p-6">
                                 {loading ? (
-                                    <div className="flex items-center justify-center py-12">
-                                        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
-                                        <span className="ml-2 text-sm text-gray-600">
+                                    <div className="flex flex-col items-center justify-center py-12 gap-3">
+                                        <Spinner size="md" />
+                                        <span className="text-sm text-gray-600">
                                             Loading connections...
                                         </span>
                                     </div>
@@ -390,14 +390,10 @@ export function AddMCPIntegrationDialog({
                                             {currentProvider?.displayName || "provider"} connection
                                             to add tools
                                         </p>
-                                        <button
-                                            onClick={handleAddNewConnection}
-                                            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-black rounded-md hover:bg-gray-800 transition-colors"
-                                            type="button"
-                                        >
+                                        <Button variant="primary" onClick={handleAddNewConnection}>
                                             <Plus className="w-4 h-4" />
                                             Add Connection
-                                        </button>
+                                        </Button>
                                     </div>
                                 ) : (
                                     <>
@@ -418,14 +414,14 @@ export function AddMCPIntegrationDialog({
                                             ))}
                                         </div>
 
-                                        <button
+                                        <Button
+                                            variant="secondary"
                                             onClick={handleAddNewConnection}
-                                            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-50 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
-                                            type="button"
+                                            className="w-full"
                                         >
                                             <Plus className="w-4 h-4" />
                                             Add New Connection
-                                        </button>
+                                        </Button>
                                     </>
                                 )}
                             </div>
@@ -450,20 +446,17 @@ export function AddMCPIntegrationDialog({
                                 {selectedTools.size} of {availableTools.length} tools selected
                             </span>
                             <div className="flex gap-3">
-                                <button
-                                    onClick={onClose}
-                                    className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-                                >
+                                <Button variant="ghost" onClick={onClose}>
                                     Cancel
-                                </button>
-                                <button
+                                </Button>
+                                <Button
+                                    variant="primary"
                                     onClick={handleAddSelectedTools}
                                     disabled={selectedTools.size === 0 || isAddingTools}
-                                    className="px-4 py-2 text-sm font-medium text-white bg-black hover:bg-gray-800 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                    loading={isAddingTools}
                                 >
-                                    {isAddingTools && <Loader2 className="w-4 h-4 animate-spin" />}
                                     Add Selected ({selectedTools.size})
-                                </button>
+                                </Button>
                             </div>
                         </div>
                     )}
@@ -621,7 +614,7 @@ function ConnectionCard({ connection, isLoading, onSelect, providerLogoUrl }: Co
             {/* Loading Indicator */}
             {isLoading && (
                 <div className="flex-shrink-0">
-                    <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
+                    <Spinner size="sm" />
                 </div>
             )}
         </button>

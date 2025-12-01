@@ -2,6 +2,8 @@ import { X, Search, Plus, Check } from "lucide-react";
 import { useState, useEffect } from "react";
 import { ALL_PROVIDERS, type Provider } from "@flowmaestro/shared";
 import { useConnectionStore } from "../../stores/connectionStore";
+import { Button } from "../common/Button";
+import { Input } from "../common/Input";
 import { Select } from "../common/Select";
 import { NewConnectionDialog } from "./NewConnectionDialog";
 import type { Connection } from "../../lib/api";
@@ -167,13 +169,9 @@ export function ProviderConnectionDialog({
                                 {view === "add-connection" && "Choose an authentication method"}
                             </p>
                         </div>
-                        <button
-                            onClick={onClose}
-                            className="text-gray-400 hover:text-gray-600 transition-colors"
-                            type="button"
-                        >
+                        <Button variant="icon" onClick={onClose}>
                             <X className="w-5 h-5" />
-                        </button>
+                        </Button>
                     </div>
 
                     {/* Content */}
@@ -185,13 +183,13 @@ export function ProviderConnectionDialog({
                                     <div className="flex flex-col sm:flex-row gap-3">
                                         {/* Search Input */}
                                         <div className="relative sm:flex-1">
-                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                            <input
+                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none z-10" />
+                                            <Input
                                                 type="text"
                                                 placeholder="Search providers..."
                                                 value={searchQuery}
                                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                                className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                                                className="pl-10"
                                             />
                                         </div>
 
@@ -293,14 +291,10 @@ export function ProviderConnectionDialog({
                                             {currentProvider?.displayName || "provider"} connection
                                             to get started
                                         </p>
-                                        <button
-                                            onClick={handleAddNewConnection}
-                                            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-black rounded-md hover:bg-gray-800 transition-colors"
-                                            type="button"
-                                        >
+                                        <Button variant="primary" onClick={handleAddNewConnection}>
                                             <Plus className="w-4 h-4" />
                                             Add Connection
-                                        </button>
+                                        </Button>
                                     </div>
                                 ) : (
                                     <>
@@ -320,14 +314,14 @@ export function ProviderConnectionDialog({
                                             ))}
                                         </div>
 
-                                        <button
+                                        <Button
+                                            variant="secondary"
                                             onClick={handleAddNewConnection}
-                                            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-50 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
-                                            type="button"
+                                            className="w-full"
                                         >
                                             <Plus className="w-4 h-4" />
                                             Add New Connection
-                                        </button>
+                                        </Button>
                                     </>
                                 )}
 

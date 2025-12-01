@@ -1,6 +1,8 @@
 import { X, Search } from "lucide-react";
 import { useState } from "react";
 import { ALL_PROVIDERS, type Provider } from "@flowmaestro/shared";
+import { Button } from "../common/Button";
+import { Input } from "../common/Input";
 import { NewConnectionDialog } from "./NewConnectionDialog";
 
 interface AddProviderDialogProps {
@@ -100,25 +102,21 @@ export function AddProviderDialog({ isOpen, onClose, onProviderAdded }: AddProvi
                                 Choose a provider to connect to your workflow
                             </p>
                         </div>
-                        <button
-                            onClick={onClose}
-                            className="text-gray-400 hover:text-gray-600 transition-colors"
-                            type="button"
-                        >
+                        <Button variant="icon" onClick={onClose}>
                             <X className="w-5 h-5" />
-                        </button>
+                        </Button>
                     </div>
 
                     {/* Search */}
                     <div className="p-6 pb-4">
                         <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                            <input
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none z-10" />
+                            <Input
                                 type="text"
                                 placeholder="Search providers..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                                className="pl-10"
                             />
                         </div>
                     </div>

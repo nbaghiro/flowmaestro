@@ -1,5 +1,7 @@
 import { X } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
+import { Button } from "../../components/common/Button";
+import { Input } from "../../components/common/Input";
 import { useWorkflowStore } from "../../stores/workflowStore";
 // AI & ML
 import { AudioNodeConfig } from "./configs/AudioNodeConfig";
@@ -137,13 +139,9 @@ export function NodeInspector() {
                 <div className="flex items-center gap-2">
                     <h2 className="text-sm font-semibold">Node Configuration</h2>
                 </div>
-                <button
-                    onClick={handleClose}
-                    className="p-1 hover:bg-muted rounded transition-colors"
-                    title="Close"
-                >
+                <Button variant="icon" onClick={handleClose} title="Close" className="p-1">
                     <X className="w-4 h-4 text-muted-foreground" />
-                </button>
+                </Button>
             </div>
 
             {/* Node Name Field */}
@@ -151,12 +149,12 @@ export function NodeInspector() {
                 <label className="block text-xs font-medium text-muted-foreground mb-2">
                     Node Name
                 </label>
-                <input
+                <Input
                     type="text"
                     value={nodeName}
                     onChange={(e) => handleNameChange(e.target.value)}
                     placeholder={'Enter custom name (e.g., "User Query")'}
-                    className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                    className="bg-background"
                 />
                 <p className="mt-1.5 text-xs text-muted-foreground">
                     Customize this node's display name in the workflow

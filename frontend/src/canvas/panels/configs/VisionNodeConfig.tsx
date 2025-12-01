@@ -4,10 +4,12 @@ import {
     LLM_MODELS_BY_PROVIDER,
     getDefaultModelForProvider
 } from "@flowmaestro/shared";
+import { FormField, FormSection } from "../../../components/common/FormField";
+import { Input } from "../../../components/common/Input";
 import { Select } from "../../../components/common/Select";
-import { FormField, FormSection } from "../../../components/FormField";
+import { Slider } from "../../../components/common/Slider";
+import { Textarea } from "../../../components/common/Textarea";
 import { OutputSettingsSection } from "../../../components/OutputSettingsSection";
-import { Slider } from "../../../components/Slider";
 
 interface VisionNodeConfigProps {
     data: Record<string, unknown>;
@@ -89,12 +91,12 @@ export function VisionNodeConfig({ data, onUpdate }: VisionNodeConfigProps) {
                         label="Image Source"
                         description="URL or use ${variableName} to reference node outputs"
                     >
-                        <input
+                        <Input
                             type="text"
                             value={imageInput}
                             onChange={(e) => setImageInput(e.target.value)}
                             placeholder="https://example.com/image.jpg or ${imageUrl}"
-                            className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono"
+                            className="font-mono"
                         />
                     </FormField>
 
@@ -102,12 +104,11 @@ export function VisionNodeConfig({ data, onUpdate }: VisionNodeConfigProps) {
                         label="Analysis Prompt"
                         description="What would you like to know about the image?"
                     >
-                        <textarea
+                        <Textarea
                             value={prompt}
                             onChange={(e) => setPrompt(e.target.value)}
                             placeholder="Describe what you see in this image..."
                             rows={6}
-                            className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
                         />
                     </FormField>
                 </FormSection>
@@ -119,12 +120,11 @@ export function VisionNodeConfig({ data, onUpdate }: VisionNodeConfigProps) {
                         label="Image Description"
                         description="Describe the image you want to generate"
                     >
-                        <textarea
+                        <Textarea
                             value={prompt}
                             onChange={(e) => setPrompt(e.target.value)}
                             placeholder="A serene landscape with mountains and a lake..."
                             rows={6}
-                            className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
                         />
                     </FormField>
                 </FormSection>
@@ -145,13 +145,12 @@ export function VisionNodeConfig({ data, onUpdate }: VisionNodeConfigProps) {
                 </FormField>
 
                 <FormField label="Max Tokens" description="Maximum length of the response">
-                    <input
+                    <Input
                         type="number"
                         value={maxTokens}
                         onChange={(e) => setMaxTokens(parseInt(e.target.value) || 0)}
                         min={1}
                         max={32000}
-                        className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                     />
                 </FormField>
             </FormSection>

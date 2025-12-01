@@ -27,6 +27,8 @@ import {
     PhoneOff
 } from "lucide-react";
 import { useCallback, useState } from "react";
+import { Button } from "../../components/common/Button";
+import { Input } from "../../components/common/Input";
 
 interface NodeDefinition {
     type: string;
@@ -238,13 +240,9 @@ export function NodeLibrary({ isCollapsed = false, onToggleCollapse }: NodeLibra
     if (isCollapsed) {
         return (
             <div className="w-12 bg-white border-r border-border flex flex-col items-center py-4">
-                <button
-                    onClick={onToggleCollapse}
-                    className="p-2 hover:bg-muted rounded-lg transition-colors"
-                    title="Expand sidebar"
-                >
+                <Button variant="icon" onClick={onToggleCollapse} title="Expand sidebar">
                     <PanelLeft className="w-5 h-5 text-muted-foreground" />
-                </button>
+                </Button>
             </div>
         );
     }
@@ -255,24 +253,25 @@ export function NodeLibrary({ isCollapsed = false, onToggleCollapse }: NodeLibra
             <div className="px-3 py-3 border-b border-border">
                 <div className="flex items-center justify-between mb-3">
                     <h2 className="text-sm font-semibold">Nodes</h2>
-                    <button
+                    <Button
+                        variant="icon"
                         onClick={onToggleCollapse}
-                        className="p-1 hover:bg-muted rounded transition-colors"
                         title="Collapse sidebar"
+                        className="p-1"
                     >
                         <PanelLeftClose className="w-3.5 h-3.5 text-muted-foreground" />
-                    </button>
+                    </Button>
                 </div>
 
                 {/* Search */}
                 <div className="relative">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-                    <input
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none z-10" />
+                    <Input
                         type="text"
                         placeholder="Search nodes..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-8 pr-2 py-1.5 text-xs border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary/20 focus:border-primary transition-colors"
+                        className="pl-8 text-xs"
                     />
                 </div>
             </div>

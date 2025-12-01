@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
+import { FormField, FormSection } from "../../../components/common/FormField";
+import { Input } from "../../../components/common/Input";
 import { Select } from "../../../components/common/Select";
-import { FormField, FormSection } from "../../../components/FormField";
+import { Textarea } from "../../../components/common/Textarea";
 
 interface VariableNodeConfigProps {
     data: Record<string, unknown>;
@@ -54,12 +56,12 @@ export function VariableNodeConfig({ data, onUpdate }: VariableNodeConfigProps) 
 
             <FormSection title="Variable">
                 <FormField label="Variable Name" description="Name of the variable">
-                    <input
+                    <Input
                         type="text"
                         value={variableName}
                         onChange={(e) => setVariableName(e.target.value)}
                         placeholder="myVariable"
-                        className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono"
+                        className="font-mono"
                     />
                 </FormField>
 
@@ -78,7 +80,7 @@ export function VariableNodeConfig({ data, onUpdate }: VariableNodeConfigProps) 
                         label="Value"
                         description="Literal value or ${variableName} reference"
                     >
-                        <textarea
+                        <Textarea
                             value={value}
                             onChange={(e) => setValue(e.target.value)}
                             placeholder={
@@ -89,7 +91,7 @@ export function VariableNodeConfig({ data, onUpdate }: VariableNodeConfigProps) 
                                       : "Value or ${otherVariable}"
                             }
                             rows={valueType === "json" ? 6 : 4}
-                            className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none font-mono"
+                            className="font-mono"
                         />
                     </FormField>
                 </FormSection>

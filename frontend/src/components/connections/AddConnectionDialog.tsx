@@ -1,7 +1,10 @@
 import React, { useState } from "react";
 import { ConnectionMethod, CreateConnectionInput } from "../../lib/api";
 import { useConnectionStore } from "../../stores/connectionStore";
+import { Alert } from "../common/Alert";
+import { Button } from "../common/Button";
 import { Dialog } from "../common/Dialog";
+import { Input } from "../common/Input";
 
 interface AddConnectionDialogProps {
     isOpen: boolean;
@@ -229,11 +232,10 @@ export function AddConnectionDialog({
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Connection Name
                             </label>
-                            <input
+                            <Input
                                 type="text"
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                                 placeholder="My Connection"
                             />
                         </div>
@@ -245,13 +247,12 @@ export function AddConnectionDialog({
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
                                         API Key
                                     </label>
-                                    <input
+                                    <Input
                                         type="password"
                                         value={(config.apiKey as string) || ""}
                                         onChange={(e) =>
                                             setConfig({ ...config, apiKey: e.target.value })
                                         }
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                                         placeholder="sk-..."
                                     />
                                 </div>
@@ -260,7 +261,7 @@ export function AddConnectionDialog({
                                         <label className="block text-sm font-medium text-gray-700 mb-1">
                                             API Secret (Optional)
                                         </label>
-                                        <input
+                                        <Input
                                             type="password"
                                             value={(config.apiSecret as string) || ""}
                                             onChange={(e) =>
@@ -269,7 +270,6 @@ export function AddConnectionDialog({
                                                     apiSecret: e.target.value
                                                 })
                                             }
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                                         />
                                     </div>
                                 )}
@@ -287,29 +287,29 @@ export function AddConnectionDialog({
                         )}
 
                         {/* Error */}
-                        {error && (
-                            <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-                                <p className="text-sm text-red-800">{error}</p>
-                            </div>
-                        )}
+                        {error && <Alert variant="error">{error}</Alert>}
 
                         {/* Actions */}
                         {connectionMethod !== "oauth2" && (
                             <div className="flex gap-3 pt-4">
-                                <button
+                                <Button
+                                    variant="secondary"
                                     onClick={handleTest}
                                     disabled={testing || saving}
-                                    className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    loading={testing}
+                                    className="flex-1"
                                 >
                                     {testing ? "Testing..." : "Test Connection"}
-                                </button>
-                                <button
+                                </Button>
+                                <Button
+                                    variant="primary"
                                     onClick={handleSave}
                                     disabled={testing || saving || !name}
-                                    className="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    loading={saving}
+                                    className="flex-1"
                                 >
                                     {saving ? "Saving..." : "Save Connection"}
-                                </button>
+                                </Button>
                             </div>
                         )}
                     </div>

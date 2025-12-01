@@ -4,8 +4,10 @@ import {
     LLM_MODELS_BY_PROVIDER,
     getDefaultModelForProvider
 } from "@flowmaestro/shared";
+import { FormField, FormSection } from "../../../components/common/FormField";
+import { Input } from "../../../components/common/Input";
 import { Select } from "../../../components/common/Select";
-import { FormField, FormSection } from "../../../components/FormField";
+import { Textarea } from "../../../components/common/Textarea";
 import { OutputSettingsSection } from "../../../components/OutputSettingsSection";
 
 interface EmbeddingsNodeConfigProps {
@@ -83,7 +85,7 @@ export function EmbeddingsNodeConfig({ data, onUpdate }: EmbeddingsNodeConfigPro
                     label="Embedding Dimensions"
                     description="Vector dimensions for this model"
                 >
-                    <input
+                    <Input
                         type="text"
                         value={dimensions}
                         disabled
@@ -98,7 +100,7 @@ export function EmbeddingsNodeConfig({ data, onUpdate }: EmbeddingsNodeConfigPro
                     description="Process multiple texts at once (one per line)"
                 >
                     <label className="flex items-center gap-2 cursor-pointer">
-                        <input
+                        <Input
                             type="checkbox"
                             checked={batchMode}
                             onChange={(e) => setBatchMode(e.target.checked)}
@@ -112,7 +114,7 @@ export function EmbeddingsNodeConfig({ data, onUpdate }: EmbeddingsNodeConfigPro
                     label={batchMode ? "Text Inputs (one per line)" : "Text Input"}
                     description="Use ${variableName} to reference other node outputs"
                 >
-                    <textarea
+                    <Textarea
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         placeholder={
@@ -121,7 +123,7 @@ export function EmbeddingsNodeConfig({ data, onUpdate }: EmbeddingsNodeConfigPro
                                 : "Enter text to generate embeddings..."
                         }
                         rows={batchMode ? 8 : 6}
-                        className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none font-mono"
+                        className="font-mono"
                     />
                 </FormField>
             </FormSection>

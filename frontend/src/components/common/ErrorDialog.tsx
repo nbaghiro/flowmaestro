@@ -4,6 +4,7 @@
  */
 
 import { X } from "lucide-react";
+import { Button } from "./Button";
 
 interface ErrorDialogProps {
     isOpen: boolean;
@@ -20,21 +21,15 @@ export function ErrorDialog({ isOpen, title, message, onClose }: ErrorDialogProp
             <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
                 <div className="flex items-start justify-between mb-4">
                     <h3 className="text-lg font-semibold text-foreground">{title}</h3>
-                    <button
-                        onClick={onClose}
-                        className="text-muted-foreground hover:text-foreground transition-colors"
-                    >
+                    <Button variant="icon" onClick={onClose}>
                         <X className="w-5 h-5" />
-                    </button>
+                    </Button>
                 </div>
                 <p className="text-sm text-muted-foreground mb-6">{message}</p>
                 <div className="flex items-center justify-end">
-                    <button
-                        onClick={onClose}
-                        className="px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-primary/90 rounded-lg transition-colors"
-                    >
+                    <Button variant="primary" onClick={onClose}>
                         OK
-                    </button>
+                    </Button>
                 </div>
             </div>
         </div>

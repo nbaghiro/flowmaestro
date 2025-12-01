@@ -1,7 +1,8 @@
 import { Plus, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { FormField, FormSection } from "../../../components/common/FormField";
+import { Input } from "../../../components/common/Input";
 import { Select } from "../../../components/common/Select";
-import { FormField, FormSection } from "../../../components/FormField";
 import { OutputSettingsSection } from "../../../components/OutputSettingsSection";
 
 interface SwitchNodeConfigProps {
@@ -59,12 +60,12 @@ export function SwitchNodeConfig({ data, onUpdate }: SwitchNodeConfigProps) {
         <div>
             <FormSection title="Input">
                 <FormField label="Input Variable" description="Variable to match against cases">
-                    <input
+                    <Input
                         type="text"
                         value={inputVariable}
                         onChange={(e) => setInputVariable(e.target.value)}
                         placeholder="${variableName}"
-                        className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono"
+                        className="font-mono"
                     />
                 </FormField>
 
@@ -95,24 +96,23 @@ export function SwitchNodeConfig({ data, onUpdate }: SwitchNodeConfigProps) {
                         </div>
 
                         <FormField label="Match Value">
-                            <input
+                            <Input
                                 type="text"
                                 value={switchCase.value}
                                 onChange={(e) => updateCase(index, "value", e.target.value)}
                                 placeholder={
                                     matchType === "regex" ? "^pattern.*$" : "value to match"
                                 }
-                                className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono"
+                                className="font-mono"
                             />
                         </FormField>
 
                         <FormField label="Label">
-                            <input
+                            <Input
                                 type="text"
                                 value={switchCase.label}
                                 onChange={(e) => updateCase(index, "label", e.target.value)}
                                 placeholder="Case label"
-                                className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                             />
                         </FormField>
                     </div>
@@ -130,7 +130,7 @@ export function SwitchNodeConfig({ data, onUpdate }: SwitchNodeConfigProps) {
             <FormSection title="Default Case">
                 <FormField label="Enable Default" description="Run if no cases match">
                     <label className="flex items-center gap-2 cursor-pointer">
-                        <input
+                        <Input
                             type="checkbox"
                             checked={hasDefault}
                             onChange={(e) => setHasDefault(e.target.checked)}

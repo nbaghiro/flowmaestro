@@ -4,7 +4,7 @@
  */
 
 import * as Dialog from "@radix-ui/react-dialog";
-import { X, Sparkles, Loader2, RefreshCw } from "lucide-react";
+import { X, Sparkles, RefreshCw } from "lucide-react";
 import { useState, useEffect } from "react";
 import {
     getRandomExamplePrompts,
@@ -12,7 +12,10 @@ import {
     getDefaultModelForProvider
 } from "@flowmaestro/shared";
 import { useConnectionStore } from "../stores/connectionStore";
+import { Alert } from "./common/Alert";
+import { Button } from "./common/Button";
 import { Select } from "./common/Select";
+import { Textarea } from "./common/Textarea";
 
 interface AIGenerateDialogProps {
     open: boolean;
@@ -149,13 +152,9 @@ export function AIGenerateDialog({ open, onOpenChange, onGenerate }: AIGenerateD
                             </Dialog.Description>
                         </div>
                         <Dialog.Close asChild>
-                            <button
-                                className="p-1 rounded-md hover:bg-muted transition-colors"
-                                aria-label="Close"
-                                disabled={isGenerating}
-                            >
+                            <Button variant="icon" aria-label="Close" disabled={isGenerating}>
                                 <X className="w-4 h-4" />
-                            </button>
+                            </Button>
                         </Dialog.Close>
                     </div>
 
@@ -166,14 +165,13 @@ export function AIGenerateDialog({ open, onOpenChange, onGenerate }: AIGenerateD
                             <label className="block text-sm font-medium mb-1.5">
                                 Workflow Description
                             </label>
-                            <textarea
+                            <Textarea
                                 value={prompt}
                                 onChange={(e) => {
                                     setPrompt(e.target.value);
                                     setError("");
                                 }}
                                 placeholder="Example: Fetch tech news from NewsAPI and summarize each article with GPT-4"
-                                className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
                                 rows={4}
                                 autoFocus
                                 disabled={isGenerating}
@@ -232,15 +230,16 @@ export function AIGenerateDialog({ open, onOpenChange, onGenerate }: AIGenerateD
                         <div className="px-3 py-2 bg-muted/30 rounded-lg border border-border">
                             <div className="flex items-center justify-between mb-1">
                                 <p className="text-xs font-medium">Example prompts:</p>
-                                <button
+                                <Button
                                     type="button"
+                                    variant="icon"
                                     onClick={handleRefreshExamples}
                                     disabled={isGenerating}
-                                    className="p-1 hover:bg-muted rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                     title="Shuffle examples"
+                                    className="p-1"
                                 >
                                     <RefreshCw className="w-3.5 h-3.5" />
-                                </button>
+                                </Button>
                             </div>
                             <ul className="text-xs text-muted-foreground space-y-1">
                                 {examplePrompts.map((example, index) => (
@@ -250,39 +249,27 @@ export function AIGenerateDialog({ open, onOpenChange, onGenerate }: AIGenerateD
                         </div>
 
                         {/* Error */}
-                        {error && (
-                            <div className="px-3 py-2 bg-red-50 border border-red-200 rounded-lg">
-                                <p className="text-xs text-red-700">{error}</p>
-                            </div>
-                        )}
+                        {error && <Alert variant="error">{error}</Alert>}
 
                         {/* Actions */}
                         <div className="flex items-center justify-end gap-2 pt-2">
-                            <button
+                            <Button
                                 type="button"
+                                variant="ghost"
                                 onClick={handleCancel}
-                                className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
                                 disabled={isGenerating}
                             >
                                 Cancel
-                            </button>
-                            <button
+                            </Button>
+                            <Button
                                 type="submit"
-                                className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                variant="primary"
                                 disabled={isGenerating || llmConnections.length === 0}
+                                loading={isGenerating}
                             >
-                                {isGenerating ? (
-                                    <>
-                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                        Generating...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Sparkles className="w-4 h-4" />
-                                        Generate Workflow
-                                    </>
-                                )}
-                            </button>
+                                {!isGenerating && <Sparkles className="w-4 h-4" />}
+                                {isGenerating ? "Generating..." : "Generate Workflow"}
+                            </Button>
                         </div>
                     </form>
                 </Dialog.Content>

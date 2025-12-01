@@ -1,5 +1,7 @@
 import { X, Shield, Key, AlertTriangle } from "lucide-react";
 import React, { useState } from "react";
+import { Alert } from "../common/Alert";
+import { Button } from "../common/Button";
 import { ConfirmDialog } from "../common/ConfirmDialog";
 import type { Connection } from "../../lib/api";
 
@@ -73,13 +75,9 @@ export function ConnectionDetailsDialog({
                     {/* Header */}
                     <div className="flex items-center justify-between p-6 pb-4 border-b border-gray-200">
                         <h2 className="text-lg font-semibold text-gray-900">Connection Details</h2>
-                        <button
-                            onClick={onClose}
-                            className="text-gray-400 hover:text-gray-600 transition-colors"
-                            type="button"
-                        >
+                        <Button variant="icon" onClick={onClose}>
                             <X className="w-5 h-5" />
-                        </button>
+                        </Button>
                     </div>
 
                     {/* Content */}
@@ -214,22 +212,19 @@ export function ConnectionDetailsDialog({
                         </div>
 
                         {/* Error Message */}
-                        {error && (
-                            <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-                                <p className="text-sm text-red-800">{error}</p>
-                            </div>
-                        )}
+                        {error && <Alert variant="error">{error}</Alert>}
 
                         {/* Disconnect Button */}
                         <div className="pt-4 border-t border-gray-200">
-                            <button
+                            <Button
+                                variant="destructive"
                                 onClick={() => setShowConfirmDisconnect(true)}
                                 disabled={isDisconnecting}
-                                className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-full"
                             >
                                 <AlertTriangle className="w-4 h-4" />
                                 Disconnect {providerDisplayName}
-                            </button>
+                            </Button>
                             <p className="text-xs text-gray-500 text-center mt-2">
                                 You can reconnect to a different account anytime
                             </p>

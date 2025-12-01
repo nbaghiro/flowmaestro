@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
+import { FormField, FormSection } from "../../../components/common/FormField";
+import { Input } from "../../../components/common/Input";
 import { Select } from "../../../components/common/Select";
-import { FormField, FormSection } from "../../../components/FormField";
+import { Textarea } from "../../../components/common/Textarea";
 
 interface VoiceHangupNodeConfigProps {
     data: Record<string, unknown>;
@@ -33,7 +35,7 @@ export function VoiceHangupNodeConfig({ data, onUpdate }: VoiceHangupNodeConfigP
             <FormSection title="Farewell Message (Optional)">
                 <FormField label="">
                     <label className="flex items-center gap-2 cursor-pointer mb-3">
-                        <input
+                        <Input
                             type="checkbox"
                             checked={enableFarewell}
                             onChange={(e) => setEnableFarewell(e.target.checked)}
@@ -45,7 +47,7 @@ export function VoiceHangupNodeConfig({ data, onUpdate }: VoiceHangupNodeConfigP
 
                 {enableFarewell && (
                     <FormField label="Message">
-                        <textarea
+                        <Textarea
                             value={farewellMessage}
                             onChange={(e) => setFarewellMessage(e.target.value)}
                             className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary min-h-[80px]"

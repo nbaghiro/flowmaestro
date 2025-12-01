@@ -7,7 +7,11 @@ import { X, Calendar, Webhook, Play, Phone } from "lucide-react";
 import { useState } from "react";
 import type { TriggerType, CreateTriggerInput } from "@flowmaestro/shared";
 import { createTrigger } from "../../lib/api";
+import { Alert } from "../common/Alert";
+import { Button } from "../common/Button";
+import { Input } from "../common/Input";
 import { Select } from "../common/Select";
+import { Textarea } from "../common/Textarea";
 
 interface CreateTriggerDialogProps {
     workflowId: string;
@@ -135,32 +139,23 @@ export function CreateTriggerDialog({ workflowId, onClose, onSuccess }: CreateTr
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b flex-shrink-0">
                     <h2 className="text-lg font-semibold">Create Trigger</h2>
-                    <button
-                        onClick={onClose}
-                        className="p-1 hover:bg-muted rounded transition-colors"
-                        disabled={loading}
-                    >
+                    <Button variant="icon" onClick={onClose} disabled={loading}>
                         <X className="w-5 h-5" />
-                    </button>
+                    </Button>
                 </div>
 
                 {/* Content */}
                 <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
                     <div className="px-6 py-4 space-y-4">
-                        {error && (
-                            <div className="p-3 bg-destructive/10 text-destructive text-sm rounded-lg border border-destructive/20">
-                                {error}
-                            </div>
-                        )}
+                        {error && <Alert variant="error">{error}</Alert>}
 
                         {/* Trigger Name */}
                         <div>
                             <label className="block text-sm font-medium mb-1.5">Trigger Name</label>
-                            <input
+                            <Input
                                 type="text"
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
-                                className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                                 placeholder="e.g., Daily Report, Customer Webhook"
                                 required
                                 disabled={loading}
@@ -244,11 +239,10 @@ export function CreateTriggerDialog({ workflowId, onClose, onSuccess }: CreateTr
                                     <label className="block text-sm font-medium mb-1.5">
                                         Description (optional)
                                     </label>
-                                    <input
+                                    <Input
                                         type="text"
                                         value={manualDescription}
                                         onChange={(e) => setManualDescription(e.target.value)}
-                                        className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                                         placeholder="e.g., Test with sample data"
                                         disabled={loading}
                                     />
@@ -331,11 +325,11 @@ export function CreateTriggerDialog({ workflowId, onClose, onSuccess }: CreateTr
                                     <label className="block text-sm font-medium mb-1.5">
                                         Cron Expression
                                     </label>
-                                    <input
+                                    <Input
                                         type="text"
                                         value={cronExpression}
                                         onChange={(e) => setCronExpression(e.target.value)}
-                                        className="w-full px-3 py-2 border border-border rounded-lg font-mono text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                                        className="font-mono"
                                         placeholder="0 9 * * *"
                                         required
                                         disabled={loading}
@@ -372,11 +366,10 @@ export function CreateTriggerDialog({ workflowId, onClose, onSuccess }: CreateTr
                                     <label className="block text-sm font-medium mb-1.5">
                                         Timezone
                                     </label>
-                                    <input
+                                    <Input
                                         type="text"
                                         value={timezone}
                                         onChange={(e) => setTimezone(e.target.value)}
-                                        className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                                         placeholder="UTC"
                                         required
                                         disabled={loading}
@@ -454,11 +447,11 @@ export function CreateTriggerDialog({ workflowId, onClose, onSuccess }: CreateTr
                                     <label className="block text-sm font-medium mb-1.5">
                                         Phone Number (E.164 format)
                                     </label>
-                                    <input
+                                    <Input
                                         type="text"
                                         value={phoneNumber}
                                         onChange={(e) => setPhoneNumber(e.target.value)}
-                                        className="w-full px-3 py-2 border border-border rounded-lg font-mono text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                                        className="font-mono"
                                         placeholder="+15551234567"
                                         required
                                         disabled={loading}
@@ -473,11 +466,10 @@ export function CreateTriggerDialog({ workflowId, onClose, onSuccess }: CreateTr
                                     <label className="block text-sm font-medium mb-1.5">
                                         Telnyx Connection
                                     </label>
-                                    <input
+                                    <Input
                                         type="text"
                                         value={connectionId}
                                         onChange={(e) => setConnectionId(e.target.value)}
-                                        className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                                         placeholder="Connection ID"
                                         required
                                         disabled={loading}
@@ -491,10 +483,9 @@ export function CreateTriggerDialog({ workflowId, onClose, onSuccess }: CreateTr
                                     <label className="block text-sm font-medium mb-1.5">
                                         Greeting Message
                                     </label>
-                                    <textarea
+                                    <Textarea
                                         value={greetingMessage}
                                         onChange={(e) => setGreetingMessage(e.target.value)}
-                                        className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                                         placeholder="Hello! How can I help you today?"
                                         rows={2}
                                         disabled={loading}
@@ -591,21 +582,24 @@ export function CreateTriggerDialog({ workflowId, onClose, onSuccess }: CreateTr
 
                     {/* Footer */}
                     <div className="px-6 py-4 border-t bg-muted/30 flex gap-3 flex-shrink-0">
-                        <button
+                        <Button
                             type="button"
+                            variant="ghost"
                             onClick={onClose}
-                            className="flex-1 px-4 py-2 border border-border rounded-lg hover:bg-muted transition-colors"
                             disabled={loading}
+                            className="flex-1"
                         >
                             Cancel
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                             type="submit"
-                            className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
+                            variant="primary"
                             disabled={loading}
+                            loading={loading}
+                            className="flex-1"
                         >
                             {loading ? "Creating..." : "Create Trigger"}
-                        </button>
+                        </Button>
                     </div>
                 </form>
             </div>

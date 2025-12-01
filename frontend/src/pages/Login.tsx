@@ -1,6 +1,10 @@
-import { AlertCircle, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useState, FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { Alert } from "../components/common/Alert";
+import { Button } from "../components/common/Button";
+import { Input } from "../components/common/Input";
+import { Divider } from "../components/common/Separator";
 import { useAuth } from "../contexts/AuthContext";
 import { useGoogleAuth } from "../hooks/useGoogleAuth";
 import { useMicrosoftAuth } from "../hooks/useMicrosoftAuth";
@@ -47,9 +51,8 @@ export function Login() {
 
                     {/* Error Message */}
                     {error && (
-                        <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
-                            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                            <p className="text-sm text-red-800">{error}</p>
+                        <div className="mb-6">
+                            <Alert variant="error">{error}</Alert>
                         </div>
                     )}
 
@@ -62,13 +65,12 @@ export function Login() {
                             >
                                 Email
                             </label>
-                            <input
+                            <Input
                                 id="email"
                                 type="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 required
-                                className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                                 placeholder="you@example.com"
                                 disabled={isLoading}
                             />
@@ -89,53 +91,40 @@ export function Login() {
                                     Forgot password?
                                 </Link>
                             </div>
-                            <input
+                            <Input
                                 id="password"
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 required
                                 minLength={8}
-                                className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                                 placeholder="••••••••"
                                 disabled={isLoading}
                             />
                         </div>
 
-                        <button
+                        <Button
                             type="submit"
-                            disabled={isLoading}
-                            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors shadow-sm"
+                            variant="primary"
+                            className="w-full"
+                            loading={isLoading}
                         >
-                            {isLoading ? (
-                                <>
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                    Signing in...
-                                </>
-                            ) : (
-                                "Sign in"
-                            )}
-                        </button>
+                            {isLoading ? "Signing in..." : "Sign in"}
+                        </Button>
                     </form>
 
                     {/* Divider */}
-                    <div className="relative my-6">
-                        <div className="absolute inset-0 flex items-center">
-                            <div className="w-full border-t border-border"></div>
-                        </div>
-                        <div className="relative flex justify-center text-sm">
-                            <span className="px-2 bg-white text-muted-foreground">OR</span>
-                        </div>
-                    </div>
+                    <Divider label="OR" className="my-6" />
 
                     {/* OAuth Sign In Buttons */}
                     <div className="space-y-3">
                         {/* Google Sign In Button */}
-                        <button
+                        <Button
                             type="button"
+                            variant="secondary"
                             onClick={loginWithGoogle}
                             disabled={isLoading || isGoogleLoading || isMicrosoftLoading}
-                            className="w-full flex items-center justify-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-border hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors shadow-sm"
+                            className="w-full gap-3"
                         >
                             {isGoogleLoading ? (
                                 <>
@@ -165,14 +154,15 @@ export function Login() {
                                     Continue with Google
                                 </>
                             )}
-                        </button>
+                        </Button>
 
                         {/* Microsoft Sign In Button */}
-                        <button
+                        <Button
                             type="button"
+                            variant="secondary"
                             onClick={loginWithMicrosoft}
                             disabled={isLoading || isGoogleLoading || isMicrosoftLoading}
-                            className="w-full flex items-center justify-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-border hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors shadow-sm"
+                            className="w-full gap-3"
                         >
                             {isMicrosoftLoading ? (
                                 <>
@@ -190,7 +180,7 @@ export function Login() {
                                     Continue with Microsoft
                                 </>
                             )}
-                        </button>
+                        </Button>
                     </div>
 
                     {/* Register Link */}
