@@ -28,6 +28,7 @@ import { wsClient } from "../../lib/websocket";
 import { useWorkflowStore } from "../../stores/workflowStore";
 import { ConfirmDialog } from "../common/ConfirmDialog";
 import { Dialog } from "../common/Dialog";
+import { Input } from "../common/Input";
 
 interface TriggerCardProps {
     trigger: WorkflowTrigger;
@@ -412,7 +413,7 @@ export function TriggerCard({ trigger, onUpdate }: TriggerCardProps) {
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                             Trigger Name
                         </label>
-                        <input
+                        <Input
                             type="text"
                             value={newName}
                             onChange={(e) => setNewName(e.target.value)}

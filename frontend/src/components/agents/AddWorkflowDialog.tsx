@@ -1,7 +1,10 @@
-import { X, Search, Loader2, FileText } from "lucide-react";
+import { X, Search, FileText } from "lucide-react";
 import { useState, useEffect } from "react";
 import { getWorkflows } from "../../lib/api";
 import { cn } from "../../lib/utils";
+import { Button } from "../common/Button";
+import { Input } from "../common/Input";
+import { Spinner } from "../common/Spinner";
 
 interface Workflow {
     id: string;
@@ -90,29 +93,21 @@ export function AddWorkflowDialog({
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b border-border">
                     <h3 className="text-lg font-semibold text-foreground">Add Workflows</h3>
-                    <button
-                        onClick={onClose}
-                        className="p-2 hover:bg-muted rounded-lg transition-colors"
-                    >
+                    <Button variant="icon" onClick={onClose}>
                         <X className="w-5 h-5" />
-                    </button>
+                    </Button>
                 </div>
 
                 {/* Search */}
                 <div className="p-4 border-b border-border">
                     <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                        <input
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                        <Input
                             type="text"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             placeholder="Search workflows..."
-                            className={cn(
-                                "w-full pl-10 pr-4 py-2 rounded-lg",
-                                "bg-background border border-border",
-                                "text-foreground placeholder:text-muted-foreground",
-                                "focus:outline-none focus:ring-2 focus:ring-primary"
-                            )}
+                            className="pl-10"
                         />
                     </div>
                 </div>
@@ -121,7 +116,7 @@ export function AddWorkflowDialog({
                 <div className="flex-1 overflow-auto p-4">
                     {isLoading ? (
                         <div className="flex items-center justify-center py-12">
-                            <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                            <Spinner size="md" />
                         </div>
                     ) : error ? (
                         <div className="text-center py-12">
@@ -197,24 +192,16 @@ export function AddWorkflowDialog({
                         {selectedIds.size} workflow{selectedIds.size !== 1 ? "s" : ""} selected
                     </p>
                     <div className="flex items-center gap-3">
-                        <button
-                            onClick={onClose}
-                            className="px-4 py-2 text-sm font-medium text-foreground hover:bg-muted rounded-lg transition-colors"
-                        >
+                        <Button variant="ghost" onClick={onClose}>
                             Cancel
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                            variant="primary"
                             onClick={handleAdd}
                             disabled={selectedIds.size === 0}
-                            className={cn(
-                                "px-4 py-2 text-sm font-medium rounded-lg transition-colors",
-                                "bg-primary text-primary-foreground",
-                                "hover:bg-primary/90",
-                                "disabled:opacity-50 disabled:cursor-not-allowed"
-                            )}
                         >
                             Add {selectedIds.size > 0 && `(${selectedIds.size})`}
-                        </button>
+                        </Button>
                     </div>
                 </div>
             </div>

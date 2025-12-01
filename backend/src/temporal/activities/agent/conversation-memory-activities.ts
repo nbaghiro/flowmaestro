@@ -3,7 +3,7 @@
  * Enables semantic search across conversation history with surrounding message context
  */
 
-import { ConversationMemoryService } from "../../../services/ConversationMemoryService";
+import { ConversationMemoryService } from "../../../services/conversation/ConversationMemoryService";
 import type { ConversationMessage } from "../../../storage/models/AgentExecution";
 
 const conversationMemoryService = new ConversationMemoryService();

@@ -1,4 +1,4 @@
-import { isFetchError } from "../../../../shared/utils/fetch-client";
+import { isFetchError } from "../../../../core/utils/fetch-client";
 import { BaseAPIClient, BaseAPIClientConfig } from "../../../core/BaseAPIClient";
 import {
     META_GRAPH_API_BASE_URL,

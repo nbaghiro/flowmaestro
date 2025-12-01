@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
+import { FormField, FormSection } from "../../../components/common/FormField";
+import { Input } from "../../../components/common/Input";
 import { Select } from "../../../components/common/Select";
-import { FormField, FormSection } from "../../../components/FormField";
-import { Slider } from "../../../components/Slider";
+import { Slider } from "../../../components/common/Slider";
+import { Textarea } from "../../../components/common/Textarea";
 
 interface VoiceGreetNodeConfigProps {
     data: Record<string, unknown>;
@@ -65,7 +67,7 @@ export function VoiceGreetNodeConfig({ data, onUpdate }: VoiceGreetNodeConfigPro
         <div>
             <FormSection title="Message">
                 <FormField label="Text to speak">
-                    <textarea
+                    <Textarea
                         value={message}
                         onChange={(e) => setMessage(e.target.value)}
                         className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary min-h-[100px]"
@@ -107,7 +109,7 @@ export function VoiceGreetNodeConfig({ data, onUpdate }: VoiceGreetNodeConfigPro
             <FormSection title="Behavior">
                 <FormField label="">
                     <label className="flex items-center gap-2 cursor-pointer">
-                        <input
+                        <Input
                             type="checkbox"
                             checked={interruptible}
                             onChange={(e) => setInterruptible(e.target.checked)}

@@ -10,7 +10,9 @@ import { ThreadChat } from "../components/agents/ThreadChat";
 import { ThreadList } from "../components/agents/ThreadList";
 import { ToolsList } from "../components/agents/ToolsList";
 import { ConfirmDialog } from "../components/common/ConfirmDialog";
+import { Input } from "../components/common/Input";
 import { Select } from "../components/common/Select";
+import { Textarea } from "../components/common/Textarea";
 import * as api from "../lib/api";
 import { cn } from "../lib/utils";
 import { useAgentStore } from "../stores/agentStore";
@@ -452,9 +454,11 @@ export function AgentBuilder() {
                                         <label className="block text-sm font-medium text-foreground mb-2">
                                             Instructions
                                         </label>
-                                        <textarea
+                                        <Textarea
                                             value={systemPrompt}
-                                            onChange={(e) => setSystemPrompt(e.target.value)}
+                                            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                                                setSystemPrompt(e.target.value)
+                                            }
                                             placeholder="Add instructions for the agent..."
                                             className={cn(
                                                 "w-full px-3 py-2 rounded-lg",
@@ -597,7 +601,7 @@ export function AgentBuilder() {
                                     <label className="block text-sm font-medium text-foreground mb-2">
                                         Agent Name
                                     </label>
-                                    <input
+                                    <Input
                                         type="text"
                                         value={name}
                                         onChange={(e) => setName(e.target.value)}
@@ -616,9 +620,11 @@ export function AgentBuilder() {
                                     <label className="block text-sm font-medium text-foreground mb-2">
                                         Description (optional)
                                     </label>
-                                    <textarea
+                                    <Textarea
                                         value={description}
-                                        onChange={(e) => setDescription(e.target.value)}
+                                        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                                            setDescription(e.target.value)
+                                        }
                                         placeholder="What does this agent do?"
                                         rows={2}
                                         className={cn(
@@ -663,7 +669,7 @@ export function AgentBuilder() {
                                                     {temperature}
                                                 </span>
                                             </div>
-                                            <input
+                                            <Input
                                                 type="range"
                                                 min="0"
                                                 max="2"
@@ -686,7 +692,7 @@ export function AgentBuilder() {
                                                     {maxTokens}
                                                 </span>
                                             </div>
-                                            <input
+                                            <Input
                                                 type="number"
                                                 min="100"
                                                 max="100000"

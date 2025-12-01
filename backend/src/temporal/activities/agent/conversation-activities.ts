@@ -2,7 +2,7 @@
  * Conversation Activities - Activities for managing conversations with ConversationManager
  */
 
-import { ConversationManager } from "../../../shared/conversation";
+import { ConversationManager } from "../../../services/conversation/ConversationManager";
 import { AgentExecutionRepository } from "../../../storage/repositories/AgentExecutionRepository";
 import type { ConversationMessage } from "../../../storage/models/AgentExecution";
 

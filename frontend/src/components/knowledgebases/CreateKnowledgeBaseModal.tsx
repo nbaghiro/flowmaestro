@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { Input } from "../common/Input";
+import { Textarea } from "../common/Textarea";
 
 interface CreateKnowledgeBaseModalProps {
     isOpen: boolean;
@@ -44,7 +46,7 @@ export function CreateKnowledgeBaseModal({
                 <div className="space-y-4">
                     <div>
                         <label className="block text-sm font-medium mb-1">Name *</label>
-                        <input
+                        <Input
                             type="text"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
@@ -56,7 +58,7 @@ export function CreateKnowledgeBaseModal({
 
                     <div>
                         <label className="block text-sm font-medium mb-1">Description</label>
-                        <textarea
+                        <Textarea
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
                             placeholder="What is this knowledge base for?"

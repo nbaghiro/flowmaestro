@@ -6,6 +6,9 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import { useState } from "react";
+import { Alert } from "./common/Alert";
+import { Button } from "./common/Button";
+import { Input } from "./common/Input";
 import { Select } from "./common/Select";
 
 interface VariableDialogProps {
@@ -90,12 +93,9 @@ export function VariableDialog({
                             </Dialog.Description>
                         </div>
                         <Dialog.Close asChild>
-                            <button
-                                className="p-1 rounded-md hover:bg-muted transition-colors"
-                                aria-label="Close"
-                            >
+                            <Button variant="icon" aria-label="Close">
                                 <X className="w-4 h-4" />
-                            </button>
+                            </Button>
                         </Dialog.Close>
                     </div>
 
@@ -106,7 +106,7 @@ export function VariableDialog({
                             <label className="block text-sm font-medium mb-1.5">
                                 Variable Name
                             </label>
-                            <input
+                            <Input
                                 type="text"
                                 value={variableName}
                                 onChange={(e) => {
@@ -114,7 +114,7 @@ export function VariableDialog({
                                     setError("");
                                 }}
                                 placeholder="continueAsking"
-                                className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono"
+                                className="font-mono"
                                 autoFocus
                             />
                             <p className="text-xs text-muted-foreground mt-1">
@@ -154,7 +154,7 @@ export function VariableDialog({
                                     ]}
                                 />
                             ) : (
-                                <input
+                                <Input
                                     type={valueType === "number" ? "number" : "text"}
                                     value={initialValue}
                                     onChange={(e) => {
@@ -162,33 +162,22 @@ export function VariableDialog({
                                         setError("");
                                     }}
                                     placeholder={valueType === "number" ? "0" : "Initial value..."}
-                                    className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono"
+                                    className="font-mono"
                                 />
                             )}
                         </div>
 
                         {/* Error */}
-                        {error && (
-                            <div className="px-3 py-2 bg-red-50 border border-red-200 rounded-lg">
-                                <p className="text-xs text-red-700">{error}</p>
-                            </div>
-                        )}
+                        {error && <Alert variant="error">{error}</Alert>}
 
                         {/* Actions */}
                         <div className="flex items-center justify-end gap-2 pt-2">
-                            <button
-                                type="button"
-                                onClick={handleCancel}
-                                className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
-                            >
+                            <Button type="button" variant="ghost" onClick={handleCancel}>
                                 Cancel
-                            </button>
-                            <button
-                                type="submit"
-                                className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-                            >
+                            </Button>
+                            <Button type="submit" variant="primary">
                                 Add Variable
-                            </button>
+                            </Button>
                         </div>
                     </form>
                 </Dialog.Content>

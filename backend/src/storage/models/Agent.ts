@@ -1,5 +1,5 @@
 import type { JsonObject } from "@flowmaestro/shared";
-import type { SafetyConfig } from "../../shared/safety/types";
+import type { SafetyConfig } from "../../core/safety/types";
 
 export type LLMProvider = "openai" | "anthropic" | "google" | "cohere";
 export type ToolType = "workflow" | "function" | "knowledge_base" | "agent" | "mcp";

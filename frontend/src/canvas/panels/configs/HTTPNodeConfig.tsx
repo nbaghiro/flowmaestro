@@ -1,7 +1,10 @@
 import { Plus, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { Button } from "../../../components/common/Button";
+import { FormField, FormSection } from "../../../components/common/FormField";
+import { Input } from "../../../components/common/Input";
 import { Select } from "../../../components/common/Select";
-import { FormField, FormSection } from "../../../components/FormField";
+import { Textarea } from "../../../components/common/Textarea";
 import { OutputSettingsSection } from "../../../components/OutputSettingsSection";
 
 interface HTTPNodeConfigProps {
@@ -116,12 +119,12 @@ export function HTTPNodeConfig({ data, onUpdate }: HTTPNodeConfigProps) {
                 </FormField>
 
                 <FormField label="URL" description="Supports ${variableName} interpolation">
-                    <input
+                    <Input
                         type="text"
                         value={url}
                         onChange={(e) => setUrl(e.target.value)}
                         placeholder="https://api.example.com/endpoint"
-                        className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono"
+                        className="font-mono"
                     />
                 </FormField>
             </FormSection>
@@ -129,72 +132,68 @@ export function HTTPNodeConfig({ data, onUpdate }: HTTPNodeConfigProps) {
             <FormSection title="Headers">
                 {headers.map((header, index) => (
                     <div key={index} className="flex gap-2 items-start min-w-0">
-                        <input
+                        <Input
                             type="text"
                             value={header.key}
                             onChange={(e) => updateHeader(index, "key", e.target.value)}
                             placeholder="Header name"
-                            className="flex-1 min-w-0 px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono"
+                            className="flex-1 min-w-0 font-mono"
                         />
-                        <input
+                        <Input
                             type="text"
                             value={header.value}
                             onChange={(e) => updateHeader(index, "value", e.target.value)}
                             placeholder="Value"
-                            className="flex-1 min-w-0 px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono"
+                            className="flex-1 min-w-0 font-mono"
                         />
                         {headers.length > 1 && (
-                            <button
+                            <Button
+                                variant="icon"
                                 onClick={() => removeHeader(index)}
-                                className="flex-shrink-0 p-2 hover:bg-red-50 rounded transition-colors"
+                                className="flex-shrink-0"
                             >
                                 <Trash2 className="w-4 h-4 text-red-600" />
-                            </button>
+                            </Button>
                         )}
                     </div>
                 ))}
-                <button
-                    onClick={addHeader}
-                    className="w-full px-3 py-2 text-sm border border-dashed border-border rounded-lg hover:bg-muted/50 transition-colors flex items-center justify-center gap-2"
-                >
+                <Button variant="secondary" onClick={addHeader} className="w-full">
                     <Plus className="w-4 h-4" />
                     Add Header
-                </button>
+                </Button>
             </FormSection>
 
             {queryParams.length > 0 || method === "GET" ? (
                 <FormSection title="Query Parameters">
                     {queryParams.map((param, index) => (
                         <div key={index} className="flex gap-2 items-start min-w-0">
-                            <input
+                            <Input
                                 type="text"
                                 value={param.key}
                                 onChange={(e) => updateQueryParam(index, "key", e.target.value)}
                                 placeholder="Parameter name"
-                                className="flex-1 min-w-0 px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono"
+                                className="flex-1 min-w-0 font-mono"
                             />
-                            <input
+                            <Input
                                 type="text"
                                 value={param.value}
                                 onChange={(e) => updateQueryParam(index, "value", e.target.value)}
                                 placeholder="Value"
-                                className="flex-1 min-w-0 px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono"
+                                className="flex-1 min-w-0 font-mono"
                             />
-                            <button
+                            <Button
+                                variant="icon"
                                 onClick={() => removeQueryParam(index)}
-                                className="flex-shrink-0 p-2 hover:bg-red-50 rounded transition-colors"
+                                className="flex-shrink-0"
                             >
                                 <Trash2 className="w-4 h-4 text-red-600" />
-                            </button>
+                            </Button>
                         </div>
                     ))}
-                    <button
-                        onClick={addQueryParam}
-                        className="w-full px-3 py-2 text-sm border border-dashed border-border rounded-lg hover:bg-muted/50 transition-colors flex items-center justify-center gap-2"
-                    >
+                    <Button variant="secondary" onClick={addQueryParam} className="w-full">
                         <Plus className="w-4 h-4" />
                         Add Query Parameter
-                    </button>
+                    </Button>
                 </FormSection>
             ) : null}
 
@@ -214,14 +213,14 @@ export function HTTPNodeConfig({ data, onUpdate }: HTTPNodeConfigProps) {
                                   : "API key value"
                         }
                     >
-                        <input
+                        <Input
                             type="password"
                             value={authCredentials}
                             onChange={(e) => setAuthCredentials(e.target.value)}
                             placeholder={
                                 authType === "basic" ? "username:password" : "Token or API key"
                             }
-                            className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono"
+                            className="font-mono"
                         />
                     </FormField>
                 )}
@@ -234,7 +233,7 @@ export function HTTPNodeConfig({ data, onUpdate }: HTTPNodeConfigProps) {
                     </FormField>
 
                     <FormField label="Body">
-                        <textarea
+                        <Textarea
                             value={body}
                             onChange={(e) => setBody(e.target.value)}
                             placeholder={
@@ -243,7 +242,7 @@ export function HTTPNodeConfig({ data, onUpdate }: HTTPNodeConfigProps) {
                                     : "Request body..."
                             }
                             rows={8}
-                            className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none font-mono"
+                            className="font-mono"
                         />
                     </FormField>
                 </FormSection>
@@ -251,24 +250,22 @@ export function HTTPNodeConfig({ data, onUpdate }: HTTPNodeConfigProps) {
 
             <FormSection title="Settings">
                 <FormField label="Timeout (seconds)" description="Maximum request duration">
-                    <input
+                    <Input
                         type="number"
                         value={timeout}
                         onChange={(e) => setTimeout(parseInt(e.target.value) || 0)}
                         min={1}
                         max={300}
-                        className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                     />
                 </FormField>
 
                 <FormField label="Retry Count" description="Number of retries on failure">
-                    <input
+                    <Input
                         type="number"
                         value={retryCount}
                         onChange={(e) => setRetryCount(parseInt(e.target.value) || 0)}
                         min={0}
                         max={10}
-                        className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                     />
                 </FormField>
             </FormSection>

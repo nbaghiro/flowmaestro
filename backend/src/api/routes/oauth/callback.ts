@@ -1,7 +1,7 @@
 import { FastifyInstance } from "fastify";
 import type { JsonValue } from "@flowmaestro/shared";
+import { config } from "../../../core/config";
 import { oauthService } from "../../../services/oauth/OAuthService";
-import { config } from "../../../shared/config";
 import { ConnectionRepository } from "../../../storage/repositories/ConnectionRepository";
 import { UserRepository } from "../../../storage/repositories/UserRepository";
 

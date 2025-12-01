@@ -1,4 +1,4 @@
-import { CircuitBreaker, CircuitBreakerOpenError } from "../../shared/utils/CircuitBreaker";
+import { CircuitBreaker, CircuitBreakerOpenError } from "../../core/utils/CircuitBreaker";
 import { ConnectionRepository } from "../../storage/repositories/ConnectionRepository";
 import { getAccessToken } from "./TokenRefreshService";
 

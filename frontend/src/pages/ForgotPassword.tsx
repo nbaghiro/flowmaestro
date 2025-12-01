@@ -1,6 +1,8 @@
-import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { useState, FormEvent } from "react";
 import { Link } from "react-router-dom";
+import { Alert } from "../components/common/Alert";
+import { Button } from "../components/common/Button";
+import { Input } from "../components/common/Input";
 import { forgotPassword } from "../lib/api";
 
 export function ForgotPassword() {
@@ -48,23 +50,18 @@ export function ForgotPassword() {
 
                     {/* Success Message */}
                     {success && (
-                        <div className="mb-6 p-3 bg-green-50 border border-green-200 rounded-lg flex items-start gap-2">
-                            <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                            <div className="text-sm text-green-800">
-                                <p className="font-medium">Check your email</p>
-                                <p className="mt-1">
-                                    If an account exists with this email, you will receive a
-                                    password reset link shortly.
-                                </p>
-                            </div>
+                        <div className="mb-6">
+                            <Alert variant="success" title="Check your email">
+                                If an account exists with this email, you will receive a password
+                                reset link shortly.
+                            </Alert>
                         </div>
                     )}
 
                     {/* Error Message */}
                     {error && (
-                        <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
-                            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                            <p className="text-sm text-red-800">{error}</p>
+                        <div className="mb-6">
+                            <Alert variant="error">{error}</Alert>
                         </div>
                     )}
 
@@ -77,32 +74,25 @@ export function ForgotPassword() {
                             >
                                 Email
                             </label>
-                            <input
+                            <Input
                                 id="email"
                                 type="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 required
-                                className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                                 placeholder="you@example.com"
                                 disabled={isLoading}
                             />
                         </div>
 
-                        <button
+                        <Button
                             type="submit"
-                            disabled={isLoading}
-                            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors shadow-sm"
+                            variant="primary"
+                            className="w-full"
+                            loading={isLoading}
                         >
-                            {isLoading ? (
-                                <>
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                    Sending...
-                                </>
-                            ) : (
-                                "Send reset link"
-                            )}
-                        </button>
+                            {isLoading ? "Sending..." : "Send reset link"}
+                        </Button>
                     </form>
 
                     {/* Back to Login Link */}

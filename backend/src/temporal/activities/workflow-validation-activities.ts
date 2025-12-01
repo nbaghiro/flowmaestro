@@ -10,7 +10,7 @@ import {
     validateWorkflowContext,
     type ValidatedWorkflowDefinition,
     type WorkflowValidationResult
-} from "../../shared/validation/workflow-state-validation";
+} from "../../core/validation/workflow-state-validation";
 
 /**
  * Validate workflow inputs before execution

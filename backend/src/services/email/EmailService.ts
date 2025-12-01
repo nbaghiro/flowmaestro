@@ -1,5 +1,5 @@
 import { Resend } from "resend";
-import { config } from "../../shared/config";
+import { config } from "../../core/config";
 import { EmailVerificationEmail } from "./templates/EmailVerificationEmail";
 import { PasswordChangedEmail } from "./templates/PasswordChangedEmail";
 import { PasswordResetEmail } from "./templates/PasswordResetEmail";

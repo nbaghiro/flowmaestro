@@ -1,4 +1,4 @@
-import { FetchClient, isFetchError } from "../../shared/utils/fetch-client";
+import { FetchClient, isFetchError } from "../../core/utils/fetch-client";
 import type { RequestConfig, RetryConfig, OperationResult, OperationError } from "./types";
 
 export interface BaseAPIClientConfig {

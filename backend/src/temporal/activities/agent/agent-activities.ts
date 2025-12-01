@@ -3,7 +3,7 @@ import {
     validateToolInput,
     coerceToolArguments,
     createValidationErrorResponse
-} from "../../../shared/validation/tool-validation";
+} from "../../../core/validation/tool-validation";
 import { AgentExecutionRepository } from "../../../storage/repositories/AgentExecutionRepository";
 import { AgentRepository } from "../../../storage/repositories/AgentRepository";
 import { ConnectionRepository } from "../../../storage/repositories/ConnectionRepository";
@@ -1048,7 +1048,7 @@ async function executeKnowledgeBaseTool(input: ExecuteKnowledgeBaseToolInput): P
     const { KnowledgeChunkRepository } = await import(
         "../../../storage/repositories/KnowledgeChunkRepository"
     );
-    const { EmbeddingService } = await import("../../../services/EmbeddingService");
+    const { EmbeddingService } = await import("../../../services/embeddings/EmbeddingService");
 
     const kbRepo = new KnowledgeBaseRepository();
     const chunkRepo = new KnowledgeChunkRepository();

@@ -4,10 +4,12 @@ import {
     LLM_MODELS_BY_PROVIDER,
     getDefaultModelForProvider
 } from "@flowmaestro/shared";
+import { FormField, FormSection } from "../../../components/common/FormField";
+import { Input } from "../../../components/common/Input";
 import { Select } from "../../../components/common/Select";
-import { FormField, FormSection } from "../../../components/FormField";
+import { Slider } from "../../../components/common/Slider";
+import { Textarea } from "../../../components/common/Textarea";
 import { OutputSettingsSection } from "../../../components/OutputSettingsSection";
-import { Slider } from "../../../components/Slider";
 
 interface AudioNodeConfigProps {
     data: Record<string, unknown>;
@@ -100,12 +102,12 @@ export function AudioNodeConfig({ data, onUpdate }: AudioNodeConfigProps) {
                         label="Audio Source"
                         description="URL or use ${variableName} to reference node outputs"
                     >
-                        <input
+                        <Input
                             type="text"
                             value={audioInput}
                             onChange={(e) => setAudioInput(e.target.value)}
                             placeholder="https://example.com/audio.mp3 or ${audioFile}"
-                            className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono"
+                            className="font-mono"
                         />
                     </FormField>
 
@@ -113,12 +115,11 @@ export function AudioNodeConfig({ data, onUpdate }: AudioNodeConfigProps) {
                         label="Language"
                         description="Source language (optional, auto-detected if not specified)"
                     >
-                        <input
+                        <Input
                             type="text"
                             value={language}
                             onChange={(e) => setLanguage(e.target.value)}
                             placeholder="en, es, fr, de, etc."
-                            className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                         />
                     </FormField>
                 </FormSection>
@@ -127,12 +128,11 @@ export function AudioNodeConfig({ data, onUpdate }: AudioNodeConfigProps) {
             {operation === "tts" && (
                 <FormSection title="Text-to-Speech">
                     <FormField label="Text Input" description="Text to convert to speech">
-                        <textarea
+                        <Textarea
                             value={textInput}
                             onChange={(e) => setTextInput(e.target.value)}
                             placeholder="Enter text to convert to speech..."
                             rows={6}
-                            className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
                         />
                     </FormField>
 

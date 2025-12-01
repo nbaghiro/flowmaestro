@@ -165,8 +165,15 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
 
     executeWorkflow: async (inputs = {}) => {
         const { nodes, edges } = get();
+        const isCommentNode = (node: Node) => (node.type || "").toLowerCase() === "comment";
+        // Exclude comment/note nodes and any edges touching them from execution payload.
+        const runnableNodes = nodes.filter((n) => !isCommentNode(n));
+        const runnableNodeIds = new Set(runnableNodes.map((n) => n.id));
+        const runnableEdges = edges.filter(
+            (e) => runnableNodeIds.has(e.source) && runnableNodeIds.has(e.target)
+        );
 
-        if (nodes.length === 0) {
+        if (runnableNodes.length === 0) {
             set({ executionError: "Workflow is empty" });
             return;
         }
@@ -178,10 +185,10 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
         });
 
         try {
-            console.log("[Workflow] Executing workflow with", nodes.length, "nodes");
+            console.log("[Workflow] Executing workflow with", runnableNodes.length, "nodes");
 
             // Convert React Flow nodes to WorkflowNode format
-            const workflowNodes = nodes.map((node) => ({
+            const workflowNodes = runnableNodes.map((node) => ({
                 type: node.type || "default",
                 name: (node.data?.label as string) || node.id,
                 config: (node.data?.config as JsonObject) || {},
@@ -196,7 +203,7 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
             }));
 
             // Convert React Flow edges to WorkflowEdge format
-            const workflowEdges = edges.map((edge) => ({
+            const workflowEdges = runnableEdges.map((edge) => ({
                 id: edge.id,
                 source: edge.source,
                 target: edge.target,

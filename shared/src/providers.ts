@@ -210,17 +210,16 @@ export const ALL_PROVIDERS: Provider[] = [
         methods: ["api_key", "oauth2"],
         comingSoon: true
     },
-    {
-        provider: "jira",
-        displayName: "Jira",
-        description: "Manage issues and sprints",
-        logoUrl: getBrandLogo("atlassian.com/jira"),
-        category: "Developer Tools",
-        methods: ["api_key", "oauth2"],
-        comingSoon: true
-    },
 
     // Project Management
+    {
+        provider: "jira",
+        displayName: "Jira Cloud",
+        description: "Project tracking and issue management for agile teams",
+        logoUrl: getBrandLogo("atlassian.com/jira"),
+        category: "Project Management",
+        methods: ["oauth2"]
+    },
     {
         provider: "asana",
         displayName: "Asana",
@@ -308,6 +307,14 @@ export const ALL_PROVIDERS: Provider[] = [
         displayName: "HubSpot",
         description: "Manage contacts, companies, deals, and more",
         logoUrl: getBrandLogo("hubspot.com"),
+        category: "CRM & Sales",
+        methods: ["oauth2"]
+    },
+    {
+        provider: "apollo",
+        displayName: "Apollo.io",
+        description: "Sales intelligence platform with 210M+ contacts and 35M+ companies",
+        logoUrl: getBrandLogo("apollo.io"),
         category: "CRM & Sales",
         methods: ["oauth2"]
     },

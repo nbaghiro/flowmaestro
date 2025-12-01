@@ -1,9 +1,10 @@
 import * as fs from "fs/promises";
 import type { JsonValue } from "@flowmaestro/shared";
-import { TextExtractor, TextChunker } from "../../services/DocumentProcessingService";
-import { EmbeddingService } from "../../services/EmbeddingService";
+import { EmbeddingService } from "../../services/embeddings/EmbeddingService";
+import { TextChunker } from "../../services/embeddings/TextChunker";
+import { TextExtractor } from "../../services/embeddings/TextExtractor";
+import { globalEventEmitter } from "../../services/events/EventEmitter";
 import { getGCSStorageService } from "../../services/GCSStorageService";
-import { globalEventEmitter } from "../../shared/events/EventEmitter";
 import { CreateKnowledgeChunkInput } from "../../storage/models/KnowledgeChunk";
 import { DocumentFileType } from "../../storage/models/KnowledgeDocument";
 import {

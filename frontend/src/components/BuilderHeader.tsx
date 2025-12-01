@@ -6,7 +6,8 @@ import { executeTrigger, createTrigger, getTriggers } from "../lib/api";
 import { wsClient } from "../lib/websocket";
 import { useTriggerStore } from "../stores/triggerStore";
 import { useWorkflowStore } from "../stores/workflowStore";
-import { Tooltip } from "./Tooltip";
+import { Input } from "./common/Input";
+import { Tooltip } from "./common/Tooltip";
 
 interface BuilderHeaderProps {
     workflowId?: string;
@@ -130,7 +131,7 @@ export function BuilderHeader({
                 {/* Center: Workflow Name and Status */}
                 <div className="flex-1 flex items-center justify-center gap-4 min-w-0">
                     <div className="flex items-center gap-2 min-w-0 max-w-full">
-                        <input
+                        <Input
                             type="text"
                             value={workflowName}
                             onChange={(e) => onNameChange?.(e.target.value)}

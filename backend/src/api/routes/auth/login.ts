@@ -1,5 +1,5 @@
 import { FastifyInstance } from "fastify";
-import { PasswordUtils } from "../../../shared/utils/password";
+import { PasswordUtils } from "../../../core/utils/password";
 import { UserRepository } from "../../../storage/repositories";
 import { validateRequest, UnauthorizedError } from "../../middleware";
 import { loginSchema, LoginRequest } from "../../schemas/auth-schemas";

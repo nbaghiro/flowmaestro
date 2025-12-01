@@ -10,6 +10,7 @@ import {
     ChevronUp
 } from "lucide-react";
 import { useState } from "react";
+import { Input } from "../common/Input";
 import type { ChunkSearchResult, KnowledgeDocument } from "../../lib/api";
 
 interface SearchSectionProps {
@@ -210,7 +211,7 @@ export function SearchSection({ knowledgeBaseId, documents, onSearch }: SearchSe
                             <label className="text-sm font-medium">Top K Results</label>
                             <span className="text-sm text-muted-foreground">{topK}</span>
                         </div>
-                        <input
+                        <Input
                             type="range"
                             min="1"
                             max="50"
@@ -229,7 +230,7 @@ export function SearchSection({ knowledgeBaseId, documents, onSearch }: SearchSe
                                 {(similarityThreshold * 100).toFixed(0)}%
                             </span>
                         </div>
-                        <input
+                        <Input
                             type="range"
                             min="0"
                             max="100"
@@ -246,7 +247,7 @@ export function SearchSection({ knowledgeBaseId, documents, onSearch }: SearchSe
                 )}
 
                 <div className="flex gap-2">
-                    <input
+                    <Input
                         type="text"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}

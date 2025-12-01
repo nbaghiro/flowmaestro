@@ -1,7 +1,11 @@
-import { BookOpen, Plus, Trash2, MoreVertical, Calendar, Loader2, Edit2 } from "lucide-react";
+import { BookOpen, Plus, Trash2, MoreVertical, Calendar, Edit2 } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { Alert } from "../components/common/Alert";
+import { Badge } from "../components/common/Badge";
+import { Button } from "../components/common/Button";
 import { PageHeader } from "../components/common/PageHeader";
+import { LoadingState } from "../components/common/Spinner";
 import { CreateKnowledgeBaseModal } from "../components/knowledgebases";
 import { useKnowledgeBaseStore } from "../stores/knowledgeBaseStore";
 
@@ -77,31 +81,23 @@ export function KnowledgeBases() {
                 title="Knowledge Bases"
                 description="Manage your document collections for RAG workflows"
                 action={
-                    <button
-                        onClick={() => setShowCreateModal(true)}
-                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-primary/90 rounded-lg transition-colors"
-                    >
+                    <Button variant="primary" onClick={() => setShowCreateModal(true)}>
                         <Plus className="w-4 h-4" />
                         New Knowledge Base
-                    </button>
+                    </Button>
                 }
             />
 
             {/* Error Message */}
             {error && (
-                <div className="mb-4 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
-                    <p className="text-sm text-destructive">{error}</p>
+                <div className="mb-4">
+                    <Alert variant="error">{error}</Alert>
                 </div>
             )}
 
             {/* Loading State */}
             {loading ? (
-                <div className="flex items-center justify-center py-20">
-                    <div className="flex flex-col items-center gap-3">
-                        <Loader2 className="w-8 h-8 text-primary animate-spin" />
-                        <p className="text-sm text-muted-foreground">Loading knowledge bases...</p>
-                    </div>
-                </div>
+                <LoadingState message="Loading knowledge bases..." />
             ) : knowledgeBases.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed border-border rounded-lg bg-white">
                     <BookOpen className="w-12 h-12 text-muted-foreground mb-4" />
@@ -112,13 +108,10 @@ export function KnowledgeBases() {
                         Create your first knowledge base to start uploading documents for RAG
                         workflows.
                     </p>
-                    <button
-                        onClick={() => setShowCreateModal(true)}
-                        className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-primary hover:bg-primary/90 rounded-lg transition-colors"
-                    >
+                    <Button variant="primary" onClick={() => setShowCreateModal(true)} size="lg">
                         <Plus className="w-4 h-4" />
                         Create Your First Knowledge Base
-                    </button>
+                    </Button>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -134,12 +127,12 @@ export function KnowledgeBases() {
                                 <div className="flex items-center justify-between mb-3">
                                     <BookOpen className="w-5 h-5 text-primary" />
                                     <div className="flex items-center gap-1">
-                                        <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
+                                        <Badge variant="default" size="sm">
                                             Documents
-                                        </span>
-                                        <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
+                                        </Badge>
+                                        <Badge variant="default" size="sm">
                                             {kb.config.embeddingModel}
-                                        </span>
+                                        </Badge>
 
                                         {/* Menu Button */}
                                         <div
@@ -234,27 +227,21 @@ export function KnowledgeBases() {
                             be undone.
                         </p>
                         <div className="flex items-center justify-end gap-3">
-                            <button
+                            <Button
+                                variant="ghost"
                                 onClick={() => setKbToDelete(null)}
                                 disabled={isDeleting}
-                                className="px-4 py-2 text-sm font-medium text-foreground hover:bg-muted rounded-lg transition-colors disabled:opacity-50"
                             >
                                 Cancel
-                            </button>
-                            <button
+                            </Button>
+                            <Button
+                                variant="destructive"
                                 onClick={handleDelete}
                                 disabled={isDeleting}
-                                className="px-4 py-2 text-sm font-medium text-white bg-destructive hover:bg-destructive/90 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+                                loading={isDeleting}
                             >
-                                {isDeleting ? (
-                                    <>
-                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                        Deleting...
-                                    </>
-                                ) : (
-                                    "Delete"
-                                )}
-                            </button>
+                                {isDeleting ? "Deleting..." : "Delete"}
+                            </Button>
                         </div>
                     </div>
                 </div>

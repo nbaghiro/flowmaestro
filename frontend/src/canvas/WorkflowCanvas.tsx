@@ -15,6 +15,7 @@ import { useWorkflowStore } from "../stores/workflowStore";
 // Import all node components
 import AudioNode from "./nodes/AudioNode";
 import CodeNode from "./nodes/CodeNode";
+import CommentNode from "./nodes/CommentNode";
 import ConditionalNode from "./nodes/ConditionalNode";
 import DatabaseNode from "./nodes/DatabaseNode";
 import EmbeddingsNode from "./nodes/EmbeddingsNode";
@@ -37,6 +38,7 @@ import WaitNode from "./nodes/WaitNode";
 
 // Register node types
 const nodeTypes = {
+    comment: CommentNode,
     llm: LLMNode,
     vision: VisionNode,
     audio: AudioNode,

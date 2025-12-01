@@ -1,6 +1,6 @@
 import type { JsonObject } from "@flowmaestro/shared";
-import { globalEventEmitter } from "../../../shared/events/EventEmitter";
-import { getVoiceCommandBus } from "../../../shared/services/VoiceCommandBus";
+import { globalEventEmitter } from "../../../services/events/EventEmitter";
+import { getVoiceCommandBus } from "../../../services/events/VoiceCommandBus";
 import { CallExecutionRepository } from "../../../storage/repositories/CallExecutionRepository";
 import { interpolateVariables } from "./utils";
 

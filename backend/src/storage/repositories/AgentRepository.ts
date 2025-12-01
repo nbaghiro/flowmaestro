@@ -7,7 +7,7 @@ import {
     Tool,
     MemoryConfig
 } from "../models/Agent";
-import type { SafetyConfig } from "../../shared/safety/types";
+import type { SafetyConfig } from "../../core/safety/types";
 
 // Database row interface
 interface AgentRow {

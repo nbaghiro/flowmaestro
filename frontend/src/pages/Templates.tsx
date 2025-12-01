@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Template, TemplateCategory, CategoryInfo, AgentTemplate } from "@flowmaestro/shared";
 import { TEMPLATE_CATEGORY_META } from "@flowmaestro/shared";
+import { Input } from "../components/common/Input";
 import { PageHeader } from "../components/common/PageHeader";
 import { AgentTemplateCard } from "../components/templates/AgentTemplateCard";
 import { AgentTemplatePreviewDialog } from "../components/templates/AgentTemplatePreviewDialog";
@@ -180,7 +181,7 @@ export function Templates() {
                 {/* Search bar */}
                 <div className="relative max-w-md">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <input
+                    <Input
                         type="text"
                         placeholder={`Search ${templateType === "workflows" ? "workflow" : "agent"} templates...`}
                         value={searchQuery}

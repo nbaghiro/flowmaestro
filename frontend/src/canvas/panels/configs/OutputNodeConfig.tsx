@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
+import { FormField, FormSection } from "../../../components/common/FormField";
+import { Input } from "../../../components/common/Input";
 import { Select } from "../../../components/common/Select";
-import { FormField, FormSection } from "../../../components/FormField";
+import { Textarea } from "../../../components/common/Textarea";
 
 interface OutputNodeConfigProps {
     data: Record<string, unknown>;
@@ -36,12 +38,12 @@ export function OutputNodeConfig({ data, onUpdate }: OutputNodeConfigProps) {
                     label="Output Name"
                     description="Name for this output in workflow results"
                 >
-                    <input
+                    <Input
                         type="text"
                         value={outputName}
                         onChange={(e) => setOutputName(e.target.value)}
                         placeholder="result"
-                        className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono"
+                        className="font-mono"
                     />
                 </FormField>
 
@@ -50,12 +52,11 @@ export function OutputNodeConfig({ data, onUpdate }: OutputNodeConfigProps) {
                 </FormField>
 
                 <FormField label="Description" description="Optional description for this output">
-                    <textarea
+                    <Textarea
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
                         placeholder="Description of what this output contains..."
                         rows={3}
-                        className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
                     />
                 </FormField>
             </FormSection>
@@ -65,7 +66,7 @@ export function OutputNodeConfig({ data, onUpdate }: OutputNodeConfigProps) {
                     label="Output Value"
                     description="Value to output (supports ${variableName} references)"
                 >
-                    <textarea
+                    <Textarea
                         value={value}
                         onChange={(e) => setValue(e.target.value)}
                         placeholder={
@@ -74,7 +75,7 @@ export function OutputNodeConfig({ data, onUpdate }: OutputNodeConfigProps) {
                                 : "${variableName}"
                         }
                         rows={format === "json" ? 8 : 4}
-                        className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none font-mono"
+                        className="font-mono"
                     />
                 </FormField>
 

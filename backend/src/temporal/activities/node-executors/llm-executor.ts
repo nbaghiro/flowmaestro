@@ -120,6 +120,12 @@ export interface LLMNodeConfig {
     outputVariable?: string;
 }
 
+export interface LLMExecutionCallbacks {
+    onToken?: (token: string) => void;
+    onComplete?: (response: string) => void;
+    onError?: (error: Error) => void;
+}
+
 export interface LLMNodeResult {
     text: string;
     usage?: {
@@ -178,7 +184,8 @@ async function getApiKey(
  */
 export async function executeLLMNode(
     config: LLMNodeConfig,
-    context: JsonObject
+    context: JsonObject,
+    callbacks?: LLMExecutionCallbacks
 ): Promise<JsonObject> {
     // Interpolate variables in prompts
     const systemPrompt = config.systemPrompt
@@ -188,21 +195,22 @@ export async function executeLLMNode(
 
     console.log(`[LLM] Calling ${config.provider}/${config.model}`);
     console.log(`[LLM] Prompt length: ${userPrompt.length} chars`);
+    console.log(`[LLM] Streaming: ${callbacks?.onToken ? "enabled" : "disabled"}`);
 
     let result: LLMNodeResult;
 
     switch (config.provider) {
         case "openai":
-            result = await executeOpenAI(config, systemPrompt, userPrompt);
+            result = await executeOpenAI(config, systemPrompt, userPrompt, callbacks);
             break;
         case "anthropic":
-            result = await executeAnthropic(config, systemPrompt, userPrompt);
+            result = await executeAnthropic(config, systemPrompt, userPrompt, callbacks);
             break;
         case "google":
-            result = await executeGoogle(config, systemPrompt, userPrompt);
+            result = await executeGoogle(config, systemPrompt, userPrompt, callbacks);
             break;
         case "cohere":
-            result = await executeCohere(config, systemPrompt, userPrompt);
+            result = await executeCohere(config, systemPrompt, userPrompt, callbacks);
             break;
         default:
             throw new Error(`Unsupported LLM provider: ${config.provider}`);
@@ -219,7 +227,8 @@ export async function executeLLMNode(
 async function executeOpenAI(
     config: LLMNodeConfig,
     systemPrompt: string | undefined,
-    userPrompt: string
+    userPrompt: string,
+    callbacks?: LLMExecutionCallbacks
 ): Promise<LLMNodeResult> {
     const apiKey = await getApiKey(config.connectionId, "openai", "OPENAI_API_KEY");
     const openai = new OpenAI({ apiKey });
@@ -231,6 +240,36 @@ async function executeOpenAI(
     messages.push({ role: "user", content: userPrompt });
 
     return withRetry(async () => {
+        // Streaming mode
+        if (callbacks?.onToken) {
+            const stream = await openai.chat.completions.create({
+                model: config.model,
+                messages,
+                temperature: config.temperature ?? 0.7,
+                max_tokens: config.maxTokens ?? 1000,
+                top_p: config.topP ?? 1,
+                stream: true
+            });
+
+            let fullContent = "";
+            for await (const chunk of stream) {
+                const delta = chunk.choices[0]?.delta?.content || "";
+                if (delta) {
+                    fullContent += delta;
+                    callbacks.onToken(delta);
+                }
+            }
+
+            console.log(`[LLM] OpenAI streaming response: ${fullContent.length} chars`);
+
+            return {
+                text: fullContent,
+                model: config.model,
+                provider: "openai"
+            };
+        }
+
+        // Non-streaming mode (fallback)
         const response = await openai.chat.completions.create({
             model: config.model,
             messages,
@@ -262,12 +301,43 @@ async function executeOpenAI(
 async function executeAnthropic(
     config: LLMNodeConfig,
     systemPrompt: string | undefined,
-    userPrompt: string
+    userPrompt: string,
+    callbacks?: LLMExecutionCallbacks
 ): Promise<LLMNodeResult> {
     const apiKey = await getApiKey(config.connectionId, "anthropic", "ANTHROPIC_API_KEY");
     const anthropic = new Anthropic({ apiKey });
 
     return withRetry(async () => {
+        // Streaming mode
+        if (callbacks?.onToken) {
+            const stream = await anthropic.messages.create({
+                model: config.model,
+                max_tokens: config.maxTokens ?? 1000,
+                temperature: config.temperature ?? 0.7,
+                system: systemPrompt,
+                messages: [{ role: "user", content: userPrompt }],
+                stream: true
+            });
+
+            let fullContent = "";
+            for await (const chunk of stream) {
+                if (chunk.type === "content_block_delta" && chunk.delta.type === "text_delta") {
+                    const delta = chunk.delta.text;
+                    fullContent += delta;
+                    callbacks.onToken(delta);
+                }
+            }
+
+            console.log(`[LLM] Anthropic streaming response: ${fullContent.length} chars`);
+
+            return {
+                text: fullContent,
+                model: config.model,
+                provider: "anthropic"
+            };
+        }
+
+        // Non-streaming mode (fallback)
         const response = await anthropic.messages.create({
             model: config.model,
             max_tokens: config.maxTokens ?? 1000,
@@ -299,7 +369,8 @@ async function executeAnthropic(
 async function executeGoogle(
     config: LLMNodeConfig,
     systemPrompt: string | undefined,
-    userPrompt: string
+    userPrompt: string,
+    callbacks?: LLMExecutionCallbacks
 ): Promise<LLMNodeResult> {
     const apiKey = await getApiKey(config.connectionId, "google", "GOOGLE_API_KEY");
     const genAI = new GoogleGenerativeAI(apiKey);
@@ -316,6 +387,27 @@ async function executeGoogle(
     const fullPrompt = systemPrompt ? `${systemPrompt}\n\n${userPrompt}` : userPrompt;
 
     return withRetry(async () => {
+        // Streaming mode
+        if (callbacks?.onToken) {
+            const result = await model.generateContentStream(fullPrompt);
+
+            let fullContent = "";
+            for await (const chunk of result.stream) {
+                const delta = chunk.text();
+                fullContent += delta;
+                callbacks.onToken(delta);
+            }
+
+            console.log(`[LLM] Google streaming response: ${fullContent.length} chars`);
+
+            return {
+                text: fullContent,
+                model: config.model,
+                provider: "google"
+            };
+        }
+
+        // Non-streaming mode (fallback)
         const result = await model.generateContent(fullPrompt);
         const response = result.response;
         const text = response.text();
@@ -333,7 +425,8 @@ async function executeGoogle(
 async function executeCohere(
     config: LLMNodeConfig,
     systemPrompt: string | undefined,
-    userPrompt: string
+    userPrompt: string,
+    callbacks?: LLMExecutionCallbacks
 ): Promise<LLMNodeResult> {
     const apiKey = await getApiKey(config.connectionId, "cohere", "COHERE_API_KEY");
     const cohere = new CohereClient({ token: apiKey });
@@ -342,6 +435,35 @@ async function executeCohere(
     const fullPrompt = systemPrompt ? `${systemPrompt}\n\n${userPrompt}` : userPrompt;
 
     return withRetry(async () => {
+        // Streaming mode
+        if (callbacks?.onToken) {
+            const stream = await cohere.generateStream({
+                model: config.model,
+                prompt: fullPrompt,
+                temperature: config.temperature ?? 0.7,
+                maxTokens: config.maxTokens ?? 1000,
+                p: config.topP ?? 1
+            });
+
+            let fullContent = "";
+            for await (const chunk of stream) {
+                if (chunk.eventType === "text-generation") {
+                    const delta = chunk.text;
+                    fullContent += delta;
+                    callbacks.onToken(delta);
+                }
+            }
+
+            console.log(`[LLM] Cohere streaming response: ${fullContent.length} chars`);
+
+            return {
+                text: fullContent,
+                model: config.model,
+                provider: "cohere"
+            };
+        }
+
+        // Non-streaming mode (fallback)
         const response = await cohere.generate({
             model: config.model,
             prompt: fullPrompt,

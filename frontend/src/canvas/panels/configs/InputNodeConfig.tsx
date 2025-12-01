@@ -1,7 +1,9 @@
 import { Info } from "lucide-react";
 import { useState, useEffect } from "react";
+import { FormField, FormSection } from "../../../components/common/FormField";
+import { Input } from "../../../components/common/Input";
 import { Select } from "../../../components/common/Select";
-import { FormField, FormSection } from "../../../components/FormField";
+import { Textarea } from "../../../components/common/Textarea";
 
 interface InputNodeConfigProps {
     data: Record<string, unknown>;
@@ -75,12 +77,12 @@ export function InputNodeConfig({ data, onUpdate }: InputNodeConfigProps) {
         <div>
             <FormSection title="Input Configuration">
                 <FormField label="Input Name" description="Variable name for this input">
-                    <input
+                    <Input
                         type="text"
                         value={inputName}
                         onChange={(e) => setInputName(e.target.value)}
                         placeholder="userName"
-                        className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono"
+                        className="font-mono"
                     />
                 </FormField>
 
@@ -92,12 +94,11 @@ export function InputNodeConfig({ data, onUpdate }: InputNodeConfigProps) {
                     label="Description"
                     description="Help text for users providing this input"
                 >
-                    <textarea
+                    <Textarea
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
                         placeholder="Enter your full name..."
                         rows={3}
-                        className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
                     />
                 </FormField>
             </FormSection>
@@ -107,12 +108,12 @@ export function InputNodeConfig({ data, onUpdate }: InputNodeConfigProps) {
                     label="Default Value"
                     description="Used when input is not provided (only applies if not required)"
                 >
-                    <input
+                    <Input
                         type="text"
                         value={defaultValue}
                         onChange={(e) => setDefaultValue(e.target.value)}
                         placeholder={inputType === "json" ? '{"key": "value"}' : "Default value..."}
-                        className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono"
+                        className="font-mono"
                     />
                 </FormField>
 
@@ -132,7 +133,7 @@ export function InputNodeConfig({ data, onUpdate }: InputNodeConfigProps) {
                     }
                 >
                     <label className="flex items-center gap-2 cursor-pointer">
-                        <input
+                        <Input
                             type="checkbox"
                             checked={required}
                             onChange={(e) => setRequired(e.target.checked)}
@@ -151,12 +152,12 @@ export function InputNodeConfig({ data, onUpdate }: InputNodeConfigProps) {
                             label="Validation Pattern (Regex)"
                             description="Regular expression to validate input format"
                         >
-                            <input
+                            <Input
                                 type="text"
                                 value={validation}
                                 onChange={(e) => setValidation(e.target.value)}
                                 placeholder="^[A-Za-z\\s]+$"
-                                className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono"
+                                className="font-mono"
                             />
                         </FormField>
 
@@ -195,22 +196,20 @@ export function InputNodeConfig({ data, onUpdate }: InputNodeConfigProps) {
                     <>
                         <div className="grid grid-cols-2 gap-3">
                             <FormField label="Minimum Value" description="Smallest allowed number">
-                                <input
+                                <Input
                                     type="number"
                                     value={minValue}
                                     onChange={(e) => setMinValue(e.target.value)}
                                     placeholder="e.g., 0"
-                                    className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                                 />
                             </FormField>
 
                             <FormField label="Maximum Value" description="Largest allowed number">
-                                <input
+                                <Input
                                     type="number"
                                     value={maxValue}
                                     onChange={(e) => setMaxValue(e.target.value)}
                                     placeholder="e.g., 100"
-                                    className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                                 />
                             </FormField>
                         </div>
@@ -232,12 +231,12 @@ export function InputNodeConfig({ data, onUpdate }: InputNodeConfigProps) {
                             label="JSON Schema"
                             description="Optional JSON schema for validation"
                         >
-                            <textarea
+                            <Textarea
                                 value={validation}
                                 onChange={(e) => setValidation(e.target.value)}
                                 placeholder={'{"type": "object", "properties": {...}}'}
                                 rows={6}
-                                className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none font-mono"
+                                className="font-mono"
                             />
                         </FormField>
 

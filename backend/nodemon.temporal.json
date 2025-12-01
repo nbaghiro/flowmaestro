@@ -1,5 +1,5 @@
 {
-    "watch": ["src"],
+    "watch": ["src", "../shared/src"],
     "ext": "ts,js",
     "ignore": ["src/**/*.test.ts", "src/**/*.spec.ts"],
     "exec": "npm run build && node --inspect=9230 dist/backend/src/temporal/workers/orchestrator-worker.js",

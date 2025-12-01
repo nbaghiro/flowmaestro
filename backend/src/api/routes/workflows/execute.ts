@@ -1,8 +1,9 @@
 import { FastifyInstance } from "fastify";
 import {
     convertFrontendToBackend,
-    FrontendWorkflowDefinition
-} from "../../../shared/utils/workflow-converter";
+    FrontendWorkflowDefinition,
+    stripNonExecutableNodes
+} from "../../../core/utils/workflow-converter";
 import { getTemporalClient } from "../../../temporal/client";
 import { authMiddleware } from "../../middleware";
 
@@ -34,8 +35,8 @@ export async function executeWorkflowRoute(fastify: FastifyInstance) {
                 const workflowId = `workflow-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
                 // Convert frontend workflow definition to backend format
-                const backendWorkflowDefinition = convertFrontendToBackend(
-                    body.workflowDefinition,
+                const backendWorkflowDef = stripNonExecutableNodes(
+                    convertFrontendToBackend(body.workflowDefinition, `Workflow ${workflowId}`),
                     `Workflow ${workflowId}`
                 );
 
@@ -45,7 +46,7 @@ export async function executeWorkflowRoute(fastify: FastifyInstance) {
                     workflowId,
                     args: [
                         {
-                            workflowDefinition: backendWorkflowDefinition,
+                            workflowDefinition: backendWorkflowDef,
                             inputs: body.inputs || {}
                         }
                     ]

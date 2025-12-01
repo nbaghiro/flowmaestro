@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { CodeInput } from "../../../components/CodeInput";
+import { FormField, FormSection } from "../../../components/common/FormField";
+import { Input } from "../../../components/common/Input";
 import { Select } from "../../../components/common/Select";
-import { FormField, FormSection } from "../../../components/FormField";
 import { OutputSettingsSection } from "../../../components/OutputSettingsSection";
 
 interface CodeNodeConfigProps {
@@ -98,25 +99,23 @@ return result`;
 
             <FormSection title="Resource Limits">
                 <FormField label="Timeout (seconds)" description="Maximum execution time">
-                    <input
+                    <Input
                         type="number"
                         value={timeout}
                         onChange={(e) => setTimeout(parseInt(e.target.value) || 0)}
                         min={1}
                         max={300}
-                        className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                     />
                 </FormField>
 
                 <FormField label="Memory Limit (MB)" description="Maximum memory allocation">
-                    <input
+                    <Input
                         type="number"
                         value={memoryLimit}
                         onChange={(e) => setMemoryLimit(parseInt(e.target.value) || 0)}
                         min={64}
                         max={2048}
                         step={64}
-                        className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                     />
                 </FormField>
             </FormSection>

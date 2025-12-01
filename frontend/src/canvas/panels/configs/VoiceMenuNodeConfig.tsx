@@ -1,8 +1,10 @@
 import { X, Plus } from "lucide-react";
 import { useState, useEffect } from "react";
+import { FormField, FormSection } from "../../../components/common/FormField";
+import { Input } from "../../../components/common/Input";
 import { Select } from "../../../components/common/Select";
-import { FormField, FormSection } from "../../../components/FormField";
-import { Slider } from "../../../components/Slider";
+import { Slider } from "../../../components/common/Slider";
+import { Textarea } from "../../../components/common/Textarea";
 
 interface VoiceMenuNodeConfigProps {
     data: Record<string, unknown>;
@@ -89,7 +91,7 @@ export function VoiceMenuNodeConfig({ data, onUpdate }: VoiceMenuNodeConfigProps
         <div>
             <FormSection title="Menu Prompt">
                 <FormField label="Prompt Message">
-                    <textarea
+                    <Textarea
                         value={prompt}
                         onChange={(e) => setPrompt(e.target.value)}
                         className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary min-h-[80px]"
@@ -130,7 +132,7 @@ export function VoiceMenuNodeConfig({ data, onUpdate }: VoiceMenuNodeConfigProps
                                         <label className="block text-xs text-muted-foreground mb-1">
                                             Key *
                                         </label>
-                                        <input
+                                        <Input
                                             type="text"
                                             value={option.key}
                                             onChange={(e) =>
@@ -144,7 +146,7 @@ export function VoiceMenuNodeConfig({ data, onUpdate }: VoiceMenuNodeConfigProps
                                         <label className="block text-xs text-muted-foreground mb-1">
                                             Value
                                         </label>
-                                        <input
+                                        <Input
                                             type="text"
                                             value={option.value || ""}
                                             onChange={(e) =>
@@ -160,7 +162,7 @@ export function VoiceMenuNodeConfig({ data, onUpdate }: VoiceMenuNodeConfigProps
                                     <label className="block text-xs text-muted-foreground mb-1">
                                         Label *
                                     </label>
-                                    <input
+                                    <Input
                                         type="text"
                                         value={option.label}
                                         onChange={(e) =>
@@ -175,7 +177,7 @@ export function VoiceMenuNodeConfig({ data, onUpdate }: VoiceMenuNodeConfigProps
                                     <label className="block text-xs text-muted-foreground mb-1">
                                         Description
                                     </label>
-                                    <input
+                                    <Input
                                         type="text"
                                         value={option.description || ""}
                                         onChange={(e) =>
@@ -239,7 +241,7 @@ export function VoiceMenuNodeConfig({ data, onUpdate }: VoiceMenuNodeConfigProps
 
             <FormSection title="Error Messages">
                 <FormField label="Invalid Input Message">
-                    <textarea
+                    <Textarea
                         value={invalidInputMessage}
                         onChange={(e) => setInvalidInputMessage(e.target.value)}
                         className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary min-h-[60px]"
@@ -251,7 +253,7 @@ export function VoiceMenuNodeConfig({ data, onUpdate }: VoiceMenuNodeConfigProps
                 </FormField>
 
                 <FormField label="Retry Message">
-                    <textarea
+                    <Textarea
                         value={retryMessage}
                         onChange={(e) => setRetryMessage(e.target.value)}
                         className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary min-h-[60px]"

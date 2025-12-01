@@ -16,6 +16,7 @@ export interface KeyboardShortcutHandlers {
     onFitView: () => void;
     canUndo?: () => boolean;
     canRedo?: () => boolean;
+    onCreateComment?: () => void;
 }
 
 /**
@@ -38,6 +39,7 @@ export function useKeyboardShortcuts(handlers: KeyboardShortcutHandlers): void {
         onSelectAll,
         onDeselectAll,
         onFitView,
+        onCreateComment,
         canUndo = () => true,
         canRedo = () => true
     } = handlers;
@@ -52,6 +54,16 @@ export function useKeyboardShortcuts(handlers: KeyboardShortcutHandlers): void {
 
             const key = event.key.toLowerCase();
             const modifier = event.metaKey || event.ctrlKey;
+
+            // Escape - Deselect / exit edit mode (even while typing)
+            if (event.key === "Escape") {
+                event.preventDefault();
+                if (target && typeof (target as HTMLElement).blur === "function") {
+                    (target as HTMLElement).blur();
+                }
+                onDeselectAll();
+                return;
+            }
 
             // Cmd+S / Ctrl+S - Save (works even when typing)
             if (modifier && key === "s") {
@@ -140,17 +152,17 @@ export function useKeyboardShortcuts(handlers: KeyboardShortcutHandlers): void {
                 return;
             }
 
-            // Escape - Deselect all
-            if (event.key === "Escape") {
-                event.preventDefault();
-                onDeselectAll();
-                return;
-            }
-
             // Cmd+0 / Ctrl+0 - Fit view
             if (modifier && key === "0") {
                 event.preventDefault();
                 onFitView();
+                return;
+            }
+
+            // "N" - Create Comment Node
+            if (!modifier && key === "n" && onCreateComment) {
+                event.preventDefault();
+                onCreateComment();
                 return;
             }
         };
@@ -175,6 +187,7 @@ export function useKeyboardShortcuts(handlers: KeyboardShortcutHandlers): void {
         onDeselectAll,
         onFitView,
         canUndo,
-        canRedo
+        canRedo,
+        onCreateComment
     ]);
 }

@@ -1,7 +1,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import { nanoid } from "nanoid";
 import type { JsonValue } from "@flowmaestro/shared";
-import { globalEventEmitter } from "../../../shared/events/EventEmitter";
+import { globalEventEmitter } from "../../../services/events/EventEmitter";
 import { PhoneCallTriggerConfig } from "../../../storage/models/Trigger";
 import { CallExecutionRepository } from "../../../storage/repositories/CallExecutionRepository";
 import { TriggerRepository } from "../../../storage/repositories/TriggerRepository";

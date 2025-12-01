@@ -1585,6 +1585,126 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
             }
         },
         refreshable: true
+    },
+
+    apollo: {
+        name: "apollo",
+        displayName: "Apollo.io",
+        authUrl: "https://app.apollo.io/#/oauth/authorize",
+        tokenUrl: "https://app.apollo.io/api/v1/oauth/token",
+        scopes: ["read_user_profile", "app_scopes"],
+        clientId: process.env.APOLLO_CLIENT_ID || "",
+        clientSecret: process.env.APOLLO_CLIENT_SECRET || "",
+        redirectUri: `${process.env.API_URL || "http://localhost:3001"}/api/oauth/apollo/callback`,
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://app.apollo.io/api/v1/users/api_profile", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    user?: {
+                        id?: string;
+                        email?: string;
+                        first_name?: string;
+                        last_name?: string;
+                    };
+                    team?: {
+                        id?: string;
+                        name?: string;
+                    };
+                };
+
+                return {
+                    userId: data.user?.id || "unknown",
+                    email: data.user?.email || "unknown@apollo.io",
+                    name:
+                        `${data.user?.first_name || ""} ${data.user?.last_name || ""}`.trim() ||
+                        "Apollo User",
+                    teamId: data.team?.id,
+                    teamName: data.team?.name
+                };
+            } catch (error) {
+                console.error("[OAuth] Failed to get Apollo user info:", error);
+                return {
+                    userId: "unknown",
+                    email: "unknown@apollo.io",
+                    name: "Apollo User"
+                };
+            }
+        },
+        refreshable: true,
+        pkceEnabled: false
+    },
+
+    jira: {
+        name: "jira",
+        displayName: "Jira Cloud",
+        authUrl: "https://auth.atlassian.com/authorize",
+        tokenUrl: "https://auth.atlassian.com/oauth/token",
+        scopes: [
+            "read:jira-work",
+            "write:jira-work",
+            "read:jira-user",
+            "manage:jira-webhook",
+            "offline_access"
+        ],
+        authParams: {
+            audience: "api.atlassian.com",
+            prompt: "consent"
+        },
+        clientId: process.env.JIRA_CLIENT_ID || "",
+        clientSecret: process.env.JIRA_CLIENT_SECRET || "",
+        redirectUri: `${process.env.API_URL || "http://localhost:3001"}/api/oauth/jira/callback`,
+        getUserInfo: async (accessToken: string) => {
+            try {
+                // Get accessible Jira sites (cloudIds)
+                const response = await fetch(
+                    "https://api.atlassian.com/oauth/token/accessible-resources",
+                    {
+                        headers: {
+                            Authorization: `Bearer ${accessToken}`,
+                            Accept: "application/json"
+                        }
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const sites = (await response.json()) as Array<{
+                    id: string;
+                    url: string;
+                    name: string;
+                    scopes: string[];
+                    avatarUrl?: string;
+                }>;
+
+                return {
+                    sites: sites.map((s) => ({
+                        cloudId: s.id,
+                        url: s.url,
+                        name: s.name,
+                        scopes: s.scopes,
+                        avatarUrl: s.avatarUrl
+                    }))
+                };
+            } catch (error) {
+                console.error("[OAuth] Failed to get Jira accessible resources:", error);
+                return {
+                    sites: []
+                };
+            }
+        },
+        refreshable: true,
+        pkceEnabled: false
     }
 };
 

@@ -1,5 +1,5 @@
 import { FastifyInstance } from "fastify";
-import { EmbeddingService } from "../../../services/EmbeddingService";
+import { EmbeddingService } from "../../../services/embeddings/EmbeddingService";
 import { KnowledgeBaseRepository, KnowledgeChunkRepository } from "../../../storage/repositories";
 import { authMiddleware } from "../../middleware";
 

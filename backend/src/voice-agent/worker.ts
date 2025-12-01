@@ -23,7 +23,7 @@
 
 import Redis from "ioredis";
 import { Room, VideoPresets } from "livekit-client";
-import { getVoiceCommandBus } from "../shared/services/VoiceCommandBus";
+import { getVoiceCommandBus } from "../services/events/VoiceCommandBus";
 import { VoiceAgent } from "./VoiceAgent";
 
 interface WorkerConfig {

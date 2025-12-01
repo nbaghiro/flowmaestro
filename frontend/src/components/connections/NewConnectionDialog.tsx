@@ -3,6 +3,10 @@ import React, { useState, useEffect, useCallback } from "react";
 import type { JsonObject, OAuthField } from "@flowmaestro/shared";
 import { useOAuth } from "../../hooks/useOAuth";
 import { useConnectionStore } from "../../stores/connectionStore";
+import { Alert } from "../common/Alert";
+import { Button } from "../common/Button";
+import { Input } from "../common/Input";
+import { Select } from "../common/Select";
 import type { CreateConnectionInput } from "../../lib/api";
 
 interface NewConnectionDialogProps {
@@ -355,33 +359,24 @@ export function NewConnectionDialog({
                 <div className="flex items-center justify-between p-6 pb-4 border-b border-gray-200">
                     <div className="flex items-center gap-3">
                         {(step === "api-key-form" || step === "oauth-settings-form") && (
-                            <button
-                                onClick={handleBackToMethodSelection}
-                                className="text-gray-600 hover:text-gray-900 transition-colors"
-                                type="button"
-                            >
+                            <Button variant="icon" onClick={handleBackToMethodSelection}>
                                 <ArrowLeft className="w-5 h-5" />
-                            </button>
+                            </Button>
                         )}
                         {step === "database-form" && (
-                            <button
+                            <Button
+                                variant="icon"
                                 onClick={handleClose}
-                                className="text-gray-600 hover:text-gray-900 transition-colors"
-                                type="button"
                                 title="Back to provider selection"
                             >
                                 <ArrowLeft className="w-5 h-5" />
-                            </button>
+                            </Button>
                         )}
                         <h2 className="text-lg font-semibold text-gray-900">New Connection</h2>
                     </div>
-                    <button
-                        onClick={handleClose}
-                        className="text-gray-400 hover:text-gray-600 transition-colors"
-                        type="button"
-                    >
+                    <Button variant="icon" onClick={handleClose}>
                         <X className="w-5 h-5" />
-                    </button>
+                    </Button>
                 </div>
 
                 {/* Content */}
@@ -484,56 +479,47 @@ export function NewConnectionDialog({
                                         </p>
                                     )}
                                     {field.type === "text" && (
-                                        <input
+                                        <Input
                                             type="text"
                                             value={oauthSettingsValues[field.name] || ""}
                                             onChange={(e) =>
                                                 updateOAuthSetting(field.name, e.target.value)
                                             }
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
                                             placeholder={field.placeholder}
                                             required={field.required}
                                         />
                                     )}
                                     {field.type === "select" && field.options && (
-                                        <select
+                                        <Select
                                             value={oauthSettingsValues[field.name] || ""}
-                                            onChange={(e) =>
-                                                updateOAuthSetting(field.name, e.target.value)
-                                            }
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
-                                            required={field.required}
-                                        >
-                                            <option value="">Select...</option>
-                                            {field.options.map((option) => (
-                                                <option key={option.value} value={option.value}>
-                                                    {option.label}
-                                                </option>
-                                            ))}
-                                        </select>
+                                            onChange={(val) => updateOAuthSetting(field.name, val)}
+                                            options={[
+                                                { value: "", label: "Select..." },
+                                                ...(field.options?.map((option) => ({
+                                                    value: option.value,
+                                                    label: option.label
+                                                })) || [])
+                                            ]}
+                                        />
                                     )}
                                 </div>
                             ))}
 
                             {/* Error Message */}
-                            {error && (
-                                <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-                                    <p className="text-sm text-red-800">{error}</p>
-                                </div>
-                            )}
+                            {error && <Alert variant="error">{error}</Alert>}
 
                             {/* Submit Button */}
                             <div className="flex justify-end pt-2">
-                                <button
+                                <Button
                                     type="submit"
+                                    variant="primary"
                                     disabled={oauthLoading || oauthInitiated}
-                                    className="px-6 py-2 text-sm font-medium text-white bg-black rounded-md hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
                                 >
                                     <Shield className="w-4 h-4" />
                                     {oauthLoading || oauthInitiated
                                         ? "Connecting..."
                                         : `Continue with ${providerDisplayName}`}
-                                </button>
+                                </Button>
                             </div>
                         </form>
                     )}
@@ -550,11 +536,10 @@ export function NewConnectionDialog({
                                     Give your connection a friendly name to identify it in your
                                     workflows and settings
                                 </p>
-                                <input
+                                <Input
                                     type="text"
                                     value={connectionName}
                                     onChange={(e) => setConnectionName(e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
                                     placeholder={`${providerDisplayName} (Personal Access Token) connection`}
                                     required
                                 />
@@ -566,25 +551,26 @@ export function NewConnectionDialog({
                                     Personal Access Token <span className="text-red-500">*</span>
                                 </label>
                                 <div className="relative">
-                                    <input
+                                    <Input
                                         type={showApiKey ? "text" : "password"}
                                         value={apiKey}
                                         onChange={(e) => setApiKey(e.target.value)}
-                                        className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                                        className="pr-10"
                                         placeholder="Enter your API key or token"
                                         required
                                     />
-                                    <button
+                                    <Button
                                         type="button"
+                                        variant="icon"
                                         onClick={() => setShowApiKey(!showApiKey)}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                                        className="absolute right-1 top-1/2 -translate-y-1/2"
                                     >
                                         {showApiKey ? (
                                             <EyeOff className="w-4 h-4" />
                                         ) : (
                                             <Eye className="w-4 h-4" />
                                         )}
-                                    </button>
+                                    </Button>
                                 </div>
 
                                 {/* Provider-specific help text */}
@@ -614,21 +600,18 @@ export function NewConnectionDialog({
                             </div>
 
                             {/* Error Message */}
-                            {error && (
-                                <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-                                    <p className="text-sm text-red-800">{error}</p>
-                                </div>
-                            )}
+                            {error && <Alert variant="error">{error}</Alert>}
 
                             {/* Submit Button */}
                             <div className="flex justify-end pt-2">
-                                <button
+                                <Button
                                     type="submit"
+                                    variant="primary"
                                     disabled={isSubmitting}
-                                    className="px-6 py-2 text-sm font-medium text-white bg-black rounded-md hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                    loading={isSubmitting}
                                 >
                                     {isSubmitting ? "Creating..." : "Create connection"}
-                                </button>
+                                </Button>
                             </div>
                         </form>
                     )}
@@ -644,11 +627,10 @@ export function NewConnectionDialog({
                                 <p className="text-xs text-gray-500 mb-2">
                                     Give your database connection a friendly name
                                 </p>
-                                <input
+                                <Input
                                     type="text"
                                     value={connectionName}
                                     onChange={(e) => setConnectionName(e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
                                     placeholder={`${providerDisplayName} Connection`}
                                     required
                                 />
@@ -694,11 +676,11 @@ export function NewConnectionDialog({
                                     <p className="text-xs text-gray-500 mb-2">
                                         Full database connection URL
                                     </p>
-                                    <input
+                                    <Input
                                         type="text"
                                         value={dbConnectionString}
                                         onChange={(e) => setDbConnectionString(e.target.value)}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors font-mono text-sm"
+                                        className="font-mono"
                                         placeholder={
                                             provider === "postgresql"
                                                 ? "postgresql://user:password@localhost:5432/dbname"
@@ -717,11 +699,10 @@ export function NewConnectionDialog({
                                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                                 Host <span className="text-red-500">*</span>
                                             </label>
-                                            <input
+                                            <Input
                                                 type="text"
                                                 value={dbHost}
                                                 onChange={(e) => setDbHost(e.target.value)}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
                                                 placeholder="localhost"
                                                 required
                                             />
@@ -730,11 +711,10 @@ export function NewConnectionDialog({
                                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                                 Port <span className="text-red-500">*</span>
                                             </label>
-                                            <input
+                                            <Input
                                                 type="text"
                                                 value={dbPort}
                                                 onChange={(e) => setDbPort(e.target.value)}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
                                                 placeholder="5432"
                                                 required
                                             />
@@ -746,11 +726,10 @@ export function NewConnectionDialog({
                                         <label className="block text-sm font-medium text-gray-700 mb-1">
                                             Database Name <span className="text-red-500">*</span>
                                         </label>
-                                        <input
+                                        <Input
                                             type="text"
                                             value={dbDatabase}
                                             onChange={(e) => setDbDatabase(e.target.value)}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
                                             placeholder="my_database"
                                             required
                                         />
@@ -761,11 +740,10 @@ export function NewConnectionDialog({
                                         <label className="block text-sm font-medium text-gray-700 mb-1">
                                             Username <span className="text-red-500">*</span>
                                         </label>
-                                        <input
+                                        <Input
                                             type="text"
                                             value={dbUsername}
                                             onChange={(e) => setDbUsername(e.target.value)}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
                                             placeholder="db_user"
                                             required
                                         />
@@ -778,24 +756,25 @@ export function NewConnectionDialog({
                                             <span className="text-gray-400">(Optional)</span>
                                         </label>
                                         <div className="relative">
-                                            <input
+                                            <Input
                                                 type={showDbPassword ? "text" : "password"}
                                                 value={dbPassword}
                                                 onChange={(e) => setDbPassword(e.target.value)}
-                                                className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                                                className="pr-10"
                                                 placeholder="Enter database password"
                                             />
-                                            <button
+                                            <Button
                                                 type="button"
+                                                variant="icon"
                                                 onClick={() => setShowDbPassword(!showDbPassword)}
-                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                                                className="absolute right-1 top-1/2 -translate-y-1/2"
                                             >
                                                 {showDbPassword ? (
                                                     <EyeOff className="w-4 h-4" />
                                                 ) : (
                                                     <Eye className="w-4 h-4" />
                                                 )}
-                                            </button>
+                                            </Button>
                                         </div>
                                     </div>
                                 </>
@@ -803,7 +782,7 @@ export function NewConnectionDialog({
 
                             {/* SSL Enabled */}
                             <div className="flex items-center gap-2">
-                                <input
+                                <Input
                                     type="checkbox"
                                     id="ssl-enabled"
                                     checked={dbSslEnabled}
@@ -819,29 +798,26 @@ export function NewConnectionDialog({
                             </div>
 
                             {/* Error Message */}
-                            {error && (
-                                <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-                                    <p className="text-sm text-red-800">{error}</p>
-                                </div>
-                            )}
+                            {error && <Alert variant="error">{error}</Alert>}
 
                             {/* Submit Button */}
                             <div className="flex justify-end pt-2">
-                                <button
+                                <Button
                                     type="submit"
+                                    variant="primary"
                                     disabled={isSubmitting}
-                                    className="px-6 py-2 text-sm font-medium text-white bg-black rounded-md hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                    loading={isSubmitting}
                                 >
                                     {isSubmitting ? "Creating..." : "Create connection"}
-                                </button>
+                                </Button>
                             </div>
                         </form>
                     )}
 
                     {/* Error Message for OAuth */}
                     {error && step === "method-selection" && (
-                        <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
-                            <p className="text-sm text-red-800">{error}</p>
+                        <div className="mt-4">
+                            <Alert variant="error">{error}</Alert>
                         </div>
                     )}
                 </div>

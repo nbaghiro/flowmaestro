@@ -55,12 +55,7 @@ export {
     type EmitAgentExecutionCompletedInput,
     type EmitAgentExecutionFailedInput
 } from "./agent";
-export {
-    createSpan,
-    endSpan,
-    endSpanWithError,
-    setSpanAttributes
-} from "./observability/span-activities";
+export { createSpan, endSpan, endSpanWithError, setSpanAttributes } from "./span-activities";
 export {
     loadConversationHistory,
     saveConversationIncremental,

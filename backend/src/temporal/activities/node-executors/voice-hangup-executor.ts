@@ -1,5 +1,5 @@
 import type { JsonObject } from "@flowmaestro/shared";
-import { getVoiceCommandBus } from "../../../shared/services/VoiceCommandBus";
+import { getVoiceCommandBus } from "../../../services/events/VoiceCommandBus";
 import { CallExecutionRepository } from "../../../storage/repositories/CallExecutionRepository";
 import { interpolateVariables } from "./utils";
 

@@ -2,9 +2,11 @@ import { Plus } from "lucide-react";
 import { useState, useEffect } from "react";
 import { ALL_PROVIDERS } from "@flowmaestro/shared";
 import { CodeInput } from "../../../components/CodeInput";
+import { FormField, FormSection } from "../../../components/common/FormField";
+import { Input } from "../../../components/common/Input";
 import { Select } from "../../../components/common/Select";
+import { Textarea } from "../../../components/common/Textarea";
 import { ProviderConnectionDialog } from "../../../components/connections/ProviderConnectionDialog";
-import { FormField, FormSection } from "../../../components/FormField";
 import { OutputSettingsSection } from "../../../components/OutputSettingsSection";
 import { useConnectionStore } from "../../../stores/connectionStore";
 
@@ -369,12 +371,12 @@ export function DatabaseNodeConfig({ data, onUpdate }: DatabaseNodeConfigProps) 
                             label="Query Parameters"
                             description="JSON array of parameter values"
                         >
-                            <textarea
+                            <Textarea
                                 value={parameters}
                                 onChange={(e) => setParameters(e.target.value)}
                                 placeholder='["value1", "value2"]'
                                 rows={4}
-                                className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none font-mono"
+                                className="font-mono"
                             />
                         </FormField>
 
@@ -419,12 +421,11 @@ export function DatabaseNodeConfig({ data, onUpdate }: DatabaseNodeConfigProps) 
                 {isMongoProvider(provider) && operation === "find" && (
                     <>
                         <FormField label="Collection" description="Name of the collection to query">
-                            <input
+                            <Input
                                 type="text"
                                 value={collection}
                                 onChange={(e) => setCollection(e.target.value)}
                                 placeholder="users"
-                                className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                             />
                         </FormField>
 
@@ -451,12 +452,11 @@ export function DatabaseNodeConfig({ data, onUpdate }: DatabaseNodeConfigProps) 
                 {isMongoProvider(provider) && operation === "insertOne" && (
                     <>
                         <FormField label="Collection" description="Name of the collection">
-                            <input
+                            <Input
                                 type="text"
                                 value={collection}
                                 onChange={(e) => setCollection(e.target.value)}
                                 placeholder="users"
-                                className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                             />
                         </FormField>
 
@@ -475,12 +475,11 @@ export function DatabaseNodeConfig({ data, onUpdate }: DatabaseNodeConfigProps) 
                 {isMongoProvider(provider) && operation === "insertMany" && (
                     <>
                         <FormField label="Collection" description="Name of the collection">
-                            <input
+                            <Input
                                 type="text"
                                 value={collection}
                                 onChange={(e) => setCollection(e.target.value)}
                                 placeholder="users"
-                                className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                             />
                         </FormField>
 
@@ -503,7 +502,7 @@ export function DatabaseNodeConfig({ data, onUpdate }: DatabaseNodeConfigProps) 
                     (operation === "updateOne" || operation === "updateMany") && (
                         <>
                             <FormField label="Collection" description="Name of the collection">
-                                <input
+                                <Input
                                     type="text"
                                     value={collection}
                                     onChange={(e) => setCollection(e.target.value)}
@@ -544,7 +543,7 @@ export function DatabaseNodeConfig({ data, onUpdate }: DatabaseNodeConfigProps) 
                     (operation === "deleteOne" || operation === "deleteMany") && (
                         <>
                             <FormField label="Collection" description="Name of the collection">
-                                <input
+                                <Input
                                     type="text"
                                     value={collection}
                                     onChange={(e) => setCollection(e.target.value)}
@@ -586,12 +585,11 @@ export function DatabaseNodeConfig({ data, onUpdate }: DatabaseNodeConfigProps) 
                 {isMongoProvider(provider) && operation === "aggregate" && (
                     <>
                         <FormField label="Collection" description="Name of the collection">
-                            <input
+                            <Input
                                 type="text"
                                 value={collection}
                                 onChange={(e) => setCollection(e.target.value)}
                                 placeholder="orders"
-                                className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                             />
                         </FormField>
 

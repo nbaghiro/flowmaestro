@@ -142,3 +142,23 @@
 .node-test {
     @apply border-gray-500;
 }
+
+/* Slim, unobtrusive scrollbars for comment content */
+.comment-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(17, 24, 39, 0.35) transparent;
+}
+
+.comment-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.comment-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.comment-scrollbar::-webkit-scrollbar-thumb {
+    background-color: rgba(17, 24, 39, 0.35);
+    border-radius: 9999px;
+    border: 2px solid transparent;
+}

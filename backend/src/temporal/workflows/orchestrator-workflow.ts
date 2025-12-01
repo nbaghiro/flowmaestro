@@ -1,6 +1,6 @@
 import { proxyActivities } from "@temporalio/workflow";
 import type { WorkflowDefinition, WorkflowNode, JsonObject } from "@flowmaestro/shared";
-import { SpanType } from "../../shared/observability/types";
+import { SpanType } from "../../core/tracing/span-types";
 import type * as activities from "../activities";
 
 // Re-export WorkflowDefinition for use by other workflow files

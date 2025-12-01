@@ -1,4 +1,5 @@
 import { Upload, Link as LinkIcon, Loader2 } from "lucide-react";
+import { Input } from "../common/Input";
 
 interface UploadSectionProps {
     onFileUpload: (file: File) => Promise<void>;
@@ -21,7 +22,7 @@ export function UploadSection({ onFileUpload, onAddUrlClick, isUploading }: Uplo
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <label className="border-2 border-dashed border-border rounded-lg p-6 hover:border-primary transition-colors cursor-pointer">
-                    <input
+                    <Input
                         type="file"
                         onChange={handleFileChange}
                         accept=".pdf,.docx,.doc,.txt,.md,.html,.json,.csv"

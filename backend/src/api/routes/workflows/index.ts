@@ -1,4 +1,7 @@
 import { FastifyInstance } from "fastify";
+import { authMiddleware } from "../../middleware";
+import { chatRoute } from "./chat";
+import { chatStreamHandler } from "./chat-stream";
 import { createWorkflowRoute } from "./create";
 import { deleteWorkflowRoute } from "./delete";
 import { executeWorkflowRoute } from "./execute";
@@ -16,4 +19,13 @@ export async function workflowRoutes(fastify: FastifyInstance) {
     await deleteWorkflowRoute(fastify);
     await executeWorkflowRoute(fastify);
     await generateWorkflowRoute(fastify);
+    await chatRoute(fastify);
+
+    // Register SSE streaming endpoint for chat
+    // Note: authMiddleware supports token from query param for EventSource compatibility
+    fastify.get<{ Params: { executionId: string }; Querystring: { token?: string } }>(
+        "/chat-stream/:executionId",
+        { preHandler: [authMiddleware] },
+        chatStreamHandler
+    );
 }

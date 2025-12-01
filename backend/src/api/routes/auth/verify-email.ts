@@ -1,5 +1,5 @@
 import { FastifyInstance } from "fastify";
-import { TokenUtils } from "../../../shared/utils/token";
+import { TokenUtils } from "../../../core/utils/token";
 import { EmailVerificationTokenRepository } from "../../../storage/repositories/EmailVerificationTokenRepository";
 import { UserRepository } from "../../../storage/repositories/UserRepository";
 import { validateRequest, UnauthorizedError } from "../../middleware";

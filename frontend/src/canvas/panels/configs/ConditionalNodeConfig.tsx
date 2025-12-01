@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { CodeInput } from "../../../components/CodeInput";
+import { FormField, FormSection } from "../../../components/common/FormField";
+import { Input } from "../../../components/common/Input";
 import { Select } from "../../../components/common/Select";
-import { FormField, FormSection } from "../../../components/FormField";
 import { OutputSettingsSection } from "../../../components/OutputSettingsSection";
 
 interface ConditionalNodeConfigProps {
@@ -64,12 +65,12 @@ export function ConditionalNodeConfig({ data, onUpdate }: ConditionalNodeConfigP
                         label="Left Value"
                         description="Use ${variableName} to reference variables"
                     >
-                        <input
+                        <Input
                             type="text"
                             value={leftValue}
                             onChange={(e) => setLeftValue(e.target.value)}
                             placeholder="${variable} or literal value"
-                            className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono"
+                            className="font-mono"
                         />
                     </FormField>
 
@@ -81,12 +82,12 @@ export function ConditionalNodeConfig({ data, onUpdate }: ConditionalNodeConfigP
                         label="Right Value"
                         description="Use ${variableName} to reference variables"
                     >
-                        <input
+                        <Input
                             type="text"
                             value={rightValue}
                             onChange={(e) => setRightValue(e.target.value)}
                             placeholder="${variable} or literal value"
-                            className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono"
+                            className="font-mono"
                         />
                     </FormField>
                 </FormSection>

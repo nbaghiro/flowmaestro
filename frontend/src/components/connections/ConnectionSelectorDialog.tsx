@@ -2,6 +2,7 @@ import { X, Plus, Check, ExternalLink } from "lucide-react";
 import { useEffect } from "react";
 import { ALL_PROVIDERS } from "@flowmaestro/shared";
 import { useConnectionStore } from "../../stores/connectionStore";
+import { Button } from "../common/Button";
 import type { Connection } from "../../lib/api";
 
 interface ConnectionSelectorDialogProps {
@@ -67,13 +68,9 @@ export function ConnectionSelectorDialog({
                     <h2 className="text-lg font-semibold text-gray-900">
                         Select {providerInfo?.displayName || provider} Connection
                     </h2>
-                    <button
-                        onClick={onClose}
-                        className="text-gray-400 hover:text-gray-600 transition-colors"
-                        type="button"
-                    >
+                    <Button variant="icon" onClick={onClose}>
                         <X className="w-5 h-5" />
-                    </button>
+                    </Button>
                 </div>
 
                 {/* Content */}
@@ -102,14 +99,10 @@ export function ConnectionSelectorDialog({
                                 Create your first {providerInfo?.displayName || provider} connection
                                 to get started
                             </p>
-                            <button
-                                onClick={handleAddNewConnection}
-                                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-black rounded-md hover:bg-gray-800 transition-colors"
-                                type="button"
-                            >
+                            <Button variant="primary" onClick={handleAddNewConnection}>
                                 <ExternalLink className="w-4 h-4" />
                                 Go to Connections Page
-                            </button>
+                            </Button>
                         </div>
                     ) : (
                         <>
@@ -125,14 +118,14 @@ export function ConnectionSelectorDialog({
                                 ))}
                             </div>
 
-                            <button
+                            <Button
+                                variant="secondary"
                                 onClick={handleAddNewConnection}
-                                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-50 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
-                                type="button"
+                                className="w-full"
                             >
                                 <ExternalLink className="w-4 h-4" />
                                 Add New Connection
-                            </button>
+                            </Button>
                         </>
                     )}
                 </div>

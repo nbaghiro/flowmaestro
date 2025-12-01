@@ -8,4 +8,3 @@ export * from "./request-context";
 export * from "./triggers";
 export * from "./template";
 export * from "./agent-template";
-// Note: json-types.ts is already exported via types.ts to avoid duplicate exports

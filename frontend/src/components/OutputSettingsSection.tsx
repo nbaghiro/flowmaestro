@@ -5,6 +5,7 @@
 
 import { AlertCircle, Info } from "lucide-react";
 import { useState, useEffect } from "react";
+import { Input } from "./common/Input";
 
 interface OutputSettingsSectionProps {
     nodeName: string;
@@ -83,10 +84,12 @@ export function OutputSettingsSection({
         <div className="space-y-3">
             {/* Enable/Disable Toggle */}
             <label className="flex items-center gap-2 cursor-pointer">
-                <input
+                <Input
                     type="checkbox"
                     checked={enabled}
-                    onChange={(e) => handleToggle(e.target.checked)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        handleToggle(e.target.checked)
+                    }
                     className="w-4 h-4 rounded border-border text-primary focus:ring-2 focus:ring-primary/20"
                 />
                 <span className="text-sm font-medium">Store output in variable</span>
@@ -97,12 +100,14 @@ export function OutputSettingsSection({
                     {/* Variable Name Input */}
                     <div className="space-y-2">
                         <label className="block text-sm font-medium">Variable Name</label>
-                        <input
+                        <Input
                             type="text"
                             value={variableName}
-                            onChange={(e) => setVariableName(e.target.value)}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                                setVariableName(e.target.value)
+                            }
                             placeholder="Enter variable name..."
-                            className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono"
+                            className="font-mono"
                         />
 
                         {error && (

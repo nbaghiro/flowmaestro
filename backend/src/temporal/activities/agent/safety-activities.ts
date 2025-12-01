@@ -3,9 +3,9 @@
  * Handles safety checks and logging within agent execution
  */
 
-import { SafetyPipeline } from "../../../shared/safety/safety-pipeline";
+import { SafetyPipeline } from "../../../core/safety/safety-pipeline";
 import { SafetyLogRepository } from "../../../storage/repositories/SafetyLogRepository";
-import type { SafetyContext, SafetyCheckResult, SafetyConfig } from "../../../shared/safety/types";
+import type { SafetyContext, SafetyCheckResult, SafetyConfig } from "../../../core/safety/types";
 
 export interface ValidateInputInput {
     content: string;

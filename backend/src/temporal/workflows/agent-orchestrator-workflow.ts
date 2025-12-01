@@ -11,8 +11,8 @@ import {
     continueAsNew
 } from "@temporalio/workflow";
 import type { JsonObject } from "@flowmaestro/shared";
-import { SpanType } from "../../shared/observability/types";
-import type { SerializedConversation } from "../../shared/conversation/conversation-manager";
+import { SpanType } from "../../core/tracing/span-types";
+import type { SerializedConversation } from "../../services/conversation/ConversationManager";
 import type { Tool } from "../../storage/models/Agent";
 import type { ConversationMessage, ToolCall } from "../../storage/models/AgentExecution";
 import type * as activities from "../activities";

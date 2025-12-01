@@ -1,6 +1,7 @@
 import { Loader2, Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ALL_PROVIDERS, type Provider } from "@flowmaestro/shared";
+import { Input } from "../components/common/Input";
 import { PageHeader } from "../components/common/PageHeader";
 import { Select } from "../components/common/Select";
 import { ConnectionDetailsDialog } from "../components/connections/ConnectionDetailsDialog";
@@ -216,7 +217,7 @@ export function Connections() {
                 {/* Search Input */}
                 <div className="relative sm:flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <input
+                    <Input
                         type="text"
                         placeholder="Search integrations..."
                         value={searchQuery}

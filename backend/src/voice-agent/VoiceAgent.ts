@@ -9,7 +9,7 @@ import {
     VoiceCommandBus,
     VoiceCommand,
     VoiceCommandResponse
-} from "../shared/services/VoiceCommandBus";
+} from "../services/events/VoiceCommandBus";
 import { CallExecutionRepository } from "../storage/repositories/CallExecutionRepository";
 import { DeepgramSTT } from "./services/DeepgramSTT";
 import { ElevenLabsTTS } from "./services/ElevenLabsTTS";

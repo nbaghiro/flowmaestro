@@ -1,5 +1,5 @@
 import type { JsonObject, JsonValue } from "@flowmaestro/shared";
-import { redisEventBus } from "../../shared/events/RedisEventBus";
+import { redisEventBus } from "../../services/events/RedisEventBus";
 
 /**
  * Activities for emitting orchestration events to WebSocket clients

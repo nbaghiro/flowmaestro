@@ -1,6 +1,10 @@
 import { FastifyInstance } from "fastify";
 import type { JsonValue } from "@flowmaestro/shared";
-import { convertFrontendToBackend } from "../../../shared/utils/workflow-converter";
+import { WorkflowDefinition } from "@flowmaestro/shared";
+import {
+    convertFrontendToBackend,
+    stripNonExecutableNodes
+} from "../../../core/utils/workflow-converter";
 import { ManualTriggerConfig } from "../../../storage/models/Trigger";
 import { ExecutionRepository } from "../../../storage/repositories/ExecutionRepository";
 import { TriggerRepository } from "../../../storage/repositories/TriggerRepository";
@@ -93,19 +97,19 @@ export async function executeTriggerRoute(fastify: FastifyInstance) {
                 const workflowId = `execution-${execution.id}`;
 
                 // Convert frontend workflow definition to backend format if needed
-                let backendWorkflowDefinition: unknown;
+                let backendWorkflowDef: WorkflowDefinition;
                 const workflowDef = workflow.definition as { nodes?: unknown; edges?: unknown };
 
                 // Check if already in backend format (nodes is an object/Record)
                 if (workflowDef.nodes && !Array.isArray(workflowDef.nodes)) {
                     // Already in backend format
-                    backendWorkflowDefinition = {
-                        name: workflow.name,
-                        ...workflowDef
+                    backendWorkflowDef = {
+                        ...(workflowDef as WorkflowDefinition),
+                        name: workflow.name
                     };
                 } else if (workflowDef.nodes && Array.isArray(workflowDef.nodes)) {
                     // Frontend format, needs conversion
-                    backendWorkflowDefinition = convertFrontendToBackend(
+                    backendWorkflowDef = convertFrontendToBackend(
                         workflow.definition as unknown as {
                             nodes: Array<{
                                 id: string;
@@ -126,6 +130,9 @@ export async function executeTriggerRoute(fastify: FastifyInstance) {
                     throw new Error("Invalid workflow definition format");
                 }
 
+                // Strip non-executable nodes
+                backendWorkflowDef = stripNonExecutableNodes(backendWorkflowDef, workflow.name);
+
                 // Start the workflow (non-blocking)
                 await client.workflow.start("orchestratorWorkflow", {
                     taskQueue: "flowmaestro-orchestrator",
@@ -133,7 +140,7 @@ export async function executeTriggerRoute(fastify: FastifyInstance) {
                     args: [
                         {
                             executionId: execution.id,
-                            workflowDefinition: backendWorkflowDefinition,
+                            workflowDefinition: backendWorkflowDef,
                             inputs,
                             userId
                         }

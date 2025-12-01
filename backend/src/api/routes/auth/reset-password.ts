@@ -1,7 +1,7 @@
 import { FastifyInstance } from "fastify";
+import { PasswordUtils } from "../../../core/utils/password";
+import { TokenUtils } from "../../../core/utils/token";
 import { emailService } from "../../../services/email/EmailService";
-import { PasswordUtils } from "../../../shared/utils/password";
-import { TokenUtils } from "../../../shared/utils/token";
 import { PasswordResetTokenRepository } from "../../../storage/repositories/PasswordResetTokenRepository";
 import { UserRepository } from "../../../storage/repositories/UserRepository";
 import { validateRequest, UnauthorizedError } from "../../middleware";

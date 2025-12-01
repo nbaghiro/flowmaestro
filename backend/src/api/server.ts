@@ -3,13 +3,12 @@ import jwt from "@fastify/jwt";
 import multipart from "@fastify/multipart";
 import websocket from "@fastify/websocket";
 import Fastify from "fastify";
+import { config } from "../core/config";
+import { initializeSpanService, getSpanService } from "../core/tracing";
 import { analyticsScheduler } from "../services/AnalyticsService";
+import { redisEventBus } from "../services/events/RedisEventBus";
 import { credentialRefreshScheduler } from "../services/oauth/CredentialRefreshScheduler";
-import { config } from "../shared/config";
-import { redisEventBus } from "../shared/events/RedisEventBus";
-import { initializeSpanService, getSpanService } from "../shared/observability";
-import { registerAllNodes } from "../shared/registry/register-nodes";
-import { eventBridge } from "../shared/websocket/EventBridge";
+import { eventBridge } from "../services/websocket/EventBridge";
 import { db } from "../storage/database";
 import { errorHandler, requestContextMiddleware } from "./middleware";
 import { agentTemplateRoutes } from "./routes/agent-templates";
@@ -21,7 +20,6 @@ import { connectionRoutes } from "./routes/connections";
 import { executionRoutes } from "./routes/executions";
 import { integrationRoutes } from "./routes/integrations";
 import { knowledgeBaseRoutes } from "./routes/knowledge-bases";
-import { nodeRoutes } from "./routes/nodes";
 import { oauthRoutes } from "./routes/oauth";
 import { templateRoutes } from "./routes/templates";
 import { threadRoutes } from "./routes/threads";
@@ -31,8 +29,6 @@ import { websocketRoutes } from "./routes/websocket";
 import { workflowRoutes } from "./routes/workflows";
 
 export async function buildServer() {
-    // Register all node types in the registry
-    registerAllNodes();
     const fastify = Fastify({
         logger: {
             level: config.logLevel,
@@ -137,7 +133,6 @@ export async function buildServer() {
     await fastify.register(connectionRoutes, { prefix: "/api/connections" });
     await fastify.register(integrationRoutes, { prefix: "/api/integrations" });
     await fastify.register(oauthRoutes, { prefix: "/api/oauth" });
-    await fastify.register(nodeRoutes, { prefix: "/api/nodes" });
     await fastify.register(knowledgeBaseRoutes, { prefix: "/api/knowledge-bases" });
     await fastify.register(agentRoutes, { prefix: "/api/agents" });
     await fastify.register(threadRoutes, { prefix: "/api/threads" });

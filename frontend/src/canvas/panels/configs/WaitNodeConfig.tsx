@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { CodeInput } from "../../../components/CodeInput";
+import { FormField, FormSection } from "../../../components/common/FormField";
+import { Input } from "../../../components/common/Input";
 import { Select } from "../../../components/common/Select";
-import { FormField, FormSection } from "../../../components/FormField";
 import { OutputSettingsSection } from "../../../components/OutputSettingsSection";
 
 interface WaitNodeConfigProps {
@@ -55,7 +56,7 @@ export function WaitNodeConfig({ data, onUpdate }: WaitNodeConfigProps) {
                 <FormSection title="Duration">
                     <FormField label="Wait For">
                         <div className="flex gap-2">
-                            <input
+                            <Input
                                 type="number"
                                 value={duration}
                                 onChange={(e) => setDuration(parseInt(e.target.value) || 0)}
@@ -85,12 +86,12 @@ export function WaitNodeConfig({ data, onUpdate }: WaitNodeConfigProps) {
             {waitType === "until" && (
                 <FormSection title="Until Timestamp">
                     <FormField label="Timestamp" description="ISO 8601 format or use ${variable}">
-                        <input
+                        <Input
                             type="text"
                             value={timestamp}
                             onChange={(e) => setTimestamp(e.target.value)}
                             placeholder="2024-12-31T23:59:59Z or ${scheduledTime}"
-                            className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono"
+                            className="font-mono"
                         />
                     </FormField>
 
@@ -121,13 +122,12 @@ export function WaitNodeConfig({ data, onUpdate }: WaitNodeConfigProps) {
                         label="Polling Interval (seconds)"
                         description="How often to check the condition"
                     >
-                        <input
+                        <Input
                             type="number"
                             value={pollingInterval}
                             onChange={(e) => setPollingInterval(parseInt(e.target.value) || 0)}
                             min={1}
                             max={3600}
-                            className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                         />
                     </FormField>
 

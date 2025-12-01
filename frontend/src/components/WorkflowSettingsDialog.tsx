@@ -4,8 +4,12 @@
  */
 
 import * as Dialog from "@radix-ui/react-dialog";
-import { X, Settings, Sparkles, Loader2 } from "lucide-react";
+import { X, Settings, Sparkles } from "lucide-react";
 import { useState, useEffect } from "react";
+import { Alert } from "./common/Alert";
+import { Button } from "./common/Button";
+import { Input } from "./common/Input";
+import { Textarea } from "./common/Textarea";
 
 interface WorkflowSettingsDialogProps {
     open: boolean;
@@ -77,12 +81,9 @@ export function WorkflowSettingsDialog({
                             </Dialog.Description>
                         </div>
                         <Dialog.Close asChild>
-                            <button
-                                className="p-1 rounded-md hover:bg-muted transition-colors"
-                                aria-label="Close"
-                            >
+                            <Button variant="icon" aria-label="Close">
                                 <X className="w-4 h-4" />
-                            </button>
+                            </Button>
                         </Dialog.Close>
                     </div>
 
@@ -93,12 +94,11 @@ export function WorkflowSettingsDialog({
                             <label className="block text-sm font-medium mb-1.5">
                                 Workflow Name
                             </label>
-                            <input
+                            <Input
                                 type="text"
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
                                 placeholder="Untitled Workflow"
-                                className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                                 autoFocus
                             />
                         </div>
@@ -106,11 +106,10 @@ export function WorkflowSettingsDialog({
                         {/* Workflow Description */}
                         <div>
                             <label className="block text-sm font-medium mb-1.5">Description</label>
-                            <textarea
+                            <Textarea
                                 value={description}
                                 onChange={(e) => setDescription(e.target.value)}
                                 placeholder="Enter a description for this workflow..."
-                                className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
                                 rows={3}
                             />
                         </div>
@@ -141,37 +140,27 @@ export function WorkflowSettingsDialog({
                         )}
 
                         {/* Error */}
-                        {error && (
-                            <div className="px-3 py-2 bg-red-50 border border-red-200 rounded-lg">
-                                <p className="text-xs text-red-700">{error}</p>
-                            </div>
-                        )}
+                        {error && <Alert variant="error">{error}</Alert>}
 
                         {/* Actions */}
                         <div className="flex items-center justify-end gap-2 pt-2">
-                            <button
+                            <Button
                                 type="button"
+                                variant="ghost"
                                 onClick={handleCancel}
-                                className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
                                 disabled={isSaving}
                             >
                                 Cancel
-                            </button>
-                            <button
+                            </Button>
+                            <Button
                                 type="button"
+                                variant="primary"
                                 onClick={handleSave}
-                                className="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                                 disabled={isSaving}
+                                loading={isSaving}
                             >
-                                {isSaving ? (
-                                    <>
-                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                        Saving...
-                                    </>
-                                ) : (
-                                    "Save Changes"
-                                )}
-                            </button>
+                                {isSaving ? "Saving..." : "Save Changes"}
+                            </Button>
                         </div>
                     </div>
                 </Dialog.Content>

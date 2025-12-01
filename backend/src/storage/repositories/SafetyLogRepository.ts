@@ -4,7 +4,7 @@
  */
 
 import { db } from "../database";
-import type { SafetyCheckType, SafetyAction } from "../../shared/safety/types";
+import type { SafetyCheckType, SafetyAction } from "../../core/safety/types";
 
 export interface SafetyLogModel {
     id: string;

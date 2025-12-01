@@ -5,7 +5,8 @@ import { ReactFlowProvider, useReactFlow, Node } from "reactflow";
 import { NodeInspector } from "../canvas/panels/NodeInspector";
 import { NodeLibrary } from "../canvas/panels/NodeLibrary";
 import { WorkflowCanvas } from "../canvas/WorkflowCanvas";
-import { AIGenerateButton } from "../components/AIGenerateButton";
+import { AIAskButton } from "../components/AIAskButton";
+import { AIChatPanel } from "../components/AIChatPanel";
 import { BuilderHeader } from "../components/BuilderHeader";
 import { CheckpointPanel } from "../components/CheckpointPanel";
 import { ExecutionPanel } from "../components/ExecutionPanel";
@@ -28,6 +29,7 @@ import {
     findEntryPoint,
     compareWorkflowSnapshots
 } from "../lib/workflowTransformers";
+import { useChatStore } from "../stores/chatStore";
 import { useHistoryStore, initializeHistoryTracking } from "../stores/historyStore";
 import { useWorkflowStore } from "../stores/workflowStore";
 
@@ -85,6 +87,8 @@ export function FlowBuilder() {
 
     const { undo, redo, canUndo, canRedo, clear } = useHistoryStore();
 
+    const { isPanelOpen: isChatOpen, closePanel: closeChatPanel } = useChatStore();
+
     useEffect(() => {
         if (workflowId) {
             listCheckpoints(workflowId).then((cp) => {
@@ -103,6 +107,20 @@ export function FlowBuilder() {
             setIsCheckpointOpen(false);
         }
     }, [selectedNode]);
+
+    // Panel coordination: Close chat panel when a node is selected
+    useEffect(() => {
+        if (selectedNode && isChatOpen) {
+            closeChatPanel();
+        }
+    }, [selectedNode, isChatOpen, closeChatPanel]);
+
+    // Panel coordination: Deselect node when chat panel opens
+    useEffect(() => {
+        if (isChatOpen && selectedNode) {
+            selectNode(null);
+        }
+    }, [isChatOpen]); // Only depend on isChatOpen to avoid infinite loop
 
     useEffect(() => {
         const unsubscribe = initializeHistoryTracking();
@@ -409,6 +427,31 @@ export function FlowBuilder() {
         setCheckpoints(updated);
     };
 
+    const handleCreateComment = useCallback(() => {
+        const instance = reactFlowInstanceRef.current;
+        if (!instance) return;
+
+        const { x, y, zoom } = instance.getViewport();
+        const centerX = (-x + window.innerWidth / 2) / zoom;
+        const centerY = (-y + window.innerHeight / 2) / zoom;
+
+        addNode({
+            id: generateId(),
+            type: "comment",
+            position: { x: centerX - 100, y: centerY - 75 },
+            data: {
+                label: "Comment",
+                content: "",
+                backgroundColor: "#FEF3C7",
+                textColor: "#1F2937"
+            },
+            style: {
+                width: 200,
+                height: 150
+            }
+        });
+    }, [addNode]);
+
     useKeyboardShortcuts({
         onSave: handleSave,
         onRun: handleRunWorkflow,
@@ -424,7 +467,8 @@ export function FlowBuilder() {
         onDeselectAll: handleDeselectAll,
         onFitView: handleFitView,
         canUndo,
-        canRedo
+        canRedo,
+        onCreateComment: handleCreateComment
     });
 
     if (isLoading) {
@@ -438,6 +482,8 @@ export function FlowBuilder() {
         );
     }
 
+    const selectedNodeObj = nodes.find((n) => n.id === selectedNode);
+    const selectedNodeType = selectedNodeObj?.type;
     return (
         <ReactFlowProvider>
             <div className="h-screen flex flex-col bg-gray-50">
@@ -472,11 +518,11 @@ export function FlowBuilder() {
                             onInit={(instance) => (reactFlowInstanceRef.current = instance)}
                         />
                     </div>
-                    {selectedNode && <NodeInspector />}
+                    {selectedNode && selectedNodeType !== "comment" && <NodeInspector />}
 
                     <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40">
                         <div className="flex items-center gap-2">
-                            <AIGenerateButton />
+                            <AIAskButton />
                             {workflowId && (
                                 <ExecutionPanel workflowId={workflowId} renderButtonOnly />
                             )}
@@ -484,6 +530,7 @@ export function FlowBuilder() {
                     </div>
 
                     {workflowId && <ExecutionPanel workflowId={workflowId} renderPanelOnly />}
+                    <AIChatPanel workflowId={workflowId} />
                     <CheckpointPanel
                         open={isCheckpointOpen}
                         onClose={() => setIsCheckpointOpen(false)}

@@ -298,6 +298,30 @@ const zendeskEntry: ProviderRegistryEntry = {
     }
 };
 
+// Register Apollo provider
+const apolloEntry: ProviderRegistryEntry = {
+    name: "apollo",
+    displayName: "Apollo.io",
+    authMethod: "oauth2",
+    category: "crm",
+    loader: async () => {
+        const { ApolloProvider } = await import("./providers/apollo/ApolloProvider");
+        return new ApolloProvider();
+    }
+};
+
+// Register Jira provider
+const jiraEntry: ProviderRegistryEntry = {
+    name: "jira",
+    displayName: "Jira Cloud",
+    authMethod: "oauth2",
+    category: "project_management",
+    loader: async () => {
+        const { JiraProvider } = await import("./providers/jira/JiraProvider");
+        return new JiraProvider();
+    }
+};
+
 // Register all providers
 providerRegistry.register(slackEntry);
 providerRegistry.register(codaEntry);
@@ -322,6 +346,8 @@ providerRegistry.register(microsoftExcelEntry);
 providerRegistry.register(microsoftWordEntry);
 providerRegistry.register(microsoftTeamsEntry);
 providerRegistry.register(zendeskEntry);
+providerRegistry.register(apolloEntry);
+providerRegistry.register(jiraEntry);
 
 // Export for use in application
 export { providerRegistry };

@@ -4,7 +4,7 @@
  */
 
 import type { JsonObject } from "@flowmaestro/shared";
-import { getWorkingMemoryService } from "../../../services/WorkingMemoryService";
+import { getWorkingMemoryService } from "../../../services/conversation/WorkingMemoryService";
 import type { Tool } from "../../../storage/models/Agent";
 
 /**

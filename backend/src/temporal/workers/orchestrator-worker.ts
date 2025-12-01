@@ -1,8 +1,7 @@
 import path from "path";
 import { Worker, NativeConnection } from "@temporalio/worker";
-import { redisEventBus } from "../../shared/events/RedisEventBus";
-import { initializeSpanService } from "../../shared/observability";
-import { registerAllNodes } from "../../shared/registry/register-nodes";
+import { initializeSpanService } from "../../core/tracing";
+import { redisEventBus } from "../../services/events/RedisEventBus";
 import { db } from "../../storage/database";
 import * as activities from "../activities";
 
@@ -13,9 +12,6 @@ import * as activities from "../activities";
  * and user input workflows.
  */
 async function run() {
-    // Register all node types
-    registerAllNodes();
-
     // Initialize SpanService for observability
     initializeSpanService({
         pool: db.getPool(),
@@ -85,7 +81,7 @@ async function run() {
         maxConcurrentWorkflowTaskExecutions: 10,
         // Add bundler options for TypeScript
         bundlerOptions: {
-            ignoreModules: ["@flowmaestro/shared", "uuid", "pg", "redis", "fastify"]
+            ignoreModules: ["uuid", "pg", "redis", "fastify"]
         }
     });
 

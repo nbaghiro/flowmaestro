@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { CodeInput } from "../../../components/CodeInput";
+import { FormField, FormSection } from "../../../components/common/FormField";
+import { Input } from "../../../components/common/Input";
 import { Select } from "../../../components/common/Select";
-import { FormField, FormSection } from "../../../components/FormField";
 import { OutputSettingsSection } from "../../../components/OutputSettingsSection";
 import { VariableDialog } from "../../../components/VariableDialog";
 
@@ -86,12 +87,12 @@ export function LoopNodeConfig({ data, onUpdate }: LoopNodeConfigProps) {
             {loopType === "forEach" && (
                 <FormSection title="For Each Configuration">
                     <FormField label="Array Variable" description="Array to iterate over">
-                        <input
+                        <Input
                             type="text"
                             value={arrayVariable}
                             onChange={(e) => setArrayVariable(e.target.value)}
                             placeholder="${arrayVariable}"
-                            className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono"
+                            className="font-mono"
                         />
                     </FormField>
 
@@ -99,12 +100,12 @@ export function LoopNodeConfig({ data, onUpdate }: LoopNodeConfigProps) {
                         label="Item Variable Name"
                         description="Variable name for current item"
                     >
-                        <input
+                        <Input
                             type="text"
                             value={itemVariable}
                             onChange={(e) => setItemVariable(e.target.value)}
                             placeholder="item"
-                            className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono"
+                            className="font-mono"
                         />
                     </FormField>
 
@@ -112,12 +113,12 @@ export function LoopNodeConfig({ data, onUpdate }: LoopNodeConfigProps) {
                         label="Index Variable Name"
                         description="Variable name for current index"
                     >
-                        <input
+                        <Input
                             type="text"
                             value={indexVariable}
                             onChange={(e) => setIndexVariable(e.target.value)}
                             placeholder="index"
-                            className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono"
+                            className="font-mono"
                         />
                     </FormField>
                 </FormSection>
@@ -154,14 +155,14 @@ export function LoopNodeConfig({ data, onUpdate }: LoopNodeConfigProps) {
                                     Object.entries(initialVariables).map(([key, value]) => (
                                         <div key={key} className="flex items-start gap-2">
                                             <div className="flex-1 grid grid-cols-2 gap-2">
-                                                <input
+                                                <Input
                                                     type="text"
                                                     value={key}
                                                     disabled
                                                     className="px-3 py-2 text-sm bg-muted border border-border rounded-lg font-mono opacity-75"
                                                     placeholder="Variable name"
                                                 />
-                                                <input
+                                                <Input
                                                     type="text"
                                                     value={
                                                         typeof value === "string"
@@ -253,13 +254,12 @@ export function LoopNodeConfig({ data, onUpdate }: LoopNodeConfigProps) {
             {loopType === "times" && (
                 <FormSection title="Times Configuration">
                     <FormField label="Count" description="Number of times to execute">
-                        <input
+                        <Input
                             type="number"
                             value={count}
                             onChange={(e) => setCount(parseInt(e.target.value) || 0)}
                             min={1}
                             max={10000}
-                            className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                         />
                     </FormField>
 
@@ -267,12 +267,12 @@ export function LoopNodeConfig({ data, onUpdate }: LoopNodeConfigProps) {
                         label="Index Variable Name"
                         description="Variable name for current iteration (0-based)"
                     >
-                        <input
+                        <Input
                             type="text"
                             value={indexVariable}
                             onChange={(e) => setIndexVariable(e.target.value)}
                             placeholder="index"
-                            className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono"
+                            className="font-mono"
                         />
                     </FormField>
                 </FormSection>
@@ -283,13 +283,12 @@ export function LoopNodeConfig({ data, onUpdate }: LoopNodeConfigProps) {
                     label="Max Iterations"
                     description="Maximum number of iterations (prevents infinite loops)"
                 >
-                    <input
+                    <Input
                         type="number"
                         value={maxIterations}
                         onChange={(e) => setMaxIterations(parseInt(e.target.value) || 0)}
                         min={1}
                         max={100000}
-                        className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                     />
                 </FormField>
 

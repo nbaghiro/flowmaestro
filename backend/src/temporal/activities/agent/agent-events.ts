@@ -1,5 +1,5 @@
 import type { JsonObject, WebSocketEvent } from "@flowmaestro/shared";
-import { redisEventBus } from "../../../shared/events/RedisEventBus";
+import { redisEventBus } from "../../../services/events/RedisEventBus";
 import type { ConversationMessage } from "../../../storage/models/AgentExecution";
 
 /**

@@ -1,8 +1,8 @@
 import { FastifyInstance } from "fastify";
+import { config } from "../../../core/config";
+import { rateLimiter } from "../../../core/utils/rate-limiter";
+import { TokenUtils } from "../../../core/utils/token";
 import { emailService } from "../../../services/email/EmailService";
-import { config } from "../../../shared/config";
-import { rateLimiter } from "../../../shared/utils/rate-limiter";
-import { TokenUtils } from "../../../shared/utils/token";
 import { EmailVerificationTokenRepository } from "../../../storage/repositories/EmailVerificationTokenRepository";
 import { UserRepository } from "../../../storage/repositories/UserRepository";
 import { authMiddleware, BadRequestError } from "../../middleware";
