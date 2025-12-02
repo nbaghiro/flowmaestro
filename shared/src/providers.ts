@@ -70,6 +70,14 @@ export const ALL_PROVIDERS: Provider[] = [
         methods: ["api_key"]
     },
     {
+        provider: "google",
+        displayName: "Google AI",
+        description: "Gemini models with vision, audio, and massive context windows",
+        logoUrl: getBrandLogo("google.com"),
+        category: "AI & ML",
+        methods: ["api_key"]
+    },
+    {
         provider: "huggingface",
         displayName: "Hugging Face",
         description: "Access AI models",
@@ -1558,8 +1566,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Language AI platform",
         logoUrl: getBrandLogo("cohere.com"),
         category: "AI & ML",
-        methods: ["api_key"],
-        comingSoon: true
+        methods: ["api_key"]
     },
     {
         provider: "replicate",

@@ -179,8 +179,8 @@ export const LLM_MODELS_BY_PROVIDER: Record<string, LLMModelDefinition[]> = {
     ],
     google: [
         {
-            value: "gemini-2.0-flash-exp",
-            label: "Gemini 2.0 Flash (Experimental)",
+            value: "gemini-2.5-flash",
+            label: "Gemini 2.5 Flash (Latest, Fastest)",
             provider: "google",
             contextWindow: 1000000,
             capabilities: ["text", "vision", "audio", "function-calling"],
@@ -190,8 +190,8 @@ export const LLM_MODELS_BY_PROVIDER: Record<string, LLMModelDefinition[]> = {
             }
         },
         {
-            value: "gemini-1.5-pro",
-            label: "Gemini 1.5 Pro",
+            value: "gemini-2.5-pro",
+            label: "Gemini 2.5 Pro (Latest, Most Capable)",
             provider: "google",
             contextWindow: 2000000,
             capabilities: ["text", "vision", "audio", "function-calling"],
@@ -201,8 +201,8 @@ export const LLM_MODELS_BY_PROVIDER: Record<string, LLMModelDefinition[]> = {
             }
         },
         {
-            value: "gemini-1.5-flash",
-            label: "Gemini 1.5 Flash (Fast)",
+            value: "gemini-2.0-flash",
+            label: "Gemini 2.0 Flash (Stable)",
             provider: "google",
             contextWindow: 1000000,
             capabilities: ["text", "vision", "audio", "function-calling"],
@@ -212,54 +212,63 @@ export const LLM_MODELS_BY_PROVIDER: Record<string, LLMModelDefinition[]> = {
             }
         },
         {
-            value: "gemini-pro",
-            label: "Gemini Pro",
+            value: "gemini-2.0-flash-exp",
+            label: "Gemini 2.0 Flash (Experimental)",
             provider: "google",
-            contextWindow: 32000,
-            capabilities: ["text"],
-            deprecated: true,
+            contextWindow: 1000000,
+            capabilities: ["text", "vision", "audio", "function-calling"],
             pricing: {
-                inputPricePerToken: 0.0000005,
-                outputPricePerToken: 0.0000015
+                inputPricePerToken: 0.000000075,
+                outputPricePerToken: 0.0000003
             }
-        },
-        {
-            value: "gemini-ultra",
-            label: "Gemini Ultra",
-            provider: "google",
-            contextWindow: 32000,
-            capabilities: ["text"],
-            deprecated: true
         }
     ],
     cohere: [
         {
-            value: "command-r-plus",
-            label: "Command R+ (Most Capable)",
+            value: "command-r-plus-08-2024",
+            label: "Command R+ 08-2024 (Most Capable)",
             provider: "cohere",
             contextWindow: 128000,
-            capabilities: ["text", "function-calling"]
+            capabilities: ["text", "function-calling"],
+            pricing: {
+                inputPricePerToken: 0.0000025,
+                outputPricePerToken: 0.00001
+            }
+        },
+        {
+            value: "command-r-08-2024",
+            label: "Command R 08-2024 (Balanced)",
+            provider: "cohere",
+            contextWindow: 128000,
+            capabilities: ["text", "function-calling"],
+            pricing: {
+                inputPricePerToken: 0.00000015,
+                outputPricePerToken: 0.0000006
+            }
+        },
+        {
+            value: "command-r-plus",
+            label: "Command R+ (Legacy)",
+            provider: "cohere",
+            contextWindow: 128000,
+            capabilities: ["text", "function-calling"],
+            deprecated: true,
+            pricing: {
+                inputPricePerToken: 0.0000025,
+                outputPricePerToken: 0.00001
+            }
         },
         {
             value: "command-r",
-            label: "Command R (Balanced)",
+            label: "Command R (Legacy)",
             provider: "cohere",
             contextWindow: 128000,
-            capabilities: ["text", "function-calling"]
-        },
-        {
-            value: "command",
-            label: "Command",
-            provider: "cohere",
-            contextWindow: 4096,
-            capabilities: ["text"]
-        },
-        {
-            value: "command-light",
-            label: "Command Light (Fast)",
-            provider: "cohere",
-            contextWindow: 4096,
-            capabilities: ["text"]
+            capabilities: ["text", "function-calling"],
+            deprecated: true,
+            pricing: {
+                inputPricePerToken: 0.00000015,
+                outputPricePerToken: 0.0000006
+            }
         }
     ]
 };

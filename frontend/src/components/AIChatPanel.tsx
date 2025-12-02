@@ -45,7 +45,7 @@ interface AIChatPanelProps {
     workflowId?: string;
 }
 
-export function AIChatPanel({ workflowId: _workflowId }: AIChatPanelProps) {
+export function AIChatPanel({ workflowId }: AIChatPanelProps) {
     const {
         isPanelOpen,
         panelWidth,
@@ -153,7 +153,7 @@ export function AIChatPanel({ workflowId: _workflowId }: AIChatPanelProps) {
 
             // Step 1: Initiate chat execution
             const response = await chatWorkflow({
-                workflowId: _workflowId,
+                workflowId,
                 action, // null for conversational, "add"/"modify"/"remove" for node ops
                 message,
                 context: {

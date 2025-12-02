@@ -131,6 +131,13 @@ export const gmailApi = new gcp.projects.Service("gmail-api", {
     disableOnDestroy: false
 });
 
+// Vertex AI API - Required for Google Gemini LLM integration
+export const vertexAiApi = new gcp.projects.Service("vertexai-api", {
+    service: "aiplatform.googleapis.com",
+    project: infrastructureConfig.project,
+    disableOnDestroy: false
+});
+
 // =============================================================================
 // Exports
 // =============================================================================
@@ -154,5 +161,6 @@ export const apiOutputs = {
     sheetsApiEnabled: sheetsApi.service,
     driveApiEnabled: driveApi.service,
     calendarApiEnabled: calendarApi.service,
-    gmailApiEnabled: gmailApi.service
+    gmailApiEnabled: gmailApi.service,
+    vertexAiApiEnabled: vertexAiApi.service
 };
