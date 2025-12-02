@@ -247,7 +247,7 @@ export function AgentChat({ agent }: AgentChatProps) {
     return (
         <div className="h-full flex flex-col">
             {/* Chat header - Fixed */}
-            <div className="border-b border-border p-4 flex items-center justify-between flex-shrink-0 bg-white">
+            <div className="border-b border-border p-4 flex items-center justify-between flex-shrink-0 bg-card">
                 <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
                         <Bot className="w-4 h-4 text-primary" />
@@ -348,7 +348,7 @@ export function AgentChat({ agent }: AgentChatProps) {
             </div>
 
             {/* Input - Fixed at bottom */}
-            <div className="border-t border-border p-4 flex-shrink-0 bg-white">
+            <div className="border-t border-border p-4 flex-shrink-0 bg-card">
                 <div className="flex gap-2">
                     <Input
                         type="text"

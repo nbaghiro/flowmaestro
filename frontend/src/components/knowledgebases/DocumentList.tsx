@@ -57,7 +57,7 @@ export function DocumentList({
     selectedDocumentId
 }: DocumentListProps) {
     return (
-        <div className="bg-white border border-border rounded-lg">
+        <div className="bg-card border border-border rounded-lg">
             <div className="p-4 border-b border-border">
                 <h2 className="font-semibold text-foreground">Documents</h2>
             </div>

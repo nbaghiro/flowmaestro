@@ -159,13 +159,13 @@ export function TemplateCard({ template, onClick }: TemplateCardProps) {
         <div
             onClick={() => onClick(template)}
             className={cn(
-                "bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700",
-                "hover:shadow-xl hover:border-gray-300 dark:hover:border-gray-600 hover:scale-[1.02]",
+                "bg-card dark:bg-card rounded-xl border border-border dark:border-border",
+                "hover:shadow-xl hover:border-border/60 dark:hover:border-border/60 hover:scale-[1.02]",
                 "transition-all duration-200 cursor-pointer overflow-hidden group"
             )}
         >
             {/* React Flow Preview */}
-            <div className="h-40 bg-gray-50 dark:bg-gray-900 relative overflow-hidden">
+            <div className="h-40 bg-muted/30 dark:bg-muted relative overflow-hidden">
                 <Flow
                     nodes={nodes}
                     edges={edges}
@@ -204,7 +204,7 @@ export function TemplateCard({ template, onClick }: TemplateCardProps) {
                     </span>
                 </div>
                 {/* Hover overlay */}
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 dark:group-hover:bg-white/5 transition-colors" />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 dark:group-hover:bg-card/5 transition-colors" />
             </div>
 
             {/* Content */}
@@ -225,7 +225,7 @@ export function TemplateCard({ template, onClick }: TemplateCardProps) {
                             />
                         ))}
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-gray-400">
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
                         <span className="flex items-center gap-1">
                             <Eye className="w-3 h-3" />
                             {template.view_count}
@@ -238,13 +238,13 @@ export function TemplateCard({ template, onClick }: TemplateCardProps) {
                 </div>
 
                 {/* Title */}
-                <h3 className="font-semibold text-gray-900 dark:text-white line-clamp-1 mb-1.5">
+                <h3 className="font-semibold text-foreground dark:text-foreground line-clamp-1 mb-1.5">
                     {template.name}
                 </h3>
 
                 {/* Description */}
                 {template.description && (
-                    <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2">
+                    <p className="text-sm text-muted-foreground dark:text-muted-foreground line-clamp-2">
                         {template.description}
                     </p>
                 )}

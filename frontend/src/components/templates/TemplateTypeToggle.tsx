@@ -10,14 +10,14 @@ interface TemplateTypeToggleProps {
 
 export function TemplateTypeToggle({ value, onChange }: TemplateTypeToggleProps) {
     return (
-        <div className="inline-flex items-center p-1 bg-gray-100 dark:bg-gray-800 rounded-lg">
+        <div className="inline-flex items-center p-1 bg-muted rounded-lg">
             <button
                 onClick={() => onChange("workflows")}
                 className={cn(
                     "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200",
                     value === "workflows"
-                        ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
-                        : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
                 )}
             >
                 <GitBranch className="w-4 h-4" />
@@ -28,8 +28,8 @@ export function TemplateTypeToggle({ value, onChange }: TemplateTypeToggleProps)
                 className={cn(
                     "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200",
                     value === "agents"
-                        ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
-                        : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
                 )}
             >
                 <Bot className="w-4 h-4" />

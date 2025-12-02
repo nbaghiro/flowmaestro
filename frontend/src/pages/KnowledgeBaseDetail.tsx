@@ -229,7 +229,7 @@ export function KnowledgeBaseDetail() {
     return (
         <div className="h-screen flex flex-col bg-background">
             {/* Header */}
-            <div className="h-16 border-b border-border bg-white flex items-center justify-between px-6 flex-shrink-0">
+            <div className="h-16 border-b border-border bg-card flex items-center justify-between px-6 flex-shrink-0">
                 {/* Left: Back + Title */}
                 <div className="flex items-center gap-4">
                     <button
@@ -273,7 +273,7 @@ export function KnowledgeBaseDetail() {
             {/* Main Content */}
             <div className="flex-1 flex overflow-hidden">
                 {/* Left Sidebar */}
-                <div className="w-56 border-r border-border bg-white flex-shrink-0">
+                <div className="w-56 border-r border-border bg-card flex-shrink-0">
                     <nav className="p-4 space-y-1">
                         {tabs.map((tab) => {
                             const Icon = tab.icon;

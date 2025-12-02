@@ -3,10 +3,25 @@ import { memo, useState, useEffect, useRef } from "react";
 import { NodeProps } from "reactflow";
 import CommentNodeToolbar from "../../components/comment/CommentNodeToolbar";
 import ContentArea from "../../components/comment/ContentArea";
+import { useThemeStore } from "../../stores/themeStore";
 import { useWorkflowStore } from "../../stores/workflowStore";
 
 function CommentNode({ id, data, selected }: NodeProps) {
-    const { content, backgroundColor, textColor } = data;
+    const { content, backgroundColor, textColor, darkBackgroundColor, darkTextColor } = data;
+    const effectiveTheme = useThemeStore((state) => state.effectiveTheme);
+    const lightDefaultBg = "#FEF3C7";
+    const darkDefaultBg = "#0F172A";
+    const lightDefaultText = "#1F2937";
+    const darkDefaultText = "#E5E7EB";
+
+    const appliedBackground =
+        effectiveTheme === "dark"
+            ? (darkBackgroundColor as string) || darkDefaultBg
+            : (backgroundColor as string) || lightDefaultBg;
+    const appliedText =
+        effectiveTheme === "dark"
+            ? (darkTextColor as string) || darkDefaultText
+            : (textColor as string) || lightDefaultText;
 
     const [isResizing, setIsResizing] = useState(false);
     const [startPos, setStartPos] = useState<{ x: number; y: number } | null>(null);
@@ -16,10 +31,10 @@ function CommentNode({ id, data, selected }: NodeProps) {
     const [isEditing, setIsEditing] = useState(false);
     const selectionRef = useRef<Range | null>(null);
     const [activeFormats, setActiveFormats] = useState<string[]>([]);
-    const [activeTextColor, setActiveTextColor] = useState(textColor);
+    const [activeTextColor, setActiveTextColor] = useState(appliedText);
 
     const normalizeColorToHex = (value: string | null): string => {
-        if (!value) return textColor;
+        if (!value) return appliedText;
         if (value.startsWith("#") && (value.length === 7 || value.length === 4)) {
             return value.length === 4
                 ? `#${value[1]}${value[1]}${value[2]}${value[2]}${value[3]}${value[3]}`.toUpperCase()
@@ -27,7 +42,7 @@ function CommentNode({ id, data, selected }: NodeProps) {
         }
 
         const match = value.match(/\d+/g);
-        if (!match || match.length < 3) return textColor;
+        if (!match || match.length < 3) return appliedText;
 
         const [r, g, b] = match.map((n) => {
             const hex = Math.max(0, Math.min(255, Number(n)))
@@ -39,7 +54,7 @@ function CommentNode({ id, data, selected }: NodeProps) {
     };
 
     const readSelectionColor = (range: Range | null) => {
-        if (!range) return textColor;
+        if (!range) return appliedText;
         let node: Node | null = range.startContainer;
         if (node.nodeType === Node.TEXT_NODE) {
             node = node.parentElement;
@@ -48,7 +63,7 @@ function CommentNode({ id, data, selected }: NodeProps) {
             const color = getComputedStyle(node).color;
             return normalizeColorToHex(color);
         }
-        return textColor;
+        return appliedText;
     };
 
     const refreshFormatState = () => {
@@ -141,6 +156,10 @@ function CommentNode({ id, data, selected }: NodeProps) {
 
     // Color updates
     const onSetBg = (c: string) => {
+        if (effectiveTheme === "dark") {
+            updateNode(id, { darkBackgroundColor: c });
+            return;
+        }
         updateNode(id, { backgroundColor: c });
     };
 
@@ -154,7 +173,11 @@ function CommentNode({ id, data, selected }: NodeProps) {
         }
 
         setActiveTextColor(normalized);
-        updateNode(id, { textColor: normalized });
+        if (effectiveTheme === "dark") {
+            updateNode(id, { darkTextColor: normalized });
+        } else {
+            updateNode(id, { textColor: normalized });
+        }
     };
 
     // --- Resize logic (same as BaseNode) ---
@@ -222,8 +245,8 @@ function CommentNode({ id, data, selected }: NodeProps) {
     }, [isResizing]);
 
     useEffect(() => {
-        setActiveTextColor(textColor);
-    }, [textColor]);
+        setActiveTextColor(appliedText);
+    }, [appliedText]);
 
     return (
         <div
@@ -240,8 +263,8 @@ function CommentNode({ id, data, selected }: NodeProps) {
                 selected ? "ring-2 ring-blue-500" : ""
             } ${isEditing ? "" : "cursor-grab active:cursor-grabbing"}`}
             style={{
-                backgroundColor,
-                color: textColor
+                backgroundColor: appliedBackground,
+                color: appliedText
             }}
         >
             {/* Toolbar */}
@@ -252,7 +275,7 @@ function CommentNode({ id, data, selected }: NodeProps) {
                     onUnderline={onUnderline}
                     onSetBg={onSetBg}
                     onSetText={onSetText}
-                    activeBg={backgroundColor}
+                    activeBg={appliedBackground}
                     activeText={activeTextColor}
                     activeBold={activeFormats.includes("bold")}
                     activeItalic={activeFormats.includes("italic")}
@@ -264,7 +287,7 @@ function CommentNode({ id, data, selected }: NodeProps) {
             <ContentArea
                 nodeId={id}
                 content={content}
-                textColor={textColor}
+                textColor={appliedText}
                 isEditing={isEditing}
                 onStopEditing={() => setIsEditing(false)}
                 onSelectionChange={(range) => {

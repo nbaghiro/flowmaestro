@@ -63,7 +63,7 @@ export function Dialog({
 
             {/* Dialog */}
             <div
-                className={`relative bg-white rounded-lg shadow-xl ${maxWidthClasses[maxWidth]} w-full mx-4 animate-in fade-in zoom-in-95 duration-200`}
+                className={`relative bg-card border border-border rounded-lg shadow-xl ${maxWidthClasses[maxWidth]} w-full mx-4 animate-in fade-in zoom-in-95 duration-200`}
             >
                 {/* Header */}
                 <div className="flex items-start justify-between p-6 pb-4 border-b border-gray-200">

@@ -158,7 +158,7 @@ export function SearchSection({ knowledgeBaseId, documents, onSearch }: SearchSe
     };
 
     return (
-        <div className="bg-white border border-border rounded-lg p-6">
+        <div className="bg-card border border-border rounded-lg p-6">
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                     <Search className="w-5 h-5 text-primary" />

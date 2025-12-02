@@ -193,7 +193,7 @@ export function Account() {
                     return (
                         <div
                             key={section.title}
-                            className="bg-white border border-border rounded-lg p-6"
+                            className="bg-card border border-border rounded-lg p-6"
                         >
                             <div className="flex items-start gap-4">
                                 <div className="p-2 bg-primary/10 text-primary rounded-lg">

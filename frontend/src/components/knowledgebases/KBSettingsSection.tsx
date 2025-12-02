@@ -9,7 +9,7 @@ export function KBSettingsSection({ kb }: KBSettingsSectionProps) {
     return (
         <div className="space-y-6">
             {/* General Information */}
-            <div className="bg-white border border-border rounded-lg p-6">
+            <div className="bg-card border border-border rounded-lg p-6">
                 <div className="flex items-center gap-2 mb-4">
                     <BookOpen className="w-5 h-5 text-primary" />
                     <h3 className="font-semibold text-foreground">General Information</h3>
@@ -66,7 +66,7 @@ export function KBSettingsSection({ kb }: KBSettingsSectionProps) {
             </div>
 
             {/* Embedding Configuration */}
-            <div className="bg-white border border-border rounded-lg p-6">
+            <div className="bg-card border border-border rounded-lg p-6">
                 <div className="flex items-center gap-2 mb-4">
                     <Database className="w-5 h-5 text-primary" />
                     <h3 className="font-semibold text-foreground">Embedding Configuration</h3>
@@ -93,7 +93,7 @@ export function KBSettingsSection({ kb }: KBSettingsSectionProps) {
             </div>
 
             {/* Chunking Configuration */}
-            <div className="bg-white border border-border rounded-lg p-6">
+            <div className="bg-card border border-border rounded-lg p-6">
                 <div className="flex items-center gap-2 mb-4">
                     <Layers className="w-5 h-5 text-primary" />
                     <h3 className="font-semibold text-foreground">Chunking Configuration</h3>
@@ -122,7 +122,7 @@ export function KBSettingsSection({ kb }: KBSettingsSectionProps) {
             </div>
 
             {/* Knowledge Base ID */}
-            <div className="bg-white border border-border rounded-lg p-6">
+            <div className="bg-card border border-border rounded-lg p-6">
                 <div className="flex items-center gap-2 mb-4">
                     <Hash className="w-5 h-5 text-primary" />
                     <h3 className="font-semibold text-foreground">Technical Details</h3>

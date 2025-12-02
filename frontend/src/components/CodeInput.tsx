@@ -6,6 +6,7 @@
 
 import CodeEditor from "@uiw/react-textarea-code-editor";
 import { FC } from "react";
+import { useThemeStore } from "../stores/themeStore";
 
 export type CodeLanguage = "js" | "javascript" | "python" | "json" | "sql" | "jsonata";
 
@@ -28,6 +29,8 @@ export const CodeInput: FC<CodeInputProps> = ({
     className = "",
     disabled = false
 }) => {
+    const effectiveTheme = useThemeStore((state) => state.effectiveTheme);
+
     // Map our language types to the library's supported languages
     const getEditorLanguage = (lang: CodeLanguage): string => {
         switch (lang) {
@@ -69,9 +72,14 @@ export const CodeInput: FC<CodeInputProps> = ({
                         'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
                     borderRadius: "0.5rem",
                     border: "1px solid hsl(var(--border))",
-                    backgroundColor: disabled ? "hsl(var(--muted))" : "white"
+                    backgroundColor:
+                        effectiveTheme === "dark" && !disabled
+                            ? "#000"
+                            : disabled
+                              ? "hsl(var(--muted))"
+                              : "white"
                 }}
-                data-color-mode="light"
+                data-color-mode={effectiveTheme}
                 className={`w-full focus-within:outline-none focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all ${
                     disabled ? "cursor-not-allowed opacity-60" : ""
                 }`}

@@ -29,6 +29,8 @@ function CommentNodeToolbar({
     activeItalic,
     activeUnderline
 }: Props) {
+    const bgColors = BG_COLORS;
+
     const stopPointer = (e: React.PointerEvent) => {
         // Keep focus on the contentEditable so formatting applies to the current selection.
         e.preventDefault();
@@ -40,7 +42,7 @@ function CommentNodeToolbar({
             <Popover.Trigger asChild>
                 <button
                     data-role="comment-toolbar"
-                    className="pointer-events-auto absolute top-2 right-2 pb- bg-white/70 hover:bg-white rounded p-1 shadow-sm border border-gray-200 text-xs text-gray-800"
+                    className="pointer-events-auto absolute top-2 right-2 pb- bg-card/70 hover:bg-card rounded p-1 shadow-sm border border-gray-200 text-xs text-gray-800 dark:bg-white"
                     onPointerDown={stopPointer}
                     type="button"
                 >
@@ -55,7 +57,7 @@ function CommentNodeToolbar({
                 onOpenAutoFocus={(e) => e.preventDefault()}
                 onCloseAutoFocus={(e) => e.preventDefault()}
                 onPointerDown={stopPointer}
-                className="rounded-md bg-white shadow-lg border p-3 space-y-3 z-50 text-gray-800"
+                className="rounded-md bg-card shadow-lg border p-3 space-y-3 z-50 text-gray-800"
             >
                 <div>
                     <button
@@ -64,8 +66,8 @@ function CommentNodeToolbar({
                             console.log("onBold clicked");
                             onBold();
                         }}
-                        className={`px-1.5 py-0.5 border rounded text-xs ${
-                            activeBold ? "bg-blue-50 border-blue-400" : ""
+                        className={`px-1.5 py-0.5 border rounded text-xs dark:text-white ${
+                            activeBold ? "bg-blue-50 border-blue-400 dark:bg-black" : ""
                         }`}
                     >
                         <b>B</b>
@@ -76,8 +78,8 @@ function CommentNodeToolbar({
                             console.log("onItalic clicked");
                             onItalic();
                         }}
-                        className={`px-1.5 py-0.5 border rounded text-xs italic ${
-                            activeItalic ? "bg-blue-50 border-blue-400" : ""
+                        className={`px-1.5 py-0.5 border rounded text-xs italic dark:text-white ${
+                            activeItalic ? "bg-blue-50 border-blue-400 dark:bg-black" : ""
                         }`}
                     >
                         I
@@ -88,8 +90,8 @@ function CommentNodeToolbar({
                             console.log("onUnderline clicked");
                             onUnderline();
                         }}
-                        className={`px-1.5 py-0.5 border rounded text-xs underline ${
-                            activeUnderline ? "bg-blue-50 border-blue-400" : ""
+                        className={`px-1.5 py-0.5 border rounded text-xs underline dark:text-white ${
+                            activeUnderline ? "bg-blue-50 border-blue-400 dark:bg-black" : ""
                         }`}
                     >
                         U
@@ -98,18 +100,18 @@ function CommentNodeToolbar({
 
                 <div className="text-[10px] text-gray-500 mb-1">Background</div>
                 <div className="flex gap-2">
-                    {BG_COLORS.map((c) => (
+                    {bgColors.map((color) => (
                         <button
-                            key={c}
+                            key={color}
                             onPointerDown={stopPointer}
                             onClick={() => {
-                                console.log("onSetBg clicked", c);
-                                onSetBg(c);
+                                console.log("onSetBg clicked", color);
+                                onSetBg(color);
                             }}
                             className={`w-5 h-5 rounded border ${
-                                activeBg === c ? "ring-2 ring-blue-500 ring-offset-1" : ""
+                                activeBg === color ? "ring-2 ring-blue-500 ring-offset-1" : ""
                             }`}
-                            style={{ backgroundColor: c }}
+                            style={{ backgroundColor: color }}
                         />
                     ))}
                 </div>

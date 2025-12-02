@@ -61,7 +61,7 @@ export function ConnectionCard({
     return (
         <div
             className={cn(
-                "bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition-shadow",
+                "bg-card dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition-shadow",
                 onSelect && "cursor-pointer hover:border-blue-500"
             )}
             onClick={handleClick}

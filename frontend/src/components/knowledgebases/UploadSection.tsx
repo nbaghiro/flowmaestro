@@ -17,7 +17,7 @@ export function UploadSection({ onFileUpload, onAddUrlClick, isUploading }: Uplo
     };
 
     return (
-        <div className="bg-white border border-border rounded-lg p-6">
+        <div className="bg-card border border-border rounded-lg p-6">
             <h2 className="text-lg font-semibold text-foreground mb-4">Add Documents</h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
