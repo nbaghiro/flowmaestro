@@ -390,9 +390,13 @@ export function AgentChat({ agent }: AgentChatProps) {
             const store = useAgentStore.getState();
             const exec = store.currentExecution;
 
+            // CRITICAL FIX: Use currentThread.id as source of truth
+            // Don't use exec?.thread_id as it might be from an old/stale execution
+            const activeThreadId = currentThread?.id;
+
             if (!exec || exec.status !== "running") {
-                // Start new execution (or new one in same thread if previous completed)
-                await executeAgent(agent.id, message, exec?.thread_id);
+                // Start new execution in the CURRENT thread
+                await executeAgent(agent.id, message, activeThreadId);
             } else {
                 // Try to continue existing execution
                 // If it fails (execution completed), start new one in same thread
@@ -410,7 +414,8 @@ export function AgentChat({ agent }: AgentChatProps) {
                     ) {
                         console.warn("[AgentChat] Unexpected error sending message:", errorMessage);
                     }
-                    await executeAgent(agent.id, message, exec.thread_id);
+                    // Use currentThread.id, not exec.thread_id (which might be stale)
+                    await executeAgent(agent.id, message, activeThreadId);
                 }
             }
         } catch (error) {

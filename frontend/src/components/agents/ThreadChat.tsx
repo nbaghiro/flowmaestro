@@ -36,6 +36,16 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
     // Load messages from backend when thread changes
     useEffect(() => {
         const loadMessages = async () => {
+            // Validate thread belongs to this agent
+            if (thread.agent_id !== agent.id) {
+                console.error(
+                    `[ThreadChat] Thread ${thread.id} does not belong to agent ${agent.id}. ` +
+                        `Thread belongs to agent ${thread.agent_id}.`
+                );
+                setMessages([]);
+                return;
+            }
+
             try {
                 const response = await api.getThreadMessages(thread.id);
                 if (response.success && response.data.messages) {
@@ -67,7 +77,7 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
         };
 
         loadMessages();
-    }, [thread.id]);
+    }, [thread.id, thread.agent_id, agent.id]);
 
     // Update messages from execution when thread matches (for real-time updates)
     // Only add new messages, don't overwrite existing ones
@@ -94,7 +104,7 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
                 });
             });
         }
-    }, [currentExecution, thread.id]);
+    }, [currentExecution?.thread_id, thread.id]);
 
     // Subscribe/unsubscribe to current execution over WebSocket
     useEffect(() => {
@@ -268,8 +278,28 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
                 // Start new execution in this thread
                 await executeAgent(agent.id, message, thread.id);
             } else {
-                // Continue existing execution
-                await sendMessage(message);
+                // Try to continue existing execution
+                // If it fails (execution completed), start new one in same thread
+                try {
+                    await sendMessage(message);
+                } catch (error) {
+                    // Any error from sendMessage means execution is not running anymore
+                    // This is expected when execution completes between status check and send
+                    // Silently handle it and start a new execution in the same thread
+                    const errorMessage = error instanceof Error ? error.message : String(error);
+                    // Only log if it's not the expected "already completed" error
+                    if (
+                        !errorMessage.includes("already completed") &&
+                        !errorMessage.includes("400")
+                    ) {
+                        console.warn(
+                            "[ThreadChat] Unexpected error sending message:",
+                            errorMessage
+                        );
+                    }
+                    // Retry: start new execution in this thread
+                    await executeAgent(agent.id, message, thread.id);
+                }
             }
         } catch (error) {
             console.error("Failed to send message:", error);
