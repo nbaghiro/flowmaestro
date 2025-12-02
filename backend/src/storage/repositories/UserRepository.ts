@@ -197,6 +197,10 @@ export class UserRepository {
             created_at: string | Date;
             updated_at: string | Date;
             last_login_at: string | Date | null;
+            two_factor_enabled: boolean;
+            two_factor_phone: string | null;
+            two_factor_phone_verified: boolean;
+            two_factor_secret: string | null;
         };
         return {
             id: r.id,
@@ -211,7 +215,11 @@ export class UserRepository {
             email_verified_at: r.email_verified_at ? new Date(r.email_verified_at) : null,
             created_at: new Date(r.created_at),
             updated_at: new Date(r.updated_at),
-            last_login_at: r.last_login_at ? new Date(r.last_login_at) : null
+            last_login_at: r.last_login_at ? new Date(r.last_login_at) : null,
+            two_factor_enabled: r.two_factor_enabled,
+            two_factor_phone: r.two_factor_phone,
+            two_factor_phone_verified: r.two_factor_phone_verified,
+            two_factor_secret: r.two_factor_secret
         };
     }
 }

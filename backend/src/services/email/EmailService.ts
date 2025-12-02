@@ -1,8 +1,12 @@
 import { Resend } from "resend";
 import { config } from "../../core/config";
+import { EmailChangedEmail } from "./templates/EmailChangedEmail";
 import { EmailVerificationEmail } from "./templates/EmailVerificationEmail";
+import { NameChangedEmail } from "./templates/NameChangedEmail";
 import { PasswordChangedEmail } from "./templates/PasswordChangedEmail";
 import { PasswordResetEmail } from "./templates/PasswordResetEmail";
+import { TwoFactorDisabledEmail } from "./templates/TwoFactorDisabledEmail";
+import { TwoFactorEnabledEmail } from "./templates/TwoFactorEnabledEmail";
 
 export class EmailService {
     private resend: Resend;
@@ -41,6 +45,53 @@ export class EmailService {
             to: email,
             subject: "Your FlowMaestro password was changed",
             react: PasswordChangedEmail({ userName })
+        });
+    }
+
+    async sendNameChangedNotification(email: string, userName: string): Promise<void> {
+        await this.resend.emails.send({
+            from: this.fromEmail,
+            to: email,
+            subject: "Your FlowMaestro profile name was changed",
+            react: NameChangedEmail({ userName })
+        });
+    }
+
+    async sendEmailChangedNotification(
+        oldEmail: string,
+        newEmail: string,
+        userName: string
+    ): Promise<void> {
+        await this.resend.emails.send({
+            from: this.fromEmail,
+            to: oldEmail,
+            subject: "Your FlowMaestro email was changed",
+            react: EmailChangedEmail({ userName, isOldAddress: true, newEmail })
+        });
+
+        await this.resend.emails.send({
+            from: this.fromEmail,
+            to: newEmail,
+            subject: "Your FlowMaestro email was changed",
+            react: EmailChangedEmail({ userName, isOldAddress: true, newEmail })
+        });
+    }
+
+    async sendTwoFactorEnabledNotification(email: string, phone: string): Promise<void> {
+        await this.resend.emails.send({
+            from: this.fromEmail,
+            to: email,
+            subject: "Two-factor authentication enabled",
+            react: TwoFactorEnabledEmail({ phone })
+        });
+    }
+
+    async sendTwoFactorDisabledNotification(email: string): Promise<void> {
+        await this.resend.emails.send({
+            from: this.fromEmail,
+            to: email,
+            subject: "Two-factor authentication disabled",
+            react: TwoFactorDisabledEmail()
         });
     }
 }
