@@ -1,4 +1,5 @@
 import { FastifyInstance } from "fastify";
+import { emailService } from "../../../services/email/EmailService";
 import { UserRepository } from "../../../storage/repositories";
 import { authMiddleware } from "../../middleware";
 
@@ -35,6 +36,46 @@ export async function meRoute(fastify: FastifyInstance) {
                         google_id: user.google_id,
                         microsoft_id: user.microsoft_id,
                         has_password: !!user.password_hash
+                    }
+                }
+            });
+        }
+    );
+
+    fastify.post(
+        "/me/name",
+        {
+            preHandler: [authMiddleware]
+        },
+        async (request, reply) => {
+            const userRepository = new UserRepository();
+            const userId = request.user.id;
+
+            const { name } = request.body as { name: string };
+
+            // Update user
+            const updated = await userRepository.update(userId, { name });
+
+            if (!updated) {
+                return reply.status(404).send({
+                    success: false,
+                    error: "User not found"
+                });
+            }
+
+            // Notification email
+            await emailService.sendNameChangedNotification(updated.email, updated.name || "");
+
+            return reply.send({
+                success: true,
+                data: {
+                    user: {
+                        id: updated.id,
+                        email: updated.email,
+                        avatar_url: updated.avatar_url,
+                        google_id: updated.google_id,
+                        microsoft_id: updated.microsoft_id,
+                        has_password: !!updated.password_hash
                     }
                 }
             });
