@@ -279,7 +279,7 @@ export class AgentExecutionRepository {
         const query = `
             SELECT * FROM flowmaestro.agent_messages
             WHERE thread_id = $1
-            ORDER BY created_at ASC
+            ORDER BY position ASC, created_at ASC
             LIMIT $2 OFFSET $3
         `;
 
@@ -318,6 +318,15 @@ export class AgentExecutionRepository {
             return;
         }
 
+        // Get current max position for this thread
+        const maxPosQuery = `
+            SELECT COALESCE(MAX(position), 0) as max_pos
+            FROM flowmaestro.agent_messages
+            WHERE thread_id = $1
+        `;
+        const maxPosResult = await db.query<{ max_pos: number }>(maxPosQuery, [threadId]);
+        let currentPosition = parseInt(String(maxPosResult.rows[0].max_pos)) + 1;
+
         // Build multi-row insert query
         const values: unknown[] = [];
         const valueStrings: string[] = [];
@@ -325,7 +334,7 @@ export class AgentExecutionRepository {
 
         for (const msg of messages) {
             valueStrings.push(
-                `($${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++})`
+                `($${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++})`
             );
             values.push(
                 threadId,
@@ -334,13 +343,14 @@ export class AgentExecutionRepository {
                 msg.content,
                 msg.tool_calls ? JSON.stringify(msg.tool_calls) : null,
                 msg.tool_name || null,
-                msg.tool_call_id || null
+                msg.tool_call_id || null,
+                currentPosition++
             );
         }
 
         const query = `
             INSERT INTO flowmaestro.agent_messages (
-                thread_id, execution_id, role, content, tool_calls, tool_name, tool_call_id
+                thread_id, execution_id, role, content, tool_calls, tool_name, tool_call_id, position
             )
             VALUES ${valueStrings.join(", ")}
             ON CONFLICT DO NOTHING

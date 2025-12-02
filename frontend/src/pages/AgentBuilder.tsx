@@ -1,5 +1,5 @@
 import { ArrowLeft, Save, Loader2, Settings, MessageSquare, Slack, Wrench } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getModelsForProvider, getDefaultModelForProvider } from "@flowmaestro/shared";
 import { AddCustomMCPDialog } from "../components/agents/AddCustomMCPDialog";
@@ -72,6 +72,10 @@ export function AgentBuilder() {
         title: string;
     } | null>(null);
 
+    // Inline name editing state
+    const [isEditingName, setIsEditingName] = useState(false);
+    const nameInputRef = useRef<HTMLInputElement>(null);
+
     // Load agent if editing
     useEffect(() => {
         if (!isNewAgent && agentId) {
@@ -97,8 +101,18 @@ export function AgentBuilder() {
             setMaxTokens(currentAgent.max_tokens);
             // Parse tools from available_tools array
             setTools(currentAgent.available_tools || []);
+        } else if (isNewAgent) {
+            // For new agents, allow editing name immediately
+            setIsEditingName(true);
         }
-    }, [currentAgent]);
+    }, [currentAgent, isNewAgent]);
+
+    // Sync tools whenever currentAgent.available_tools changes (for immediate updates after adding/removing tools)
+    useEffect(() => {
+        if (currentAgent?.available_tools) {
+            setTools(currentAgent.available_tools);
+        }
+    }, [currentAgent?.available_tools]);
 
     // Load threads when agent loads or when switching to conversations tab
     useEffect(() => {
@@ -114,6 +128,14 @@ export function AgentBuilder() {
             setModel(defaultModel);
         }
     }, [provider, isNewAgent]);
+
+    // Focus name input when editing starts
+    useEffect(() => {
+        if (isEditingName && nameInputRef.current) {
+            nameInputRef.current.focus();
+            nameInputRef.current.select();
+        }
+    }, [isEditingName]);
 
     // Filter connections by LLM providers
     const llmConnections = connections.filter(
@@ -168,9 +190,10 @@ export function AgentBuilder() {
         setRemovingToolId(toolId);
         try {
             await removeTool(currentAgent.id, toolId);
-            // Update local state from the updated agent (handled by store)
-            if (currentAgent) {
-                setTools(currentAgent.available_tools || []);
+            // Get the updated agent from the store and update local tools state immediately
+            const store = useAgentStore.getState();
+            if (store.currentAgent?.id === currentAgent.id) {
+                setTools(store.currentAgent.available_tools || []);
             }
         } catch (error) {
             console.error("Failed to remove tool:", error);
@@ -187,6 +210,7 @@ export function AgentBuilder() {
 
         try {
             // Add each workflow as a tool
+            let latestAgent = currentAgent;
             for (const workflow of workflows) {
                 await addTool(currentAgent.id, {
                     type: "workflow",
@@ -197,12 +221,15 @@ export function AgentBuilder() {
                         workflowId: workflow.id
                     }
                 });
+                // Get the updated agent from the store after each add
+                const store = useAgentStore.getState();
+                if (store.currentAgent?.id === currentAgent.id) {
+                    latestAgent = store.currentAgent;
+                }
             }
 
-            // Update local state from the updated agent
-            if (currentAgent) {
-                setTools(currentAgent.available_tools || []);
-            }
+            // Update local tools state immediately from the latest agent
+            setTools(latestAgent.available_tools || []);
         } catch (error) {
             console.error("Failed to add workflows:", error);
             setError(error instanceof Error ? error.message : "Failed to add workflows");
@@ -228,9 +255,10 @@ export function AgentBuilder() {
                 }
             });
 
-            // Update local state from the updated agent
-            if (currentAgent) {
-                setTools(currentAgent.available_tools || []);
+            // Get the updated agent from the store and update local tools state immediately
+            const store = useAgentStore.getState();
+            if (store.currentAgent?.id === currentAgent.id) {
+                setTools(store.currentAgent.available_tools || []);
             }
         } catch (error) {
             console.error("Failed to add custom MCP:", error);
@@ -242,15 +270,19 @@ export function AgentBuilder() {
         if (!currentAgent) return;
 
         try {
-            // Add each MCP tool
+            // Add each MCP tool and collect updated agents
+            let latestAgent = currentAgent;
             for (const tool of toolsToAdd) {
                 await addTool(currentAgent.id, tool);
+                // Get the updated agent from the store after each add
+                const store = useAgentStore.getState();
+                if (store.currentAgent?.id === currentAgent.id) {
+                    latestAgent = store.currentAgent;
+                }
             }
 
-            // Update local state from the updated agent
-            if (currentAgent) {
-                setTools(currentAgent.available_tools || []);
-            }
+            // Update local tools state immediately from the latest agent
+            setTools(latestAgent.available_tools || []);
         } catch (error) {
             console.error("Failed to add MCP tools:", error);
             setError(error instanceof Error ? error.message : "Failed to add MCP tools");
@@ -332,10 +364,57 @@ export function AgentBuilder() {
                     >
                         <ArrowLeft className="w-5 h-5" />
                     </button>
-                    <div>
-                        <h1 className="text-lg font-semibold text-foreground">
-                            {isNewAgent ? "New Agent" : currentAgent?.name || "Loading..."}
-                        </h1>
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                        {isEditingName ? (
+                            <input
+                                ref={nameInputRef}
+                                type="text"
+                                value={name || ""}
+                                onChange={(e) => setName(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                        setIsEditingName(false);
+                                        // Don't auto-save, just stop editing
+                                        // User can click Save button to save
+                                    }
+                                    if (e.key === "Escape") {
+                                        // Revert to original name
+                                        if (currentAgent) {
+                                            setName(currentAgent.name);
+                                        } else if (isNewAgent) {
+                                            setName("");
+                                        }
+                                        setIsEditingName(false);
+                                    }
+                                }}
+                                onBlur={() => {
+                                    setIsEditingName(false);
+                                    // Revert if empty for existing agents
+                                    if (!name.trim() && currentAgent) {
+                                        setName(currentAgent.name);
+                                    }
+                                }}
+                                placeholder="Enter agent name"
+                                className={cn(
+                                    "text-lg font-semibold text-foreground",
+                                    "bg-transparent border-none outline-none",
+                                    "focus:ring-2 focus:ring-primary focus:bg-background",
+                                    "px-2 py-1 rounded",
+                                    "min-w-[200px] max-w-[400px]"
+                                )}
+                                autoFocus
+                            />
+                        ) : (
+                            <h1
+                                className="text-lg font-semibold text-foreground cursor-pointer hover:text-primary transition-colors px-2 py-1 rounded hover:bg-muted/50"
+                                onClick={() => setIsEditingName(true)}
+                                title="Click to edit name"
+                            >
+                                {isNewAgent
+                                    ? name.trim() || "New Agent"
+                                    : currentAgent?.name || name.trim() || "Loading..."}
+                            </h1>
+                        )}
                     </div>
                 </div>
                 <button

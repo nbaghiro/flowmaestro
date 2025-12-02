@@ -174,6 +174,80 @@ export async function callLLM(input: CallLLMInput): Promise<LLMResponse> {
 }
 
 /**
+ * Validate message sequence for OpenAI API requirements
+ * Tool messages must immediately follow assistant messages with tool_calls
+ */
+function validateMessageSequence(messages: ConversationMessage[]): void {
+    for (let i = 0; i < messages.length; i++) {
+        const msg = messages[i];
+
+        // If this is a tool message, verify previous message is assistant with tool_calls
+        if (msg.role === "tool") {
+            if (i === 0) {
+                throw new Error("Tool message cannot be first message");
+            }
+
+            const prevMsg = messages[i - 1];
+            if (prevMsg.role !== "assistant") {
+                // Log full context for debugging
+                console.error("[Validation] Message sequence error - full history:", {
+                    totalMessages: messages.length,
+                    errorIndex: i,
+                    messages: messages.map((m, idx) => ({
+                        index: idx,
+                        role: m.role,
+                        hasContent: !!m.content,
+                        hasToolCalls: !!(m as unknown as { tool_calls?: unknown[] }).tool_calls,
+                        toolCallCount:
+                            ((m as unknown as { tool_calls?: unknown[] }).tool_calls
+                                ?.length as number) || 0,
+                        toolCallId: (m as unknown as { tool_call_id?: string }).tool_call_id
+                    }))
+                });
+
+                throw new Error(
+                    `Tool message at index ${i} must follow an assistant message, ` +
+                        `but previous message has role "${prevMsg.role}"`
+                );
+            }
+
+            if (!prevMsg.tool_calls || prevMsg.tool_calls.length === 0) {
+                // Log full context for debugging
+                console.error("[Validation] Message sequence error - full history:", {
+                    totalMessages: messages.length,
+                    errorIndex: i,
+                    prevMessageIndex: i - 1,
+                    messages: messages.map((m, idx) => ({
+                        index: idx,
+                        role: m.role,
+                        hasContent: !!m.content,
+                        contentPreview: m.content ? m.content.substring(0, 50) : null,
+                        hasToolCalls: !!m.tool_calls,
+                        toolCallCount: m.tool_calls?.length || 0,
+                        toolCallId: (m as unknown as { tool_call_id?: string }).tool_call_id,
+                        toolName: (m as unknown as { tool_name?: string }).tool_name
+                    }))
+                });
+
+                throw new Error(
+                    `Tool message at index ${i} must follow an assistant message with tool_calls, ` +
+                        "but previous assistant message has no tool_calls"
+                );
+            }
+
+            // Verify tool_call_id matches one of the tool_calls
+            const matchingCall = prevMsg.tool_calls.find((tc) => tc.id === msg.tool_call_id);
+            if (!matchingCall) {
+                throw new Error(
+                    `Tool message tool_call_id "${msg.tool_call_id}" does not match any ` +
+                        "tool_call in previous assistant message"
+                );
+            }
+        }
+    }
+}
+
+/**
  * Call OpenAI API
  */
 interface OpenAICallInput {
@@ -188,6 +262,9 @@ interface OpenAICallInput {
 
 async function callOpenAI(input: OpenAICallInput): Promise<LLMResponse> {
     const { model, apiKey, messages, tools, temperature, maxTokens, executionId } = input;
+
+    // Validate message sequence before sending to OpenAI
+    validateMessageSequence(messages);
 
     // Format messages for OpenAI
     const formattedMessages = messages.map((msg) => {

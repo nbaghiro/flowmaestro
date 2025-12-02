@@ -50,6 +50,15 @@ export function AgentChat({ agent }: AgentChatProps) {
 
         const checkAndUpdateMostRecentThread = async () => {
             try {
+                const currentThreadState = useAgentStore.getState().currentThread;
+
+                // CRITICAL: Clear currentThread if it belongs to a different agent
+                // This prevents cross-agent conversation leaks when switching agents
+                if (currentThreadState && currentThreadState.agent_id !== agent.id) {
+                    setCurrentThread(null);
+                    return;
+                }
+
                 // Fetch the most recent thread for this agent
                 const response = await api.getThreads({
                     agent_id: agent.id,
@@ -59,7 +68,6 @@ export function AgentChat({ agent }: AgentChatProps) {
 
                 if (response.success && response.data.threads.length > 0) {
                     const mostRecentThread = response.data.threads[0];
-                    const currentThreadState = useAgentStore.getState().currentThread;
 
                     // If no current thread, or if the most recent thread is newer, switch to it
                     if (!currentThreadState) {
@@ -81,9 +89,8 @@ export function AgentChat({ agent }: AgentChatProps) {
                         }
                     }
                 } else {
-                    const currentThreadState = useAgentStore.getState().currentThread;
+                    // No threads exist for this agent, clear current thread
                     if (currentThreadState) {
-                        // No threads exist, clear current thread
                         setCurrentThread(null);
                     }
                 }
@@ -257,17 +264,22 @@ export function AgentChat({ agent }: AgentChatProps) {
 
             // Update streaming message
             setMessages((prev) => {
-                const lastMessage = prev[prev.length - 1];
                 const accumulated = tokenAccumulatorRef.current.get(executionId) || "";
                 const streamingId = `streaming-${executionId}`;
+                const lastIndex = prev.length - 1;
+                const lastMessage = prev[lastIndex];
 
+                // If last message is our streaming message, update it in place
                 if (
                     lastMessage &&
                     lastMessage.role === "assistant" &&
                     lastMessage.id === streamingId
                 ) {
-                    return [...prev.slice(0, -1), { ...lastMessage, content: accumulated }];
+                    const updated = [...prev];
+                    updated[lastIndex] = { ...lastMessage, content: accumulated };
+                    return updated;
                 } else {
+                    // Add new streaming message at the end (no sorting needed)
                     return [
                         ...prev,
                         {
@@ -469,65 +481,55 @@ export function AgentChat({ agent }: AgentChatProps) {
                     </div>
                 ) : (
                     <>
-                        {messages
-                            .sort((a, b) => {
-                                const timeA = new Date(a.timestamp).getTime();
-                                const timeB = new Date(b.timestamp).getTime();
-                                if (timeA === timeB) {
-                                    if (a.role === "user" && b.role === "assistant") return -1;
-                                    if (a.role === "assistant" && b.role === "user") return 1;
-                                }
-                                return timeA - timeB;
-                            })
-                            .map((message) => (
+                        {messages.map((message) => (
+                            <div
+                                key={message.id}
+                                className={cn(
+                                    "flex gap-3",
+                                    message.role === "user" ? "justify-end" : "justify-start"
+                                )}
+                            >
+                                {message.role !== "user" && message.role !== "system" && (
+                                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                                        <Bot className="w-4 h-4 text-primary" />
+                                    </div>
+                                )}
                                 <div
-                                    key={message.id}
                                     className={cn(
-                                        "flex gap-3",
-                                        message.role === "user" ? "justify-end" : "justify-start"
+                                        "max-w-[80%] rounded-lg px-4 py-3",
+                                        message.role === "user"
+                                            ? "bg-primary text-primary-foreground"
+                                            : message.role === "system"
+                                              ? "bg-muted/50 text-muted-foreground text-sm italic"
+                                              : "bg-muted text-foreground"
                                     )}
                                 >
-                                    {message.role !== "user" && message.role !== "system" && (
-                                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                                            <Bot className="w-4 h-4 text-primary" />
-                                        </div>
-                                    )}
-                                    <div
-                                        className={cn(
-                                            "max-w-[80%] rounded-lg px-4 py-3",
-                                            message.role === "user"
-                                                ? "bg-primary text-primary-foreground"
-                                                : message.role === "system"
-                                                  ? "bg-muted/50 text-muted-foreground text-sm italic"
-                                                  : "bg-muted text-foreground"
-                                        )}
-                                    >
-                                        <div className="whitespace-pre-wrap break-words">
-                                            {message.content}
-                                        </div>
-                                        {message.tool_calls && message.tool_calls.length > 0 && (
-                                            <div className="mt-2 pt-2 border-t border-border/50">
-                                                <p className="text-xs text-muted-foreground mb-1">
-                                                    Using tools:
-                                                </p>
-                                                {message.tool_calls.map((tool, idx) => (
-                                                    <div
-                                                        key={idx}
-                                                        className="text-xs bg-background/50 rounded px-2 py-1 mt-1"
-                                                    >
-                                                        {tool.name}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
+                                    <div className="whitespace-pre-wrap break-words">
+                                        {message.content}
                                     </div>
-                                    {message.role === "user" && (
-                                        <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
-                                            <User className="w-4 h-4 text-secondary-foreground" />
+                                    {message.tool_calls && message.tool_calls.length > 0 && (
+                                        <div className="mt-2 pt-2 border-t border-border/50">
+                                            <p className="text-xs text-muted-foreground mb-1">
+                                                Using tools:
+                                            </p>
+                                            {message.tool_calls.map((tool, idx) => (
+                                                <div
+                                                    key={idx}
+                                                    className="text-xs bg-background/50 rounded px-2 py-1 mt-1"
+                                                >
+                                                    {tool.name}
+                                                </div>
+                                            ))}
                                         </div>
                                     )}
                                 </div>
-                            ))}
+                                {message.role === "user" && (
+                                    <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
+                                        <User className="w-4 h-4 text-secondary-foreground" />
+                                    </div>
+                                )}
+                            </div>
+                        ))}
                         {isSending &&
                             currentExecution &&
                             !messages.some((m) => m.id === `streaming-${currentExecution.id}`) && (

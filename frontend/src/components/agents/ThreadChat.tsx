@@ -26,6 +26,7 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
     const [isSending, setIsSending] = useState(false);
     const [messages, setMessages] = useState<ConversationMessage[]>([]);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const tokenAccumulatorRef = useRef<Map<string, string>>(new Map());
 
     // Scroll to bottom when messages change
     useEffect(() => {
@@ -109,6 +110,53 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
 
     // Listen for WebSocket events
     useEffect(() => {
+        const handleToken = (event: unknown) => {
+            const data = event as { executionId?: string; threadId?: string; token?: string };
+            if (!data.executionId || !data.token || data.threadId !== thread.id) return;
+
+            const executionId = data.executionId;
+            const store = useAgentStore.getState();
+            if (!store.currentExecution || executionId !== store.currentExecution.id) return;
+
+            if (isSending) {
+                setIsSending(false);
+            }
+
+            // Accumulate tokens
+            const current = tokenAccumulatorRef.current.get(executionId) || "";
+            tokenAccumulatorRef.current.set(executionId, current + data.token);
+
+            // Update streaming message
+            setMessages((prev) => {
+                const accumulated = tokenAccumulatorRef.current.get(executionId) || "";
+                const streamingId = `streaming-${executionId}`;
+                const lastIndex = prev.length - 1;
+                const lastMessage = prev[lastIndex];
+
+                // If last message is our streaming message, update it in place
+                if (
+                    lastMessage &&
+                    lastMessage.role === "assistant" &&
+                    lastMessage.id === streamingId
+                ) {
+                    const updated = [...prev];
+                    updated[lastIndex] = { ...lastMessage, content: accumulated };
+                    return updated;
+                } else {
+                    // Add new streaming message at the end (no sorting needed)
+                    return [
+                        ...prev,
+                        {
+                            id: streamingId,
+                            role: "assistant" as const,
+                            content: accumulated,
+                            timestamp: new Date().toISOString()
+                        }
+                    ];
+                }
+            });
+        };
+
         const handleMessage = (event: unknown) => {
             const data = event as {
                 executionId?: string;
@@ -121,17 +169,25 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
                 if (data.message.role === "user") {
                     return;
                 }
+                // Skip tool messages (raw JSON)
+                if (data.message.role === "tool") {
+                    return;
+                }
                 // Update store
                 addMessageToExecution(data.executionId, data.message);
-                // Also update local messages state directly, ensuring proper order
+                // Also update local messages state directly, replacing streaming message with final
                 setMessages((prev) => {
-                    const existingIds = new Set(prev.map((m) => m.id));
+                    // Remove any streaming message for this execution
+                    const filtered = prev.filter((m) => m.id !== `streaming-${data.executionId}`);
+
+                    // Check if this message already exists (avoid duplicates)
+                    const existingIds = new Set(filtered.map((m) => m.id));
                     if (existingIds.has(data.message!.id)) {
-                        return prev; // Already exists
+                        return filtered; // Already exists, just return filtered (streaming removed)
                     }
-                    const updated = [...prev, data.message!];
-                    // Sort by timestamp to ensure chronological order (oldest first)
-                    // If timestamps are equal, ensure user messages come before assistant
+
+                    // Add the final message and sort by timestamp with tie-breaker
+                    const updated = [...filtered, data.message!];
                     return updated.sort((a, b) => {
                         const timeA = new Date(a.timestamp).getTime();
                         const timeB = new Date(b.timestamp).getTime();
@@ -155,6 +211,9 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
         const handleCompleted = (event: unknown) => {
             const data = event as { executionId?: string; threadId?: string };
             if (data.threadId === thread.id && data.executionId) {
+                // Remove streaming message if it still exists
+                setMessages((prev) => prev.filter((m) => m.id !== `streaming-${data.executionId}`));
+                tokenAccumulatorRef.current.delete(data.executionId);
                 setIsSending(false);
                 updateExecutionStatus(data.executionId, "completed");
             }
@@ -163,24 +222,34 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
         const handleFailed = (event: unknown) => {
             const data = event as { executionId?: string; threadId?: string; error?: unknown };
             if (data.threadId === thread.id && data.executionId) {
+                // Remove streaming message on failure
+                setMessages((prev) => prev.filter((m) => m.id !== `streaming-${data.executionId}`));
+                tokenAccumulatorRef.current.delete(data.executionId);
                 setIsSending(false);
                 updateExecutionStatus(data.executionId, "failed");
                 console.error("Agent failed:", data.error);
             }
         };
 
+        wsClient.on("agent:token", handleToken);
         wsClient.on("agent:message:new", handleMessage);
         wsClient.on("agent:thinking", handleThinking);
         wsClient.on("agent:execution:completed", handleCompleted);
         wsClient.on("agent:execution:failed", handleFailed);
 
         return () => {
+            wsClient.off("agent:token", handleToken);
             wsClient.off("agent:message:new", handleMessage);
             wsClient.off("agent:thinking", handleThinking);
             wsClient.off("agent:execution:completed", handleCompleted);
             wsClient.off("agent:execution:failed", handleFailed);
+
+            // Clean up token accumulator on unmount
+            if (currentExecution?.id) {
+                tokenAccumulatorRef.current.delete(currentExecution.id);
+            }
         };
-    }, [thread.id, updateExecutionStatus, addMessageToExecution]);
+    }, [thread.id, updateExecutionStatus, addMessageToExecution, isSending, currentExecution?.id]);
 
     const handleSend = async () => {
         if (!input.trim() || isSending) return;
