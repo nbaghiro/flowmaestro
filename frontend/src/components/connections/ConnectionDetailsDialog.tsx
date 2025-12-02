@@ -71,10 +71,12 @@ export function ConnectionDetailsDialog({
                 <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
 
                 {/* Dialog */}
-                <div className="relative bg-white rounded-lg shadow-xl max-w-lg w-full mx-4 animate-in fade-in zoom-in-95 duration-200">
+                <div className="relative bg-card border border-border rounded-lg shadow-xl max-w-lg w-full mx-4 animate-in fade-in zoom-in-95 duration-200">
                     {/* Header */}
-                    <div className="flex items-center justify-between p-6 pb-4 border-b border-gray-200">
-                        <h2 className="text-lg font-semibold text-gray-900">Connection Details</h2>
+                    <div className="flex items-center justify-between p-6 pb-4 border-b border-border">
+                        <h2 className="text-lg font-semibold text-foreground">
+                            Connection Details
+                        </h2>
                         <Button variant="icon" onClick={onClose}>
                             <X className="w-5 h-5" />
                         </Button>
@@ -86,32 +88,34 @@ export function ConnectionDetailsDialog({
                         <div className="flex items-center gap-4">
                             <div className="w-12 h-12 flex-shrink-0">{providerIcon}</div>
                             <div>
-                                <h3 className="font-medium text-gray-900">{providerDisplayName}</h3>
-                                <p className="text-sm text-gray-600">{connection.name}</p>
+                                <h3 className="font-medium text-foreground">
+                                    {providerDisplayName}
+                                </h3>
+                                <p className="text-sm text-muted-foreground">{connection.name}</p>
                             </div>
                         </div>
 
                         {/* Authentication Method */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <label className="block text-sm font-medium text-muted-foreground mb-2">
                                 Authentication Method
                             </label>
-                            <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-md">
+                            <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-md">
                                 {isOAuth ? (
                                     <>
-                                        <Shield className="w-4 h-4 text-gray-600" />
-                                        <span className="text-sm text-gray-900">OAuth 2.0</span>
-                                        <span className="ml-auto px-2 py-0.5 text-xs font-medium text-blue-700 bg-blue-100 rounded">
+                                        <Shield className="w-4 h-4 text-muted-foreground" />
+                                        <span className="text-sm text-foreground">OAuth 2.0</span>
+                                        <span className="ml-auto px-2 py-0.5 text-xs font-medium text-blue-700 dark:text-blue-400 bg-blue-500/10 dark:bg-blue-400/20 rounded">
                                             OAUTH
                                         </span>
                                     </>
                                 ) : isApiKey ? (
                                     <>
-                                        <Key className="w-4 h-4 text-gray-600" />
-                                        <span className="text-sm text-gray-900">API Key</span>
+                                        <Key className="w-4 h-4 text-muted-foreground" />
+                                        <span className="text-sm text-foreground">API Key</span>
                                     </>
                                 ) : (
-                                    <span className="text-sm text-gray-900">
+                                    <span className="text-sm text-foreground">
                                         {connection.connection_method}
                                     </span>
                                 )}
@@ -121,30 +125,34 @@ export function ConnectionDetailsDialog({
                         {/* OAuth Account Info */}
                         {isOAuth && connection.metadata?.account_info && (
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                <label className="block text-sm font-medium text-muted-foreground mb-2">
                                     Connected Account
                                 </label>
-                                <div className="p-3 bg-gray-50 rounded-md space-y-1">
+                                <div className="p-3 bg-muted/30 rounded-md space-y-1">
                                     {connection.metadata.account_info.email && (
                                         <div className="text-sm">
-                                            <span className="text-gray-600">Email: </span>
-                                            <span className="text-gray-900">
+                                            <span className="text-muted-foreground">Email: </span>
+                                            <span className="text-foreground">
                                                 {connection.metadata.account_info.email}
                                             </span>
                                         </div>
                                     )}
                                     {connection.metadata.account_info.username && (
                                         <div className="text-sm">
-                                            <span className="text-gray-600">Username: </span>
-                                            <span className="text-gray-900">
+                                            <span className="text-muted-foreground">
+                                                Username:{" "}
+                                            </span>
+                                            <span className="text-foreground">
                                                 {connection.metadata.account_info.username}
                                             </span>
                                         </div>
                                     )}
                                     {connection.metadata.account_info.workspace && (
                                         <div className="text-sm">
-                                            <span className="text-gray-600">Workspace: </span>
-                                            <span className="text-gray-900">
+                                            <span className="text-muted-foreground">
+                                                Workspace:{" "}
+                                            </span>
+                                            <span className="text-foreground">
                                                 {connection.metadata.account_info.workspace}
                                             </span>
                                         </div>
@@ -156,14 +164,14 @@ export function ConnectionDetailsDialog({
                         {/* API Key (masked) */}
                         {isApiKey && (
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                <label className="block text-sm font-medium text-muted-foreground mb-2">
                                     API Key
                                 </label>
-                                <div className="p-3 bg-gray-50 rounded-md">
-                                    <code className="text-sm text-gray-900 font-mono">
+                                <div className="p-3 bg-muted/30 rounded-md">
+                                    <code className="text-sm text-foreground font-mono">
                                         ••••••••••••••••
                                     </code>
-                                    <p className="text-xs text-gray-500 mt-1">
+                                    <p className="text-xs text-muted-foreground mt-1">
                                         API keys are encrypted and cannot be displayed
                                     </p>
                                 </div>
@@ -172,17 +180,17 @@ export function ConnectionDetailsDialog({
 
                         {/* Status */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <label className="block text-sm font-medium text-muted-foreground mb-2">
                                 Status
                             </label>
                             <div className="flex items-center gap-2">
                                 <span
                                     className={`inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-md ${
                                         connection.status === "active"
-                                            ? "bg-green-50 text-green-700"
+                                            ? "bg-green-500/10 dark:bg-green-400/20 text-green-700 dark:text-green-400"
                                             : connection.status === "expired"
-                                              ? "bg-yellow-50 text-yellow-700"
-                                              : "bg-red-50 text-red-700"
+                                              ? "bg-amber-500/10 dark:bg-amber-400/20 text-amber-700 dark:text-amber-400"
+                                              : "bg-red-500/10 dark:bg-red-400/20 text-red-700 dark:text-red-400"
                                     }`}
                                 >
                                     {connection.status.charAt(0).toUpperCase() +
@@ -194,18 +202,18 @@ export function ConnectionDetailsDialog({
                         {/* Dates */}
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label className="block text-sm font-medium text-muted-foreground mb-1">
                                     Created
                                 </label>
-                                <p className="text-sm text-gray-900">
+                                <p className="text-sm text-foreground">
                                     {formatDate(connection.created_at)}
                                 </p>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label className="block text-sm font-medium text-muted-foreground mb-1">
                                     Last Used
                                 </label>
-                                <p className="text-sm text-gray-900">
+                                <p className="text-sm text-foreground">
                                     {formatDate(connection.last_used_at)}
                                 </p>
                             </div>
@@ -215,7 +223,7 @@ export function ConnectionDetailsDialog({
                         {error && <Alert variant="error">{error}</Alert>}
 
                         {/* Disconnect Button */}
-                        <div className="pt-4 border-t border-gray-200">
+                        <div className="pt-4 border-t border-border">
                             <Button
                                 variant="destructive"
                                 onClick={() => setShowConfirmDisconnect(true)}
@@ -225,7 +233,7 @@ export function ConnectionDetailsDialog({
                                 <AlertTriangle className="w-4 h-4" />
                                 Disconnect {providerDisplayName}
                             </Button>
-                            <p className="text-xs text-gray-500 text-center mt-2">
+                            <p className="text-xs text-muted-foreground text-center mt-2">
                                 You can reconnect to a different account anytime
                             </p>
                         </div>

@@ -237,11 +237,11 @@ export function LoopNodeConfig({ data, onUpdate }: LoopNodeConfigProps) {
                             </div>
                         </FormField>
 
-                        <div className="px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="px-3 py-2 bg-blue-500/10 dark:bg-blue-400/20 border border-blue-500/30 dark:border-blue-400/30 text-blue-800 dark:text-blue-400 rounded-lg">
                             <p className="text-xs text-blue-800">
                                 <strong>Tip:</strong> These variables are set once before the loop
                                 starts. Use them in your loop condition (e.g.,{" "}
-                                <code className="px-1 py-0.5 bg-blue-100 rounded">
+                                <code className="px-1 py-0.5 bg-blue-500/20 dark:bg-blue-400/30 rounded">
                                     continueAsking
                                 </code>
                                 ).
@@ -292,7 +292,7 @@ export function LoopNodeConfig({ data, onUpdate }: LoopNodeConfigProps) {
                     />
                 </FormField>
 
-                <div className="px-3 py-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <div className="px-3 py-2 bg-amber-500/10 dark:bg-amber-400/20 border border-amber-500/30 dark:border-amber-400/30 text-amber-800 dark:text-amber-400 rounded-lg">
                     <p className="text-xs text-yellow-800">
                         <strong>Warning:</strong> Loop will terminate if max iterations is reached.
                     </p>

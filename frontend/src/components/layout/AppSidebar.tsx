@@ -13,6 +13,7 @@ import {
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "../../lib/utils";
+import { Logo } from "../common/Logo";
 import { Tooltip } from "../common/Tooltip";
 import type { LucideIcon } from "lucide-react";
 
@@ -63,16 +64,14 @@ export function AppSidebar() {
             <div className="h-16 border-b border-border flex items-center justify-between px-4">
                 {!isCollapsed && (
                     <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold text-sm">
-                            FM
-                        </div>
+                        <Logo size="md" />
                         <span className="font-semibold text-foreground">FlowMaestro</span>
                     </div>
                 )}
 
                 {isCollapsed && (
-                    <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold text-sm mx-auto">
-                        FM
+                    <div className="mx-auto">
+                        <Logo size="md" />
                     </div>
                 )}
 

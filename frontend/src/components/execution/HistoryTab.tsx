@@ -73,7 +73,7 @@ export function HistoryTab({ workflowId }: HistoryTabProps) {
                 return {
                     icon: <AlertCircle className="w-4 h-4" />,
                     color: "text-gray-500",
-                    bg: "bg-gray-50 dark:bg-gray-900/20",
+                    bg: "bg-muted/30 dark:bg-gray-900/20",
                     label: "Cancelled"
                 };
         }

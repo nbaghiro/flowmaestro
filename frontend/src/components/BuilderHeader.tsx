@@ -7,6 +7,7 @@ import { wsClient } from "../lib/websocket";
 import { useTriggerStore } from "../stores/triggerStore";
 import { useWorkflowStore } from "../stores/workflowStore";
 import { Input } from "./common/Input";
+import { Logo } from "./common/Logo";
 import { Tooltip } from "./common/Tooltip";
 
 interface BuilderHeaderProps {
@@ -112,16 +113,16 @@ export function BuilderHeader({
     };
 
     return (
-        <header className="bg-white border-b border-border shadow-sm">
+        <header className="bg-card border-b border-border shadow-sm">
             <div className="flex items-center justify-between px-6 py-3">
                 {/* Left: Logo and Label */}
                 <div className="flex items-center gap-3">
                     <button
                         onClick={handleBack}
-                        className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center text-white font-bold hover:bg-primary/90 transition-colors"
+                        className="hover:opacity-80 transition-opacity"
                         title="Back to Library"
                     >
-                        FM
+                        <Logo size="md" />
                     </button>
                     <span className="text-sm font-medium text-muted-foreground">
                         Workflow Builder
@@ -140,8 +141,8 @@ export function BuilderHeader({
                             style={{ width: `${Math.max(200, workflowName.length * 10)}px` }}
                         />
                         {hasUnsavedChanges && (
-                            <span className="flex items-center gap-1.5 text-xs text-amber-600 whitespace-nowrap">
-                                <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                            <span className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 whitespace-nowrap">
+                                <span className="w-2 h-2 rounded-full bg-amber-500 dark:bg-amber-400"></span>
                                 Unsaved
                             </span>
                         )}
@@ -149,28 +150,28 @@ export function BuilderHeader({
 
                     {/* Execution Status */}
                     {currentExecution?.status === "running" && (
-                        <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-700 rounded-lg text-sm">
+                        <div className="flex items-center gap-2 px-3 py-1 bg-blue-500/10 dark:bg-blue-400/20 text-blue-700 dark:text-blue-400 rounded-lg text-sm">
                             <Loader2 className="w-4 h-4 animate-spin" />
                             <span>Executing...</span>
                         </div>
                     )}
 
                     {currentExecution?.status === "completed" && (
-                        <div className="flex items-center gap-2 px-3 py-1 bg-green-50 text-green-700 rounded-lg text-sm">
+                        <div className="flex items-center gap-2 px-3 py-1 bg-green-500/10 dark:bg-green-400/20 text-green-700 dark:text-green-400 rounded-lg text-sm">
                             <CheckCircle className="w-4 h-4" />
                             <span>Success</span>
                         </div>
                     )}
 
                     {currentExecution?.status === "failed" && (
-                        <div className="flex items-center gap-2 px-3 py-1 bg-red-50 text-red-700 rounded-lg text-sm">
+                        <div className="flex items-center gap-2 px-3 py-1 bg-red-500/10 dark:bg-red-400/20 text-red-700 dark:text-red-400 rounded-lg text-sm">
                             <XCircle className="w-4 h-4" />
                             <span>Failed</span>
                         </div>
                     )}
 
                     {runError && !currentExecution && (
-                        <div className="flex items-center gap-2 px-3 py-1 bg-red-50 text-red-700 rounded-lg text-sm">
+                        <div className="flex items-center gap-2 px-3 py-1 bg-red-500/10 dark:bg-red-400/20 text-red-700 dark:text-red-400 rounded-lg text-sm">
                             <XCircle className="w-4 h-4" />
                             <span>{runError}</span>
                         </div>
@@ -232,7 +233,7 @@ export function BuilderHeader({
                         <button
                             onClick={handleRun}
                             disabled={isRunning || currentExecution?.status === "running"}
-                            className="flex items-center gap-2 px-4 py-1.5 text-sm font-medium text-white bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors shadow-sm"
+                            className="flex items-center gap-2 px-4 py-1.5 text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors shadow-sm"
                             data-action="run"
                         >
                             {isRunning || currentExecution?.status === "running" ? (

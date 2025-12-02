@@ -83,7 +83,7 @@ export function Agents() {
             {isLoading ? (
                 <LoadingState message="Loading agents..." />
             ) : agents.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed border-border rounded-lg bg-white">
+                <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed border-border rounded-lg bg-card">
                     <Bot className="w-12 h-12 text-muted-foreground mb-4" />
                     <h3 className="text-lg font-semibold text-foreground mb-2">No agents yet</h3>
                     <p className="text-sm text-muted-foreground mb-6 text-center max-w-md">
@@ -100,7 +100,7 @@ export function Agents() {
                     {agents.map((agent) => (
                         <div
                             key={agent.id}
-                            className="bg-white border border-border rounded-lg p-5 hover:border-primary hover:shadow-md transition-all group relative"
+                            className="bg-card border border-border rounded-lg p-5 hover:border-primary hover:shadow-md transition-all group relative"
                         >
                             <div
                                 onClick={() => navigate(`/agents/${agent.id}`)}
@@ -136,7 +136,7 @@ export function Agents() {
 
                                             {/* Dropdown Menu */}
                                             {openMenuId === agent.id && (
-                                                <div className="absolute right-0 mt-1 w-48 bg-white border border-border rounded-lg shadow-lg py-1 z-10">
+                                                <div className="absolute right-0 mt-1 w-48 bg-card border border-border rounded-lg shadow-lg py-1 z-10">
                                                     <button
                                                         onClick={(e) => {
                                                             e.stopPropagation();
@@ -190,7 +190,7 @@ export function Agents() {
             {/* Delete Confirmation Dialog */}
             {agentToDelete && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-                    <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+                    <div className="bg-card rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
                         <h3 className="text-lg font-semibold text-foreground mb-2">Delete Agent</h3>
                         <p className="text-sm text-muted-foreground mb-6">
                             Are you sure you want to delete "{agentToDelete.name}"? This action

@@ -431,19 +431,30 @@ async function executeCohere(
     const apiKey = await getApiKey(config.connectionId, "cohere", "COHERE_API_KEY");
     const cohere = new CohereClient({ token: apiKey });
 
-    // Combine system prompt with user prompt
-    const fullPrompt = systemPrompt ? `${systemPrompt}\n\n${userPrompt}` : userPrompt;
+    // Build message with preamble (system prompt) if provided
+    const chatOptions: {
+        model: string;
+        message: string;
+        preamble?: string;
+        temperature?: number;
+        maxTokens?: number;
+        p?: number;
+    } = {
+        model: config.model,
+        message: userPrompt,
+        temperature: config.temperature ?? 0.7,
+        maxTokens: config.maxTokens ?? 1000,
+        p: config.topP ?? 1
+    };
+
+    if (systemPrompt) {
+        chatOptions.preamble = systemPrompt;
+    }
 
     return withRetry(async () => {
         // Streaming mode
         if (callbacks?.onToken) {
-            const stream = await cohere.generateStream({
-                model: config.model,
-                prompt: fullPrompt,
-                temperature: config.temperature ?? 0.7,
-                maxTokens: config.maxTokens ?? 1000,
-                p: config.topP ?? 1
-            });
+            const stream = await cohere.chatStream(chatOptions);
 
             let fullContent = "";
             for await (const chunk of stream) {
@@ -464,15 +475,9 @@ async function executeCohere(
         }
 
         // Non-streaming mode (fallback)
-        const response = await cohere.generate({
-            model: config.model,
-            prompt: fullPrompt,
-            temperature: config.temperature ?? 0.7,
-            maxTokens: config.maxTokens ?? 1000,
-            p: config.topP ?? 1
-        });
+        const response = await cohere.chat(chatOptions);
 
-        const text = response.generations[0]?.text || "";
+        const text = response.text || "";
 
         console.log(`[LLM] Cohere response: ${text.length} chars`);
 

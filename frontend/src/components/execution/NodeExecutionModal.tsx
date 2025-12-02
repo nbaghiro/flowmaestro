@@ -77,7 +77,7 @@ export function NodeExecutionModal({
                 return {
                     icon: <AlertCircle className="w-5 h-5" />,
                     color: "text-gray-500",
-                    bg: "bg-gray-50 dark:bg-gray-900/20",
+                    bg: "bg-muted/30 dark:bg-gray-900/20",
                     label: "Idle"
                 };
         }

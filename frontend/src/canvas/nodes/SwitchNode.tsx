@@ -27,7 +27,7 @@ function SwitchNode({ data, selected }: NodeProps<SwitchNodeData>) {
                     <Handle
                         type="target"
                         position={Position.Top}
-                        className="!w-2.5 !h-2.5 !bg-white !border-2 !border-primary !shadow-sm"
+                        className="!w-2.5 !h-2.5 !bg-card !border-2 !border-primary !shadow-sm"
                     />
                     {Array.from({ length: Math.min(caseCount, 4) }).map((_, i) => (
                         <Handle
@@ -35,7 +35,7 @@ function SwitchNode({ data, selected }: NodeProps<SwitchNodeData>) {
                             type="source"
                             position={Position.Bottom}
                             id={`case-${i}`}
-                            className="!w-2.5 !h-2.5 !bg-white !border-2 !border-purple-500 !shadow-sm"
+                            className="!w-2.5 !h-2.5 !bg-card !border-2 !border-purple-500 !shadow-sm"
                             style={{ left: `${25 + i * 17}%` }}
                         />
                     ))}

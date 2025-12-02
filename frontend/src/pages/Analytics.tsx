@@ -96,7 +96,7 @@ export function Analytics() {
             {/* Overview Stats Grid */}
             <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {/* Total Executions */}
-                <div className="bg-white p-6 rounded-lg border border-slate-200">
+                <div className="bg-card p-6 rounded-lg border border-slate-200">
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm font-medium text-slate-600">Total Executions</p>
@@ -114,7 +114,7 @@ export function Analytics() {
                 </div>
 
                 {/* Total Cost */}
-                <div className="bg-white p-6 rounded-lg border border-slate-200">
+                <div className="bg-card p-6 rounded-lg border border-slate-200">
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm font-medium text-slate-600">Total Cost</p>
@@ -130,7 +130,7 @@ export function Analytics() {
                 </div>
 
                 {/* Avg Duration */}
-                <div className="bg-white p-6 rounded-lg border border-slate-200">
+                <div className="bg-card p-6 rounded-lg border border-slate-200">
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm font-medium text-slate-600">Avg Duration</p>
@@ -146,7 +146,7 @@ export function Analytics() {
                 </div>
 
                 {/* Success/Failure Split */}
-                <div className="bg-white p-6 rounded-lg border border-slate-200">
+                <div className="bg-card p-6 rounded-lg border border-slate-200">
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm font-medium text-slate-600">Success/Failure</p>
@@ -168,7 +168,7 @@ export function Analytics() {
                     <h2 className="text-lg font-semibold text-slate-900 mb-4">
                         Top Models by Cost
                     </h2>
-                    <div className="bg-white rounded-lg border border-slate-200 p-6">
+                    <div className="bg-card rounded-lg border border-slate-200 p-6">
                         <div className="space-y-4">
                             {overview.topModels.map((model, index) => {
                                 const maxCost = overview.topModels[0].totalCost;
@@ -213,7 +213,7 @@ export function Analytics() {
                     <h2 className="text-lg font-semibold text-slate-900 mb-4">
                         Model Usage Breakdown
                     </h2>
-                    <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+                    <div className="bg-card rounded-lg border border-slate-200 overflow-hidden">
                         <table className="w-full">
                             <thead className="bg-slate-50 border-b border-slate-200">
                                 <tr>

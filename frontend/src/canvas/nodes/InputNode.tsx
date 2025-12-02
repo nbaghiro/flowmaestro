@@ -26,11 +26,13 @@ function InputNode({ data, selected }: NodeProps<InputNodeData>) {
             <div className="space-y-2">
                 <div className="flex items-center justify-between">
                     <span className="text-xs text-muted-foreground">Type:</span>
-                    <span className="text-xs font-medium capitalize">{inputType}</span>
+                    <span className="text-xs font-medium capitalize text-foreground">
+                        {inputType}
+                    </span>
                 </div>
                 <div className="flex items-center justify-between">
                     <span className="text-xs text-muted-foreground">Variable:</span>
-                    <span className="text-xs font-mono bg-muted px-1.5 py-0.5 rounded">
+                    <span className="text-xs font-mono bg-muted px-1.5 py-0.5 rounded text-foreground">
                         ${inputName}
                     </span>
                 </div>

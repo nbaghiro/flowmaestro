@@ -180,13 +180,13 @@ export function Templates() {
             <div className="space-y-4 mb-8">
                 {/* Search bar */}
                 <div className="relative max-w-md">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                     <Input
                         type="text"
                         placeholder={`Search ${templateType === "workflows" ? "workflow" : "agent"} templates...`}
                         value={searchQuery}
                         onChange={handleSearchChange}
-                        className="w-full pl-10 pr-4 py-2.5 border border-gray-200 dark:border-gray-700 rounded-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                        className="w-full pl-10 pr-4 py-2.5 border border-border dark:border-border rounded-full bg-card dark:bg-card text-foreground dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary focus:border-transparent transition-colors"
                     />
                 </div>
 
@@ -202,8 +202,8 @@ export function Templates() {
             {/* Content */}
             {isLoading ? (
                 <div className="flex flex-col items-center justify-center py-20">
-                    <Loader2 className="w-8 h-8 text-blue-500 animate-spin mb-4" />
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                    <Loader2 className="w-8 h-8 text-primary animate-spin mb-4" />
+                    <p className="text-sm text-muted-foreground dark:text-muted-foreground">
                         Loading {templateType === "workflows" ? "workflow" : "agent"} templates...
                     </p>
                 </div>
@@ -220,16 +220,16 @@ export function Templates() {
                     </p>
                 </div>
             ) : templateCount === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800">
+                <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed border-border dark:border-border rounded-lg bg-muted/30 dark:bg-card">
                     {templateType === "workflows" ? (
-                        <FileText className="w-12 h-12 text-gray-400 dark:text-gray-500 mb-4" />
+                        <FileText className="w-12 h-12 text-muted-foreground dark:text-muted-foreground mb-4" />
                     ) : (
-                        <Bot className="w-12 h-12 text-gray-400 dark:text-gray-500 mb-4" />
+                        <Bot className="w-12 h-12 text-muted-foreground dark:text-muted-foreground mb-4" />
                     )}
-                    <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    <h3 className="text-lg font-semibold text-foreground dark:text-foreground mb-2">
                         No {templateType === "workflows" ? "workflow" : "agent"} templates found
                     </h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 text-center max-w-md">
+                    <p className="text-sm text-muted-foreground dark:text-muted-foreground text-center max-w-md">
                         {searchQuery
                             ? `No templates match "${searchQuery}"`
                             : selectedCategory && TEMPLATE_CATEGORY_META[selectedCategory]
@@ -240,7 +240,7 @@ export function Templates() {
             ) : (
                 <>
                     {/* Results count */}
-                    <div className="mb-6 text-sm text-gray-500 dark:text-gray-400">
+                    <div className="mb-6 text-sm text-muted-foreground dark:text-muted-foreground">
                         {templateCount} {templateType === "workflows" ? "workflow" : "agent"}{" "}
                         template{templateCount !== 1 ? "s" : ""}
                         {selectedCategory &&

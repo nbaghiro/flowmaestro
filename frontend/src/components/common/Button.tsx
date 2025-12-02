@@ -5,13 +5,13 @@ import { forwardRef } from "react";
 import { cn } from "../../lib/utils";
 
 const buttonVariants = cva(
-    "inline-flex items-center justify-center rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:pointer-events-none",
+    "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:pointer-events-none",
     {
         variants: {
             variant: {
-                primary: "bg-primary text-white hover:bg-primary/90",
+                primary: "bg-primary text-primary-foreground hover:bg-primary/90",
                 secondary: "bg-card border border-border text-foreground hover:bg-muted",
-                destructive: "bg-destructive text-white hover:bg-destructive/90",
+                destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
                 ghost: "hover:bg-muted text-foreground",
                 icon: "p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground"
             },
@@ -49,7 +49,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
                 disabled={disabled || loading}
                 {...props}
             >
-                {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                {loading && <Loader2 className="w-4 h-4 animate-spin" />}
                 {children}
             </Comp>
         );

@@ -107,7 +107,7 @@ export function ThreadList({
     };
 
     return (
-        <div className="h-full flex flex-col bg-white border-r border-border">
+        <div className="h-full flex flex-col bg-card border-r border-border">
             {/* Header */}
             <div className="p-4 border-b border-border flex-shrink-0">
                 <button
@@ -244,7 +244,7 @@ export function ThreadList({
                                                     </button>
 
                                                     {openMenuId === thread.id && (
-                                                        <div className="absolute right-0 mt-1 w-48 bg-white border border-border rounded-lg shadow-lg py-1 z-10">
+                                                        <div className="absolute right-0 mt-1 w-48 bg-card border border-border rounded-lg shadow-lg py-1 z-10">
                                                             <button
                                                                 onClick={() =>
                                                                     handleStartEdit(thread)

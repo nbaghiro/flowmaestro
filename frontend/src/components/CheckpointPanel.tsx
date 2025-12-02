@@ -56,7 +56,7 @@ export function CheckpointPanel({
         <>
             <div
                 className={`
-                    absolute right-0 h-full w-[360px] bg-white border-l border-border shadow-xl z-50
+                    absolute right-0 h-full w-[360px] bg-card border-l border-border shadow-xl z-50
                     transform transition-transform duration-300
                     flex flex-col
                     ${open ? "translate-x-0" : "translate-x-full"}
@@ -166,7 +166,7 @@ export function CheckpointPanel({
                 </div>
 
                 {/* Save Checkpoint Button */}
-                <div className="absolute bottom-0 w-full p-3 border-t border-border bg-white">
+                <div className="absolute bottom-0 w-full p-3 border-t border-border bg-card">
                     <button
                         onClick={() => {
                             // Check for significant changes first
@@ -177,7 +177,7 @@ export function CheckpointPanel({
                                 onShowMinorChangesDialog?.();
                             }
                         }}
-                        className="w-full py-1.5 text-sm bg-primary text-white rounded-md hover:bg-primary/90 transition-colors"
+                        className="w-full py-1.5 text-sm bg-primary text-white rounded-md hover:bg-primary/90 transition-colors dark:text-black"
                     >
                         Save Checkpoint
                     </button>
@@ -191,7 +191,7 @@ export function CheckpointPanel({
                     onClick={() => setShowConfirm(false)}
                 >
                     <div
-                        className="bg-white p-5 rounded-lg shadow-lg w-[400px] space-y-4"
+                        className="bg-card p-5 rounded-lg shadow-lg w-[400px] space-y-4"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {confirmType === "delete" && (
@@ -236,7 +236,7 @@ export function CheckpointPanel({
                                     if (confirmType === "restore") onRestore(pendingCheckpoint.id);
                                     setShowConfirm(false);
                                 }}
-                                className="px-3 py-1 text-sm bg-primary text-white rounded hover:bg-primary/90"
+                                className="px-3 py-1 text-sm bg-primary text-white rounded hover:bg-primary/90 dark:text-black"
                             >
                                 Confirm
                             </button>
@@ -255,7 +255,7 @@ export function CheckpointPanel({
                     }}
                 >
                     <div
-                        className="bg-white p-5 rounded-lg shadow-lg w-[400px] space-y-4"
+                        className="bg-card p-5 rounded-lg shadow-lg w-[400px] space-y-4"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <p className="text-sm font-medium">Name this checkpoint</p>
@@ -299,7 +299,7 @@ export function CheckpointPanel({
                                     onCreate(nameValue || undefined);
                                     setNameValue("");
                                 }}
-                                className="px-3 py-1 text-sm bg-primary text-white rounded hover:bg-primary/90"
+                                className="px-3 py-1 text-sm bg-primary text-white rounded hover:bg-primary/90 dark:text-black"
                             >
                                 Save
                             </button>
@@ -315,7 +315,7 @@ export function CheckpointPanel({
                     onClick={onCloseMinorChangesDialog}
                 >
                     <div
-                        className="bg-white p-5 rounded-lg shadow-lg w-[400px] space-y-4"
+                        className="bg-card p-5 rounded-lg shadow-lg w-[400px] space-y-4"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <p className="text-sm font-medium">No structural changes detected</p>
@@ -339,7 +339,7 @@ export function CheckpointPanel({
                                     onCloseMinorChangesDialog?.();
                                     setShowNameDialog(true);
                                 }}
-                                className="px-3 py-1 text-sm bg-primary text-white rounded hover:bg-primary/90"
+                                className="px-3 py-1 text-sm bg-primary text-white rounded hover:bg-primary/90 dark:text-black"
                             >
                                 Create Anyway
                             </button>

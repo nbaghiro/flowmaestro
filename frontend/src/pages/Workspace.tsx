@@ -21,21 +21,21 @@ export function Workspace() {
                 </p>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 w-full max-w-2xl">
-                    <div className="bg-white p-4 rounded-lg border border-border">
+                    <div className="bg-card p-4 rounded-lg border border-border">
                         <Users className="w-5 h-5 text-primary mb-2" />
                         <h4 className="font-medium text-sm mb-1">Team Collaboration</h4>
                         <p className="text-xs text-muted-foreground">
                             Invite team members and collaborate
                         </p>
                     </div>
-                    <div className="bg-white p-4 rounded-lg border border-border">
+                    <div className="bg-card p-4 rounded-lg border border-border">
                         <Sparkles className="w-5 h-5 text-primary mb-2" />
                         <h4 className="font-medium text-sm mb-1">Shared Resources</h4>
                         <p className="text-xs text-muted-foreground">
                             Share workflows and credentials
                         </p>
                     </div>
-                    <div className="bg-white p-4 rounded-lg border border-border">
+                    <div className="bg-card p-4 rounded-lg border border-border">
                         <Crown className="w-5 h-5 text-primary mb-2" />
                         <h4 className="font-medium text-sm mb-1">Advanced Controls</h4>
                         <p className="text-xs text-muted-foreground">

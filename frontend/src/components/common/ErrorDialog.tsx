@@ -18,7 +18,7 @@ export function ErrorDialog({ isOpen, title, message, onClose }: ErrorDialogProp
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-            <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+            <div className="bg-card border border-border rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
                 <div className="flex items-start justify-between mb-4">
                     <h3 className="text-lg font-semibold text-foreground">{title}</h3>
                     <Button variant="icon" onClick={onClose}>

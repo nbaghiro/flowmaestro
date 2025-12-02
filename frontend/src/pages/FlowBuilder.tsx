@@ -473,7 +473,7 @@ export function FlowBuilder() {
 
     if (isLoading) {
         return (
-            <div className="h-screen flex items-center justify-center bg-gray-50">
+            <div className="h-screen flex items-center justify-center bg-background">
                 <div className="flex flex-col items-center gap-3">
                     <Loader2 className="w-8 h-8 text-primary animate-spin" />
                     <p className="text-sm text-muted-foreground">Loading workflow...</p>
@@ -486,7 +486,7 @@ export function FlowBuilder() {
     const selectedNodeType = selectedNodeObj?.type;
     return (
         <ReactFlowProvider>
-            <div className="h-screen flex flex-col bg-gray-50">
+            <div className="h-screen flex flex-col bg-background">
                 <BuilderHeader
                     workflowId={workflowId}
                     workflowName={workflowName}

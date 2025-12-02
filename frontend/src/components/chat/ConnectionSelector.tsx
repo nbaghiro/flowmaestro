@@ -8,6 +8,9 @@ import { useChatStore } from "../../stores/chatStore";
 // Get list of provider values from the models registry
 const LLM_PROVIDER_VALUES = Object.keys(LLM_MODELS_BY_PROVIDER);
 
+// Define provider display order
+const PROVIDER_ORDER = ["openai", "anthropic", "google", "cohere"];
+
 export function ConnectionSelector() {
     const { selectedConnectionId, selectedModel, setConnection } = useChatStore();
     const [connections, setConnections] = useState<Connection[]>([]);
@@ -20,9 +23,17 @@ export function ConnectionSelector() {
             try {
                 const response = await getConnections({ status: "active" });
                 if (response.success) {
-                    const llmConnections = response.data.filter((conn) =>
-                        LLM_PROVIDER_VALUES.includes(conn.provider)
-                    );
+                    const llmConnections = response.data
+                        .filter((conn) => LLM_PROVIDER_VALUES.includes(conn.provider))
+                        .sort((a, b) => {
+                            const aIndex = PROVIDER_ORDER.indexOf(a.provider);
+                            const bIndex = PROVIDER_ORDER.indexOf(b.provider);
+                            // Sort by provider order, then alphabetically by name within same provider
+                            if (aIndex !== bIndex) {
+                                return aIndex - bIndex;
+                            }
+                            return a.name.localeCompare(b.name);
+                        });
                     setConnections(llmConnections);
 
                     // Auto-select first connection if none selected

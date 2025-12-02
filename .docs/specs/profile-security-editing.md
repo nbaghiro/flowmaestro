@@ -159,7 +159,7 @@ The Account page (`frontend/src/pages/Account.tsx`) currently displays user info
 │                           ▼                                │
 │  ┌────────────────────────────────────────────────────┐    │
 │  │  Services                                          │    │
-│  │  - EmailService  - SmsService (Twilio)             │    │
+│  │  - EmailService (Resend)  - SmsService (Twilio)    │    │
 │  └────────────────────────────────────────────────────┘    │
 └───────────────────────┬────────────────────────────────────┘
                         │
@@ -702,24 +702,25 @@ export class SmsService {
 export const smsService = new SmsService();
 ```
 
-#### File: `backend/src/services/EmailService.ts` (MODIFY)
+#### File: `backend/src/services/email/EmailService.ts` (MODIFY)
 
-Add new methods for profile/security notifications:
+Add new methods for profile/security notifications using existing Resend/React Email pattern:
 
 ```typescript
 // Add these methods to the existing EmailService class
+// Import new templates at the top:
+// import { NameChangedEmail } from "./templates/NameChangedEmail";
+// import { EmailChangedEmail } from "./templates/EmailChangedEmail";
+// import { TwoFactorEnabledEmail } from "./templates/TwoFactorEnabledEmail";
+// import { TwoFactorDisabledEmail } from "./templates/TwoFactorDisabledEmail";
 
-async sendNameChangedNotification(email: string, name: string): Promise<void> {
+async sendNameChangedNotification(email: string, name: string, userName?: string): Promise<void> {
     try {
-        const html = await render(
-            NameChangedEmail({ name })
-        );
-
-        await this.transporter.sendMail({
+        await this.resend.emails.send({
             from: this.fromEmail,
             to: email,
             subject: "Your FlowMaestro profile name has been updated",
-            html
+            react: NameChangedEmail({ name, userName })
         });
     } catch (error) {
         console.error("Failed to send name changed email:", error);
@@ -729,30 +730,24 @@ async sendNameChangedNotification(email: string, name: string): Promise<void> {
 
 async sendEmailChangedNotification(
     oldEmail: string,
-    newEmail: string
+    newEmail: string,
+    userName?: string
 ): Promise<void> {
     try {
-        const htmlOld = await render(
-            EmailChangedEmail({ newEmail, isOldAddress: true })
-        );
-        const htmlNew = await render(
-            EmailChangedEmail({ newEmail, isOldAddress: false })
-        );
-
         // Send to old email
-        await this.transporter.sendMail({
+        await this.resend.emails.send({
             from: this.fromEmail,
             to: oldEmail,
             subject: "Your FlowMaestro email address has been changed",
-            html: htmlOld
+            react: EmailChangedEmail({ newEmail, isOldAddress: true, userName })
         });
 
         // Send to new email
-        await this.transporter.sendMail({
+        await this.resend.emails.send({
             from: this.fromEmail,
             to: newEmail,
             subject: "Your FlowMaestro email address has been changed",
-            html: htmlNew
+            react: EmailChangedEmail({ newEmail, isOldAddress: false, userName })
         });
     } catch (error) {
         console.error("Failed to send email changed notification:", error);
@@ -761,35 +756,28 @@ async sendEmailChangedNotification(
 
 async sendTwoFactorEnabledNotification(
     email: string,
-    phone: string
+    phone: string,
+    userName?: string
 ): Promise<void> {
     try {
-        const html = await render(
-            TwoFactorEnabledEmail({ phone })
-        );
-
-        await this.transporter.sendMail({
+        await this.resend.emails.send({
             from: this.fromEmail,
             to: email,
             subject: "Two-factor authentication enabled on your account",
-            html
+            react: TwoFactorEnabledEmail({ phone, userName })
         });
     } catch (error) {
         console.error("Failed to send 2FA enabled email:", error);
     }
 }
 
-async sendTwoFactorDisabledNotification(email: string): Promise<void> {
+async sendTwoFactorDisabledNotification(email: string, userName?: string): Promise<void> {
     try {
-        const html = await render(
-            TwoFactorDisabledEmail({})
-        );
-
-        await this.transporter.sendMail({
+        await this.resend.emails.send({
             from: this.fromEmail,
             to: email,
             subject: "Two-factor authentication disabled on your account",
-            html
+            react: TwoFactorDisabledEmail({ userName })
         });
     } catch (error) {
         console.error("Failed to send 2FA disabled email:", error);
@@ -3281,6 +3269,7 @@ Step 3:
     ```bash
     cd backend
     npm install twilio
+    # Note: Resend and @react-email are already installed
     ```
 
 2. **Run migration:**
@@ -3310,8 +3299,8 @@ Step 3:
 ### Monitoring
 
 - **Twilio Dashboard:** Monitor SMS delivery and costs
-- **Email Logs:** Check email notification delivery
-- **Error Logs:** Watch for validation failures
+- **Resend Dashboard:** Monitor email delivery, bounces, and delivery rates
+- **Error Logs:** Watch for validation failures and email/SMS errors
 - **Database:** Monitor token expiry cleanup
 
 ---
@@ -3335,7 +3324,9 @@ Implementation is complete when:
 
 ## Notes
 
-- **Email service:** Uses existing EmailService pattern
+- **Email service:** Uses existing Resend API with React Email templates (see `backend/src/services/email/`)
+    - Create new templates following the pattern in `templates/PasswordChangedEmail.tsx`
+    - Templates needed: `NameChangedEmail`, `EmailChangedEmail`, `TwoFactorEnabledEmail`, `TwoFactorDisabledEmail`
 - **SMS costs:** Each 2FA setup costs 1 SMS. Monitor Twilio usage.
 - **Future enhancements:** TOTP support can use `two_factor_secret` column
 - **Backup codes:** Users should be reminded to save codes securely
@@ -3347,8 +3338,8 @@ Implementation is complete when:
 
 **Dependencies:**
 
-- Twilio account (free tier available)
+- Twilio account (free tier available) for SMS
+- Resend account (already configured) for email notifications
 - Existing auth system
 - Existing Dialog components
 - PostgreSQL database
-- Email service configured
