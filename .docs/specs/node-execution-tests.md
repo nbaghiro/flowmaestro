@@ -1,318 +1,184 @@
 # Node Testing Framework Specification
 
-## Overview
+## Purpose
 
-This specification outlines a **developer-focused regression testing framework** for validating workflow node execution logic in isolation. This enables testing individual node implementations before integrating them into real workflows, catching breaking changes early in the development cycle.
+**INTERNAL DEVELOPER TOOL ONLY** - This framework is for developers to write regression tests for workflow node implementations. Since no real-world workflows exist yet, these tests will catch bugs, validate node behavior, and serve as executable documentation before nodes are integrated into production workflows.
 
-## Target Users & Use Case
+## Quick Start
 
-- **Primary Users**: Internal development team
-- **Primary Use Case**: Automated regression testing in CI/CD pipeline
-- **Secondary Use Case**: Manual node validation during development
+**What you're building:** A test framework that runs individual workflow nodes in isolation (without Temporal orchestrator) to validate their behavior.
 
-## Architecture Design
+**Why it matters:** No real workflows = bugs undiscovered. These tests catch issues before users build workflows.
 
-### Core Components
+**How it works:**
 
-#### 1. NodeTestRunner Class (`backend/tests/helpers/NodeTestRunner.ts`)
+```
+NodeTestRunner → calls executeNode() → runs actual node executor → returns outputs → validate with assertions
+```
 
-**Purpose**: Execute individual nodes in isolation with mock context
+## Prerequisites
 
-**Key Features**:
+Before starting implementation:
 
-- Direct invocation of `executeNode()` from existing node executor infrastructure
-- Mock context/variable injection for testing interpolation
-- Timeout handling for long-running nodes
-- Error capturing with detailed stack traces
-- Support for batch test execution
+1. **Understand node architecture** - Read `backend/src/temporal/activities/node-executors/index.ts`
+2. **Familiar with Jest** - Tests use Jest framework
+3. **Know variable interpolation** - Understand `${variable}` syntax in node configs
+4. **Context concept** - Context is accumulated outputs from previous nodes in a workflow
 
-**API**:
+## Key Concepts
+
+### What is Context?
+
+In production workflows, **context** accumulates outputs from all previous nodes. Each node adds its outputs to the context, making them available to downstream nodes.
+
+**Example workflow context flow:**
 
 ```typescript
-class NodeTestRunner {
-    async executeNode(input: NodeTestCase): Promise<NodeTestResult>;
-    async executeBatch(cases: NodeTestCase[]): Promise<NodeTestResult[]>;
-    async loadFromJSON(filePath: string): Promise<NodeTestCase[]>;
-}
+// Workflow starts
+context = { userId: "123" }
 
-interface NodeTestCase {
-    name: string;
-    nodeType: string;
-    nodeConfig: JsonObject;
-    context?: JsonObject;
-    globalStore?: Record<string, JsonValue>;
-    timeout?: number;
-    expectedOutputs?: JsonObject;
-    expectError?: boolean;
-}
+// After HTTP node executes
+context = { userId: "123", httpResponse: { status: 200, data: {...} } }
 
-interface NodeTestResult {
-    name: string;
-    success: boolean;
-    outputs?: JsonObject;
-    error?: string;
-    duration: number;
-}
+// After LLM node executes
+context = { userId: "123", httpResponse: {...}, llmOutput: "Generated text" }
 ```
 
-#### 2. NodeAssertions Helper (`backend/tests/helpers/NodeAssertions.ts`)
+### What are Node Outputs?
 
-**Purpose**: Specialized assertion utilities for node output validation
-
-**Features**:
-
-- Structure matching for complex objects
-- Field presence/type checking
-- Numeric range validation
-- String pattern matching (regex)
-- Array element validation
-
-**API**:
+Each node returns a plain object with its results. Common output patterns:
 
 ```typescript
-class NodeAssertions {
-    static assertOutputContains(result: NodeTestResult, expected: JsonObject): void;
-    static assertOutputStructure(result: NodeTestResult, schema: JsonSchema): void;
-    static assertFieldInRange(
-        result: NodeTestResult,
-        field: string,
-        min: number,
-        max: number
-    ): void;
-    static assertFieldMatches(result: NodeTestResult, field: string, pattern: RegExp): void;
-    static assertArrayLength(result: NodeTestResult, field: string, expectedLength: number): void;
-}
+// HTTP Node
+{ status: 200, data: {...}, headers: {...} }
+
+// LLM Node
+{ text: "Generated response", usage: { tokens: 150 } }
+
+// Transform Node
+{ result: [...transformed data...] }
+
+// Database Node
+{ rows: [...], rowCount: 5 }
+
+// Conditional Node
+{ result: true, branch: "then" }
 ```
 
-#### 3. CLI Test Runner (`backend/scripts/test-nodes.ts`)
+### How Tests Differ from Workflow Integration Tests
 
-**Purpose**: Command-line interface for running node tests
+| Aspect           | Node Tests (this spec)      | Workflow Integration Tests        |
+| ---------------- | --------------------------- | --------------------------------- |
+| **Scope**        | Single node in isolation    | Full workflow with multiple nodes |
+| **Execution**    | Direct `executeNode()` call | Temporal orchestrator             |
+| **Speed**        | Fast (~50ms per test)       | Slow (~5s per workflow)           |
+| **Dependencies** | No Temporal worker needed   | Requires Temporal worker running  |
+| **Purpose**      | Validate node logic         | Validate workflow orchestration   |
 
-**Commands**:
+## Architecture Overview
 
-```bash
-# Run JSON test cases
-npm run test:nodes:run <file.json>
+### How Node Testing Works
 
-# Generate test case templates
-npm run test:nodes:generate <nodeType> [-o output.json]
-
-# List available test cases
-npm run test:nodes:list [directory]
-
-# Validate test case JSON schema
-npm run test:nodes:validate <file.json>
+```
+┌────────────────────────────────────────────────────────────┐
+│  Test File (http-node.test.ts)                             │
+│  ┌───────────────────────────────────────────────────────┐ │
+│  │  describe("HTTP Node", () => {                        │ │
+│  │    it("should make GET request", async () => {        │ │
+│  │      const result = await runner.executeNode({        │ │
+│  │        nodeType: "http",                              │ │
+│  │        nodeConfig: { method: "GET", url: "..." },     │ │
+│  │        context: {}                                    │ │
+│  │      });                                              │ │
+│  │    });                                                │ │
+│  │  });                                                  │ │
+│  └───────────────────────────────────────────────────────┘ │
+└────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌────────────────────────────────────────────────────────────┐
+│  NodeTestRunner                                            │
+│  ┌───────────────────────────────────────────────────────┐ │
+│  │  async executeNode(testCase) {                        │ │
+│  │    return await executeNode({                         │ │
+│  │      nodeType,                                        │ │
+│  │      nodeConfig,                                      │ │
+│  │      context                                          │ │
+│  │    });                                                │ │
+│  │  }                                                    │ │
+│  └───────────────────────────────────────────────────────┘ │
+└────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌────────────────────────────────────────────────────────────┐
+│  executeNode() - Router (index.ts)                         │
+│  ┌───────────────────────────────────────────────────────┐ │
+│  │  switch (nodeType) {                                  │ │
+│  │    case "http": return executeHTTPNode(config, ctx);  │ │
+│  │    case "llm": return executeLLMNode(config, ctx);    │ │
+│  │    ...                                                │ │
+│  │  }                                                    │ │
+│  └───────────────────────────────────────────────────────┘ │
+└────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌────────────────────────────────────────────────────────────┐
+│  Actual Node Executor (http-executor.ts)                   │
+│  ┌───────────────────────────────────────────────────────┐ │
+│  │  async function executeHTTPNode(config, context) {    │ │
+│  │    const url = interpolateVariables(config.url, ctx); │ │
+│  │    const response = await fetch(url);                 │ │
+│  │    return { status, data };                           │ │
+│  │  }                                                    │ │
+│  └───────────────────────────────────────────────────────┘ │
+└────────────────────────────────────────────────────────────┘
 ```
 
-#### 4. JSON Test Case Format
+### File Structure
 
-**Purpose**: Allow non-developers to write tests without TypeScript knowledge
-
-**Schema**:
-
-```json
-{
-    "testSuite": "HTTP Node Tests",
-    "tests": [
-        {
-            "name": "Simple GET request",
-            "nodeType": "http",
-            "nodeConfig": {
-                "method": "GET",
-                "url": "https://api.example.com/users"
-            },
-            "context": {},
-            "expectedOutputs": {
-                "status": 200
-            }
-        },
-        {
-            "name": "POST with variable interpolation",
-            "nodeType": "http",
-            "nodeConfig": {
-                "method": "POST",
-                "url": "https://api.example.com/users",
-                "body": "{\"name\": \"${userName}\"}"
-            },
-            "context": {
-                "userName": "John Doe"
-            },
-            "expectedOutputs": {
-                "status": 201
-            }
-        }
-    ]
-}
+```
+backend/
+├── src/
+│   └── temporal/
+│       └── activities/
+│           └── node-executors/
+│               ├── index.ts              # executeNode() router
+│               ├── utils.ts              # interpolateVariables()
+│               ├── http-executor.ts      # HTTP node implementation
+│               └── llm-executor.ts       # LLM node implementation
+└── tests/
+    ├── helpers/
+    │   ├── NodeTestRunner.ts             # [CREATE] Test execution wrapper
+    │   └── NodeAssertions.ts             # [CREATE] Assertion utilities
+    └── node-tests/
+        ├── http-node.test.ts             # [CREATE] HTTP node tests
+        ├── llm-node.test.ts              # [CREATE] LLM node tests
+        ├── transform-node.test.ts        # [CREATE] Transform node tests
+        └── database-node.test.ts         # [CREATE] Database node tests
 ```
 
-## Implementation Phases
+## Complete Example Walkthrough
 
-### Phase 1: Core Test Runner (3-4 hours)
+Let's walk through creating a complete test file from scratch.
 
-**Goal**: Basic test execution infrastructure
+### Step 1: Create Test File
 
-**Tasks**:
-
-1. Create `NodeTestRunner` class with single node execution
-2. Implement timeout handling
-3. Add error capturing and formatting
-4. Create basic TypeScript test examples for HTTP node
-5. Add npm script: `npm run test:nodes`
-
-**Files to Create**:
-
-- `backend/tests/helpers/NodeTestRunner.ts` (200 lines)
-- `backend/tests/node-tests/http-node.test.ts` (150 lines)
-
-**Files to Reference**:
-
-- `backend/src/temporal/activities/node-executors/index.ts` (executeNode function)
-- `backend/src/temporal/activities/node-executors/utils.ts` (interpolateVariables)
-- `backend/tests/helpers/WorkflowTestHarness.ts` (assertion patterns)
-
-### Phase 2: Assertion Library (2-3 hours)
-
-**Goal**: Rich assertion utilities for node outputs
-
-**Tasks**:
-
-1. Create `NodeAssertions` class
-2. Implement structure validation
-3. Add range and pattern matching
-4. Create test examples using assertions
-5. Document assertion API
-
-**Files to Create**:
-
-- `backend/tests/helpers/NodeAssertions.ts` (150 lines)
-- `backend/tests/node-tests/transform-node.test.ts` (200 lines)
-
-### Phase 3: JSON Test Case Support (2-3 hours)
-
-**Goal**: Enable non-developer test authoring
-
-**Tasks**:
-
-1. Define JSON schema for test cases
-2. Implement JSON loader in `NodeTestRunner`
-3. Add schema validation
-4. Create example JSON test cases
-5. Add batch execution support
-
-**Files to Create**:
-
-- `backend/tests/node-tests/cases/http-basic.json` (100 lines)
-- `backend/tests/node-tests/cases/llm-providers.json` (150 lines)
-- `backend/tests/schemas/node-test-case.schema.json` (80 lines)
-
-**Files to Modify**:
-
-- `backend/tests/helpers/NodeTestRunner.ts` (+100 lines for JSON support)
-
-### Phase 4: CLI Tool (2-3 hours)
-
-**Goal**: Command-line interface for test management
-
-**Tasks**:
-
-1. Create CLI script with Commander.js
-2. Implement `run`, `generate`, `list`, `validate` commands
-3. Add colored console output (chalk)
-4. Create template generation for all node types
-5. Add npm scripts to package.json
-
-**Files to Create**:
-
-- `backend/scripts/test-nodes.ts` (300 lines)
-- `backend/templates/node-test-templates.ts` (200 lines)
-
-**Files to Modify**:
-
-- `backend/package.json` (add scripts)
-
-### Phase 5: Comprehensive Test Coverage (3-4 hours)
-
-**Goal**: Test all critical node types
-
-**Tasks**:
-
-1. Create tests for LLM nodes (with provider switching)
-2. Create tests for Transform nodes (JSONata operations)
-3. Create tests for Database nodes (with mock connections)
-4. Create tests for Conditional/Switch nodes
-5. Create tests for Error handling scenarios
-
-**Files to Create**:
-
-- `backend/tests/node-tests/llm-node.test.ts` (250 lines)
-- `backend/tests/node-tests/database-node.test.ts` (200 lines)
-- `backend/tests/node-tests/conditional-node.test.ts` (150 lines)
-- `backend/tests/node-tests/error-handling.test.ts` (150 lines)
-
-### Phase 6: CI/CD Integration (1-2 hours)
-
-**Goal**: Automated testing in GitHub Actions
-
-**Tasks**:
-
-1. Create GitHub Actions workflow
-2. Add test coverage reporting
-3. Add pre-commit hooks for node tests
-4. Update documentation
-
-**Files to Create**:
-
-- `.github/workflows/node-tests.yml` (50 lines)
-- `backend/tests/node-tests/README.md` (documentation)
-
-**Files to Modify**:
-
-- `.github/workflows/test.yml` (add node test step)
-
-## Critical Files Reference
-
-### Files to Study Before Implementation
-
-1. **`backend/src/temporal/activities/node-executors/index.ts`**
-    - Main `executeNode()` function - routing logic
-    - Node type registry via switch-case
-    - All node executor exports
-
-2. **`backend/src/temporal/activities/node-executors/utils.ts`**
-    - `interpolateVariables()` - variable interpolation engine
-    - Nested path resolution
-    - Deep clone utilities
-
-3. **`backend/tests/helpers/WorkflowTestHarness.ts`**
-    - Existing test patterns and assertions
-    - Result validation structure
-    - Error handling patterns
-
-### Node Executors to Reference
-
-- `backend/src/temporal/activities/node-executors/http-executor.ts`
-- `backend/src/temporal/activities/node-executors/llm-executor.ts`
-- `backend/src/temporal/activities/node-executors/transform-executor.ts`
-- `backend/src/temporal/activities/node-executors/conditional-executor.ts`
-
-## Example Test Cases
-
-### TypeScript Test Example
+**File:** `backend/tests/node-tests/http-node.test.ts`
 
 ```typescript
 import { NodeTestRunner } from "../helpers/NodeTestRunner";
-import { NodeAssertions } from "../helpers/NodeAssertions";
 
-describe("HTTP Node Tests", () => {
+describe("HTTP Node", () => {
     let runner: NodeTestRunner;
 
     beforeAll(() => {
         runner = new NodeTestRunner();
     });
 
-    it("should execute GET request successfully", async () => {
+    it("should make successful GET request", async () => {
+        // Execute node with test config
         const result = await runner.executeNode({
-            name: "GET request",
+            name: "GET request test",
             nodeType: "http",
             nodeConfig: {
                 method: "GET",
@@ -322,39 +188,41 @@ describe("HTTP Node Tests", () => {
             timeout: 5000
         });
 
-        NodeAssertions.assertOutputContains(result, {
-            status: 200
-        });
-        NodeAssertions.assertFieldInRange(result, "status", 200, 299);
+        // Validate outputs
+        expect(result.success).toBe(true);
+        expect(result.outputs).toBeDefined();
+        expect(result.outputs?.status).toBe(200);
+        expect(result.outputs?.data).toHaveProperty("id", 1);
+        expect(result.duration).toBeLessThan(5000);
     });
 
     it("should interpolate variables in URL", async () => {
         const result = await runner.executeNode({
-            name: "GET with variable",
+            name: "Variable interpolation test",
             nodeType: "http",
             nodeConfig: {
                 method: "GET",
                 url: "https://jsonplaceholder.typicode.com/users/${userId}"
             },
             context: {
-                userId: 1
+                userId: 2 // This gets interpolated into URL
             }
         });
 
         expect(result.success).toBe(true);
-        expect(result.outputs?.data).toHaveProperty("id", 1);
+        expect(result.outputs?.data).toHaveProperty("id", 2);
     });
 
-    it("should handle network errors gracefully", async () => {
+    it("should handle errors gracefully", async () => {
         const result = await runner.executeNode({
-            name: "Invalid URL",
+            name: "Error handling test",
             nodeType: "http",
             nodeConfig: {
                 method: "GET",
-                url: "https://invalid-domain-that-does-not-exist-12345.com"
+                url: "https://jsonplaceholder.typicode.com/invalid-endpoint"
             },
             context: {},
-            expectError: true
+            expectError: true // Mark that we expect this to fail
         });
 
         expect(result.success).toBe(false);
@@ -363,76 +231,79 @@ describe("HTTP Node Tests", () => {
 });
 ```
 
-### JSON Test Case Example
+### Step 2: Run Tests
 
-```json
-{
-    "testSuite": "LLM Node Provider Tests",
-    "tests": [
-        {
-            "name": "OpenAI GPT-4 basic completion",
-            "nodeType": "llm",
-            "nodeConfig": {
-                "provider": "openai",
-                "model": "gpt-4",
-                "prompt": "Say 'test successful' and nothing else",
-                "temperature": 0,
-                "maxTokens": 10
-            },
-            "context": {},
-            "skipIfNoCredentials": true,
-            "expectedOutputs": {
-                "provider": "openai"
-            }
-        },
-        {
-            "name": "LLM with variable interpolation",
-            "nodeType": "llm",
-            "nodeConfig": {
-                "provider": "openai",
-                "model": "gpt-4",
-                "prompt": "Summarize: ${articleText}",
-                "temperature": 0.7
-            },
-            "context": {
-                "articleText": "FlowMaestro is a workflow automation platform."
-            },
-            "skipIfNoCredentials": true
-        }
-    ]
-}
+```bash
+# Run all node tests
+npm run test:nodes
+
+# Run specific test file
+npm run test:nodes -- http-node.test.ts
+
+# Run tests in watch mode
+npm run test:nodes -- --watch
 ```
 
-## Implementation Details
+### Step 3: See Results
 
-### NodeTestRunner Implementation Guide
+```
+PASS  backend/tests/node-tests/http-node.test.ts
+  HTTP Node
+    ✓ should make successful GET request (324ms)
+    ✓ should interpolate variables in URL (156ms)
+    ✓ should handle errors gracefully (89ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       3 passed, 3 total
+```
+
+## Implementation Guide
+
+### Phase 1: Core Test Runner (3-4 hours)
+
+**Goal:** Get basic test execution working for HTTP nodes
+
+#### 1.1 Create NodeTestRunner (~200 lines)
+
+**File:** `backend/tests/helpers/NodeTestRunner.ts`
 
 ```typescript
 import { executeNode, ExecuteNodeInput } from "../../src/temporal/activities/node-executors";
-import type { JsonObject, JsonValue } from "@flowmaestro/shared";
+import type { JsonObject } from "@flowmaestro/shared";
+
+export interface NodeTestCase {
+    name: string;
+    nodeType: string;
+    nodeConfig: JsonObject;
+    context?: JsonObject;
+    timeout?: number;
+    expectedOutputs?: JsonObject;
+    expectError?: boolean;
+}
+
+export interface NodeTestResult {
+    name: string;
+    success: boolean;
+    outputs?: JsonObject;
+    error?: string;
+    duration: number;
+}
 
 export class NodeTestRunner {
-    private defaultTimeout = 30000; // 30 seconds
+    private defaultTimeout = 30000;
 
     async executeNode(testCase: NodeTestCase): Promise<NodeTestResult> {
         const startTime = Date.now();
         const timeout = testCase.timeout || this.defaultTimeout;
 
         try {
-            // Create promise for node execution
             const executionPromise = this.runNode(testCase);
-
-            // Create timeout promise
             const timeoutPromise = new Promise<never>((_, reject) => {
-                setTimeout(() => {
-                    reject(new Error(`Node execution timed out after ${timeout}ms`));
-                }, timeout);
+                setTimeout(() => reject(new Error(`Timeout after ${timeout}ms`)), timeout);
             });
 
-            // Race between execution and timeout
             const outputs = await Promise.race([executionPromise, timeoutPromise]);
 
-            // Validate expected outputs if provided
             if (testCase.expectedOutputs && !testCase.expectError) {
                 this.validateOutputs(outputs, testCase.expectedOutputs);
             }
@@ -444,18 +315,9 @@ export class NodeTestRunner {
                 duration: Date.now() - startTime
             };
         } catch (error) {
-            if (testCase.expectError) {
-                return {
-                    name: testCase.name,
-                    success: true,
-                    error: error instanceof Error ? error.message : String(error),
-                    duration: Date.now() - startTime
-                };
-            }
-
             return {
                 name: testCase.name,
-                success: false,
+                success: testCase.expectError ? true : false,
                 error: error instanceof Error ? error.message : String(error),
                 duration: Date.now() - startTime
             };
@@ -463,25 +325,86 @@ export class NodeTestRunner {
     }
 
     private async runNode(testCase: NodeTestCase): Promise<JsonObject> {
-        const input: ExecuteNodeInput = {
+        return await executeNode({
             nodeType: testCase.nodeType,
             nodeConfig: testCase.nodeConfig,
-            context: testCase.context || {},
-            globalStore: testCase.globalStore
-                ? new Map(Object.entries(testCase.globalStore))
-                : undefined
-        };
-
-        return await executeNode(input);
+            context: testCase.context || {}
+        });
     }
 
     private validateOutputs(actual: JsonObject, expected: JsonObject): void {
         for (const [key, expectedValue] of Object.entries(expected)) {
             if (!(key in actual)) {
-                throw new Error(`Expected output key "${key}" not found`);
+                throw new Error(`Expected output "${key}" not found`);
+            }
+            const actualValue = actual[key];
+            if (typeof expectedValue === "object" && expectedValue !== null) {
+                if (JSON.stringify(actualValue) !== JSON.stringify(expectedValue)) {
+                    throw new Error(
+                        `"${key}" mismatch.\nExpected: ${JSON.stringify(expectedValue)}\nActual: ${JSON.stringify(actualValue)}`
+                    );
+                }
+            } else if (actualValue !== expectedValue) {
+                throw new Error(
+                    `"${key}" mismatch. Expected: ${expectedValue}, Actual: ${actualValue}`
+                );
+            }
+        }
+    }
+
+    async executeBatch(cases: NodeTestCase[]): Promise<NodeTestResult[]> {
+        return Promise.all(cases.map((testCase) => this.executeNode(testCase)));
+    }
+}
+```
+
+#### 1.2 Create HTTP Node Tests (~150 lines)
+
+**File:** `backend/tests/node-tests/http-node.test.ts`
+
+See "Complete Example Walkthrough" above for full implementation.
+
+#### 1.3 Add npm Script
+
+**File:** `backend/package.json`
+
+```json
+{
+    "scripts": {
+        "test:nodes": "jest --testMatch='**/tests/node-tests/**/*.test.ts'"
+    }
+}
+```
+
+### Phase 2: Assertion Library + Transform Tests (2-3 hours)
+
+#### 2.1 Create NodeAssertions (~150 lines)
+
+**File:** `backend/tests/helpers/NodeAssertions.ts`
+
+```typescript
+import type { NodeTestResult } from "./NodeTestRunner";
+import type { JsonObject } from "@flowmaestro/shared";
+
+export class NodeAssertions {
+    /**
+     * Assert that result contains expected outputs
+     */
+    static assertOutputContains(result: NodeTestResult, expected: JsonObject): void {
+        if (!result.success) {
+            throw new Error(`Test failed: ${result.error}`);
+        }
+
+        if (!result.outputs) {
+            throw new Error("No outputs returned");
+        }
+
+        for (const [key, expectedValue] of Object.entries(expected)) {
+            if (!(key in result.outputs)) {
+                throw new Error(`Expected output "${key}" not found`);
             }
 
-            const actualValue = actual[key];
+            const actualValue = result.outputs[key];
 
             if (typeof expectedValue === "object" && expectedValue !== null) {
                 if (JSON.stringify(actualValue) !== JSON.stringify(expectedValue)) {
@@ -497,233 +420,1472 @@ export class NodeTestRunner {
         }
     }
 
-    async executeBatch(cases: NodeTestCase[]): Promise<NodeTestResult[]> {
-        return Promise.all(cases.map((testCase) => this.executeNode(testCase)));
+    /**
+     * Assert that a numeric field is within a range
+     */
+    static assertFieldInRange(
+        result: NodeTestResult,
+        field: string,
+        min: number,
+        max: number
+    ): void {
+        if (!result.success || !result.outputs) {
+            throw new Error("Cannot assert on failed result");
+        }
+
+        const value = this.getNestedValue(result.outputs, field);
+
+        if (typeof value !== "number") {
+            throw new Error(`Field "${field}" is not a number: ${typeof value}`);
+        }
+
+        if (value < min || value > max) {
+            throw new Error(`Field "${field}" value ${value} not in range [${min}, ${max}]`);
+        }
     }
 
-    async loadFromJSON(filePath: string): Promise<NodeTestCase[]> {
-        const fs = await import("fs/promises");
-        const content = await fs.readFile(filePath, "utf-8");
-        const data = JSON.parse(content);
-        return data.tests || [];
+    /**
+     * Assert that a field matches a regex pattern
+     */
+    static assertFieldMatches(result: NodeTestResult, field: string, pattern: RegExp): void {
+        if (!result.success || !result.outputs) {
+            throw new Error("Cannot assert on failed result");
+        }
+
+        const value = this.getNestedValue(result.outputs, field);
+
+        if (typeof value !== "string") {
+            throw new Error(`Field "${field}" is not a string`);
+        }
+
+        if (!pattern.test(value)) {
+            throw new Error(`Field "${field}" value "${value}" does not match pattern ${pattern}`);
+        }
+    }
+
+    /**
+     * Assert that an array field has expected length
+     */
+    static assertArrayLength(result: NodeTestResult, field: string, expectedLength: number): void {
+        if (!result.success || !result.outputs) {
+            throw new Error("Cannot assert on failed result");
+        }
+
+        const value = this.getNestedValue(result.outputs, field);
+
+        if (!Array.isArray(value)) {
+            throw new Error(`Field "${field}" is not an array`);
+        }
+
+        if (value.length !== expectedLength) {
+            throw new Error(
+                `Field "${field}" length ${value.length} does not match expected ${expectedLength}`
+            );
+        }
+    }
+
+    /**
+     * Get nested value from object using dot notation
+     */
+    private static getNestedValue(obj: JsonObject, path: string): unknown {
+        const keys = path.split(".");
+        let value: unknown = obj;
+
+        for (const key of keys) {
+            if (value === null || typeof value !== "object") {
+                throw new Error(`Cannot access "${key}" on non-object`);
+            }
+            value = (value as Record<string, unknown>)[key];
+        }
+
+        return value;
     }
 }
 ```
 
-### Dependencies to Install
+#### 2.2 Create Transform Node Tests
 
-```json
-{
-    "devDependencies": {
-        "commander": "^11.0.0",
-        "chalk": "^5.3.0",
-        "ajv": "^8.12.0"
-    }
-}
+**File:** `backend/tests/node-tests/transform-node.test.ts`
+
+```typescript
+import { NodeTestRunner } from "../helpers/NodeTestRunner";
+import { NodeAssertions } from "../helpers/NodeAssertions";
+
+describe("Transform Node", () => {
+    let runner: NodeTestRunner;
+
+    beforeAll(() => {
+        runner = new NodeTestRunner();
+    });
+
+    it("should map array", async () => {
+        const result = await runner.executeNode({
+            name: "Map operation",
+            nodeType: "transform",
+            nodeConfig: {
+                operation: "map",
+                input: "${users}",
+                expression: "{ name: $.name, upper: $uppercase($.name) }"
+            },
+            context: {
+                users: [
+                    { name: "Alice", age: 30 },
+                    { name: "Bob", age: 25 }
+                ]
+            }
+        });
+
+        expect(result.success).toBe(true);
+        NodeAssertions.assertOutputContains(result, {
+            result: [
+                { name: "Alice", upper: "ALICE" },
+                { name: "Bob", upper: "BOB" }
+            ]
+        });
+    });
+
+    it("should filter array", async () => {
+        const result = await runner.executeNode({
+            name: "Filter operation",
+            nodeType: "transform",
+            nodeConfig: {
+                operation: "filter",
+                input: "${numbers}",
+                expression: "$ > 5"
+            },
+            context: {
+                numbers: [1, 3, 5, 7, 9]
+            }
+        });
+
+        NodeAssertions.assertOutputContains(result, {
+            result: [7, 9]
+        });
+        NodeAssertions.assertArrayLength(result, "result", 2);
+    });
+});
 ```
 
-### package.json Scripts to Add
+### Phase 3: Comprehensive Node Coverage (4-5 hours)
 
-```json
-{
-    "scripts": {
-        "test:nodes": "jest --testMatch='**/tests/node-tests/**/*.test.ts'",
-        "test:nodes:run": "tsx backend/scripts/test-nodes.ts run",
-        "test:nodes:generate": "tsx backend/scripts/test-nodes.ts generate",
-        "test:nodes:list": "tsx backend/scripts/test-nodes.ts list",
-        "test:nodes:validate": "tsx backend/scripts/test-nodes.ts validate"
-    }
-}
+Create test files for remaining node types:
+
+- `llm-node.test.ts` - See "Mocking External Services" section
+- `database-node.test.ts` - See "Mocking External Services" section
+- `conditional-node.test.ts` - See "Test Scenarios" section
+- `error-handling.test.ts` - General error cases
+
+### Phase 4: CI/CD Integration (1-2 hours)
+
+**File:** `.github/workflows/node-tests.yml`
+
+```yaml
+name: Node Tests
+
+on:
+    push:
+        branches: [main, develop]
+    pull_request:
+        branches: [main, develop]
+
+jobs:
+    test:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v3
+            - uses: actions/setup-node@v3
+              with:
+                  node-version: "20"
+            - run: npm ci
+            - run: npm run test:nodes
 ```
 
-## Key Architectural Context
+## Mocking External Services
 
-### How Node Execution Currently Works
+### HTTP Nodes - Use JSONPlaceholder
 
-1. **In Production Workflows**:
-    - Temporal orchestrator calls `executeNode()` activity
-    - Context accumulates outputs from previous nodes
-    - Variables interpolated using `${variable}` syntax
-    - Results merged into context for downstream nodes
+```typescript
+describe("HTTP Node", () => {
+    it("should make GET request", async () => {
+        const result = await runner.executeNode({
+            name: "GET request",
+            nodeType: "http",
+            nodeConfig: {
+                method: "GET",
+                url: "https://jsonplaceholder.typicode.com/users/1" // Free mock API
+            },
+            context: {}
+        });
 
-2. **Node Executor Pattern**:
+        expect(result.success).toBe(true);
+        expect(result.outputs?.status).toBe(200);
+        expect(result.outputs?.data).toHaveProperty("id");
+    });
+});
+```
 
-    ```typescript
-    export async function executeHTTPNode(
-        config: HTTPNodeConfig,
-        context: JsonObject
-    ): Promise<JsonObject> {
-        // 1. Interpolate variables
-        const url = interpolateVariables(config.url, context);
+### LLM Nodes - Mock API Calls
 
-        // 2. Execute logic
-        const response = await fetch(url, { method: config.method });
+Mock the actual LLM provider APIs to avoid requiring real API keys and ensure consistent test results.
 
-        // 3. Return outputs (not merged - orchestrator does that)
-        return {
-            status: response.status,
-            data: await response.json()
+```typescript
+import { NodeTestRunner } from "../helpers/NodeTestRunner";
+
+// Mock the fetch function used by LLM executor
+global.fetch = jest.fn();
+
+describe("LLM Node", () => {
+    let runner: NodeTestRunner;
+
+    beforeAll(() => {
+        runner = new NodeTestRunner();
+    });
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    it("should call OpenAI API successfully", async () => {
+        // Mock OpenAI API response
+        (global.fetch as jest.Mock).mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({
+                choices: [
+                    {
+                        message: {
+                            content: "This is a test response",
+                            role: "assistant"
+                        },
+                        finish_reason: "stop"
+                    }
+                ],
+                usage: {
+                    prompt_tokens: 10,
+                    completion_tokens: 20,
+                    total_tokens: 30
+                }
+            })
+        });
+
+        const result = await runner.executeNode({
+            name: "OpenAI test",
+            nodeType: "llm",
+            nodeConfig: {
+                provider: "openai",
+                model: "gpt-4",
+                prompt: "Test prompt",
+                temperature: 0.7
+            },
+            context: {}
+        });
+
+        expect(result.success).toBe(true);
+        expect(result.outputs?.text).toBe("This is a test response");
+        expect(result.outputs?.usage?.total_tokens).toBe(30);
+        expect(global.fetch).toHaveBeenCalledWith(
+            expect.stringContaining("openai.com"),
+            expect.objectContaining({
+                method: "POST",
+                headers: expect.objectContaining({
+                    "Content-Type": "application/json"
+                })
+            })
+        );
+    });
+
+    it("should interpolate variables in prompt", async () => {
+        (global.fetch as jest.Mock).mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({
+                choices: [{ message: { content: "Response", role: "assistant" } }],
+                usage: { total_tokens: 20 }
+            })
+        });
+
+        const result = await runner.executeNode({
+            name: "Variable interpolation",
+            nodeType: "llm",
+            nodeConfig: {
+                provider: "openai",
+                model: "gpt-4",
+                prompt: "Summarize this: ${article}"
+            },
+            context: {
+                article: "FlowMaestro is a workflow automation platform."
+            }
+        });
+
+        expect(result.success).toBe(true);
+
+        // Verify the prompt was interpolated correctly
+        const callArgs = (global.fetch as jest.Mock).mock.calls[0];
+        const body = JSON.parse(callArgs[1].body);
+        expect(body.messages[0].content).toContain("FlowMaestro is a workflow automation platform");
+    });
+
+    it("should handle API errors gracefully", async () => {
+        // Mock API error
+        (global.fetch as jest.Mock).mockResolvedValueOnce({
+            ok: false,
+            status: 429,
+            statusText: "Too Many Requests",
+            json: async () => ({
+                error: {
+                    message: "Rate limit exceeded",
+                    type: "rate_limit_error"
+                }
+            })
+        });
+
+        const result = await runner.executeNode({
+            name: "API error",
+            nodeType: "llm",
+            nodeConfig: {
+                provider: "openai",
+                model: "gpt-4",
+                prompt: "Test"
+            },
+            context: {},
+            expectError: true
+        });
+
+        expect(result.success).toBe(false);
+        expect(result.error).toContain("Rate limit");
+    });
+
+    it("should support multiple providers", async () => {
+        // Test Anthropic
+        (global.fetch as jest.Mock).mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({
+                content: [{ text: "Claude response" }],
+                usage: { input_tokens: 10, output_tokens: 15 }
+            })
+        });
+
+        const result = await runner.executeNode({
+            name: "Anthropic test",
+            nodeType: "llm",
+            nodeConfig: {
+                provider: "anthropic",
+                model: "claude-3-5-sonnet-20241022",
+                prompt: "Test prompt"
+            },
+            context: {}
+        });
+
+        expect(result.success).toBe(true);
+        expect(result.outputs?.text).toBe("Claude response");
+    });
+});
+```
+
+### Database Nodes - Use SQLite In-Memory
+
+```typescript
+describe("Database Node", () => {
+    const testDbUrl = "sqlite::memory:";
+
+    beforeAll(async () => {
+        // Set up test database with sample data
+        await setupTestDatabase(testDbUrl);
+    });
+
+    it("should execute SELECT query", async () => {
+        const result = await runner.executeNode({
+            name: "SELECT query",
+            nodeType: "database",
+            nodeConfig: {
+                connectionString: testDbUrl,
+                query: "SELECT * FROM test_users WHERE id = 1"
+            },
+            context: {}
+        });
+
+        expect(result.success).toBe(true);
+        expect(result.outputs?.rows).toHaveLength(1);
+    });
+});
+```
+
+### Transform Nodes - Pure Logic
+
+No mocking needed - these are pure functions with no external dependencies.
+
+## Additional Node Type Examples
+
+### Conditional Node Tests
+
+**File:** `backend/tests/node-tests/conditional-node.test.ts`
+
+```typescript
+import { NodeTestRunner } from "../helpers/NodeTestRunner";
+
+describe("Conditional Node", () => {
+    let runner: NodeTestRunner;
+
+    beforeAll(() => {
+        runner = new NodeTestRunner();
+    });
+
+    it("should evaluate simple equality condition", async () => {
+        const result = await runner.executeNode({
+            name: "Equality test",
+            nodeType: "conditional",
+            nodeConfig: {
+                condition: {
+                    leftOperand: "${status}",
+                    operator: "==",
+                    rightOperand: "success"
+                }
+            },
+            context: {
+                status: "success"
+            }
+        });
+
+        expect(result.success).toBe(true);
+        expect(result.outputs?.result).toBe(true);
+        expect(result.outputs?.branch).toBe("then");
+    });
+
+    it("should evaluate numeric comparison", async () => {
+        const result = await runner.executeNode({
+            name: "Greater than test",
+            nodeType: "conditional",
+            nodeConfig: {
+                condition: {
+                    leftOperand: "${count}",
+                    operator: ">",
+                    rightOperand: "10"
+                }
+            },
+            context: {
+                count: 15
+            }
+        });
+
+        expect(result.outputs?.result).toBe(true);
+    });
+
+    it("should handle AND logic", async () => {
+        const result = await runner.executeNode({
+            name: "AND condition",
+            nodeType: "conditional",
+            nodeConfig: {
+                condition: {
+                    logic: "AND",
+                    conditions: [
+                        {
+                            leftOperand: "${age}",
+                            operator: ">=",
+                            rightOperand: "18"
+                        },
+                        {
+                            leftOperand: "${hasLicense}",
+                            operator: "==",
+                            rightOperand: "true"
+                        }
+                    ]
+                }
+            },
+            context: {
+                age: 25,
+                hasLicense: true
+            }
+        });
+
+        expect(result.outputs?.result).toBe(true);
+    });
+
+    it("should handle OR logic", async () => {
+        const result = await runner.executeNode({
+            name: "OR condition",
+            nodeType: "conditional",
+            nodeConfig: {
+                condition: {
+                    logic: "OR",
+                    conditions: [
+                        {
+                            leftOperand: "${isAdmin}",
+                            operator: "==",
+                            rightOperand: "true"
+                        },
+                        {
+                            leftOperand: "${isModerator}",
+                            operator: "==",
+                            rightOperand: "true"
+                        }
+                    ]
+                }
+            },
+            context: {
+                isAdmin: false,
+                isModerator: true
+            }
+        });
+
+        expect(result.outputs?.result).toBe(true);
+    });
+
+    it("should handle null/undefined values", async () => {
+        const result = await runner.executeNode({
+            name: "Null check",
+            nodeType: "conditional",
+            nodeConfig: {
+                condition: {
+                    leftOperand: "${email}",
+                    operator: "!=",
+                    rightOperand: null
+                }
+            },
+            context: {
+                email: null
+            }
+        });
+
+        expect(result.outputs?.result).toBe(false);
+    });
+});
+```
+
+### Variable Node Tests
+
+**File:** `backend/tests/node-tests/variable-node.test.ts`
+
+```typescript
+import { NodeTestRunner } from "../helpers/NodeTestRunner";
+
+describe("Variable Node", () => {
+    let runner: NodeTestRunner;
+
+    beforeAll(() => {
+        runner = new NodeTestRunner();
+    });
+
+    it("should set a string variable", async () => {
+        const result = await runner.executeNode({
+            name: "Set string",
+            nodeType: "variable",
+            nodeConfig: {
+                operation: "set",
+                variableName: "greeting",
+                value: "Hello, World!"
+            },
+            context: {}
+        });
+
+        expect(result.success).toBe(true);
+        expect(result.outputs?.greeting).toBe("Hello, World!");
+    });
+
+    it("should set a variable with interpolation", async () => {
+        const result = await runner.executeNode({
+            name: "Set with interpolation",
+            nodeType: "variable",
+            nodeConfig: {
+                operation: "set",
+                variableName: "fullName",
+                value: "${firstName} ${lastName}"
+            },
+            context: {
+                firstName: "John",
+                lastName: "Doe"
+            }
+        });
+
+        expect(result.outputs?.fullName).toBe("John Doe");
+    });
+
+    it("should set an object variable", async () => {
+        const result = await runner.executeNode({
+            name: "Set object",
+            nodeType: "variable",
+            nodeConfig: {
+                operation: "set",
+                variableName: "user",
+                value: {
+                    id: 123,
+                    name: "Alice",
+                    active: true
+                }
+            },
+            context: {}
+        });
+
+        expect(result.outputs?.user).toEqual({
+            id: 123,
+            name: "Alice",
+            active: true
+        });
+    });
+
+    it("should set an array variable", async () => {
+        const result = await runner.executeNode({
+            name: "Set array",
+            nodeType: "variable",
+            nodeConfig: {
+                operation: "set",
+                variableName: "numbers",
+                value: [1, 2, 3, 4, 5]
+            },
+            context: {}
+        });
+
+        expect(result.outputs?.numbers).toEqual([1, 2, 3, 4, 5]);
+    });
+
+    it("should get an existing variable", async () => {
+        const result = await runner.executeNode({
+            name: "Get variable",
+            nodeType: "variable",
+            nodeConfig: {
+                operation: "get",
+                variableName: "existingVar"
+            },
+            context: {
+                existingVar: "test value"
+            }
+        });
+
+        expect(result.outputs?.value).toBe("test value");
+    });
+
+    it("should handle non-existent variable", async () => {
+        const result = await runner.executeNode({
+            name: "Get non-existent",
+            nodeType: "variable",
+            nodeConfig: {
+                operation: "get",
+                variableName: "nonExistent"
+            },
+            context: {}
+        });
+
+        expect(result.outputs?.value).toBeUndefined();
+    });
+});
+```
+
+### Wait Node Tests
+
+**File:** `backend/tests/node-tests/wait-node.test.ts`
+
+```typescript
+import { NodeTestRunner } from "../helpers/NodeTestRunner";
+
+describe("Wait Node", () => {
+    let runner: NodeTestRunner;
+
+    beforeAll(() => {
+        runner = new NodeTestRunner();
+    });
+
+    it("should wait for specified duration", async () => {
+        const startTime = Date.now();
+
+        const result = await runner.executeNode({
+            name: "Wait 100ms",
+            nodeType: "wait",
+            nodeConfig: {
+                duration: 100 // milliseconds
+            },
+            context: {}
+        });
+
+        const endTime = Date.now();
+        const elapsed = endTime - startTime;
+
+        expect(result.success).toBe(true);
+        expect(elapsed).toBeGreaterThanOrEqual(100);
+        expect(elapsed).toBeLessThan(150); // Allow 50ms tolerance
+    });
+
+    it("should wait with seconds unit", async () => {
+        const startTime = Date.now();
+
+        const result = await runner.executeNode({
+            name: "Wait 1 second",
+            nodeType: "wait",
+            nodeConfig: {
+                duration: 1,
+                unit: "seconds"
+            },
+            context: {},
+            timeout: 2000
+        });
+
+        const elapsed = Date.now() - startTime;
+
+        expect(result.success).toBe(true);
+        expect(elapsed).toBeGreaterThanOrEqual(1000);
+        expect(elapsed).toBeLessThan(1100);
+    });
+
+    it("should support variable interpolation for duration", async () => {
+        const result = await runner.executeNode({
+            name: "Wait dynamic",
+            nodeType: "wait",
+            nodeConfig: {
+                duration: "${waitTime}"
+            },
+            context: {
+                waitTime: 50
+            }
+        });
+
+        expect(result.success).toBe(true);
+        expect(result.duration).toBeGreaterThanOrEqual(50);
+    });
+
+    it("should return immediately for zero duration", async () => {
+        const result = await runner.executeNode({
+            name: "No wait",
+            nodeType: "wait",
+            nodeConfig: {
+                duration: 0
+            },
+            context: {}
+        });
+
+        expect(result.success).toBe(true);
+        expect(result.duration).toBeLessThan(10);
+    });
+});
+```
+
+### Echo Node Tests
+
+**File:** `backend/tests/node-tests/echo-node.test.ts`
+
+```typescript
+import { NodeTestRunner } from "../helpers/NodeTestRunner";
+
+describe("Echo Node", () => {
+    let runner: NodeTestRunner;
+
+    beforeAll(() => {
+        runner = new NodeTestRunner();
+    });
+
+    it("should echo simple string", async () => {
+        const result = await runner.executeNode({
+            name: "Echo string",
+            nodeType: "echo",
+            nodeConfig: {
+                message: "Hello, Echo!"
+            },
+            context: {}
+        });
+
+        expect(result.success).toBe(true);
+        expect(result.outputs?.message).toBe("Hello, Echo!");
+    });
+
+    it("should echo with variable interpolation", async () => {
+        const result = await runner.executeNode({
+            name: "Echo interpolated",
+            nodeType: "echo",
+            nodeConfig: {
+                message: "User ${userName} logged in at ${time}"
+            },
+            context: {
+                userName: "alice",
+                time: "10:30 AM"
+            }
+        });
+
+        expect(result.outputs?.message).toBe("User alice logged in at 10:30 AM");
+    });
+
+    it("should echo objects", async () => {
+        const testObject = {
+            id: 123,
+            name: "Test",
+            nested: { value: 42 }
         };
-    }
-    ```
 
-3. **Variable Interpolation**:
-    - Simple: `${userId}` → context.userId
-    - Nested: `${user.profile.name}` → context.user.profile.name
-    - Arrays: `${users[0].name}` → context.users[0].name
-    - Handled by `interpolateVariables()` in utils.ts
+        const result = await runner.executeNode({
+            name: "Echo object",
+            nodeType: "echo",
+            nodeConfig: {
+                message: testObject
+            },
+            context: {}
+        });
 
-4. **Node Types to Handle Specially**:
-    - **Control Flow Nodes** (conditional, switch, loop): Throw error - must be handled by orchestrator
-    - **Input Nodes**: Return value from context
-    - **Credential-Required Nodes**: Need connectionId or env vars (OPENAI_API_KEY, etc.)
+        expect(result.outputs?.message).toEqual(testObject);
+    });
 
-### Credential Handling for Tests
+    it("should echo arrays", async () => {
+        const testArray = [1, 2, 3, 4, 5];
 
-**Option 1: Use Environment Variables**
+        const result = await runner.executeNode({
+            name: "Echo array",
+            nodeType: "echo",
+            nodeConfig: {
+                message: testArray
+            },
+            context: {}
+        });
 
-```typescript
-// For LLM tests
-process.env.OPENAI_API_KEY = "test-key";
-```
-
-**Option 2: Create Test Connections**
-
-```typescript
-// Use existing connection management
-const testConnectionId = await createTestConnection({
-    provider: "openai",
-    apiKey: process.env.OPENAI_API_KEY
+        expect(result.outputs?.message).toEqual(testArray);
+    });
 });
 ```
 
-**Option 3: Skip Tests Without Credentials**
+### Code Node Tests
+
+**File:** `backend/tests/node-tests/code-node.test.ts`
 
 ```typescript
-it.skipIf(!process.env.OPENAI_API_KEY)("should call OpenAI", async () => {
-    // Test code
+import { NodeTestRunner } from "../helpers/NodeTestRunner";
+
+describe("Code Node", () => {
+    let runner: NodeTestRunner;
+
+    beforeAll(() => {
+        runner = new NodeTestRunner();
+    });
+
+    it("should execute simple JavaScript", async () => {
+        const result = await runner.executeNode({
+            name: "Simple JS",
+            nodeType: "code",
+            nodeConfig: {
+                language: "javascript",
+                code: "return 2 + 2;"
+            },
+            context: {}
+        });
+
+        expect(result.success).toBe(true);
+        expect(result.outputs?.result).toBe(4);
+    });
+
+    it("should access context variables", async () => {
+        const result = await runner.executeNode({
+            name: "Context access",
+            nodeType: "code",
+            nodeConfig: {
+                language: "javascript",
+                code: `
+                    const sum = context.a + context.b;
+                    return sum * 2;
+                `
+            },
+            context: {
+                a: 5,
+                b: 10
+            }
+        });
+
+        expect(result.outputs?.result).toBe(30);
+    });
+
+    it("should handle array operations", async () => {
+        const result = await runner.executeNode({
+            name: "Array operations",
+            nodeType: "code",
+            nodeConfig: {
+                language: "javascript",
+                code: `
+                    const numbers = context.numbers;
+                    const doubled = numbers.map(n => n * 2);
+                    const sum = doubled.reduce((a, b) => a + b, 0);
+                    return { doubled, sum };
+                `
+            },
+            context: {
+                numbers: [1, 2, 3, 4, 5]
+            }
+        });
+
+        expect(result.outputs?.result.doubled).toEqual([2, 4, 6, 8, 10]);
+        expect(result.outputs?.result.sum).toBe(30);
+    });
+
+    it("should handle string manipulation", async () => {
+        const result = await runner.executeNode({
+            name: "String operations",
+            nodeType: "code",
+            nodeConfig: {
+                language: "javascript",
+                code: `
+                    const text = context.text;
+                    return {
+                        upper: text.toUpperCase(),
+                        lower: text.toLowerCase(),
+                        length: text.length,
+                        reversed: text.split('').reverse().join('')
+                    };
+                `
+            },
+            context: {
+                text: "Hello World"
+            }
+        });
+
+        expect(result.outputs?.result.upper).toBe("HELLO WORLD");
+        expect(result.outputs?.result.lower).toBe("hello world");
+        expect(result.outputs?.result.length).toBe(11);
+        expect(result.outputs?.result.reversed).toBe("dlroW olleH");
+    });
+
+    it("should handle errors in code", async () => {
+        const result = await runner.executeNode({
+            name: "Error handling",
+            nodeType: "code",
+            nodeConfig: {
+                language: "javascript",
+                code: `
+                    throw new Error("Intentional test error");
+                `
+            },
+            context: {},
+            expectError: true
+        });
+
+        expect(result.success).toBe(false);
+        expect(result.error).toContain("Intentional test error");
+    });
+
+    it("should support async operations", async () => {
+        const result = await runner.executeNode({
+            name: "Async code",
+            nodeType: "code",
+            nodeConfig: {
+                language: "javascript",
+                code: `
+                    async function process() {
+                        await new Promise(resolve => setTimeout(resolve, 50));
+                        return "async result";
+                    }
+                    return await process();
+                `
+            },
+            context: {}
+        });
+
+        expect(result.success).toBe(true);
+        expect(result.outputs?.result).toBe("async result");
+    });
 });
 ```
 
-## Testing Strategy
+### Integration Node Tests
 
-### Unit Tests for Test Framework
-
-Test the testing mechanism itself:
+**File:** `backend/tests/node-tests/integration-node.test.ts`
 
 ```typescript
-describe("NodeTestRunner", () => {
-    it("should execute simple echo node", async () => { ... });
-    it("should handle timeouts correctly", async () => { ... });
-    it("should capture errors properly", async () => { ... });
-    it("should interpolate context variables", async () => { ... });
-});
+import { NodeTestRunner } from "../helpers/NodeTestRunner";
 
-describe("NodeAssertions", () => {
-    it("should validate output structure", async () => { ... });
-    it("should check field ranges", async () => { ... });
-    it("should match patterns", async () => { ... });
+// Mock fetch for integration API calls
+global.fetch = jest.fn();
+
+describe("Integration Node", () => {
+    let runner: NodeTestRunner;
+
+    beforeAll(() => {
+        runner = new NodeTestRunner();
+    });
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    describe("Slack Integration", () => {
+        it("should send Slack message successfully", async () => {
+            // Mock Slack API response
+            (global.fetch as jest.Mock).mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({
+                    ok: true,
+                    channel: "C1234567890",
+                    ts: "1234567890.123456",
+                    message: {
+                        text: "Hello from FlowMaestro!",
+                        user: "U1234567890"
+                    }
+                })
+            });
+
+            const result = await runner.executeNode({
+                name: "Send Slack message",
+                nodeType: "integration",
+                nodeConfig: {
+                    service: "slack",
+                    action: "sendMessage",
+                    connectionId: "slack-conn-123",
+                    params: {
+                        channel: "#general",
+                        text: "Hello from FlowMaestro!",
+                        username: "FlowBot"
+                    }
+                },
+                context: {}
+            });
+
+            expect(result.success).toBe(true);
+            expect(result.outputs?.ok).toBe(true);
+            expect(result.outputs?.channel).toBe("C1234567890");
+            expect(global.fetch).toHaveBeenCalledWith(
+                expect.stringContaining("slack.com/api"),
+                expect.objectContaining({
+                    method: "POST"
+                })
+            );
+        });
+
+        it("should send Slack message with variable interpolation", async () => {
+            (global.fetch as jest.Mock).mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ ok: true })
+            });
+
+            const result = await runner.executeNode({
+                name: "Dynamic Slack message",
+                nodeType: "integration",
+                nodeConfig: {
+                    service: "slack",
+                    action: "sendMessage",
+                    connectionId: "slack-conn-123",
+                    params: {
+                        channel: "${slackChannel}",
+                        text: "User ${userName} completed task: ${taskName}"
+                    }
+                },
+                context: {
+                    slackChannel: "#notifications",
+                    userName: "Alice",
+                    taskName: "Deploy to production"
+                }
+            });
+
+            expect(result.success).toBe(true);
+
+            // Verify interpolation occurred
+            const callArgs = (global.fetch as jest.Mock).mock.calls[0];
+            const body = JSON.parse(callArgs[1].body);
+            expect(body.text).toBe("User Alice completed task: Deploy to production");
+            expect(body.channel).toBe("#notifications");
+        });
+
+        it("should handle Slack API errors", async () => {
+            (global.fetch as jest.Mock).mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({
+                    ok: false,
+                    error: "channel_not_found"
+                })
+            });
+
+            const result = await runner.executeNode({
+                name: "Invalid channel",
+                nodeType: "integration",
+                nodeConfig: {
+                    service: "slack",
+                    action: "sendMessage",
+                    connectionId: "slack-conn-123",
+                    params: {
+                        channel: "#nonexistent",
+                        text: "Test"
+                    }
+                },
+                context: {},
+                expectError: true
+            });
+
+            expect(result.success).toBe(false);
+            expect(result.error).toContain("channel_not_found");
+        });
+    });
+
+    describe("GitHub Integration", () => {
+        it("should create GitHub issue", async () => {
+            (global.fetch as jest.Mock).mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({
+                    id: 123456789,
+                    number: 42,
+                    title: "Bug: Login fails",
+                    state: "open",
+                    html_url: "https://github.com/org/repo/issues/42"
+                })
+            });
+
+            const result = await runner.executeNode({
+                name: "Create GitHub issue",
+                nodeType: "integration",
+                nodeConfig: {
+                    service: "github",
+                    action: "createIssue",
+                    connectionId: "github-conn-123",
+                    params: {
+                        owner: "myorg",
+                        repo: "myrepo",
+                        title: "Bug: Login fails",
+                        body: "Users are unable to login",
+                        labels: ["bug", "high-priority"]
+                    }
+                },
+                context: {}
+            });
+
+            expect(result.success).toBe(true);
+            expect(result.outputs?.number).toBe(42);
+            expect(result.outputs?.state).toBe("open");
+            expect(result.outputs?.html_url).toContain("/issues/42");
+        });
+
+        it("should add comment to GitHub issue", async () => {
+            (global.fetch as jest.Mock).mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({
+                    id: 987654321,
+                    body: "This has been fixed",
+                    created_at: "2025-01-01T12:00:00Z"
+                })
+            });
+
+            const result = await runner.executeNode({
+                name: "Add issue comment",
+                nodeType: "integration",
+                nodeConfig: {
+                    service: "github",
+                    action: "addIssueComment",
+                    connectionId: "github-conn-123",
+                    params: {
+                        owner: "myorg",
+                        repo: "myrepo",
+                        issueNumber: "${issueNumber}",
+                        body: "This has been fixed"
+                    }
+                },
+                context: {
+                    issueNumber: 42
+                }
+            });
+
+            expect(result.success).toBe(true);
+            expect(result.outputs?.body).toBe("This has been fixed");
+        });
+    });
+
+    describe("Email Integration", () => {
+        it("should send email via SMTP", async () => {
+            (global.fetch as jest.Mock).mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({
+                    messageId: "abc123@mail.example.com",
+                    accepted: ["recipient@example.com"],
+                    rejected: []
+                })
+            });
+
+            const result = await runner.executeNode({
+                name: "Send email",
+                nodeType: "integration",
+                nodeConfig: {
+                    service: "email",
+                    action: "send",
+                    connectionId: "email-conn-123",
+                    params: {
+                        to: "recipient@example.com",
+                        subject: "Workflow Completed",
+                        body: "Your workflow has completed successfully.",
+                        from: "noreply@flowmaestro.com"
+                    }
+                },
+                context: {}
+            });
+
+            expect(result.success).toBe(true);
+            expect(result.outputs?.messageId).toBeDefined();
+            expect(result.outputs?.accepted).toContain("recipient@example.com");
+        });
+
+        it("should send email with HTML content", async () => {
+            (global.fetch as jest.Mock).mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({
+                    messageId: "def456@mail.example.com",
+                    accepted: ["user@example.com"]
+                })
+            });
+
+            const result = await runner.executeNode({
+                name: "Send HTML email",
+                nodeType: "integration",
+                nodeConfig: {
+                    service: "email",
+                    action: "send",
+                    connectionId: "email-conn-123",
+                    params: {
+                        to: "${userEmail}",
+                        subject: "Hello ${userName}",
+                        html: "<h1>Welcome!</h1><p>Thanks for signing up.</p>",
+                        from: "welcome@flowmaestro.com"
+                    }
+                },
+                context: {
+                    userEmail: "user@example.com",
+                    userName: "Alice"
+                }
+            });
+
+            expect(result.success).toBe(true);
+
+            // Verify interpolation
+            const callArgs = (global.fetch as jest.Mock).mock.calls[0];
+            const body = JSON.parse(callArgs[1].body);
+            expect(body.to).toBe("user@example.com");
+            expect(body.subject).toBe("Hello Alice");
+        });
+    });
+
+    describe("Webhook Integration", () => {
+        it("should send webhook POST request", async () => {
+            (global.fetch as jest.Mock).mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                json: async () => ({
+                    received: true,
+                    processingTime: 45
+                })
+            });
+
+            const result = await runner.executeNode({
+                name: "Send webhook",
+                nodeType: "integration",
+                nodeConfig: {
+                    service: "webhook",
+                    action: "send",
+                    params: {
+                        url: "https://example.com/webhook",
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-Custom-Header": "value"
+                        },
+                        body: {
+                            event: "user.created",
+                            userId: "${userId}",
+                            timestamp: "${timestamp}"
+                        }
+                    }
+                },
+                context: {
+                    userId: "user-123",
+                    timestamp: "2025-01-01T12:00:00Z"
+                }
+            });
+
+            expect(result.success).toBe(true);
+            expect(result.outputs?.received).toBe(true);
+        });
+
+        it("should handle webhook timeout", async () => {
+            (global.fetch as jest.Mock).mockRejectedValueOnce(new Error("Request timeout"));
+
+            const result = await runner.executeNode({
+                name: "Webhook timeout",
+                nodeType: "integration",
+                nodeConfig: {
+                    service: "webhook",
+                    action: "send",
+                    params: {
+                        url: "https://slow-endpoint.example.com/webhook",
+                        method: "POST",
+                        body: { test: true }
+                    }
+                },
+                context: {},
+                expectError: true,
+                timeout: 1000
+            });
+
+            expect(result.success).toBe(false);
+            expect(result.error).toContain("timeout");
+        });
+    });
+
+    describe("Twilio Integration", () => {
+        it("should send SMS via Twilio", async () => {
+            (global.fetch as jest.Mock).mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({
+                    sid: "SM1234567890abcdef",
+                    status: "queued",
+                    to: "+15555551234",
+                    from: "+15555559876",
+                    body: "Your verification code is 123456"
+                })
+            });
+
+            const result = await runner.executeNode({
+                name: "Send SMS",
+                nodeType: "integration",
+                nodeConfig: {
+                    service: "twilio",
+                    action: "sendSMS",
+                    connectionId: "twilio-conn-123",
+                    params: {
+                        to: "+15555551234",
+                        from: "+15555559876",
+                        body: "Your verification code is ${verificationCode}"
+                    }
+                },
+                context: {
+                    verificationCode: "123456"
+                }
+            });
+
+            expect(result.success).toBe(true);
+            expect(result.outputs?.sid).toBe("SM1234567890abcdef");
+            expect(result.outputs?.status).toBe("queued");
+        });
+
+        it("should make Twilio voice call", async () => {
+            (global.fetch as jest.Mock).mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({
+                    sid: "CA1234567890abcdef",
+                    status: "initiated",
+                    to: "+15555551234",
+                    from: "+15555559876"
+                })
+            });
+
+            const result = await runner.executeNode({
+                name: "Make call",
+                nodeType: "integration",
+                nodeConfig: {
+                    service: "twilio",
+                    action: "makeCall",
+                    connectionId: "twilio-conn-123",
+                    params: {
+                        to: "+15555551234",
+                        from: "+15555559876",
+                        url: "https://example.com/twiml/greeting.xml"
+                    }
+                },
+                context: {}
+            });
+
+            expect(result.success).toBe(true);
+            expect(result.outputs?.sid).toBe("CA1234567890abcdef");
+            expect(result.outputs?.status).toBe("initiated");
+        });
+    });
+
+    describe("Google Sheets Integration", () => {
+        it("should append row to Google Sheet", async () => {
+            (global.fetch as jest.Mock).mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({
+                    spreadsheetId: "abc123",
+                    updatedRange: "Sheet1!A2:C2",
+                    updatedRows: 1,
+                    updatedColumns: 3
+                })
+            });
+
+            const result = await runner.executeNode({
+                name: "Append to sheet",
+                nodeType: "integration",
+                nodeConfig: {
+                    service: "googlesheets",
+                    action: "appendRow",
+                    connectionId: "gsheets-conn-123",
+                    params: {
+                        spreadsheetId: "abc123",
+                        range: "Sheet1!A:C",
+                        values: [["${userName}", "${email}", "${timestamp}"]]
+                    }
+                },
+                context: {
+                    userName: "Alice",
+                    email: "alice@example.com",
+                    timestamp: "2025-01-01T12:00:00Z"
+                }
+            });
+
+            expect(result.success).toBe(true);
+            expect(result.outputs?.updatedRows).toBe(1);
+        });
+
+        it("should read data from Google Sheet", async () => {
+            (global.fetch as jest.Mock).mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({
+                    range: "Sheet1!A1:C3",
+                    majorDimension: "ROWS",
+                    values: [
+                        ["Name", "Email", "Status"],
+                        ["Alice", "alice@example.com", "Active"],
+                        ["Bob", "bob@example.com", "Active"]
+                    ]
+                })
+            });
+
+            const result = await runner.executeNode({
+                name: "Read sheet",
+                nodeType: "integration",
+                nodeConfig: {
+                    service: "googlesheets",
+                    action: "readRange",
+                    connectionId: "gsheets-conn-123",
+                    params: {
+                        spreadsheetId: "abc123",
+                        range: "Sheet1!A1:C3"
+                    }
+                },
+                context: {}
+            });
+
+            expect(result.success).toBe(true);
+            expect(result.outputs?.values).toHaveLength(3);
+            expect(result.outputs?.values[0]).toEqual(["Name", "Email", "Status"]);
+        });
+    });
 });
 ```
 
-### Edge Cases to Handle
+## Common Issues
 
-1. **Timeout Scenarios**: Long-running nodes (Wait node with 30s delay)
-2. **Missing Credentials**: LLM nodes without API keys (skip or mock)
-3. **Invalid Context**: Variable interpolation with missing variables
-4. **Malformed Config**: Invalid node configurations
-5. **Network Failures**: HTTP nodes with unreachable endpoints
-6. **Concurrent Execution**: Multiple tests running in parallel
+### "Node type not yet implemented"
 
-### Integration with Existing Tests
+**Cause:** Typo in nodeType or node not registered in switch-case
+**Fix:** Check spelling matches `backend/src/temporal/activities/node-executors/index.ts`
 
-- Node tests run alongside workflow integration tests
-- Separate test suite: `npm run test:nodes` vs `npm run test:integration`
-- Share test helpers: `NodeTestRunner` can be imported in workflow tests
-- CI/CD runs both test suites
+### "Variable interpolation not working"
 
-## Troubleshooting Guide
+**Cause:** Context missing the variable
+**Fix:** Ensure `context.userId` exists when using `${userId}`
 
-### Common Issues
+### "Timeout errors"
 
-1. **"Node type not yet implemented"**
-    - Check node type spelling matches switch-case in index.ts
-    - Verify node executor is imported and exported
+**Cause:** Node takes longer than 30s default
+**Fix:** Increase timeout: `{ timeout: 60000 }`
 
-2. **"Variable interpolation not working"**
-    - Ensure context object has the variable
-    - Check variable syntax: `${varName}` not `{varName}` or `$varName`
-    - Nested paths must exist: `${user.name}` requires context.user to be defined
+### "Connection/credential errors"
 
-3. **"Timeout errors"**
-    - Increase timeout for slow nodes (LLM, HTTP to slow APIs)
-    - Default is 30s, some nodes may need 60s+
-
-4. **"Connection/credential errors"**
-    - Set environment variables or create test connections
-    - Use `skipIfNoCredentials` in JSON tests
-    - Mock credential lookups if needed
-
-5. **"Control flow nodes failing"**
-    - Conditional, switch, loop nodes cannot be tested in isolation
-    - They're handled by orchestrator, not executeNode()
-    - Test them via workflow integration tests instead
+**Cause:** Missing API keys or connection strings
+**Fix:** Set environment variables or use `it.skipIf(!process.env.API_KEY)`
 
 ## Success Criteria
 
-### MVP (Phase 1-2 Complete)
+**MVP (Phase 1-2):**
 
-- Execute HTTP and Transform nodes in isolation
-- Basic assertions for output validation
-- TypeScript test examples
-- Run via `npm run test:nodes`
+- HTTP and Transform node tests working
+- Can run via `npm run test:nodes`
+- Basic assertions implemented
 
-### Full Implementation (All Phases Complete)
+**Complete (All Phases):**
 
-- All node types testable (20+ node types)
-- JSON test case support for non-developers
-- CLI tool for test management
-- CI/CD integration
-- Comprehensive documentation
-- 50+ test cases covering critical scenarios
+- All 20+ node types have tests
+- CI/CD integration working
+- 50+ test cases covering common scenarios
 
-## Benefits
-
-1. **Faster Development**: Test node changes without full workflow execution
-2. **Early Bug Detection**: Catch breaking changes before they reach workflows
-3. **Documentation**: Test cases serve as usage examples
-4. **Confidence**: Regression suite prevents accidental breakage
-5. **Developer Experience**: Quick feedback loop for node development
-
-## Timeline Estimate
-
-- **MVP (Phases 1-2)**: 5-7 hours
-- **Full Implementation (All Phases)**: 13-17 hours
-- **Maintenance per new node type**: 1-2 hours
-
-## Future Enhancements
-
-1. **Visual Test Results Dashboard**
-    - Web UI showing test runs, pass/fail rates
-    - Historical test results tracking
-    - Performance trends over time
-
-2. **Mock HTTP Server**
-    - Built-in mock server for HTTP node tests
-    - Predefined responses for common scenarios
-    - No external API dependencies
-
-3. **Credential Mocking**
-    - Mock credential resolver for offline testing
-    - Fake API responses for LLM/integration nodes
-    - Deterministic outputs for regression tests
-
-4. **Performance Benchmarking**
-    - Track node execution times
-    - Alert on performance regressions
-    - Compare node implementations (e.g., different LLM providers)
-
-5. **Test Case Generator from Workflows**
-    - Extract nodes from existing workflows
-    - Generate test cases with actual context
-    - Regression tests from production workflows
+**Timeline:** 10-14 hours total
