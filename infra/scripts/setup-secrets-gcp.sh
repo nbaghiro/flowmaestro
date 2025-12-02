@@ -257,6 +257,7 @@ EXISTING_REDIS_PORT=$(get_gcp_json_field "flowmaestro-redis-config" "redis_port"
 EXISTING_OPENAI_KEY=$(get_existing_gcp_secret "flowmaestro-app-openai-api-key")
 EXISTING_ANTHROPIC_KEY=$(get_existing_gcp_secret "flowmaestro-app-anthropic-api-key")
 EXISTING_GOOGLE_KEY=$(get_existing_gcp_secret "flowmaestro-app-google-api-key")
+EXISTING_COHERE_KEY=$(get_existing_gcp_secret "flowmaestro-app-cohere-api-key")
 
 # Check OAuth secrets
 EXISTING_SLACK_CLIENT_ID=$(get_existing_gcp_secret "flowmaestro-app-slack-client-id")
@@ -304,6 +305,7 @@ FOUND_COUNT=0
 [ -n "$EXISTING_OPENAI_KEY" ] && ((FOUND_COUNT++))
 [ -n "$EXISTING_ANTHROPIC_KEY" ] && ((FOUND_COUNT++))
 [ -n "$EXISTING_GOOGLE_KEY" ] && ((FOUND_COUNT++))
+[ -n "$EXISTING_COHERE_KEY" ] && ((FOUND_COUNT++))
 [ -n "$EXISTING_SLACK_CLIENT_ID" ] && ((FOUND_COUNT++))
 [ -n "$EXISTING_GOOGLE_CLIENT_ID" ] && ((FOUND_COUNT++))
 [ -n "$EXISTING_NOTION_CLIENT_ID" ] && ((FOUND_COUNT++))
@@ -327,6 +329,7 @@ if [ $FOUND_COUNT -gt 0 ]; then
     [ -n "$EXISTING_OPENAI_KEY" ] && print_info "  - OpenAI API Key: $(mask_secret "$EXISTING_OPENAI_KEY")"
     [ -n "$EXISTING_ANTHROPIC_KEY" ] && print_info "  - Anthropic API Key: $(mask_secret "$EXISTING_ANTHROPIC_KEY")"
     [ -n "$EXISTING_GOOGLE_KEY" ] && print_info "  - Google API Key: $(mask_secret "$EXISTING_GOOGLE_KEY")"
+    [ -n "$EXISTING_COHERE_KEY" ] && print_info "  - Cohere API Key: $(mask_secret "$EXISTING_COHERE_KEY")"
     [ -n "$EXISTING_SLACK_CLIENT_ID" ] && print_info "  - Slack OAuth: configured"
     [ -n "$EXISTING_GOOGLE_CLIENT_ID" ] && print_info "  - Google OAuth: configured"
     [ -n "$EXISTING_NOTION_CLIENT_ID" ] && print_info "  - Notion OAuth: configured"
@@ -579,6 +582,16 @@ else
     read -p "Google API Key: " GOOGLE_API_KEY
 fi
 
+# Cohere API Key
+if [ -n "$EXISTING_COHERE_KEY" ] && [ "$PROMPT_ALL" = false ]; then
+    print_info "Cohere API Key: already exists ($(mask_secret "$EXISTING_COHERE_KEY"))"
+    COHERE_API_KEY="$EXISTING_COHERE_KEY"
+elif [ -n "$EXISTING_COHERE_KEY" ]; then
+    prompt_with_existing "Cohere API Key" "$EXISTING_COHERE_KEY" "COHERE_API_KEY"
+else
+    read -p "Cohere API Key: " COHERE_API_KEY
+fi
+
 # OAuth Secrets (optional)
 echo ""
 print_info "OAuth Secrets (optional - press Enter to skip)"
@@ -797,6 +810,7 @@ create_or_update_json_secret "flowmaestro-temporal-db-config" "$TEMPORAL_DB_CONF
 create_or_update_secret "flowmaestro-app-openai-api-key" "$OPENAI_API_KEY"
 create_or_update_secret "flowmaestro-app-anthropic-api-key" "$ANTHROPIC_API_KEY"
 create_or_update_secret "flowmaestro-app-google-api-key" "$GOOGLE_API_KEY"
+create_or_update_secret "flowmaestro-app-cohere-api-key" "$COHERE_API_KEY"
 
 # OAuth Secrets
 create_or_update_secret "flowmaestro-app-slack-client-id" "$SLACK_CLIENT_ID"
