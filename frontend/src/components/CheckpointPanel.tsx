@@ -177,7 +177,7 @@ export function CheckpointPanel({
                                 onShowMinorChangesDialog?.();
                             }
                         }}
-                        className="w-full py-1.5 text-sm bg-primary text-white rounded-md hover:bg-primary/90 transition-colors"
+                        className="w-full py-1.5 text-sm bg-primary text-white rounded-md hover:bg-primary/90 transition-colors dark:text-black"
                     >
                         Save Checkpoint
                     </button>
@@ -236,7 +236,7 @@ export function CheckpointPanel({
                                     if (confirmType === "restore") onRestore(pendingCheckpoint.id);
                                     setShowConfirm(false);
                                 }}
-                                className="px-3 py-1 text-sm bg-primary text-white rounded hover:bg-primary/90"
+                                className="px-3 py-1 text-sm bg-primary text-white rounded hover:bg-primary/90 dark:text-black"
                             >
                                 Confirm
                             </button>
@@ -299,7 +299,7 @@ export function CheckpointPanel({
                                     onCreate(nameValue || undefined);
                                     setNameValue("");
                                 }}
-                                className="px-3 py-1 text-sm bg-primary text-white rounded hover:bg-primary/90"
+                                className="px-3 py-1 text-sm bg-primary text-white rounded hover:bg-primary/90 dark:text-black"
                             >
                                 Save
                             </button>
@@ -339,7 +339,7 @@ export function CheckpointPanel({
                                     onCloseMinorChangesDialog?.();
                                     setShowNameDialog(true);
                                 }}
-                                className="px-3 py-1 text-sm bg-primary text-white rounded hover:bg-primary/90"
+                                className="px-3 py-1 text-sm bg-primary text-white rounded hover:bg-primary/90 dark:text-black"
                             >
                                 Create Anyway
                             </button>
