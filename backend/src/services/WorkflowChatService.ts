@@ -696,7 +696,7 @@ ${(nodes as ReactFlowNode[])
      */
     private async getProviderFromConnection(
         connectionId: string
-    ): Promise<"openai" | "anthropic" | "google" | "cohere"> {
+    ): Promise<"openai" | "anthropic" | "google" | "cohere" | "huggingface"> {
         const connection = await this.connectionRepo.findById(connectionId);
         if (!connection) {
             throw new Error(`Connection not found: ${connectionId}`);
@@ -708,12 +708,13 @@ ${(nodes as ReactFlowNode[])
             provider !== "openai" &&
             provider !== "anthropic" &&
             provider !== "google" &&
-            provider !== "cohere"
+            provider !== "cohere" &&
+            provider !== "huggingface"
         ) {
             throw new Error(`Unsupported provider: ${connection.provider}`);
         }
 
-        return provider as "openai" | "anthropic" | "google" | "cohere";
+        return provider as "openai" | "anthropic" | "google" | "cohere" | "huggingface";
     }
 
     /**
@@ -742,6 +743,8 @@ ${(nodes as ReactFlowNode[])
                 return "gemini-1.5-pro";
             case "cohere":
                 return "command-r-plus";
+            case "huggingface":
+                return "meta-llama/Llama-3.3-70B-Instruct";
             default:
                 return "gpt-4o"; // Fallback
         }

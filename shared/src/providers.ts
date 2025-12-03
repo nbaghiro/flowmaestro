@@ -80,11 +80,10 @@ export const ALL_PROVIDERS: Provider[] = [
     {
         provider: "huggingface",
         displayName: "Hugging Face",
-        description: "Access AI models",
+        description: "Access thousands of open-source AI models including Llama, Qwen, and Mistral",
         logoUrl: getBrandLogo("huggingface.co"),
         category: "AI & ML",
-        methods: ["api_key"],
-        comingSoon: true
+        methods: ["api_key"]
     },
 
     // Communication

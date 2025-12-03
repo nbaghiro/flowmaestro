@@ -258,6 +258,7 @@ EXISTING_OPENAI_KEY=$(get_existing_gcp_secret "flowmaestro-app-openai-api-key")
 EXISTING_ANTHROPIC_KEY=$(get_existing_gcp_secret "flowmaestro-app-anthropic-api-key")
 EXISTING_GOOGLE_KEY=$(get_existing_gcp_secret "flowmaestro-app-google-api-key")
 EXISTING_COHERE_KEY=$(get_existing_gcp_secret "flowmaestro-app-cohere-api-key")
+EXISTING_HUGGINGFACE_KEY=$(get_existing_gcp_secret "flowmaestro-app-huggingface-api-key")
 
 # Check OAuth secrets
 EXISTING_SLACK_CLIENT_ID=$(get_existing_gcp_secret "flowmaestro-app-slack-client-id")
@@ -306,6 +307,7 @@ FOUND_COUNT=0
 [ -n "$EXISTING_ANTHROPIC_KEY" ] && ((FOUND_COUNT++))
 [ -n "$EXISTING_GOOGLE_KEY" ] && ((FOUND_COUNT++))
 [ -n "$EXISTING_COHERE_KEY" ] && ((FOUND_COUNT++))
+[ -n "$EXISTING_HUGGINGFACE_KEY" ] && ((FOUND_COUNT++))
 [ -n "$EXISTING_SLACK_CLIENT_ID" ] && ((FOUND_COUNT++))
 [ -n "$EXISTING_GOOGLE_CLIENT_ID" ] && ((FOUND_COUNT++))
 [ -n "$EXISTING_NOTION_CLIENT_ID" ] && ((FOUND_COUNT++))
@@ -330,6 +332,7 @@ if [ $FOUND_COUNT -gt 0 ]; then
     [ -n "$EXISTING_ANTHROPIC_KEY" ] && print_info "  - Anthropic API Key: $(mask_secret "$EXISTING_ANTHROPIC_KEY")"
     [ -n "$EXISTING_GOOGLE_KEY" ] && print_info "  - Google API Key: $(mask_secret "$EXISTING_GOOGLE_KEY")"
     [ -n "$EXISTING_COHERE_KEY" ] && print_info "  - Cohere API Key: $(mask_secret "$EXISTING_COHERE_KEY")"
+    [ -n "$EXISTING_HUGGINGFACE_KEY" ] && print_info "  - Hugging Face API Key: $(mask_secret "$EXISTING_HUGGINGFACE_KEY")"
     [ -n "$EXISTING_SLACK_CLIENT_ID" ] && print_info "  - Slack OAuth: configured"
     [ -n "$EXISTING_GOOGLE_CLIENT_ID" ] && print_info "  - Google OAuth: configured"
     [ -n "$EXISTING_NOTION_CLIENT_ID" ] && print_info "  - Notion OAuth: configured"
@@ -592,6 +595,16 @@ else
     read -p "Cohere API Key: " COHERE_API_KEY
 fi
 
+# Hugging Face API Key
+if [ -n "$EXISTING_HUGGINGFACE_KEY" ] && [ "$PROMPT_ALL" = false ]; then
+    print_info "Hugging Face API Key: already exists ($(mask_secret "$EXISTING_HUGGINGFACE_KEY"))"
+    HUGGINGFACE_API_KEY="$EXISTING_HUGGINGFACE_KEY"
+elif [ -n "$EXISTING_HUGGINGFACE_KEY" ]; then
+    prompt_with_existing "Hugging Face API Key" "$EXISTING_HUGGINGFACE_KEY" "HUGGINGFACE_API_KEY"
+else
+    read -p "Hugging Face API Key: " HUGGINGFACE_API_KEY
+fi
+
 # OAuth Secrets (optional)
 echo ""
 print_info "OAuth Secrets (optional - press Enter to skip)"
@@ -799,6 +812,7 @@ create_or_update_secret "flowmaestro-app-openai-api-key" "$OPENAI_API_KEY"
 create_or_update_secret "flowmaestro-app-anthropic-api-key" "$ANTHROPIC_API_KEY"
 create_or_update_secret "flowmaestro-app-google-api-key" "$GOOGLE_API_KEY"
 create_or_update_secret "flowmaestro-app-cohere-api-key" "$COHERE_API_KEY"
+create_or_update_secret "flowmaestro-app-huggingface-api-key" "$HUGGINGFACE_API_KEY"
 
 # OAuth Secrets
 create_or_update_secret "flowmaestro-app-slack-client-id" "$SLACK_CLIENT_ID"
