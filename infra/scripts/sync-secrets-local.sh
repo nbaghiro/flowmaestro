@@ -169,7 +169,6 @@ JIRA_CLIENT_SECRET=$(get_secret "flowmaestro-app-jira-client-secret" "")
 
 # Email Service (Resend)
 RESEND_API_KEY=$(get_secret "flowmaestro-app-resend-api-key" "")
-RESEND_FROM_EMAIL=$(get_secret "flowmaestro-app-resend-from-email" "")
 
 print_success "Developer secrets fetched successfully"
 
@@ -432,14 +431,13 @@ else
 fi
 
 # Email Service (Resend)
-if [ -n "$RESEND_API_KEY" ] || [ -n "$RESEND_FROM_EMAIL" ]; then
+if [ -n "$RESEND_API_KEY" ]; then
     cat >> "$BACKEND_ENV_FILE" << EOF
 
 # ==============================================================================
 # Email Configuration (Resend)
 # ==============================================================================
 RESEND_API_KEY=${RESEND_API_KEY}
-RESEND_FROM_EMAIL=${RESEND_FROM_EMAIL}
 FRONTEND_URL=http://localhost:3000
 EOF
 else
@@ -449,7 +447,6 @@ else
 # Email Configuration (Resend)
 # ==============================================================================
 RESEND_API_KEY=
-RESEND_FROM_EMAIL=
 FRONTEND_URL=http://localhost:3000
 EOF
 fi
