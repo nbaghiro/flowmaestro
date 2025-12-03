@@ -100,7 +100,7 @@ export function DocumentViewerPanel({
     return (
         <div
             ref={panelRef}
-            className="relative flex-shrink-0 border-l border-border bg-white flex flex-col h-full"
+            className="relative flex-shrink-0 border-l border-border bg-card flex flex-col h-full"
             style={{ width: `${width}px` }}
         >
             {/* Resize Handle - invisible, cursor indicates draggable */}

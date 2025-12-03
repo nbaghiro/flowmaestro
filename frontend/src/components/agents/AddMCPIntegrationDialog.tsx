@@ -224,7 +224,7 @@ export function AddMCPIntegrationDialog({
                 {/* Dialog */}
                 <div
                     className={`
-                        relative bg-white rounded-lg shadow-xl w-full mx-4 max-h-[90vh] flex flex-col animate-in fade-in zoom-in-95 duration-200
+                        relative bg-card border border-border rounded-lg shadow-xl w-full mx-4 max-h-[90vh] flex flex-col animate-in fade-in zoom-in-95 duration-200
                         ${view === "provider-list" ? "max-w-6xl" : "max-w-2xl"}
                     `}
                 >
@@ -571,7 +571,7 @@ function ConnectionCard({ connection, isLoading, onSelect, providerLogoUrl }: Co
             disabled={isLoading}
             className={`
                 w-full flex items-start gap-4 p-4 text-left border rounded-lg transition-all
-                border-gray-200 hover:border-gray-300 hover:bg-gray-50
+                border-gray-200 hover:border-gray-300 hover:bg-muted/30
                 ${isLoading ? "opacity-50 cursor-wait" : ""}
             `}
             type="button"
@@ -657,7 +657,7 @@ function ToolsList({ tools, selectedTools, onToggle, onSelectAll }: ToolsListPro
                             className={`w-full p-4 border rounded-lg transition-colors text-left flex items-start gap-3 ${
                                 isSelected
                                     ? "border-blue-500 bg-blue-50"
-                                    : "border-gray-200 hover:bg-gray-50"
+                                    : "border-gray-200 hover:bg-muted/30"
                             }`}
                         >
                             <div

@@ -87,7 +87,7 @@ return result`;
                     />
                 </FormField>
 
-                <div className="px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="px-3 py-2 bg-blue-500/10 dark:bg-blue-400/20 border border-blue-500/30 dark:border-blue-400/30 text-blue-800 dark:text-blue-400 rounded-lg">
                     <p className="text-xs text-blue-800">
                         <strong>Available:</strong> All standard library functions
                         <br />

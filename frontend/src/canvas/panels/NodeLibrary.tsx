@@ -198,11 +198,36 @@ const nodeLibrary: NodeDefinition[] = [
 ];
 
 const categories = [
-    { id: "ai", label: "AI & ML", color: "text-blue-600", bgColor: "bg-blue-50" },
-    { id: "logic", label: "Logic & Code", color: "text-purple-600", bgColor: "bg-purple-50" },
-    { id: "data", label: "Data Operations", color: "text-green-600", bgColor: "bg-green-50" },
-    { id: "connect", label: "Connect", color: "text-orange-600", bgColor: "bg-orange-50" },
-    { id: "voice", label: "Voice & Calls", color: "text-emerald-600", bgColor: "bg-emerald-50" }
+    {
+        id: "ai",
+        label: "AI & ML",
+        color: "text-blue-600 dark:text-blue-400",
+        bgColor: "bg-blue-500/10 dark:bg-blue-400/20"
+    },
+    {
+        id: "logic",
+        label: "Logic & Code",
+        color: "text-purple-600 dark:text-purple-400",
+        bgColor: "bg-purple-500/10 dark:bg-purple-400/20"
+    },
+    {
+        id: "data",
+        label: "Data Operations",
+        color: "text-green-600 dark:text-green-400",
+        bgColor: "bg-green-500/10 dark:bg-green-400/20"
+    },
+    {
+        id: "connect",
+        label: "Connect",
+        color: "text-orange-600 dark:text-orange-400",
+        bgColor: "bg-orange-500/10 dark:bg-orange-400/20"
+    },
+    {
+        id: "voice",
+        label: "Voice & Calls",
+        color: "text-emerald-600 dark:text-emerald-400",
+        bgColor: "bg-emerald-500/10 dark:bg-emerald-400/20"
+    }
 ];
 
 interface NodeLibraryProps {
@@ -239,7 +264,7 @@ export function NodeLibrary({ isCollapsed = false, onToggleCollapse }: NodeLibra
 
     if (isCollapsed) {
         return (
-            <div className="w-12 bg-white border-r border-border flex flex-col items-center py-4">
+            <div className="w-12 bg-card border-r border-border flex flex-col items-center py-4">
                 <Button variant="icon" onClick={onToggleCollapse} title="Expand sidebar">
                     <PanelLeft className="w-5 h-5 text-muted-foreground" />
                 </Button>
@@ -248,7 +273,7 @@ export function NodeLibrary({ isCollapsed = false, onToggleCollapse }: NodeLibra
     }
 
     return (
-        <div className="w-64 bg-white border-r border-border flex flex-col h-full shadow-panel">
+        <div className="w-64 bg-card border-r border-border flex flex-col h-full shadow-panel">
             {/* Header */}
             <div className="px-3 py-3 border-b border-border">
                 <div className="flex items-center justify-between mb-3">

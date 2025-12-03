@@ -25,8 +25,8 @@ interface BaseNodeProps {
 }
 
 const statusConfig: Record<NodeStatus, { color: string; label: string }> = {
-    idle: { color: "bg-gray-300", label: "Idle" },
-    pending: { color: "bg-yellow-400", label: "Pending" },
+    idle: { color: "bg-gray-300 dark:bg-gray-600", label: "Idle" },
+    pending: { color: "bg-yellow-400 dark:bg-yellow-500", label: "Pending" },
     running: { color: "bg-blue-500 animate-pulse", label: "Running" },
     success: { color: "bg-green-500", label: "Success" },
     error: { color: "bg-red-500", label: "Error" }
@@ -38,38 +38,38 @@ const categoryConfig: Record<
 > = {
     ai: {
         borderColor: "border-l-blue-500",
-        iconBg: "bg-blue-50",
-        iconColor: "text-blue-600",
+        iconBg: "bg-blue-500/10 dark:bg-blue-400/20",
+        iconColor: "text-blue-600 dark:text-blue-400",
         ringColor: "ring-blue-500"
     },
     logic: {
         borderColor: "border-l-purple-500",
-        iconBg: "bg-purple-50",
-        iconColor: "text-purple-600",
+        iconBg: "bg-purple-500/10 dark:bg-purple-400/20",
+        iconColor: "text-purple-600 dark:text-purple-400",
         ringColor: "ring-purple-500"
     },
     interaction: {
         borderColor: "border-l-green-500",
-        iconBg: "bg-green-50",
-        iconColor: "text-green-600",
+        iconBg: "bg-green-500/10 dark:bg-green-400/20",
+        iconColor: "text-green-600 dark:text-green-400",
         ringColor: "ring-green-500"
     },
     data: {
         borderColor: "border-l-teal-500",
-        iconBg: "bg-teal-50",
-        iconColor: "text-teal-600",
+        iconBg: "bg-teal-500/10 dark:bg-teal-400/20",
+        iconColor: "text-teal-600 dark:text-teal-400",
         ringColor: "ring-teal-500"
     },
     connect: {
         borderColor: "border-l-orange-500",
-        iconBg: "bg-orange-50",
-        iconColor: "text-orange-600",
+        iconBg: "bg-orange-500/10 dark:bg-orange-400/20",
+        iconColor: "text-orange-600 dark:text-orange-400",
         ringColor: "ring-orange-500"
     },
     voice: {
         borderColor: "border-l-emerald-500",
-        iconBg: "bg-emerald-50",
-        iconColor: "text-emerald-600",
+        iconBg: "bg-emerald-500/10 dark:bg-emerald-400/20",
+        iconColor: "text-emerald-600 dark:text-emerald-400",
         ringColor: "ring-emerald-500"
     }
 };
@@ -231,7 +231,7 @@ export function BaseNode({
     return (
         <div
             className={cn(
-                "h-full flex flex-col bg-white rounded-lg transition-all duration-200 min-w-[260px] overflow-hidden",
+                "h-full flex flex-col bg-card rounded-lg transition-all duration-200 min-w-[260px] overflow-hidden",
                 "border-2 border-border",
                 categoryStyle.borderColor,
                 `node-${category}-category`,
@@ -291,7 +291,7 @@ export function BaseNode({
 
             {/* Content */}
             {children && (
-                <div className="flex-1 pl-3 pr-6 py-2.5 text-sm bg-white break-words whitespace-pre-wrap overflow-auto">
+                <div className="flex-1 pl-3 pr-6 py-2.5 text-sm bg-card break-words whitespace-pre-wrap overflow-auto">
                     {children}
                 </div>
             )}

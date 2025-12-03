@@ -95,7 +95,7 @@ export function WaitNodeConfig({ data, onUpdate }: WaitNodeConfigProps) {
                         />
                     </FormField>
 
-                    <div className="px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="px-3 py-2 bg-blue-500/10 dark:bg-blue-400/20 border border-blue-500/30 dark:border-blue-400/30 text-blue-800 dark:text-blue-400 rounded-lg">
                         <p className="text-xs text-blue-800">
                             <strong>Examples:</strong>
                             <br />• 2024-12-31T23:59:59Z
@@ -131,7 +131,7 @@ export function WaitNodeConfig({ data, onUpdate }: WaitNodeConfigProps) {
                         />
                     </FormField>
 
-                    <div className="px-3 py-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <div className="px-3 py-2 bg-amber-500/10 dark:bg-amber-400/20 border border-amber-500/30 dark:border-amber-400/30 text-amber-800 dark:text-amber-400 rounded-lg">
                         <p className="text-xs text-yellow-800">
                             <strong>Note:</strong> Condition will be checked every {pollingInterval}{" "}
                             seconds until it evaluates to true.

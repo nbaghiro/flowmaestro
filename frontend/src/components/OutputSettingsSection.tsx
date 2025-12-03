@@ -111,9 +111,11 @@ export function OutputSettingsSection({
                         />
 
                         {error && (
-                            <div className="flex items-start gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg">
-                                <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
-                                <span className="text-xs text-red-700">{error}</span>
+                            <div className="flex items-start gap-2 px-3 py-2 bg-red-500/10 dark:bg-red-400/20 border border-red-500/30 dark:border-red-400/30 rounded-lg">
+                                <AlertCircle className="w-4 h-4 text-red-700 dark:text-red-400 mt-0.5 flex-shrink-0" />
+                                <span className="text-xs text-red-700 dark:text-red-400">
+                                    {error}
+                                </span>
                             </div>
                         )}
                     </div>
@@ -129,11 +131,11 @@ export function OutputSettingsSection({
                     )}
 
                     {/* Reference Help */}
-                    <div className="flex items-start gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
-                        <Info className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                        <div className="text-xs text-blue-800">
+                    <div className="flex items-start gap-2 px-3 py-2 bg-blue-500/10 dark:bg-blue-400/20 border border-blue-500/30 dark:border-blue-400/30 rounded-lg">
+                        <Info className="w-4 h-4 text-blue-700 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                        <div className="text-xs text-blue-700 dark:text-blue-400">
                             <strong>Reference this in other nodes:</strong>
-                            <div className="mt-1 font-mono bg-white px-2 py-1 rounded border border-blue-300">
+                            <div className="mt-1 font-mono bg-card px-2 py-1 rounded border border-blue-500/30 dark:border-blue-400/30">
                                 ${"{"}
                                 {variableName || "variableName"}
                                 {"}"}

@@ -36,7 +36,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
     if (isLoading) {
         return (
-            <div className="h-screen flex items-center justify-center bg-gray-50">
+            <div className="h-screen flex items-center justify-center bg-muted/30">
                 <div className="flex flex-col items-center gap-3">
                     <Loader2 className="w-8 h-8 text-primary animate-spin" />
                     <p className="text-sm text-muted-foreground">Loading...</p>

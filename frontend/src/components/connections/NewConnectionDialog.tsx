@@ -6,6 +6,7 @@ import { useConnectionStore } from "../../stores/connectionStore";
 import { Alert } from "../common/Alert";
 import { Button } from "../common/Button";
 import { Input } from "../common/Input";
+import { Logo } from "../common/Logo";
 import { Select } from "../common/Select";
 import type { CreateConnectionInput } from "../../lib/api";
 
@@ -354,9 +355,9 @@ export function NewConnectionDialog({
             />
 
             {/* Dialog */}
-            <div className="relative bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="relative bg-card border border-border rounded-lg shadow-xl max-w-2xl w-full mx-4 animate-in fade-in zoom-in-95 duration-200">
                 {/* Header */}
-                <div className="flex items-center justify-between p-6 pb-4 border-b border-gray-200">
+                <div className="flex items-center justify-between p-6 pb-4 border-b border-border">
                     <div className="flex items-center gap-3">
                         {(step === "api-key-form" || step === "oauth-settings-form") && (
                             <Button variant="icon" onClick={handleBackToMethodSelection}>
@@ -372,7 +373,7 @@ export function NewConnectionDialog({
                                 <ArrowLeft className="w-5 h-5" />
                             </Button>
                         )}
-                        <h2 className="text-lg font-semibold text-gray-900">New Connection</h2>
+                        <h2 className="text-lg font-semibold text-foreground">New Connection</h2>
                     </div>
                     <Button variant="icon" onClick={handleClose}>
                         <X className="w-5 h-5" />
@@ -384,21 +385,19 @@ export function NewConnectionDialog({
                     {/* Provider Connection Visual */}
                     <div className="flex items-center justify-center gap-4 mb-8">
                         {/* FlowMaestro Icon */}
-                        <div className="w-16 h-16 bg-black rounded-lg flex items-center justify-center shadow-md">
-                            <span className="text-2xl font-bold text-white">FM</span>
-                        </div>
+                        <Logo size="lg" />
 
                         {/* Dotted Line */}
-                        <div className="flex-1 max-w-[120px] border-t-2 border-dotted border-gray-300" />
+                        <div className="flex-1 max-w-[120px] border-t-2 border-dotted border-border" />
 
                         {/* Provider Icon */}
-                        <div className="w-16 h-16 rounded-lg flex items-center justify-center shadow-md bg-white p-3">
+                        <div className="w-16 h-16 rounded-lg flex items-center justify-center shadow-md bg-card p-3">
                             {providerIcon}
                         </div>
                     </div>
 
                     {/* Connection Title */}
-                    <p className="text-center text-gray-700 mb-6">
+                    <p className="text-center text-foreground mb-6">
                         Connect FlowMaestro to {providerDisplayName}
                     </p>
 
@@ -409,23 +408,23 @@ export function NewConnectionDialog({
                                 <button
                                     onClick={handleOAuthSelect}
                                     disabled={oauthLoading}
-                                    className="w-full p-4 text-left border border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="w-full p-4 text-left border border-border rounded-lg hover:border-primary hover:bg-primary/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                     type="button"
                                 >
                                     <div className="flex items-start gap-3">
-                                        <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                                            <Shield className="w-5 h-5 text-gray-700" />
+                                        <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center">
+                                            <Shield className="w-5 h-5 text-foreground" />
                                         </div>
                                         <div className="flex-1">
                                             <div className="flex items-center gap-2 mb-1">
-                                                <span className="font-medium text-gray-900">
+                                                <span className="font-medium text-foreground">
                                                     OAuth2 {providerDisplayName}
                                                 </span>
-                                                <span className="px-2 py-0.5 text-xs font-medium text-blue-700 bg-blue-100 rounded">
+                                                <span className="px-2 py-0.5 text-xs font-medium text-blue-700 dark:text-blue-400 bg-blue-500/10 dark:bg-blue-400/20 rounded">
                                                     OAUTH
                                                 </span>
                                             </div>
-                                            <p className="text-sm text-gray-600">
+                                            <p className="text-sm text-muted-foreground">
                                                 Link your account to FlowMaestro
                                             </p>
                                         </div>
@@ -436,18 +435,18 @@ export function NewConnectionDialog({
                             {supportsApiKey && (
                                 <button
                                     onClick={handleApiKeySelect}
-                                    className="w-full p-4 text-left border border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
+                                    className="w-full p-4 text-left border border-border rounded-lg hover:border-primary hover:bg-primary/5 transition-colors"
                                     type="button"
                                 >
                                     <div className="flex items-start gap-3">
-                                        <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                                            <Key className="w-5 h-5 text-gray-700" />
+                                        <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center">
+                                            <Key className="w-5 h-5 text-foreground" />
                                         </div>
                                         <div className="flex-1">
-                                            <div className="font-medium text-gray-900 mb-1">
+                                            <div className="font-medium text-foreground mb-1">
                                                 API Key
                                             </div>
-                                            <p className="text-sm text-gray-600">
+                                            <p className="text-sm text-muted-foreground">
                                                 Manually enter account credentials
                                             </p>
                                         </div>
@@ -461,7 +460,7 @@ export function NewConnectionDialog({
                     {step === "oauth-settings-form" && oauthSettings && (
                         <form onSubmit={handleOAuthSettingsSubmit} className="space-y-4">
                             <div className="mb-4">
-                                <p className="text-sm text-gray-600">
+                                <p className="text-sm text-muted-foreground">
                                     Please provide the following information to connect to{" "}
                                     {providerDisplayName}:
                                 </p>
@@ -469,12 +468,12 @@ export function NewConnectionDialog({
 
                             {oauthSettings.map((field) => (
                                 <div key={field.name}>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    <label className="block text-sm font-medium text-foreground mb-1">
                                         {field.label}{" "}
                                         {field.required && <span className="text-red-500">*</span>}
                                     </label>
                                     {field.helpText && (
-                                        <p className="text-xs text-gray-500 mb-2">
+                                        <p className="text-xs text-muted-foreground mb-2">
                                             {field.helpText}
                                         </p>
                                     )}
@@ -529,10 +528,10 @@ export function NewConnectionDialog({
                         <form onSubmit={handleApiKeySubmit} className="space-y-4">
                             {/* Connection Name */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label className="block text-sm font-medium text-foreground mb-1">
                                     Connection Name <span className="text-red-500">*</span>
                                 </label>
-                                <p className="text-xs text-gray-500 mb-2">
+                                <p className="text-xs text-muted-foreground mb-2">
                                     Give your connection a friendly name to identify it in your
                                     workflows and settings
                                 </p>
@@ -547,7 +546,7 @@ export function NewConnectionDialog({
 
                             {/* API Key / Personal Access Token */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                <label className="block text-sm font-medium text-foreground mb-2">
                                     Personal Access Token <span className="text-red-500">*</span>
                                 </label>
                                 <div className="relative">
@@ -575,11 +574,11 @@ export function NewConnectionDialog({
 
                                 {/* Provider-specific help text */}
                                 {provider === "coda" && (
-                                    <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
-                                        <p className="text-sm text-blue-900 font-medium mb-1">
+                                    <div className="mt-2 p-3 bg-blue-500/10 dark:bg-blue-400/20 border border-blue-500/30 dark:border-blue-400/30 rounded-md">
+                                        <p className="text-sm text-blue-700 dark:text-blue-400 dark:text-blue-300 font-medium mb-1">
                                             How to get your Coda API token:
                                         </p>
-                                        <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
+                                        <ol className="text-sm text-blue-700 dark:text-blue-400 space-y-1 list-decimal list-inside">
                                             <li>
                                                 Go to{" "}
                                                 <a
@@ -621,10 +620,10 @@ export function NewConnectionDialog({
                         <form onSubmit={handleDatabaseSubmit} className="space-y-4">
                             {/* Connection Name */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label className="block text-sm font-medium text-foreground mb-1">
                                     Connection Name <span className="text-red-500">*</span>
                                 </label>
-                                <p className="text-xs text-gray-500 mb-2">
+                                <p className="text-xs text-muted-foreground mb-2">
                                     Give your database connection a friendly name
                                 </p>
                                 <Input
@@ -638,7 +637,7 @@ export function NewConnectionDialog({
 
                             {/* Connection Method Toggle */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                <label className="block text-sm font-medium text-foreground mb-2">
                                     Connection Method
                                 </label>
                                 <div className="flex gap-2">
@@ -647,8 +646,8 @@ export function NewConnectionDialog({
                                         onClick={() => setUseConnectionString(false)}
                                         className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
                                             !useConnectionString
-                                                ? "bg-black text-white"
-                                                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                                                ? "bg-primary text-primary-foreground"
+                                                : "bg-muted text-foreground hover:bg-muted/50"
                                         }`}
                                     >
                                         Individual Fields
@@ -658,8 +657,8 @@ export function NewConnectionDialog({
                                         onClick={() => setUseConnectionString(true)}
                                         className={`flex-1 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
                                             useConnectionString
-                                                ? "bg-black text-white"
-                                                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                                                ? "bg-primary text-primary-foreground"
+                                                : "bg-muted text-foreground hover:bg-muted/50"
                                         }`}
                                     >
                                         Connection String
@@ -670,10 +669,10 @@ export function NewConnectionDialog({
                             {/* Connection String (if selected) */}
                             {useConnectionString ? (
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    <label className="block text-sm font-medium text-foreground mb-1">
                                         Connection String <span className="text-red-500">*</span>
                                     </label>
-                                    <p className="text-xs text-gray-500 mb-2">
+                                    <p className="text-xs text-muted-foreground mb-2">
                                         Full database connection URL
                                     </p>
                                     <Input
@@ -696,7 +695,7 @@ export function NewConnectionDialog({
                                     {/* Host and Port */}
                                     <div className="grid grid-cols-3 gap-3">
                                         <div className="col-span-2">
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            <label className="block text-sm font-medium text-foreground mb-1">
                                                 Host <span className="text-red-500">*</span>
                                             </label>
                                             <Input
@@ -708,7 +707,7 @@ export function NewConnectionDialog({
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            <label className="block text-sm font-medium text-foreground mb-1">
                                                 Port <span className="text-red-500">*</span>
                                             </label>
                                             <Input
@@ -723,7 +722,7 @@ export function NewConnectionDialog({
 
                                     {/* Database Name */}
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        <label className="block text-sm font-medium text-foreground mb-1">
                                             Database Name <span className="text-red-500">*</span>
                                         </label>
                                         <Input
@@ -737,7 +736,7 @@ export function NewConnectionDialog({
 
                                     {/* Username */}
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        <label className="block text-sm font-medium text-foreground mb-1">
                                             Username <span className="text-red-500">*</span>
                                         </label>
                                         <Input
@@ -751,9 +750,11 @@ export function NewConnectionDialog({
 
                                     {/* Password */}
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        <label className="block text-sm font-medium text-foreground mb-1">
                                             Password{" "}
-                                            <span className="text-gray-400">(Optional)</span>
+                                            <span className="text-muted-foreground">
+                                                (Optional)
+                                            </span>
                                         </label>
                                         <div className="relative">
                                             <Input
@@ -787,11 +788,11 @@ export function NewConnectionDialog({
                                     id="ssl-enabled"
                                     checked={dbSslEnabled}
                                     onChange={(e) => setDbSslEnabled(e.target.checked)}
-                                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                    className="w-4 h-4 text-blue-600 border-border rounded focus:ring-blue-500"
                                 />
                                 <label
                                     htmlFor="ssl-enabled"
-                                    className="text-sm font-medium text-gray-700"
+                                    className="text-sm font-medium text-foreground"
                                 >
                                     Enable SSL/TLS
                                 </label>

@@ -114,7 +114,7 @@ export function VariableNodeConfig({ data, onUpdate }: VariableNodeConfigProps) 
 
             {operation === "delete" && (
                 <FormSection title="Confirmation">
-                    <div className="px-3 py-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <div className="px-3 py-2 bg-amber-500/10 dark:bg-amber-400/20 border border-amber-500/30 dark:border-amber-400/30 text-amber-800 dark:text-amber-400 rounded-lg">
                         <p className="text-xs text-yellow-800">
                             <strong>Warning:</strong> This will permanently delete the variable{" "}
                             <code>{variableName || "variableName"}</code> from the {scope} scope.

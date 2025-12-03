@@ -6,9 +6,12 @@ const badgeVariants = cva("inline-flex items-center rounded font-medium", {
         variant: {
             default: "bg-muted text-muted-foreground",
             primary: "bg-primary/10 text-primary",
-            success: "bg-green-100 text-green-700",
-            warning: "bg-yellow-100 text-yellow-700",
-            error: "bg-red-100 text-red-700"
+            success: "bg-green-500/10 dark:bg-green-400/20 text-green-700 dark:text-green-400",
+            warning: "bg-amber-500/10 dark:bg-amber-400/20 text-amber-700 dark:text-amber-400",
+            error: "bg-red-500/10 dark:bg-red-400/20 text-red-700 dark:text-red-400",
+            info: "bg-blue-500/10 dark:bg-blue-400/20 text-blue-700 dark:text-blue-400",
+            purple: "bg-purple-500/10 dark:bg-purple-400/20 text-purple-700 dark:text-purple-400",
+            pro: "bg-amber-500/10 dark:bg-amber-400/20 text-amber-700 dark:text-amber-400"
         },
         size: {
             sm: "px-1.5 py-0.5 text-xs",

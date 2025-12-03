@@ -40,8 +40,7 @@ export const config = {
         url: process.env.FRONTEND_URL || "http://localhost:3000"
     },
     resend: {
-        apiKey: process.env.RESEND_API_KEY || "",
-        fromEmail: process.env.RESEND_FROM_EMAIL || "FlowMaestro <noreply@flowmaestro.com>"
+        apiKey: process.env.RESEND_API_KEY || ""
     },
     tokens: {
         passwordResetExpiryMinutes: 30,

@@ -4,7 +4,7 @@ import { AppSidebar } from "./AppSidebar";
 
 export function AppLayout() {
     return (
-        <div className="flex h-screen overflow-hidden bg-gray-50">
+        <div className="flex h-screen overflow-hidden bg-muted/30">
             {/* Sidebar */}
             <AppSidebar />
 

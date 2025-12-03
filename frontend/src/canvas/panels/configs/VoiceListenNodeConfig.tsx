@@ -110,11 +110,11 @@ export function VoiceListenNodeConfig({ data, onUpdate }: VoiceListenNodeConfigP
             <div className="p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg text-xs">
                 <p className="text-blue-800 dark:text-blue-200">
                     <strong>Tip:</strong> The transcribed text will be stored in the variable{" "}
-                    <code className="bg-blue-100 dark:bg-blue-900 px-1 rounded">
+                    <code className="bg-blue-500/20 dark:bg-blue-400/30 dark:bg-blue-900 px-1 rounded">
                         {outputVariable}
                     </code>{" "}
                     and can be used in subsequent nodes with{" "}
-                    <code className="bg-blue-100 dark:bg-blue-900 px-1 rounded">{`{${outputVariable}}`}</code>
+                    <code className="bg-blue-500/20 dark:bg-blue-400/30 dark:bg-blue-900 px-1 rounded">{`{${outputVariable}}`}</code>
                 </p>
             </div>
         </div>
