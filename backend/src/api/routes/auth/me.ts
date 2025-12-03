@@ -1,6 +1,8 @@
+import crypto from "crypto";
 import { FastifyInstance } from "fastify";
 import { emailService } from "../../../services/email/EmailService";
 import { UserRepository } from "../../../storage/repositories";
+import { EmailVerificationTokenRepository } from "../../../storage/repositories/EmailVerificationTokenRepository";
 import { authMiddleware } from "../../middleware";
 
 export async function meRoute(fastify: FastifyInstance) {
@@ -78,6 +80,98 @@ export async function meRoute(fastify: FastifyInstance) {
                         has_password: !!updated.password_hash
                     }
                 }
+            });
+        }
+    );
+
+    fastify.post(
+        "/me/email",
+        {
+            preHandler: [authMiddleware]
+        },
+        async (request, reply) => {
+            const userRepository = new UserRepository();
+            const tokenRepo = new EmailVerificationTokenRepository();
+
+            const userId = request.user.id;
+            const { email: newEmail } = request.body as { email: string };
+
+            // Load user
+            const user = await userRepository.findById(userId);
+            if (!user) {
+                return reply.status(404).send({
+                    success: false,
+                    error: "User not found"
+                });
+            }
+
+            // Block Google/Microsoft users
+            if (user.auth_provider !== "local") {
+                return reply.status(400).send({
+                    success: false,
+                    error: "Email cannot be changed for Google or Microsoft accounts"
+                });
+            }
+
+            // Validate new email format
+            if (!newEmail || typeof newEmail !== "string" || !newEmail.includes("@")) {
+                return reply.status(400).send({
+                    success: false,
+                    error: "Invalide email address"
+                });
+            }
+
+            // If same as current -> block
+            if (newEmail.toLocaleLowerCase() === user.email.toLocaleLowerCase()) {
+                return reply.status(400).send({
+                    success: false,
+                    error: "New email must be different from current email"
+                });
+            }
+
+            // Ensure email not already taken
+            const existing = await userRepository.findByEmail(newEmail);
+            if (existing) {
+                return reply.status(400).send({
+                    success: false,
+                    error: "Email is already in use"
+                });
+            }
+
+            //Invalidate prior pending token
+            const pending = await tokenRepo.findPendingByUserId(userId);
+            if (pending) {
+                await tokenRepo.markAsVerified(pending.id);
+            }
+
+            // Generate token
+            const rawToken = crypto.randomUUID() + crypto.randomUUID();
+            const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+
+            // Store verification token
+            await tokenRepo.create({
+                userId,
+                email: newEmail,
+                tokenHash,
+                expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+                ipAddress: request.ip,
+                userAgent: request.headers["user-agent"]
+            });
+
+            // Send warning to old email + verification to new email
+            await emailService.sendEmailChangedNotification(user.email, newEmail, user.name || "");
+
+            await emailService.sendEmailVerification(newEmail, rawToken, user.name || "");
+
+            // Mark email as unverified (will finalize after token verification)
+            await userRepository.update(userId, {
+                email_verified: false,
+                email_verified_at: null
+            });
+
+            return reply.send({
+                success: true,
+                message: "Verification link sent to your new email address"
             });
         }
     );

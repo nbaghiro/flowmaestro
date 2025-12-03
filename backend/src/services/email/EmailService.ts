@@ -62,9 +62,13 @@ export class EmailService {
         });
     }
 
-    async sendNameChangedNotification(email: string, userName: string): Promise<void> {
+    async sendNameChangedNotification(
+        email: string,
+        userName: string,
+        from?: string
+    ): Promise<void> {
         await this.resend.emails.send({
-            from: this.fromEmail,
+            from: from || DEFAULT_FROM_EMAIL,
             to: email,
             subject: "Your FlowMaestro profile name was changed",
             react: NameChangedEmail({ userName })
@@ -74,35 +78,40 @@ export class EmailService {
     async sendEmailChangedNotification(
         oldEmail: string,
         newEmail: string,
-        userName: string
+        userName: string,
+        from?: string
     ): Promise<void> {
         await this.resend.emails.send({
-            from: this.fromEmail,
+            from: from || DEFAULT_FROM_EMAIL,
             to: oldEmail,
             subject: "Your FlowMaestro email was changed",
             react: EmailChangedEmail({ userName, isOldAddress: true, newEmail })
         });
 
         await this.resend.emails.send({
-            from: this.fromEmail,
+            from: from || DEFAULT_FROM_EMAIL,
             to: newEmail,
             subject: "Your FlowMaestro email was changed",
             react: EmailChangedEmail({ userName, isOldAddress: true, newEmail })
         });
     }
 
-    async sendTwoFactorEnabledNotification(email: string, phone: string): Promise<void> {
+    async sendTwoFactorEnabledNotification(
+        email: string,
+        phone: string,
+        from?: string
+    ): Promise<void> {
         await this.resend.emails.send({
-            from: this.fromEmail,
+            from: from || DEFAULT_FROM_EMAIL,
             to: email,
             subject: "Two-factor authentication enabled",
             react: TwoFactorEnabledEmail({ phone })
         });
     }
 
-    async sendTwoFactorDisabledNotification(email: string): Promise<void> {
+    async sendTwoFactorDisabledNotification(email: string, from?: string): Promise<void> {
         await this.resend.emails.send({
-            from: this.fromEmail,
+            from: from || DEFAULT_FROM_EMAIL,
             to: email,
             subject: "Two-factor authentication disabled",
             react: TwoFactorDisabledEmail()

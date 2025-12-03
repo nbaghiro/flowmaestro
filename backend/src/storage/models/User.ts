@@ -39,4 +39,6 @@ export interface UpdateUserInput {
     two_factor_enabled?: boolean;
     two_factor_phone?: string | null;
     two_factor_phone_verified?: boolean;
+    email_verified?: boolean;
+    email_verified_at?: Date | null;
 }
