@@ -36,9 +36,7 @@ export interface UpdateUserInput {
     microsoft_id?: string | null;
     avatar_url?: string | null;
     last_login_at?: Date;
-    two_factor_enabled?: boolean;
-    two_factor_phone?: string | null;
-    two_factor_phone_verified?: boolean;
     email_verified?: boolean;
     email_verified_at?: Date | null;
+    auth_provider?: UserModel["auth_provider"];
 }

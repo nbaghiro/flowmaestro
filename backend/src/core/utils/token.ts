@@ -1,7 +1,7 @@
 import { randomBytes, createHash } from "crypto";
 
 export class TokenUtils {
-    private static readonly TOKEN_LENGTH = 48; // 48 bytes = 384 bits of entropy
+    private static readonly TOKEN_LENGTH = 32; // 48 bytes = 384 bits of entropy
     private static readonly TOKEN_EXPIRY_MINUTES = 15;
 
     /**
@@ -9,7 +9,7 @@ export class TokenUtils {
      * Returns 64-character URL-safe base64 string
      */
     static generate(): string {
-        return randomBytes(this.TOKEN_LENGTH).toString("base64url");
+        return randomBytes(this.TOKEN_LENGTH).toString("hex");
     }
 
     /**

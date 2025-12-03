@@ -1,5 +1,6 @@
-import crypto from "crypto";
 import { FastifyInstance } from "fastify";
+import { PasswordUtils } from "../../../core/utils/password";
+import { TokenUtils } from "../../../core/utils/token";
 import { emailService } from "../../../services/email/EmailService";
 import { UserRepository } from "../../../storage/repositories";
 import { EmailVerificationTokenRepository } from "../../../storage/repositories/EmailVerificationTokenRepository";
@@ -105,11 +106,11 @@ export async function meRoute(fastify: FastifyInstance) {
                 });
             }
 
-            // Block Google/Microsoft users
-            if (user.auth_provider !== "local") {
+            // If user has no password AND is using OAuth, block email change
+            if (!user.password_hash && (user.google_id || user.microsoft_id)) {
                 return reply.status(400).send({
                     success: false,
-                    error: "Email cannot be changed for Google or Microsoft accounts"
+                    error: "You must set a password before changing your email"
                 });
             }
 
@@ -145,8 +146,8 @@ export async function meRoute(fastify: FastifyInstance) {
             }
 
             // Generate token
-            const rawToken = crypto.randomUUID() + crypto.randomUUID();
-            const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+            const rawToken = TokenUtils.generate();
+            const tokenHash = TokenUtils.hash(rawToken);
 
             // Store verification token
             await tokenRepo.create({
@@ -159,8 +160,6 @@ export async function meRoute(fastify: FastifyInstance) {
             });
 
             // Send warning to old email + verification to new email
-            await emailService.sendEmailChangedNotification(user.email, newEmail, user.name || "");
-
             await emailService.sendEmailVerification(newEmail, rawToken, user.name || "");
 
             // Mark email as unverified (will finalize after token verification)
@@ -172,6 +171,169 @@ export async function meRoute(fastify: FastifyInstance) {
             return reply.send({
                 success: true,
                 message: "Verification link sent to your new email address"
+            });
+        }
+    );
+
+    fastify.post(
+        "/me/set-password",
+        {
+            preHandler: [authMiddleware]
+        },
+        async (request, reply) => {
+            const userRepository = new UserRepository();
+            const userId = request.user.id;
+
+            const { password } = request.body as { password: string };
+
+            if (!password || typeof password !== "string" || password.length < 8) {
+                return reply.status(400).send({
+                    success: false,
+                    error: "Password must be at least 8 characters long"
+                });
+            }
+
+            const user = await userRepository.findById(userId);
+
+            if (!user) {
+                return reply.status(404).send({
+                    success: false,
+                    error: "User not found"
+                });
+            }
+
+            if (user.password_hash) {
+                return reply.status(404).send({
+                    success: false,
+                    error: "Password is already set. Use change password instead"
+                });
+            }
+
+            const passwordHash = await PasswordUtils.hash(password);
+            await userRepository.updatePassword(user.id, passwordHash);
+
+            const updated = await userRepository.findById(userId);
+
+            if (!updated) {
+                return reply.status(500).send({
+                    success: false,
+                    error: "Failed to set password"
+                });
+            }
+
+            try {
+                await emailService.sendPasswordChangedNotification(
+                    updated.email,
+                    updated.name || undefined
+                );
+            } catch (error) {
+                const errorMsg = error instanceof Error ? error.message : String(error);
+                fastify.log.error(
+                    `Failed to send password changed notification to ${updated.email}: ${errorMsg}`
+                );
+            }
+
+            return reply.send({
+                success: true,
+                message: "Password set successfully",
+                data: {
+                    user: {
+                        id: updated.id,
+                        email: updated.email,
+                        avatar_url: updated.avatar_url,
+                        google_id: updated.google_id,
+                        microsoft_id: updated.microsoft_id,
+                        has_password: !!updated.password_hash
+                    }
+                }
+            });
+        }
+    );
+
+    fastify.post(
+        "/me/password",
+        {
+            preHandler: [authMiddleware]
+        },
+        async (request, reply) => {
+            const userRepository = new UserRepository();
+            const userId = request.user.id;
+
+            const { currentPassword, newPassword } = request.body as {
+                currentPassword: string;
+                newPassword: string;
+            };
+
+            if (!newPassword || typeof newPassword !== "string" || newPassword.length < 8) {
+                return reply.status(400).send({
+                    success: false,
+                    error: "New password must be at least 8 characters long"
+                });
+            }
+
+            const user = await userRepository.findById(userId);
+
+            if (!user) {
+                return reply.status(404).send({
+                    success: false,
+                    error: "User not found"
+                });
+            }
+
+            if (!user.password_hash) {
+                return reply.status(400).send({
+                    success: false,
+                    error: "No password set for this account. Use set Password instead"
+                });
+            }
+
+            const isValid = await PasswordUtils.verify(currentPassword || "", user.password_hash);
+
+            if (!isValid) {
+                return reply.status(400).send({
+                    success: false,
+                    error: "Current password is incorrect"
+                });
+            }
+
+            const newPasswordHash = await PasswordUtils.hash(newPassword);
+            await userRepository.update(user.id, { password_hash: newPasswordHash });
+
+            const updated = await userRepository.findById(userId);
+
+            if (!updated) {
+                return reply.status(500).send({
+                    success: false,
+                    error: "Failed to change password"
+                });
+            }
+
+            try {
+                await emailService.sendPasswordChangedNotification(
+                    updated.email,
+                    updated.name || undefined
+                );
+            } catch (error) {
+                const errorMsg = error instanceof Error ? error.message : String(error);
+                fastify.log.error(
+                    `Failed to send password changed notification to ${updated.email}: ${errorMsg}`
+                );
+            }
+
+            return reply.send({
+                success: true,
+                message: "Password changed successfully",
+                data: {
+                    user: {
+                        id: updated.id,
+                        email: updated.email,
+                        name: updated.name,
+                        avatar_url: updated.avatar_url,
+                        google_id: updated.google_id,
+                        microsoft_id: updated.microsoft_id,
+                        has_password: !!updated.password_hash
+                    }
+                }
             });
         }
     );

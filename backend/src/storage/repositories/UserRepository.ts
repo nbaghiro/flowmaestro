@@ -123,6 +123,11 @@ export class UserRepository {
             values.push(input.microsoft_id);
         }
 
+        if (input.auth_provider !== undefined) {
+            updates.push(`auth_provider = $${paramIndex++}`);
+            values.push(input.auth_provider);
+        }
+
         if (input.avatar_url !== undefined) {
             updates.push(`avatar_url = $${paramIndex++}`);
             values.push(input.avatar_url);
