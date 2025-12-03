@@ -121,13 +121,13 @@ export function AgentBuilder() {
         }
     }, [currentAgent, activeTab, fetchThreads]);
 
-    // Set default model when provider changes
+    // Set default model when provider changes (only if model is empty)
     useEffect(() => {
-        if (!model || !isNewAgent) {
+        if (!model) {
             const defaultModel = getDefaultModelForProvider(provider);
             setModel(defaultModel);
         }
-    }, [provider, isNewAgent]);
+    }, [provider]);
 
     // Focus name input when editing starts
     useEffect(() => {
@@ -143,6 +143,20 @@ export function AgentBuilder() {
             ["openai", "anthropic", "google", "cohere"].includes(conn.provider.toLowerCase()) &&
             (conn.connection_method === "api_key" || conn.connection_method === "oauth2")
     );
+
+    // Auto-save name
+    const autoSaveName = async () => {
+        if (isNewAgent || !agentId || !name.trim() || name.trim() === currentAgent?.name) {
+            return;
+        }
+
+        try {
+            await updateAgent(agentId, { name: name.trim() });
+        } catch (err) {
+            // Silently fail for auto-save
+            console.error("Auto-save name failed:", err);
+        }
+    };
 
     const handleSave = async () => {
         if (!name.trim()) {
@@ -374,8 +388,7 @@ export function AgentBuilder() {
                                 onKeyDown={(e) => {
                                     if (e.key === "Enter") {
                                         setIsEditingName(false);
-                                        // Don't auto-save, just stop editing
-                                        // User can click Save button to save
+                                        autoSaveName();
                                     }
                                     if (e.key === "Escape") {
                                         // Revert to original name
@@ -392,6 +405,9 @@ export function AgentBuilder() {
                                     // Revert if empty for existing agents
                                     if (!name.trim() && currentAgent) {
                                         setName(currentAgent.name);
+                                    } else {
+                                        // Auto-save name when blurring
+                                        autoSaveName();
                                     }
                                 }}
                                 placeholder="Enter agent name"

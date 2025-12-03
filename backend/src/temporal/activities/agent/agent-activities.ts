@@ -109,6 +109,18 @@ export async function callLLM(input: CallLLMInput): Promise<LLMResponse> {
         };
     }
 
+    // Helper function to clean API keys (remove invisible characters)
+    const cleanApiKey = (key: string | null | undefined): string | null => {
+        if (!key) return null;
+        return (
+            key
+                .trim()
+                .replace(/[\u200B-\u200D\uFEFF\u2008-\u200F]/g, "") // Remove zero-width spaces and similar
+                .replace(/[^\x20-\x7E]/g, "") || // Remove any non-printable ASCII characters
+            null
+        );
+    };
+
     // Get API credentials from connection
     let apiKey: string | null = null;
     if (connectionId) {
@@ -117,9 +129,9 @@ export async function callLLM(input: CallLLMInput): Promise<LLMResponse> {
             // Extract API key from connection data
             const connectionData = connection.data;
             if ("api_key" in connectionData) {
-                apiKey = connectionData.api_key || null;
+                apiKey = cleanApiKey(connectionData.api_key as string);
             } else if ("apiKey" in connectionData) {
-                apiKey = ((connectionData as Record<string, unknown>).apiKey as string) || null;
+                apiKey = cleanApiKey((connectionData as Record<string, unknown>).apiKey as string);
             }
         }
     }
@@ -128,16 +140,16 @@ export async function callLLM(input: CallLLMInput): Promise<LLMResponse> {
     if (!apiKey) {
         switch (provider) {
             case "openai":
-                apiKey = process.env.OPENAI_API_KEY || null;
+                apiKey = cleanApiKey(process.env.OPENAI_API_KEY);
                 break;
             case "anthropic":
-                apiKey = process.env.ANTHROPIC_API_KEY || null;
+                apiKey = cleanApiKey(process.env.ANTHROPIC_API_KEY);
                 break;
             case "google":
-                apiKey = process.env.GOOGLE_API_KEY || null;
+                apiKey = cleanApiKey(process.env.GOOGLE_API_KEY);
                 break;
             case "cohere":
-                apiKey = process.env.COHERE_API_KEY || null;
+                apiKey = cleanApiKey(process.env.COHERE_API_KEY);
                 break;
         }
     }
@@ -160,6 +172,26 @@ export async function callLLM(input: CallLLMInput): Promise<LLMResponse> {
             });
         case "anthropic":
             return await callAnthropic({
+                model,
+                apiKey,
+                messages,
+                tools,
+                temperature,
+                maxTokens,
+                executionId: input.executionId
+            });
+        case "google":
+            return await callGoogle({
+                model,
+                apiKey,
+                messages,
+                tools,
+                temperature,
+                maxTokens,
+                executionId: input.executionId
+            });
+        case "cohere":
+            return await callCohere({
                 model,
                 apiKey,
                 messages,
@@ -497,6 +529,601 @@ async function callOpenAI(input: OpenAICallInput): Promise<LLMResponse> {
         isComplete: finishReason === "stop" && !toolCalls,
         usage
     };
+}
+
+/**
+ * Call Google Gemini API
+ */
+interface GoogleCallInput {
+    model: string;
+    apiKey: string;
+    messages: ConversationMessage[];
+    tools: Tool[];
+    temperature: number;
+    maxTokens: number;
+    executionId?: string;
+}
+
+async function callGoogle(input: GoogleCallInput): Promise<LLMResponse> {
+    const { model, apiKey, messages, tools, temperature, maxTokens, executionId } = input;
+
+    if (!apiKey || apiKey.length === 0) {
+        throw new Error("Google API key is missing or empty after cleaning");
+    }
+
+    // Extract system prompt (Gemini uses systemInstruction)
+    const systemPrompt = messages.find((m) => m.role === "system")?.content || "";
+    const conversationMessages = messages.filter((m) => m.role !== "system");
+
+    // Format messages for Gemini API (parts-based structure)
+    // Gemini expects alternating user/model turns, with function responses as user messages
+    const formattedContents: Array<{
+        role: "user" | "model";
+        parts: Array<{ text?: string; functionCall?: unknown; functionResponse?: unknown }>;
+    }> = [];
+
+    // Group tool messages by their tool_call_id to match with assistant messages
+    const toolMessagesByCallId = new Map<string, ConversationMessage[]>();
+    for (const msg of conversationMessages) {
+        if (msg.role === "tool" && msg.tool_call_id) {
+            const existing = toolMessagesByCallId.get(msg.tool_call_id) || [];
+            existing.push(msg);
+            toolMessagesByCallId.set(msg.tool_call_id, existing);
+        }
+    }
+
+    for (let i = 0; i < conversationMessages.length; i++) {
+        const msg = conversationMessages[i];
+
+        // Skip tool messages - they're handled when processing assistant messages
+        if (msg.role === "tool") {
+            continue;
+        }
+
+        if (msg.role === "user") {
+            formattedContents.push({
+                role: "user",
+                parts: [{ text: msg.content || "" }]
+            });
+        } else if (msg.role === "assistant") {
+            const parts: Array<{ text?: string; functionCall?: unknown }> = [];
+
+            // Add text content if present
+            if (msg.content) {
+                parts.push({ text: msg.content });
+            }
+
+            // Add function calls if present
+            if (msg.tool_calls && msg.tool_calls.length > 0) {
+                for (const toolCall of msg.tool_calls) {
+                    parts.push({
+                        functionCall: {
+                            name: toolCall.name,
+                            args: toolCall.arguments
+                        }
+                    });
+                }
+            }
+
+            if (parts.length > 0) {
+                formattedContents.push({
+                    role: "model",
+                    parts
+                });
+
+                // If there are tool calls, add function responses as a user message
+                if (msg.tool_calls && msg.tool_calls.length > 0) {
+                    const functionResponses: Array<{ functionResponse: unknown }> = [];
+                    for (const toolCall of msg.tool_calls) {
+                        const toolMsgs = toolMessagesByCallId.get(toolCall.id) || [];
+                        for (const toolMsg of toolMsgs) {
+                            let responseContent: JsonObject;
+                            if (typeof toolMsg.content === "string") {
+                                try {
+                                    responseContent = JSON.parse(toolMsg.content);
+                                } catch {
+                                    responseContent = { result: toolMsg.content };
+                                }
+                            } else {
+                                responseContent = toolMsg.content as JsonObject;
+                            }
+
+                            functionResponses.push({
+                                functionResponse: {
+                                    name: toolCall.name,
+                                    response: responseContent
+                                }
+                            });
+                        }
+                    }
+
+                    if (functionResponses.length > 0) {
+                        formattedContents.push({
+                            role: "user",
+                            parts: functionResponses
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    // Format tools as function_declarations for Gemini
+    // Gemini expects a single tools array with functionDeclarations
+    const formattedTools =
+        tools.length > 0
+            ? [
+                  {
+                      functionDeclarations: tools.map((tool) => ({
+                          name: tool.name,
+                          description: tool.description,
+                          parameters: normalizeSchemaForLLM(tool.schema, "google")
+                      }))
+                  }
+              ]
+            : undefined;
+
+    // Build request body
+    const requestBody: {
+        contents: typeof formattedContents;
+        systemInstruction?: { parts: Array<{ text: string }> };
+        tools?: typeof formattedTools;
+        generationConfig?: {
+            temperature?: number;
+            maxOutputTokens?: number;
+        };
+    } = {
+        contents: formattedContents,
+        generationConfig: {
+            temperature,
+            maxOutputTokens: maxTokens
+        }
+    };
+
+    if (systemPrompt) {
+        requestBody.systemInstruction = {
+            parts: [{ text: systemPrompt }]
+        };
+    }
+
+    if (formattedTools) {
+        requestBody.tools = formattedTools;
+    }
+
+    const headers: Record<string, string> = {
+        "Content-Type": "application/json"
+    };
+    headers["x-goog-api-key"] = apiKey;
+
+    const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent`,
+        {
+            method: "POST",
+            headers,
+            body: JSON.stringify(requestBody)
+        }
+    );
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error("[Google] API error response:", errorText);
+        throw new Error(`Google Gemini API error: ${response.status} - ${errorText}`);
+    }
+
+    // Process streaming response
+    const reader = response.body?.getReader();
+    const decoder = new TextDecoder();
+    let fullContent = "";
+    let toolCalls: ToolCall[] | undefined;
+    let usage: { promptTokens: number; completionTokens: number; totalTokens: number } | undefined;
+
+    if (!reader) {
+        throw new Error("Failed to get response reader");
+    }
+
+    // Process streaming response chunks
+    // Gemini streams the JSON response in chunks - we need to accumulate and parse incrementally
+    // Track function calls by name+args to avoid duplicates
+    const seenFunctionCalls = new Set<string>();
+    let fullResponseBuffer = "";
+    let done = false;
+
+    // Accumulate all chunks first (Gemini streams the JSON object in pieces)
+    while (!done) {
+        const result = await reader.read();
+        done = result.done;
+        if (done) break;
+
+        const value = result.value;
+        const chunk = decoder.decode(value, { stream: true });
+        fullResponseBuffer += chunk;
+    }
+
+    // Now parse the complete JSON response
+    try {
+        // Gemini may return an array of responses or a single object
+        let parsed: {
+            candidates?: Array<{
+                content?: {
+                    parts?: Array<{
+                        text?: string;
+                        functionCall?: {
+                            name: string;
+                            args: JsonObject;
+                        };
+                    }>;
+                };
+                finishReason?: string;
+            }>;
+            usageMetadata?: {
+                promptTokenCount?: number;
+                candidatesTokenCount?: number;
+                totalTokenCount?: number;
+            };
+        };
+
+        // Try parsing as array first (some responses come as array)
+        const trimmed = fullResponseBuffer.trim();
+        if (trimmed.startsWith("[")) {
+            const array = JSON.parse(trimmed) as Array<unknown>;
+            // Process each item in the array
+            for (const item of array) {
+                parsed = item as typeof parsed;
+                await processGeminiResponse(parsed);
+            }
+        } else {
+            // Single object response
+            parsed = JSON.parse(trimmed);
+            await processGeminiResponse(parsed);
+        }
+    } catch (error) {
+        console.error(
+            "[Google] Failed to parse complete response:",
+            error instanceof Error ? error.message : error
+        );
+        console.error("[Google] Response buffer length:", fullResponseBuffer.length);
+        console.error("[Google] Response preview:", fullResponseBuffer.substring(0, 500));
+        throw new Error(
+            `Failed to parse Google Gemini response: ${error instanceof Error ? error.message : "Unknown error"}`
+        );
+    }
+
+    // Helper function to process a parsed Gemini response
+    async function processGeminiResponse(parsed: {
+        candidates?: Array<{
+            content?: {
+                parts?: Array<{
+                    text?: string;
+                    functionCall?: {
+                        name: string;
+                        args: JsonObject;
+                    };
+                }>;
+            };
+            finishReason?: string;
+        }>;
+        usageMetadata?: {
+            promptTokenCount?: number;
+            candidatesTokenCount?: number;
+            totalTokenCount?: number;
+        };
+    }): Promise<void> {
+        if (parsed.candidates && parsed.candidates[0]) {
+            const candidate = parsed.candidates[0];
+            const parts = candidate.content?.parts || [];
+
+            for (const part of parts) {
+                if (part.text) {
+                    // Emit token for streaming
+                    if (executionId) {
+                        await emitAgentToken({ executionId, token: part.text });
+                    }
+                    fullContent += part.text;
+                }
+
+                if (part.functionCall) {
+                    // Create a unique key for this function call to avoid duplicates
+                    const callKey = `${part.functionCall.name}:${JSON.stringify(part.functionCall.args)}`;
+                    if (!seenFunctionCalls.has(callKey)) {
+                        seenFunctionCalls.add(callKey);
+                        if (!toolCalls) {
+                            toolCalls = [];
+                        }
+                        toolCalls.push({
+                            id: `call_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+                            name: part.functionCall.name,
+                            arguments: part.functionCall.args
+                        });
+                    }
+                }
+            }
+        }
+
+        if (parsed.usageMetadata) {
+            usage = {
+                promptTokens: parsed.usageMetadata.promptTokenCount || 0,
+                completionTokens: parsed.usageMetadata.candidatesTokenCount || 0,
+                totalTokens: parsed.usageMetadata.totalTokenCount || 0
+            };
+        }
+    }
+
+    // Determine if response is complete (no tool calls means complete)
+    const isComplete = !toolCalls || toolCalls.length === 0;
+
+    return {
+        content: fullContent,
+        tool_calls: toolCalls,
+        isComplete,
+        usage
+    };
+}
+
+/**
+ * Call Cohere API
+ */
+interface CohereCallInput {
+    model: string;
+    apiKey: string;
+    messages: ConversationMessage[];
+    tools: Tool[];
+    temperature: number;
+    maxTokens: number;
+    executionId?: string;
+}
+
+async function callCohere(input: CohereCallInput): Promise<LLMResponse> {
+    const { model, apiKey, messages, tools, temperature, maxTokens, executionId } = input;
+
+    if (!apiKey || apiKey.length === 0) {
+        throw new Error("Cohere API key is missing or empty after cleaning");
+    }
+
+    // Import Cohere client
+    const { CohereClient } = await import("cohere-ai");
+    const cohere = new CohereClient({ token: apiKey });
+
+    // Extract system prompt (Cohere uses preamble)
+    const systemPrompt = messages.find((m) => m.role === "system")?.content || "";
+    const conversationMessages = messages.filter((m) => m.role !== "system");
+
+    // Cohere chat API expects a conversation history format
+    // Cohere uses "User" and "Chatbot"
+    const chatHistory: Array<
+        { role: "User"; message: string } | { role: "Chatbot"; message: string }
+    > = [];
+
+    for (const msg of conversationMessages) {
+        if (msg.role === "user") {
+            chatHistory.push({
+                role: "User",
+                message: msg.content || ""
+            });
+        } else if (msg.role === "assistant") {
+            // For assistant messages, include text content
+            // Note: Cohere doesn't support tool calls natively, so we format them as text
+            let assistantMessage = msg.content || "";
+
+            // If there are tool calls, format them clearly
+            if (msg.tool_calls && msg.tool_calls.length > 0) {
+                // Format tool calls as text (Cohere doesn't have native tool calling)
+                const toolCallsText = msg.tool_calls
+                    .map((tc) => `${tc.name}(${JSON.stringify(tc.arguments)})`)
+                    .join(", ");
+                assistantMessage += `\n[Tool calls: ${toolCallsText}]`;
+            }
+
+            // Only add assistant message if it has content (empty messages can cause 400 errors)
+            if (assistantMessage.trim().length > 0) {
+                chatHistory.push({
+                    role: "Chatbot",
+                    message: assistantMessage.trim()
+                });
+            }
+        } else if (msg.role === "tool") {
+            // Tool results are added to the previous assistant message
+            // If there's no previous assistant message, create one
+            const lastMessage = chatHistory[chatHistory.length - 1];
+            const toolResult =
+                typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content);
+            if (lastMessage && "role" in lastMessage && lastMessage.role === "Chatbot") {
+                lastMessage.message += `\n[Tool result: ${msg.tool_name || "unknown"}: ${toolResult}]`;
+            } else {
+                // Create a new assistant message for the tool result
+                chatHistory.push({
+                    role: "Chatbot",
+                    message: `[Tool result: ${msg.tool_name || "unknown"}: ${toolResult}]`
+                });
+            }
+        }
+    }
+
+    // Cohere API expects the last user message as 'message' and previous messages as 'chatHistory'
+    // Find the last user message
+    let currentMessage = "";
+    let previousMessages: Array<
+        { role: "User"; message: string } | { role: "Chatbot"; message: string }
+    > = [];
+
+    // Find the last user message
+    for (let i = chatHistory.length - 1; i >= 0; i--) {
+        if (chatHistory[i].role === "User") {
+            currentMessage = chatHistory[i].message;
+            previousMessages = chatHistory.slice(0, i);
+            break;
+        }
+    }
+
+    // If no user message found, use empty string (shouldn't happen, but handle gracefully)
+    if (!currentMessage && chatHistory.length > 0) {
+        // Fallback: use the last message if it's not a user message
+        const lastMsg = chatHistory[chatHistory.length - 1];
+        if (lastMsg.role === "Chatbot") {
+            // This shouldn't happen in normal flow, but handle it
+            currentMessage = "";
+            previousMessages = chatHistory;
+        } else {
+            currentMessage = lastMsg.message;
+            previousMessages = chatHistory.slice(0, -1);
+        }
+    }
+
+    // Build chat options - match the format used in llm-executor.ts
+    const chatOptions: {
+        model: string;
+        message: string;
+        chatHistory?: Array<
+            { role: "User"; message: string } | { role: "Chatbot"; message: string }
+        >;
+        preamble?: string;
+        temperature?: number;
+        maxTokens?: number;
+    } = {
+        model,
+        message: currentMessage,
+        temperature,
+        maxTokens
+    };
+
+    if (systemPrompt) {
+        chatOptions.preamble = systemPrompt;
+    }
+
+    if (previousMessages.length > 0) {
+        chatOptions.chatHistory = previousMessages;
+    }
+
+    // Tools are disabled for now - Cohere's tool support varies by model
+    // and can cause 400 errors if the model doesn't support them
+    // TODO: Re-enable when we can detect which models support tools
+    if (tools.length > 0) {
+        console.warn(
+            `[Cohere] Tools provided (${tools.length}) but not included in request - Cohere tool support varies by model`
+        );
+    }
+
+    try {
+        // Use streaming API with type assertion to handle SDK type strictness
+        const stream = await cohere.chatStream(
+            chatOptions as Parameters<typeof cohere.chatStream>[0]
+        );
+
+        let fullContent = "";
+        let toolCalls: ToolCall[] | undefined;
+        let usage:
+            | { promptTokens: number; completionTokens: number; totalTokens: number }
+            | undefined;
+
+        // Process streaming response
+        for await (const chunk of stream) {
+            if (chunk.eventType === "text-generation") {
+                const delta = chunk.text || "";
+                if (delta) {
+                    // Emit token for streaming
+                    if (executionId) {
+                        await emitAgentToken({ executionId, token: delta });
+                    }
+                    fullContent += delta;
+                }
+            } else if (
+                (chunk.eventType === "tool-calls-generation" ||
+                    chunk.eventType === "tool-calls-chunk") &&
+                "toolCalls" in chunk
+            ) {
+                // Handle tool calls if Cohere supports them
+                const toolCallsData = chunk.toolCalls as Array<{
+                    name?: string;
+                    parameters?: unknown;
+                }>;
+                if (toolCallsData) {
+                    if (!toolCalls) {
+                        toolCalls = [];
+                    }
+                    for (const toolCall of toolCallsData) {
+                        toolCalls.push({
+                            id: `call_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+                            name: toolCall.name || "",
+                            arguments: (toolCall.parameters as JsonObject) || {}
+                        });
+                    }
+                }
+            } else if (chunk.eventType === "stream-end") {
+                // Extract usage information if available
+                if (chunk.response && "usage" in chunk.response) {
+                    const usageData = chunk.response.usage as {
+                        inputTokens?: number;
+                        outputTokens?: number;
+                    };
+                    if (usageData) {
+                        usage = {
+                            promptTokens: usageData.inputTokens || 0,
+                            completionTokens: usageData.outputTokens || 0,
+                            totalTokens:
+                                (usageData.inputTokens || 0) + (usageData.outputTokens || 0)
+                        };
+                    }
+                }
+            }
+        }
+
+        return {
+            content: fullContent,
+            tool_calls: toolCalls,
+            isComplete: !toolCalls || toolCalls.length === 0,
+            usage
+        };
+    } catch (error) {
+        // Enhanced error logging for Cohere API
+        if (error && typeof error === "object" && "statusCode" in error) {
+            const cohereError = error as {
+                statusCode?: number;
+                body?: unknown;
+                message?: string;
+            };
+
+            // Try to read the body if it's a ReadableStream
+            let bodyText = "";
+            if (
+                cohereError.body &&
+                typeof cohereError.body === "object" &&
+                "getReader" in cohereError.body
+            ) {
+                try {
+                    const reader = (cohereError.body as ReadableStream).getReader();
+                    const decoder = new TextDecoder();
+                    const result = await reader.read();
+                    if (!result.done) {
+                        bodyText = decoder.decode(result.value);
+                    }
+                } catch {
+                    bodyText = "[Could not read error body]";
+                }
+            } else {
+                bodyText = JSON.stringify(cohereError.body);
+            }
+
+            console.error("[Cohere] API error details:", {
+                statusCode: cohereError.statusCode,
+                message: cohereError.message,
+                body: bodyText
+            });
+
+            // Log the chat history that caused the error for debugging
+            console.error(
+                "[Cohere] Chat history that caused error:",
+                JSON.stringify(previousMessages, null, 2)
+            );
+            console.error("[Cohere] Current message:", currentMessage);
+
+            throw new Error(
+                `Cohere API error: ${cohereError.statusCode || "Unknown"} - ${cohereError.message || bodyText || "Unknown error"}`
+            );
+        }
+        console.error("[Cohere] API error:", error instanceof Error ? error.message : error);
+        throw new Error(
+            `Cohere API error: ${error instanceof Error ? error.message : "Unknown error"}`
+        );
+    }
 }
 
 /**
