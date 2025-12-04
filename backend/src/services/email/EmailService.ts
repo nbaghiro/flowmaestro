@@ -35,15 +35,20 @@ export class EmailService {
         email: string,
         token: string,
         userName?: string,
-        from?: string
+        from?: string,
+        context: "signup" | "change-email" = "signup"
     ): Promise<void> {
         const verificationUrl = `${config.frontend.url}/verify-email?token=${token}`;
+        const subject =
+            context === "change-email"
+                ? "Confirm your new FlowMaestro email"
+                : "Verify your FlowMaestro email";
 
         await this.resend.emails.send({
             from: from || DEFAULT_FROM_EMAIL,
             to: email,
-            subject: "Verify your FlowMaestro email",
-            react: EmailVerificationEmail({ verificationUrl, userName })
+            subject,
+            react: EmailVerificationEmail({ verificationUrl, userName, context })
         });
     }
 

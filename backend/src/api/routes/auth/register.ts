@@ -72,7 +72,9 @@ export async function registerRoute(fastify: FastifyInstance) {
                     await emailService.sendEmailVerification(
                         user.email,
                         verificationToken,
-                        user.name || undefined
+                        user.name || undefined,
+                        undefined,
+                        "signup"
                     );
                     fastify.log.info(`Verification email sent to: ${user.email}`);
                 } catch (error) {

@@ -160,7 +160,13 @@ export async function meRoute(fastify: FastifyInstance) {
             });
 
             // Send warning to old email + verification to new email
-            await emailService.sendEmailVerification(newEmail, rawToken, user.name || "");
+            await emailService.sendEmailVerification(
+                newEmail,
+                rawToken,
+                user.name || "",
+                undefined,
+                "change-email"
+            );
 
             // Mark email as unverified (will finalize after token verification)
             await userRepository.update(userId, {
