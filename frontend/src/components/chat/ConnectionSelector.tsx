@@ -9,7 +9,7 @@ import { useChatStore } from "../../stores/chatStore";
 const LLM_PROVIDER_VALUES = Object.keys(LLM_MODELS_BY_PROVIDER);
 
 // Define provider display order
-const PROVIDER_ORDER = ["openai", "anthropic", "google", "cohere"];
+const PROVIDER_ORDER = ["openai", "anthropic", "google", "cohere", "huggingface"];
 
 export function ConnectionSelector() {
     const { selectedConnectionId, selectedModel, setConnection } = useChatStore();
@@ -58,26 +58,19 @@ export function ConnectionSelector() {
         ? LLM_MODELS_BY_PROVIDER[selectedConnection.provider] || []
         : [];
 
-    // Get short model nickname for display
+    // Get model display name with parenthetical descriptions removed
     const getModelNickname = (modelValue: string | null): string => {
         if (!modelValue) return "";
 
-        // Extract meaningful short name from model value
-        if (modelValue.startsWith("gpt-")) {
-            return modelValue.replace("gpt-", "GPT-").split("-")[0]; // "gpt-4o" -> "GPT-4o"
-        }
-        if (modelValue.startsWith("claude-")) {
-            const parts = modelValue.split("-");
-            return `Claude ${parts[1] || ""}`.trim(); // "claude-sonnet-4-5..." -> "Claude sonnet"
-        }
-        if (modelValue.startsWith("gemini-")) {
-            return modelValue.replace("gemini-", "Gemini "); // "gemini-1.5-pro" -> "Gemini 1.5"
-        }
-        if (modelValue.startsWith("command")) {
-            return modelValue.split("-")[0]; // "command-r-plus" -> "command"
+        // Find the full model label from the available models
+        const model = availableModels.find((m) => m.value === modelValue);
+        if (model) {
+            // Remove parenthetical descriptions: "GPT-4o (Latest, Multimodal)" -> "GPT-4o"
+            return model.label.replace(/\s*\([^)]*\)/g, "").trim();
         }
 
-        return modelValue.split("-")[0] || modelValue;
+        // Fallback to model value if label not found
+        return modelValue;
     };
 
     const modelNickname = getModelNickname(selectedModel);

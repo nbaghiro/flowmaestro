@@ -135,6 +135,7 @@ OPENAI_API_KEY=$(get_secret "flowmaestro-app-openai-api-key" "")
 ANTHROPIC_API_KEY=$(get_secret "flowmaestro-app-anthropic-api-key" "")
 GOOGLE_API_KEY=$(get_secret "flowmaestro-app-google-api-key" "")
 COHERE_API_KEY=$(get_secret "flowmaestro-app-cohere-api-key" "")
+HUGGINGFACE_API_KEY=$(get_secret "flowmaestro-app-huggingface-api-key" "")
 
 # Fetch OAuth secrets
 print_info "Fetching OAuth secrets..."
@@ -248,6 +249,12 @@ if [ -n "$COHERE_API_KEY" ]; then
     echo "COHERE_API_KEY=${COHERE_API_KEY}" >> "$BACKEND_ENV_FILE"
 else
     echo "COHERE_API_KEY=" >> "$BACKEND_ENV_FILE"
+fi
+
+if [ -n "$HUGGINGFACE_API_KEY" ]; then
+    echo "HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY}" >> "$BACKEND_ENV_FILE"
+else
+    echo "HUGGINGFACE_API_KEY=" >> "$BACKEND_ENV_FILE"
 fi
 
 cat >> "$BACKEND_ENV_FILE" << EOF

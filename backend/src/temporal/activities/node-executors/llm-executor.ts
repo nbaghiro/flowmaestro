@@ -50,7 +50,9 @@ function isRetryableError(error: unknown): boolean {
         if (
             message.includes("overloaded") ||
             message.includes("rate limit") ||
-            message.includes("too many requests")
+            message.includes("too many requests") ||
+            (message.includes("model") && message.includes("loading")) ||
+            message.includes("is currently loading")
         ) {
             return true;
         }
@@ -109,7 +111,7 @@ async function withRetry<T>(fn: () => Promise<T>, context: string): Promise<T> {
 }
 
 export interface LLMNodeConfig {
-    provider: "openai" | "anthropic" | "google" | "cohere";
+    provider: "openai" | "anthropic" | "google" | "cohere" | "huggingface";
     model: string;
     connectionId?: string;
     systemPrompt?: string;
@@ -211,6 +213,9 @@ export async function executeLLMNode(
             break;
         case "cohere":
             result = await executeCohere(config, systemPrompt, userPrompt, callbacks);
+            break;
+        case "huggingface":
+            result = await executeHuggingFace(config, systemPrompt, userPrompt, callbacks);
             break;
         default:
             throw new Error(`Unsupported LLM provider: ${config.provider}`);
@@ -487,6 +492,171 @@ async function executeCohere(
             provider: "cohere"
         };
     }, `Cohere ${config.model}`);
+}
+
+async function executeHuggingFace(
+    config: LLMNodeConfig,
+    systemPrompt: string | undefined,
+    userPrompt: string,
+    callbacks?: LLMExecutionCallbacks
+): Promise<LLMNodeResult> {
+    const apiKey = await getApiKey(config.connectionId, "huggingface", "HUGGINGFACE_API_KEY");
+
+    const apiUrl = "https://router.huggingface.co/v1/chat/completions";
+
+    // Build messages array for OpenAI-compatible format
+    const messages: Array<{ role: "system" | "user"; content: string }> = [];
+    if (systemPrompt) {
+        messages.push({ role: "system", content: systemPrompt });
+    }
+    messages.push({ role: "user", content: userPrompt });
+
+    return withRetry(async () => {
+        // Streaming mode
+        if (callbacks?.onToken) {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 min timeout
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: "POST",
+                    headers: {
+                        Authorization: `Bearer ${apiKey}`,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        model: config.model,
+                        messages,
+                        temperature: config.temperature ?? 0.7,
+                        max_tokens: config.maxTokens ?? 1000,
+                        top_p: config.topP ?? 1,
+                        stream: true
+                    }),
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+
+                    // Special handling for model loading
+                    if (response.status === 503) {
+                        throw new Error(
+                            `Model ${config.model} is loading. This is retryable. Status: ${response.status}`
+                        );
+                    }
+
+                    throw new Error(`HuggingFace API error (${response.status}): ${errorText}`);
+                }
+
+                // Parse SSE stream
+                const reader = response.body?.getReader();
+                if (!reader) {
+                    throw new Error("Response body is not readable");
+                }
+
+                const decoder = new TextDecoder();
+                let fullContent = "";
+
+                // eslint-disable-next-line no-constant-condition
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value, { stream: true });
+                    const lines = chunk.split("\n");
+
+                    for (const line of lines) {
+                        if (line.startsWith("data: ")) {
+                            const data = line.slice(6);
+                            if (data === "[DONE]") continue;
+
+                            try {
+                                const parsed = JSON.parse(data);
+                                // OpenAI format: choices[0].delta.content
+                                const token = parsed.choices?.[0]?.delta?.content || "";
+                                if (token) {
+                                    fullContent += token;
+                                    callbacks.onToken(token);
+                                }
+                            } catch (_e) {
+                                // Skip invalid JSON
+                                continue;
+                            }
+                        }
+                    }
+                }
+
+                console.log(`[LLM] HuggingFace streaming response: ${fullContent.length} chars`);
+
+                return {
+                    text: fullContent,
+                    model: config.model,
+                    provider: "huggingface"
+                };
+            } catch (error) {
+                clearTimeout(timeoutId);
+                throw error;
+            }
+        }
+
+        // Non-streaming mode
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 120000);
+
+        try {
+            const response = await fetch(apiUrl, {
+                method: "POST",
+                headers: {
+                    Authorization: `Bearer ${apiKey}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    model: config.model,
+                    messages,
+                    temperature: config.temperature ?? 0.7,
+                    max_tokens: config.maxTokens ?? 1000,
+                    top_p: config.topP ?? 1,
+                    stream: false
+                }),
+                signal: controller.signal
+            });
+
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                const errorText = await response.text();
+
+                // Special handling for model loading
+                if (response.status === 503) {
+                    throw new Error(
+                        `Model ${config.model} is loading. This is retryable. Status: ${response.status}`
+                    );
+                }
+
+                throw new Error(`HuggingFace API error (${response.status}): ${errorText}`);
+            }
+
+            const result = (await response.json()) as {
+                choices?: Array<{ message?: { content?: string } }>;
+            };
+
+            // OpenAI format: choices[0].message.content
+            const text = result.choices?.[0]?.message?.content || "";
+
+            console.log(`[LLM] HuggingFace response: ${text.length} chars`);
+
+            return {
+                text,
+                model: config.model,
+                provider: "huggingface"
+            };
+        } catch (error) {
+            clearTimeout(timeoutId);
+            throw error;
+        }
+    }, `HuggingFace ${config.model}`);
 }
 
 /**
