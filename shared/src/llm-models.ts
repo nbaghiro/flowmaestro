@@ -30,7 +30,8 @@ export const LLM_PROVIDERS: LLMProviderDefinition[] = [
     { value: "openai", label: "OpenAI" },
     { value: "anthropic", label: "Anthropic" },
     { value: "google", label: "Google" },
-    { value: "cohere", label: "Cohere" }
+    { value: "cohere", label: "Cohere" },
+    { value: "huggingface", label: "Hugging Face" }
 ];
 
 /**
@@ -268,6 +269,96 @@ export const LLM_MODELS_BY_PROVIDER: Record<string, LLMModelDefinition[]> = {
             pricing: {
                 inputPricePerToken: 0.00000015,
                 outputPricePerToken: 0.0000006
+            }
+        }
+    ],
+    huggingface: [
+        {
+            value: "meta-llama/Llama-3.3-70B-Instruct",
+            label: "Meta Llama 3.3 70B Instruct (Default)",
+            provider: "huggingface",
+            contextWindow: 128000,
+            capabilities: ["text", "instruction-following"],
+            pricing: {
+                inputPricePerToken: 0.00000065,
+                outputPricePerToken: 0.00000065
+            }
+        },
+        {
+            value: "meta-llama/Llama-3.1-8B-Instruct",
+            label: "Meta Llama 3.1 8B Instruct (Fast)",
+            provider: "huggingface",
+            contextWindow: 128000,
+            capabilities: ["text", "instruction-following"],
+            pricing: {
+                inputPricePerToken: 0.0000001,
+                outputPricePerToken: 0.0000001
+            }
+        },
+        {
+            value: "Qwen/Qwen2.5-72B-Instruct",
+            label: "Qwen 2.5 72B Instruct (Reasoning)",
+            provider: "huggingface",
+            contextWindow: 128000,
+            capabilities: ["text", "reasoning", "code", "multilingual"],
+            pricing: {
+                inputPricePerToken: 0.00000065,
+                outputPricePerToken: 0.00000065
+            }
+        },
+        {
+            value: "Qwen/Qwen2.5-7B-Instruct",
+            label: "Qwen 2.5 7B Instruct (Multilingual)",
+            provider: "huggingface",
+            contextWindow: 128000,
+            capabilities: ["text", "multilingual"],
+            pricing: {
+                inputPricePerToken: 0.0000001,
+                outputPricePerToken: 0.0000001
+            }
+        },
+        {
+            value: "mistralai/Mistral-7B-Instruct-v0.3",
+            label: "Mistral 7B Instruct v0.3 (European)",
+            provider: "huggingface",
+            contextWindow: 32768,
+            capabilities: ["text", "instruction-following"],
+            pricing: {
+                inputPricePerToken: 0.0000001,
+                outputPricePerToken: 0.0000001
+            }
+        },
+        {
+            value: "mistralai/Mixtral-8x7B-Instruct-v0.1",
+            label: "Mixtral 8x7B Instruct (MoE)",
+            provider: "huggingface",
+            contextWindow: 32768,
+            capabilities: ["text", "instruction-following"],
+            pricing: {
+                inputPricePerToken: 0.00000027,
+                outputPricePerToken: 0.00000027
+            }
+        },
+        {
+            value: "google/gemma-2-9b-it",
+            label: "Gemma 2 9B IT",
+            provider: "huggingface",
+            contextWindow: 8192,
+            capabilities: ["text", "instruction-following"],
+            pricing: {
+                inputPricePerToken: 0.0000001,
+                outputPricePerToken: 0.0000001
+            }
+        },
+        {
+            value: "HuggingFaceH4/zephyr-7b-beta",
+            label: "Zephyr 7B Beta (Helpful)",
+            provider: "huggingface",
+            contextWindow: 32768,
+            capabilities: ["text", "instruction-following"],
+            pricing: {
+                inputPricePerToken: 0.0000001,
+                outputPricePerToken: 0.0000001
             }
         }
     ]

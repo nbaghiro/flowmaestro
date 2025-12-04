@@ -27,7 +27,7 @@ export class TestConnectionFactory {
         if (!encryptionKey) {
             throw new Error("ENCRYPTION_KEY environment variable is required for tests");
         }
-        this.encryptionService = new EncryptionService(encryptionKey);
+        this.encryptionService = new EncryptionService();
     }
 
     /**
@@ -82,6 +82,20 @@ export class TestConnectionFactory {
         return this.createConnection({
             name: "Test Google AI Connection",
             provider: "google",
+            connectionMethod: "api_key",
+            data: {
+                api_key: apiKey
+            }
+        });
+    }
+
+    /**
+     * Create Hugging Face API key connection
+     */
+    async createHuggingFaceConnection(apiKey: string = "test-huggingface-key"): Promise<string> {
+        return this.createConnection({
+            name: "Test Hugging Face Connection",
+            provider: "huggingface",
             connectionMethod: "api_key",
             data: {
                 api_key: apiKey
