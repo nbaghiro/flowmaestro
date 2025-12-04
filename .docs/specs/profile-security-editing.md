@@ -3243,6 +3243,204 @@ Step 3:
 
 ---
 
+## Twilio Configuration Guide
+
+### Understanding Twilio Identifiers
+
+Twilio uses several different identifiers, which can be confusing. Here's what each one is:
+
+#### 1. Account SID (Required for SMS 2FA)
+
+- **Format:** Starts with `AC` followed by 32 characters (e.g., `ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`)
+- **What it is:** Your Twilio account identifier
+- **Where to find it:** Twilio Console → Account Info section (top of dashboard)
+- **How it's used:** Authentication for API calls (paired with Auth Token)
+- **Environment variable:** `TWILIO_ACCOUNT_SID`
+
+#### 2. Auth Token (Required for SMS 2FA)
+
+- **Format:** 32-character string (alphanumeric)
+- **What it is:** Your API authentication secret
+- **Where to find it:** Twilio Console → Account Info section → "Show" button next to Auth Token
+- **How it's used:** Password for API authentication (paired with Account SID)
+- **Environment variable:** `TWILIO_AUTH_TOKEN`
+- **Security:** Treat this like a password - never commit to git
+
+#### 3. Phone Number (Required for SMS 2FA)
+
+- **Format:** E.164 format (e.g., `+16282397153`)
+- **What it is:** The Twilio phone number that sends SMS messages
+- **Where to get it:** Twilio Console → Phone Numbers → Buy a number (or use existing)
+- **How it's used:** The "from" field in SMS messages
+- **Environment variable:** `TWILIO_FROM_PHONE`
+- **Cost:** ~$1/month per number + $0.0079 per SMS in US
+
+#### 4. Messaging Service SID (NOT needed for basic SMS 2FA)
+
+- **Format:** Starts with `MG` followed by 32 characters (e.g., `MGb6f03e605cf6c277e1cf5069c3f13f31`)
+- **What it is:** A Twilio Messaging Service configuration container
+- **Where to find it:** Twilio Console → Messaging → Services
+- **How it's used:** Advanced messaging features (sender pools, failover, webhooks, etc.)
+- **For this spec:** NOT REQUIRED - we're using simple SMS sending with a single phone number
+
+### Quick Setup: What You Actually Need
+
+For the SMS 2FA feature in this spec, you only need **3 things**:
+
+```bash
+# .env file
+TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx  # Your account ID
+TWILIO_AUTH_TOKEN=your_32_character_auth_token          # Your API secret
+TWILIO_FROM_PHONE=+16282397153                          # Your Twilio phone number
+```
+
+### Step-by-Step Twilio Setup
+
+#### 1. Create Twilio Account
+
+1. Go to https://www.twilio.com/try-twilio
+2. Sign up and upgrade to paid account
+3. Verify your email and phone number
+
+#### 2. Get Account SID and Auth Token
+
+1. Log into Twilio Console: https://console.twilio.com
+2. On the dashboard, find "Account Info" section
+3. Copy **Account SID** (starts with AC)
+4. Click "Show" next to **Auth Token** and copy it
+5. Add both to your `.env` file
+
+#### 3. Get a Phone Number
+
+1. In Twilio Console, go to **Phone Numbers** → **Manage** → **Buy a number**
+2. Select your country (e.g., United States)
+3. Check "SMS" capability
+4. Click "Search"
+5. Pick a number and click "Buy"
+6. Copy the phone number in E.164 format (e.g., `+16282397153`)
+7. Add to your `.env` file as `TWILIO_FROM_PHONE`
+
+#### 4. Test Your Configuration
+
+```typescript
+// Quick test in backend
+import { smsService } from "./services/SmsService";
+
+await smsService.sendVerificationCode("+1YOUR_PHONE", "123456");
+// You should receive an SMS with the code
+```
+
+### Messaging Service (Advanced - Optional)
+
+If you see a "Messaging Service" in Twilio Console or want to use advanced features, here's what it is:
+
+**Messaging Services** are containers that:
+
+- Bundle multiple phone numbers (sender pools)
+- Provide automatic failover
+- Enable link shortening
+- Configure webhooks for inbound messages
+- Manage compliance settings
+
+**For basic SMS 2FA, you don't need a Messaging Service.** The simple phone number approach is sufficient and easier to set up.
+
+However, if you want to use a Messaging Service instead:
+
+1. **Create Messaging Service in Twilio:**
+    - Go to Twilio Console → Messaging → Services
+    - Click "Create Messaging Service"
+    - Name it (e.g., "FlowMaestro 2FA")
+    - Add your phone number to the sender pool
+    - Copy the Messaging Service SID (starts with MG)
+
+2. **Update SmsService.ts to use Messaging Service:**
+
+    ```typescript
+    async sendVerificationCode(phone: string, code: string): Promise<void> {
+        const message = `Your FlowMaestro verification code is: ${code}. This code expires in 5 minutes.`;
+
+        try {
+            await this.client.messages.create({
+                body: message,
+                messagingServiceSid: config.twilio.messagingServiceSid, // Use this instead of 'from'
+                to: phone
+            });
+        } catch (error) {
+            console.error("Failed to send SMS:", error);
+            throw new Error("Failed to send verification code");
+        }
+    }
+    ```
+
+3. **Add environment variable:**
+    ```bash
+    TWILIO_MESSAGING_SERVICE_SID=MGb6f03e605cf6c277e1cf5069c3f13f31
+    ```
+
+### Webhook Configuration (For Inbound SMS - Not Required for 2FA)
+
+The screenshot you shared shows an "Inbound Request Config" webhook URL. This is for **receiving** SMS messages, not sending them.
+
+**For SMS 2FA (this spec), you don't need inbound webhooks** because:
+
+- We only **send** SMS codes to users
+- We don't **receive** SMS replies from users
+- Users enter the code in the web UI, not via SMS reply
+
+If you need to receive SMS messages in the future:
+
+1. Create a webhook endpoint: `POST /api/webhooks/twilio`
+2. In Twilio Console → Phone Numbers → Select your number
+3. Under "Messaging Configuration", set:
+    - **A MESSAGE COMES IN**: Webhook URL (http://localhost:3001/api/webhooks/twilio)
+    - Method: HTTP POST
+4. Twilio will POST inbound messages to this endpoint
+
+### Cost Estimate
+
+**Twilio Pricing (US, as of 2024):**
+
+- Phone number: ~$1.00/month
+- Outbound SMS: $0.0079 per message
+- Inbound SMS: $0.0079 per message (not needed for 2FA)
+
+**Example monthly cost:**
+
+- 1000 users enable 2FA = 1000 SMS × $0.0079 = $7.90
+- Phone number rental = $1.00
+- **Total: ~$8.90/month for 1000 2FA setups**
+
+**Note:** Assumes paid Twilio account. Can send to any phone number without restrictions.
+
+### Troubleshooting
+
+**SMS not sending:**
+
+1. Check environment variables are set correctly
+2. Verify Account SID starts with `AC`
+3. Verify phone number is in E.164 format (`+1` for US)
+4. Check Twilio Console → Logs → Messaging Logs for error messages
+5. Verify phone number is active and SMS-enabled in Twilio Console
+
+**Error: "Twilio credentials not configured":**
+
+- Make sure `.env` file is in `backend/` directory
+- Restart backend server after adding environment variables
+- Verify no typos in variable names
+
+**Testing Your Setup:**
+
+```bash
+# Send a test SMS to verify configuration
+curl -X POST "https://api.twilio.com/2010-04-01/Accounts/$TWILIO_ACCOUNT_SID/Messages.json" \
+  --data-urlencode "Body=Test message from FlowMaestro" \
+  --data-urlencode "From=$TWILIO_FROM_PHONE" \
+  --data-urlencode "To=+1YOUR_NUMBER" \
+  -u "$TWILIO_ACCOUNT_SID:$TWILIO_AUTH_TOKEN"
+```
+
+---
+
 ## Deployment
 
 ### Environment Setup
