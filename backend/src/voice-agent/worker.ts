@@ -21,6 +21,10 @@
  * - Use dedicated audio processing libraries for Node.js
  */
 
+// Set timezone to UTC before any other imports or operations
+// This prevents timezone mismatches between Node.js and PostgreSQL
+process.env.TZ = "UTC";
+
 import Redis from "ioredis";
 import { Room, VideoPresets } from "livekit-client";
 import { getVoiceCommandBus } from "../services/events/VoiceCommandBus";

@@ -21,6 +21,14 @@ export const database = new gcp.sql.DatabaseInstance(
 
             availabilityType: infrastructureConfig.dbHighAvailability ? "REGIONAL" : "ZONAL",
 
+            // Database flags
+            databaseFlags: [
+                {
+                    name: "timezone",
+                    value: "UTC"
+                }
+            ],
+
             // Note: pgvector extension can be enabled via SQL after database creation
             // No database flags needed for PostgreSQL 15+
             // Run: CREATE EXTENSION IF NOT EXISTS vector;

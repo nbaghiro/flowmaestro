@@ -30,17 +30,20 @@ export class TokenUtils {
 
     /**
      * Check if token has expired
+     * Uses UTC time to ensure consistency with database timezone
      */
     static isExpired(expiresAt: Date): boolean {
-        return new Date() > expiresAt;
+        const now = new Date();
+        return now > expiresAt;
     }
 
     /**
      * Generate expiry date (15 minutes from now)
+     * Uses UTC to ensure consistency with database timezone
      */
     static generateExpiryDate(): Date {
-        const expiryDate = new Date();
-        expiryDate.setMinutes(expiryDate.getMinutes() + this.TOKEN_EXPIRY_MINUTES);
-        return expiryDate;
+        const now = Date.now(); // Milliseconds since epoch (timezone-independent)
+        const expiryTime = now + this.TOKEN_EXPIRY_MINUTES * 60 * 1000;
+        return new Date(expiryTime);
     }
 }
