@@ -1,3 +1,7 @@
+// Set timezone to UTC before any other imports or operations
+// This prevents timezone mismatches between Node.js and PostgreSQL
+process.env.TZ = "UTC";
+
 import { startServer } from "./api/server";
 
 // Start the server
