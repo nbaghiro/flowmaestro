@@ -1,10 +1,10 @@
 /**
- * Conversation Activities - Activities for managing conversations with ConversationManager
+ * Thread Activities - Activities for managing conversations with ThreadManager
  */
 
-import { ConversationManager } from "../../../services/conversation/ConversationManager";
+import { ThreadManager } from "../../../services/agents/ThreadManager";
 import { AgentExecutionRepository } from "../../../storage/repositories/AgentExecutionRepository";
-import type { ConversationMessage } from "../../../storage/models/AgentExecution";
+import type { ThreadMessage } from "../../../storage/models/AgentExecution";
 
 const executionRepo = new AgentExecutionRepository();
 
@@ -12,13 +12,11 @@ const executionRepo = new AgentExecutionRepository();
  * Load conversation history for an execution
  * Returns messages that have been persisted to the database
  */
-export interface LoadConversationHistoryInput {
+export interface LoadThreadHistoryInput {
     executionId: string;
 }
 
-export async function loadConversationHistory(
-    input: LoadConversationHistoryInput
-): Promise<ConversationMessage[]> {
+export async function loadThreadHistory(input: LoadThreadHistoryInput): Promise<ThreadMessage[]> {
     const { executionId } = input;
 
     // Load execution from database
@@ -28,8 +26,8 @@ export async function loadConversationHistory(
         throw new Error(`Execution ${executionId} not found`);
     }
 
-    // Return conversation history
-    return execution.conversation_history || [];
+    // Return thread history
+    return execution.thread_history || [];
 }
 
 /**
@@ -38,15 +36,15 @@ export async function loadConversationHistory(
  *
  * Thread-aware: Saves messages to both execution and agent_messages table with thread_id
  */
-export interface SaveConversationIncrementalInput {
+export interface SaveThreadIncrementalInput {
     executionId: string;
     threadId: string; // Thread ID for message persistence
-    messages: ConversationMessage[];
+    messages: ThreadMessage[];
     markCompleted?: boolean; // If true, mark execution as completed after saving
 }
 
-export async function saveConversationIncremental(
-    input: SaveConversationIncrementalInput
+export async function saveThreadIncremental(
+    input: SaveThreadIncrementalInput
 ): Promise<{ saved: number }> {
     const { executionId, threadId, messages, markCompleted } = input;
 
@@ -61,12 +59,12 @@ export async function saveConversationIncremental(
         throw new Error(`Execution ${executionId} not found`);
     }
 
-    // Use ConversationManager for proper handling
-    const conversation = new ConversationManager();
+    // Use ThreadManager for proper handling
+    const conversation = new ThreadManager();
 
     // Add existing messages from database (mark as saved)
-    if (execution.conversation_history && execution.conversation_history.length > 0) {
-        conversation.addFromMemory(execution.conversation_history);
+    if (execution.thread_history && execution.thread_history.length > 0) {
+        conversation.addFromMemory(execution.thread_history);
     }
 
     // Add new messages
@@ -97,9 +95,9 @@ export async function saveConversationIncremental(
     // Get all messages for storage
     const allMessages = conversation.toDatabase();
 
-    // Update execution with all messages (for backward compatibility)
+    // Update execution with all messages
     await executionRepo.update(executionId, {
-        conversation_history: allMessages
+        thread_history: allMessages
     });
 
     // Also save individual messages to agent_messages table with thread_id
@@ -115,7 +113,7 @@ export async function saveConversationIncremental(
     }
 
     console.log(
-        `[ConversationActivity] Saved ${messages.length} new messages for execution ${executionId} in thread ${threadId}${markCompleted ? " (marked as completed)" : ""}`
+        `[ThreadActivity] Saved ${messages.length} new messages for execution ${executionId} in thread ${threadId}${markCompleted ? " (marked as completed)" : ""}`
     );
 
     return { saved: messages.length };
@@ -126,13 +124,13 @@ export async function saveConversationIncremental(
  * Useful for format conversion in activities
  */
 export interface ConvertToOpenAIInput {
-    messages: ConversationMessage[];
+    messages: ThreadMessage[];
 }
 
 export async function convertToOpenAI(input: ConvertToOpenAIInput): Promise<unknown[]> {
     const { messages } = input;
 
-    const conversation = new ConversationManager();
+    const conversation = new ThreadManager();
     conversation.addFromMemory(messages);
 
     return conversation.toOpenAI();
@@ -143,7 +141,7 @@ export async function convertToOpenAI(input: ConvertToOpenAIInput): Promise<unkn
  * Useful for format conversion in activities
  */
 export interface ConvertToAnthropicInput {
-    messages: ConversationMessage[];
+    messages: ThreadMessage[];
 }
 
 export async function convertToAnthropic(
@@ -151,7 +149,7 @@ export async function convertToAnthropic(
 ): Promise<{ system: string; messages: unknown[] }> {
     const { messages } = input;
 
-    const conversation = new ConversationManager();
+    const conversation = new ThreadManager();
     conversation.addFromMemory(messages);
 
     return conversation.toAnthropic();

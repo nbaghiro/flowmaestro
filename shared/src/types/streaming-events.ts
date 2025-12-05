@@ -1,0 +1,124 @@
+import type { JsonObject } from "../types";
+
+/**
+ * Thread-scoped streaming event types for agent message streaming.
+ * These events replace the old execution-scoped agent events.
+ *
+ * Key improvements:
+ * - threadId-first routing (not executionId)
+ * - Sequence numbers for guaranteed token ordering
+ * - messageId to correlate tokens to specific messages
+ * - Explicit lifecycle: start → token* → complete/error
+ */
+
+export type StreamingEventType =
+    | "thread:message:start" // Assistant message starting
+    | "thread:message:token" // Individual token with sequence
+    | "thread:message:complete" // Message finalized, saved to DB
+    | "thread:message:error" // Message generation failed
+    | "thread:thinking" // Agent thinking indicator
+    | "thread:tool:started" // Tool execution started
+    | "thread:tool:completed" // Tool execution completed
+    | "thread:tool:failed"; // Tool execution failed
+
+/**
+ * Base event interface with common fields
+ */
+export interface BaseStreamingEvent {
+    type: StreamingEventType;
+    timestamp: number;
+    threadId: string; // PRIMARY routing key
+    executionId: string; // For execution tracking
+}
+
+/**
+ * Emitted when an assistant message starts streaming
+ */
+export interface MessageStartEvent extends BaseStreamingEvent {
+    type: "thread:message:start";
+    messageId: string; // Unique ID for this message
+    role: "assistant";
+}
+
+/**
+ * Emitted for each token in the streaming response
+ * Includes sequence number for guaranteed ordering
+ */
+export interface MessageTokenEvent extends BaseStreamingEvent {
+    type: "thread:message:token";
+    messageId: string; // Which message these tokens belong to
+    token: string; // The actual token text
+    sequence: number; // Monotonically increasing (1, 2, 3...)
+}
+
+/**
+ * Emitted when message streaming completes successfully
+ */
+export interface MessageCompleteEvent extends BaseStreamingEvent {
+    type: "thread:message:complete";
+    messageId: string;
+    finalContent: string; // Complete message (for verification)
+    tokenCount: number; // Total tokens emitted
+    saved: boolean; // Confirmed persisted to DB
+}
+
+/**
+ * Emitted when message streaming fails
+ */
+export interface MessageErrorEvent extends BaseStreamingEvent {
+    type: "thread:message:error";
+    messageId: string;
+    error: string;
+    partialContent?: string; // Tokens received before error
+}
+
+/**
+ * Emitted when agent is thinking (no tokens yet)
+ */
+export interface ThinkingEvent extends BaseStreamingEvent {
+    type: "thread:thinking";
+}
+
+/**
+ * Emitted when tool execution starts
+ */
+export interface ToolStartedEvent extends BaseStreamingEvent {
+    type: "thread:tool:started";
+    toolName: string;
+    toolCallId: string;
+    arguments: JsonObject;
+}
+
+/**
+ * Emitted when tool execution completes successfully
+ */
+export interface ToolCompletedEvent extends BaseStreamingEvent {
+    type: "thread:tool:completed";
+    toolName: string;
+    toolCallId: string;
+    result: JsonObject;
+}
+
+/**
+ * Emitted when tool execution fails
+ */
+export interface ToolFailedEvent extends BaseStreamingEvent {
+    type: "thread:tool:failed";
+    toolName: string;
+    toolCallId: string;
+    error: string;
+}
+
+/**
+ * Union type of all thread streaming events
+ * Enables TypeScript discriminated unions based on `type` field
+ */
+export type ThreadStreamingEvent =
+    | MessageStartEvent
+    | MessageTokenEvent
+    | MessageCompleteEvent
+    | MessageErrorEvent
+    | ThinkingEvent
+    | ToolStartedEvent
+    | ToolCompletedEvent
+    | ToolFailedEvent;

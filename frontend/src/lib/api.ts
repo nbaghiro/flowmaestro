@@ -23,6 +23,9 @@ import type {
     CopyAgentTemplateResponse
 } from "@flowmaestro/shared";
 
+// Re-export types for use in components
+export type { JsonObject };
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
 // ===== Knowledge Base Types =====
@@ -1363,7 +1366,7 @@ export interface Agent {
     name: string;
     description?: string;
     model: string;
-    provider: "openai" | "anthropic" | "google" | "cohere";
+    provider: "openai" | "anthropic" | "google" | "cohere" | "huggingface";
     connection_id: string | null;
     system_prompt: string;
     temperature: number;
@@ -1380,7 +1383,7 @@ export interface CreateAgentRequest {
     name: string;
     description?: string;
     model: string;
-    provider: "openai" | "anthropic" | "google" | "cohere";
+    provider: "openai" | "anthropic" | "google" | "cohere" | "huggingface";
     connection_id?: string | null;
     system_prompt?: string;
     temperature?: number;
@@ -1394,7 +1397,7 @@ export interface UpdateAgentRequest {
     name?: string;
     description?: string;
     model?: string;
-    provider?: "openai" | "anthropic" | "google" | "cohere";
+    provider?: "openai" | "anthropic" | "google" | "cohere" | "huggingface";
     connection_id?: string | null;
     system_prompt?: string;
     temperature?: number;
@@ -1447,7 +1450,7 @@ export interface AgentExecution {
     user_id: string;
     thread_id: string; // Thread this execution belongs to
     status: "running" | "completed" | "failed";
-    conversation_history: ConversationMessage[];
+    thread_history: ThreadMessage[];
     iterations: number;
     error: string | null;
     started_at: string;
@@ -1456,7 +1459,7 @@ export interface AgentExecution {
     updated_at: string;
 }
 
-export interface ConversationMessage {
+export interface ThreadMessage {
     id: string;
     role: "user" | "assistant" | "system" | "tool";
     content: string;
@@ -1597,11 +1600,14 @@ export async function deleteAgent(
 /**
  * Execute an agent with an initial message
  * Optionally continue an existing thread
+ * Optionally override agent's default connection and model
  */
 export async function executeAgent(
     agentId: string,
     message: string,
-    threadId?: string
+    threadId?: string,
+    connectionId?: string,
+    model?: string
 ): Promise<{
     success: boolean;
     data: { executionId: string; threadId: string; agentId: string; status: string };
@@ -1617,7 +1623,9 @@ export async function executeAgent(
         },
         body: JSON.stringify({
             message,
-            ...(threadId && { thread_id: threadId })
+            ...(threadId && { thread_id: threadId }),
+            ...(connectionId && { connection_id: connectionId }),
+            ...(model && { model })
         })
     });
 
@@ -1667,7 +1675,10 @@ export function streamAgentExecution(
     executionId: string,
     callbacks: {
         onToken?: (token: string) => void;
-        onMessage?: (message: ConversationMessage) => void;
+        onMessage?: (message: ThreadMessage) => void;
+        onToolCallStarted?: (data: { toolName: string; arguments: JsonObject }) => void;
+        onToolCallCompleted?: (data: { toolName: string; result: JsonObject }) => void;
+        onToolCallFailed?: (data: { toolName: string; error: string }) => void;
         onCompleted?: (data: { finalMessage: string; iterations: number }) => void;
         onError?: (error: string) => void;
         onConnected?: () => void;
@@ -1704,11 +1715,65 @@ export function streamAgentExecution(
     eventSource.addEventListener("message", (event) => {
         try {
             const data = JSON.parse(event.data) as {
-                message: ConversationMessage;
+                message: ThreadMessage;
                 executionId: string;
             };
             if (data.executionId === executionId && data.message) {
                 callbacks.onMessage?.(data.message);
+            }
+        } catch {
+            // Silently ignore parsing errors
+        }
+    });
+
+    eventSource.addEventListener("tool_call_started", (event) => {
+        try {
+            const data = JSON.parse(event.data) as {
+                toolName: string;
+                arguments: JsonObject;
+                executionId: string;
+            };
+            if (data.executionId === executionId) {
+                callbacks.onToolCallStarted?.({
+                    toolName: data.toolName,
+                    arguments: data.arguments
+                });
+            }
+        } catch {
+            // Silently ignore parsing errors
+        }
+    });
+
+    eventSource.addEventListener("tool_call_completed", (event) => {
+        try {
+            const data = JSON.parse(event.data) as {
+                toolName: string;
+                result: JsonObject;
+                executionId: string;
+            };
+            if (data.executionId === executionId) {
+                callbacks.onToolCallCompleted?.({
+                    toolName: data.toolName,
+                    result: data.result
+                });
+            }
+        } catch {
+            // Silently ignore parsing errors
+        }
+    });
+
+    eventSource.addEventListener("tool_call_failed", (event) => {
+        try {
+            const data = JSON.parse(event.data) as {
+                toolName: string;
+                error: string;
+                executionId: string;
+            };
+            if (data.executionId === executionId) {
+                callbacks.onToolCallFailed?.({
+                    toolName: data.toolName,
+                    error: data.error
+                });
             }
         } catch {
             // Silently ignore parsing errors
@@ -1940,7 +2005,7 @@ export async function getThread(
  */
 export async function getThreadMessages(
     threadId: string
-): Promise<{ success: boolean; data: { messages: ConversationMessage[] }; error?: string }> {
+): Promise<{ success: boolean; data: { messages: ThreadMessage[] }; error?: string }> {
     const token = getAuthToken();
     const url = `${API_BASE_URL}/api/threads/${threadId}/messages`;
 

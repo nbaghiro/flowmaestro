@@ -15,6 +15,7 @@ interface AddMCPIntegrationDialogProps {
     isOpen: boolean;
     onClose: () => void;
     onAddTools: (tools: AddToolRequest[]) => Promise<void>;
+    existingToolNames?: string[]; // Names of tools already added to agent
 }
 
 type DialogView = "provider-list" | "connection-list" | "add-connection" | "tools";
@@ -22,7 +23,8 @@ type DialogView = "provider-list" | "connection-list" | "add-connection" | "tool
 export function AddMCPIntegrationDialog({
     isOpen,
     onClose,
-    onAddTools
+    onAddTools,
+    existingToolNames = []
 }: AddMCPIntegrationDialogProps) {
     const { connections, loading, fetchConnections } = useConnectionStore();
     const [view, setView] = useState<DialogView>("provider-list");
@@ -124,6 +126,16 @@ export function AddMCPIntegrationDialog({
             const response = await getConnectionMCPTools(connection.id);
             if (response.success && response.data.tools) {
                 setAvailableTools(response.data.tools);
+
+                // Pre-select tools that are already added to the agent
+                const preselectedTools = new Set<string>();
+                response.data.tools.forEach((tool) => {
+                    if (existingToolNames.includes(tool.name)) {
+                        preselectedTools.add(tool.name);
+                    }
+                });
+                setSelectedTools(preselectedTools);
+
                 setView("tools");
             } else {
                 setError("No tools available for this connection");

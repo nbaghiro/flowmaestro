@@ -66,14 +66,16 @@ export function Dialog({
                 className={`relative bg-card border border-border rounded-lg shadow-xl ${maxWidthClasses[maxWidth]} w-full mx-4 animate-in fade-in zoom-in-95 duration-200`}
             >
                 {/* Header */}
-                <div className="flex items-start justify-between p-6 pb-4 border-b border-gray-200">
+                <div className="flex items-start justify-between p-6 pb-4 border-b border-border">
                     <div className="flex-1">
-                        <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
-                        {description && <p className="mt-1 text-sm text-gray-600">{description}</p>}
+                        <h2 className="text-lg font-semibold text-foreground">{title}</h2>
+                        {description && (
+                            <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+                        )}
                     </div>
                     <button
                         onClick={onClose}
-                        className="ml-4 text-gray-400 hover:text-gray-600 transition-colors"
+                        className="ml-4 text-muted-foreground hover:text-foreground transition-colors"
                     >
                         <X className="w-5 h-5" />
                     </button>

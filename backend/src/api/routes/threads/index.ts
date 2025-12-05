@@ -6,6 +6,7 @@ import { deleteThreadHandler } from "./delete";
 import { getThreadHandler } from "./get";
 import { listThreadsHandler } from "./list";
 import { getThreadMessagesHandler } from "./messages";
+import { streamThreadHandler } from "./stream";
 import { updateThreadHandler } from "./update";
 
 export async function threadRoutes(fastify: FastifyInstance) {
@@ -23,4 +24,7 @@ export async function threadRoutes(fastify: FastifyInstance) {
     // Archive operations
     fastify.post("/:id/archive", archiveThreadHandler);
     fastify.post("/:id/unarchive", unarchiveThreadHandler);
+
+    // Streaming (SSE)
+    fastify.get("/:id/stream", streamThreadHandler);
 }

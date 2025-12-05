@@ -25,8 +25,8 @@ export async function getThreadMessagesHandler(
     const executionRepo = new AgentExecutionRepository();
     const messages = await executionRepo.getMessagesByThread(threadId);
 
-    // Convert to ConversationMessage format
-    const conversationMessages = messages.map((msg) => ({
+    // Convert to ThreadMessage format
+    const threadMessages = messages.map((msg) => ({
         id: msg.id,
         role: msg.role,
         content: msg.content,
@@ -37,7 +37,7 @@ export async function getThreadMessagesHandler(
     reply.send({
         success: true,
         data: {
-            messages: conversationMessages
+            messages: threadMessages
         }
     });
 }

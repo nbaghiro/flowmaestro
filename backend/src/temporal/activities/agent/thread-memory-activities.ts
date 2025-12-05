@@ -1,28 +1,28 @@
 /**
- * Conversation Memory Activities - Vector memory with context windows for agent conversations
+ * Thread Memory Activities - Vector memory with context windows for agent conversations
  * Enables semantic search across conversation history with surrounding message context
  */
 
-import { ConversationMemoryService } from "../../../services/conversation/ConversationMemoryService";
-import type { ConversationMessage } from "../../../storage/models/AgentExecution";
+import { ThreadMemoryService } from "../../../services/agents/ThreadMemoryService";
+import type { ThreadMessage } from "../../../storage/models/AgentExecution";
 
-const conversationMemoryService = new ConversationMemoryService();
+const conversationMemoryService = new ThreadMemoryService();
 
 /**
  * Store embeddings for conversation messages
  * Called after agent conversations to enable semantic search
  */
-export interface StoreConversationEmbeddingsInput {
+export interface StoreThreadEmbeddingsInput {
     agentId: string;
     userId: string;
     executionId: string;
-    messages: ConversationMessage[];
+    messages: ThreadMessage[];
     embeddingModel?: string;
     embeddingProvider?: string;
 }
 
-export async function storeConversationEmbeddings(
-    input: StoreConversationEmbeddingsInput
+export async function storeThreadEmbeddings(
+    input: StoreThreadEmbeddingsInput
 ): Promise<{ stored: number; skipped: number }> {
     const {
         agentId,
@@ -34,10 +34,10 @@ export async function storeConversationEmbeddings(
     } = input;
 
     console.log(
-        `[StoreConversationEmbeddings] Storing embeddings for ${messages.length} messages in execution ${executionId}`
+        `[StoreThreadEmbeddings] Storing embeddings for ${messages.length} messages in execution ${executionId}`
     );
 
-    const result = await conversationMemoryService.storeConversationEmbeddings({
+    const result = await conversationMemoryService.storeThreadEmbeddings({
         agentId,
         userId,
         executionId,
@@ -47,7 +47,7 @@ export async function storeConversationEmbeddings(
     });
 
     console.log(
-        `[StoreConversationEmbeddings] Stored ${result.stored} embeddings, skipped ${result.skipped}`
+        `[StoreThreadEmbeddings] Stored ${result.stored} embeddings, skipped ${result.skipped}`
     );
 
     return result;
@@ -57,7 +57,7 @@ export async function storeConversationEmbeddings(
  * Search conversation memory using semantic similarity
  * Returns relevant messages with context windows for better conversation continuity
  */
-export interface SearchConversationMemoryInput {
+export interface SearchThreadMemoryInput {
     agentId: string;
     userId: string;
     query: string;
@@ -71,7 +71,7 @@ export interface SearchConversationMemoryInput {
     embeddingProvider?: string;
 }
 
-export interface SearchConversationMemoryResult {
+export interface SearchThreadMemoryResult {
     query: string;
     results: Array<{
         message_id: string;
@@ -87,9 +87,9 @@ export interface SearchConversationMemoryResult {
     formattedForLLM: string;
 }
 
-export async function searchConversationMemory(
-    input: SearchConversationMemoryInput
-): Promise<SearchConversationMemoryResult> {
+export async function searchThreadMemory(
+    input: SearchThreadMemoryInput
+): Promise<SearchThreadMemoryResult> {
     const {
         agentId,
         userId,
@@ -105,10 +105,10 @@ export async function searchConversationMemory(
     } = input;
 
     console.log(
-        `[SearchConversationMemory] Searching for: "${query.substring(0, 50)}..." (topK: ${topK}, threshold: ${similarityThreshold}, context: ${contextWindow})`
+        `[SearchThreadMemory] Searching for: "${query.substring(0, 50)}..." (topK: ${topK}, threshold: ${similarityThreshold}, context: ${contextWindow})`
     );
 
-    const searchResult = await conversationMemoryService.searchConversationMemory({
+    const searchResult = await conversationMemoryService.searchThreadMemory({
         agentId,
         userId,
         query,
@@ -164,9 +164,7 @@ export interface MemoryStatsResult {
     latestMessages: number;
 }
 
-export async function getConversationMemoryStats(
-    input: GetMemoryStatsInput
-): Promise<MemoryStatsResult> {
+export async function getThreadMemoryStats(input: GetMemoryStatsInput): Promise<MemoryStatsResult> {
     const { agentId, userId } = input;
 
     const stats = await conversationMemoryService.getMemoryStats(agentId, userId);

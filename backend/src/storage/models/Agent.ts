@@ -1,8 +1,8 @@
 import type { JsonObject } from "@flowmaestro/shared";
 import type { SafetyConfig } from "../../core/safety/types";
 
-export type LLMProvider = "openai" | "anthropic" | "google" | "cohere";
-export type ToolType = "workflow" | "function" | "knowledge_base" | "agent";
+export type LLMProvider = "openai" | "anthropic" | "google" | "cohere" | "huggingface";
+export type ToolType = "workflow" | "function" | "knowledge_base" | "agent" | "mcp";
 export type MemoryType = "buffer" | "summary" | "vector";
 
 export interface Tool {
@@ -27,6 +27,10 @@ export interface ToolConfig {
     // For agent type
     agentId?: string;
     agentName?: string;
+
+    // For MCP type
+    connectionId?: string;
+    provider?: string;
 }
 
 export interface MemoryConfig {

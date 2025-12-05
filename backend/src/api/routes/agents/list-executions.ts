@@ -38,7 +38,7 @@ export async function listExecutionsHandler(
         status
     });
 
-    // Format executions for response (exclude full conversation history)
+    // Format executions for response (exclude full thread history)
     const formattedExecutions = executions.map((execution) => ({
         id: execution.id,
         agentId: execution.agent_id,
@@ -46,10 +46,10 @@ export async function listExecutionsHandler(
         iterations: execution.iterations,
         toolCallsCount: execution.tool_calls_count,
         firstMessagePreview:
-            execution.conversation_history.length > 0
-                ? execution.conversation_history[0].content.substring(0, 100)
+            execution.thread_history.length > 0
+                ? execution.thread_history[0].content.substring(0, 100)
                 : null,
-        messageCount: execution.conversation_history.length,
+        messageCount: execution.thread_history.length,
         error: execution.error,
         startedAt: execution.started_at,
         completedAt: execution.completed_at

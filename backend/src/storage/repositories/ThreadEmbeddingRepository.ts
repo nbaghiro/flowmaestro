@@ -1,11 +1,11 @@
 /**
- * ConversationEmbeddingRepository - Manages vector embeddings for agent conversations
+ * ThreadEmbeddingRepository - Manages vector embeddings for agent conversations
  * Implements semantic search with context window retrieval for better conversation continuity
  */
 
 import { db } from "../database";
 
-export interface ConversationEmbedding {
+export interface ThreadEmbedding {
     id: string;
     agent_id: string;
     user_id: string;
@@ -20,7 +20,7 @@ export interface ConversationEmbedding {
     created_at: Date;
 }
 
-export interface CreateConversationEmbeddingInput {
+export interface CreateThreadEmbeddingInput {
     agent_id: string;
     user_id: string;
     execution_id: string;
@@ -59,16 +59,16 @@ export interface SimilarMessageResult {
     created_at: Date;
 
     // Context window
-    context_before?: ConversationEmbedding[];
-    context_after?: ConversationEmbedding[];
+    context_before?: ThreadEmbedding[];
+    context_after?: ThreadEmbedding[];
 }
 
-export class ConversationEmbeddingRepository {
+export class ThreadEmbeddingRepository {
     /**
      * Store a conversation message embedding
      */
-    async create(input: CreateConversationEmbeddingInput): Promise<ConversationEmbedding> {
-        const result = await db.query<ConversationEmbedding>(
+    async create(input: CreateThreadEmbeddingInput): Promise<ThreadEmbedding> {
+        const result = await db.query<ThreadEmbedding>(
             `INSERT INTO flowmaestro.agent_conversation_embeddings (
                 agent_id,
                 user_id,
@@ -102,9 +102,7 @@ export class ConversationEmbeddingRepository {
     /**
      * Batch create embeddings for multiple messages
      */
-    async createBatch(
-        inputs: CreateConversationEmbeddingInput[]
-    ): Promise<ConversationEmbedding[]> {
+    async createBatch(inputs: CreateThreadEmbeddingInput[]): Promise<ThreadEmbedding[]> {
         if (inputs.length === 0) {
             return [];
         }
@@ -128,7 +126,7 @@ export class ConversationEmbeddingRepository {
             input.embedding_provider
         ]);
 
-        const result = await db.query<ConversationEmbedding>(
+        const result = await db.query<ThreadEmbedding>(
             `INSERT INTO flowmaestro.agent_conversation_embeddings (
                 agent_id,
                 user_id,
@@ -265,7 +263,7 @@ export class ConversationEmbeddingRepository {
                 ORDER BY message_index ASC
             `;
 
-            const contextResult = await db.query<ConversationEmbedding>(contextQuery, [
+            const contextResult = await db.query<ThreadEmbedding>(contextQuery, [
                 row.execution_id,
                 row.message_index - context_window,
                 row.message_index + context_window
@@ -301,8 +299,8 @@ export class ConversationEmbeddingRepository {
     /**
      * Get embeddings for a specific execution
      */
-    async findByExecution(executionId: string): Promise<ConversationEmbedding[]> {
-        const result = await db.query<ConversationEmbedding>(
+    async findByExecution(executionId: string): Promise<ThreadEmbedding[]> {
+        const result = await db.query<ThreadEmbedding>(
             `SELECT * FROM flowmaestro.agent_conversation_embeddings
              WHERE execution_id = $1
              ORDER BY message_index ASC`,
@@ -346,8 +344,8 @@ export class ConversationEmbeddingRepository {
         agentId: string,
         userId: string,
         limit: number = 10
-    ): Promise<ConversationEmbedding[]> {
-        const result = await db.query<ConversationEmbedding>(
+    ): Promise<ThreadEmbedding[]> {
+        const result = await db.query<ThreadEmbedding>(
             `SELECT * FROM flowmaestro.agent_conversation_embeddings
              WHERE agent_id = $1 AND user_id = $2
              ORDER BY created_at DESC

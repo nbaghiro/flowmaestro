@@ -1,4 +1,5 @@
 export * from "./types";
+export * from "./types/streaming-events";
 export * from "./errors";
 export * from "./example-prompts";
 export * from "./connections";
