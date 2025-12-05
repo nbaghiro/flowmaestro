@@ -1,3 +1,7 @@
+// Set timezone to UTC before any other imports or operations
+// This prevents timezone mismatches between Node.js and PostgreSQL
+process.env.TZ = "UTC";
+
 import path from "path";
 import { Worker, NativeConnection } from "@temporalio/worker";
 import { initializeSpanService } from "../../core/tracing";
