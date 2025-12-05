@@ -17,8 +17,6 @@ export async function verifyEmailRoute(fastify: FastifyInstance) {
             const body = request.body as VerifyEmailRequest;
             const { token } = body;
 
-            console.log("Received token:", token, token.length);
-
             // Hash the token to find it in database
             const tokenHash = TokenUtils.hash(token);
 

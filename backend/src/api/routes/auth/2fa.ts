@@ -24,11 +24,6 @@ export async function twoFactorRoutes(fastify: FastifyInstance) {
             preHandler: [authMiddleware]
         },
         async (request, reply) => {
-            console.log("[2FA] HIT /2fa/send-code handler");
-
-            console.log("[2FA][DEBUG] REQUEST USER:", request.user);
-            console.log("[2FA][DEBUG] HEADERS:", request.headers);
-
             const userId = request.user.id;
             const { phone } = request.body as { phone: string };
 
@@ -54,8 +49,6 @@ export async function twoFactorRoutes(fastify: FastifyInstance) {
                 code_hash: codeHash,
                 expires_at: new Date(Date.now() + 5 * 60 * 1000)
             });
-
-            console.log("[2FA] send-code: saved SMS token for user:", userId);
 
             await sendSms(phone, `Your FlowMaestro verification code: ${code}`);
 
