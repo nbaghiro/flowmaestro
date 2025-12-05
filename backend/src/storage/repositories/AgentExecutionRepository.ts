@@ -16,7 +16,7 @@ interface AgentExecutionRow {
     user_id: string;
     thread_id: string;
     status: string;
-    conversation_history: string | JsonValue[];
+    thread_history: string | JsonValue[];
     iterations: number;
     tool_calls_count: number;
     metadata: string | Record<string, JsonValue>;
@@ -43,7 +43,7 @@ export class AgentExecutionRepository {
     async create(input: CreateAgentExecutionInput): Promise<AgentExecutionModel> {
         const query = `
             INSERT INTO flowmaestro.agent_executions (
-                agent_id, user_id, thread_id, status, conversation_history,
+                agent_id, user_id, thread_id, status, thread_history,
                 iterations, tool_calls_count, metadata
             )
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -55,7 +55,7 @@ export class AgentExecutionRepository {
             input.user_id,
             input.thread_id,
             input.status || "running",
-            JSON.stringify(input.conversation_history || []),
+            JSON.stringify(input.thread_history || []),
             input.iterations || 0,
             input.tool_calls_count || 0,
             JSON.stringify(input.metadata || {})
@@ -181,9 +181,9 @@ export class AgentExecutionRepository {
             values.push(input.status);
         }
 
-        if (input.conversation_history !== undefined) {
-            updates.push(`conversation_history = $${paramIndex++}`);
-            values.push(JSON.stringify(input.conversation_history));
+        if (input.thread_history !== undefined) {
+            updates.push(`thread_history = $${paramIndex++}`);
+            values.push(JSON.stringify(input.thread_history));
         }
 
         if (input.iterations !== undefined) {
@@ -261,7 +261,7 @@ export class AgentExecutionRepository {
         const query = `
             SELECT * FROM flowmaestro.agent_messages
             WHERE execution_id = $1
-            ORDER BY created_at ASC
+            ORDER BY created_at ASC, id ASC
             LIMIT $2 OFFSET $3
         `;
 
@@ -279,7 +279,7 @@ export class AgentExecutionRepository {
         const query = `
             SELECT * FROM flowmaestro.agent_messages
             WHERE thread_id = $1
-            ORDER BY created_at ASC
+            ORDER BY created_at ASC, id ASC
             LIMIT $2 OFFSET $3
         `;
 
@@ -309,6 +309,7 @@ export class AgentExecutionRepository {
             id: string;
             role: string;
             content: string;
+            timestamp?: string | Date;
             tool_calls?: unknown[];
             tool_name?: string;
             tool_call_id?: string;
@@ -325,7 +326,7 @@ export class AgentExecutionRepository {
 
         for (const msg of messages) {
             valueStrings.push(
-                `($${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++})`
+                `($${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++})`
             );
             values.push(
                 threadId,
@@ -334,13 +335,14 @@ export class AgentExecutionRepository {
                 msg.content,
                 msg.tool_calls ? JSON.stringify(msg.tool_calls) : null,
                 msg.tool_name || null,
-                msg.tool_call_id || null
+                msg.tool_call_id || null,
+                msg.timestamp || new Date()
             );
         }
 
         const query = `
             INSERT INTO flowmaestro.agent_messages (
-                thread_id, execution_id, role, content, tool_calls, tool_name, tool_call_id
+                thread_id, execution_id, role, content, tool_calls, tool_name, tool_call_id, created_at
             )
             VALUES ${valueStrings.join(", ")}
             ON CONFLICT DO NOTHING
@@ -353,10 +355,10 @@ export class AgentExecutionRepository {
         return {
             ...row,
             status: row.status as AgentExecutionStatus,
-            conversation_history:
-                typeof row.conversation_history === "string"
-                    ? JSON.parse(row.conversation_history)
-                    : row.conversation_history,
+            thread_history:
+                typeof row.thread_history === "string"
+                    ? JSON.parse(row.thread_history)
+                    : row.thread_history,
             metadata: typeof row.metadata === "string" ? JSON.parse(row.metadata) : row.metadata,
             started_at: new Date(row.started_at),
             completed_at: row.completed_at ? new Date(row.completed_at) : null

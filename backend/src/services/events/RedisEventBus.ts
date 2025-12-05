@@ -1,5 +1,5 @@
 import Redis from "ioredis";
-import { WebSocketEvent } from "@flowmaestro/shared";
+import { WebSocketEvent, ThreadStreamingEvent } from "@flowmaestro/shared";
 import { config } from "../../core/config";
 
 /**
@@ -195,6 +195,51 @@ export class RedisEventBus {
      */
     get connected(): boolean {
         return this.isConnected;
+    }
+
+    /**
+     * Get thread-specific Redis channel name
+     */
+    private getThreadStreamChannel(threadId: string): string {
+        return `thread:${threadId}:stream`;
+    }
+
+    /**
+     * Publish event to thread-specific channel
+     * Used for new thread-scoped streaming events
+     */
+    async publishThreadEvent(threadId: string, event: ThreadStreamingEvent): Promise<void> {
+        const channel = this.getThreadStreamChannel(threadId);
+        await this.publish(channel, event as unknown as WebSocketEvent);
+    }
+
+    /**
+     * Subscribe to thread-specific channel
+     * Used for SSE endpoints to receive streaming events for a specific thread
+     */
+    async subscribeToThread(
+        threadId: string,
+        handler: (event: ThreadStreamingEvent) => void
+    ): Promise<void> {
+        const channel = this.getThreadStreamChannel(threadId);
+        // Wrap handler to cast event type
+        const wrappedHandler = (event: WebSocketEvent) => {
+            handler(event as unknown as ThreadStreamingEvent);
+        };
+        await this.subscribe(channel, wrappedHandler);
+    }
+
+    /**
+     * Unsubscribe from thread-specific channel
+     */
+    async unsubscribeFromThread(
+        threadId: string,
+        _handler: (event: ThreadStreamingEvent) => void
+    ): Promise<void> {
+        const channel = this.getThreadStreamChannel(threadId);
+        // Note: We can't unwrap the handler here, so we unsubscribe from the channel entirely
+        // This is fine since each SSE connection has its own handler
+        await this.unsubscribe(channel);
     }
 }
 

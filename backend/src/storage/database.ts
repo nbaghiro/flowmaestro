@@ -30,7 +30,10 @@ class Database {
             password: config.password,
             max: config.max || 20,
             idleTimeoutMillis: config.idleTimeoutMillis || 30000,
-            connectionTimeoutMillis: config.connectionTimeoutMillis || 2000
+            connectionTimeoutMillis: config.connectionTimeoutMillis || 2000,
+            // Set timezone to UTC to ensure consistent timestamp handling
+            // This prevents timezone mismatches between Node.js and PostgreSQL
+            options: "-c timezone=UTC"
         });
 
         this.pool.on("error", (err) => {

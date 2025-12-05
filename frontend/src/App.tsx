@@ -82,7 +82,34 @@ function App() {
                 />
 
                 <Route
-                    path="/agents/:agentId/test"
+                    path="/agents/:agentId/build"
+                    element={
+                        <ProtectedRoute>
+                            <AgentBuilder />
+                        </ProtectedRoute>
+                    }
+                />
+
+                <Route
+                    path="/agents/:agentId/threads"
+                    element={
+                        <ProtectedRoute>
+                            <AgentBuilder />
+                        </ProtectedRoute>
+                    }
+                />
+
+                <Route
+                    path="/agents/:agentId/threads/:threadId"
+                    element={
+                        <ProtectedRoute>
+                            <AgentBuilder />
+                        </ProtectedRoute>
+                    }
+                />
+
+                <Route
+                    path="/agents/:agentId/settings"
                     element={
                         <ProtectedRoute>
                             <AgentBuilder />

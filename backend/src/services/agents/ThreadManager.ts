@@ -1,15 +1,11 @@
 /**
- * ConversationManager - Message Abstraction for Agent Conversations
+ * ThreadManager - Message Abstraction for Agent Threads
  * Implements Mastra-inspired MessageList pattern with multi-format support
  */
 
 import { v4 as uuidv4 } from "uuid";
 import type { JsonObject, JsonValue } from "@flowmaestro/shared";
-import type {
-    ConversationMessage,
-    MessageRole,
-    ToolCall
-} from "../../storage/models/AgentExecution";
+import type { ThreadMessage, MessageRole, ToolCall } from "../../storage/models/AgentExecution";
 
 /**
  * Message source types for tracking persistence state
@@ -23,7 +19,7 @@ export enum MessageSource {
 /**
  * Internal message with source tracking
  */
-interface TrackedMessage extends ConversationMessage {
+interface TrackedMessage extends ThreadMessage {
     source: MessageSource;
 }
 
@@ -66,16 +62,16 @@ export interface AnthropicMessage {
 /**
  * Serialized conversation state for workflow persistence
  */
-export interface SerializedConversation {
-    messages: ConversationMessage[];
+export interface SerializedThread {
+    messages: ThreadMessage[];
     savedMessageIds: string[];
     metadata: JsonObject;
 }
 
 /**
- * ConversationManager - Manages conversation state with source tracking
+ * ThreadManager - Manages conversation state with source tracking
  */
-export class ConversationManager {
+export class ThreadManager {
     private messages: TrackedMessage[] = [];
     private savedMessageIds = new Set<string>();
     private metadata: JsonObject = {};
@@ -87,7 +83,7 @@ export class ConversationManager {
     /**
      * Add messages loaded from memory/database (already persisted)
      */
-    addFromMemory(messages: ConversationMessage[]): void {
+    addFromMemory(messages: ThreadMessage[]): void {
         const trackedMessages: TrackedMessage[] = messages.map((msg) => ({
             ...msg,
             source: msg.role === "system" ? MessageSource.SYSTEM : MessageSource.MEMORY
@@ -102,8 +98,8 @@ export class ConversationManager {
     /**
      * Add system message (usually at conversation start)
      */
-    addSystemMessage(content: string, id?: string): ConversationMessage {
-        const message: ConversationMessage = {
+    addSystemMessage(content: string, id?: string): ThreadMessage {
+        const message: ThreadMessage = {
             id: id || `sys-${Date.now()}-${uuidv4()}`,
             role: "system",
             content,
@@ -121,8 +117,8 @@ export class ConversationManager {
     /**
      * Add user message (new in this session)
      */
-    addUserMessage(content: string, id?: string): ConversationMessage {
-        const message: ConversationMessage = {
+    addUserMessage(content: string, id?: string): ThreadMessage {
+        const message: ThreadMessage = {
             id: id || `user-${Date.now()}-${uuidv4()}`,
             role: "user",
             content,
@@ -140,8 +136,8 @@ export class ConversationManager {
     /**
      * Add assistant message with optional tool calls
      */
-    addAssistantMessage(content: string, toolCalls?: ToolCall[], id?: string): ConversationMessage {
-        const message: ConversationMessage = {
+    addAssistantMessage(content: string, toolCalls?: ToolCall[], id?: string): ThreadMessage {
+        const message: ThreadMessage = {
             id: id || `asst-${Date.now()}-${uuidv4()}`,
             role: "assistant",
             content,
@@ -165,8 +161,8 @@ export class ConversationManager {
         toolName: string,
         toolCallId: string,
         id?: string
-    ): ConversationMessage {
-        const message: ConversationMessage = {
+    ): ThreadMessage {
+        const message: ThreadMessage = {
             id: id || `tool-${Date.now()}-${uuidv4()}`,
             role: "tool",
             content,
@@ -186,7 +182,7 @@ export class ConversationManager {
     /**
      * Get all messages (without source tracking)
      */
-    getAll(): ConversationMessage[] {
+    getAll(): ThreadMessage[] {
         return this.messages.map((msg) => {
             const { source: _source, ...message } = msg;
             return message;
@@ -196,7 +192,7 @@ export class ConversationManager {
     /**
      * Get only unsaved messages (for incremental persistence)
      */
-    getUnsaved(): ConversationMessage[] {
+    getUnsaved(): ThreadMessage[] {
         return this.messages
             .filter((msg) => !this.savedMessageIds.has(msg.id))
             .map((msg) => {
@@ -336,14 +332,14 @@ export class ConversationManager {
     /**
      * Convert to database format (for storage)
      */
-    toDatabase(): ConversationMessage[] {
+    toDatabase(): ThreadMessage[] {
         return this.getAll();
     }
 
     /**
      * Serialize for workflow persistence (e.g., continue-as-new)
      */
-    serialize(): SerializedConversation {
+    serialize(): SerializedThread {
         return {
             messages: this.getAll(),
             savedMessageIds: Array.from(this.savedMessageIds),
@@ -354,8 +350,8 @@ export class ConversationManager {
     /**
      * Deserialize from workflow persistence
      */
-    static deserialize(serialized: SerializedConversation): ConversationManager {
-        const manager = new ConversationManager(serialized.metadata);
+    static deserialize(serialized: SerializedThread): ThreadManager {
+        const manager = new ThreadManager(serialized.metadata);
 
         // Add all messages as memory (they're from previous workflow run)
         manager.addFromMemory(serialized.messages);
@@ -380,7 +376,7 @@ export class ConversationManager {
     /**
      * Keep only last N messages (for memory management)
      */
-    keepLast(count: number): ConversationMessage[] {
+    keepLast(count: number): ThreadMessage[] {
         if (this.messages.length <= count) {
             return [];
         }
@@ -400,7 +396,7 @@ export class ConversationManager {
      */
     async summarize(
         maxMessages: number,
-        summarizer?: (messages: ConversationMessage[]) => Promise<string>
+        summarizer?: (messages: ThreadMessage[]) => Promise<string>
     ): Promise<void> {
         if (this.messages.length <= maxMessages) {
             return; // No need to summarize
@@ -469,7 +465,7 @@ export class ConversationManager {
     /**
      * Clone the conversation manager
      */
-    clone(): ConversationManager {
-        return ConversationManager.deserialize(this.serialize());
+    clone(): ThreadManager {
+        return ThreadManager.deserialize(this.serialize());
     }
 }

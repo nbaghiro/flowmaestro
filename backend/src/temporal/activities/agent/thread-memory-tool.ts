@@ -1,33 +1,33 @@
 /**
- * Conversation Memory Tool - Auto-injected tool for agents to search conversation history
- * Enables agents to recall relevant past conversations using semantic search
+ * Thread Memory Tool - Auto-injected tool for agents to search thread history
+ * Enables agents to recall relevant past threads using semantic search
  */
 
 import type { Tool } from "../../../storage/models/Agent";
 
 /**
- * Create the searchConversationMemory tool definition
+ * Create the searchThreadMemory tool definition
  * This tool is automatically injected into agent configurations
  */
-export function createConversationMemoryTool(): Tool {
+export function createThreadMemoryTool(): Tool {
     return {
-        id: "built-in-search-conversation-memory",
-        name: "search_conversation_memory",
+        id: "built-in-search-thread-memory",
+        name: "search_thread_memory",
         type: "function",
-        description: `Search your conversation history to find relevant past interactions.
+        description: `Search your thread history to find relevant past interactions.
 
 Use this when you need to:
-- Recall previous conversations with the user
+- Recall previous threads with the user
 - Find information discussed in earlier messages
 - Check what you've told the user before
 - Remember context from past interactions
 
-The search uses semantic similarity to find the most relevant conversations, and includes surrounding messages for full context.
+The search uses semantic similarity to find the most relevant threads, and includes surrounding messages for full context.
 
 Returns:
-- Relevant conversation excerpts with context
+- Relevant thread excerpts with context
 - Similarity scores (how relevant each result is)
-- Conversation context (messages before and after the match)`,
+- Thread context (messages before and after the match)`,
         schema: {
             type: "object",
             properties: {
@@ -53,14 +53,14 @@ Returns:
                 contextWindow: {
                     type: "number",
                     description:
-                        "Number of messages before/after each match to include (default: 2). Provides conversation context around the matched message.",
+                        "Number of messages before/after each match to include (default: 2). Provides thread context around the matched message.",
                     minimum: 0,
                     maximum: 10
                 },
                 searchPastExecutions: {
                     type: "boolean",
                     description:
-                        "Search across all past conversations (default: false). If true, searches beyond current conversation. If false, only searches current conversation."
+                        "Search across all past threads (default: false). If true, searches beyond current thread. If false, only searches current thread."
                 },
                 messageRoles: {
                     type: "array",
@@ -75,24 +75,24 @@ Returns:
             required: ["query"]
         },
         config: {
-            functionName: "search_conversation_memory"
+            functionName: "search_thread_memory"
         }
     };
 }
 
 /**
- * Merge the conversation memory tool into agent's available tools
+ * Merge the thread memory tool into agent's available tools
  */
-export function injectConversationMemoryTool(existingTools: Tool[]): Tool[] {
-    const conversationMemoryTool = createConversationMemoryTool();
+export function injectThreadMemoryTool(existingTools: Tool[]): Tool[] {
+    const threadMemoryTool = createThreadMemoryTool();
 
     // Check if tool already exists
-    const toolExists = existingTools.some((tool) => tool.name === conversationMemoryTool.name);
+    const toolExists = existingTools.some((tool) => tool.name === threadMemoryTool.name);
 
     if (toolExists) {
         return existingTools;
     }
 
     // Add to the beginning for easy discovery
-    return [conversationMemoryTool, ...existingTools];
+    return [threadMemoryTool, ...existingTools];
 }

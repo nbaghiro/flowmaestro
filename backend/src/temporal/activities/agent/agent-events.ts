@@ -1,6 +1,6 @@
 import type { JsonObject, WebSocketEvent } from "@flowmaestro/shared";
 import { redisEventBus } from "../../../services/events/RedisEventBus";
-import type { ConversationMessage } from "../../../storage/models/AgentExecution";
+import type { ThreadMessage } from "../../../storage/models/AgentExecution";
 
 /**
  * Activities for emitting agent events to WebSocket clients
@@ -16,7 +16,7 @@ export interface EmitAgentExecutionStartedInput {
 export interface EmitAgentMessageInput {
     executionId: string;
     threadId: string;
-    message: ConversationMessage;
+    message: ThreadMessage;
 }
 
 export interface EmitAgentThinkingInput {
@@ -84,11 +84,18 @@ export async function emitAgentExecutionStarted(
  */
 export async function emitAgentMessage(input: EmitAgentMessageInput): Promise<void> {
     const { executionId, threadId, message } = input;
+
+    // Handle timestamp which might be Date, string, or number after Temporal serialization
+    const timestamp =
+        message.timestamp instanceof Date
+            ? message.timestamp.toISOString()
+            : new Date(message.timestamp).toISOString();
+
     const serializedMessage: JsonObject = {
         id: message.id,
         role: message.role,
         content: message.content,
-        timestamp: message.timestamp.toISOString(),
+        timestamp,
         ...(message.tool_calls && {
             tool_calls: message.tool_calls.map((tc) => ({
                 id: tc.id,

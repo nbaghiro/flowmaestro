@@ -1,27 +1,27 @@
 /**
- * ConversationMemoryService - High-level service for agent conversation vector memory
- * Integrates EmbeddingService with ConversationEmbeddingRepository for semantic search
+ * ThreadMemoryService - High-level service for agent conversation vector memory
+ * Integrates EmbeddingService with ThreadEmbeddingRepository for semantic search
  */
 
 import {
-    ConversationEmbeddingRepository,
-    type CreateConversationEmbeddingInput,
+    ThreadEmbeddingRepository,
+    type CreateThreadEmbeddingInput,
     type SearchSimilarMessagesInput,
     type SimilarMessageResult
-} from "../../storage/repositories/ConversationEmbeddingRepository";
+} from "../../storage/repositories/ThreadEmbeddingRepository";
 import { EmbeddingService } from "../embeddings/EmbeddingService";
-import type { ConversationMessage } from "../../storage/models/AgentExecution";
+import type { ThreadMessage } from "../../storage/models/AgentExecution";
 
-export interface StoreConversationEmbeddingsInput {
+export interface StoreThreadEmbeddingsInput {
     agentId: string;
     userId: string;
     executionId: string;
-    messages: ConversationMessage[];
+    messages: ThreadMessage[];
     embeddingModel?: string;
     embeddingProvider?: string;
 }
 
-export interface SearchConversationMemoryInput {
+export interface SearchThreadMemoryInput {
     agentId: string;
     userId: string;
     query: string;
@@ -35,28 +35,28 @@ export interface SearchConversationMemoryInput {
     embeddingProvider?: string;
 }
 
-export interface SearchConversationMemoryResult {
+export interface SearchThreadMemoryResult {
     query: string;
     results: SimilarMessageResult[];
     totalResults: number;
     contextWindowSize: number;
 }
 
-export class ConversationMemoryService {
+export class ThreadMemoryService {
     private embeddingService: EmbeddingService;
-    private repository: ConversationEmbeddingRepository;
+    private repository: ThreadEmbeddingRepository;
 
-    constructor(embeddingService?: EmbeddingService, repository?: ConversationEmbeddingRepository) {
+    constructor(embeddingService?: EmbeddingService, repository?: ThreadEmbeddingRepository) {
         this.embeddingService = embeddingService || new EmbeddingService();
-        this.repository = repository || new ConversationEmbeddingRepository();
+        this.repository = repository || new ThreadEmbeddingRepository();
     }
 
     /**
      * Store embeddings for conversation messages
      * Generates embeddings and stores them in the database
      */
-    async storeConversationEmbeddings(
-        input: StoreConversationEmbeddingsInput
+    async storeThreadEmbeddings(
+        input: StoreThreadEmbeddingsInput
     ): Promise<{ stored: number; skipped: number }> {
         const {
             agentId,
@@ -107,7 +107,7 @@ export class ConversationMemoryService {
         );
 
         // Create embedding records
-        const embeddingInputs: CreateConversationEmbeddingInput[] = embeddableMessages.map(
+        const embeddingInputs: CreateThreadEmbeddingInput[] = embeddableMessages.map(
             (msg, index) => {
                 const messageIndex = messages.indexOf(msg); // Original index in conversation
                 return {
@@ -129,7 +129,7 @@ export class ConversationMemoryService {
         const stored = await this.repository.createBatch(embeddingInputs);
 
         console.log(
-            `[ConversationMemoryService] Stored ${stored.length} embeddings for execution ${executionId}`
+            `[ThreadMemoryService] Stored ${stored.length} embeddings for execution ${executionId}`
         );
 
         return {
@@ -142,9 +142,7 @@ export class ConversationMemoryService {
      * Search conversation memory using semantic similarity
      * Returns relevant messages with context windows
      */
-    async searchConversationMemory(
-        input: SearchConversationMemoryInput
-    ): Promise<SearchConversationMemoryResult> {
+    async searchThreadMemory(input: SearchThreadMemoryInput): Promise<SearchThreadMemoryResult> {
         const {
             agentId,
             userId,
@@ -191,7 +189,7 @@ export class ConversationMemoryService {
         const results = await this.repository.searchSimilar(searchInput);
 
         console.log(
-            `[ConversationMemoryService] Found ${results.length} similar messages for query: "${query.substring(0, 50)}..."`
+            `[ThreadMemoryService] Found ${results.length} similar messages for query: "${query.substring(0, 50)}..."`
         );
 
         return {
@@ -206,7 +204,7 @@ export class ConversationMemoryService {
      * Format search results for LLM context
      * Creates a readable string with messages and their context
      */
-    formatSearchResultsForLLM(searchResult: SearchConversationMemoryResult): string {
+    formatSearchResultsForLLM(searchResult: SearchThreadMemoryResult): string {
         if (searchResult.results.length === 0) {
             return "No relevant previous conversations found.";
         }
@@ -216,7 +214,7 @@ export class ConversationMemoryService {
 
             // Add header
             parts.push(
-                `\n--- Relevant Conversation ${index + 1} (Similarity: ${result.similarity.toFixed(3)}) ---`
+                `\n--- Relevant Thread ${index + 1} (Similarity: ${result.similarity.toFixed(3)}) ---`
             );
 
             // Add context before (if available)
@@ -242,7 +240,7 @@ export class ConversationMemoryService {
             return parts.join("\n");
         });
 
-        return `# Relevant Previous Conversations\n\nQuery: "${searchResult.query}"\nFound ${searchResult.totalResults} relevant conversation(s):\n${formattedResults.join("\n\n")}`;
+        return `# Relevant Previous Threads\n\nQuery: "${searchResult.query}"\nFound ${searchResult.totalResults} relevant conversation(s):\n${formattedResults.join("\n\n")}`;
     }
 
     /**
@@ -270,7 +268,7 @@ export class ConversationMemoryService {
     async clearExecutionMemory(executionId: string): Promise<number> {
         const deleted = await this.repository.deleteByExecution(executionId);
         console.log(
-            `[ConversationMemoryService] Cleared ${deleted} embeddings for execution ${executionId}`
+            `[ThreadMemoryService] Cleared ${deleted} embeddings for execution ${executionId}`
         );
         return deleted;
     }

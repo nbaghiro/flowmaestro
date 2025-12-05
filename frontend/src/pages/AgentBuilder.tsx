@@ -1,10 +1,20 @@
-import { ArrowLeft, Save, Loader2, Settings, MessageSquare, Slack, Wrench } from "lucide-react";
-import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { getModelsForProvider, getDefaultModelForProvider } from "@flowmaestro/shared";
+import {
+    ArrowLeft,
+    Save,
+    Loader2,
+    Settings,
+    MessageSquare,
+    Slack,
+    Wrench,
+    Pencil
+} from "lucide-react";
+import { useEffect, useState, useRef } from "react";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { getDefaultModelForProvider } from "@flowmaestro/shared";
 import { AddCustomMCPDialog } from "../components/agents/AddCustomMCPDialog";
 import { AddMCPIntegrationDialog } from "../components/agents/AddMCPIntegrationDialog";
 import { AddWorkflowDialog } from "../components/agents/AddWorkflowDialog";
+import { AgentBuilderConnectionSelector } from "../components/agents/AgentBuilderConnectionSelector";
 import { AgentChat } from "../components/agents/AgentChat";
 import { ThreadChat } from "../components/agents/ThreadChat";
 import { ThreadList } from "../components/agents/ThreadList";
@@ -18,13 +28,26 @@ import { useAgentStore } from "../stores/agentStore";
 import { useConnectionStore } from "../stores/connectionStore";
 import type { CreateAgentRequest, UpdateAgentRequest, AddToolRequest, Tool } from "../lib/api";
 
-type AgentTab = "build" | "conversations" | "slack" | "settings";
+type AgentTab = "build" | "threads" | "slack" | "settings";
 
 export function AgentBuilder() {
-    const { agentId } = useParams<{ agentId: string }>();
+    const { agentId, threadId } = useParams<{ agentId: string; threadId?: string }>();
     const navigate = useNavigate();
+    const location = useLocation();
     const isNewAgent = agentId === "new";
-    const [activeTab, setActiveTab] = useState<AgentTab>("build");
+
+    // Initialize tab from URL path
+    const getTabFromPath = (): AgentTab => {
+        const path = location.pathname;
+        if (path.includes("/threads")) return "threads";
+        if (path.includes("/settings")) return "settings";
+        if (path.includes("/slack")) return "slack";
+        if (path.includes("/build")) return "build";
+        return "build"; // Default for /agents/:agentId
+    };
+
+    const [activeTab, setActiveTab] = useState<AgentTab>(getTabFromPath());
+    const prevTabRef = useRef<AgentTab>(getTabFromPath());
 
     const {
         currentAgent,
@@ -48,9 +71,9 @@ export function AgentBuilder() {
     // Form state
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
-    const [provider, setProvider] = useState<"openai" | "anthropic" | "google" | "cohere">(
-        "openai"
-    );
+    const [provider, setProvider] = useState<
+        "openai" | "anthropic" | "google" | "cohere" | "huggingface"
+    >("openai");
     const [model, setModel] = useState("");
     const [connectionId, setConnectionId] = useState<string>("");
     const [systemPrompt, setSystemPrompt] = useState("You are a helpful AI assistant.");
@@ -58,6 +81,14 @@ export function AgentBuilder() {
     const [maxTokens, setMaxTokens] = useState(4096);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    // Inline editing state
+    const [isEditingName, setIsEditingName] = useState(false);
+    const [editedName, setEditedName] = useState("");
+    const nameInputRef = useRef<HTMLInputElement>(null);
+
+    // Flag to prevent navigation during thread creation
+    const isCreatingThreadRef = useRef(false);
 
     // Tools state
     const [tools, setTools] = useState<Tool[]>([]);
@@ -100,12 +131,92 @@ export function AgentBuilder() {
         }
     }, [currentAgent]);
 
-    // Load threads when agent loads or when switching to conversations tab
+    // Load threads when agent loads and auto-select most recent for build tab
     useEffect(() => {
-        if (currentAgent && activeTab === "conversations") {
-            fetchThreads(currentAgent.id);
+        if (currentAgent && !isNewAgent) {
+            fetchThreads(currentAgent.id).then(() => {
+                // Auto-select most recent thread if none is currently selected
+                const store = useAgentStore.getState();
+                if (!store.currentThread && store.threads.length > 0) {
+                    // Threads are ordered by created_at DESC, so first is most recent
+                    setCurrentThread(store.threads[0]);
+                }
+            });
         }
-    }, [currentAgent, activeTab, fetchThreads]);
+    }, [currentAgent, isNewAgent, fetchThreads, setCurrentThread]);
+
+    // Auto-select most recent thread when switching to build tab
+    useEffect(() => {
+        const prevTab = prevTabRef.current;
+        prevTabRef.current = activeTab;
+
+        // When switching TO build tab from another tab, always select most recent thread
+        if (activeTab === "build" && prevTab !== "build") {
+            // Get latest threads from store to avoid having threads as dependency
+            const store = useAgentStore.getState();
+            if (store.threads.length > 0) {
+                // Threads are ordered by created_at DESC, so first is most recent
+                setCurrentThread(store.threads[0]);
+            }
+        }
+    }, [activeTab, setCurrentThread]);
+
+    // Update URL when tab changes
+    useEffect(() => {
+        const currentTabFromPath = getTabFromPath();
+        if (currentTabFromPath !== activeTab) {
+            // Navigate to the appropriate path for the tab
+            const basePath = `/agents/${agentId}`;
+            const tabPaths: Record<AgentTab, string> = {
+                build: `${basePath}/build`,
+                threads: `${basePath}/threads`,
+                slack: `${basePath}/slack`,
+                settings: `${basePath}/settings`
+            };
+            navigate(tabPaths[activeTab], { replace: true });
+        }
+    }, [activeTab, agentId, navigate, location.pathname]);
+
+    // Load thread from URL params when threadId is present
+    // Note: currentThread intentionally excluded from deps to prevent circular updates
+    useEffect(() => {
+        if (threadId && threads.length > 0) {
+            const thread = threads.find((t) => t.id === threadId);
+            if (thread && thread.id !== currentThread?.id) {
+                setCurrentThread(thread);
+            }
+        }
+    }, [threadId, threads, setCurrentThread]);
+
+    // Update URL when current thread changes (on threads tab)
+    // Use a ref to track the last navigation to prevent duplicate calls
+    const lastNavigatedThreadIdRef = useRef<string | null>(null);
+
+    useEffect(() => {
+        // Skip navigation during thread creation to prevent rapid navigation calls
+        if (isCreatingThreadRef.current) {
+            return;
+        }
+
+        if (activeTab === "threads") {
+            const targetThreadId = currentThread?.id || null;
+
+            // Only navigate if the URL actually needs to change
+            if (
+                targetThreadId !== threadId &&
+                targetThreadId !== lastNavigatedThreadIdRef.current
+            ) {
+                lastNavigatedThreadIdRef.current = targetThreadId;
+
+                if (targetThreadId) {
+                    navigate(`/agents/${agentId}/threads/${targetThreadId}`, { replace: true });
+                } else {
+                    // Thread was deselected, navigate back to threads list
+                    navigate(`/agents/${agentId}/threads`, { replace: true });
+                }
+            }
+        }
+    }, [currentThread, activeTab, agentId, threadId, navigate]);
 
     // Set default model when provider changes
     useEffect(() => {
@@ -118,9 +229,29 @@ export function AgentBuilder() {
     // Filter connections by LLM providers
     const llmConnections = connections.filter(
         (conn) =>
-            ["openai", "anthropic", "google", "cohere"].includes(conn.provider.toLowerCase()) &&
+            ["openai", "anthropic", "google", "cohere", "huggingface"].includes(
+                conn.provider.toLowerCase()
+            ) &&
             (conn.connection_method === "api_key" || conn.connection_method === "oauth2")
     );
+
+    // Auto-select OpenAI connection when no connection is configured
+    // This applies to both new agents and existing agents without a connection
+    useEffect(() => {
+        if (llmConnections.length > 0 && !connectionId) {
+            // Prefer OpenAI connection if available
+            const openAIConn = llmConnections.find(
+                (conn) => conn.provider.toLowerCase() === "openai"
+            );
+            const defaultConn = openAIConn || llmConnections[0];
+            setConnectionId(defaultConn.id);
+            setProvider(
+                defaultConn.provider as "openai" | "anthropic" | "google" | "cohere" | "huggingface"
+            );
+            const defaultModel = getDefaultModelForProvider(defaultConn.provider);
+            setModel(defaultModel);
+        }
+    }, [llmConnections.length, connectionId]);
 
     const handleSave = async () => {
         if (!name.trim()) {
@@ -161,6 +292,64 @@ export function AgentBuilder() {
         }
     };
 
+    // Inline name editing handlers
+    const handleStartEditingName = () => {
+        if (isNewAgent) return;
+        setEditedName(name);
+        setIsEditingName(true);
+    };
+
+    const handleSaveNameEdit = async () => {
+        const trimmedName = editedName.trim();
+        if (!trimmedName) {
+            setEditedName(name);
+            setIsEditingName(false);
+            return;
+        }
+
+        if (trimmedName === name) {
+            setIsEditingName(false);
+            return;
+        }
+
+        setName(trimmedName);
+        setIsEditingName(false);
+
+        // Auto-save the name change
+        if (!isNewAgent && agentId) {
+            try {
+                await updateAgent(agentId, { name: trimmedName });
+            } catch (err) {
+                setError(err instanceof Error ? err.message : "Failed to update agent name");
+                // Revert the name on error
+                setName(name);
+            }
+        }
+    };
+
+    const handleCancelNameEdit = () => {
+        setEditedName(name);
+        setIsEditingName(false);
+    };
+
+    const handleNameKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            handleSaveNameEdit();
+        } else if (e.key === "Escape") {
+            e.preventDefault();
+            handleCancelNameEdit();
+        }
+    };
+
+    // Focus input when editing starts
+    useEffect(() => {
+        if (isEditingName && nameInputRef.current) {
+            nameInputRef.current.focus();
+            nameInputRef.current.select();
+        }
+    }, [isEditingName]);
+
     // Tool management handlers
     const handleRemoveTool = async (toolId: string) => {
         if (!currentAgent) return;
@@ -168,9 +357,10 @@ export function AgentBuilder() {
         setRemovingToolId(toolId);
         try {
             await removeTool(currentAgent.id, toolId);
-            // Update local state from the updated agent (handled by store)
-            if (currentAgent) {
-                setTools(currentAgent.available_tools || []);
+            // Update local state from the store's updated agent
+            const updatedAgent = useAgentStore.getState().currentAgent;
+            if (updatedAgent) {
+                setTools(updatedAgent.available_tools || []);
             }
         } catch (error) {
             console.error("Failed to remove tool:", error);
@@ -199,9 +389,10 @@ export function AgentBuilder() {
                 });
             }
 
-            // Update local state from the updated agent
-            if (currentAgent) {
-                setTools(currentAgent.available_tools || []);
+            // Update local state from the store's updated agent
+            const updatedAgent = useAgentStore.getState().currentAgent;
+            if (updatedAgent) {
+                setTools(updatedAgent.available_tools || []);
             }
         } catch (error) {
             console.error("Failed to add workflows:", error);
@@ -228,9 +419,10 @@ export function AgentBuilder() {
                 }
             });
 
-            // Update local state from the updated agent
-            if (currentAgent) {
-                setTools(currentAgent.available_tools || []);
+            // Update local state from the store's updated agent
+            const updatedAgent = useAgentStore.getState().currentAgent;
+            if (updatedAgent) {
+                setTools(updatedAgent.available_tools || []);
             }
         } catch (error) {
             console.error("Failed to add custom MCP:", error);
@@ -241,26 +433,90 @@ export function AgentBuilder() {
     const handleAddMCPTools = async (toolsToAdd: AddToolRequest[]) => {
         if (!currentAgent) return;
 
-        try {
-            // Add each MCP tool
-            for (const tool of toolsToAdd) {
-                await addTool(currentAgent.id, tool);
-            }
+        const results = {
+            added: [] as string[],
+            skipped: [] as string[],
+            failed: [] as string[]
+        };
 
-            // Update local state from the updated agent
-            if (currentAgent) {
-                setTools(currentAgent.available_tools || []);
+        // Try to add each MCP tool individually
+        for (const tool of toolsToAdd) {
+            try {
+                await addTool(currentAgent.id, tool);
+                results.added.push(tool.name);
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                // If tool already exists, skip it silently
+                if (errorMessage.includes("already exists")) {
+                    results.skipped.push(tool.name);
+                    console.log(`Skipped tool "${tool.name}" (already exists)`);
+                } else {
+                    // Other errors are actual failures
+                    results.failed.push(tool.name);
+                    console.error(`Failed to add tool "${tool.name}":`, error);
+                }
             }
-        } catch (error) {
-            console.error("Failed to add MCP tools:", error);
-            setError(error instanceof Error ? error.message : "Failed to add MCP tools");
-            throw error; // Re-throw so the dialog can handle it
+        }
+
+        // Update local state from the store's updated agent
+        const updatedAgent = useAgentStore.getState().currentAgent;
+        if (updatedAgent) {
+            setTools(updatedAgent.available_tools || []);
+        }
+
+        // Show appropriate message based on results
+        if (results.added.length > 0) {
+            console.log(`Successfully added ${results.added.length} tool(s)`);
+            if (results.skipped.length > 0) {
+                console.log(`Skipped ${results.skipped.length} tool(s) (already exist)`);
+            }
+        } else if (results.skipped.length > 0) {
+            // All tools were skipped
+            console.log("All selected tools already exist");
+        }
+
+        // Only throw error if some tools actually failed (not just duplicates)
+        if (results.failed.length > 0) {
+            const errorMsg = `Failed to add ${results.failed.length} tool(s): ${results.failed.join(", ")}`;
+            setError(errorMsg);
+            throw new Error(errorMsg);
         }
     };
 
     // Thread management handlers
-    const handleNewThread = () => {
-        createNewThread();
+    const handleSelectThread = (thread: typeof currentThread) => {
+        setCurrentThread(thread);
+        // Note: URL update is handled by the useEffect that watches currentThread
+        // to avoid duplicate navigation calls
+    };
+
+    const handleNewThread = async () => {
+        if (!currentAgent) return;
+
+        try {
+            // Set flag to prevent navigation during thread creation
+            isCreatingThreadRef.current = true;
+
+            // Save the current thread so we can restore it after creation
+            const previousThread = currentThread;
+
+            await createNewThread(currentAgent.id);
+
+            // Restore the previous thread so user stays on current thread
+            // The new thread will appear in the list and user can manually switch to it
+            if (previousThread) {
+                setCurrentThread(previousThread);
+            }
+
+            // Clear flag after a brief delay to ensure all state updates complete
+            setTimeout(() => {
+                isCreatingThreadRef.current = false;
+            }, 100);
+        } catch (error) {
+            console.error("Failed to create new thread:", error);
+            setError(error instanceof Error ? error.message : "Failed to create new thread");
+            isCreatingThreadRef.current = false;
+        }
     };
 
     const handleArchiveThread = async (threadId: string) => {
@@ -286,7 +542,7 @@ export function AgentBuilder() {
 
     const tabs = [
         { id: "build" as AgentTab, label: "Build", icon: Wrench },
-        { id: "conversations" as AgentTab, label: "Conversations", icon: MessageSquare },
+        { id: "threads" as AgentTab, label: "Threads", icon: MessageSquare },
         { id: "slack" as AgentTab, label: "Connect to Slack", icon: Slack, comingSoon: true },
         { id: "settings" as AgentTab, label: "Settings", icon: Settings }
     ];
@@ -302,10 +558,39 @@ export function AgentBuilder() {
                     >
                         <ArrowLeft className="w-5 h-5" />
                     </button>
-                    <div>
-                        <h1 className="text-lg font-semibold text-foreground">
-                            {isNewAgent ? "New Agent" : currentAgent?.name || "Loading..."}
-                        </h1>
+                    <div className="flex items-center gap-2">
+                        {isEditingName ? (
+                            <input
+                                ref={nameInputRef}
+                                type="text"
+                                value={editedName}
+                                onChange={(e) => setEditedName(e.target.value)}
+                                onBlur={handleSaveNameEdit}
+                                onKeyDown={handleNameKeyDown}
+                                className={cn(
+                                    "text-lg font-semibold text-foreground",
+                                    "bg-background border border-primary rounded px-2 py-1",
+                                    "focus:outline-none focus:ring-2 focus:ring-primary"
+                                )}
+                            />
+                        ) : (
+                            <button
+                                onClick={handleStartEditingName}
+                                disabled={isNewAgent}
+                                className={cn(
+                                    "flex items-center gap-2 group",
+                                    !isNewAgent &&
+                                        "hover:bg-muted rounded px-2 py-1 transition-colors"
+                                )}
+                            >
+                                <h1 className="text-lg font-semibold text-foreground">
+                                    {isNewAgent ? "New Agent" : currentAgent?.name || "Loading..."}
+                                </h1>
+                                {!isNewAgent && (
+                                    <Pencil className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                                )}
+                            </button>
+                        )}
                     </div>
                 </div>
                 <button
@@ -381,43 +666,23 @@ export function AgentBuilder() {
                             <div className="w-[500px] border-r border-border bg-card overflow-auto flex-shrink-0">
                                 <div className="p-6 space-y-6">
                                     {/* AI Model Selection */}
-                                    <div>
-                                        <label className="block text-sm font-medium text-foreground mb-2">
-                                            AI Model Selection
-                                        </label>
-                                        <Select
-                                            value={`${provider}:${model}`}
-                                            onChange={(value) => {
-                                                const [newProvider, newModel] = value.split(":");
-                                                setProvider(
-                                                    newProvider as
-                                                        | "openai"
-                                                        | "anthropic"
-                                                        | "google"
-                                                        | "cohere"
-                                                );
-                                                setModel(newModel);
-                                            }}
-                                            options={[
-                                                ...getModelsForProvider("openai").map((m) => ({
-                                                    value: `openai:${m.value}`,
-                                                    label: `OpenAI - ${m.label}`
-                                                })),
-                                                ...getModelsForProvider("anthropic").map((m) => ({
-                                                    value: `anthropic:${m.value}`,
-                                                    label: `Anthropic - ${m.label}`
-                                                })),
-                                                ...getModelsForProvider("google").map((m) => ({
-                                                    value: `google:${m.value}`,
-                                                    label: `Google - ${m.label}`
-                                                })),
-                                                ...getModelsForProvider("cohere").map((m) => ({
-                                                    value: `cohere:${m.value}`,
-                                                    label: `Cohere - ${m.label}`
-                                                }))
-                                            ]}
-                                        />
-                                    </div>
+                                    <AgentBuilderConnectionSelector
+                                        connections={llmConnections}
+                                        selectedConnectionId={connectionId}
+                                        selectedModel={model}
+                                        onConnectionChange={(connId, connProvider, connModel) => {
+                                            setConnectionId(connId);
+                                            setProvider(
+                                                connProvider as
+                                                    | "openai"
+                                                    | "anthropic"
+                                                    | "google"
+                                                    | "cohere"
+                                                    | "huggingface"
+                                            );
+                                            setModel(connModel);
+                                        }}
+                                    />
 
                                     {/* Instructions */}
                                     <div>
@@ -512,14 +777,14 @@ export function AgentBuilder() {
                         </>
                     )}
 
-                    {activeTab === "conversations" && (
+                    {activeTab === "threads" && (
                         <>
                             {/* Left panel: Thread List */}
                             <div className="w-80 flex-shrink-0 h-full">
                                 <ThreadList
                                     threads={threads}
                                     currentThread={currentThread}
-                                    onThreadSelect={setCurrentThread}
+                                    onThreadSelect={handleSelectThread}
                                     onNewThread={handleNewThread}
                                     onUpdateTitle={updateThreadTitle}
                                     onArchiveThread={handleArchiveThread}
@@ -543,8 +808,8 @@ export function AgentBuilder() {
                                             <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-50" />
                                             <p>
                                                 {threads.length === 0
-                                                    ? "Start a new conversation"
-                                                    : "Select a conversation to continue"}
+                                                    ? "Start a new thread"
+                                                    : "Select a thread to continue"}
                                             </p>
                                         </div>
                                     </div>
@@ -699,6 +964,7 @@ export function AgentBuilder() {
                 isOpen={isMCPDialogOpen}
                 onClose={() => setIsMCPDialogOpen(false)}
                 onAddTools={handleAddMCPTools}
+                existingToolNames={tools.map((t) => t.name)}
             />
 
             <AddCustomMCPDialog
@@ -712,8 +978,8 @@ export function AgentBuilder() {
                 isOpen={threadToDelete !== null}
                 onClose={() => setThreadToDelete(null)}
                 onConfirm={handleDeleteThread}
-                title="Delete Conversation"
-                message={`Are you sure you want to delete "${threadToDelete?.title}"? This will permanently delete the conversation and all its messages.`}
+                title="Delete Thread"
+                message={`Are you sure you want to delete "${threadToDelete?.title}"? This will permanently delete the thread and all its messages.`}
                 confirmText="Delete"
                 cancelText="Cancel"
                 variant="danger"

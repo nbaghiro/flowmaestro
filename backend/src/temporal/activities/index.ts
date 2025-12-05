@@ -57,27 +57,27 @@ export {
 } from "./agent";
 export { createSpan, endSpan, endSpanWithError, setSpanAttributes } from "./span-activities";
 export {
-    loadConversationHistory,
-    saveConversationIncremental,
+    loadThreadHistory,
+    saveThreadIncremental,
     convertToOpenAI,
     convertToAnthropic,
-    type LoadConversationHistoryInput,
-    type SaveConversationIncrementalInput,
+    type LoadThreadHistoryInput,
+    type SaveThreadIncrementalInput,
     type ConvertToOpenAIInput,
     type ConvertToAnthropicInput
-} from "./agent/conversation-activities";
+} from "./agent/thread-activities";
 export {
-    storeConversationEmbeddings,
-    searchConversationMemory,
-    getConversationMemoryStats,
+    storeThreadEmbeddings,
+    searchThreadMemory,
+    getThreadMemoryStats,
     clearExecutionMemory,
-    type StoreConversationEmbeddingsInput,
-    type SearchConversationMemoryInput,
-    type SearchConversationMemoryResult,
+    type StoreThreadEmbeddingsInput,
+    type SearchThreadMemoryInput,
+    type SearchThreadMemoryResult,
     type GetMemoryStatsInput,
     type MemoryStatsResult,
     type ClearExecutionMemoryInput
-} from "./agent/conversation-memory-activities";
+} from "./agent/thread-memory-activities";
 export {
     validateInputsActivity,
     validateOutputsActivity,

@@ -120,7 +120,7 @@ export function ThreadList({
                     )}
                 >
                     <Plus className="w-4 h-4" />
-                    New Conversation
+                    New Thread
                 </button>
             </div>
 
@@ -133,8 +133,8 @@ export function ThreadList({
                 ) : threads.length === 0 ? (
                     <div className="p-4 text-center text-muted-foreground">
                         <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                        <p className="text-sm">No conversations yet</p>
-                        <p className="text-xs mt-1">Start a new conversation to begin</p>
+                        <p className="text-sm">No threads yet</p>
+                        <p className="text-xs mt-1">Start a new thread to begin</p>
                     </div>
                 ) : (
                     <div className="p-2 space-y-1">

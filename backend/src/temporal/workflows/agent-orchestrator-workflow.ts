@@ -1,6 +1,5 @@
 /**
- * Agent Orchestrator Workflow - With ConversationManager
- * Refactored to use ConversationManager for better message handling
+ * Agent Orchestrator Workflow
  */
 
 import {
@@ -12,9 +11,9 @@ import {
 } from "@temporalio/workflow";
 import type { JsonObject } from "@flowmaestro/shared";
 import { SpanType } from "../../core/tracing/span-types";
-import type { SerializedConversation } from "../../services/conversation/ConversationManager";
+import type { SerializedThread } from "../../services/agents/ThreadManager";
 import type { Tool } from "../../storage/models/Agent";
-import type { ConversationMessage, ToolCall } from "../../storage/models/AgentExecution";
+import type { ThreadMessage, ToolCall } from "../../storage/models/AgentExecution";
 import type * as activities from "../activities";
 
 // Proxy activities
@@ -22,7 +21,7 @@ const {
     getAgentConfig,
     callLLM,
     executeToolCall,
-    saveConversationIncremental,
+    saveThreadIncremental,
     validateInput,
     validateOutput,
     createSpan,
@@ -61,14 +60,14 @@ export interface AgentOrchestratorInput {
     userId: string;
     threadId: string; // Thread this execution belongs to
     initialMessage?: string;
-    // For continue-as-new with ConversationManager
-    serializedConversation?: SerializedConversation;
+    // For continue-as-new with ThreadManager
+    serializedThread?: SerializedThread;
     iterations?: number;
 }
 
 export interface AgentOrchestratorResult {
     success: boolean;
-    serializedConversation: SerializedConversation;
+    serializedThread: SerializedThread;
     iterations: number;
     finalMessage?: string;
     error?: string;
@@ -114,19 +113,32 @@ export interface LLMResponse {
 }
 
 /**
- * Message state for workflow (deterministic, plain objects only)
+ * Token buffer for deterministic token accumulation in workflow
  */
-interface WorkflowMessageState {
-    messages: ConversationMessage[];
-    savedMessageIds: string[];
-    metadata: JsonObject;
+interface TokenBuffer {
+    messageId: string;
+    tokens: Array<{ sequence: number; token: string }>;
+    sequenceCounter: number;
+    startTime: number;
 }
 
 /**
- * Agent Orchestrator Workflow V2 with ConversationManager
+ * Message state for workflow (deterministic, plain objects only)
+ */
+interface WorkflowMessageState {
+    messages: ThreadMessage[];
+    savedMessageIds: string[];
+    metadata: JsonObject;
+
+    // NEW: Token buffering for streaming
+    currentTokenBuffer: TokenBuffer | null;
+    lastEmittedSequence: number;
+}
+
+/**
+ * Agent Orchestrator Workflow
  *
- * Improvements over V1:
- * - Uses ConversationManager pattern for message handling
+ * - Uses ThreadManager pattern for message handling
  * - Incremental persistence (only save new messages)
  * - Source tracking (memory vs new messages)
  * - Better serialization for continue-as-new
@@ -141,7 +153,7 @@ export async function agentOrchestratorWorkflow(
         userId,
         threadId,
         initialMessage,
-        serializedConversation,
+        serializedThread,
         iterations = 0
     } = input;
 
@@ -179,23 +191,27 @@ export async function agentOrchestratorWorkflow(
     // Initialize message state (deterministic - just plain objects)
     let messageState: WorkflowMessageState;
 
-    if (serializedConversation) {
+    if (serializedThread) {
         // Restoring from continue-as-new
         messageState = {
-            messages: serializedConversation.messages,
-            savedMessageIds: serializedConversation.savedMessageIds,
-            metadata: serializedConversation.metadata
+            messages: serializedThread.messages,
+            savedMessageIds: serializedThread.savedMessageIds,
+            metadata: serializedThread.metadata,
+            currentTokenBuffer: null,
+            lastEmittedSequence: 0
         };
     } else {
         // First run - initialize
         messageState = {
             messages: [],
             savedMessageIds: [],
-            metadata: {}
+            metadata: {},
+            currentTokenBuffer: null,
+            lastEmittedSequence: 0
         };
 
         // Add system prompt
-        const systemMessage: ConversationMessage = {
+        const systemMessage: ThreadMessage = {
             id: `sys-${Date.now()}`,
             role: "system",
             content: agent.system_prompt,
@@ -237,7 +253,7 @@ export async function agentOrchestratorWorkflow(
             }
 
             // Use potentially redacted content
-            const userMessage: ConversationMessage = {
+            const userMessage: ThreadMessage = {
                 id: `user-${Date.now()}`,
                 role: "user",
                 content: safetyResult.content,
@@ -294,7 +310,7 @@ export async function agentOrchestratorWorkflow(
             // Save incremental messages before continue-as-new
             const unsavedMessages = getUnsavedMessages(messageState);
             if (unsavedMessages.length > 0) {
-                await saveConversationIncremental({
+                await saveThreadIncremental({
                     executionId,
                     threadId,
                     messages: unsavedMessages
@@ -314,7 +330,7 @@ export async function agentOrchestratorWorkflow(
                 agentId,
                 userId,
                 threadId,
-                serializedConversation: summarizedState,
+                serializedThread: summarizedState,
                 iterations: currentIterations
             });
         }
@@ -343,7 +359,7 @@ export async function agentOrchestratorWorkflow(
         });
         const modelGenSpanId = modelGenContext.spanId;
 
-        // Call LLM with conversation history and available tools
+        // Call LLM with thread messages and available tools
         let llmResponse: LLMResponse;
         try {
             llmResponse = await callLLM({
@@ -354,7 +370,8 @@ export async function agentOrchestratorWorkflow(
                 tools: agent.available_tools,
                 temperature: agent.temperature,
                 maxTokens: agent.max_tokens,
-                executionId: input.executionId
+                executionId: input.executionId,
+                threadId
             });
 
             // End MODEL_GENERATION span with success and token usage
@@ -414,7 +431,7 @@ export async function agentOrchestratorWorkflow(
 
             return {
                 success: false,
-                serializedConversation: messageState,
+                serializedThread: messageState,
                 iterations: currentIterations,
                 error: errorMessage
             };
@@ -463,7 +480,7 @@ export async function agentOrchestratorWorkflow(
         }
 
         // Add assistant response to history (with potentially redacted content)
-        const assistantMessage: ConversationMessage = {
+        const assistantMessage: ThreadMessage = {
             id: `asst-${Date.now()}-${currentIterations}`,
             role: "assistant",
             content: outputSafetyResult.content,
@@ -472,12 +489,10 @@ export async function agentOrchestratorWorkflow(
         };
         messageState.messages.push(assistantMessage);
 
-        // Emit message event
-        await emitAgentMessage({
-            executionId,
-            threadId,
-            message: assistantMessage
-        });
+        // DON'T emit message event for streamed assistant responses
+        // The frontend builds the final message from accumulated streaming tokens
+        // Only user messages, tool results, and system messages need emitAgentMessage()
+        // This prevents race conditions where the full message arrives before all tokens
 
         // Check if agent is done (no tool calls and has final answer)
         const hasToolCalls = llmResponse.tool_calls && llmResponse.tool_calls.length > 0;
@@ -521,7 +536,7 @@ export async function agentOrchestratorWorkflow(
 
                     return {
                         success: false,
-                        serializedConversation: messageState,
+                        serializedThread: messageState,
                         iterations: currentIterations,
                         error: timeoutError
                     };
@@ -577,14 +592,14 @@ export async function agentOrchestratorWorkflow(
 
                     return {
                         success: false,
-                        serializedConversation: messageState,
+                        serializedThread: messageState,
                         iterations: currentIterations,
                         error: `User message blocked by safety check: ${blockReasons}`
                     };
                 }
 
                 // Add user message to history (with potentially redacted content)
-                const userMessage: ConversationMessage = {
+                const userMessage: ThreadMessage = {
                     id: `user-${Date.now()}-${currentIterations}`,
                     role: "user",
                     content: pendingSafetyResult.content,
@@ -620,7 +635,7 @@ export async function agentOrchestratorWorkflow(
             // Agent is done - save any unsaved messages (including the final assistant message)
             const unsavedMessages = getUnsavedMessages(messageState);
             if (unsavedMessages.length > 0) {
-                await saveConversationIncremental({
+                await saveThreadIncremental({
                     executionId,
                     threadId,
                     messages: unsavedMessages,
@@ -630,7 +645,7 @@ export async function agentOrchestratorWorkflow(
                 unsavedMessages.forEach((msg) => messageState.savedMessageIds.push(msg.id));
             } else {
                 // Even if no new messages, mark execution as completed
-                await saveConversationIncremental({
+                await saveThreadIncremental({
                     executionId,
                     threadId,
                     messages: [],
@@ -677,7 +692,7 @@ export async function agentOrchestratorWorkflow(
 
             return {
                 success: true,
-                serializedConversation: messageState,
+                serializedThread: messageState,
                 iterations: currentIterations,
                 finalMessage: llmResponse.content
             };
@@ -721,8 +736,8 @@ export async function agentOrchestratorWorkflow(
                     agentId
                 });
 
-                // Add tool result to conversation
-                const toolMessage: ConversationMessage = {
+                // Add tool result to thread messages
+                const toolMessage: ThreadMessage = {
                     id: `tool-${Date.now()}-${toolCall.id}`,
                     role: "tool",
                     content: JSON.stringify(toolResult),
@@ -752,8 +767,8 @@ export async function agentOrchestratorWorkflow(
                 const errorMessage = error instanceof Error ? error.message : "Unknown tool error";
                 console.error(`[Agent] Tool ${toolCall.name} failed: ${errorMessage}`);
 
-                // Add error result to conversation
-                const toolMessage: ConversationMessage = {
+                // Add error result to thread messages
+                const toolMessage: ThreadMessage = {
                     id: `tool-${Date.now()}-${toolCall.id}`,
                     role: "tool",
                     content: JSON.stringify({ error: errorMessage }),
@@ -785,7 +800,7 @@ export async function agentOrchestratorWorkflow(
         if (currentIterations > 0 && currentIterations % 10 === 0) {
             const unsavedMessages = getUnsavedMessages(messageState);
             if (unsavedMessages.length > 0) {
-                await saveConversationIncremental({
+                await saveThreadIncremental({
                     executionId,
                     threadId,
                     messages: unsavedMessages
@@ -816,7 +831,7 @@ export async function agentOrchestratorWorkflow(
     // Save any unsaved messages
     const unsavedMessages = getUnsavedMessages(messageState);
     if (unsavedMessages.length > 0) {
-        await saveConversationIncremental({
+        await saveThreadIncremental({
             executionId,
             threadId,
             messages: unsavedMessages
@@ -843,7 +858,7 @@ export async function agentOrchestratorWorkflow(
 
     return {
         success: false,
-        serializedConversation: messageState,
+        serializedThread: messageState,
         iterations: currentIterations,
         error: maxIterError
     };
@@ -852,7 +867,7 @@ export async function agentOrchestratorWorkflow(
 /**
  * Get unsaved messages from message state
  */
-function getUnsavedMessages(state: WorkflowMessageState): ConversationMessage[] {
+function getUnsavedMessages(state: WorkflowMessageState): ThreadMessage[] {
     const savedIds = new Set(state.savedMessageIds);
     return state.messages.filter((msg) => !savedIds.has(msg.id));
 }
@@ -861,10 +876,7 @@ function getUnsavedMessages(state: WorkflowMessageState): ConversationMessage[] 
  * Summarize message state to keep only recent messages
  * This prevents history from growing too large for continue-as-new
  */
-function summarizeMessageState(
-    state: WorkflowMessageState,
-    maxMessages: number
-): SerializedConversation {
+function summarizeMessageState(state: WorkflowMessageState, maxMessages: number): SerializedThread {
     if (state.messages.length <= maxMessages) {
         return {
             messages: state.messages,

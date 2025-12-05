@@ -4,21 +4,24 @@ import {
     coerceToolArguments,
     createValidationErrorResponse
 } from "../../../core/validation/tool-validation";
+import { ExecutionRouter } from "../../../integrations/core/ExecutionRouter";
+import { providerRegistry } from "../../../integrations/registry";
 import { AgentExecutionRepository } from "../../../storage/repositories/AgentExecutionRepository";
 import { AgentRepository } from "../../../storage/repositories/AgentRepository";
 import { ConnectionRepository } from "../../../storage/repositories/ConnectionRepository";
 import { WorkflowRepository } from "../../../storage/repositories/WorkflowRepository";
-import { emitAgentToken } from "./agent-events";
-import { searchConversationMemory as searchConversationMemoryActivity } from "./conversation-memory-activities";
-import { injectConversationMemoryTool } from "./conversation-memory-tool";
+import { emitAgentToken } from "./agent-events"; // OLD: Will be removed after migration
+import { searchThreadMemory as searchThreadMemoryActivity } from "./thread-memory-activities";
+import { injectThreadMemoryTool } from "./thread-memory-tool";
 import type { Tool } from "../../../storage/models/Agent";
-import type { ConversationMessage, ToolCall } from "../../../storage/models/AgentExecution";
+import type { ThreadMessage, ToolCall } from "../../../storage/models/AgentExecution";
 import type { AgentConfig, LLMResponse } from "../../workflows/agent-orchestrator-workflow";
 
 const agentRepo = new AgentRepository();
 const executionRepo = new AgentExecutionRepository();
 const workflowRepo = new WorkflowRepository();
 const connectionRepo = new ConnectionRepository();
+const executionRouter = new ExecutionRouter(providerRegistry);
 
 /**
  * Get agent configuration for workflow execution
@@ -37,7 +40,7 @@ export async function getAgentConfig(input: GetAgentConfigInput): Promise<AgentC
     }
 
     // Inject conversation memory tool for semantic search
-    const toolsWithMemory = injectConversationMemoryTool(agent.available_tools);
+    const toolsWithMemory = injectThreadMemoryTool(agent.available_tools);
 
     return {
         id: agent.id,
@@ -56,22 +59,32 @@ export async function getAgentConfig(input: GetAgentConfigInput): Promise<AgentC
 }
 
 /**
- * Call LLM with conversation history and tools
+ * Call LLM with thread messages and tools
  */
 export interface CallLLMInput {
     model: string;
     provider: string;
     connectionId: string | null;
-    messages: ConversationMessage[];
+    messages: ThreadMessage[];
     tools: Tool[];
     temperature: number;
     maxTokens: number;
     executionId?: string; // For streaming token emission
+    threadId: string; // NEW: Required for thread-scoped streaming events
 }
 
 export async function callLLM(input: CallLLMInput): Promise<LLMResponse> {
-    const { model, provider, connectionId, messages, tools, temperature, maxTokens, executionId } =
-        input;
+    const {
+        model,
+        provider,
+        connectionId,
+        messages,
+        tools,
+        temperature,
+        maxTokens,
+        executionId,
+        threadId
+    } = input;
 
     // Mock mode for testing without using LLM tokens
     const mockMode = process.env.AGENT_MOCK_MODE === "true" || process.env.AGENT_MOCK_MODE === "1";
@@ -154,7 +167,8 @@ export async function callLLM(input: CallLLMInput): Promise<LLMResponse> {
                 tools,
                 temperature,
                 maxTokens,
-                executionId: input.executionId
+                executionId: input.executionId,
+                threadId
             });
         case "anthropic":
             return await callAnthropic({
@@ -164,7 +178,8 @@ export async function callLLM(input: CallLLMInput): Promise<LLMResponse> {
                 tools,
                 temperature,
                 maxTokens,
-                executionId: input.executionId
+                executionId: input.executionId,
+                threadId
             });
         default:
             throw new Error(`Provider ${provider} not yet implemented`);
@@ -177,11 +192,60 @@ export async function callLLM(input: CallLLMInput): Promise<LLMResponse> {
 interface OpenAICallInput {
     model: string;
     apiKey: string;
-    messages: ConversationMessage[];
+    messages: ThreadMessage[];
     tools: Tool[];
     temperature: number;
     maxTokens: number;
     executionId?: string;
+    threadId: string; // NEW: Required for thread-scoped streaming events
+}
+
+/**
+ * Sanitize JSON schema to ensure it's valid for OpenAI's function calling
+ * Fixes common issues like missing 'items' for arrays
+ */
+function sanitizeJsonSchema(schema: JsonObject): JsonObject {
+    const sanitized = { ...schema };
+
+    // Recursively fix array types missing 'items'
+    function fixSchema(obj: Record<string, unknown>): void {
+        for (const key in obj) {
+            const value = obj[key];
+
+            if (value && typeof value === "object" && !Array.isArray(value)) {
+                const objValue = value as Record<string, unknown>;
+
+                // If this is an array type without items, add default items
+                if (objValue.type === "array" && !objValue.items) {
+                    objValue.items = { type: "object" };
+                }
+
+                // Recursively process nested objects
+                fixSchema(objValue);
+
+                // Process properties object if it exists
+                if (objValue.properties && typeof objValue.properties === "object") {
+                    fixSchema(objValue.properties as Record<string, unknown>);
+                }
+
+                // Process items if it exists
+                if (objValue.items && typeof objValue.items === "object") {
+                    fixSchema(objValue.items as Record<string, unknown>);
+                }
+
+                // Process additionalProperties if it exists
+                if (
+                    objValue.additionalProperties &&
+                    typeof objValue.additionalProperties === "object"
+                ) {
+                    fixSchema(objValue.additionalProperties as Record<string, unknown>);
+                }
+            }
+        }
+    }
+
+    fixSchema(sanitized);
+    return sanitized;
 }
 
 async function callOpenAI(input: OpenAICallInput): Promise<LLMResponse> {
@@ -191,18 +255,30 @@ async function callOpenAI(input: OpenAICallInput): Promise<LLMResponse> {
     const formattedMessages = messages.map((msg) => ({
         role: msg.role === "assistant" ? "assistant" : msg.role === "tool" ? "tool" : "user",
         content: msg.content,
-        ...(msg.tool_calls && { tool_calls: msg.tool_calls }),
+        ...(msg.tool_calls && {
+            tool_calls: msg.tool_calls.map((tc) => ({
+                id: tc.id,
+                type: "function",
+                function: {
+                    name: tc.name,
+                    arguments:
+                        typeof tc.arguments === "string"
+                            ? tc.arguments
+                            : JSON.stringify(tc.arguments)
+                }
+            }))
+        }),
         ...(msg.tool_call_id && { tool_call_id: msg.tool_call_id }),
         ...(msg.tool_name && { name: msg.tool_name })
     }));
 
-    // Format tools for OpenAI function calling
+    // Format tools for OpenAI function calling with schema sanitization
     const formattedTools = tools.map((tool) => ({
         type: "function",
         function: {
             name: tool.name,
             description: tool.description,
-            parameters: tool.schema
+            parameters: sanitizeJsonSchema(tool.schema)
         }
     }));
 
@@ -363,22 +439,23 @@ async function callOpenAI(input: OpenAICallInput): Promise<LLMResponse> {
 interface AnthropicCallInput {
     model: string;
     apiKey: string;
-    messages: ConversationMessage[];
+    messages: ThreadMessage[];
     tools: Tool[];
     temperature: number;
     maxTokens: number;
     executionId?: string;
+    threadId: string; // NEW: Required for thread-scoped streaming events
 }
 
 async function callAnthropic(input: AnthropicCallInput): Promise<LLMResponse> {
-    const { model, apiKey, messages, tools, temperature, maxTokens } = input;
+    const { model, apiKey, messages, tools, temperature, maxTokens, executionId } = input;
 
     // Extract system prompt (first message)
     const systemPrompt = messages.find((m) => m.role === "system")?.content || "";
-    const conversationMessages = messages.filter((m) => m.role !== "system");
+    const threadMessages = messages.filter((m) => m.role !== "system");
 
     // Format messages for Anthropic
-    const formattedMessages = conversationMessages.map((msg) => {
+    const formattedMessages = threadMessages.map((msg) => {
         if (msg.role === "assistant") {
             return {
                 role: "assistant",
@@ -413,14 +490,14 @@ async function callAnthropic(input: AnthropicCallInput): Promise<LLMResponse> {
         }
     });
 
-    // Format tools for Anthropic
+    // Format tools for Anthropic with schema sanitization
     const formattedTools = tools.map((tool) => ({
         name: tool.name,
         description: tool.description,
-        input_schema: tool.schema
+        input_schema: sanitizeJsonSchema(tool.schema)
     }));
 
-    // Call Anthropic API
+    // Call Anthropic API with streaming enabled
     const response = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: {
@@ -434,7 +511,8 @@ async function callAnthropic(input: AnthropicCallInput): Promise<LLMResponse> {
             messages: formattedMessages,
             tools: formattedTools.length > 0 ? formattedTools : undefined,
             temperature,
-            max_tokens: maxTokens
+            max_tokens: maxTokens,
+            stream: true // ✅ Enable streaming
         })
     });
 
@@ -443,48 +521,140 @@ async function callAnthropic(input: AnthropicCallInput): Promise<LLMResponse> {
         throw new Error(`Anthropic API error: ${response.status} - ${error}`);
     }
 
-    interface AnthropicResponse {
-        content: Array<
-            | { type: "text"; text: string }
-            | { type: "tool_use"; id: string; name: string; input: JsonObject }
-        >;
-        stop_reason: string;
-        usage?: {
-            input_tokens: number;
-            output_tokens: number;
-        };
+    // Process streaming response
+    const reader = response.body?.getReader();
+    const decoder = new TextDecoder();
+    let fullContent = "";
+    let toolCalls: ToolCall[] | undefined;
+    let stopReason = "";
+    let usage: { promptTokens: number; completionTokens: number; totalTokens: number } | undefined;
+
+    if (!reader) {
+        throw new Error("Failed to get response reader");
     }
 
-    const data = (await response.json()) as AnthropicResponse;
+    // Track current tool use being built
+    let currentToolUse: { id: string; name: string; input: string } | null = null;
 
-    // Parse response
-    let content = "";
-    let toolCalls: ToolCall[] | undefined;
+    // Process streaming response chunks
+    let done = false;
+    while (!done) {
+        const result = await reader.read();
+        done = result.done;
+        if (done) break;
 
-    for (const block of data.content) {
-        if (block.type === "text") {
-            content += block.text;
-        } else if (block.type === "tool_use") {
-            if (!toolCalls) toolCalls = [];
-            toolCalls.push({
-                id: block.id,
-                name: block.name,
-                arguments: block.input
-            });
+        const chunk = decoder.decode(result.value, { stream: true });
+        const lines = chunk.split("\n").filter((line) => line.trim());
+
+        for (const line of lines) {
+            if (line.startsWith("data: ")) {
+                const data = line.slice(6);
+
+                try {
+                    const parsed = JSON.parse(data) as {
+                        type: string;
+                        index?: number;
+                        delta?: {
+                            type?: string;
+                            text?: string;
+                            stop_reason?: string;
+                        };
+                        content_block?: {
+                            type: string;
+                            id?: string;
+                            name?: string;
+                            text?: string;
+                            input?: JsonObject;
+                        };
+                        message?: {
+                            usage?: {
+                                input_tokens: number;
+                                output_tokens: number;
+                            };
+                        };
+                    };
+
+                    // Handle content block delta (streaming text)
+                    if (
+                        parsed.type === "content_block_delta" &&
+                        parsed.delta?.type === "text_delta"
+                    ) {
+                        const text = parsed.delta.text;
+                        if (text && executionId) {
+                            // ✅ Emit token immediately for streaming
+                            console.log(
+                                `[LLM Stream] Emitting Anthropic token for execution ${executionId}: "${text}"`
+                            );
+                            await emitAgentToken({ executionId, token: text });
+                            fullContent += text;
+                        }
+                    }
+
+                    // Handle content block start (for tool use)
+                    if (
+                        parsed.type === "content_block_start" &&
+                        parsed.content_block?.type === "tool_use"
+                    ) {
+                        currentToolUse = {
+                            id: parsed.content_block.id || "",
+                            name: parsed.content_block.name || "",
+                            input: ""
+                        };
+                    }
+
+                    // Handle input_json delta (for tool arguments)
+                    if (
+                        parsed.type === "content_block_delta" &&
+                        parsed.delta?.type === "input_json_delta"
+                    ) {
+                        if (currentToolUse && parsed.delta.text) {
+                            currentToolUse.input += parsed.delta.text;
+                        }
+                    }
+
+                    // Handle content block stop (finalize tool use)
+                    if (parsed.type === "content_block_stop" && currentToolUse) {
+                        if (!toolCalls) toolCalls = [];
+                        try {
+                            toolCalls.push({
+                                id: currentToolUse.id,
+                                name: currentToolUse.name,
+                                arguments: JSON.parse(currentToolUse.input)
+                            });
+                        } catch (error) {
+                            console.error("[Anthropic] Failed to parse tool input JSON:", error);
+                        }
+                        currentToolUse = null;
+                    }
+
+                    // Handle message delta (stop reason)
+                    if (parsed.type === "message_delta" && parsed.delta?.stop_reason) {
+                        stopReason = parsed.delta.stop_reason;
+                    }
+
+                    // Handle message start (usage info)
+                    if (parsed.type === "message_start" && parsed.message?.usage) {
+                        usage = {
+                            promptTokens: parsed.message.usage.input_tokens,
+                            completionTokens: parsed.message.usage.output_tokens,
+                            totalTokens:
+                                parsed.message.usage.input_tokens +
+                                parsed.message.usage.output_tokens
+                        };
+                    }
+                } catch {
+                    // Skip invalid JSON lines
+                    continue;
+                }
+            }
         }
     }
 
     return {
-        content,
+        content: fullContent,
         tool_calls: toolCalls,
-        isComplete: data.stop_reason === "end_turn" && !toolCalls,
-        usage: data.usage
-            ? {
-                  promptTokens: data.usage.input_tokens,
-                  completionTokens: data.usage.output_tokens,
-                  totalTokens: data.usage.input_tokens + data.usage.output_tokens
-              }
-            : undefined
+        isComplete: stopReason === "end_turn" && !toolCalls,
+        usage
     };
 }
 
@@ -539,6 +709,8 @@ export async function executeToolCall(input: ExecuteToolCallInput): Promise<Json
             return await executeKnowledgeBaseTool({ tool, arguments: validatedArgs, userId });
         case "agent":
             return await executeAgentTool({ tool, arguments: validatedArgs, userId });
+        case "mcp":
+            return await executeMCPToolCall({ tool, arguments: validatedArgs, userId });
         default:
             throw new Error(`Unknown tool type: ${tool.type}`);
     }
@@ -652,11 +824,11 @@ async function executeFunctionTool(input: ExecuteFunctionToolInput): Promise<Jso
 
     // Built-in functions
     switch (tool.config.functionName) {
-        case "search_conversation_memory":
+        case "search_thread_memory":
             if (!agentId || !userId) {
-                throw new Error("search_conversation_memory requires agentId and userId");
+                throw new Error("search_thread_memory requires agentId and userId");
             }
-            return await executeSearchConversationMemory({
+            return await executeSearchThreadMemory({
                 agentId,
                 userId,
                 executionId,
@@ -705,20 +877,20 @@ async function executeFunctionTool(input: ExecuteFunctionToolInput): Promise<Jso
 /**
  * Execute search conversation memory tool
  */
-interface ExecuteSearchConversationMemoryInput {
+interface ExecuteSearchThreadMemoryInput {
     agentId: string;
     userId: string;
     executionId?: string;
     arguments: JsonObject;
 }
 
-async function executeSearchConversationMemory(
-    input: ExecuteSearchConversationMemoryInput
+async function executeSearchThreadMemory(
+    input: ExecuteSearchThreadMemoryInput
 ): Promise<JsonObject> {
     const { agentId, userId, executionId, arguments: args } = input;
 
     if (typeof args.query !== "string") {
-        throw new Error("search_conversation_memory requires 'query' string argument");
+        throw new Error("search_thread_memory requires 'query' string argument");
     }
 
     const query = args.query;
@@ -730,7 +902,7 @@ async function executeSearchConversationMemory(
     const messageRoles = Array.isArray(args.messageRoles) ? args.messageRoles : undefined;
 
     try {
-        const result = await searchConversationMemoryActivity({
+        const result = await searchThreadMemoryActivity({
             agentId,
             userId,
             query,
@@ -1096,7 +1268,7 @@ async function executeAgentTool(input: ExecuteAgentToolInput): Promise<JsonObjec
             user_id: userId,
             thread_id: thread.id,
             status: "running",
-            conversation_history: [
+            thread_history: [
                 {
                     id: `user-${Date.now()}`,
                     role: "user",
@@ -1140,13 +1312,11 @@ async function executeAgentTool(input: ExecuteAgentToolInput): Promise<JsonObjec
             executionId: execution.id,
             response: result.finalMessage || "",
             iterations: result.iterations,
-            // Include the full conversation if needed
-            conversationHistory: result.serializedConversation?.messages.map(
-                (msg: ConversationMessage) => ({
-                    role: msg.role,
-                    content: msg.content
-                })
-            )
+            // Include the full thread messages if needed
+            threadMessages: result.serializedConversation?.messages.map((msg: ThreadMessage) => ({
+                role: msg.role,
+                content: msg.content
+            }))
         };
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
@@ -1155,11 +1325,64 @@ async function executeAgentTool(input: ExecuteAgentToolInput): Promise<JsonObjec
 }
 
 /**
+ * Execute MCP tool
+ */
+interface ExecuteMCPToolInput {
+    tool: Tool;
+    arguments: JsonObject;
+    userId: string;
+}
+
+async function executeMCPToolCall(input: ExecuteMCPToolInput): Promise<JsonObject> {
+    const { tool, arguments: args, userId } = input;
+
+    if (!tool.config.connectionId) {
+        throw new Error("MCP tool missing connectionId in config");
+    }
+
+    if (!tool.config.provider) {
+        throw new Error("MCP tool missing provider in config");
+    }
+
+    // Load connection
+    const connection = await connectionRepo.findByIdWithData(tool.config.connectionId);
+    if (!connection) {
+        throw new Error(`Connection ${tool.config.connectionId} not found`);
+    }
+
+    // Verify ownership
+    if (connection.user_id !== userId) {
+        throw new Error("Access denied to connection");
+    }
+
+    // Execute MCP tool via ExecutionRouter
+    try {
+        const result = await executionRouter.executeMCPTool(
+            tool.config.provider,
+            tool.name,
+            args,
+            connection
+        );
+
+        return {
+            success: true,
+            provider: tool.config.provider,
+            toolName: tool.name,
+            result: result as JsonValue
+        };
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        console.error(`[MCP Tool] Execution failed for ${tool.name}:`, errorMessage);
+        throw new Error(`MCP tool execution failed: ${errorMessage}`);
+    }
+}
+
+/**
  * Save agent checkpoint for continue-as-new
  */
 export interface SaveAgentCheckpointInput {
     executionId: string;
-    messages: ConversationMessage[];
+    messages: ThreadMessage[];
     iterations: number;
 }
 
@@ -1167,7 +1390,7 @@ export async function saveAgentCheckpoint(input: SaveAgentCheckpointInput): Prom
     const { executionId, messages, iterations } = input;
 
     await executionRepo.update(executionId, {
-        conversation_history: messages,
+        thread_history: messages,
         iterations
     });
 }

@@ -9,7 +9,7 @@ export interface ToolCall {
     arguments: JsonObject;
 }
 
-export interface ConversationMessage {
+export interface ThreadMessage {
     id: string;
     role: MessageRole;
     content: string;
@@ -25,7 +25,7 @@ export interface AgentExecutionModel {
     user_id: string;
     thread_id: string; // Thread this execution belongs to
     status: AgentExecutionStatus;
-    conversation_history: ConversationMessage[];
+    thread_history: ThreadMessage[];
     iterations: number;
     tool_calls_count: number;
     started_at: Date;
@@ -51,7 +51,7 @@ export interface CreateAgentExecutionInput {
     user_id: string;
     thread_id: string; // Required: execution must belong to a thread
     status?: AgentExecutionStatus;
-    conversation_history?: ConversationMessage[];
+    thread_history?: ThreadMessage[];
     iterations?: number;
     tool_calls_count?: number;
     metadata?: JsonObject;
@@ -59,7 +59,7 @@ export interface CreateAgentExecutionInput {
 
 export interface UpdateAgentExecutionInput {
     status?: AgentExecutionStatus;
-    conversation_history?: ConversationMessage[];
+    thread_history?: ThreadMessage[];
     iterations?: number;
     tool_calls_count?: number;
     completed_at?: Date;

@@ -5,6 +5,7 @@ import { AgentRepository } from "../../../storage/repositories/AgentRepository";
 import { ThreadRepository } from "../../../storage/repositories/ThreadRepository";
 import { getTemporalClient } from "../../../temporal/client";
 import { NotFoundError, BadRequestError } from "../../middleware";
+import type { ThreadMessage } from "../../../storage/models/AgentExecution";
 
 const executeAgentParamsSchema = z.object({
     id: z.string().uuid()
@@ -12,7 +13,9 @@ const executeAgentParamsSchema = z.object({
 
 const executeAgentSchema = z.object({
     message: z.string().min(1),
-    thread_id: z.string().uuid().optional() // Optional: use existing thread or create new one
+    thread_id: z.string().uuid().optional(), // Optional: use existing thread or create new one
+    connection_id: z.string().uuid().optional(), // Optional: override agent's default connection
+    model: z.string().optional() // Optional: override agent's default model
 });
 
 export async function executeAgentHandler(
@@ -21,7 +24,7 @@ export async function executeAgentHandler(
 ): Promise<void> {
     const userId = request.user!.id;
     const { id: agentId } = executeAgentParamsSchema.parse(request.params);
-    const { message, thread_id } = executeAgentSchema.parse(request.body);
+    const { message, thread_id, connection_id, model } = executeAgentSchema.parse(request.body);
 
     const agentRepo = new AgentRepository();
     const executionRepo = new AgentExecutionRepository();
@@ -53,18 +56,34 @@ export async function executeAgentHandler(
             const newThread = await threadRepo.create({
                 user_id: userId,
                 agent_id: agentId,
-                title: `Conversation ${new Date().toLocaleString()}` // Will be auto-generated later
+                title: new Date().toLocaleString() // Auto-generated timestamp as title
             });
             threadId = newThread.id;
         }
 
-        // Create execution record linked to thread
+        // Load existing messages from thread to preserve full thread history
+        let threadMessages: ThreadMessage[] = [];
+        if (thread_id) {
+            // Get all previous messages in this thread to build full history
+            const messages = await executionRepo.getMessagesByThread(threadId);
+            threadMessages = messages.map((msg) => ({
+                id: msg.id,
+                role: msg.role,
+                content: msg.content,
+                tool_calls: msg.tool_calls || undefined,
+                tool_name: msg.tool_name || undefined,
+                tool_call_id: msg.tool_call_id || undefined,
+                timestamp: msg.created_at
+            }));
+        }
+
+        // Create execution record linked to thread with full message history
         const execution = await executionRepo.create({
             agent_id: agentId,
             user_id: userId,
             thread_id: threadId,
             status: "running",
-            conversation_history: [],
+            thread_history: threadMessages,
             iterations: 0
         });
 
@@ -79,7 +98,9 @@ export async function executeAgentHandler(
                     agentId,
                     userId,
                     threadId,
-                    initialMessage: message
+                    initialMessage: message,
+                    ...(connection_id && { connectionId: connection_id }),
+                    ...(model && { model })
                 }
             ]
         });

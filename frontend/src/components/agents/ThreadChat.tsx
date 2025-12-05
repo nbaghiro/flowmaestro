@@ -1,12 +1,23 @@
-import { Send, Bot, User, Loader2 } from "lucide-react";
+import { Send, Bot, User, Loader2, Wrench, CheckCircle2, XCircle, Eye } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import * as api from "../../lib/api";
+import { streamAgentExecution } from "../../lib/api";
 import { cn } from "../../lib/utils";
-import { wsClient } from "../../lib/websocket";
 import { useAgentStore } from "../../stores/agentStore";
 import { Button } from "../common/Button";
+import { Dialog } from "../common/Dialog";
 import { Input } from "../common/Input";
-import type { Agent, Thread, ConversationMessage } from "../../lib/api";
+import { AgentConnectionSelector } from "./AgentConnectionSelector";
+import type { Agent, Thread, ThreadMessage, JsonObject } from "../../lib/api";
+
+interface ToolCallInfo {
+    id: string;
+    toolName: string;
+    status: "running" | "success" | "failed";
+    arguments?: JsonObject;
+    result?: JsonObject;
+    error?: string;
+}
 
 interface ThreadChatProps {
     agent: Agent;
@@ -19,18 +30,27 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
         executeAgent,
         sendMessage,
         updateExecutionStatus,
-        addMessageToExecution
+        addMessageToExecution,
+        selectedConnectionId,
+        selectedModel
     } = useAgentStore();
 
     const [input, setInput] = useState("");
     const [isSending, setIsSending] = useState(false);
-    const [messages, setMessages] = useState<ConversationMessage[]>([]);
+    const [messages, setMessages] = useState<ThreadMessage[]>([]);
+    const [toolCalls, setToolCalls] = useState<ToolCallInfo[]>([]);
+    const [selectedToolError, setSelectedToolError] = useState<{
+        toolName: string;
+        error: string;
+    } | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const sseCleanupRef = useRef<(() => void) | null>(null);
+    const streamingContentRef = useRef<string>("");
 
-    // Scroll to bottom when messages change
+    // Scroll to bottom when messages or tool calls change
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [messages]);
+    }, [messages, toolCalls]);
 
     // Load messages from backend when thread changes
     useEffect(() => {
@@ -52,77 +72,171 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
     // Update messages from execution when thread matches (for real-time updates)
     useEffect(() => {
         if (currentExecution && currentExecution.thread_id === thread.id) {
-            setMessages(currentExecution.conversation_history);
+            setMessages(currentExecution.thread_history);
         }
     }, [currentExecution, thread.id]);
 
-    // Subscribe/unsubscribe to current execution over WebSocket
+    // Start SSE stream when execution starts for this thread
     useEffect(() => {
-        if (!currentExecution) return;
+        if (!currentExecution || currentExecution.thread_id !== thread.id) return;
 
         const executionId = currentExecution.id;
-        wsClient.subscribeToExecution(executionId);
+        const agentId = agent.id;
 
-        return () => {
-            wsClient.unsubscribeFromExecution(executionId);
-        };
-    }, [currentExecution?.id]);
+        // Clean up any previous stream
+        if (sseCleanupRef.current) {
+            sseCleanupRef.current();
+            sseCleanupRef.current = null;
+        }
 
-    // Listen for WebSocket events
-    useEffect(() => {
-        const handleMessage = (event: unknown) => {
-            const data = event as {
-                executionId?: string;
-                threadId?: string;
-                message?: ConversationMessage;
-            };
-            // Only add messages that belong to this thread
-            if (data.threadId === thread.id && data.message && data.executionId) {
-                // Avoid duplicating user messages (we already add them locally)
-                if (data.message.role === "user") {
-                    return;
+        // Reset streaming content and tool calls
+        streamingContentRef.current = "";
+        setToolCalls([]);
+
+        console.log(`[ThreadChat] Starting SSE stream for execution ${executionId}`);
+
+        // Start SSE stream
+        const cleanup = streamAgentExecution(agentId, executionId, {
+            onConnected: () => {
+                console.log(`[ThreadChat] SSE connected for execution ${executionId}`);
+            },
+            onToken: (token: string) => {
+                // Accumulate token
+                streamingContentRef.current += token;
+
+                // Update streaming message
+                setMessages((prev) => {
+                    const streamingId = `streaming-${executionId}`;
+                    const lastMessage = prev[prev.length - 1];
+
+                    if (
+                        lastMessage &&
+                        lastMessage.role === "assistant" &&
+                        lastMessage.id === streamingId
+                    ) {
+                        // Update existing streaming message
+                        return [
+                            ...prev.slice(0, -1),
+                            { ...lastMessage, content: streamingContentRef.current }
+                        ];
+                    } else {
+                        // Create new streaming message
+                        return [
+                            ...prev,
+                            {
+                                id: streamingId,
+                                role: "assistant" as const,
+                                content: streamingContentRef.current,
+                                timestamp: new Date().toISOString()
+                            }
+                        ];
+                    }
+                });
+
+                if (isSending) {
+                    setIsSending(false);
                 }
-                // Update store so useEffect syncs it to UI
-                addMessageToExecution(data.executionId, data.message);
-            }
-        };
+            },
+            onMessage: (message: ThreadMessage) => {
+                console.log("[ThreadChat] Received message:", message);
+                // This receives non-streamed messages: tool results, system messages, etc.
+                // Assistant responses are built from streaming tokens (onToken + onCompleted)
+                if (message.role !== "user") {
+                    addMessageToExecution(executionId, message);
+                }
+            },
+            onToolCallStarted: (data) => {
+                console.log("[ThreadChat] Tool call started:", data);
+                setToolCalls((prev) => [
+                    ...prev,
+                    {
+                        id: `tool-${Date.now()}-${data.toolName}`,
+                        toolName: data.toolName,
+                        status: "running",
+                        arguments: data.arguments
+                    }
+                ]);
+            },
+            onToolCallCompleted: (data) => {
+                console.log("[ThreadChat] Tool call completed:", data);
+                setToolCalls((prev) =>
+                    prev.map((tc) =>
+                        tc.toolName === data.toolName && tc.status === "running"
+                            ? { ...tc, status: "success" as const, result: data.result }
+                            : tc
+                    )
+                );
+            },
+            onToolCallFailed: (data) => {
+                console.log("[ThreadChat] Tool call failed:", data);
+                setToolCalls((prev) =>
+                    prev.map((tc) =>
+                        tc.toolName === data.toolName && tc.status === "running"
+                            ? { ...tc, status: "failed" as const, error: data.error }
+                            : tc
+                    )
+                );
+            },
+            onCompleted: (data) => {
+                console.log("[ThreadChat] Execution completed:", data);
 
-        const handleThinking = (event: unknown) => {
-            const data = event as { executionId?: string; threadId?: string };
-            if (data.threadId === thread.id) {
-                console.log("Agent is thinking...");
-            }
-        };
+                // Finalize streaming message
+                const finalContent = data.finalMessage || streamingContentRef.current;
+                const streamingId = `streaming-${executionId}`;
 
-        const handleCompleted = (event: unknown) => {
-            const data = event as { executionId?: string; threadId?: string };
-            if (data.threadId === thread.id && data.executionId) {
+                setMessages((prev) => {
+                    const filtered = prev.filter((m) => m.id !== streamingId);
+                    const finalMessage: ThreadMessage = {
+                        id: `asst-${executionId}-${Date.now()}`,
+                        role: "assistant",
+                        content: finalContent,
+                        timestamp: new Date().toISOString()
+                    };
+                    return [...filtered, finalMessage];
+                });
+
+                // Add to store
+                addMessageToExecution(executionId, {
+                    id: `asst-${executionId}-${Date.now()}`,
+                    role: "assistant",
+                    content: finalContent,
+                    timestamp: new Date().toISOString()
+                });
+
+                streamingContentRef.current = "";
                 setIsSending(false);
-                updateExecutionStatus(data.executionId, "completed");
-            }
-        };
+                updateExecutionStatus(executionId, "completed");
+            },
+            onError: (error: string) => {
+                console.error("[ThreadChat] SSE error:", error);
 
-        const handleFailed = (event: unknown) => {
-            const data = event as { executionId?: string; threadId?: string; error?: unknown };
-            if (data.threadId === thread.id && data.executionId) {
+                // Remove streaming message and show error
+                setMessages((prev) => prev.filter((m) => m.id !== `streaming-${executionId}`));
+
+                streamingContentRef.current = "";
                 setIsSending(false);
-                updateExecutionStatus(data.executionId, "failed");
-                console.error("Agent failed:", data.error);
+                updateExecutionStatus(executionId, "failed");
             }
-        };
+        });
 
-        wsClient.on("agent:message:new", handleMessage);
-        wsClient.on("agent:thinking", handleThinking);
-        wsClient.on("agent:execution:completed", handleCompleted);
-        wsClient.on("agent:execution:failed", handleFailed);
+        sseCleanupRef.current = cleanup;
 
         return () => {
-            wsClient.off("agent:message:new", handleMessage);
-            wsClient.off("agent:thinking", handleThinking);
-            wsClient.off("agent:execution:completed", handleCompleted);
-            wsClient.off("agent:execution:failed", handleFailed);
+            if (sseCleanupRef.current) {
+                console.log(`[ThreadChat] Cleaning up SSE stream for execution ${executionId}`);
+                sseCleanupRef.current();
+                sseCleanupRef.current = null;
+            }
         };
-    }, [thread.id, updateExecutionStatus, addMessageToExecution]);
+    }, [
+        currentExecution?.id,
+        currentExecution?.thread_id,
+        thread.id,
+        agent.id,
+        isSending,
+        updateExecutionStatus,
+        addMessageToExecution
+    ]);
 
     const handleSend = async () => {
         if (!input.trim() || isSending) return;
@@ -139,7 +253,14 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
                 currentExecution.status !== "running"
             ) {
                 // Start new execution in this thread
-                await executeAgent(agent.id, message, thread.id);
+                // Pass selected connection/model if available, otherwise agent will use defaults
+                await executeAgent(
+                    agent.id,
+                    message,
+                    thread.id,
+                    selectedConnectionId || undefined,
+                    selectedModel || undefined
+                );
             } else {
                 // Continue existing execution
                 await sendMessage(message);
@@ -176,6 +297,7 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
                         </p>
                     </div>
                 </div>
+                <AgentConnectionSelector />
             </div>
 
             {/* Messages */}
@@ -189,56 +311,154 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
                     </div>
                 ) : (
                     <>
-                        {messages.map((message) => (
-                            <div
-                                key={message.id}
-                                className={cn(
-                                    "flex gap-3",
-                                    message.role === "user" ? "justify-end" : "justify-start"
-                                )}
-                            >
-                                {message.role !== "user" && message.role !== "system" && (
-                                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                                        <Bot className="w-4 h-4 text-primary" />
+                        {messages.map((message) => {
+                            // Skip empty assistant messages that only had tool_calls (now shown separately)
+                            if (message.role === "assistant" && !message.content?.trim()) {
+                                return null;
+                            }
+
+                            // Render tool messages with special UI
+                            if (message.role === "tool") {
+                                const isError =
+                                    message.content.includes('"error":true') ||
+                                    message.content.includes("Validation errors") ||
+                                    message.content.toLowerCase().includes('"error"');
+
+                                // Extract tool name from content if not in tool_name field
+                                let toolName = message.tool_name || "unknown";
+                                if (toolName === "unknown") {
+                                    try {
+                                        const parsed = JSON.parse(message.content);
+                                        toolName = parsed.toolName || parsed.tool || toolName;
+                                    } catch {
+                                        // Keep "unknown" if can't parse
+                                    }
+                                }
+
+                                return (
+                                    <div key={message.id} className="flex gap-3">
+                                        <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                                            <Wrench className="w-4 h-4 text-amber-500" />
+                                        </div>
+                                        <div className="max-w-[80%] rounded-lg px-4 py-3 bg-muted/50 border border-border">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <span className="text-sm font-medium">
+                                                    Using tool - {toolName}
+                                                </span>
+                                                {isError ? (
+                                                    <span className="flex items-center gap-1 text-xs bg-red-500/10 text-red-600 px-2 py-0.5 rounded-full">
+                                                        <XCircle className="w-3 h-3" />
+                                                        Failed
+                                                    </span>
+                                                ) : (
+                                                    <span className="flex items-center gap-1 text-xs bg-green-500/10 text-green-600 px-2 py-0.5 rounded-full">
+                                                        <CheckCircle2 className="w-3 h-3" />
+                                                        Success
+                                                    </span>
+                                                )}
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="text-xs h-auto py-0.5 px-2"
+                                                    onClick={() =>
+                                                        setSelectedToolError({
+                                                            toolName: toolName,
+                                                            error: message.content
+                                                        })
+                                                    }
+                                                >
+                                                    <Eye className="w-3 h-3 mr-1" />
+                                                    {isError ? "View Error" : "View Result"}
+                                                </Button>
+                                            </div>
+                                        </div>
                                     </div>
-                                )}
+                                );
+                            }
+
+                            // Render regular messages
+                            return (
                                 <div
+                                    key={message.id}
                                     className={cn(
-                                        "max-w-[80%] rounded-lg px-4 py-3",
-                                        message.role === "user"
-                                            ? "bg-primary text-primary-foreground"
-                                            : message.role === "system"
-                                              ? "bg-muted/50 text-muted-foreground text-sm italic"
-                                              : "bg-muted text-foreground"
+                                        "flex gap-3",
+                                        message.role === "user" ? "justify-end" : "justify-start"
                                     )}
                                 >
-                                    <div className="whitespace-pre-wrap break-words">
-                                        {message.content}
+                                    {message.role !== "user" && message.role !== "system" && (
+                                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                                            <Bot className="w-4 h-4 text-primary" />
+                                        </div>
+                                    )}
+                                    <div
+                                        className={cn(
+                                            "max-w-[80%] rounded-lg px-4 py-3",
+                                            message.role === "user"
+                                                ? "bg-primary text-primary-foreground"
+                                                : message.role === "system"
+                                                  ? "bg-muted/50 text-muted-foreground text-sm italic"
+                                                  : "bg-muted text-foreground"
+                                        )}
+                                    >
+                                        <div className="whitespace-pre-wrap break-words">
+                                            {message.content}
+                                        </div>
                                     </div>
-                                    {message.tool_calls && message.tool_calls.length > 0 && (
-                                        <div className="mt-2 pt-2 border-t border-border/50">
-                                            <p className="text-xs text-muted-foreground mb-1">
-                                                Using tools:
-                                            </p>
-                                            {message.tool_calls.map((tool, idx) => (
-                                                <div
-                                                    key={idx}
-                                                    className="text-xs bg-background/50 rounded px-2 py-1 mt-1"
-                                                >
-                                                    {tool.name}
-                                                </div>
-                                            ))}
+                                    {message.role === "user" && (
+                                        <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
+                                            <User className="w-4 h-4 text-secondary-foreground" />
                                         </div>
                                     )}
                                 </div>
-                                {message.role === "user" && (
-                                    <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
-                                        <User className="w-4 h-4 text-secondary-foreground" />
+                            );
+                        })}
+                        {/* Tool calls */}
+                        {toolCalls.map((toolCall) => (
+                            <div key={toolCall.id} className="flex gap-3">
+                                <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                                    <Wrench className="w-4 h-4 text-amber-500" />
+                                </div>
+                                <div className="max-w-[80%] rounded-lg px-4 py-3 bg-muted/50 border border-border">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm font-medium">
+                                            Using tool - {toolCall.toolName}
+                                        </span>
+                                        {toolCall.status === "running" && (
+                                            <Loader2 className="w-4 h-4 animate-spin text-amber-500" />
+                                        )}
+                                        {toolCall.status === "success" && (
+                                            <span className="flex items-center gap-1 text-xs bg-green-500/10 text-green-600 px-2 py-0.5 rounded-full">
+                                                <CheckCircle2 className="w-3 h-3" />
+                                                Success
+                                            </span>
+                                        )}
+                                        {toolCall.status === "failed" && (
+                                            <span className="flex items-center gap-1 text-xs bg-red-500/10 text-red-600 px-2 py-0.5 rounded-full">
+                                                <XCircle className="w-3 h-3" />
+                                                Failed
+                                            </span>
+                                        )}
                                     </div>
-                                )}
+                                    {toolCall.status === "failed" && toolCall.error && (
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="mt-2 text-xs h-auto py-1"
+                                            onClick={() =>
+                                                setSelectedToolError({
+                                                    toolName: toolCall.toolName,
+                                                    error: toolCall.error!
+                                                })
+                                            }
+                                        >
+                                            <Eye className="w-3 h-3 mr-1" />
+                                            View Error
+                                        </Button>
+                                    )}
+                                </div>
                             </div>
                         ))}
-                        {isSending && (
+                        {isSending && toolCalls.length === 0 && (
                             <div className="flex gap-3">
                                 <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
                                     <Bot className="w-4 h-4 text-primary" />
@@ -275,6 +495,35 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
                     </Button>
                 </div>
             </div>
+
+            {/* Tool result/error dialog */}
+            {selectedToolError && (
+                <Dialog
+                    isOpen={true}
+                    onClose={() => setSelectedToolError(null)}
+                    title={`Tool Details - ${selectedToolError.toolName}`}
+                >
+                    <div className="space-y-4">
+                        <div className="bg-muted border border-border rounded-lg p-4">
+                            <pre className="text-xs text-foreground whitespace-pre-wrap break-words max-h-96 overflow-y-auto font-mono">
+                                {(() => {
+                                    try {
+                                        const parsed = JSON.parse(selectedToolError.error);
+                                        return JSON.stringify(parsed, null, 2);
+                                    } catch {
+                                        return selectedToolError.error;
+                                    }
+                                })()}
+                            </pre>
+                        </div>
+                        <div className="flex justify-end">
+                            <Button variant="secondary" onClick={() => setSelectedToolError(null)}>
+                                Close
+                            </Button>
+                        </div>
+                    </div>
+                </Dialog>
+            )}
         </div>
     );
 }

@@ -8,7 +8,7 @@ export * from "./KnowledgeChunkRepository";
 export * from "./TriggerRepository";
 export * from "./CallExecutionRepository";
 export * from "./WorkingMemoryRepository";
-export * from "./ConversationEmbeddingRepository";
+export * from "./ThreadEmbeddingRepository";
 export * from "./TemplateRepository";
 export * from "./AgentTemplateRepository";
 export * from "./AgentRepository";
