@@ -123,6 +123,21 @@ export class UserRepository {
             values.push(input.microsoft_id);
         }
 
+        if (input.auth_provider !== undefined) {
+            updates.push(`auth_provider = $${paramIndex++}`);
+            values.push(input.auth_provider);
+        }
+
+        if (input.email_verified !== undefined) {
+            updates.push(`email_verified = $${paramIndex++}`);
+            values.push(input.email_verified);
+        }
+
+        if (input.email_verified_at !== undefined) {
+            updates.push(`email_verified_at = $${paramIndex++}`);
+            values.push(input.email_verified_at);
+        }
+
         if (input.avatar_url !== undefined) {
             updates.push(`avatar_url = $${paramIndex++}`);
             values.push(input.avatar_url);
@@ -131,6 +146,26 @@ export class UserRepository {
         if (input.last_login_at !== undefined) {
             updates.push(`last_login_at = $${paramIndex++}`);
             values.push(input.last_login_at);
+        }
+
+        if (input.two_factor_enabled !== undefined) {
+            updates.push(`two_factor_enabled = $${paramIndex++}`);
+            values.push(input.two_factor_enabled);
+        }
+
+        if (input.two_factor_phone !== undefined) {
+            updates.push(`two_factor_phone = $${paramIndex++}`);
+            values.push(input.two_factor_phone);
+        }
+
+        if (input.two_factor_phone_verified !== undefined) {
+            updates.push(`two_factor_phone_verified = $${paramIndex++}`);
+            values.push(input.two_factor_phone_verified);
+        }
+
+        if (input.two_factor_secret !== undefined) {
+            updates.push(`two_factor_secret = $${paramIndex++}`);
+            values.push(input.two_factor_secret);
         }
 
         if (updates.length === 0) {
@@ -197,6 +232,10 @@ export class UserRepository {
             created_at: string | Date;
             updated_at: string | Date;
             last_login_at: string | Date | null;
+            two_factor_enabled: boolean;
+            two_factor_phone: string | null;
+            two_factor_phone_verified: boolean;
+            two_factor_secret: string | null;
         };
         return {
             id: r.id,
@@ -211,7 +250,11 @@ export class UserRepository {
             email_verified_at: r.email_verified_at ? new Date(r.email_verified_at) : null,
             created_at: new Date(r.created_at),
             updated_at: new Date(r.updated_at),
-            last_login_at: r.last_login_at ? new Date(r.last_login_at) : null
+            last_login_at: r.last_login_at ? new Date(r.last_login_at) : null,
+            two_factor_enabled: r.two_factor_enabled,
+            two_factor_phone: r.two_factor_phone,
+            two_factor_phone_verified: r.two_factor_phone_verified,
+            two_factor_secret: r.two_factor_secret
         };
     }
 }

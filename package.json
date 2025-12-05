@@ -61,8 +61,5 @@
         ]
     },
     "author": "FlowMaestro Team",
-    "license": "MIT",
-    "dependencies": {
-        "react-markdown": "^10.1.0"
-    }
+    "license": "MIT"
 }

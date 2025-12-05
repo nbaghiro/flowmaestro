@@ -72,7 +72,13 @@ export async function resendVerificationRoute(fastify: FastifyInstance) {
 
             // Send verification email
             try {
-                await emailService.sendEmailVerification(user.email, token, user.name || undefined);
+                await emailService.sendEmailVerification(
+                    user.email,
+                    token,
+                    user.name || undefined,
+                    undefined,
+                    "signup"
+                );
                 fastify.log.info(`Verification email resent to: ${user.email}`);
             } catch (error) {
                 const errorMsg = error instanceof Error ? error.message : String(error);

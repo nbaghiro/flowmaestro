@@ -13,6 +13,10 @@ import { useMicrosoftAuth } from "../hooks/useMicrosoftAuth";
 export function Login() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [code, setCode] = useState("");
+    const [twoFactorRequired, setTwoFactorRequired] = useState(false);
+    const [maskedPhone, setMaskedPhone] = useState<string | undefined>(undefined);
+    const [useBackupCode, setUseBackupCode] = useState(false);
     const [error, setError] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const { login } = useAuth();
@@ -26,7 +30,20 @@ export function Login() {
         setIsLoading(true);
 
         try {
-            await login(email, password);
+            const result = await login(
+                email,
+                password,
+                twoFactorRequired ? code.trim() || undefined : undefined
+            );
+
+            if (result.twoFactorRequired) {
+                setTwoFactorRequired(true);
+                setMaskedPhone(result.maskedPhone);
+                setCode("");
+                setUseBackupCode(false);
+                return;
+            }
+
             navigate("/app");
         } catch (err: unknown) {
             setError((err as Error).message || "Failed to login. Please check your credentials.");
@@ -73,7 +90,7 @@ export function Login() {
                                 onChange={(e) => setEmail(e.target.value)}
                                 required
                                 placeholder="you@example.com"
-                                disabled={isLoading}
+                                disabled={isLoading || twoFactorRequired}
                             />
                         </div>
 
@@ -100,9 +117,56 @@ export function Login() {
                                 required
                                 minLength={8}
                                 placeholder="••••••••"
-                                disabled={isLoading}
+                                disabled={isLoading || twoFactorRequired}
                             />
                         </div>
+
+                        {twoFactorRequired ? (
+                            <div className="space-y-2">
+                                <div className="text-sm text-muted-foreground">
+                                    {useBackupCode ? (
+                                        <>Enter one of your backup codes.</>
+                                    ) : (
+                                        <>
+                                            Enter the 6-digit code sent to{" "}
+                                            <span className="font-medium text-foreground">
+                                                {maskedPhone || "your phone"}
+                                            </span>
+                                            .
+                                        </>
+                                    )}
+                                </div>
+                                <Input
+                                    id="code"
+                                    type="text"
+                                    inputMode={useBackupCode ? "text" : "numeric"}
+                                    maxLength={useBackupCode ? undefined : 6}
+                                    value={code}
+                                    onChange={(e) =>
+                                        setCode(
+                                            useBackupCode
+                                                ? e.target.value
+                                                      .replace(/[^A-Za-z0-9-]/g, "")
+                                                      .toUpperCase()
+                                                : e.target.value.replace(/\D/g, "")
+                                        )
+                                    }
+                                    required
+                                    placeholder={useBackupCode ? "XXXX-XXXX-XXXX" : "123456"}
+                                    disabled={isLoading}
+                                />
+                                <button
+                                    type="button"
+                                    className="text-xs text-primary hover:text-primary/80"
+                                    onClick={() => {
+                                        setUseBackupCode((prev) => !prev);
+                                        setCode("");
+                                    }}
+                                >
+                                    {useBackupCode ? "Use SMS code instead" : "Use a backup code"}
+                                </button>
+                            </div>
+                        ) : null}
 
                         <Button
                             type="submit"
@@ -110,7 +174,13 @@ export function Login() {
                             className="w-full"
                             loading={isLoading}
                         >
-                            {isLoading ? "Signing in..." : "Sign in"}
+                            {twoFactorRequired
+                                ? isLoading
+                                    ? "Verifying..."
+                                    : "Verify code"
+                                : isLoading
+                                  ? "Signing in..."
+                                  : "Sign in"}
                         </Button>
                     </form>
 

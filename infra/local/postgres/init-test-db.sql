@@ -77,3 +77,7 @@ CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
 COMMENT ON TABLE users IS 'Sample users table for testing database node queries';
 COMMENT ON TABLE products IS 'Sample products table for testing database node queries';
 COMMENT ON TABLE orders IS 'Sample orders table for testing database node queries';
+
+-- Ensure timezone defaults to UTC for sessions
+ALTER DATABASE test_database SET timezone TO 'UTC';
+ALTER ROLE test_user SET timezone TO 'UTC';

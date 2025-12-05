@@ -1,5 +1,7 @@
 import { FastifyInstance } from "fastify";
 import { TokenUtils } from "../../../core/utils/token";
+import { emailService } from "../../../services/email/EmailService";
+import { UpdateUserInput } from "../../../storage/models";
 import { EmailVerificationTokenRepository } from "../../../storage/repositories/EmailVerificationTokenRepository";
 import { UserRepository } from "../../../storage/repositories/UserRepository";
 import { validateRequest, UnauthorizedError } from "../../middleware";
@@ -55,6 +57,45 @@ export async function verifyEmailRoute(fastify: FastifyInstance) {
 
             if (!user) {
                 throw new UnauthorizedError("User not found.");
+            }
+
+            if (verificationToken.email !== user.email) {
+                const hasPassword = !!user.password_hash;
+                const hasOauth = !!(user.google_id || user.microsoft_id);
+
+                const oldEmail = user.email;
+                const newEmail = verificationToken.email;
+
+                const updateFields: UpdateUserInput = {
+                    email: newEmail,
+                    email_verified: true,
+                    email_verified_at: new Date()
+                };
+
+                if (hasPassword && hasOauth) {
+                    updateFields.google_id = null;
+                    updateFields.microsoft_id = null;
+                    updateFields.auth_provider = "local";
+                }
+
+                await userRepository.update(user.id, updateFields);
+
+                await emailService.sendEmailChangedNotification(
+                    oldEmail,
+                    newEmail,
+                    user.name || ""
+                );
+
+                await tokenRepository.markAsVerified(verificationToken.id);
+
+                fastify.log.info(
+                    `Email changed and verified for user ${user.id}: ${oldEmail} -> ${newEmail}`
+                );
+
+                return reply.send({
+                    success: true,
+                    message: "Email changed and verified successfully!"
+                });
             }
 
             // Update user email verification status

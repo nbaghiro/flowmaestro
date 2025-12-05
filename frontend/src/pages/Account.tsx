@@ -1,9 +1,10 @@
-import { User, Lock, Bell } from "lucide-react";
-import { useState } from "react";
+import { User, Lock, Bell, CheckCircle2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { ConfirmDialog } from "../components/common/ConfirmDialog";
 import { PageHeader } from "../components/common/PageHeader";
 import { useAuth } from "../contexts/AuthContext";
 import type { LucideIcon } from "lucide-react";
+import { AccountEditModal } from "@/components/AccountEditModal";
 
 interface AccountSection {
     icon: LucideIcon;
@@ -13,10 +14,13 @@ interface AccountSection {
 }
 
 export function Account() {
-    const { user } = useAuth();
+    const { user, refreshUser } = useAuth();
     const [isUnlinkGoogleDialogOpen, setIsUnlinkGoogleDialogOpen] = useState(false);
     const [isUnlinkMicrosoftDialogOpen, setIsUnlinkMicrosoftDialogOpen] = useState(false);
     const [isUnlinking, setIsUnlinking] = useState(false);
+    const [activeEditModal, setActiveEditModal] = useState<null | "profile" | "security">(null);
+    const [showSuccess, setShowSuccess] = useState(false);
+    const successTimeoutRef = useRef<number | null>(null);
 
     const isGoogleConnected = !!user?.google_id;
     const isMicrosoftConnected = !!user?.microsoft_id;
@@ -86,6 +90,23 @@ export function Account() {
         }
     };
 
+    const handleModalUpdated = async () => {
+        await refreshUser();
+        setShowSuccess(true);
+        if (successTimeoutRef.current) {
+            clearTimeout(successTimeoutRef.current);
+        }
+        successTimeoutRef.current = window.setTimeout(() => setShowSuccess(false), 4000);
+    };
+
+    useEffect(() => {
+        return () => {
+            if (successTimeoutRef.current) {
+                clearTimeout(successTimeoutRef.current);
+            }
+        };
+    }, []);
+
     const accountSections: AccountSection[] = [
         {
             icon: User,
@@ -102,7 +123,17 @@ export function Account() {
             description: "Password and authentication settings",
             fields: [
                 { label: "Password", value: hasPassword ? "••••••••" : "Not set" },
-                { label: "Two-factor authentication", value: "Disabled" },
+                {
+                    label: "Two-factor authentication",
+                    value: user?.two_factor_enabled ? (
+                        <div className="flex items-center gap-2 text-green-600 font-medium">
+                            <CheckCircle2 className="w-4 h-4" />
+                            Enabled
+                        </div>
+                    ) : (
+                        <span className="text-muted-foreground">Disabled</span>
+                    )
+                },
                 {
                     label: "Google Account",
                     value: (
@@ -182,6 +213,11 @@ export function Account() {
 
     return (
         <div className="max-w-4xl mx-auto px-6 py-8">
+            {showSuccess && (
+                <div className="mb-4 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+                    Changes saved successfully.
+                </div>
+            )}
             <PageHeader
                 title="Account"
                 description="Manage your account settings and preferences"
@@ -221,7 +257,16 @@ export function Account() {
                                             </div>
                                         ))}
                                     </div>
-                                    <button className="mt-4 text-sm text-primary hover:text-primary/80 font-medium">
+                                    <button
+                                        className="mt-4 text-sm text-primary hover:text-primary/80 font-medium"
+                                        onClick={() => {
+                                            if (section.title === "Profile") {
+                                                setActiveEditModal("profile");
+                                            } else if (section.title === "Security") {
+                                                setActiveEditModal("security");
+                                            }
+                                        }}
+                                    >
                                         Edit {section.title.toLowerCase()} →
                                     </button>
                                 </div>
@@ -230,6 +275,15 @@ export function Account() {
                     );
                 })}
             </div>
+
+            {activeEditModal && user && (
+                <AccountEditModal
+                    mode={activeEditModal}
+                    user={user}
+                    onClose={() => setActiveEditModal(null)}
+                    onUpdated={handleModalUpdated}
+                />
+            )}
 
             {/* Google Unlink Dialog */}
             {canUnlinkGoogle ? (

@@ -132,11 +132,7 @@ interface ExecuteWorkflowResponse {
 interface AuthResponse {
     success: boolean;
     data?: {
-        user: {
-            id: string;
-            email: string;
-            name?: string;
-        };
+        user: ApiUser;
         token: string;
     };
     error?: string;
@@ -145,6 +141,7 @@ interface AuthResponse {
 interface LoginRequest {
     email: string;
     password: string;
+    code?: string;
 }
 
 interface RegisterRequest {
@@ -156,13 +153,34 @@ interface RegisterRequest {
 interface UserResponse {
     success: boolean;
     data?: {
-        user: {
-            id: string;
-            email: string;
-            name?: string;
-        };
+        user: ApiUser;
     };
     error?: string;
+}
+
+export interface LoginTwoFactorResponse {
+    success: boolean;
+    data?: {
+        two_factor_required: true;
+        masked_phone?: string;
+    };
+    error?: string;
+}
+
+export type LoginApiResponse = AuthResponse | LoginTwoFactorResponse;
+
+export interface ApiUser {
+    id: string;
+    email: string;
+    name?: string;
+    avatar_url?: string;
+    google_id?: string | null;
+    microsoft_id?: string | null;
+    has_password?: boolean;
+    email_verified?: boolean;
+    two_factor_enabled?: boolean;
+    two_factor_phone?: string | null;
+    two_factor_phone_verified?: boolean;
 }
 
 /**
@@ -217,15 +235,19 @@ export function clearAuthToken(): void {
 }
 
 /**
- * Login with email and password
+ * Login with email and password (and optional 2FA code)
  */
-export async function login(email: string, password: string): Promise<AuthResponse> {
+export async function login(
+    email: string,
+    password: string,
+    code?: string
+): Promise<LoginApiResponse> {
     const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json"
         },
-        body: JSON.stringify({ email, password } as LoginRequest)
+        body: JSON.stringify({ email, password, code } as LoginRequest)
     });
 
     if (!response.ok) {

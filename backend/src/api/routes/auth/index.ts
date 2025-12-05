@@ -1,4 +1,5 @@
 import { FastifyInstance } from "fastify";
+import { twoFactorRoutes } from "./2fa";
 import { forgotPasswordRoute } from "./forgot-password";
 import { googleAuthRoutes } from "./google";
 import { loginRoute } from "./login";
@@ -19,4 +20,5 @@ export async function authRoutes(fastify: FastifyInstance) {
     await resetPasswordRoute(fastify);
     await verifyEmailRoute(fastify);
     await resendVerificationRoute(fastify);
+    await twoFactorRoutes(fastify);
 }
