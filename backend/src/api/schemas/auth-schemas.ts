@@ -8,7 +8,13 @@ export const registerSchema = z.object({
 
 export const loginSchema = z.object({
     email: z.string().email(),
-    password: z.string()
+    password: z.string(),
+    code: z
+        .string()
+        .min(6)
+        .max(24)
+        .regex(/^[A-Za-z0-9-]+$/, "Code must be alphanumeric")
+        .optional()
 });
 
 export const forgotPasswordSchema = z.object({

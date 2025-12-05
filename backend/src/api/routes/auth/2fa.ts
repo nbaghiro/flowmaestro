@@ -6,6 +6,7 @@ import {
     generateBackupCodes,
     normalizeAndHashBackupCode
 } from "../../../core/utils/two-factor";
+import { emailService } from "../../../services/email/EmailService";
 import { sendSms } from "../../../services/SmsService";
 import { UserRepository } from "../../../storage/repositories";
 import { TwoFactorBackupCodeRepository } from "../../../storage/repositories/TwoFactorBackupCodeRepository";
@@ -24,6 +25,10 @@ export async function twoFactorRoutes(fastify: FastifyInstance) {
         },
         async (request, reply) => {
             console.log("[2FA] HIT /2fa/send-code handler");
+
+            console.log("[2FA][DEBUG] REQUEST USER:", request.user);
+            console.log("[2FA][DEBUG] HEADERS:", request.headers);
+
             const userId = request.user.id;
             const { phone } = request.body as { phone: string };
 
@@ -47,8 +52,7 @@ export async function twoFactorRoutes(fastify: FastifyInstance) {
             await tokenRepo.saveCode({
                 user_id: userId,
                 code_hash: codeHash,
-                expires_at: new Date(Date.now() + 5 * 60 * 1000),
-                type: "sms"
+                expires_at: new Date(Date.now() + 5 * 60 * 1000)
             });
 
             console.log("[2FA] send-code: saved SMS token for user:", userId);
@@ -68,6 +72,9 @@ export async function twoFactorRoutes(fastify: FastifyInstance) {
             preHandler: [authMiddleware]
         },
         async (request, reply) => {
+            console.log("[2FA][DEBUG] REQUEST USER:", request.user);
+            console.log("[2FA][DEBUG] HEADERS:", request.headers);
+
             const userId = request.user.id;
             const { code } = request.body as { code: string; phone?: string };
             const { phone } = request.body as { phone?: string; code: string };
@@ -113,6 +120,24 @@ export async function twoFactorRoutes(fastify: FastifyInstance) {
                 two_factor_phone_verified: true
             });
 
+            try {
+                const updatedUser = await userRepo.findById(userId);
+                if (updatedUser) {
+                    await emailService.sendTwoFactorEnabledNotification(
+                        updatedUser.email,
+                        phone || updatedUser.two_factor_phone || "",
+                        backupCodes,
+                        updatedUser.name || undefined
+                    );
+                }
+            } catch (err) {
+                fastify.log.error(
+                    `[2FA] Failed to send 2FA enabled email for user ${userId}: ${
+                        err instanceof Error ? err.message : String(err)
+                    }`
+                );
+            }
+
             return reply.send({
                 success: true,
                 message: "Two-factor authentication enabled",
@@ -138,6 +163,22 @@ export async function twoFactorRoutes(fastify: FastifyInstance) {
 
             await tokenRepo.deleteByUserId(userId);
             await backupCodeReo.deleteByUserId(userId);
+
+            try {
+                const updatedUser = await userRepo.findById(userId);
+                if (updatedUser) {
+                    await emailService.sendTwoFactorDisabledNotification(
+                        updatedUser.email,
+                        updatedUser.name || undefined
+                    );
+                }
+            } catch (err) {
+                fastify.log.error(
+                    `[2FA] Failed to send 2FA disabled email for user ${userId}: ${
+                        err instanceof Error ? err.message : String(err)
+                    }`
+                );
+            }
 
             return reply.send({
                 success: true,

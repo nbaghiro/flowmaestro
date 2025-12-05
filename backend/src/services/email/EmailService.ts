@@ -5,6 +5,8 @@ import { EmailVerificationEmail } from "./templates/EmailVerificationEmail";
 import { NameChangedEmail } from "./templates/NameChangedEmail";
 import { PasswordChangedEmail } from "./templates/PasswordChangedEmail";
 import { PasswordResetEmail } from "./templates/PasswordResetEmail";
+import { TwoFactorDisabledEmail } from "./templates/TwoFactorDisabledEmail";
+import { TwoFactorEnabledEmail } from "./templates/TwoFactorEnabledEmail";
 
 const DEFAULT_FROM_EMAIL = "FlowMaestro <noreply@flowmaestro.ai>";
 
@@ -96,6 +98,34 @@ export class EmailService {
             to: newEmail,
             subject: "Your FlowMaestro email was changed",
             react: EmailChangedEmail({ userName, isOldAddress: true, newEmail })
+        });
+    }
+
+    async sendTwoFactorEnabledNotification(
+        email: string,
+        phone: string,
+        backupCodes?: string[],
+        _userName?: string,
+        from?: string
+    ): Promise<void> {
+        await this.resend.emails.send({
+            from: from || DEFAULT_FROM_EMAIL,
+            to: email,
+            subject: "Two-factor authentication enabled",
+            react: TwoFactorEnabledEmail({ phone, backupCodes })
+        });
+    }
+
+    async sendTwoFactorDisabledNotification(
+        email: string,
+        _userName?: string,
+        from?: string
+    ): Promise<void> {
+        await this.resend.emails.send({
+            from: from || DEFAULT_FROM_EMAIL,
+            to: email,
+            subject: "Two-factor authentication disabled",
+            react: TwoFactorDisabledEmail()
         });
     }
 }

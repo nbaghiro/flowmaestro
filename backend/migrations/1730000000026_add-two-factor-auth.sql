@@ -19,8 +19,7 @@ CREATE TABLE flowmaestro.two_factor_tokens (
     verified_at TIMESTAMP,           -- NULL until verified
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     ip_address VARCHAR(45),          -- IPv4 or IPv6
-    user_agent TEXT,
-    type VARCHAR(20) NOT NULL DEFAULT 'sms'
+    user_agent TEXT
 );
 
 -- Indexes for two_factor_tokens

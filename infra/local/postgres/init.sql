@@ -23,5 +23,9 @@ CREATE EXTENSION IF NOT EXISTS vector;
 CREATE SCHEMA IF NOT EXISTS flowmaestro;
 GRANT ALL PRIVILEGES ON SCHEMA flowmaestro TO flowmaestro;
 
+-- Ensure timezone defaults to UTC for sessions
+ALTER DATABASE flowmaestro SET timezone TO 'UTC';
+ALTER ROLE flowmaestro SET timezone TO 'UTC';
+
 -- Note: Application migrations will be run separately via npm run db:migrate
 -- This init script only sets up extensions, databases, and schemas

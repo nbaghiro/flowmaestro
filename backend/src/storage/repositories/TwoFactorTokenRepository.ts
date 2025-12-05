@@ -15,16 +15,28 @@ export class TwoFactorTokenRepository {
             [input.user_id]
         );
 
+        const before = await db.query(
+            `
+            SELECT *
+            FROM flowmaestro.two_factor_tokens
+            WHERE user_id = $1
+            ORDER BY created_at DESC
+        `,
+            [input.user_id]
+        );
+
+        console.log("[2FA][DEBUG] BEFORE INSERT rows:", before.rows.length);
+        console.log("[2FA][DEBUG] BEFORE INSERT tokens:", before.rows);
+
         const query = `
             INSERT INTO flowmaestro.two_factor_tokens (
                 user_id,
                 code_hash,
                 expires_at,
                 ip_address,
-                user_agent,
-                type
+                user_agent
             )
-            VALUES ($1, $2, $3, $4, $5, $6)
+            VALUES ($1, $2, $3, $4, $5)
             RETURNING *
         `;
 
@@ -33,20 +45,26 @@ export class TwoFactorTokenRepository {
             input.code_hash,
             input.expires_at,
             input.ip_address ?? null,
-            input.user_agent ?? null,
-            input.type
+            input.user_agent ?? null
         ];
 
         const result = await db.query<TwoFactorTokenModel>(query, values);
         const token = result.rows[0];
 
-        console.log("[2FA] Saved token:", {
-            id: token.id,
-            user_id: token.user_id,
-            expires_at: token.expires_at,
-            verified_at: token.verified_at,
-            code_hash_length: token.code_hash.length
-        });
+        console.log("[2FA][DEBUG] SAVED TOKEN FULL:", token);
+
+        const after = await db.query(
+            `
+            SELECT *
+            FROM flowmaestro.two_factor_tokens
+            WHERE user_id = $1
+            ORDER BY created_at DESC
+        `,
+            [input.user_id]
+        );
+
+        console.log("[2FA][DEBUG] AFTER INSERT rows:", after.rows.length);
+        console.log("[2FA][DEBUG] AFTER INSERT tokens:", after.rows);
 
         return token;
     }
@@ -58,15 +76,26 @@ export class TwoFactorTokenRepository {
             WHERE user_id = $1
                 AND verified_at IS NULL
                 AND expires_at > NOW()
-                AND type = 'sms'
             ORDER BY created_at DESC
             LIMIT 1
         `;
+        const rawTokens = await db.query(
+            `
+            SELECT *
+            FROM flowmaestro.two_factor_tokens
+            WHERE user_id = $1
+            ORDER BY created_at DESC
+        `,
+            [userId]
+        );
+
+        console.log("[2FA][DEBUG] VERIFY - RAW TOKENS:", rawTokens.rows);
+        console.log("[2FA][DEBUG] findValidCode INPUT userId:", userId);
+
         const result = await db.query<TwoFactorTokenModel>(query, [userId]);
-        console.log("[2FA] findValidCode:", {
-            userId,
-            rows: result.rows.length,
-            rowsRaw: result.rows
+        console.log("[2FA][DEBUG] findValidCode RESULT:", {
+            rowCount: result.rows.length,
+            rows: result.rows
         });
 
         return result.rows[0] || null;

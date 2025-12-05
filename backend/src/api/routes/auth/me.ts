@@ -38,7 +38,10 @@ export async function meRoute(fastify: FastifyInstance) {
                         avatar_url: user.avatar_url,
                         google_id: user.google_id,
                         microsoft_id: user.microsoft_id,
-                        has_password: !!user.password_hash
+                        has_password: !!user.password_hash,
+                        two_factor_enabled: user.two_factor_enabled,
+                        two_factor_phone: user.two_factor_phone,
+                        two_factor_phone_verified: user.two_factor_phone_verified
                     }
                 }
             });

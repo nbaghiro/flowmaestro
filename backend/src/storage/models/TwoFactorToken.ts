@@ -21,7 +21,6 @@ export interface TwoFactorTokenModel {
     attempts: number;
     ip_address: string | null;
     user_agent: string | null;
-    type: string;
 }
 
 export interface CreateTwoFactorTokenInput {
@@ -30,5 +29,4 @@ export interface CreateTwoFactorTokenInput {
     expires_at: Date;
     ip_address?: string | null;
     user_agent?: string | null;
-    type: string;
 }

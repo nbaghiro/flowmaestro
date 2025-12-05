@@ -1,4 +1,4 @@
-import { User, Lock, Bell } from "lucide-react";
+import { User, Lock, Bell, CheckCircle2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { ConfirmDialog } from "../components/common/ConfirmDialog";
 import { PageHeader } from "../components/common/PageHeader";
@@ -123,7 +123,17 @@ export function Account() {
             description: "Password and authentication settings",
             fields: [
                 { label: "Password", value: hasPassword ? "••••••••" : "Not set" },
-                { label: "Two-factor authentication", value: "Disabled" },
+                {
+                    label: "Two-factor authentication",
+                    value: user?.two_factor_enabled ? (
+                        <div className="flex items-center gap-2 text-green-600 font-medium">
+                            <CheckCircle2 className="w-4 h-4" />
+                            Enabled
+                        </div>
+                    ) : (
+                        <span className="text-muted-foreground">Disabled</span>
+                    )
+                },
                 {
                     label: "Google Account",
                     value: (

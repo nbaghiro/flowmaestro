@@ -6,23 +6,17 @@ import {
     setAuthToken,
     clearAuthToken
 } from "../lib/api";
-
-interface User {
-    id: string;
-    email: string;
-    name?: string;
-    avatar_url?: string;
-    google_id?: string | null;
-    microsoft_id?: string | null;
-    has_password?: boolean;
-    email_verified?: boolean;
-}
+import type { ApiUser } from "../lib/api";
 
 interface AuthContextType {
-    user: User | null;
+    user: ApiUser | null;
     isAuthenticated: boolean;
     isLoading: boolean;
-    login: (email: string, password: string) => Promise<void>;
+    login: (
+        email: string,
+        password: string,
+        code?: string
+    ) => Promise<{ twoFactorRequired: boolean; maskedPhone?: string }>;
     register: (email: string, password: string, name?: string) => Promise<void>;
     logout: () => void;
     refreshUser: () => Promise<void>;
@@ -31,7 +25,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-    const [user, setUser] = useState<User | null>(null);
+    const [user, setUser] = useState<ApiUser | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
@@ -53,6 +47,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                         const user = JSON.parse(decodeURIComponent(userData));
                         setUser(user);
                         setIsLoading(false);
+                        // Refresh to ensure we have the latest fields (including 2FA status)
+                        void refreshUser();
 
                         // Clear hash from URL
                         window.history.replaceState(null, "", window.location.pathname);
@@ -114,15 +110,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     }, []);
 
-    const login = async (email: string, password: string) => {
+    const login = async (email: string, password: string, code?: string) => {
         try {
-            const response = await apiLogin(email, password);
-            if (response.success && response.data) {
+            const response = await apiLogin(email, password, code);
+            if (response.success && response.data && "two_factor_required" in response.data) {
+                return {
+                    twoFactorRequired: true,
+                    maskedPhone: response.data.masked_phone
+                };
+            }
+
+            if (response.success && response.data && "token" in response.data) {
                 setAuthToken(response.data.token);
                 setUser(response.data.user);
-            } else {
-                throw new Error(response.error || "Login failed");
+                return { twoFactorRequired: false };
             }
+
+            throw new Error(response.error || "Login failed");
         } catch (error) {
             console.error("Login failed:", error);
             throw error;

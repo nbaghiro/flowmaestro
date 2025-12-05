@@ -16,9 +16,14 @@ export function AccountEditModal({ mode, user, onClose, onUpdated }: AccountEdit
     const [currentPassword, setCurrentPassword] = useState("");
     const [newPassword, setNewPassword] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isTwoFactorSubmitting, setIsTwoFactorSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
     const [isConfirmingEmailChange, setIsConfirmingEmailChange] = useState(false);
+    const [isConfirmingDisable2FA, setIsConfirmingDisable2FA] = useState(false);
+    const [twoFactorStep, setTwoFactorStep] = useState<"idle" | "enterPhone" | "verify">("idle");
+    const [twoFactorPhoneInput, setTwoFactorPhoneInput] = useState(user.two_factor_phone || "");
+    const [twoFactorCode, setTwoFactorCode] = useState("");
 
     const apiBase = import.meta.env.VITE_API_URL || "http://localhost:3001";
     const hasOAuthLink = Boolean(user.google_id || user.microsoft_id);
@@ -28,6 +33,49 @@ export function AccountEditModal({ mode, user, onClose, onUpdated }: AccountEdit
           ? "Microsoft"
           : "OAuth provider";
     const emailLockedByOAuth = hasOAuthLink && !user.has_password;
+
+    const sanitizePhoneInput = (value: string) => {
+        const cleaned = value.replace(/[^+\d]/g, "");
+        let result = "";
+        for (let i = 0; i < cleaned.length; i++) {
+            const ch = cleaned[i];
+            if (ch === "+") {
+                if (result.includes("+") || i !== 0) continue;
+                result += ch;
+            } else {
+                result += ch;
+            }
+        }
+        // E.164 max length is 15 digits
+        return result.slice(0, 16);
+    };
+
+    const normalizePhoneForApi = (input: string) => {
+        const stripped = input.trim();
+        if (!stripped) return "";
+        const digits = stripped.replace(/\D/g, "");
+        if (digits.length < 8 || digits.length > 15) return "";
+        return `+${digits}`;
+    };
+
+    const formatPhoneForDisplay = (value: string | null | undefined) => {
+        if (!value) return "";
+        const digits = value.replace(/\D/g, "");
+        if (!digits) return value;
+        // US/Canada: +1 (AAA) BBB-CCCC
+        if (digits.length === 11 && digits.startsWith("1")) {
+            const a = digits.slice(1, 4);
+            const b = digits.slice(4, 7);
+            const c = digits.slice(7, 11);
+            return `+1 (${a}) ${b}-${c}`;
+        }
+        // Generic: prefix + country code + grouped remainder
+        const countryLen = digits.length <= 4 ? digits.length : 2;
+        const country = digits.slice(0, countryLen);
+        const rest = digits.slice(countryLen);
+        const parts: string[] = rest.match(/.{1,3}/g) || [];
+        return `+${country}${parts.length ? " " + parts.join(" ") : ""}`;
+    };
 
     const submitProfileChanges = async () => {
         setError(null);
@@ -183,6 +231,122 @@ export function AccountEditModal({ mode, user, onClose, onUpdated }: AccountEdit
             setError(err instanceof Error ? err.message : "Something went wrong.");
         } finally {
             setIsSubmitting(false);
+        }
+    };
+
+    const startEnableTwoFactor = () => {
+        setError(null);
+        setSuccess(null);
+        setTwoFactorStep("enterPhone");
+    };
+
+    const handleSendTwoFactorCode = async () => {
+        setError(null);
+        setSuccess(null);
+
+        const phoneForApi = normalizePhoneForApi(twoFactorPhoneInput);
+
+        if (!phoneForApi) {
+            setError("Please enter a valid phone number with country code.");
+            return;
+        }
+
+        setIsTwoFactorSubmitting(true);
+        try {
+            const res = await fetch(`${apiBase}/api/auth/2fa/send-code`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${localStorage.getItem("auth_token")}`
+                },
+                body: JSON.stringify({ phone: phoneForApi })
+            });
+
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok || data.success === false) {
+                throw new Error(data.error || "Failed to send verification code");
+            }
+
+            setSuccess("Verification code sent.");
+            setTwoFactorStep("verify");
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Something went wrong.");
+        } finally {
+            setIsTwoFactorSubmitting(false);
+        }
+    };
+
+    const handleVerifyTwoFactorCode = async () => {
+        setError(null);
+        setSuccess(null);
+
+        if (!twoFactorCode || twoFactorCode.length !== 6) {
+            setError("Enter the 6-digit code you received.");
+            return;
+        }
+
+        setIsTwoFactorSubmitting(true);
+        try {
+            const phoneForApi = normalizePhoneForApi(twoFactorPhoneInput);
+
+            if (!phoneForApi) {
+                setError("Please enter a valid phone number with country code.");
+                return;
+            }
+
+            const res = await fetch(`${apiBase}/api/auth/2fa/verify/code`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${localStorage.getItem("auth_token")}`
+                },
+                body: JSON.stringify({ code: twoFactorCode, phone: phoneForApi })
+            });
+
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok || data.success === false) {
+                throw new Error(data.error || "Failed to verify code");
+            }
+
+            if (onUpdated) {
+                await onUpdated();
+            }
+            onClose();
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Something went wrong.");
+        } finally {
+            setIsTwoFactorSubmitting(false);
+        }
+    };
+
+    const handleDisableTwoFactor = async () => {
+        setError(null);
+        setSuccess(null);
+        setIsConfirmingDisable2FA(false);
+        setIsTwoFactorSubmitting(true);
+
+        try {
+            const res = await fetch(`${apiBase}/api/auth/2fa/disable`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${localStorage.getItem("auth_token")}`
+                }
+            });
+
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok || data.success === false) {
+                throw new Error(data.error || "Failed to disable two-factor authentication");
+            }
+
+            if (onUpdated) {
+                await onUpdated();
+            }
+            onClose();
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Something went wrong.");
+        } finally {
+            setIsTwoFactorSubmitting(false);
         }
     };
 
@@ -354,14 +518,143 @@ export function AccountEditModal({ mode, user, onClose, onUpdated }: AccountEdit
                             )}
                         </div>
 
-                        {/* 2FA placeholder */}
-                        <div className="space-y-2 border-t border-border pt-4">
-                            <h3 className="text-sm font-medium text-foreground">
-                                Two-factor authentication
-                            </h3>
-                            <p className="text-sm text-muted-foreground">
-                                Two-factor authentication will be available in a future update.
-                            </p>
+                        {/* Two-factor authentication */}
+                        <div className="space-y-3 border-t border-border pt-4">
+                            <div className="flex items-start justify-between gap-3">
+                                <div>
+                                    <h3 className="text-sm font-medium text-foreground">
+                                        Two-factor authentication
+                                    </h3>
+                                    <p className="text-sm text-muted-foreground">
+                                        Add a phone-based verification step when signing in.
+                                    </p>
+                                </div>
+                                {user.two_factor_enabled ? (
+                                    <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700 border border-green-200">
+                                        Enabled
+                                    </span>
+                                ) : null}
+                            </div>
+
+                            {user.two_factor_enabled ? (
+                                <div className="flex items-center justify-between rounded-md border border-border bg-muted/40 px-3 py-3">
+                                    <div>
+                                        <p className="text-xs text-muted-foreground">
+                                            Phone number
+                                        </p>
+                                        <p className="text-sm font-medium text-foreground">
+                                            {formatPhoneForDisplay(user.two_factor_phone) ||
+                                                "Not provided"}
+                                        </p>
+                                    </div>
+                                    {isConfirmingDisable2FA ? (
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={handleDisableTwoFactor}
+                                                disabled={isTwoFactorSubmitting}
+                                                className="px-3 py-2 text-sm rounded bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-60"
+                                            >
+                                                {isTwoFactorSubmitting ? "Disabling..." : "Confirm"}
+                                            </button>
+                                            <button
+                                                onClick={() => setIsConfirmingDisable2FA(false)}
+                                                disabled={isTwoFactorSubmitting}
+                                                className="px-3 py-2 text-sm rounded border border-border text-muted-foreground hover:bg-muted disabled:opacity-60"
+                                            >
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <button
+                                            onClick={() => setIsConfirmingDisable2FA(true)}
+                                            disabled={isTwoFactorSubmitting}
+                                            className="px-3 py-2 text-sm rounded border border-border text-muted-foreground hover:bg-muted disabled:opacity-60"
+                                        >
+                                            Disable
+                                        </button>
+                                    )}
+                                </div>
+                            ) : twoFactorStep === "verify" ? (
+                                <div className="space-y-2 rounded-md border border-border bg-muted/40 p-3">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="text-xs text-muted-foreground">
+                                                Enter the 6-digit code
+                                            </p>
+                                            <p className="text-sm text-foreground">
+                                                Sent to{" "}
+                                                {formatPhoneForDisplay(twoFactorPhoneInput) ||
+                                                    "your phone"}
+                                            </p>
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                setTwoFactorCode("");
+                                                setTwoFactorStep("enterPhone");
+                                            }}
+                                            className="text-xs text-primary hover:text-primary/80"
+                                            type="button"
+                                            disabled={isTwoFactorSubmitting}
+                                        >
+                                            Change phone
+                                        </button>
+                                    </div>
+                                    <input
+                                        className="w-full border border-border rounded px-3 py-2 text-center tracking-[0.4em] text-lg font-semibold bg-background"
+                                        inputMode="numeric"
+                                        maxLength={6}
+                                        value={twoFactorCode}
+                                        onChange={(e) =>
+                                            setTwoFactorCode(
+                                                e.target.value.replace(/\D/g, "").slice(0, 6)
+                                            )
+                                        }
+                                        placeholder="••••••"
+                                    />
+                                    <button
+                                        onClick={handleVerifyTwoFactorCode}
+                                        disabled={isTwoFactorSubmitting}
+                                        className="w-full px-3 py-2 text-sm rounded bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+                                    >
+                                        {isTwoFactorSubmitting ? "Verifying..." : "Verify code"}
+                                    </button>
+                                </div>
+                            ) : twoFactorStep === "enterPhone" ? (
+                                <div className="space-y-2 rounded-md border border-border bg-muted/40 p-3">
+                                    <label className="block text-sm text-muted-foreground mb-1">
+                                        Phone number
+                                    </label>
+                                    <input
+                                        className="w-full border border-border rounded px-3 py-2 text-sm bg-background"
+                                        value={twoFactorPhoneInput}
+                                        onChange={(e) => {
+                                            setTwoFactorPhoneInput(
+                                                sanitizePhoneInput(e.target.value)
+                                            );
+                                        }}
+                                        placeholder="+15551234567 or 447123456789"
+                                    />
+                                    <button
+                                        onClick={handleSendTwoFactorCode}
+                                        disabled={isTwoFactorSubmitting}
+                                        className="w-full px-3 py-2 text-sm rounded bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+                                    >
+                                        {isTwoFactorSubmitting ? "Sending..." : "Send code"}
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="flex items-center justify-between rounded-md border border-border bg-muted/40 px-3 py-3">
+                                    <p className="text-sm text-muted-foreground">
+                                        Protect your account with a one-time SMS code.
+                                    </p>
+                                    <button
+                                        onClick={startEnableTwoFactor}
+                                        className="px-3 py-2 text-sm rounded bg-primary text-primary-foreground hover:bg-primary/90"
+                                    >
+                                        Enable
+                                    </button>
+                                </div>
+                            )}
                         </div>
 
                         <div className="flex justify-end">

@@ -128,6 +128,16 @@ export class UserRepository {
             values.push(input.auth_provider);
         }
 
+        if (input.email_verified !== undefined) {
+            updates.push(`email_verified = $${paramIndex++}`);
+            values.push(input.email_verified);
+        }
+
+        if (input.email_verified_at !== undefined) {
+            updates.push(`email_verified_at = $${paramIndex++}`);
+            values.push(input.email_verified_at);
+        }
+
         if (input.avatar_url !== undefined) {
             updates.push(`avatar_url = $${paramIndex++}`);
             values.push(input.avatar_url);
@@ -136,6 +146,26 @@ export class UserRepository {
         if (input.last_login_at !== undefined) {
             updates.push(`last_login_at = $${paramIndex++}`);
             values.push(input.last_login_at);
+        }
+
+        if (input.two_factor_enabled !== undefined) {
+            updates.push(`two_factor_enabled = $${paramIndex++}`);
+            values.push(input.two_factor_enabled);
+        }
+
+        if (input.two_factor_phone !== undefined) {
+            updates.push(`two_factor_phone = $${paramIndex++}`);
+            values.push(input.two_factor_phone);
+        }
+
+        if (input.two_factor_phone_verified !== undefined) {
+            updates.push(`two_factor_phone_verified = $${paramIndex++}`);
+            values.push(input.two_factor_phone_verified);
+        }
+
+        if (input.two_factor_secret !== undefined) {
+            updates.push(`two_factor_secret = $${paramIndex++}`);
+            values.push(input.two_factor_secret);
         }
 
         if (updates.length === 0) {
