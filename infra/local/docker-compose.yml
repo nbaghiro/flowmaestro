@@ -7,6 +7,9 @@ services:
             POSTGRES_DB: flowmaestro
             POSTGRES_USER: flowmaestro
             POSTGRES_PASSWORD: flowmaestro_dev_password
+            # Set timezone to UTC to prevent timezone mismatch issues
+            TZ: UTC
+            PGTZ: UTC
         ports:
             - "5432:5432"
         volumes:
@@ -28,6 +31,9 @@ services:
             POSTGRES_DB: test_database
             POSTGRES_USER: test_user
             POSTGRES_PASSWORD: test_password
+            # Set timezone to UTC to prevent timezone mismatch issues
+            TZ: UTC
+            PGTZ: UTC
         ports:
             - "5433:5432"
         volumes:
