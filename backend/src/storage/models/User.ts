@@ -39,4 +39,8 @@ export interface UpdateUserInput {
     email_verified?: boolean;
     email_verified_at?: Date | null;
     auth_provider?: UserModel["auth_provider"];
+    two_factor_enabled?: boolean;
+    two_factor_phone?: string | null;
+    two_factor_phone_verified?: boolean;
+    two_factor_secret?: string | null;
 }

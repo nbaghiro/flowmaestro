@@ -36,6 +36,11 @@ export const config = {
             process.env.GOOGLE_OAUTH_REDIRECT_URI ||
             `http://localhost:${parseInt(process.env.BACKEND_PORT || "3001")}/api/auth/google/callback`
     },
+    twilio: {
+        accountSid: process.env.TWILIO_ACCOUNT_SID || "",
+        authToken: process.env.TWILIO_AUTH_TOKEN || "",
+        fromPhone: process.env.TWILIO_FROM_PHONE || ""
+    },
     frontend: {
         url: process.env.FRONTEND_URL || "http://localhost:3000"
     },

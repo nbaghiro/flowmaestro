@@ -44,6 +44,14 @@ export class TwoFactorBackupCodeRepository {
 
         return result.rows.length > 0;
     }
+
+    async deleteByUserId(userId: string): Promise<void> {
+        await db.query(
+            `DELETE FROM flowmaestro.two_factor_backup_codes
+            WHERE user_id = $1`,
+            [userId]
+        );
+    }
 }
 
 export const twoFactorBackupCodeRepo = new TwoFactorBackupCodeRepository();
