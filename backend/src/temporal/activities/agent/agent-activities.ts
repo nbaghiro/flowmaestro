@@ -535,6 +535,10 @@ async function callAnthropic(input: AnthropicCallInput): Promise<LLMResponse> {
     let toolCalls: ToolCall[] | undefined;
     let stopReason = "";
     let usage: { promptTokens: number; completionTokens: number; totalTokens: number } | undefined;
+    // Track tokens across streaming events (Anthropic may split input/output across events)
+    let streamedInputTokens = 0;
+    let streamedOutputTokens = 0;
+    let sawUsageEvent = false;
 
     if (!reader) {
         throw new Error("Failed to get response reader");
@@ -572,6 +576,10 @@ async function callAnthropic(input: AnthropicCallInput): Promise<LLMResponse> {
                             name?: string;
                             text?: string;
                             input?: JsonObject;
+                        };
+                        usage?: {
+                            input_tokens?: number;
+                            output_tokens?: number;
                         };
                         message?: {
                             usage?: {
@@ -639,15 +647,27 @@ async function callAnthropic(input: AnthropicCallInput): Promise<LLMResponse> {
                         stopReason = parsed.delta.stop_reason;
                     }
 
-                    // Handle message start (usage info)
-                    if (parsed.type === "message_start" && parsed.message?.usage) {
-                        usage = {
-                            promptTokens: parsed.message.usage.input_tokens,
-                            completionTokens: parsed.message.usage.output_tokens,
-                            totalTokens:
-                                parsed.message.usage.input_tokens +
-                                parsed.message.usage.output_tokens
-                        };
+                    // Capture usage tokens (Anthropic streams usage on multiple event types)
+                    if (parsed.usage) {
+                        if (typeof parsed.usage.input_tokens === "number") {
+                            streamedInputTokens = parsed.usage.input_tokens;
+                        }
+                        if (typeof parsed.usage.output_tokens === "number") {
+                            streamedOutputTokens = parsed.usage.output_tokens;
+                        }
+                        sawUsageEvent = true;
+                    }
+
+                    // Also capture usage from message payloads if present
+                    if (
+                        (parsed.type === "message_start" || parsed.type === "message_stop") &&
+                        parsed.message?.usage
+                    ) {
+                        streamedInputTokens =
+                            parsed.message.usage.input_tokens ?? streamedInputTokens;
+                        streamedOutputTokens =
+                            parsed.message.usage.output_tokens ?? streamedOutputTokens;
+                        sawUsageEvent = true;
                     }
                 } catch {
                     // Skip invalid JSON lines
@@ -655,6 +675,15 @@ async function callAnthropic(input: AnthropicCallInput): Promise<LLMResponse> {
                 }
             }
         }
+    }
+
+    // Finalize usage if we captured any token counts (or saw an explicit usage event)
+    if (sawUsageEvent || streamedInputTokens > 0 || streamedOutputTokens > 0) {
+        usage = {
+            promptTokens: streamedInputTokens,
+            completionTokens: streamedOutputTokens,
+            totalTokens: streamedInputTokens + streamedOutputTokens
+        };
     }
 
     return {
@@ -930,7 +959,8 @@ async function callCohere(input: CohereCallInput): Promise<LLMResponse> {
 
         for (const line of lines) {
             try {
-                const parsed = JSON.parse(line) as {
+                const jsonLine = line.startsWith("data: ") ? line.slice(6) : line;
+                const parsed = JSON.parse(jsonLine) as {
                     event_type?: string;
                     text?: string;
                     tool_calls?: Array<{
@@ -942,6 +972,14 @@ async function callCohere(input: CohereCallInput): Promise<LLMResponse> {
                         tokens?: {
                             input_tokens?: number;
                             output_tokens?: number;
+                        };
+                    };
+                    response?: {
+                        meta?: {
+                            tokens?: {
+                                input_tokens?: number;
+                                output_tokens?: number;
+                            };
                         };
                     };
                 };
@@ -968,6 +1006,16 @@ async function callCohere(input: CohereCallInput): Promise<LLMResponse> {
                         totalTokens:
                             (parsed.meta.tokens.input_tokens || 0) +
                             (parsed.meta.tokens.output_tokens || 0)
+                    };
+                }
+
+                // Final token usage may arrive on stream-end response envelope
+                if (parsed.event_type === "stream-end" && parsed.response?.meta?.tokens) {
+                    const tokens = parsed.response.meta.tokens;
+                    usage = {
+                        promptTokens: tokens.input_tokens || 0,
+                        completionTokens: tokens.output_tokens || 0,
+                        totalTokens: (tokens.input_tokens || 0) + (tokens.output_tokens || 0)
                     };
                 }
             } catch {

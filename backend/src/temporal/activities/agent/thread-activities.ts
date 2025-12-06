@@ -141,6 +141,36 @@ export interface UpdateThreadTokensInput {
 export async function updateThreadTokens(input: UpdateThreadTokensInput): Promise<void> {
     const { threadId, executionId, usage, provider, model } = input;
 
+    // Load existing token usage from thread metadata for accumulation when spans are missing
+    const existingUsageResult = await db.query<{
+        token_usage: {
+            promptTokens?: number;
+            completionTokens?: number;
+            totalTokens?: number;
+            totalCost?: number;
+        } | null;
+    }>(
+        `
+        SELECT (metadata->'tokenUsage') AS token_usage
+        FROM flowmaestro.threads
+        WHERE id = $1
+        `,
+        [threadId]
+    );
+
+    const existingUsage = existingUsageResult.rows[0]?.token_usage || {};
+    const priorPromptTokens = existingUsage.promptTokens || 0;
+    const priorCompletionTokens = existingUsage.completionTokens || 0;
+    const priorTotalTokens = existingUsage.totalTokens || 0;
+    const priorTotalCost = existingUsage.totalCost || 0;
+    const usagePrompt = usage?.promptTokens ?? 0;
+    const usageCompletion = usage?.completionTokens ?? 0;
+    const usageTotal =
+        usage?.totalTokens ??
+        (typeof usagePrompt === "number" && typeof usageCompletion === "number"
+            ? usagePrompt + usageCompletion
+            : 0);
+
     const result = await db.query<{
         prompt_tokens: string;
         completion_tokens: string;
@@ -172,38 +202,61 @@ export async function updateThreadTokens(input: UpdateThreadTokensInput): Promis
         executionCount: parseInt(result.rows[0].execution_count, 10)
     };
 
-    // Fallback: if aggregation returned zeros but we have usage from the LLM response, use it
-    const shouldFallback =
-        aggregated.totalTokens === 0 &&
+    // Fallback usage when spans are incomplete
+    const usageFallbackAvailable =
         usage &&
         typeof usage.promptTokens === "number" &&
-        typeof usage.completionTokens === "number" &&
-        typeof usage.totalTokens === "number";
+        typeof usage.completionTokens === "number";
 
-    // Compute cost if we have usage and pricing info
-    const fallbackCost =
-        shouldFallback && provider && model
+    // Start from the higher of aggregated vs existing totals
+    const basePromptTokens = Math.max(aggregated.promptTokens, priorPromptTokens);
+    const baseCompletionTokens = Math.max(aggregated.completionTokens, priorCompletionTokens);
+    const baseTotalTokens = Math.max(aggregated.totalTokens, priorTotalTokens);
+
+    // If spans missed this execution but usage is present, add the missing delta
+    const effectivePromptTokens =
+        usageFallbackAvailable && aggregated.promptTokens < priorPromptTokens + usagePrompt
+            ? priorPromptTokens + usagePrompt
+            : basePromptTokens;
+
+    const effectiveCompletionTokens =
+        usageFallbackAvailable &&
+        aggregated.completionTokens < priorCompletionTokens + usageCompletion
+            ? priorCompletionTokens + usageCompletion
+            : baseCompletionTokens;
+
+    const effectiveTotalTokens =
+        usageFallbackAvailable && aggregated.totalTokens < priorTotalTokens + usageTotal
+            ? priorTotalTokens + usageTotal
+            : baseTotalTokens;
+
+    // Compute cost if missing/zero
+    const shouldComputeCost =
+        provider &&
+        model &&
+        effectiveTotalTokens > 0 &&
+        (aggregated.totalCost === 0 ||
+            aggregated.totalCost === null ||
+            aggregated.totalCost === undefined);
+
+    const costResult =
+        shouldComputeCost && provider && model
             ? calculateCost({
                   provider,
                   model,
-                  promptTokens: usage.promptTokens,
-                  completionTokens: usage.completionTokens
+                  promptTokens: effectivePromptTokens,
+                  completionTokens: effectiveCompletionTokens
               })
             : null;
 
-    const tokenUsage = shouldFallback
-        ? {
-              promptTokens: usage.promptTokens,
-              completionTokens: usage.completionTokens,
-              totalTokens: usage.totalTokens,
-              totalCost: fallbackCost?.totalCost ?? aggregated.totalCost ?? 0,
-              lastUpdatedAt: new Date().toISOString(),
-              executionCount: aggregated.executionCount || 1
-          }
-        : {
-              ...aggregated,
-              lastUpdatedAt: new Date().toISOString()
-          };
+    const tokenUsage = {
+        promptTokens: effectivePromptTokens,
+        completionTokens: effectiveCompletionTokens,
+        totalTokens: effectiveTotalTokens,
+        totalCost: costResult?.totalCost ?? aggregated.totalCost ?? priorTotalCost ?? 0,
+        lastUpdatedAt: new Date().toISOString(),
+        executionCount: aggregated.executionCount || 1
+    };
 
     await db.query(
         `

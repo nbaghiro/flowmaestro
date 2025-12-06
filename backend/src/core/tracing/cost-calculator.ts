@@ -162,6 +162,14 @@ const MODEL_PRICING_DB: ModelPricing[] = [
     },
     {
         provider: "anthropic",
+        model: "claude-3-5-sonnet-latest",
+        inputPricePer1M: 3.0,
+        outputPricePer1M: 15.0,
+        inputPricePerToken: 0.000003,
+        outputPricePerToken: 0.000015
+    },
+    {
+        provider: "anthropic",
         model: "claude-3-5-sonnet-20240620",
         inputPricePer1M: 3.0,
         outputPricePer1M: 15.0,
@@ -175,6 +183,14 @@ const MODEL_PRICING_DB: ModelPricing[] = [
         outputPricePer1M: 1.25,
         inputPricePerToken: 0.00000025,
         outputPricePerToken: 0.00000125
+    },
+    {
+        provider: "anthropic",
+        model: "claude-3-5-haiku-latest",
+        inputPricePer1M: 1.0,
+        outputPricePer1M: 5.0,
+        inputPricePerToken: 0.000001,
+        outputPricePerToken: 0.000005
     },
     {
         provider: "anthropic",
