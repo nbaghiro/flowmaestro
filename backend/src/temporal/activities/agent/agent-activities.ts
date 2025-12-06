@@ -74,57 +74,24 @@ export interface CallLLMInput {
 }
 
 export async function callLLM(input: CallLLMInput): Promise<LLMResponse> {
-    const {
-        model,
-        provider,
-        connectionId,
-        messages,
-        tools,
-        temperature,
-        maxTokens,
-        executionId,
-        threadId
-    } = input;
-
-    // Mock mode for testing without using LLM tokens
-    const mockMode = process.env.AGENT_MOCK_MODE === "true" || process.env.AGENT_MOCK_MODE === "1";
-    if (mockMode) {
-        console.log("[callLLM] 🧪 MOCK MODE: Returning mock response without calling LLM");
-
-        // Get the last user message for context
-        const lastUserMessage = messages.filter((m) => m.role === "user").pop();
-        const userQuery = lastUserMessage?.content || "Hello";
-
-        // Generate a mock response
-        const mockResponse = `This is a mock response to: "${userQuery}". In a real scenario, I would analyze your request and provide a helpful answer. This response is generated in mock mode to test the agent flow without consuming LLM tokens.`;
-
-        // Emit tokens as if streaming (for realistic testing)
-        if (executionId) {
-            const tokens = mockResponse.split(" ");
-            for (const token of tokens) {
-                await emitAgentToken({ executionId, token: token + " " });
-                // Small delay to simulate streaming
-                await new Promise((resolve) => setTimeout(resolve, 50));
-            }
-        }
-
-        return {
-            content: mockResponse,
-            tool_calls: undefined,
-            isComplete: true,
-            usage: {
-                promptTokens: 100,
-                completionTokens: 50,
-                totalTokens: 150
-            }
-        };
-    }
+    const { model, provider, connectionId, messages, tools, temperature, maxTokens, threadId } =
+        input;
 
     // Get API credentials from connection
+    // Also update provider if connection is overridden (connection determines provider)
     let apiKey: string | null = null;
+    let actualProvider = provider;
+
     if (connectionId) {
         const connection = await connectionRepo.findByIdWithData(connectionId);
         if (connection && connection.data) {
+            // Use the connection's provider (important for overrides)
+            actualProvider = connection.provider as typeof provider;
+
+            console.log(
+                `[callLLM] Connection override detected: ${provider} -> ${actualProvider}, model: ${model}`
+            );
+
             // Extract API key from connection data
             const connectionData = connection.data;
             if ("api_key" in connectionData) {
@@ -137,7 +104,7 @@ export async function callLLM(input: CallLLMInput): Promise<LLMResponse> {
 
     // If no connection or API key, try environment variables
     if (!apiKey) {
-        switch (provider) {
+        switch (actualProvider) {
             case "openai":
                 apiKey = process.env.OPENAI_API_KEY || null;
                 break;
@@ -150,15 +117,18 @@ export async function callLLM(input: CallLLMInput): Promise<LLMResponse> {
             case "cohere":
                 apiKey = process.env.COHERE_API_KEY || null;
                 break;
+            case "huggingface":
+                apiKey = process.env.HUGGINGFACE_API_KEY || null;
+                break;
         }
     }
 
     if (!apiKey) {
-        throw new Error(`No API key found for provider ${provider}`);
+        throw new Error(`No API key found for provider ${actualProvider}`);
     }
 
-    // Call appropriate LLM provider
-    switch (provider) {
+    // Call appropriate LLM provider (use actualProvider which may be overridden)
+    switch (actualProvider) {
         case "openai":
             return await callOpenAI({
                 model,
@@ -172,6 +142,39 @@ export async function callLLM(input: CallLLMInput): Promise<LLMResponse> {
             });
         case "anthropic":
             return await callAnthropic({
+                model,
+                apiKey,
+                messages,
+                tools,
+                temperature,
+                maxTokens,
+                executionId: input.executionId,
+                threadId
+            });
+        case "google":
+            return await callGoogle({
+                model,
+                apiKey,
+                messages,
+                tools,
+                temperature,
+                maxTokens,
+                executionId: input.executionId,
+                threadId
+            });
+        case "cohere":
+            return await callCohere({
+                model,
+                apiKey,
+                messages,
+                tools,
+                temperature,
+                maxTokens,
+                executionId: input.executionId,
+                threadId
+            });
+        case "huggingface":
+            return await callHuggingFace({
                 model,
                 apiKey,
                 messages,
@@ -655,6 +658,416 @@ async function callAnthropic(input: AnthropicCallInput): Promise<LLMResponse> {
         tool_calls: toolCalls,
         isComplete: stopReason === "end_turn" && !toolCalls,
         usage
+    };
+}
+
+/**
+ * Call Google Gemini API
+ */
+interface GoogleCallInput {
+    model: string;
+    apiKey: string;
+    messages: ThreadMessage[];
+    tools: Tool[];
+    temperature: number;
+    maxTokens: number;
+    executionId?: string;
+    threadId: string;
+}
+
+async function callGoogle(input: GoogleCallInput): Promise<LLMResponse> {
+    const { model, apiKey, messages, tools, temperature, maxTokens, executionId } = input;
+
+    // Extract system prompt
+    const systemPrompt = messages.find((m) => m.role === "system")?.content || "";
+    const threadMessages = messages.filter((m) => m.role !== "system");
+
+    // Format messages for Gemini
+    const formattedMessages = threadMessages.map((msg) => {
+        if (msg.role === "assistant") {
+            return {
+                role: "model",
+                parts: [{ text: msg.content }]
+            };
+        } else if (msg.role === "tool") {
+            return {
+                role: "function",
+                parts: [
+                    {
+                        functionResponse: {
+                            name: msg.tool_name || "",
+                            response: {
+                                content: msg.content
+                            }
+                        }
+                    }
+                ]
+            };
+        } else {
+            return {
+                role: "user",
+                parts: [{ text: msg.content }]
+            };
+        }
+    });
+
+    // Format tools for Gemini
+    const formattedTools =
+        tools.length > 0
+            ? {
+                  functionDeclarations: tools.map((tool) => ({
+                      name: tool.name,
+                      description: tool.description,
+                      parameters: sanitizeJsonSchema(tool.schema)
+                  }))
+              }
+            : undefined;
+
+    // Call Google Gemini API with streaming
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?key=${apiKey}&alt=sse`;
+    const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            contents: formattedMessages,
+            tools: formattedTools ? [formattedTools] : undefined,
+            systemInstruction: systemPrompt
+                ? {
+                      parts: [{ text: systemPrompt }]
+                  }
+                : undefined,
+            generationConfig: {
+                temperature,
+                maxOutputTokens: maxTokens
+            }
+        })
+    });
+
+    if (!response.ok) {
+        const error = await response.text();
+        throw new Error(`Google API error: ${response.status} - ${error}`);
+    }
+
+    // Process streaming response
+    const reader = response.body?.getReader();
+    const decoder = new TextDecoder();
+    let fullContent = "";
+    let toolCalls: ToolCall[] | undefined;
+    let finishReason = "";
+    let usage: { promptTokens: number; completionTokens: number; totalTokens: number } | undefined;
+
+    if (!reader) {
+        throw new Error("Failed to get response reader");
+    }
+
+    let done = false;
+    while (!done) {
+        const result = await reader.read();
+        done = result.done;
+        if (done) break;
+
+        const chunk = decoder.decode(result.value, { stream: true });
+        const lines = chunk.split("\n").filter((line) => line.trim());
+
+        for (const line of lines) {
+            if (line.startsWith("data: ")) {
+                const data = line.slice(6);
+
+                try {
+                    const parsed = JSON.parse(data) as {
+                        candidates?: Array<{
+                            content?: {
+                                parts?: Array<{
+                                    text?: string;
+                                    functionCall?: {
+                                        name: string;
+                                        args: JsonObject;
+                                    };
+                                }>;
+                            };
+                            finishReason?: string;
+                        }>;
+                        usageMetadata?: {
+                            promptTokenCount: number;
+                            candidatesTokenCount: number;
+                            totalTokenCount: number;
+                        };
+                    };
+
+                    const candidate = parsed.candidates?.[0];
+                    if (candidate?.content?.parts) {
+                        for (const part of candidate.content.parts) {
+                            if (part.text) {
+                                fullContent += part.text;
+                                if (executionId) {
+                                    await emitAgentToken({ executionId, token: part.text });
+                                }
+                            }
+                            if (part.functionCall) {
+                                if (!toolCalls) toolCalls = [];
+                                toolCalls.push({
+                                    id: `google-${Date.now()}-${toolCalls.length}`,
+                                    name: part.functionCall.name,
+                                    arguments: part.functionCall.args
+                                });
+                            }
+                        }
+                    }
+
+                    if (candidate?.finishReason) {
+                        finishReason = candidate.finishReason;
+                    }
+
+                    if (parsed.usageMetadata) {
+                        usage = {
+                            promptTokens: parsed.usageMetadata.promptTokenCount,
+                            completionTokens: parsed.usageMetadata.candidatesTokenCount,
+                            totalTokens: parsed.usageMetadata.totalTokenCount
+                        };
+                    }
+                } catch {
+                    // Skip invalid JSON lines
+                    continue;
+                }
+            }
+        }
+    }
+
+    return {
+        content: fullContent,
+        tool_calls: toolCalls,
+        isComplete: finishReason === "STOP" && !toolCalls,
+        usage
+    };
+}
+
+/**
+ * Call Cohere API
+ */
+interface CohereCallInput {
+    model: string;
+    apiKey: string;
+    messages: ThreadMessage[];
+    tools: Tool[];
+    temperature: number;
+    maxTokens: number;
+    executionId?: string;
+    threadId: string;
+}
+
+async function callCohere(input: CohereCallInput): Promise<LLMResponse> {
+    const { model, apiKey, messages, tools, temperature, maxTokens, executionId } = input;
+
+    // Extract system prompt
+    const systemPrompt = messages.find((m) => m.role === "system")?.content || "";
+    const threadMessages = messages.filter((m) => m.role !== "system");
+
+    // Format messages for Cohere
+    const formattedMessages = threadMessages.map((msg) => ({
+        role: msg.role === "assistant" ? "CHATBOT" : "USER",
+        message: msg.content
+    }));
+
+    // Format tools for Cohere
+    const formattedTools =
+        tools.length > 0
+            ? tools.map((tool) => ({
+                  name: tool.name,
+                  description: tool.description,
+                  parameter_definitions: tool.schema.properties || {}
+              }))
+            : undefined;
+
+    // Call Cohere API with streaming
+    const response = await fetch("https://api.cohere.ai/v1/chat", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+            model,
+            message: formattedMessages[formattedMessages.length - 1]?.message || "",
+            chat_history: formattedMessages.slice(0, -1),
+            preamble: systemPrompt || undefined,
+            tools: formattedTools,
+            temperature,
+            max_tokens: maxTokens,
+            stream: true
+        })
+    });
+
+    if (!response.ok) {
+        const error = await response.text();
+        throw new Error(`Cohere API error: ${response.status} - ${error}`);
+    }
+
+    // Process streaming response
+    const reader = response.body?.getReader();
+    const decoder = new TextDecoder();
+    let fullContent = "";
+    let toolCalls: ToolCall[] | undefined;
+    let usage: { promptTokens: number; completionTokens: number; totalTokens: number } | undefined;
+
+    if (!reader) {
+        throw new Error("Failed to get response reader");
+    }
+
+    let done = false;
+    while (!done) {
+        const result = await reader.read();
+        done = result.done;
+        if (done) break;
+
+        const chunk = decoder.decode(result.value, { stream: true });
+        const lines = chunk.split("\n").filter((line) => line.trim());
+
+        for (const line of lines) {
+            try {
+                const parsed = JSON.parse(line) as {
+                    event_type?: string;
+                    text?: string;
+                    tool_calls?: Array<{
+                        name: string;
+                        parameters: JsonObject;
+                    }>;
+                    finish_reason?: string;
+                    meta?: {
+                        tokens?: {
+                            input_tokens?: number;
+                            output_tokens?: number;
+                        };
+                    };
+                };
+
+                if (parsed.event_type === "text-generation" && parsed.text) {
+                    fullContent += parsed.text;
+                    if (executionId) {
+                        await emitAgentToken({ executionId, token: parsed.text });
+                    }
+                }
+
+                if (parsed.event_type === "tool-calls-generation" && parsed.tool_calls) {
+                    toolCalls = parsed.tool_calls.map((tc, idx) => ({
+                        id: `cohere-${Date.now()}-${idx}`,
+                        name: tc.name,
+                        arguments: tc.parameters
+                    }));
+                }
+
+                if (parsed.meta?.tokens) {
+                    usage = {
+                        promptTokens: parsed.meta.tokens.input_tokens || 0,
+                        completionTokens: parsed.meta.tokens.output_tokens || 0,
+                        totalTokens:
+                            (parsed.meta.tokens.input_tokens || 0) +
+                            (parsed.meta.tokens.output_tokens || 0)
+                    };
+                }
+            } catch {
+                continue;
+            }
+        }
+    }
+
+    return {
+        content: fullContent,
+        tool_calls: toolCalls,
+        isComplete: !toolCalls,
+        usage
+    };
+}
+
+/**
+ * Call Hugging Face Inference API
+ */
+interface HuggingFaceCallInput {
+    model: string;
+    apiKey: string;
+    messages: ThreadMessage[];
+    tools: Tool[];
+    temperature: number;
+    maxTokens: number;
+    executionId?: string;
+    threadId: string;
+}
+
+async function callHuggingFace(input: HuggingFaceCallInput): Promise<LLMResponse> {
+    const { model, apiKey, messages, temperature, maxTokens, executionId } = input;
+
+    // Format messages for Hugging Face (OpenAI-compatible format)
+    const formattedMessages = messages.map((msg) => ({
+        role: msg.role === "assistant" ? "assistant" : msg.role === "tool" ? "assistant" : "user",
+        content: msg.content
+    }));
+
+    // Using the OpenAI-compatible Inference API endpoint
+    const response = await fetch("https://router.huggingface.co/v1/chat/completions", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+            model: `${model}:fastest`, // Use :fastest suffix for best performance
+            messages: formattedMessages,
+            temperature,
+            max_tokens: maxTokens,
+            stream: true // Enable streaming for token-by-token responses
+        })
+    });
+
+    if (!response.ok) {
+        const error = await response.text();
+        throw new Error(`Hugging Face API error: ${response.status} - ${error}`);
+    }
+
+    let fullContent = "";
+
+    // Handle streaming response (SSE format)
+    if (response.body) {
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        let result = await reader.read();
+        while (!result.done) {
+            const chunk = decoder.decode(result.value, { stream: true });
+            const lines = chunk.split("\n");
+
+            for (const line of lines) {
+                if (!line.trim() || line.startsWith(":")) continue;
+
+                if (line.startsWith("data: ")) {
+                    const data = line.slice(6);
+                    if (data === "[DONE]") continue;
+
+                    try {
+                        const parsed = JSON.parse(data);
+                        const content = parsed.choices?.[0]?.delta?.content || "";
+
+                        if (content) {
+                            fullContent += content;
+                            if (executionId) {
+                                await emitAgentToken({ executionId, token: content });
+                            }
+                        }
+                    } catch {
+                        continue;
+                    }
+                }
+            }
+
+            result = await reader.read();
+        }
+    }
+
+    return {
+        content: fullContent,
+        tool_calls: undefined,
+        isComplete: true,
+        usage: undefined
     };
 }
 

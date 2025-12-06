@@ -28,3 +28,11 @@ spec:
     - secretKey: GOOGLE_API_KEY
       remoteRef:
         key: flowmaestro-app-google-api-key
+
+    - secretKey: COHERE_API_KEY
+      remoteRef:
+        key: flowmaestro-app-cohere-api-key
+
+    - secretKey: HUGGINGFACE_API_KEY
+      remoteRef:
+        key: flowmaestro-app-huggingface-api-key

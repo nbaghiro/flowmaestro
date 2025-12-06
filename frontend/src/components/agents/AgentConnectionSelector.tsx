@@ -1,9 +1,8 @@
 import { Settings, ChevronDown } from "lucide-react";
 import { useState, useEffect } from "react";
 import { LLM_MODELS_BY_PROVIDER, getDefaultModelForProvider } from "@flowmaestro/shared";
-import { getConnections, type Connection } from "../../lib/api";
+import { getConnections, type Connection, type Agent } from "../../lib/api";
 import { cn } from "../../lib/utils";
-import { useAgentStore } from "../../stores/agentStore";
 
 // Get list of provider values from the models registry
 const LLM_PROVIDER_VALUES = Object.keys(LLM_MODELS_BY_PROVIDER);
@@ -11,8 +10,19 @@ const LLM_PROVIDER_VALUES = Object.keys(LLM_MODELS_BY_PROVIDER);
 // Define provider display order
 const PROVIDER_ORDER = ["openai", "anthropic", "google", "cohere", "huggingface"];
 
-export function AgentConnectionSelector() {
-    const { selectedConnectionId, selectedModel, setConnection } = useAgentStore();
+interface AgentConnectionSelectorProps {
+    agent: Agent;
+    overrideConnectionId?: string | null;
+    overrideModel?: string | null;
+    onOverrideChange: (connectionId: string, model: string) => void;
+}
+
+export function AgentConnectionSelector({
+    agent,
+    overrideConnectionId,
+    overrideModel,
+    onOverrideChange
+}: AgentConnectionSelectorProps) {
     const [connections, setConnections] = useState<Connection[]>([]);
     const [isOpen, setIsOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
@@ -35,17 +45,6 @@ export function AgentConnectionSelector() {
                             return a.name.localeCompare(b.name);
                         });
                     setConnections(llmConnections);
-
-                    // Auto-select first connection if none selected
-                    // Prefer OpenAI connection if available
-                    if (!selectedConnectionId && llmConnections.length > 0) {
-                        const openAIConn = llmConnections.find(
-                            (conn) => conn.provider.toLowerCase() === "openai"
-                        );
-                        const defaultConn = openAIConn || llmConnections[0];
-                        const defaultModel = getDefaultModelForProvider(defaultConn.provider);
-                        setConnection(defaultConn.id, defaultModel);
-                    }
                 }
             } catch (error) {
                 console.error("Failed to fetch connections:", error);
@@ -55,9 +54,13 @@ export function AgentConnectionSelector() {
         };
 
         fetchConnections();
-    }, [selectedConnectionId, setConnection]);
+    }, []);
 
-    const selectedConnection = connections.find((c) => c.id === selectedConnectionId);
+    // Use override if provided, otherwise fall back to agent's settings
+    const activeConnectionId = overrideConnectionId || agent.connection_id || "";
+    const activeModel = overrideModel || agent.model;
+
+    const selectedConnection = connections.find((c) => c.id === activeConnectionId);
     const availableModels = selectedConnection
         ? LLM_MODELS_BY_PROVIDER[selectedConnection.provider] || []
         : [];
@@ -77,20 +80,20 @@ export function AgentConnectionSelector() {
         return modelValue;
     };
 
-    const modelNickname = getModelNickname(selectedModel);
+    const modelNickname = getModelNickname(activeModel);
 
     const handleConnectionChange = (connectionId: string) => {
         const connection = connections.find((c) => c.id === connectionId);
         if (connection) {
             const defaultModel = getDefaultModelForProvider(connection.provider);
-            setConnection(connectionId, defaultModel);
+            onOverrideChange(connectionId, defaultModel);
         }
         setIsOpen(false);
     };
 
     const handleModelChange = (model: string) => {
-        if (selectedConnectionId) {
-            setConnection(selectedConnectionId, model);
+        if (activeConnectionId) {
+            onOverrideChange(activeConnectionId, model);
         }
         setIsOpen(false);
     };
@@ -148,7 +151,7 @@ export function AgentConnectionSelector() {
                                         className={cn(
                                             "w-full text-left px-2 py-1.5 rounded text-xs",
                                             "hover:bg-muted transition-colors",
-                                            selectedConnectionId === conn.id
+                                            activeConnectionId === conn.id
                                                 ? "bg-primary/10 text-primary"
                                                 : "text-foreground"
                                         )}
@@ -176,7 +179,7 @@ export function AgentConnectionSelector() {
                                             className={cn(
                                                 "w-full text-left px-2 py-1.5 rounded text-xs",
                                                 "hover:bg-muted transition-colors",
-                                                selectedModel === model.value
+                                                activeModel === model.value
                                                     ? "bg-primary/10 text-primary"
                                                     : "text-foreground"
                                             )}

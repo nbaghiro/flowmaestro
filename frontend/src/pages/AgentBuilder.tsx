@@ -670,7 +670,11 @@ export function AgentBuilder() {
                                         connections={llmConnections}
                                         selectedConnectionId={connectionId}
                                         selectedModel={model}
-                                        onConnectionChange={(connId, connProvider, connModel) => {
+                                        onConnectionChange={async (
+                                            connId,
+                                            connProvider,
+                                            connModel
+                                        ) => {
                                             setConnectionId(connId);
                                             setProvider(
                                                 connProvider as
@@ -681,6 +685,27 @@ export function AgentBuilder() {
                                                     | "huggingface"
                                             );
                                             setModel(connModel);
+
+                                            // Auto-save to agent if not a new agent
+                                            if (!isNewAgent && agentId) {
+                                                try {
+                                                    await updateAgent(agentId, {
+                                                        connection_id: connId,
+                                                        provider: connProvider as
+                                                            | "openai"
+                                                            | "anthropic"
+                                                            | "google"
+                                                            | "cohere"
+                                                            | "huggingface",
+                                                        model: connModel
+                                                    });
+                                                } catch (err) {
+                                                    console.error(
+                                                        "Failed to update agent model:",
+                                                        err
+                                                    );
+                                                }
+                                            }
                                         }}
                                     />
 

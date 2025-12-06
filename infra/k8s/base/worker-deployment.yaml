@@ -124,6 +124,18 @@ spec:
                   name: llm-api-keys
                   key: google-api-key
                   optional: true
+            - name: COHERE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: llm-api-keys
+                  key: cohere-api-key
+                  optional: true
+            - name: HUGGINGFACE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: llm-api-keys
+                  key: huggingface-api-key
+                  optional: true
 
             # Google Cloud Storage configuration (from configmap)
             - name: GCS_BUCKET_NAME

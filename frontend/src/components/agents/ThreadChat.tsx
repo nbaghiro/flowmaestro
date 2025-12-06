@@ -30,9 +30,7 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
         executeAgent,
         sendMessage,
         updateExecutionStatus,
-        addMessageToExecution,
-        selectedConnectionId,
-        selectedModel
+        addMessageToExecution
     } = useAgentStore();
 
     const [input, setInput] = useState("");
@@ -43,6 +41,11 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
         toolName: string;
         error: string;
     } | null>(null);
+
+    // Thread-level model override (doesn't save to agent)
+    const [overrideConnectionId, setOverrideConnectionId] = useState<string | null>(null);
+    const [overrideModel, setOverrideModel] = useState<string | null>(null);
+
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const sseCleanupRef = useRef<(() => void) | null>(null);
     const streamingContentRef = useRef<string>("");
@@ -253,13 +256,13 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
                 currentExecution.status !== "running"
             ) {
                 // Start new execution in this thread
-                // Pass selected connection/model if available, otherwise agent will use defaults
+                // Pass override connection/model if available, otherwise agent will use defaults
                 await executeAgent(
                     agent.id,
                     message,
                     thread.id,
-                    selectedConnectionId || undefined,
-                    selectedModel || undefined
+                    overrideConnectionId || undefined,
+                    overrideModel || undefined
                 );
             } else {
                 // Continue existing execution
@@ -297,7 +300,15 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
                         </p>
                     </div>
                 </div>
-                <AgentConnectionSelector />
+                <AgentConnectionSelector
+                    agent={agent}
+                    overrideConnectionId={overrideConnectionId}
+                    overrideModel={overrideModel}
+                    onOverrideChange={(connectionId, model) => {
+                        setOverrideConnectionId(connectionId);
+                        setOverrideModel(model);
+                    }}
+                />
             </div>
 
             {/* Messages */}
