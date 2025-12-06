@@ -14,7 +14,8 @@ import type {
     MessageCompleteEvent,
     MessageErrorEvent,
     ThinkingEvent,
-    ThreadStreamingEvent
+    ThreadStreamingEvent,
+    TokensUpdatedEvent
 } from "@flowmaestro/shared";
 import { redisEventBus } from "../../../services/events/RedisEventBus";
 
@@ -133,6 +134,32 @@ export async function emitThinking(input: {
     };
 
     await publishWithRetry(input.threadId, event);
+}
+
+export async function emitTokensUpdated(input: {
+    threadId: string;
+    executionId: string;
+    tokenUsage: {
+        promptTokens: number;
+        completionTokens: number;
+        totalTokens: number;
+        totalCost: number;
+        lastUpdatedAt: string;
+    };
+}): Promise<void> {
+    const event: TokensUpdatedEvent = {
+        type: "thread:tokens:updated",
+        timestamp: Date.now(),
+        threadId: input.threadId,
+        executionId: input.executionId,
+        tokenUsage: input.tokenUsage
+    };
+
+    await publishWithRetry(input.threadId, event);
+
+    console.log(
+        `[Streaming] Tokens updated: ${input.tokenUsage.totalTokens} tokens ($${input.tokenUsage.totalCost.toFixed(4)}) for thread ${input.threadId}`
+    );
 }
 
 /**

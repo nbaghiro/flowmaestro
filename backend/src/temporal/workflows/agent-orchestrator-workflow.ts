@@ -25,7 +25,8 @@ const {
     validateInput,
     validateOutput,
     createSpan,
-    endSpan
+    endSpan,
+    updateThreadTokens
 } = proxyActivities<typeof activities>({
     startToCloseTimeout: "10 minutes",
     retry: {
@@ -399,6 +400,19 @@ export async function agentOrchestratorWorkflow(
                     })
                 }
             });
+
+            // Update token usage for thread (pass usage to avoid zeros when spans are lagging)
+            try {
+                await updateThreadTokens({
+                    threadId,
+                    executionId,
+                    usage: llmResponse.usage,
+                    provider: agent.provider,
+                    model: agent.model
+                });
+            } catch (error) {
+                console.error("[Workflow] Failed to update thread tokens", error);
+            }
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : "Unknown LLM error";
             console.error(`[Agent] LLM call failed: ${errorMessage}`);

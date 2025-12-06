@@ -1,5 +1,6 @@
 import { FastifyRequest, FastifyReply } from "fastify";
 import { z } from "zod";
+import type { ThreadStreamingEvent } from "@flowmaestro/shared";
 import { redisEventBus } from "../../../services/events/RedisEventBus";
 import { AgentExecutionRepository } from "../../../storage/repositories/AgentExecutionRepository";
 import { NotFoundError } from "../../middleware";
@@ -27,6 +28,7 @@ export async function streamAgentHandler(
     if (!execution || execution.user_id !== userId || execution.agent_id !== agentId) {
         throw new NotFoundError("Execution not found");
     }
+    const threadId = execution.thread_id;
 
     // Set SSE headers
     const origin = request.headers.origin;
@@ -86,6 +88,7 @@ export async function streamAgentHandler(
         channel: string;
         handler: (data: Record<string, unknown>) => void;
     }> = [];
+    let threadUnsubscribe: (() => Promise<void>) | null = null;
 
     const subscribe = (
         eventType: string,
@@ -109,6 +112,11 @@ export async function streamAgentHandler(
         eventHandlers.forEach(({ channel, handler }) => {
             redisEventBus.unsubscribe(channel, handler);
         });
+        if (threadUnsubscribe) {
+            threadUnsubscribe().catch((error) =>
+                console.error("[SSE Stream] Failed to unsubscribe from thread channel", error)
+            );
+        }
     };
 
     // Subscribe to relevant events
@@ -223,6 +231,19 @@ export async function streamAgentHandler(
             }, 500);
         }
     });
+
+    // Also listen on the thread-scoped stream for token usage updates
+    const threadHandler = (event: ThreadStreamingEvent) => {
+        if (event.type === "thread:tokens:updated" && event.executionId === executionId) {
+            // Spread to satisfy Record<string, unknown> requirement on sendEvent
+            sendEvent("thread:tokens:updated", { ...event });
+        }
+    };
+
+    await redisEventBus.subscribeToThread(threadId, threadHandler);
+    threadUnsubscribe = async () => {
+        await redisEventBus.unsubscribeFromThread(threadId, threadHandler);
+    };
 
     // Send initial connection event
     console.log(`[SSE Stream] Sending connected event for execution ${executionId}`);

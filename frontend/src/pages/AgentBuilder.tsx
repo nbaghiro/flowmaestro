@@ -54,7 +54,7 @@ export function AgentBuilder() {
         fetchAgent,
         createAgent,
         updateAgent,
-        setCurrentAgent,
+        resetAgentState,
         addTool,
         removeTool,
         threads,
@@ -103,17 +103,21 @@ export function AgentBuilder() {
         title: string;
     } | null>(null);
 
-    // Load agent if editing
+    // Load agent if editing - reset state first when switching agents
     useEffect(() => {
+        // Reset all agent-specific state when agentId changes
+        resetAgentState();
+
         if (!isNewAgent && agentId) {
             fetchAgent(agentId);
         }
         fetchConnections();
 
         return () => {
-            setCurrentAgent(null);
+            // Also reset on unmount to ensure clean state
+            resetAgentState();
         };
-    }, [agentId, isNewAgent, fetchAgent, fetchConnections, setCurrentAgent]);
+    }, [agentId, isNewAgent, fetchAgent, fetchConnections, resetAgentState]);
 
     // Populate form when agent loads
     useEffect(() => {
