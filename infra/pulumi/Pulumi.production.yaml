@@ -12,3 +12,4 @@ config:
   flowmaestro-infrastructure:dbHighAvailability: "true"
   flowmaestro-infrastructure:redisMemorySizeGb: "5"
   flowmaestro-infrastructure:redisTier: STANDARD_HA
+  flowmaestro-infrastructure:gaMeasurementId: G-JKESHN6FT6

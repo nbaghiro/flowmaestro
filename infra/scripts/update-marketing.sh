@@ -52,10 +52,14 @@ fi
 
 REGISTRY="$GCP_REGION-docker.pkg.dev/$GCP_PROJECT/flowmaestro"
 
+# Get Google Analytics Measurement ID from Pulumi config
+GA_MEASUREMENT_ID=$(pulumi config get gaMeasurementId 2>/dev/null || echo "")
+
 print_info "Configuration:"
 echo "  Project: $GCP_PROJECT"
 echo "  Region:  $GCP_REGION"
 echo "  Registry: $REGISTRY"
+[ -n "$GA_MEASUREMENT_ID" ] && echo "  GA ID:   $GA_MEASUREMENT_ID"
 echo ""
 
 cd "$REPO_ROOT" || exit 1
@@ -79,6 +83,7 @@ print_success "Docker authenticated"
 print_info "Building marketing Docker image for linux/amd64..."
 docker build \
     --platform linux/amd64 \
+    --build-arg VITE_GA_MEASUREMENT_ID="$GA_MEASUREMENT_ID" \
     -f infra/docker/marketing/Dockerfile \
     -t "$REGISTRY/marketing:latest" \
     -t "$REGISTRY/marketing:$ENVIRONMENT" \

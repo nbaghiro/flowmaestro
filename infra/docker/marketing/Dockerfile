@@ -1,6 +1,9 @@
 # Build stage
 FROM node:20-alpine AS builder
 
+# Build arguments for environment variables baked into the static build
+ARG VITE_GA_MEASUREMENT_ID=""
+
 WORKDIR /app
 
 # Copy root package files
@@ -15,6 +18,9 @@ RUN npm ci --workspace=marketing --ignore-scripts && \
 
 # Copy source code
 COPY marketing/ ./marketing/
+
+# Set environment variables for build
+ENV VITE_GA_MEASUREMENT_ID=${VITE_GA_MEASUREMENT_ID}
 
 # Build marketing site
 RUN npm run build --workspace=marketing
