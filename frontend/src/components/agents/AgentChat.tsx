@@ -46,15 +46,24 @@ const normalizeTokenUsage = (usage?: ThreadTokenUsage | null): ThreadTokenUsage 
 };
 
 export function AgentChat({ agent }: AgentChatProps) {
-    const { currentExecution, currentThread, executeAgent, sendMessage, updateExecutionStatus } =
-        useAgentStore();
+    const {
+        currentThread,
+        threadMessages,
+        currentExecutionId,
+        currentExecutionThreadId,
+        executeAgent,
+        sendMessage,
+        setExecutionStatus,
+        addMessageToThread,
+        updateThreadMessage,
+        fetchThreadMessages
+    } = useAgentStore();
 
     const [input, setInput] = useState("");
     const [isSending, setIsSending] = useState(false);
     const [tokenUsage, setTokenUsage] = useState<ThreadTokenUsage | null>(
         normalizeTokenUsage(currentThread?.metadata?.tokenUsage || null)
     );
-    const [messages, setMessages] = useState<ThreadMessage[]>([]);
     const [toolCalls, setToolCalls] = useState<ToolCallInfo[]>([]);
     const [selectedToolError, setSelectedToolError] = useState<{
         toolName: string;
@@ -69,14 +78,18 @@ export function AgentChat({ agent }: AgentChatProps) {
     const sseCleanupRef = useRef<(() => void) | null>(null);
     const streamingContentRef = useRef<string>("");
 
+    // Get messages for current thread from store
+    // Use currentExecutionThreadId as fallback for timing issues during new thread creation
+    const activeThreadId = currentThread?.id || currentExecutionThreadId;
+    const messages = activeThreadId ? threadMessages[activeThreadId] || [] : [];
+
     const refreshTokenUsage = useCallback(async () => {
-        const threadId = currentThread?.id || currentExecution?.thread_id;
+        const threadId = currentThread?.id;
         if (!threadId) return;
 
         try {
             const response = await api.getThread(threadId);
             if (response.success) {
-                // Thread API can return ThreadWithStats, but metadata shape is same
                 const threadData = response.data as {
                     metadata?: { tokenUsage?: ThreadTokenUsage };
                 };
@@ -85,95 +98,34 @@ export function AgentChat({ agent }: AgentChatProps) {
         } catch (error) {
             console.error("[AgentChat] Failed to refresh token usage:", error);
         }
-    }, [currentExecution?.thread_id, currentThread?.id]);
+    }, [currentThread?.id]);
 
-    // Keep token usage fresh when thread changes or on mount (Build tab)
+    // Load messages when thread changes
     useEffect(() => {
-        void refreshTokenUsage();
-    }, [refreshTokenUsage]);
+        if (currentThread && !threadMessages[currentThread.id]) {
+            fetchThreadMessages(currentThread.id);
+        }
+    }, [currentThread?.id, threadMessages, fetchThreadMessages]);
+
+    // Keep token usage fresh when thread changes
+    useEffect(() => {
+        if (currentThread) {
+            setTokenUsage(normalizeTokenUsage(currentThread.metadata?.tokenUsage || null));
+            void refreshTokenUsage();
+        }
+    }, [currentThread?.id, refreshTokenUsage, currentThread?.metadata?.tokenUsage]);
 
     // Scroll to bottom when messages or tool calls change
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages, toolCalls]);
 
-    // Track previous thread_id to preserve messages when continuing in same thread
-    const prevThreadIdRef = useRef<string | undefined>(undefined);
-
-    // Load thread messages when currentThread is set but no active execution
-    useEffect(() => {
-        if (currentThread && !currentExecution) {
-            // Load messages for this thread from the API
-            import("../../lib/api").then(({ getThreadMessages }) => {
-                getThreadMessages(currentThread.id)
-                    .then((response) => {
-                        if (response.success && response.data) {
-                            setMessages(response.data.messages || []);
-                            prevThreadIdRef.current = currentThread.id;
-                            const metaUsage =
-                                (response.data as { metadata?: { tokenUsage?: ThreadTokenUsage } })
-                                    .metadata?.tokenUsage || currentThread.metadata?.tokenUsage;
-                            setTokenUsage(normalizeTokenUsage(metaUsage || null));
-                        }
-                    })
-                    .catch((error) => {
-                        console.error("Failed to load thread messages:", error);
-                    });
-            });
-        }
-    }, [currentThread?.id, currentExecution?.id, currentThread?.metadata?.tokenUsage]);
-
-    // Update token usage when thread metadata changes while active
-    useEffect(() => {
-        if (currentThread?.metadata?.tokenUsage) {
-            setTokenUsage(normalizeTokenUsage(currentThread.metadata.tokenUsage));
-        }
-    }, [currentThread?.metadata?.tokenUsage]);
-
-    // Sync messages from execution when execution ID changes
-    // Preserve existing messages if we're continuing in the same thread
-    useEffect(() => {
-        if (currentExecution) {
-            const currentThreadId = currentExecution.thread_id;
-            const isSameThread = prevThreadIdRef.current === currentThreadId;
-            const history = currentExecution.thread_history || [];
-
-            // Update thread reference
-            prevThreadIdRef.current = currentThreadId;
-
-            setMessages((prev) => {
-                // If same thread and we have existing messages, only add truly new messages
-                if (isSameThread && prev.length > 0) {
-                    // Find messages in history that are newer than what we have
-                    // Compare by content + timestamp to avoid ID mismatch issues
-                    const existingMessages = new Set(
-                        prev.map((m) => `${m.role}:${m.content}:${m.timestamp}`)
-                    );
-                    const newMessages = history.filter((m) => {
-                        const key = `${m.role}:${m.content}:${m.timestamp}`;
-                        return !existingMessages.has(key);
-                    });
-
-                    // If we found new messages, add them
-                    // Otherwise, keep existing messages (they might be more up-to-date with streaming)
-                    if (newMessages.length > 0) {
-                        // Only add the new messages, not the entire history
-                        return [...prev, ...newMessages];
-                    }
-                    return prev;
-                }
-
-                // New thread or no previous messages - use execution history
-                return history;
-            });
-        }
-    }, [currentExecution?.id]);
-
     // Start SSE stream when execution starts
     useEffect(() => {
-        if (!currentExecution) return;
+        if (!currentExecutionId || !currentExecutionThreadId) return;
 
-        const executionId = currentExecution.id;
+        const executionId = currentExecutionId;
+        const threadId = currentExecutionThreadId;
         const agentId = agent.id;
 
         // Clean up any previous stream
@@ -188,6 +140,8 @@ export function AgentChat({ agent }: AgentChatProps) {
 
         console.log(`[AgentChat] Starting SSE stream for execution ${executionId}`);
 
+        const streamingMessageId = `streaming-${executionId}`;
+
         // Start SSE stream
         const cleanup = streamAgentExecution(agentId, executionId, {
             onConnected: () => {
@@ -197,34 +151,21 @@ export function AgentChat({ agent }: AgentChatProps) {
                 // Accumulate token
                 streamingContentRef.current += token;
 
-                // Update streaming message
-                setMessages((prev) => {
-                    const streamingId = `streaming-${executionId}`;
-                    const lastMessage = prev[prev.length - 1];
+                // Update or add streaming message in store
+                const store = useAgentStore.getState();
+                const currentMessages = store.threadMessages[threadId] || [];
+                const existingStreamMsg = currentMessages.find((m) => m.id === streamingMessageId);
 
-                    if (
-                        lastMessage &&
-                        lastMessage.role === "assistant" &&
-                        lastMessage.id === streamingId
-                    ) {
-                        // Update existing streaming message
-                        return [
-                            ...prev.slice(0, -1),
-                            { ...lastMessage, content: streamingContentRef.current }
-                        ];
-                    } else {
-                        // Create new streaming message
-                        return [
-                            ...prev,
-                            {
-                                id: streamingId,
-                                role: "assistant" as const,
-                                content: streamingContentRef.current,
-                                timestamp: new Date().toISOString()
-                            }
-                        ];
-                    }
-                });
+                if (existingStreamMsg) {
+                    updateThreadMessage(threadId, streamingMessageId, streamingContentRef.current);
+                } else {
+                    addMessageToThread(threadId, {
+                        id: streamingMessageId,
+                        role: "assistant",
+                        content: streamingContentRef.current,
+                        timestamp: new Date().toISOString()
+                    });
+                }
 
                 if (isSending) {
                     setIsSending(false);
@@ -232,14 +173,10 @@ export function AgentChat({ agent }: AgentChatProps) {
             },
             onMessage: (message: ThreadMessage) => {
                 console.log("[AgentChat] Received message:", message);
-                // This receives non-streamed messages: tool results, system messages, etc.
-                // Assistant responses are built from streaming tokens (onToken + onCompleted)
-                const store = useAgentStore.getState();
                 if (message.role !== "user") {
-                    store.addMessageToExecution(executionId, message);
+                    addMessageToThread(threadId, message);
                 }
             },
-            // Token usage updated
             onTokenUsageUpdated: (data) => {
                 console.log("[AgentChat] Token usage updated:", data);
                 setTokenUsage(normalizeTokenUsage(data.tokenUsage));
@@ -279,44 +216,41 @@ export function AgentChat({ agent }: AgentChatProps) {
             onCompleted: (data) => {
                 console.log("[AgentChat] Execution completed:", data);
 
-                // Finalize streaming message
+                // Finalize streaming message - replace streaming message with final
                 const finalContent = data.finalMessage || streamingContentRef.current;
-                const streamingId = `streaming-${executionId}`;
-
-                setMessages((prev) => {
-                    const filtered = prev.filter((m) => m.id !== streamingId);
-                    const finalMessage: ThreadMessage = {
-                        id: `asst-${executionId}-${Date.now()}`,
-                        role: "assistant",
-                        content: finalContent,
-                        timestamp: new Date().toISOString()
-                    };
-                    return [...filtered, finalMessage];
-                });
-
-                // Add to store
                 const store = useAgentStore.getState();
-                store.addMessageToExecution(executionId, {
+                const currentMessages = store.threadMessages[threadId] || [];
+
+                // Remove streaming message and add final message
+                const filteredMessages = currentMessages.filter((m) => m.id !== streamingMessageId);
+                const finalMessage: ThreadMessage = {
                     id: `asst-${executionId}-${Date.now()}`,
                     role: "assistant",
                     content: finalContent,
                     timestamp: new Date().toISOString()
-                });
+                };
+
+                store.setThreadMessages(threadId, [...filteredMessages, finalMessage]);
 
                 streamingContentRef.current = "";
                 setIsSending(false);
-                updateExecutionStatus(executionId, "completed");
+                setExecutionStatus(null, null, null);
                 void refreshTokenUsage();
             },
             onError: (error: string) => {
                 console.error("[AgentChat] SSE error:", error);
 
-                // Remove streaming message and show error
-                setMessages((prev) => prev.filter((m) => m.id !== `streaming-${executionId}`));
+                // Remove streaming message
+                const store = useAgentStore.getState();
+                const currentMessages = store.threadMessages[threadId] || [];
+                store.setThreadMessages(
+                    threadId,
+                    currentMessages.filter((m) => m.id !== streamingMessageId)
+                );
 
                 streamingContentRef.current = "";
                 setIsSending(false);
-                updateExecutionStatus(executionId, "failed");
+                setExecutionStatus(null, null, null);
             }
         });
 
@@ -329,7 +263,16 @@ export function AgentChat({ agent }: AgentChatProps) {
                 sseCleanupRef.current = null;
             }
         };
-    }, [currentExecution?.id, agent.id, isSending, updateExecutionStatus, refreshTokenUsage]);
+    }, [
+        currentExecutionId,
+        currentExecutionThreadId,
+        agent.id,
+        isSending,
+        setExecutionStatus,
+        addMessageToThread,
+        updateThreadMessage,
+        refreshTokenUsage
+    ]);
 
     const handleSend = async () => {
         if (!input.trim() || isSending) return;
@@ -340,13 +283,12 @@ export function AgentChat({ agent }: AgentChatProps) {
 
         try {
             const store = useAgentStore.getState();
-            const exec = store.currentExecution;
+            const execId = store.currentExecutionId;
+            const execStatus = store.currentExecutionStatus;
 
-            if (!exec || exec.status !== "running") {
+            if (!execId || execStatus !== "running") {
                 // Start new execution in current thread (or new thread if none exists)
-                // Use currentThread if no execution, to continue in auto-loaded thread
-                const threadId = exec?.thread_id || currentThread?.id;
-                // Pass override connection/model if available, otherwise agent will use defaults
+                const threadId = currentThread?.id;
                 await executeAgent(
                     agent.id,
                     message,
@@ -356,25 +298,21 @@ export function AgentChat({ agent }: AgentChatProps) {
                 );
             } else {
                 // Try to continue existing execution
-                // If it fails (execution completed), start new one in same thread
                 try {
                     await sendMessage(message);
                 } catch (error) {
-                    // Any error from sendMessage means execution is not running anymore
-                    // This is expected when execution completes between status check and send
-                    // Silently handle it and start a new execution in the same thread
                     const errorMessage = error instanceof Error ? error.message : String(error);
-                    // Only log if it's not the expected "already completed" error
                     if (
                         !errorMessage.includes("already completed") &&
                         !errorMessage.includes("400")
                     ) {
                         console.warn("[AgentChat] Unexpected error sending message:", errorMessage);
                     }
+                    // Start new execution in same thread
                     await executeAgent(
                         agent.id,
                         message,
-                        exec.thread_id,
+                        currentThread?.id,
                         overrideConnectionId || undefined,
                         overrideModel || undefined
                     );
@@ -411,7 +349,7 @@ export function AgentChat({ agent }: AgentChatProps) {
                     <div>
                         <p className="text-sm font-medium text-foreground">{agent.name}</p>
                         <p className="text-xs text-muted-foreground">
-                            {currentExecution ? "Active thread" : "Ready to chat"}
+                            {currentExecutionId ? "Active thread" : "Ready to chat"}
                             {usageLabel ? <> • {usageLabel}</> : null}
                         </p>
                     </div>
@@ -441,7 +379,7 @@ export function AgentChat({ agent }: AgentChatProps) {
                 ) : (
                     <>
                         {messages.map((message) => {
-                            // Skip empty assistant messages that only had tool_calls (now shown separately)
+                            // Skip empty assistant messages that only had tool_calls
                             if (message.role === "assistant" && !message.content?.trim()) {
                                 return null;
                             }
@@ -453,14 +391,13 @@ export function AgentChat({ agent }: AgentChatProps) {
                                     message.content.includes("Validation errors") ||
                                     message.content.toLowerCase().includes('"error"');
 
-                                // Extract tool name from content if not in tool_name field
                                 let toolName = message.tool_name || "unknown";
                                 if (toolName === "unknown") {
                                     try {
                                         const parsed = JSON.parse(message.content);
                                         toolName = parsed.toolName || parsed.tool || toolName;
                                     } catch {
-                                        // Keep "unknown" if can't parse
+                                        // Keep "unknown"
                                     }
                                 }
 
@@ -597,7 +534,7 @@ export function AgentChat({ agent }: AgentChatProps) {
                                 </div>
                             </div>
                         ))}
-                        {isSending && currentExecution && toolCalls.length === 0 && (
+                        {isSending && currentExecutionId && toolCalls.length === 0 && (
                             <div className="flex gap-3">
                                 <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
                                     <Bot className="w-4 h-4 text-primary" />

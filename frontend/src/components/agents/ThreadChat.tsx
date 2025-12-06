@@ -48,11 +48,16 @@ const normalizeTokenUsage = (usage?: ThreadTokenUsage | null): ThreadTokenUsage 
 
 export function ThreadChat({ agent, thread }: ThreadChatProps) {
     const {
-        currentExecution,
+        threadMessages,
+        currentExecutionId,
+        currentExecutionStatus,
         executeAgent,
         sendMessage,
-        updateExecutionStatus,
-        addMessageToExecution
+        setExecutionStatus,
+        addMessageToThread,
+        updateThreadMessage,
+        fetchThreadMessages,
+        setThreadMessages
     } = useAgentStore();
 
     const [input, setInput] = useState("");
@@ -60,7 +65,6 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
     const [tokenUsage, setTokenUsage] = useState<ThreadTokenUsage | null>(
         normalizeTokenUsage(thread.metadata?.tokenUsage)
     );
-    const [messages, setMessages] = useState<ThreadMessage[]>([]);
     const [toolCalls, setToolCalls] = useState<ToolCallInfo[]>([]);
     const [selectedToolError, setSelectedToolError] = useState<{
         toolName: string;
@@ -74,6 +78,9 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const sseCleanupRef = useRef<(() => void) | null>(null);
     const streamingContentRef = useRef<string>("");
+
+    // Get messages for this thread from store
+    const messages = threadMessages[thread.id] || [];
 
     const refreshTokenUsage = useCallback(async () => {
         try {
@@ -92,41 +99,29 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages, toolCalls]);
 
-    // Load token usage when thread changes
+    // Load messages when thread changes
     useEffect(() => {
+        if (!threadMessages[thread.id]) {
+            fetchThreadMessages(thread.id);
+        }
+        // Refresh token usage when thread changes
         setTokenUsage(normalizeTokenUsage(thread.metadata?.tokenUsage));
         refreshTokenUsage();
-    }, [thread.id, refreshTokenUsage, thread.metadata?.tokenUsage]);
-
-    // Load messages from backend when thread changes
-    useEffect(() => {
-        const loadMessages = async () => {
-            try {
-                const response = await api.getThreadMessages(thread.id);
-                if (response.success && response.data.messages) {
-                    setMessages(response.data.messages);
-                }
-            } catch (error) {
-                console.error("Failed to load thread messages:", error);
-                setMessages([]);
-            }
-        };
-
-        loadMessages();
-    }, [thread.id]);
-
-    // Update messages from execution when thread matches (for real-time updates)
-    useEffect(() => {
-        if (currentExecution && currentExecution.thread_id === thread.id) {
-            setMessages(currentExecution.thread_history);
-        }
-    }, [currentExecution, thread.id]);
+    }, [
+        thread.id,
+        threadMessages,
+        fetchThreadMessages,
+        refreshTokenUsage,
+        thread.metadata?.tokenUsage
+    ]);
 
     // Start SSE stream when execution starts for this thread
     useEffect(() => {
-        if (!currentExecution || currentExecution.thread_id !== thread.id) return;
+        // Only handle SSE if this is the thread with the active execution
+        if (!currentExecutionId || currentExecutionStatus !== "running") return;
 
-        const executionId = currentExecution.id;
+        const executionId = currentExecutionId;
+        const threadId = thread.id;
         const agentId = agent.id;
 
         // Clean up any previous stream
@@ -141,6 +136,8 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
 
         console.log(`[ThreadChat] Starting SSE stream for execution ${executionId}`);
 
+        const streamingMessageId = `streaming-${executionId}`;
+
         // Start SSE stream
         const cleanup = streamAgentExecution(agentId, executionId, {
             onConnected: () => {
@@ -150,34 +147,21 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
                 // Accumulate token
                 streamingContentRef.current += token;
 
-                // Update streaming message
-                setMessages((prev) => {
-                    const streamingId = `streaming-${executionId}`;
-                    const lastMessage = prev[prev.length - 1];
+                // Update or add streaming message in store
+                const store = useAgentStore.getState();
+                const currentMessages = store.threadMessages[threadId] || [];
+                const existingStreamMsg = currentMessages.find((m) => m.id === streamingMessageId);
 
-                    if (
-                        lastMessage &&
-                        lastMessage.role === "assistant" &&
-                        lastMessage.id === streamingId
-                    ) {
-                        // Update existing streaming message
-                        return [
-                            ...prev.slice(0, -1),
-                            { ...lastMessage, content: streamingContentRef.current }
-                        ];
-                    } else {
-                        // Create new streaming message
-                        return [
-                            ...prev,
-                            {
-                                id: streamingId,
-                                role: "assistant" as const,
-                                content: streamingContentRef.current,
-                                timestamp: new Date().toISOString()
-                            }
-                        ];
-                    }
-                });
+                if (existingStreamMsg) {
+                    updateThreadMessage(threadId, streamingMessageId, streamingContentRef.current);
+                } else {
+                    addMessageToThread(threadId, {
+                        id: streamingMessageId,
+                        role: "assistant",
+                        content: streamingContentRef.current,
+                        timestamp: new Date().toISOString()
+                    });
+                }
 
                 if (isSending) {
                     setIsSending(false);
@@ -185,13 +169,10 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
             },
             onMessage: (message: ThreadMessage) => {
                 console.log("[ThreadChat] Received message:", message);
-                // This receives non-streamed messages: tool results, system messages, etc.
-                // Assistant responses are built from streaming tokens (onToken + onCompleted)
                 if (message.role !== "user") {
-                    addMessageToExecution(executionId, message);
+                    addMessageToThread(threadId, message);
                 }
             },
-            // Token usage updated
             onTokenUsageUpdated: (data) => {
                 console.log("[ThreadChat] Token usage updated:", data);
                 setTokenUsage(normalizeTokenUsage(data.tokenUsage));
@@ -231,43 +212,41 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
             onCompleted: (data) => {
                 console.log("[ThreadChat] Execution completed:", data);
 
-                // Finalize streaming message
+                // Finalize streaming message - replace streaming message with final
                 const finalContent = data.finalMessage || streamingContentRef.current;
-                const streamingId = `streaming-${executionId}`;
+                const store = useAgentStore.getState();
+                const currentMessages = store.threadMessages[threadId] || [];
 
-                setMessages((prev) => {
-                    const filtered = prev.filter((m) => m.id !== streamingId);
-                    const finalMessage: ThreadMessage = {
-                        id: `asst-${executionId}-${Date.now()}`,
-                        role: "assistant",
-                        content: finalContent,
-                        timestamp: new Date().toISOString()
-                    };
-                    return [...filtered, finalMessage];
-                });
-
-                // Add to store
-                addMessageToExecution(executionId, {
+                // Remove streaming message and add final message
+                const filteredMessages = currentMessages.filter((m) => m.id !== streamingMessageId);
+                const finalMessage: ThreadMessage = {
                     id: `asst-${executionId}-${Date.now()}`,
                     role: "assistant",
                     content: finalContent,
                     timestamp: new Date().toISOString()
-                });
+                };
+
+                setThreadMessages(threadId, [...filteredMessages, finalMessage]);
 
                 streamingContentRef.current = "";
                 setIsSending(false);
-                updateExecutionStatus(executionId, "completed");
+                setExecutionStatus(null, null, null);
                 void refreshTokenUsage();
             },
             onError: (error: string) => {
                 console.error("[ThreadChat] SSE error:", error);
 
-                // Remove streaming message and show error
-                setMessages((prev) => prev.filter((m) => m.id !== `streaming-${executionId}`));
+                // Remove streaming message
+                const store = useAgentStore.getState();
+                const currentMessages = store.threadMessages[threadId] || [];
+                setThreadMessages(
+                    threadId,
+                    currentMessages.filter((m) => m.id !== streamingMessageId)
+                );
 
                 streamingContentRef.current = "";
                 setIsSending(false);
-                updateExecutionStatus(executionId, "failed");
+                setExecutionStatus(null, null, null);
             }
         });
 
@@ -281,13 +260,15 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
             }
         };
     }, [
-        currentExecution?.id,
-        currentExecution?.thread_id,
+        currentExecutionId,
+        currentExecutionStatus,
         thread.id,
         agent.id,
         isSending,
-        updateExecutionStatus,
-        addMessageToExecution,
+        setExecutionStatus,
+        addMessageToThread,
+        updateThreadMessage,
+        setThreadMessages,
         refreshTokenUsage
     ]);
 
@@ -299,14 +280,12 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
         setIsSending(true);
 
         try {
-            // Check if we have a running execution for this thread
-            if (
-                !currentExecution ||
-                currentExecution.thread_id !== thread.id ||
-                currentExecution.status !== "running"
-            ) {
+            const store = useAgentStore.getState();
+            const execId = store.currentExecutionId;
+            const execStatus = store.currentExecutionStatus;
+
+            if (!execId || execStatus !== "running") {
                 // Start new execution in this thread
-                // Pass override connection/model if available, otherwise agent will use defaults
                 await executeAgent(
                     agent.id,
                     message,
@@ -351,7 +330,7 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
                             {thread.title || `Thread ${thread.id.slice(0, 8)}`}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                            {currentExecution && currentExecution.thread_id === thread.id
+                            {currentExecutionId && currentExecutionStatus === "running"
                                 ? "Active conversation"
                                 : "Ready to continue"}
                             {usageLabel ? <> • {usageLabel}</> : null}
@@ -381,7 +360,7 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
                 ) : (
                     <>
                         {messages.map((message) => {
-                            // Skip empty assistant messages that only had tool_calls (now shown separately)
+                            // Skip empty assistant messages that only had tool_calls
                             if (message.role === "assistant" && !message.content?.trim()) {
                                 return null;
                             }
@@ -393,14 +372,13 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
                                     message.content.includes("Validation errors") ||
                                     message.content.toLowerCase().includes('"error"');
 
-                                // Extract tool name from content if not in tool_name field
                                 let toolName = message.tool_name || "unknown";
                                 if (toolName === "unknown") {
                                     try {
                                         const parsed = JSON.parse(message.content);
                                         toolName = parsed.toolName || parsed.tool || toolName;
                                     } catch {
-                                        // Keep "unknown" if can't parse
+                                        // Keep "unknown"
                                     }
                                 }
 
