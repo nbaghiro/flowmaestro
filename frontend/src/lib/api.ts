@@ -1430,13 +1430,27 @@ export interface UpdateAgentRequest {
 }
 
 // Thread types
+export interface ThreadTokenUsage extends JsonObject {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+    totalCost: number;
+    lastUpdatedAt: string;
+    executionCount: number;
+}
+
+export interface ThreadMetadata {
+    tokenUsage?: ThreadTokenUsage;
+    [key: string]: JsonValue | ThreadTokenUsage | undefined;
+}
+
 export interface Thread {
     id: string;
     user_id: string;
     agent_id: string;
     title: string | null;
     status: "active" | "archived" | "deleted";
-    metadata: JsonObject;
+    metadata: ThreadMetadata;
     created_at: string;
     updated_at: string;
     last_message_at: string | null;
@@ -1704,6 +1718,11 @@ export function streamAgentExecution(
         onCompleted?: (data: { finalMessage: string; iterations: number }) => void;
         onError?: (error: string) => void;
         onConnected?: () => void;
+        onTokenUsageUpdated?: (data: {
+            threadId: string;
+            executionId: string;
+            tokenUsage: ThreadTokenUsage;
+        }) => void;
     }
 ): () => void {
     const token = getAuthToken();
@@ -1799,6 +1818,35 @@ export function streamAgentExecution(
             }
         } catch {
             // Silently ignore parsing errors
+        }
+    });
+
+    // Thread token usage updated
+    eventSource.addEventListener("thread:tokens:updated", (event) => {
+        try {
+            const data = JSON.parse(event.data) as {
+                threadId: string;
+                executionId: string;
+                tokenUsage: ThreadTokenUsage & { lastUpdated?: string };
+            };
+
+            if (data.executionId === executionId && data.tokenUsage) {
+                const tokenUsage: ThreadTokenUsage = {
+                    ...data.tokenUsage,
+                    lastUpdatedAt:
+                        data.tokenUsage.lastUpdatedAt ||
+                        data.tokenUsage.lastUpdated ||
+                        new Date().toISOString()
+                };
+
+                callbacks.onTokenUsageUpdated?.({
+                    threadId: data.threadId,
+                    executionId: data.executionId,
+                    tokenUsage
+                });
+            }
+        } catch (e) {
+            console.warn("Failed to parse token usage update event:", e);
         }
     });
 

@@ -2,8 +2,11 @@
  * Thread Activities - Activities for managing conversations with ThreadManager
  */
 
+import { calculateCost } from "../../../core/tracing/cost-calculator";
 import { ThreadManager } from "../../../services/agents/ThreadManager";
+import { db } from "../../../storage/database";
 import { AgentExecutionRepository } from "../../../storage/repositories/AgentExecutionRepository";
+import { emitTokensUpdated } from "./streaming-events";
 import type { ThreadMessage } from "../../../storage/models/AgentExecution";
 
 const executionRepo = new AgentExecutionRepository();
@@ -117,6 +120,114 @@ export async function saveThreadIncremental(
     );
 
     return { saved: messages.length };
+}
+
+export interface UpdateThreadTokensInput {
+    threadId: string;
+    executionId: string;
+    usage?: {
+        promptTokens: number;
+        completionTokens: number;
+        totalTokens: number;
+    };
+    provider?: string;
+    model?: string;
+}
+
+/**
+ * Aggregate token usage for a thread from MODEL_GENERATION spans
+ * and store it in thread.metadata.tokenUsage, then emit a streaming event.
+ */
+export async function updateThreadTokens(input: UpdateThreadTokensInput): Promise<void> {
+    const { threadId, executionId, usage, provider, model } = input;
+
+    const result = await db.query<{
+        prompt_tokens: string;
+        completion_tokens: string;
+        total_tokens: string;
+        total_cost: string;
+        execution_count: string;
+    }>(
+        `
+        SELECT
+            COALESCE(SUM((s.attributes->>'promptTokens')::int), 0) as prompt_tokens,
+            COALESCE(SUM((s.attributes->>'completionTokens')::int), 0) as completion_tokens,
+            COALESCE(SUM((s.attributes->>'totalTokens')::int), 0) as total_tokens,
+            COALESCE(SUM((s.attributes->>'totalCost')::numeric), 0) as total_cost,
+            COUNT(DISTINCT e.id) as execution_count
+        FROM flowmaestro.execution_spans s
+        INNER JOIN flowmaestro.agent_executions e ON s.trace_id = e.id
+        WHERE e.thread_id = $1
+          AND s.span_type = 'model_generation'
+          AND s.attributes ? 'totalTokens'
+        `,
+        [threadId]
+    );
+
+    const aggregated = {
+        promptTokens: parseInt(result.rows[0].prompt_tokens, 10),
+        completionTokens: parseInt(result.rows[0].completion_tokens, 10),
+        totalTokens: parseInt(result.rows[0].total_tokens, 10),
+        totalCost: parseFloat(result.rows[0].total_cost),
+        executionCount: parseInt(result.rows[0].execution_count, 10)
+    };
+
+    // Fallback: if aggregation returned zeros but we have usage from the LLM response, use it
+    const shouldFallback =
+        aggregated.totalTokens === 0 &&
+        usage &&
+        typeof usage.promptTokens === "number" &&
+        typeof usage.completionTokens === "number" &&
+        typeof usage.totalTokens === "number";
+
+    // Compute cost if we have usage and pricing info
+    const fallbackCost =
+        shouldFallback && provider && model
+            ? calculateCost({
+                  provider,
+                  model,
+                  promptTokens: usage.promptTokens,
+                  completionTokens: usage.completionTokens
+              })
+            : null;
+
+    const tokenUsage = shouldFallback
+        ? {
+              promptTokens: usage.promptTokens,
+              completionTokens: usage.completionTokens,
+              totalTokens: usage.totalTokens,
+              totalCost: fallbackCost?.totalCost ?? aggregated.totalCost ?? 0,
+              lastUpdatedAt: new Date().toISOString(),
+              executionCount: aggregated.executionCount || 1
+          }
+        : {
+              ...aggregated,
+              lastUpdatedAt: new Date().toISOString()
+          };
+
+    await db.query(
+        `
+        UPDATE flowmaestro.threads
+        SET metadata = jsonb_set(
+            COALESCE(metadata, '{}'::jsonb),
+            '{tokenUsage}',
+            $2::jsonb
+        )
+        WHERE id = $1
+        `,
+        [threadId, JSON.stringify(tokenUsage)]
+    );
+
+    console.log(
+        `[ThreadTokens] Updated thread ${threadId}: ${tokenUsage.totalTokens} tokens` +
+            `(${tokenUsage.executionCount} executions, $${tokenUsage.totalCost.toFixed(4)})`
+    );
+
+    await emitTokensUpdated({
+        threadId,
+        executionId,
+        tokenUsage
+    });
 }
 
 /**

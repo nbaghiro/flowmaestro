@@ -1,5 +1,6 @@
 import { Send, Loader2, Bot, User, Wrench, CheckCircle2, XCircle, Eye } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import * as api from "../../lib/api";
 import { streamAgentExecution } from "../../lib/api";
 import { cn } from "../../lib/utils";
 import { useAgentStore } from "../../stores/agentStore";
@@ -7,7 +8,7 @@ import { Button } from "../common/Button";
 import { Dialog } from "../common/Dialog";
 import { Input } from "../common/Input";
 import { AgentConnectionSelector } from "./AgentConnectionSelector";
-import type { Agent, ThreadMessage, JsonObject } from "../../lib/api";
+import type { Agent, ThreadMessage, JsonObject, ThreadTokenUsage } from "../../lib/api";
 
 interface ToolCallInfo {
     id: string;
@@ -22,6 +23,28 @@ interface AgentChatProps {
     agent: Agent;
 }
 
+const normalizeTokenUsage = (usage?: ThreadTokenUsage | null): ThreadTokenUsage | null => {
+    if (
+        !usage ||
+        typeof usage.promptTokens !== "number" ||
+        typeof usage.completionTokens !== "number" ||
+        typeof usage.totalTokens !== "number" ||
+        typeof usage.totalCost !== "number" ||
+        typeof usage.lastUpdatedAt !== "string"
+    ) {
+        return null;
+    }
+
+    return {
+        promptTokens: usage.promptTokens,
+        completionTokens: usage.completionTokens,
+        totalTokens: usage.totalTokens,
+        totalCost: usage.totalCost,
+        lastUpdatedAt: usage.lastUpdatedAt,
+        executionCount: usage.executionCount ?? 0
+    };
+};
+
 export function AgentChat({ agent }: AgentChatProps) {
     const {
         currentExecution,
@@ -35,6 +58,9 @@ export function AgentChat({ agent }: AgentChatProps) {
 
     const [input, setInput] = useState("");
     const [isSending, setIsSending] = useState(false);
+    const [tokenUsage, setTokenUsage] = useState<ThreadTokenUsage | null>(
+        normalizeTokenUsage(currentThread?.metadata?.tokenUsage || null)
+    );
     const [messages, setMessages] = useState<ThreadMessage[]>([]);
     const [toolCalls, setToolCalls] = useState<ToolCallInfo[]>([]);
     const [selectedToolError, setSelectedToolError] = useState<{
@@ -44,6 +70,29 @@ export function AgentChat({ agent }: AgentChatProps) {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const sseCleanupRef = useRef<(() => void) | null>(null);
     const streamingContentRef = useRef<string>("");
+
+    const refreshTokenUsage = useCallback(async () => {
+        const threadId = currentThread?.id || currentExecution?.thread_id;
+        if (!threadId) return;
+
+        try {
+            const response = await api.getThread(threadId);
+            if (response.success) {
+                // Thread API can return ThreadWithStats, but metadata shape is same
+                const threadData = response.data as {
+                    metadata?: { tokenUsage?: ThreadTokenUsage };
+                };
+                setTokenUsage(normalizeTokenUsage(threadData.metadata?.tokenUsage || null));
+            }
+        } catch (error) {
+            console.error("[AgentChat] Failed to refresh token usage:", error);
+        }
+    }, [currentExecution?.thread_id, currentThread?.id]);
+
+    // Keep token usage fresh when thread changes or on mount (Build tab)
+    useEffect(() => {
+        void refreshTokenUsage();
+    }, [refreshTokenUsage]);
 
     // Scroll to bottom when messages or tool calls change
     useEffect(() => {
@@ -63,6 +112,10 @@ export function AgentChat({ agent }: AgentChatProps) {
                         if (response.success && response.data) {
                             setMessages(response.data.messages || []);
                             prevThreadIdRef.current = currentThread.id;
+                            const metaUsage =
+                                (response.data as { metadata?: { tokenUsage?: ThreadTokenUsage } })
+                                    .metadata?.tokenUsage || currentThread.metadata?.tokenUsage;
+                            setTokenUsage(normalizeTokenUsage(metaUsage || null));
                         }
                     })
                     .catch((error) => {
@@ -70,7 +123,14 @@ export function AgentChat({ agent }: AgentChatProps) {
                     });
             });
         }
-    }, [currentThread?.id, currentExecution?.id]);
+    }, [currentThread?.id, currentExecution?.id, currentThread?.metadata?.tokenUsage]);
+
+    // Update token usage when thread metadata changes while active
+    useEffect(() => {
+        if (currentThread?.metadata?.tokenUsage) {
+            setTokenUsage(normalizeTokenUsage(currentThread.metadata.tokenUsage));
+        }
+    }, [currentThread?.metadata?.tokenUsage]);
 
     // Sync messages from execution when execution ID changes
     // Preserve existing messages if we're continuing in the same thread
@@ -181,6 +241,11 @@ export function AgentChat({ agent }: AgentChatProps) {
                     store.addMessageToExecution(executionId, message);
                 }
             },
+            // Token usage updated
+            onTokenUsageUpdated: (data) => {
+                console.log("[AgentChat] Token usage updated:", data);
+                setTokenUsage(normalizeTokenUsage(data.tokenUsage));
+            },
             onToolCallStarted: (data) => {
                 console.log("[AgentChat] Tool call started:", data);
                 setToolCalls((prev) => [
@@ -243,6 +308,7 @@ export function AgentChat({ agent }: AgentChatProps) {
                 streamingContentRef.current = "";
                 setIsSending(false);
                 updateExecutionStatus(executionId, "completed");
+                void refreshTokenUsage();
             },
             onError: (error: string) => {
                 console.error("[AgentChat] SSE error:", error);
@@ -265,7 +331,7 @@ export function AgentChat({ agent }: AgentChatProps) {
                 sseCleanupRef.current = null;
             }
         };
-    }, [currentExecution?.id, agent.id, isSending, updateExecutionStatus]);
+    }, [currentExecution?.id, agent.id, isSending, updateExecutionStatus, refreshTokenUsage]);
 
     const handleSend = async () => {
         if (!input.trim() || isSending) return;
@@ -329,6 +395,13 @@ export function AgentChat({ agent }: AgentChatProps) {
         }
     };
 
+    const usageLabel =
+        tokenUsage && tokenUsage.totalTokens > 0
+            ? `${tokenUsage.totalTokens.toLocaleString()} tokens${
+                  tokenUsage.totalCost > 0 ? ` ($${tokenUsage.totalCost.toFixed(4)})` : ""
+              }`
+            : null;
+
     return (
         <div className="h-full flex flex-col">
             {/* Chat header - Fixed */}
@@ -341,6 +414,7 @@ export function AgentChat({ agent }: AgentChatProps) {
                         <p className="text-sm font-medium text-foreground">{agent.name}</p>
                         <p className="text-xs text-muted-foreground">
                             {currentExecution ? "Active thread" : "Ready to chat"}
+                            {usageLabel ? <> • {usageLabel}</> : null}
                         </p>
                     </div>
                 </div>

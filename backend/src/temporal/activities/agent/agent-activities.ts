@@ -295,7 +295,11 @@ async function callOpenAI(input: OpenAICallInput): Promise<LLMResponse> {
             tools: formattedTools.length > 0 ? formattedTools : undefined,
             temperature,
             max_tokens: maxTokens,
-            stream: true // Enable streaming
+            stream: true, // Enable streaming
+            // Ask OpenAI to include usage in the final chunk so we can surface token counts
+            stream_options: {
+                include_usage: true
+            }
         })
     });
 

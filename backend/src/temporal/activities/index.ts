@@ -59,10 +59,12 @@ export { createSpan, endSpan, endSpanWithError, setSpanAttributes } from "./span
 export {
     loadThreadHistory,
     saveThreadIncremental,
+    updateThreadTokens,
     convertToOpenAI,
     convertToAnthropic,
     type LoadThreadHistoryInput,
     type SaveThreadIncrementalInput,
+    type UpdateThreadTokensInput,
     type ConvertToOpenAIInput,
     type ConvertToAnthropicInput
 } from "./agent/thread-activities";

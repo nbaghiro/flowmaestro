@@ -19,7 +19,8 @@ export type StreamingEventType =
     | "thread:thinking" // Agent thinking indicator
     | "thread:tool:started" // Tool execution started
     | "thread:tool:completed" // Tool execution completed
-    | "thread:tool:failed"; // Tool execution failed
+    | "thread:tool:failed" // Tool execution failed
+    | "thread:tokens:updated"; // Updated aggregate token & cost usage
 
 /**
  * Base event interface with common fields
@@ -110,6 +111,20 @@ export interface ToolFailedEvent extends BaseStreamingEvent {
 }
 
 /**
+ * Emitted when token usage for the thread is updated
+ */
+export interface TokensUpdatedEvent extends BaseStreamingEvent {
+    type: "thread:tokens:updated";
+    tokenUsage: {
+        promptTokens: number;
+        completionTokens: number;
+        totalTokens: number;
+        totalCost: number;
+        lastUpdatedAt: string; // matches your emitter
+    };
+}
+
+/**
  * Union type of all thread streaming events
  * Enables TypeScript discriminated unions based on `type` field
  */
@@ -121,4 +136,5 @@ export type ThreadStreamingEvent =
     | ThinkingEvent
     | ToolStartedEvent
     | ToolCompletedEvent
-    | ToolFailedEvent;
+    | ToolFailedEvent
+    | TokensUpdatedEvent;
