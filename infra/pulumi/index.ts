@@ -185,7 +185,9 @@ Next Steps:
        --namespace=flowmaestro \\
        --from-literal=OPENAI_API_KEY='<from-config>' \\
        --from-literal=ANTHROPIC_API_KEY='<from-config>' \\
-       --from-literal=GOOGLE_API_KEY='<from-config>'
+       --from-literal=GOOGLE_API_KEY='<from-config>' \\
+       --from-literal=COHERE_API_KEY='<from-config>' \\
+       --from-literal=HUGGINGFACE_API_KEY='<from-config>'
 
    # GCS configuration
    $ kubectl create configmap gcs-config \\

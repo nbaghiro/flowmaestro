@@ -39,6 +39,9 @@ export interface InfrastructureConfig {
     // Temporal Configuration (self-hosted)
     temporalNamespace: string;
 
+    // Marketing Site Configuration
+    gaMeasurementId: string;
+
     // Application Secrets (flexible key-value pairs for any integration)
     // Format: JSON object like {"OPENAI_API_KEY": "sk-...", "SLACK_TOKEN": "xoxb-..."}
     appSecrets: { [key: string]: string };
@@ -111,6 +114,9 @@ export const infrastructureConfig: InfrastructureConfig = {
 
     // Temporal Configuration (self-hosted)
     temporalNamespace: config.get("temporalNamespace") || "default",
+
+    // Marketing Site Configuration
+    gaMeasurementId: config.get("gaMeasurementId") || "",
 
     // Application Secrets (flexible)
     appSecrets: parseAppSecrets()

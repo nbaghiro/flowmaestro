@@ -483,6 +483,11 @@ build_and_push_images() {
     print_info "Installing dependencies..."
     npm ci
 
+    # Get Google Analytics Measurement ID from Pulumi config
+    cd "$PULUMI_DIR" || exit 1
+    local ga_measurement_id=$(pulumi config get gaMeasurementId 2>/dev/null || echo "")
+    cd "$REPO_ROOT" || exit 1
+
     local images=("backend" "frontend" "marketing")
 
     for image in "${images[@]}"; do
@@ -494,6 +499,14 @@ build_and_push_images() {
                 -f "infra/docker/$image/Dockerfile" \
                 --build-arg VITE_API_URL="https://api.$DOMAIN" \
                 --build-arg VITE_WS_URL="https://api.$DOMAIN" \
+                -t "$REGISTRY/$image:latest" \
+                -t "$REGISTRY/$image:$ENVIRONMENT" \
+                .
+        elif [ "$image" = "marketing" ]; then
+            docker build \
+                --platform linux/amd64 \
+                -f "infra/docker/$image/Dockerfile" \
+                --build-arg VITE_GA_MEASUREMENT_ID="$ga_measurement_id" \
                 -t "$REGISTRY/$image:latest" \
                 -t "$REGISTRY/$image:$ENVIRONMENT" \
                 .

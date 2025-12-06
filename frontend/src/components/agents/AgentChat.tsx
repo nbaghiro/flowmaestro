@@ -46,15 +46,8 @@ const normalizeTokenUsage = (usage?: ThreadTokenUsage | null): ThreadTokenUsage 
 };
 
 export function AgentChat({ agent }: AgentChatProps) {
-    const {
-        currentExecution,
-        currentThread,
-        executeAgent,
-        sendMessage,
-        updateExecutionStatus,
-        selectedConnectionId,
-        selectedModel
-    } = useAgentStore();
+    const { currentExecution, currentThread, executeAgent, sendMessage, updateExecutionStatus } =
+        useAgentStore();
 
     const [input, setInput] = useState("");
     const [isSending, setIsSending] = useState(false);
@@ -67,6 +60,11 @@ export function AgentChat({ agent }: AgentChatProps) {
         toolName: string;
         error: string;
     } | null>(null);
+
+    // Thread-level model override (doesn't save to agent)
+    const [overrideConnectionId, setOverrideConnectionId] = useState<string | null>(null);
+    const [overrideModel, setOverrideModel] = useState<string | null>(null);
+
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const sseCleanupRef = useRef<(() => void) | null>(null);
     const streamingContentRef = useRef<string>("");
@@ -348,13 +346,13 @@ export function AgentChat({ agent }: AgentChatProps) {
                 // Start new execution in current thread (or new thread if none exists)
                 // Use currentThread if no execution, to continue in auto-loaded thread
                 const threadId = exec?.thread_id || currentThread?.id;
-                // Pass selected connection/model if available, otherwise agent will use defaults
+                // Pass override connection/model if available, otherwise agent will use defaults
                 await executeAgent(
                     agent.id,
                     message,
                     threadId,
-                    selectedConnectionId || undefined,
-                    selectedModel || undefined
+                    overrideConnectionId || undefined,
+                    overrideModel || undefined
                 );
             } else {
                 // Try to continue existing execution
@@ -377,8 +375,8 @@ export function AgentChat({ agent }: AgentChatProps) {
                         agent.id,
                         message,
                         exec.thread_id,
-                        selectedConnectionId || undefined,
-                        selectedModel || undefined
+                        overrideConnectionId || undefined,
+                        overrideModel || undefined
                     );
                 }
             }
@@ -419,7 +417,15 @@ export function AgentChat({ agent }: AgentChatProps) {
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    <AgentConnectionSelector />
+                    <AgentConnectionSelector
+                        agent={agent}
+                        overrideConnectionId={overrideConnectionId}
+                        overrideModel={overrideModel}
+                        onOverrideChange={(connectionId, model) => {
+                            setOverrideConnectionId(connectionId);
+                            setOverrideModel(model);
+                        }}
+                    />
                 </div>
             </div>
 

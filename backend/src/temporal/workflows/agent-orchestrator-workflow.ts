@@ -61,6 +61,9 @@ export interface AgentOrchestratorInput {
     userId: string;
     threadId: string; // Thread this execution belongs to
     initialMessage?: string;
+    // Override agent's default connection/model
+    connectionId?: string;
+    model?: string;
     // For continue-as-new with ThreadManager
     serializedThread?: SerializedThread;
     iterations?: number;
@@ -332,7 +335,10 @@ export async function agentOrchestratorWorkflow(
                 userId,
                 threadId,
                 serializedThread: summarizedState,
-                iterations: currentIterations
+                iterations: currentIterations,
+                // Preserve override values across continue-as-new
+                ...(input.connectionId && { connectionId: input.connectionId }),
+                ...(input.model && { model: input.model })
             });
         }
 
@@ -361,12 +367,13 @@ export async function agentOrchestratorWorkflow(
         const modelGenSpanId = modelGenContext.spanId;
 
         // Call LLM with thread messages and available tools
+        // Use override connection/model if provided, otherwise use agent's defaults
         let llmResponse: LLMResponse;
         try {
             llmResponse = await callLLM({
-                model: agent.model,
+                model: input.model || agent.model,
                 provider: agent.provider,
-                connectionId: agent.connection_id,
+                connectionId: input.connectionId || agent.connection_id,
                 messages: messageState.messages,
                 tools: agent.available_tools,
                 temperature: agent.temperature,
