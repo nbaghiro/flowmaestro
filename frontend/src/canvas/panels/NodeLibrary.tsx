@@ -20,11 +20,7 @@ import {
     ChevronRight,
     Search,
     PanelLeftClose,
-    PanelLeft,
-    MessageSquare,
-    Ear,
-    ListOrdered,
-    PhoneOff
+    PanelLeft
 } from "lucide-react";
 import { useCallback, useState } from "react";
 import { Button } from "../../components/common/Button";
@@ -164,36 +160,6 @@ const nodeLibrary: NodeDefinition[] = [
         icon: Plug,
         category: "connect",
         description: "Connect to Slack, Email, Google Sheets, etc."
-    },
-
-    // Voice (4 nodes)
-    {
-        type: "voice_greet",
-        label: "Say Message",
-        icon: MessageSquare,
-        category: "voice",
-        description: "Play text-to-speech message to caller"
-    },
-    {
-        type: "voice_listen",
-        label: "Listen",
-        icon: Ear,
-        category: "voice",
-        description: "Capture caller's speech with speech-to-text"
-    },
-    {
-        type: "voice_menu",
-        label: "Menu",
-        icon: ListOrdered,
-        category: "voice",
-        description: "Present IVR menu with multiple options"
-    },
-    {
-        type: "voice_hangup",
-        label: "Hang Up",
-        icon: PhoneOff,
-        category: "voice",
-        description: "End the phone call"
     }
 ];
 
@@ -221,12 +187,6 @@ const categories = [
         label: "Connect",
         color: "text-orange-600 dark:text-orange-400",
         bgColor: "bg-orange-500/10 dark:bg-orange-400/20"
-    },
-    {
-        id: "voice",
-        label: "Voice & Calls",
-        color: "text-emerald-600 dark:text-emerald-400",
-        bgColor: "bg-emerald-500/10 dark:bg-emerald-400/20"
     }
 ];
 

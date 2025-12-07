@@ -23,11 +23,6 @@ import { SwitchNodeConfig } from "./configs/SwitchNodeConfig";
 import { TransformNodeConfig } from "./configs/TransformNodeConfig";
 import { VariableNodeConfig } from "./configs/VariableNodeConfig";
 import { VisionNodeConfig } from "./configs/VisionNodeConfig";
-// Voice & Calls
-import { VoiceGreetNodeConfig } from "./configs/VoiceGreetNodeConfig";
-import { VoiceHangupNodeConfig } from "./configs/VoiceHangupNodeConfig";
-import { VoiceListenNodeConfig } from "./configs/VoiceListenNodeConfig";
-import { VoiceMenuNodeConfig } from "./configs/VoiceMenuNodeConfig";
 import { WaitNodeConfig } from "./configs/WaitNodeConfig";
 
 export function NodeInspector() {
@@ -112,16 +107,6 @@ export function NodeInspector() {
                 return <IntegrationNodeConfig data={node.data} onUpdate={handleUpdate} />;
             case "knowledgeBaseQuery":
                 return <KnowledgeBaseQueryNodeConfig data={node.data} onUpdate={handleUpdate} />;
-
-            // Voice & Calls
-            case "voice_greet":
-                return <VoiceGreetNodeConfig data={node.data} onUpdate={handleUpdate} />;
-            case "voice_listen":
-                return <VoiceListenNodeConfig data={node.data} onUpdate={handleUpdate} />;
-            case "voice_menu":
-                return <VoiceMenuNodeConfig data={node.data} onUpdate={handleUpdate} />;
-            case "voice_hangup":
-                return <VoiceHangupNodeConfig data={node.data} onUpdate={handleUpdate} />;
 
             default:
                 return (

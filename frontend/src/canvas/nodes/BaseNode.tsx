@@ -65,12 +65,6 @@ const categoryConfig: Record<
         iconBg: "bg-orange-500/10 dark:bg-orange-400/20",
         iconColor: "text-orange-600 dark:text-orange-400",
         ringColor: "ring-orange-500"
-    },
-    voice: {
-        borderColor: "border-l-emerald-500",
-        iconBg: "bg-emerald-500/10 dark:bg-emerald-400/20",
-        iconColor: "text-emerald-600 dark:text-emerald-400",
-        ringColor: "ring-emerald-500"
     }
 };
 

@@ -36,26 +36,6 @@ import {
 } from "./transform-executor";
 import { executeVariableNode, VariableNodeConfig, VariableNodeResult } from "./variable-executor";
 import { executeVisionNode, VisionNodeConfig, VisionNodeResult } from "./vision-executor";
-import {
-    executeVoiceGreetNode,
-    VoiceGreetNodeConfig,
-    VoiceGreetNodeResult
-} from "./voice-greet-executor";
-import {
-    executeVoiceHangupNode,
-    VoiceHangupNodeConfig,
-    VoiceHangupNodeResult
-} from "./voice-hangup-executor";
-import {
-    executeVoiceListenNode,
-    VoiceListenNodeConfig,
-    VoiceListenNodeResult
-} from "./voice-listen-executor";
-import {
-    executeVoiceMenuNode,
-    VoiceMenuNodeConfig,
-    VoiceMenuNodeResult
-} from "./voice-menu-executor";
 import { executeWaitNode, WaitNodeConfig, WaitNodeResult } from "./wait-executor";
 
 export type NodeConfig =
@@ -171,34 +151,6 @@ export async function executeNode(input: ExecuteNodeInput): Promise<JsonObject> 
                 context
             });
 
-        case "voiceGreet":
-        case "voice_greet":
-            return await executeVoiceGreetNode(
-                nodeConfig as unknown as VoiceGreetNodeConfig,
-                context
-            );
-
-        case "voiceListen":
-        case "voice_listen":
-            return await executeVoiceListenNode(
-                nodeConfig as unknown as VoiceListenNodeConfig,
-                context
-            );
-
-        case "voiceMenu":
-        case "voice_menu":
-            return await executeVoiceMenuNode(
-                nodeConfig as unknown as VoiceMenuNodeConfig,
-                context
-            );
-
-        case "voiceHangup":
-        case "voice_hangup":
-            return await executeVoiceHangupNode(
-                nodeConfig as unknown as VoiceHangupNodeConfig,
-                context
-            );
-
         default:
             throw new Error(`Node type '${nodeType}' not yet implemented`);
     }
@@ -223,11 +175,7 @@ export {
     executeEmbeddingsNode,
     executeDatabaseNode,
     executeIntegrationNode,
-    executeKnowledgeBaseQueryNode,
-    executeVoiceGreetNode,
-    executeVoiceListenNode,
-    executeVoiceMenuNode,
-    executeVoiceHangupNode
+    executeKnowledgeBaseQueryNode
 };
 
 // Export types
@@ -265,13 +213,5 @@ export type {
     DatabaseNodeResult,
     IntegrationNodeConfig,
     IntegrationNodeResult,
-    KnowledgeBaseQueryNodeConfig,
-    VoiceGreetNodeConfig,
-    VoiceGreetNodeResult,
-    VoiceListenNodeConfig,
-    VoiceListenNodeResult,
-    VoiceMenuNodeConfig,
-    VoiceMenuNodeResult,
-    VoiceHangupNodeConfig,
-    VoiceHangupNodeResult
+    KnowledgeBaseQueryNodeConfig
 };

@@ -1,0 +1,668 @@
+# Workflow Node Groups: Complete Transformation
+
+## Executive Summary
+
+This specification outlines a complete transformation of FlowMaestro's workflow node system from **generic technical primitives** to **purpose-built, product-focused nodes** designed for non-technical users.
+
+**Current State**: ~25 generic nodes (LLM, HTTP, Transform, Condition, etc.) that require technical knowledge to configure and combine.
+
+**Target State**: ~130+ purpose-built nodes organized into intuitive categories with natural language configuration, enabling business users to build powerful automations without coding.
+
+---
+
+## Why This Change?
+
+### The Problem
+
+Today's workflow builder exposes low-level primitives:
+
+```
+Current Node List:
+├── LLM Node (requires prompt engineering)
+├── HTTP Request (requires API knowledge)
+├── Transform (requires JSON/template syntax)
+├── Condition (requires expression syntax)
+├── Code (requires JavaScript)
+└── ...
+```
+
+This creates barriers for non-technical users:
+
+- **Cognitive Load**: Users must understand how to compose primitives
+- **Configuration Complexity**: Each node requires technical configuration
+- **No Guidance**: No clear path from "what I want to do" to "how to do it"
+- **Hidden Patterns**: Common workflows require rediscovering the same patterns
+
+### The Solution
+
+Purpose-built nodes that match how users think about their work:
+
+```
+New Node Categories:
+├── AI & Agents
+│   ├── Ask AI (not "LLM with prompt template")
+│   ├── Extract Data (not "LLM with JSON schema")
+│   ├── Categorizer (not "LLM with classification prompt")
+│   └── ...
+├── Knowledge
+│   ├── Search Knowledge Base (not "Vector DB query + LLM")
+│   └── ...
+├── Automations
+│   ├── On New Email (not "Gmail API polling + webhook")
+│   └── ...
+└── Integrations
+    ├── Gmail Send (not "HTTP + OAuth + Gmail API")
+    └── ...
+```
+
+---
+
+## What's Changing
+
+### 1. Node Organization
+
+**Before**: Flat list of ~25 technical nodes
+
+**After**: Hierarchical categories with ~160 purpose-built nodes
+
+| Category         | Description                          | Node Count   |
+| ---------------- | ------------------------------------ | ------------ |
+| **AI & Agents**  | AI models, agents, and intelligence  | 18           |
+| **Knowledge**    | RAG, search, and knowledge bases     | 5            |
+| **Automations**  | Triggers and scheduled workflows     | 12           |
+| **Tools**        | Data processing and utilities        | 35           |
+| **Governance**   | Security, compliance, and operations | 6            |
+| **Integrations** | Third-party service connections      | ~80          |
+| **Custom Nodes** | User-created reusable nodes          | User-defined |
+| **Subflows**     | Composable workflow components       | User-defined |
+
+### 2. Node Library UI
+
+**Before**: Static panel with scrollable list
+
+**After**:
+
+- Collapsible panel (hover/click to show)
+- Two-level navigation (categories → nodes)
+- Search across all nodes
+- Frequently used section
+- MCP badges on integrations
+
+### 3. Node Visual Design
+
+**Before**: Plain white cards with colored left border
+
+**After**:
+
+- Category-colored gradient headers
+- Category badge pills
+- I/O chips visible on hover
+- Selection glow effects
+- Running state animations
+
+### 4. Node Configuration
+
+**Before**: Separate right panel (NodeInspector)
+
+**After**: Attached sidebar connected to node's right edge
+
+### 5. Node Abstraction Level
+
+**Before**: Technical primitives requiring expertise
+
+| Old Node     | Required Knowledge                                      |
+| ------------ | ------------------------------------------------------- |
+| LLM Node     | Prompt engineering, model selection, temperature tuning |
+| HTTP Request | REST APIs, authentication, headers, response parsing    |
+| Transform    | JSON templates, variable syntax, data structures        |
+| Condition    | Expression syntax, boolean logic                        |
+
+**After**: Purpose-built nodes with guided configuration
+
+| New Node     | User Experience                                |
+| ------------ | ---------------------------------------------- |
+| Ask AI       | Select model, write plain prompt, get response |
+| Extract Data | Define fields you want, AI extracts them       |
+| Categorizer  | List your categories, AI classifies content    |
+| Gmail Send   | Connect account, write message, send           |
+
+---
+
+## Node Categories Deep Dive
+
+### AI & Agents (18 nodes)
+
+Transform raw LLM access into task-specific AI tools:
+
+| Node               | Purpose               | Replaces                        |
+| ------------------ | --------------------- | ------------------------------- |
+| Ask AI             | General AI prompts    | LLM Node                        |
+| Extract Data       | Structured extraction | LLM + JSON schema               |
+| Categorizer        | Classification        | LLM + category prompt           |
+| Summarizer         | Content condensation  | LLM + summary prompt            |
+| Translator         | Language translation  | LLM + translation prompt        |
+| Sentiment Analyzer | Tone detection        | LLM + sentiment prompt          |
+| Scorer             | Content rating        | LLM + scoring criteria          |
+| AI List Sorter     | Semantic ordering     | LLM + ranking prompt            |
+| Generate Image     | Image creation        | DALL-E API                      |
+| Analyze Image      | Vision AI             | GPT-4V API                      |
+| Analyze Video      | Video processing      | Multi-frame vision              |
+| Run Agent          | Agent execution       | Complex agent orchestration     |
+| Agent Chat         | Conversational AI     | Multi-turn agent loop           |
+| Agent Handoff      | Agent transfer        | Custom handoff logic            |
+| Human-in-the-Loop  | Human approval        | Pause + notification + resume   |
+| Compare Models     | Model evaluation      | Multiple LLM calls + comparison |
+| Model Router       | Smart routing         | Complexity analysis + routing   |
+
+### Knowledge (5 nodes)
+
+Enterprise-grade RAG without infrastructure complexity:
+
+| Node                  | Purpose            | What It Abstracts                          |
+| --------------------- | ------------------ | ------------------------------------------ |
+| Search Knowledge Base | Semantic search    | Vector DB + embeddings + relevance scoring |
+| Add to Knowledge Base | Document ingestion | Chunking + embedding + storage             |
+| Knowledge Base Chat   | RAG Q&A            | Search + context injection + LLM           |
+| Sync Knowledge Source | Continuous sync    | Scheduling + diffing + updates             |
+| Knowledge Analytics   | Usage insights     | Query logging + gap analysis               |
+
+### Governance & Security (6 nodes)
+
+Compliance and governance without custom development:
+
+| Node            | Purpose            | What It Abstracts                          |
+| --------------- | ------------------ | ------------------------------------------ |
+| Approval Gate   | Human sign-off     | Notification + wait + timeout + escalation |
+| Audit Log       | Compliance logging | Multi-destination logging + retention      |
+| PII Redactor    | Data masking       | Pattern detection + redaction              |
+| Encrypt/Decrypt | Data security      | KMS + encryption algorithms                |
+| Rate Limiter    | Throttling         | Token bucket + queuing                     |
+| Circuit Breaker | Fault tolerance    | Failure tracking + recovery                |
+
+---
+
+## Real-World Workflow Examples
+
+### Example 1: Customer Support Automation
+
+**Business Need**: Automatically categorize and route support tickets, respond to simple queries, escalate complex ones.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        Support Ticket Automation                            │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
+│ On New Email │───▶│ PII Redactor │───▶│ Categorizer  │───▶│ Router       │
+│              │    │              │    │              │    │              │
+│ Folder:      │    │ Mask:        │    │ Categories:  │    │ Based on     │
+│ Support      │    │ - SSN        │    │ - Billing    │    │ category +   │
+│              │    │ - Credit card│    │ - Technical  │    │ sentiment    │
+└──────────────┘    │ - Phone      │    │ - Sales      │    └──────────────┘
+                    └──────────────┘    │ - General    │          │
+                                        └──────────────┘    ┌─────┴─────────┐
+                                                            ▼               ▼
+                                                       Simple          Complex
+                                                            │               │
+                                                            ▼               ▼
+                                                    ┌──────────────┐ ┌──────────────┐
+                                                    │ KB Chat      │ │ Agent Chat   │
+                                                    │              │ │              │
+                                                    │ Answer from  │ │ Multi-turn   │
+                                                    │ help docs    │ │ with tools   │
+                                                    └──────────────┘ └──────────────┘
+                                                            │               │
+                                                            ▼               ▼
+                                                    ┌──────────────┐ ┌──────────────┐
+                                                    │ Gmail Send   │ │ Router       │
+                                                    │              │ │ (resolved?)  │
+                                                    │ Auto-reply   │ └──────────────┘
+                                                    └──────────────┘        │
+                                                                      ┌─────┴─────┐
+                                                                      ▼           ▼
+                                                                 Resolved    Escalate
+                                                                      │           │
+                                                                      ▼           ▼
+                                                               Close ticket  Human agent
+
+**Impact**: 70% of tickets auto-resolved, response time from hours to seconds
+```
+
+---
+
+### Example 2: Lead Enrichment & Qualification
+
+**Business Need**: When a new lead signs up, automatically research their company, score the lead, and route to appropriate sales team.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        Lead Enrichment Pipeline                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────┐    ┌──────────────┐    ┌──────────────┐
+│ Webhook      │───▶│ Run Agent    │───▶│ Scorer       │
+│              │    │              │    │              │
+│ Stripe new   │    │ "Company     │    │ Criteria:    │
+│ customer     │    │ Researcher"  │    │ - Size >100  │
+│ event        │    │              │    │ - SaaS/Tech  │
+└──────────────┘    │ Tools:       │    │ - VP+ title  │
+                    │ - Web search │    │ - Clear need │
+                    │ - LinkedIn   │    └──────────────┘
+                    │ - Clearbit   │          │
+                    └──────────────┘          ▼
+                                        ┌──────────────┐
+                                        │ Router       │
+                                        │              │
+                                        │ score > 80   │───▶ Enterprise team
+                                        │ score > 50   │───▶ Mid-market team
+                                        │ default      │───▶ SMB team
+                                        └──────────────┘
+                                               │
+                                               ▼
+                                        ┌──────────────┐
+                                        │ HubSpot      │
+                                        │ Create Lead  │
+                                        │              │
+                                        │ With all     │
+                                        │ enriched     │
+                                        │ data + score │
+                                        └──────────────┘
+                                               │
+                                               ▼
+                                        ┌──────────────┐
+                                        │ Slack        │
+                                        │ #sales-leads │
+                                        │              │
+                                        │ "New hot     │
+                                        │ lead: ..."   │
+                                        └──────────────┘
+
+**Impact**: Sales team gets qualified, enriched leads instantly with AI-generated company summaries
+```
+
+---
+
+### Example 3: Content Review Pipeline
+
+**Business Need**: AI generates blog content weekly, but requires human approval before publishing.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        Content Review Pipeline                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────┐    ┌──────────────┐    ┌──────────────┐
+│ Schedule     │───▶│ Search KB    │───▶│ Ask AI       │
+│              │    │              │    │              │
+│ Every Monday │    │ "Product     │    │ "Write a     │
+│ 9am          │    │ Updates"     │    │ blog post    │
+│              │    │              │    │ about..."    │
+└──────────────┘    │ Last 7 days  │    │              │
+                    └──────────────┘    │ Model:       │
+                                        │ Claude 3.5   │
+                                        └──────────────┘
+                                               │
+                                               ▼
+                                        ┌──────────────┐
+                                        │ Generate     │
+                                        │ Image        │
+                                        │              │
+                                        │ "Hero image  │
+                                        │ for blog     │
+                                        │ about..."    │
+                                        └──────────────┘
+                                               │
+                                               ▼
+                                        ┌──────────────────────────────────────┐
+                                        │ Human-in-the-Loop                    │
+                                        │                                      │
+                                        │ Notify: #content-team via Slack      │
+                                        │                                      │
+                                        │ Show: Article + Image                │
+                                        │                                      │
+                                        │ Actions: [Publish] [Edit] [Reject]   │
+                                        │                                      │
+                                        │ Timeout: 48 hours → Auto-reject      │
+                                        └──────────────────────────────────────┘
+                                                          │
+                                               ┌──────────┼──────────┐
+                                               ▼          ▼          ▼
+                                           Publish      Edit      Reject
+                                               │          │          │
+                                               ▼          ▼          ▼
+                                        ┌──────────┐ Loop back  ┌──────────┐
+                                        │ Notion   │ to Ask AI  │ Slack    │
+                                        │ Create   │ with       │ Notify   │
+                                        │ Page     │ feedback   │ author   │
+                                        └──────────┘            └──────────┘
+
+**Impact**: Marketing generates drafts automatically, humans maintain quality control
+```
+
+---
+
+### Example 4: Intelligent Data Sync Pipeline
+
+**Business Need**: Sync new customers from Stripe to CRM with AI-enriched company data, automatic segmentation, and team notifications.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        Intelligent Data Sync Pipeline                        │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────┐    ┌──────────────┐    ┌──────────────┐
+│ Webhook      │───▶│ Transform    │───▶│ Run Agent    │
+│              │    │              │    │              │
+│ Stripe       │    │ Extract:     │    │ "Company     │
+│ customer.    │    │ - email      │    │ Enrichment"  │
+│ created      │    │ - name       │    │              │
+│              │    │ - metadata   │    │ Tools:       │
+└──────────────┘    └──────────────┘    │ - LinkedIn   │
+                                        │ - Clearbit   │
+                                        │ - Web search │
+                                        └──────────────┘
+                                               │
+                                               ▼
+                                        ┌──────────────┐
+                                        │ Categorizer  │
+                                        │              │
+                                        │ Segments:    │
+                                        │ - Enterprise │
+                                        │ - Mid-market │
+                                        │ - SMB        │
+                                        │ - Startup    │
+                                        │              │
+                                        │ Based on:    │
+                                        │ - Company    │
+                                        │   size       │
+                                        │ - Industry   │
+                                        │ - Plan       │
+                                        └──────────────┘
+                                               │
+                              ┌────────────────┼────────────────┐
+                              ▼                ▼                ▼
+                         Enterprise       Mid-market         SMB/Startup
+                              │                │                │
+                              ▼                ▼                ▼
+                       ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
+                       │ HubSpot      │ │ HubSpot      │ │ HubSpot      │
+                       │ Create       │ │ Create       │ │ Create       │
+                       │              │ │              │ │              │
+                       │ Owner:       │ │ Owner:       │ │ Owner:       │
+                       │ Enterprise   │ │ Growth team  │ │ Self-serve   │
+                       │ AE           │ │              │ │ queue        │
+                       └──────────────┘ └──────────────┘ └──────────────┘
+                              │                │                │
+                              ▼                ▼                ▼
+                       ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
+                       │ Slack        │ │ Slack        │ │ Gmail        │
+                       │ #enterprise  │ │ #growth      │ │              │
+                       │              │ │              │ │ Welcome      │
+                       │ "🎯 New      │ │ "New mid-    │ │ sequence     │
+                       │ enterprise   │ │ market..."   │ │ trigger      │
+                       │ lead..."     │ │              │ │              │
+                       └──────────────┘ └──────────────┘ └──────────────┘
+
+**Impact**: Every new customer auto-routed with enriched data, zero manual triage
+```
+
+---
+
+### Example 5: Multi-Stage Approval Workflow
+
+**Business Need**: Large purchase orders require multiple approvals with automatic escalation.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        Purchase Order Approval                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────┐    ┌──────────────┐    ┌──────────────┐
+│ Webhook      │───▶│ Router       │───▶│ Based on     │
+│              │    │              │    │ amount       │
+│ New PO from  │    │ amount > ?   │    └──────────────┘
+│ procurement  │    └──────────────┘          │
+│ system       │                        ┌─────┼─────────────┐
+└──────────────┘                        ▼     ▼             ▼
+                                    < $1K  $1K-$10K      > $10K
+                                        │     │             │
+                                        ▼     ▼             ▼
+                                    Auto   Manager       Manager
+                                  approve  approval      approval
+                                        │     │             │
+                                        │     │             ▼
+                                        │     │     ┌──────────────┐
+                                        │     │     │ Approval     │
+                                        │     │     │ Gate         │
+                                        │     │     │              │
+                                        │     │     │ VP Finance   │
+                                        │     │     │              │
+                                        │     │     │ Timeout: 24h │
+                                        │     │     │ Escalate: CFO│
+                                        │     │     └──────────────┘
+                                        │     │             │
+                                        │     ▼             │
+                                        │ ┌──────────────┐  │
+                                        │ │ Approval     │  │
+                                        │ │ Gate         │  │
+                                        │ │              │  │
+                                        │ │ Department   │  │
+                                        │ │ Manager      │  │
+                                        │ │              │  │
+                                        │ │ Timeout: 48h │  │
+                                        │ │ Escalate: VP │  │
+                                        │ └──────────────┘  │
+                                        │       │           │
+                                        ▼       ▼           ▼
+                                        ┌───────────────────┐
+                                        │ Audit Log         │
+                                        │                   │
+                                        │ Record:           │
+                                        │ - PO details      │
+                                        │ - Approvers       │
+                                        │ - Timestamps      │
+                                        │ - Decisions       │
+                                        │                   │
+                                        │ Destination:      │
+                                        │ - Database        │
+                                        │ - S3 (compliance) │
+                                        └───────────────────┘
+                                                │
+                                                ▼
+                                        ┌──────────────┐
+                                        │ NetSuite     │
+                                        │ Create PO    │
+                                        │              │
+                                        │ With audit   │
+                                        │ trail        │
+                                        └──────────────┘
+
+**Impact**: SOC2-compliant approval process with automatic escalation and full audit trail
+```
+
+---
+
+### Example 6: Document Processing Pipeline
+
+**Business Need**: Process incoming contracts, extract key terms, add to knowledge base, alert legal team.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        Contract Processing Pipeline                         │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────┐    ┌──────────────┐    ┌──────────────┐
+│ On New Email │───▶│ Parse PDF    │───▶│ Extract Data │
+│              │    │              │    │              │
+│ From:        │    │ OCR: on      │    │ Fields:      │
+│ *@legal.com  │    │ Tables: on   │    │ - parties    │
+│              │    │              │    │ - value      │
+│ Has:         │    │              │    │ - term       │
+│ attachment   │    │              │    │ - start_date │
+└──────────────┘    └──────────────┘    │ - clauses[]  │
+                                        │ - risks[]    │
+                                        └──────────────┘
+                                               │
+                                               ▼
+                                        ┌──────────────┐
+                                        │ Scorer       │
+                                        │              │
+                                        │ Risk score   │
+                                        │ based on:    │
+                                        │ - Unusual    │
+                                        │   clauses    │
+                                        │ - Missing    │
+                                        │   protections│
+                                        │ - Value/risk │
+                                        │   ratio      │
+                                        └──────────────┘
+                                               │
+                              ┌────────────────┼────────────────┐
+                              ▼                ▼                ▼
+                         Low risk         Medium risk      High risk
+                              │                │                │
+                              ▼                ▼                ▼
+                       ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
+                       │ Add to KB    │ │ Add to KB    │ │ Add to KB    │
+                       │              │ │              │ │              │
+                       │ Auto-index   │ │ Flag for     │ │ Flag urgent  │
+                       │              │ │ review       │ │              │
+                       └──────────────┘ └──────────────┘ └──────────────┘
+                              │                │                │
+                              ▼                ▼                ▼
+                       ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
+                       │ Airtable     │ │ Slack        │ │ Human-in-    │
+                       │ Create       │ │ #legal       │ │ the-Loop     │
+                       │ Record       │ │              │ │              │
+                       │              │ │ "Medium risk │ │ Urgent       │
+                       │ Contract     │ │ contract..." │ │ legal review │
+                       │ database     │ └──────────────┘ │ required     │
+                       └──────────────┘                  └──────────────┘
+
+**Impact**: Legal team focuses on high-risk contracts, routine contracts auto-processed
+```
+
+---
+
+### Example Workflows Index
+
+These workflows are documented in detail in their respective phase spec files with specific acceptance criteria:
+
+| Example                                 | Primary Nodes Used                              | Spec Location                 |
+| --------------------------------------- | ----------------------------------------------- | ----------------------------- |
+| **Customer Support Automation**         | Categorizer, KB Chat, Agent Chat, PII Redactor  | Phase 09-13 (AI Nodes)        |
+| **Lead Enrichment & Qualification**     | Run Agent, Scorer, Router, HubSpot              | Phase 09-13 (AI Nodes)        |
+| **Content Review Pipeline**             | Ask AI, Generate Image, Human-in-the-Loop       | Phase 09-13 (AI Nodes)        |
+| **Intelligent Data Sync Pipeline**      | Webhook, Run Agent, Categorizer, HubSpot, Slack | Phase 14-16 (Automation)      |
+| **Multi-Stage Purchase Order Approval** | Approval Gate, Audit Log, Router                | Phase 19-20 (Governance)      |
+| **Document Processing Pipeline**        | Parse PDF, Extract Data, Scorer, Add to KB      | Phase 17-18 (Knowledge)       |
+| **Company Enrichment Custom Node**      | HTTP Request, Transform, Ask AI                 | Phase 24-25 (Custom/Subflows) |
+| **Manager Approval Subflow**            | Approval Gate, Transform, Slack                 | Phase 24-25 (Custom/Subflows) |
+
+---
+
+## Implementation Phases
+
+The transformation is broken into **27 granular phases**, each with:
+
+- Concrete, verifiable deliverables
+- Maximum 6 nodes per phase
+- Specific test workflows for validation
+
+### Phase Overview
+
+| Group            | Phases | Description                                 | Nodes |
+| ---------------- | ------ | ------------------------------------------- | ----- |
+| **Foundation**   | 01-05  | Types, registry, styles, UI infrastructure  | 0     |
+| **Core Tools**   | 06-08  | Flow control, data processing, file parsing | 11    |
+| **AI**           | 09-13  | Core AI, analysis, vision, agents, advanced | 17    |
+| **Automation**   | 14-16  | Triggers, Google readers, other readers     | 12    |
+| **Knowledge**    | 17-18  | KB core, KB management                      | 5     |
+| **Governance**   | 19-20  | Security, compliance, operations            | 6     |
+| **Integrations** | 21-25  | Framework, core integrations, additional    | ~80   |
+| **Custom**       | 24-25  | Custom nodes, subflows                      | 2     |
+
+**Total: ~130+ nodes across 25 phases**
+
+### Phase Dependencies
+
+```
+01 (Types, Registry, Styles)
+ │
+ └─► 02 (BaseNode Visual) ──► 03 (Node Sidebar)
+                                      │
+                                      └─► 04 (Collapsible Library) ──► 05 (Nav & Search)
+                                                                              │
+                    ┌─────────────────────────────────────────────────────────┼─────────────────────────────────────┐
+                    │                                                         │                                     │
+                    ▼                                                         ▼                                     ▼
+              06-08 (Core Tools)                                        09-13 (AI)                            14-16 (Automation)
+                    │                                                         │                                     │
+                    │                                                         ▼                                     │
+                    │                                                   17-18 (Knowledge)                           │
+                    │                                                         │                                     │
+                    └─────────────────────────────────────────────────────────┼─────────────────────────────────────┘
+                                                                              │
+                                                                              ▼
+                                                                        19-20 (Governance)
+                                                                              │
+                                                                              ▼
+                                                                        21-23 (Integrations)
+                                                                              │
+                                                                              ▼
+                                                                        24-25 (Custom/Subflows)
+```
+
+### Verification Checkpoints
+
+| After Phase | Milestone    | What Works                                         |
+| ----------- | ------------ | -------------------------------------------------- |
+| 05          | UI Complete  | New node library, attached sidebar, visual refresh |
+| 08          | Core Tools   | Basic data processing workflows                    |
+| 13          | AI Complete  | AI-powered workflows                               |
+| 16          | Automation   | External event triggers                            |
+| 18          | Knowledge    | RAG and knowledge base workflows                   |
+| 20          | Governance   | Compliance and security features                   |
+| 23          | Integrations | Third-party connections                            |
+| 25          | Complete     | Full system with custom nodes                      |
+
+See [`phase-index.md`](./phase-index.md) for detailed phase mapping and the `/phases` directory for implementation specs.
+
+---
+
+## Success Metrics
+
+After implementation, we expect:
+
+| Metric                       | Before           | After               |
+| ---------------------------- | ---------------- | ------------------- |
+| Time to first workflow       | 30+ minutes      | 5 minutes           |
+| Nodes used per workflow      | 3-5 (primitives) | 3-5 (purpose-built) |
+| Support tickets for "how to" | High             | Low                 |
+| User-created workflows       | Power users only | All users           |
+| Workflow complexity possible | Limited          | Enterprise-grade    |
+
+---
+
+## Migration Path
+
+Existing workflows using primitive nodes will continue to work. The old nodes remain available under "Advanced" or can be deprecated over time as purpose-built alternatives prove stable.
+
+---
+
+## Getting Started
+
+1. Read [`phase-index.md`](./phase-index.md) for the complete 27-phase mapping
+2. Read [Phase 01: Foundation](./phases/00-foundation.md) for the technical foundation (types, registry, styles)
+3. Review the phase dependency graph above to understand parallel work opportunities
+4. Check [`test-workflows.md`](./test-workflows.md) for acceptance criteria per phase
+5. Each phase should have its own PR for easier review
+
+---
+
+## Related Documents
+
+- [`phase-index.md`](./phase-index.md) - Maps 27 phases to source specs
+- [`test-workflows.md`](./test-workflows.md) - Test workflows and acceptance criteria
+- [Phase Specifications](./phases/) - Detailed implementation specs (11 files covering all 27 phases)
+- Original node spec: `.docs/specs/workflow-node-groups.md` (deprecated, superseded by this)
