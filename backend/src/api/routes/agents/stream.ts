@@ -88,6 +88,7 @@ export async function streamAgentHandler(
         channel: string;
         handler: (data: Record<string, unknown>) => void;
     }> = [];
+    let threadUnsubscribe: (() => Promise<void>) | null = null;
 
     // Unsubscribe callback from thread channel when client disconnects
     let threadUnsubscribe: (() => Promise<void>) | null = null;
