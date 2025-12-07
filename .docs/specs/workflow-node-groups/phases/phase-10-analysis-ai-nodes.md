@@ -427,6 +427,67 @@ registerNode({
 
 ---
 
+## Unit Tests
+
+### Test Pattern
+
+**Pattern B (Mock LLM)**: Mock `executeLLMNode` with canned JSON responses for deterministic testing.
+
+### Files to Create
+
+| Executor          | Test File                                                                  | Pattern |
+| ----------------- | -------------------------------------------------------------------------- | ------- |
+| Categorizer       | `backend/tests/unit/node-executors/ai/categorizer-executor.test.ts`        | B       |
+| SentimentAnalyzer | `backend/tests/unit/node-executors/ai/sentiment-analyzer-executor.test.ts` | B       |
+| Scorer            | `backend/tests/unit/node-executors/ai/scorer-executor.test.ts`             | B       |
+| AIListSorter      | `backend/tests/unit/node-executors/ai/ai-list-sorter-executor.test.ts`     | B       |
+
+### Mock Setup
+
+```typescript
+mockLLM.setJSONResponse(/classification/i, {
+    category: "billing",
+    confidence: 0.95,
+    allScores: { billing: 0.95, technical: 0.03, shipping: 0.02 }
+});
+```
+
+### Required Test Cases
+
+#### categorizer-executor.test.ts
+
+- `should assign category from defined list`
+- `should return confidence scores per category`
+- `should support multi-label classification`
+- `should fall back to "other" when below threshold`
+- `should handle empty category list`
+
+#### sentiment-analyzer-executor.test.ts
+
+- `should return positive/negative/neutral sentiment`
+- `should return score in -1 to 1 range`
+- `should detect mixed sentiment`
+- `should return emotion labels when enabled`
+- `should analyze aspect-based sentiment`
+
+#### scorer-executor.test.ts
+
+- `should assign score based on criteria`
+- `should return breakdown by criterion`
+- `should calculate weighted average`
+- `should include explanation when required`
+- `should respect score range configuration`
+
+#### ai-list-sorter-executor.test.ts
+
+- `should sort items by semantic criteria`
+- `should return rankings with scores`
+- `should include reasoning per item`
+- `should respect limit configuration`
+- `should handle ascending/descending order`
+
+---
+
 ## Test Workflow: Feedback Analysis
 
 ```

@@ -742,6 +742,58 @@ function buildMessages(
 
 ---
 
+## Unit Tests
+
+### Test Pattern
+
+**Pattern B + DB**: Mock LLM for embeddings and use test database for vector storage.
+
+### Files to Create
+
+| Executor | Test File                                                                | Pattern |
+| -------- | ------------------------------------------------------------------------ | ------- |
+| SearchKB | `backend/tests/unit/node-executors/knowledge/search-kb-executor.test.ts` | B + DB  |
+| AddKB    | `backend/tests/unit/node-executors/knowledge/add-kb-executor.test.ts`    | B + DB  |
+| KBChat   | `backend/tests/unit/node-executors/knowledge/kb-chat-executor.test.ts`   | B + DB  |
+
+### Mock Setup
+
+```typescript
+// Mock embedding generation
+mockLLM.setEmbeddingResponse([0.1, 0.2, 0.3, ...]); // 1536-dim vector
+
+// Use test database with pgvector
+const pool = getGlobalTestPool();
+await pool.query("CREATE EXTENSION IF NOT EXISTS vector");
+```
+
+### Required Test Cases
+
+#### search-kb-executor.test.ts
+
+- `should return semantically similar documents`
+- `should respect topK limit`
+- `should filter by metadata`
+- `should return relevance scores`
+- `should handle empty results`
+
+#### add-kb-executor.test.ts
+
+- `should chunk document by strategy`
+- `should generate embeddings for chunks`
+- `should store with metadata`
+- `should handle duplicate detection`
+- `should support batch ingestion`
+
+#### kb-chat-executor.test.ts
+
+- `should retrieve context and generate answer`
+- `should cite sources in response`
+- `should maintain conversation history`
+- `should handle no relevant context`
+
+---
+
 ## Test Workflow: Q&A Bot
 
 ```

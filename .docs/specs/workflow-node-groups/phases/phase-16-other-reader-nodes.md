@@ -136,6 +136,49 @@ if (!response.ok) {
 
 ---
 
+## Unit Tests
+
+### Test Pattern
+
+**Pattern C (Mock Services)**: Use `nock` to mock external APIs.
+
+### Files to Create
+
+| Executor       | Test File                                                                    | Pattern |
+| -------------- | ---------------------------------------------------------------------------- | ------- |
+| NotionReader   | `backend/tests/unit/node-executors/readers/notion-reader-executor.test.ts`   | C       |
+| AirtableReader | `backend/tests/unit/node-executors/readers/airtable-reader-executor.test.ts` | C       |
+| HTTPRequest    | `backend/tests/unit/node-executors/readers/http-request-executor.test.ts`    | C       |
+
+### Required Test Cases
+
+#### notion-reader-executor.test.ts
+
+- `should query database with filters`
+- `should fetch page content`
+- `should handle pagination`
+- `should parse rich text properties`
+- `should handle relation properties`
+
+#### airtable-reader-executor.test.ts
+
+- `should list records from table`
+- `should apply filter formula`
+- `should handle field types correctly`
+- `should paginate large result sets`
+- `should respect view configuration`
+
+#### http-request-executor.test.ts
+
+- `should make GET request and return response`
+- `should make POST request with JSON body`
+- `should handle various auth methods`
+- `should timeout after configured duration`
+- `should retry on 5xx errors`
+- `should handle non-JSON responses`
+
+---
+
 ## Test Workflow: Notion Sync
 
 ```

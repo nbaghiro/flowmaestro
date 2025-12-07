@@ -160,6 +160,40 @@ export interface Workflow {
 
 ---
 
+## Unit Tests
+
+### Test Pattern
+
+**Pattern A (Pure Logic)**: Test subflow execution, input/output mapping, and interface validation.
+
+### Files to Create
+
+| Component        | Test File                                                             | Pattern |
+| ---------------- | --------------------------------------------------------------------- | ------- |
+| SubflowExecutor  | `backend/tests/unit/node-executors/subflows/subflow-executor.test.ts` | A       |
+| SubflowInterface | `backend/tests/unit/subflows/subflow-interface.test.ts`               | A       |
+
+### Required Test Cases
+
+#### subflow-executor.test.ts
+
+- `should execute referenced workflow as child`
+- `should map inputs to subflow context`
+- `should return outputs to parent context`
+- `should handle subflow errors`
+- `should support recursive subflows (with depth limit)`
+- `should track execution hierarchy`
+
+#### subflow-interface.test.ts
+
+- `should validate input schema compliance`
+- `should validate output schema compliance`
+- `should detect version mismatches`
+- `should generate interface from workflow`
+- `should support optional inputs with defaults`
+
+---
+
 ## Test Workflow: Approval Reuse
 
 ```

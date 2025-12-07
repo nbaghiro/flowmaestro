@@ -354,6 +354,62 @@ export async function executeWaitNode(
 
 ---
 
+## Unit Tests
+
+### Test Pattern
+
+**Pattern A (Pure Logic)**: These nodes have no external dependencies - test executors directly without mocking.
+
+### Files to Create
+
+| Executor | Test File                                                                | Pattern |
+| -------- | ------------------------------------------------------------------------ | ------- |
+| Input    | `backend/tests/unit/node-executors/flow-control/input-executor.test.ts`  | A       |
+| Output   | `backend/tests/unit/node-executors/flow-control/output-executor.test.ts` | A       |
+| Router   | `backend/tests/unit/node-executors/flow-control/router-executor.test.ts` | A       |
+| Loop     | `backend/tests/unit/node-executors/flow-control/loop-executor.test.ts`   | A       |
+| Wait     | `backend/tests/unit/node-executors/flow-control/wait-executor.test.ts`   | A       |
+
+### Required Test Cases
+
+#### input-executor.test.ts
+
+- `should pass through input data to context variables`
+- `should validate input against schema when provided`
+- `should set default values for missing fields`
+
+#### output-executor.test.ts
+
+- `should format output according to template`
+- `should extract specified fields from context`
+- `should handle missing variables gracefully`
+
+#### router-executor.test.ts
+
+- `should route to first matching condition`
+- `should fall back to default when no match`
+- `should return all matches in "all" mode`
+- `should throw on invalid expression syntax`
+- `should handle nested property access in expressions`
+- `should evaluate multiple conditions in order`
+
+#### loop-executor.test.ts
+
+- `should iterate over array items`
+- `should provide item and index variables`
+- `should respect batch size configuration`
+- `should handle empty arrays`
+- `should break early when break condition met`
+
+#### wait-executor.test.ts
+
+- `should delay execution by specified duration`
+- `should parse duration strings (1s, 5m, 1h)`
+- `should interpolate duration from variables`
+- `should passthrough context unchanged`
+
+---
+
 ## Test Workflow: Simple Data Routing
 
 ```

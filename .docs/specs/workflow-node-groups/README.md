@@ -660,6 +660,63 @@ Existing workflows using primitive nodes will continue to work. The old nodes re
 
 ---
 
+## Testing Guidelines
+
+Each phase spec includes a `## Unit Tests` section specifying test files and cases. Follow these patterns:
+
+### Test Patterns
+
+| Pattern               | Applies To                             | Approach                                    |
+| --------------------- | -------------------------------------- | ------------------------------------------- |
+| **A (Pure Logic)**    | Router, Transform, Filter, Loop        | Test executor directly, no mocking          |
+| **B (Mock LLM)**      | Categorizer, Sentiment, Scorer, Ask AI | Mock `executeLLMNode` with canned responses |
+| **C (Mock Services)** | HTTP Request, Integrations, Readers    | Use `nock` to mock external APIs            |
+| **D (Mock Redis)**    | Rate Limiter, Circuit Breaker          | Mock Redis client for state                 |
+
+### Mock Utilities
+
+```typescript
+// MockContext - Create test execution context
+import { createMockContext } from "../helpers/MockContext";
+const context = createMockContext({ variables: { data: { priority: "high" } } });
+
+// MockLLMProvider - Deterministic LLM responses
+import { MockLLMProvider } from "../helpers/MockLLMProvider";
+const mockLLM = new MockLLMProvider();
+mockLLM.setJSONResponse("classification", { category: "billing", confidence: 0.95 });
+jest.spyOn(llmExecutor, "executeLLMNode").mockImplementation(mockLLM.getMockExecutor());
+
+// MockRedis - State management testing
+import { MockRedis } from "../mocks/redis.mock";
+const mockRedis = new MockRedis();
+jest.spyOn(redisModule, "getRedisClient").mockReturnValue(mockRedis);
+```
+
+### Directory Structure
+
+```
+backend/tests/
+├── unit/node-executors/
+│   ├── flow-control/      # Router, Loop, Wait
+│   ├── data-processing/   # Transform, Filter, Aggregate
+│   ├── ai/                # Categorizer, Sentiment, Scorer
+│   ├── knowledge/         # KB Search, KB Add
+│   └── governance/        # Rate Limiter, PII Redactor
+├── integration/workflows/  # One test per phase group
+├── mocks/                  # MockRedis, etc.
+└── helpers/               # MockContext, MockLLMProvider
+```
+
+### Running Tests
+
+```bash
+npm run test --workspace=backend          # All tests
+npm run test:unit --workspace=backend     # Unit only
+npm run test:integration --workspace=backend  # Integration only
+```
+
+---
+
 ## Related Documents
 
 - [Phase Specifications](./phases/) - Detailed implementation specs for all 25 phases

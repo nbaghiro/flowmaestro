@@ -369,6 +369,61 @@ export async function executeDeduplicateNode(
 
 ---
 
+## Unit Tests
+
+### Test Pattern
+
+**Pattern A (Pure Logic)**: Data processing nodes use JSONata/JavaScript expressions with no external dependencies.
+
+### Files to Create
+
+| Executor    | Test File                                                                        | Pattern |
+| ----------- | -------------------------------------------------------------------------------- | ------- |
+| Transform   | `backend/tests/unit/node-executors/data-processing/transform-executor.test.ts`   | A       |
+| Filter      | `backend/tests/unit/node-executors/data-processing/filter-executor.test.ts`      | A       |
+| Aggregate   | `backend/tests/unit/node-executors/data-processing/aggregate-executor.test.ts`   | A       |
+| Deduplicate | `backend/tests/unit/node-executors/data-processing/deduplicate-executor.test.ts` | A       |
+
+### Required Test Cases
+
+#### transform-executor.test.ts
+
+- `should map array items using expression`
+- `should evaluate JSONata expressions`
+- `should evaluate JavaScript arrow functions`
+- `should handle nested property access`
+- `should throw on invalid expression`
+- `should support parseJSON operation`
+- `should support parseXML operation`
+
+#### filter-executor.test.ts
+
+- `should filter items matching condition`
+- `should return empty array when no matches`
+- `should support complex boolean expressions`
+- `should handle nested property comparisons`
+- `should preserve original item structure`
+
+#### aggregate-executor.test.ts
+
+- `should sum numeric values`
+- `should calculate average`
+- `should find min/max values`
+- `should count items`
+- `should group by field`
+- `should handle empty arrays`
+
+#### deduplicate-executor.test.ts
+
+- `should remove duplicates by key`
+- `should keep first occurrence by default`
+- `should optionally keep last occurrence`
+- `should return duplicates list`
+- `should handle complex key expressions`
+- `should handle case-insensitive comparison`
+
+---
+
 ## Test Workflow: Lead List Cleanup
 
 ```

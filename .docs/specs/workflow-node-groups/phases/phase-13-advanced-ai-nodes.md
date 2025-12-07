@@ -459,6 +459,52 @@ registerNode({
 
 ---
 
+## Unit Tests
+
+### Test Pattern
+
+**Pattern B (Mock LLM)**: Mock multiple LLM providers for parallel execution testing.
+
+### Files to Create
+
+| Executor      | Test File                                                              | Pattern |
+| ------------- | ---------------------------------------------------------------------- | ------- |
+| CompareModels | `backend/tests/unit/node-executors/ai/compare-models-executor.test.ts` | B       |
+| ModelRouter   | `backend/tests/unit/node-executors/ai/model-router-executor.test.ts`   | B       |
+
+### Mock Setup
+
+```typescript
+// Mock multiple providers returning different responses
+mockLLM.setResponse("openai/gpt-4", "Response from GPT-4");
+mockLLM.setResponse("anthropic/claude-3", "Response from Claude");
+```
+
+### Required Test Cases
+
+#### compare-models-executor.test.ts
+
+- `should execute prompt across all configured models`
+- `should return responses with latency metrics`
+- `should calculate cost per model response`
+- `should select winner based on speed criteria`
+- `should select winner based on cost criteria`
+- `should use LLM evaluator for quality criteria`
+- `should handle partial failures gracefully`
+- `should respect per-model timeout`
+
+#### model-router-executor.test.ts
+
+- `should analyze prompt complexity`
+- `should route simple queries to cheaper models`
+- `should route complex queries to capable models`
+- `should respect cost optimization criteria`
+- `should use fallback model on routing failure`
+- `should explain routing decision`
+- `should consider model specialties`
+
+---
+
 ## Test Workflow: Model Comparison
 
 ```

@@ -429,6 +429,70 @@ Return ONLY the translation, no explanations.`;
 
 ---
 
+## Unit Tests
+
+### Test Pattern
+
+**Pattern B (Mock LLM)**: Mock `executeLLMNode` with canned responses for deterministic testing.
+
+### Files to Create
+
+| Executor    | Test File                                                            | Pattern |
+| ----------- | -------------------------------------------------------------------- | ------- |
+| AskAI       | `backend/tests/unit/node-executors/ai/ask-ai-executor.test.ts`       | B       |
+| ExtractData | `backend/tests/unit/node-executors/ai/extract-data-executor.test.ts` | B       |
+| Summarizer  | `backend/tests/unit/node-executors/ai/summarizer-executor.test.ts`   | B       |
+| Translator  | `backend/tests/unit/node-executors/ai/translator-executor.test.ts`   | B       |
+
+### Mock Setup
+
+```typescript
+import { MockLLMProvider } from "../../../mocks/llm-provider.mock";
+
+let mockLLM: MockLLMProvider;
+beforeEach(() => {
+    mockLLM = new MockLLMProvider();
+    jest.spyOn(llmExecutor, "executeLLMNode").mockImplementation(mockLLM.getMockExecutor());
+});
+```
+
+### Required Test Cases
+
+#### ask-ai-executor.test.ts
+
+- `should send prompt to LLM and return response`
+- `should interpolate variables in prompt template`
+- `should include system prompt when configured`
+- `should respect temperature setting`
+- `should handle streaming responses`
+- `should use specified provider and model`
+
+#### extract-data-executor.test.ts
+
+- `should extract fields according to schema`
+- `should return structured JSON response`
+- `should handle missing optional fields`
+- `should validate extracted data types`
+- `should throw on extraction failure`
+
+#### summarizer-executor.test.ts
+
+- `should summarize text to target length`
+- `should preserve key points`
+- `should handle different formats (bullets, paragraph)`
+- `should respect maxLength configuration`
+- `should handle very long input text`
+
+#### translator-executor.test.ts
+
+- `should translate text to target language`
+- `should auto-detect source language`
+- `should preserve formatting`
+- `should return detected language in result`
+- `should handle unsupported language pairs`
+
+---
+
 ## Test Workflow: Multi-Language Support Ticket
 
 ```

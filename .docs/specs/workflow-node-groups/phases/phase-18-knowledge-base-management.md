@@ -911,6 +911,40 @@ CREATE INDEX idx_kb_query_logs_similarity ON flowmaestro.kb_query_logs(top_simil
 
 ---
 
+## Unit Tests
+
+### Test Pattern
+
+**Pattern C (Mock Services)**: Mock external sources and database operations.
+
+### Files to Create
+
+| Executor     | Test File                                                                     | Pattern |
+| ------------ | ----------------------------------------------------------------------------- | ------- |
+| SyncKBSource | `backend/tests/unit/node-executors/knowledge/sync-kb-source-executor.test.ts` | C       |
+| KBAnalytics  | `backend/tests/unit/node-executors/knowledge/kb-analytics-executor.test.ts`   | C + DB  |
+
+### Required Test Cases
+
+#### sync-kb-source-executor.test.ts
+
+- `should sync from Notion source`
+- `should sync from Google Drive source`
+- `should detect new/modified/deleted docs`
+- `should use incremental sync when available`
+- `should report sync statistics`
+- `should handle source errors gracefully`
+
+#### kb-analytics-executor.test.ts
+
+- `should identify frequently searched topics`
+- `should detect unanswered queries`
+- `should calculate document relevance scores`
+- `should suggest content improvements`
+- `should generate usage reports`
+
+---
+
 ## Test Workflow: KB Sync Pipeline
 
 ```

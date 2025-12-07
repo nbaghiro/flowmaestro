@@ -132,6 +132,45 @@ export const createContactOperation: OperationDefinition = {
 
 ---
 
+## Unit Tests
+
+### Test Pattern
+
+**Pattern C (Mock Services)**: Use `nock` to mock provider APIs.
+
+### Files to Create
+
+| Integration | Test File                                                     | Pattern |
+| ----------- | ------------------------------------------------------------- | ------- |
+| HubSpot     | `backend/tests/unit/integrations/hubspot-operations.test.ts`  | C       |
+| Notion      | `backend/tests/unit/integrations/notion-operations.test.ts`   | C       |
+| Airtable    | `backend/tests/unit/integrations/airtable-operations.test.ts` | C       |
+
+### Required Test Cases
+
+#### hubspot-operations.test.ts
+
+- `should create contact`
+- `should update contact properties`
+- `should search contacts by criteria`
+- `should handle API pagination`
+
+#### notion-operations.test.ts
+
+- `should query database`
+- `should create page`
+- `should update page properties`
+- `should handle rich text formatting`
+
+#### airtable-operations.test.ts
+
+- `should list records with filter`
+- `should create record`
+- `should update record fields`
+- `should handle formula fields`
+
+---
+
 ## Test Workflow: CRM Sync
 
 ```

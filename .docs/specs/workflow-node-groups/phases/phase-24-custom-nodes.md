@@ -177,6 +177,40 @@ export interface CustomNodeDefinition {
 
 ---
 
+## Unit Tests
+
+### Test Pattern
+
+**Pattern A (Pure Logic)**: Test custom node execution and validation.
+
+### Files to Create
+
+| Component           | Test File                                                               | Pattern |
+| ------------------- | ----------------------------------------------------------------------- | ------- |
+| CustomNodeExecutor  | `backend/tests/unit/node-executors/custom/custom-node-executor.test.ts` | A       |
+| CustomNodeValidator | `backend/tests/unit/custom/custom-node-validator.test.ts`               | A       |
+
+### Required Test Cases
+
+#### custom-node-executor.test.ts
+
+- `should execute internal workflow with inputs`
+- `should return defined outputs`
+- `should handle nested node execution`
+- `should respect timeout configuration`
+- `should propagate errors from internal nodes`
+- `should track execution as single unit`
+
+#### custom-node-validator.test.ts
+
+- `should validate interface definition`
+- `should require input/output schema`
+- `should validate internal workflow structure`
+- `should detect circular dependencies`
+- `should validate version compatibility`
+
+---
+
 ## Test Workflow: Company Enrichment
 
 ```

@@ -169,6 +169,55 @@ const connection = await connectionRepository.findByIdWithData(connectionId);
 
 ---
 
+## Unit Tests
+
+### Test Pattern
+
+**Pattern C (Mock Services)**: Mock Temporal scheduler and webhook endpoints.
+
+### Files to Create
+
+| Executor     | Test File                                                                   | Pattern |
+| ------------ | --------------------------------------------------------------------------- | ------- |
+| Schedule     | `backend/tests/unit/node-executors/triggers/schedule-executor.test.ts`      | C       |
+| Webhook      | `backend/tests/unit/node-executors/triggers/webhook-executor.test.ts`       | C       |
+| EmailTrigger | `backend/tests/unit/node-executors/triggers/email-trigger-executor.test.ts` | C       |
+| SlackTrigger | `backend/tests/unit/node-executors/triggers/slack-trigger-executor.test.ts` | C       |
+
+### Required Test Cases
+
+#### schedule-executor.test.ts
+
+- `should register cron schedule with Temporal`
+- `should parse cron expression correctly`
+- `should respect timezone configuration`
+- `should trigger workflow at scheduled time`
+- `should handle invalid cron expressions`
+
+#### webhook-executor.test.ts
+
+- `should generate unique webhook URL`
+- `should validate webhook secret`
+- `should parse JSON payload`
+- `should parse form-encoded payload`
+- `should reject invalid signatures`
+
+#### email-trigger-executor.test.ts
+
+- `should parse incoming email`
+- `should filter by sender/subject`
+- `should extract attachments`
+- `should handle MIME parsing`
+
+#### slack-trigger-executor.test.ts
+
+- `should verify Slack signature`
+- `should filter by channel/mention`
+- `should extract message content`
+- `should handle thread replies`
+
+---
+
 ## Test Workflow: Scheduled Report
 
 ```

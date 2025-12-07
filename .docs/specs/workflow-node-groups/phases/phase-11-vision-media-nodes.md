@@ -131,6 +131,58 @@ const response = await openai.chat.completions.create({
 
 ---
 
+## Unit Tests
+
+### Test Pattern
+
+**Pattern B (Mock LLM)**: Mock vision/image generation APIs with canned responses.
+
+### Files to Create
+
+| Executor      | Test File                                                              | Pattern |
+| ------------- | ---------------------------------------------------------------------- | ------- |
+| GenerateImage | `backend/tests/unit/node-executors/ai/generate-image-executor.test.ts` | B       |
+| AnalyzeImage  | `backend/tests/unit/node-executors/ai/analyze-image-executor.test.ts`  | B       |
+| AnalyzeVideo  | `backend/tests/unit/node-executors/ai/analyze-video-executor.test.ts`  | B       |
+
+### Test Fixtures Required
+
+```
+backend/tests/fixtures/data/
+├── sample-image.png
+├── sample-photo.jpg
+└── sample-video.mp4
+```
+
+### Required Test Cases
+
+#### generate-image-executor.test.ts
+
+- `should generate image from text prompt`
+- `should respect size configuration`
+- `should return image URL or base64`
+- `should handle style/quality settings`
+- `should validate prompt length`
+
+#### analyze-image-executor.test.ts
+
+- `should describe image contents`
+- `should extract objects and labels`
+- `should detect text in image (OCR)`
+- `should analyze image from URL`
+- `should analyze image from base64`
+- `should return confidence scores`
+
+#### analyze-video-executor.test.ts
+
+- `should extract frames at interval`
+- `should generate frame descriptions`
+- `should create aggregate summary`
+- `should extract audio transcript`
+- `should handle various video formats`
+
+---
+
 ## Test Workflow: Content Moderation
 
 ```

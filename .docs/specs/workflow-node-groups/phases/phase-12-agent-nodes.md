@@ -124,6 +124,56 @@ const tools = await agentRepository.getAgentTools(agentId);
 
 ---
 
+## Unit Tests
+
+### Test Pattern
+
+**Pattern B (Mock LLM)**: Mock agent execution and LLM calls for deterministic testing.
+
+### Files to Create
+
+| Executor  | Test File                                                          | Pattern |
+| --------- | ------------------------------------------------------------------ | ------- |
+| RunAgent  | `backend/tests/unit/node-executors/ai/run-agent-executor.test.ts`  | B       |
+| AgentChat | `backend/tests/unit/node-executors/ai/agent-chat-executor.test.ts` | B       |
+| Handoff   | `backend/tests/unit/node-executors/ai/handoff-executor.test.ts`    | B       |
+| HITL      | `backend/tests/unit/node-executors/ai/hitl-executor.test.ts`       | B + C   |
+
+### Required Test Cases
+
+#### run-agent-executor.test.ts
+
+- `should execute agent with given prompt`
+- `should provide access to configured tools`
+- `should return agent output and trace`
+- `should respect max iterations limit`
+- `should timeout after configured duration`
+- `should handle agent errors gracefully`
+
+#### agent-chat-executor.test.ts
+
+- `should continue existing conversation`
+- `should maintain message history`
+- `should support multi-turn interactions`
+- `should preserve context variables`
+
+#### handoff-executor.test.ts
+
+- `should transfer to target agent`
+- `should pass context to new agent`
+- `should return handoff reasoning`
+- `should support conditional handoffs`
+
+#### hitl-executor.test.ts
+
+- `should pause execution awaiting human input`
+- `should notify assigned reviewer`
+- `should resume with human decision`
+- `should timeout with default action`
+- `should support custom action buttons`
+
+---
+
 ## Test Workflow: Research Agent
 
 ```

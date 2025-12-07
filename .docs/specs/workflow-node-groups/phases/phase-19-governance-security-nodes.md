@@ -1112,6 +1112,59 @@ CREATE INDEX idx_audit_logs_expires_at ON flowmaestro.audit_logs(expires_at) WHE
 
 ---
 
+## Unit Tests
+
+### Test Pattern
+
+**Pattern A/D (Mixed)**: PII detection is pure logic, Approval Gate requires mock services.
+
+### Files to Create
+
+| Executor     | Test File                                                                     | Pattern |
+| ------------ | ----------------------------------------------------------------------------- | ------- |
+| ApprovalGate | `backend/tests/unit/node-executors/governance/approval-gate-executor.test.ts` | C       |
+| AuditLog     | `backend/tests/unit/node-executors/governance/audit-log-executor.test.ts`     | A + DB  |
+| PIIRedactor  | `backend/tests/unit/node-executors/governance/pii-redactor-executor.test.ts`  | A       |
+| Encryption   | `backend/tests/unit/node-executors/governance/encryption-executor.test.ts`    | A       |
+
+### Required Test Cases
+
+#### approval-gate-executor.test.ts
+
+- `should pause workflow awaiting approval`
+- `should notify configured approvers`
+- `should resume on approval`
+- `should reject on denial`
+- `should timeout with default action`
+- `should support multi-level approval`
+
+#### audit-log-executor.test.ts
+
+- `should log workflow actions to database`
+- `should include timestamp and actor`
+- `should capture before/after state`
+- `should support compliance tags`
+- `should be tamper-evident`
+
+#### pii-redactor-executor.test.ts
+
+- `should detect email addresses`
+- `should detect phone numbers`
+- `should detect SSN/tax IDs`
+- `should detect credit card numbers`
+- `should support custom patterns`
+- `should preserve data structure while redacting`
+
+#### encryption-executor.test.ts
+
+- `should encrypt data with specified key`
+- `should decrypt data with correct key`
+- `should fail decryption with wrong key`
+- `should support field-level encryption`
+- `should handle key rotation`
+
+---
+
 ## Test Workflow: GDPR-Compliant Processing
 
 ```

@@ -161,6 +161,45 @@ export const readSheetOperation: OperationDefinition = {
 
 ---
 
+## Unit Tests
+
+### Test Pattern
+
+**Pattern C (Mock Services)**: Use `nock` to mock provider APIs.
+
+### Files to Create
+
+| Integration   | Test File                                                   | Pattern |
+| ------------- | ----------------------------------------------------------- | ------- |
+| Slack         | `backend/tests/unit/integrations/slack-operations.test.ts`  | C       |
+| Gmail         | `backend/tests/unit/integrations/gmail-operations.test.ts`  | C       |
+| Google Sheets | `backend/tests/unit/integrations/sheets-operations.test.ts` | C       |
+
+### Required Test Cases
+
+#### slack-operations.test.ts
+
+- `should send message to channel`
+- `should send direct message`
+- `should list channels`
+- `should handle rate limiting`
+
+#### gmail-operations.test.ts
+
+- `should search emails by query`
+- `should send email with attachments`
+- `should read email content`
+- `should handle OAuth token refresh`
+
+#### sheets-operations.test.ts
+
+- `should read range from spreadsheet`
+- `should write data to range`
+- `should append rows to sheet`
+- `should create new spreadsheet`
+
+---
+
 ## Test Workflow: Lead Notification
 
 ```

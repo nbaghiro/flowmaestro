@@ -723,6 +723,53 @@ export async function withCircuitBreaker<T>(
 
 ---
 
+## Unit Tests
+
+### Test Pattern
+
+**Pattern D (Mock Redis)**: Mock Redis for rate limiting state and circuit breaker state.
+
+### Files to Create
+
+| Executor       | Test File                                                                        | Pattern |
+| -------------- | -------------------------------------------------------------------------------- | ------- |
+| RateLimiter    | `backend/tests/unit/node-executors/operational/rate-limiter-executor.test.ts`    | D       |
+| CircuitBreaker | `backend/tests/unit/node-executors/operational/circuit-breaker-executor.test.ts` | D       |
+
+### Mock Setup
+
+```typescript
+import { MockRedis } from "../../../mocks/redis.mock";
+
+let mockRedis: MockRedis;
+beforeEach(() => {
+    mockRedis = new MockRedis();
+    jest.spyOn(redis, "getClient").mockReturnValue(mockRedis);
+});
+```
+
+### Required Test Cases
+
+#### rate-limiter-executor.test.ts
+
+- `should allow requests under limit`
+- `should reject requests over limit`
+- `should reset count after window expires`
+- `should support per-key rate limiting`
+- `should queue requests in queue mode`
+- `should handle concurrent requests correctly`
+
+#### circuit-breaker-executor.test.ts
+
+- `should allow requests when circuit closed`
+- `should open circuit after failure threshold`
+- `should reject requests when circuit open`
+- `should half-open after reset timeout`
+- `should close circuit on successful probe`
+- `should track failure/success metrics`
+
+---
+
 ## Test Workflow: Resilient API Calls
 
 ```

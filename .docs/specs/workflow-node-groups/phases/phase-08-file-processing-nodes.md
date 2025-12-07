@@ -336,6 +336,54 @@ async function parseDocx(
 
 ---
 
+## Unit Tests
+
+### Test Pattern
+
+**Pattern A (Pure Logic)**: File parsing uses libraries (pdf-parse, mammoth) that can be tested with fixture files.
+
+### Files to Create
+
+| Executor      | Test File                                                                           | Pattern |
+| ------------- | ----------------------------------------------------------------------------------- | ------- |
+| ParsePDF      | `backend/tests/unit/node-executors/file-processing/parse-pdf-executor.test.ts`      | A       |
+| ParseDocument | `backend/tests/unit/node-executors/file-processing/parse-document-executor.test.ts` | A       |
+
+### Test Fixtures Required
+
+```
+backend/tests/fixtures/data/
+├── sample-invoice.pdf
+├── sample-contract.pdf
+├── sample-document.docx
+├── sample-spreadsheet.xlsx
+└── sample-presentation.pptx
+```
+
+### Required Test Cases
+
+#### parse-pdf-executor.test.ts
+
+- `should extract text from simple PDF`
+- `should extract text from multi-page PDF`
+- `should return page count in metadata`
+- `should handle scanned PDFs with OCR flag`
+- `should extract text by page when splitPages is true`
+- `should handle password-protected PDFs`
+- `should throw on corrupted PDF files`
+
+#### parse-document-executor.test.ts
+
+- `should extract text from DOCX files`
+- `should extract text from XLSX files`
+- `should extract text from PPTX files`
+- `should detect document type automatically`
+- `should extract sections/slides as array`
+- `should include document metadata`
+- `should handle empty documents`
+
+---
+
 ## Test Workflow: Invoice Extraction
 
 ```

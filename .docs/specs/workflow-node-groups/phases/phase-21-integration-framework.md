@@ -344,6 +344,32 @@ export async function executeIntegrationNode(
 
 ---
 
+## Unit Tests
+
+### Test Pattern
+
+**Pattern C (Mock Services)**: Mock integration API clients for deterministic testing.
+
+### Files to Create
+
+| Executor            | Test File                                                                     | Pattern |
+| ------------------- | ----------------------------------------------------------------------------- | ------- |
+| IntegrationExecutor | `backend/tests/unit/node-executors/integrations/integration-executor.test.ts` | C       |
+
+### Required Test Cases
+
+#### integration-executor.test.ts
+
+- `should route to correct provider executor`
+- `should load operation schema from registry`
+- `should validate input against schema`
+- `should pass credentials from connection`
+- `should handle API errors gracefully`
+- `should support pagination for list operations`
+- `should interpolate variables in parameters`
+
+---
+
 ## How to Test
 
 | Test                          | Expected Result                         |

@@ -134,6 +134,56 @@ const scopes = [
 
 ---
 
+## Unit Tests
+
+### Test Pattern
+
+**Pattern C (Mock Services)**: Use `nock` to mock Google APIs.
+
+### Files to Create
+
+| Executor     | Test File                                                                  | Pattern |
+| ------------ | -------------------------------------------------------------------------- | ------- |
+| GmailReader  | `backend/tests/unit/node-executors/readers/gmail-reader-executor.test.ts`  | C       |
+| SheetsReader | `backend/tests/unit/node-executors/readers/sheets-reader-executor.test.ts` | C       |
+| DriveReader  | `backend/tests/unit/node-executors/readers/drive-reader-executor.test.ts`  | C       |
+
+### Mock Setup
+
+```typescript
+nock("https://gmail.googleapis.com")
+    .get("/gmail/v1/users/me/messages")
+    .reply(200, { messages: [{ id: "123" }] });
+```
+
+### Required Test Cases
+
+#### gmail-reader-executor.test.ts
+
+- `should fetch emails matching query`
+- `should parse email body and attachments`
+- `should respect maxResults limit`
+- `should handle pagination`
+- `should filter by label/sender`
+
+#### sheets-reader-executor.test.ts
+
+- `should read specified range`
+- `should parse values as correct types`
+- `should handle empty cells`
+- `should read entire sheet when range not specified`
+- `should return row/column metadata`
+
+#### drive-reader-executor.test.ts
+
+- `should list files in folder`
+- `should download file content`
+- `should respect file type filters`
+- `should handle nested folders`
+- `should return file metadata`
+
+---
+
 ## Test Workflow: Daily Sales Report
 
 ```
