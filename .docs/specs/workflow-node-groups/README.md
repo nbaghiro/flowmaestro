@@ -1,12 +1,14 @@
-# Workflow Node Groups: Complete Transformation
+# Workflow Nodes Spec
 
-## Executive Summary
+## Overview
 
-This specification outlines a complete transformation of FlowMaestro's workflow node system from **generic technical primitives** to **purpose-built, product-focused nodes** designed for non-technical users.
+Transform FlowMaestro's node system from **generic primitives** to **purpose-built nodes** for non-technical users.
 
-**Current State**: ~25 generic nodes (LLM, HTTP, Transform, Condition, etc.) that require technical knowledge to configure and combine.
-
-**Target State**: ~130+ purpose-built nodes organized into intuitive categories with natural language configuration, enabling business users to build powerful automations without coding.
+|            | Before                      | After                        |
+| ---------- | --------------------------- | ---------------------------- |
+| **Nodes**  | ~25 technical primitives    | ~130+ purpose-built          |
+| **Users**  | Developers only             | Business users               |
+| **Config** | Code/API knowledge required | Natural language + guided UI |
 
 ---
 
@@ -23,6 +25,7 @@ Current Node List:
 ├── Transform (requires JSON/template syntax)
 ├── Condition (requires expression syntax)
 ├── Code (requires JavaScript)
+├── Integration Node (generic for all providers)
 └── ...
 ```
 
@@ -563,26 +566,25 @@ These workflows are documented in detail in their respective phase spec files wi
 
 ## Implementation Phases
 
-The transformation is broken into **27 granular phases**, each with:
+25 phases organized by capability area. Each phase spec in `./phases/` includes:
 
-- Concrete, verifiable deliverables
-- Maximum 6 nodes per phase
-- Specific test workflows for validation
+- Node definitions with TypeScript interfaces
+- Backend executor implementations
+- Frontend component patterns
+- Test workflows for validation
 
 ### Phase Overview
 
-| Group            | Phases | Description                                 | Nodes |
-| ---------------- | ------ | ------------------------------------------- | ----- |
-| **Foundation**   | 01-05  | Types, registry, styles, UI infrastructure  | 0     |
-| **Core Tools**   | 06-08  | Flow control, data processing, file parsing | 11    |
-| **AI**           | 09-13  | Core AI, analysis, vision, agents, advanced | 17    |
-| **Automation**   | 14-16  | Triggers, Google readers, other readers     | 12    |
-| **Knowledge**    | 17-18  | KB core, KB management                      | 5     |
-| **Governance**   | 19-20  | Security, compliance, operations            | 6     |
-| **Integrations** | 21-25  | Framework, core integrations, additional    | ~80   |
-| **Custom**       | 24-25  | Custom nodes, subflows                      | 2     |
-
-**Total: ~130+ nodes across 25 phases**
+| Group            | Phases | What It Covers                                                                      |
+| ---------------- | ------ | ----------------------------------------------------------------------------------- |
+| **Foundation**   | 01-05  | Node registry, category system, BaseNode component, config sidebar, node library UI |
+| **Core Tools**   | 06-08  | Router, Loop, Delay, Transform, Code, file parsers (PDF, CSV, Excel)                |
+| **AI**           | 09-13  | Ask AI, Extract Data, Categorizer, Summarizer, vision nodes, Run Agent, Agent Chat  |
+| **Automation**   | 14-16  | Schedule, Webhook, Email/Drive/Sheets triggers, Notion/Airtable/HTTP readers        |
+| **Knowledge**    | 17-18  | Search KB, Add to KB, KB Chat, source sync, analytics                               |
+| **Governance**   | 19-20  | Approval Gate, Audit Log, PII Redactor, Rate Limiter, Circuit Breaker               |
+| **Integrations** | 21-23  | IntegrationNode framework, provider operations (Slack, Gmail, HubSpot, etc.)        |
+| **Custom**       | 24-25  | Custom node builder, subflow composition                                            |
 
 ### Phase Dependencies
 
@@ -626,7 +628,7 @@ The transformation is broken into **27 granular phases**, each with:
 | 23          | Integrations | Third-party connections                            |
 | 25          | Complete     | Full system with custom nodes                      |
 
-See [`phase-index.md`](./phase-index.md) for detailed phase mapping and the `/phases` directory for implementation specs.
+See the `/phases` directory for detailed implementation specs.
 
 ---
 
@@ -652,17 +654,12 @@ Existing workflows using primitive nodes will continue to work. The old nodes re
 
 ## Getting Started
 
-1. Read [`phase-index.md`](./phase-index.md) for the complete 27-phase mapping
-2. Read [Phase 01: Foundation](./phases/00-foundation.md) for the technical foundation (types, registry, styles)
-3. Review the phase dependency graph above to understand parallel work opportunities
-4. Check [`test-workflows.md`](./test-workflows.md) for acceptance criteria per phase
-5. Each phase should have its own PR for easier review
+1. Review the phase dependency graph above to understand parallel work opportunities
+2. Read phase specs in `./phases/` starting with `phase-01-*.md` through `phase-05-*.md` for foundation
+3. Each phase should have its own PR for easier review
 
 ---
 
 ## Related Documents
 
-- [`phase-index.md`](./phase-index.md) - Maps 27 phases to source specs
-- [`test-workflows.md`](./test-workflows.md) - Test workflows and acceptance criteria
-- [Phase Specifications](./phases/) - Detailed implementation specs (11 files covering all 27 phases)
-- Original node spec: `.docs/specs/workflow-node-groups.md` (deprecated, superseded by this)
+- [Phase Specifications](./phases/) - Detailed implementation specs for all 25 phases
