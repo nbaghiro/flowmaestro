@@ -70,13 +70,15 @@ The codebase uses consistent panel patterns - look at existing panels for refere
 
 ## Deliverables
 
-| Item               | Description                          |
-| ------------------ | ------------------------------------ |
-| `NodeLibraryPanel` | Collapsible left panel component     |
-| Collapsed state    | Show category icons only (48px wide) |
-| Expanded state     | Full panel (280px wide) with content |
-| Hover expand       | Panel expands after 300ms hover      |
-| Click lock         | Click locks panel open               |
+| Item               | Description                               |
+| ------------------ | ----------------------------------------- |
+| `NodeLibraryPanel` | Collapsible left panel component          |
+| `AddNodeButton`    | Floating plus button on canvas            |
+| Collapsed state    | Show category icons only (48px wide)      |
+| Expanded state     | Full panel (280px wide) with content      |
+| Hover expand       | Panel expands after 300ms hover           |
+| Click lock         | Click locks panel open                    |
+| Drag-to-close      | Panel closes when dragging node to canvas |
 
 ---
 
@@ -86,16 +88,32 @@ The codebase uses consistent panel patterns - look at existing panels for refere
 
 ```
 ┌────┐
+│ >  │  ← Chevron arrow (hover to expand)
+│────│
 │ 🤖 │  AI
 │ 📚 │  Knowledge
 │ ⚡  │  Automation
 │ 🔧 │  Tools
-│ 📞 │  Voice
 │ 🧩 │  Integration
 │ 📦 │  Custom
 │ 🔀 │  Subflow
 └────┘
+
+   ┌───┐
+   │ + │  ← Plus button (top-left corner of canvas, click to expand)
+   └───┘
 ```
+
+### Trigger Behaviors
+
+| Trigger             | Action                                       |
+| ------------------- | -------------------------------------------- |
+| Click `>` arrow     | Toggle panel open/closed                     |
+| Hover over panel    | Show panel after 300ms (auto-hide on leave)  |
+| Click `+` button    | Show panel (stays open until explicit close) |
+| Click outside panel | Close panel (if not locked)                  |
+| Escape key          | Close panel                                  |
+| Drag node to canvas | Close panel                                  |
 
 ### Expanded State (280px)
 
@@ -316,25 +334,70 @@ export const useNodeLibraryStore = create<NodeLibraryState>((set, get) => ({
 }));
 ```
 
+### 3. `frontend/src/canvas/components/AddNodeButton.tsx`
+
+```typescript
+import { memo } from "react";
+import { Plus } from "lucide-react";
+import { useNodeLibraryStore } from "../../stores/nodeLibraryStore";
+import { cn } from "../../lib/utils";
+
+/**
+ * Floating plus button on canvas to open node library
+ * Positioned top-left corner, always visible
+ */
+export const AddNodeButton = memo(function AddNodeButton() {
+    const { expand, isExpanded } = useNodeLibraryStore();
+
+    return (
+        <button
+            onClick={() => expand()}
+            className={cn(
+                "fixed top-4 left-16 z-50",
+                "w-10 h-10 rounded-full",
+                "bg-primary text-primary-foreground",
+                "shadow-lg hover:shadow-xl",
+                "flex items-center justify-center",
+                "transition-all duration-200",
+                "hover:scale-105 active:scale-95",
+                isExpanded && "opacity-0 pointer-events-none"
+            )}
+            title="Add node"
+        >
+            <Plus className="w-5 h-5" />
+        </button>
+    );
+});
+```
+
 ---
 
 ## Files to Modify
 
 ### `frontend/src/canvas/WorkflowCanvas.tsx`
 
-Add NodeLibraryPanel to the left side:
+Add NodeLibraryPanel and AddNodeButton:
 
 ```tsx
 import { useNodeLibraryStore } from "../../stores/nodeLibraryStore";
 import { NodeLibraryPanel } from "../panels/NodeLibraryPanel";
+import { AddNodeButton } from "./components/AddNodeButton";
 
 export function WorkflowCanvas() {
-    const { isExpanded, isLocked } = useNodeLibraryStore();
+    const { isExpanded, isLocked, collapse } = useNodeLibraryStore();
+
+    // Close panel when dragging node to canvas
+    const handleNodeDragStart = () => {
+        collapse();
+    };
 
     return (
         <div className="flex h-full relative">
             {/* Node Library Panel */}
             <NodeLibraryPanel />
+
+            {/* Add Node Button (visible when panel collapsed) */}
+            <AddNodeButton />
 
             {/* React Flow Canvas */}
             <div
@@ -348,6 +411,7 @@ export function WorkflowCanvas() {
                     edges={edges}
                     onNodesChange={onNodesChange}
                     onEdgesChange={onEdgesChange}
+                    onNodeDragStart={handleNodeDragStart}
                     nodeTypes={nodeTypes}
                     // ... other props
                 >
@@ -410,12 +474,15 @@ Add panel animation CSS:
 | Test                   | Expected Result                 |
 | ---------------------- | ------------------------------- |
 | Page load              | Panel collapsed, icons visible  |
+| Page load              | Plus button visible on canvas   |
+| Click plus button      | Panel expands and locks         |
 | Hover left edge 300ms+ | Panel expands smoothly          |
 | Move cursor away       | Panel collapses                 |
 | Click category icon    | Panel expands and locks         |
 | Press Escape           | Panel collapses                 |
 | Click outside panel    | Panel collapses (if not locked) |
 | Click lock toggle      | Panel stays open                |
+| Drag node to canvas    | Panel closes automatically      |
 
 ### Interaction Flow
 
@@ -442,11 +509,15 @@ Initial: Collapsed
 - [ ] Panel collapsed by default (48px wide)
 - [ ] Category icons visible in collapsed state
 - [ ] Icons have correct category colors
+- [ ] Plus button visible on canvas (top-left)
+- [ ] Clicking plus button expands and locks panel
+- [ ] Plus button hides when panel is expanded
 - [ ] Hover expands panel after 300ms delay
 - [ ] Panel stays open while cursor is inside
 - [ ] Click locks panel open
 - [ ] Escape key collapses panel
 - [ ] Click outside collapses (when not locked)
+- [ ] Dragging node to canvas closes panel
 - [ ] Smooth expand/collapse animation
 - [ ] Panel doesn't overlap canvas content
 - [ ] Touch devices: tap to toggle
