@@ -4,7 +4,6 @@ import { deleteTriggerRoute } from "./delete";
 import { executeTriggerRoute } from "./execute";
 import { getTriggerRoute } from "./get";
 import { listTriggersRoute } from "./list";
-import { phoneCallWebhookRoute } from "./phone-call-webhook";
 import { updateTriggerRoute } from "./update";
 import { webhookReceiverRoute } from "./webhook";
 
@@ -13,7 +12,6 @@ export async function triggerRoutes(fastify: FastifyInstance) {
     fastify.register(
         async (instance) => {
             instance.register(webhookReceiverRoute);
-            instance.register(phoneCallWebhookRoute);
         },
         { prefix: "/webhooks" }
     );

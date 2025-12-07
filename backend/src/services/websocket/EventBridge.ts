@@ -54,14 +54,7 @@ export class EventBridge {
             // Knowledge Base events (emitted locally, not from Temporal)
             "kb:document:processing",
             "kb:document:completed",
-            "kb:document:failed",
-            // Call events (emitted from webhook handlers and voice executors)
-            "call:incoming",
-            "call:ringing",
-            "call:active",
-            "call:transcript",
-            "call:ended",
-            "call:error"
+            "kb:document:failed"
         ];
 
         localEventTypes.forEach((eventType) => {

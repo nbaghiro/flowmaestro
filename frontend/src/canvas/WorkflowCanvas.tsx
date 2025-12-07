@@ -31,10 +31,6 @@ import SwitchNode from "./nodes/SwitchNode";
 import TransformNode from "./nodes/TransformNode";
 import VariableNode from "./nodes/VariableNode";
 import VisionNode from "./nodes/VisionNode";
-import { VoiceGreetNode } from "./nodes/VoiceGreetNode";
-import { VoiceHangupNode } from "./nodes/VoiceHangupNode";
-import { VoiceListenNode } from "./nodes/VoiceListenNode";
-import { VoiceMenuNode } from "./nodes/VoiceMenuNode";
 import WaitNode from "./nodes/WaitNode";
 
 // Register node types
@@ -56,11 +52,7 @@ const nodeTypes = {
     http: HTTPNode,
     database: DatabaseNode,
     integration: IntegrationNode,
-    knowledgeBaseQuery: KnowledgeBaseQueryNode,
-    voice_greet: VoiceGreetNode,
-    voice_listen: VoiceListenNode,
-    voice_menu: VoiceMenuNode,
-    voice_hangup: VoiceHangupNode
+    knowledgeBaseQuery: KnowledgeBaseQueryNode
 };
 
 interface WorkflowCanvasProps {

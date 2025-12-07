@@ -19,10 +19,6 @@ import SwitchNode from "../../canvas/nodes/SwitchNode";
 import TransformNode from "../../canvas/nodes/TransformNode";
 import VariableNode from "../../canvas/nodes/VariableNode";
 import VisionNode from "../../canvas/nodes/VisionNode";
-import { VoiceGreetNode } from "../../canvas/nodes/VoiceGreetNode";
-import { VoiceHangupNode } from "../../canvas/nodes/VoiceHangupNode";
-import { VoiceListenNode } from "../../canvas/nodes/VoiceListenNode";
-import { VoiceMenuNode } from "../../canvas/nodes/VoiceMenuNode";
 import WaitNode from "../../canvas/nodes/WaitNode";
 import { cn } from "../../lib/utils";
 import { Button } from "../common/Button";
@@ -45,11 +41,7 @@ const nodeTypes = {
     http: HTTPNode,
     database: DatabaseNode,
     integration: IntegrationNode,
-    knowledgeBaseQuery: KnowledgeBaseQueryNode,
-    voice_greet: VoiceGreetNode,
-    voice_listen: VoiceListenNode,
-    voice_menu: VoiceMenuNode,
-    voice_hangup: VoiceHangupNode
+    knowledgeBaseQuery: KnowledgeBaseQueryNode
 };
 
 // Brandfetch Logo API - same as shared/providers.ts

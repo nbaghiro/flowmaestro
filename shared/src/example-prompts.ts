@@ -60,7 +60,6 @@ export const EXAMPLE_WORKFLOW_PROMPTS = [
     "Build interactive AI assistant for internal team questions with company knowledge",
     "Create AI agent that follows up with customers and adapts based on responses",
     "Use AI to analyze support conversations and suggest knowledge base improvements",
-    "Build voice AI agent that handles routine customer requests over phone",
     "Create AI moderator for community forums that detects toxic content",
     "Use AI to generate contextual help suggestions based on user actions",
     "Build AI tutor that explains complex topics in simple terms",

@@ -256,12 +256,6 @@ export type WebSocketEventType =
     | "kb:document:processing"
     | "kb:document:completed"
     | "kb:document:failed"
-    | "call:incoming"
-    | "call:ringing"
-    | "call:active"
-    | "call:transcript"
-    | "call:ended"
-    | "call:error"
     | "agent:execution:started"
     | "agent:message:new"
     | "agent:thinking"
@@ -400,51 +394,6 @@ export type WebSocketEvent =
           error: string;
       } & JsonObject)
     | ({
-          type: "call:incoming";
-          timestamp: number;
-          callExecutionId: string;
-          callerNumber: string;
-          calledNumber: string;
-      } & JsonObject)
-    | ({
-          type: "call:ringing";
-          timestamp: number;
-          callExecutionId: string;
-          callerNumber: string;
-      } & JsonObject)
-    | ({
-          type: "call:active";
-          timestamp: number;
-          callExecutionId: string;
-          executionId?: string;
-          answeredAt: number;
-      } & JsonObject)
-    | ({
-          type: "call:transcript";
-          timestamp: number;
-          callExecutionId: string;
-          speaker: string;
-          text: string;
-          isFinal: boolean;
-          confidence?: number;
-      } & JsonObject)
-    | ({
-          type: "call:ended";
-          timestamp: number;
-          callExecutionId: string;
-          duration?: number;
-          status: string;
-          hangupCause?: string;
-          recordingUrl?: string;
-      } & JsonObject)
-    | ({
-          type: "call:error";
-          timestamp: number;
-          callExecutionId: string;
-          error: string;
-          errorCode?: string;
-      } & JsonObject)
-    | ({
           type: "agent:execution:started";
           timestamp: number;
           executionId: string;
@@ -457,7 +406,11 @@ export type WebSocketEvent =
           executionId: string;
           message: JsonObject;
       } & JsonObject)
-    | ({ type: "agent:thinking"; timestamp: number; executionId: string } & JsonObject)
+    | ({
+          type: "agent:thinking";
+          timestamp: number;
+          executionId: string;
+      } & JsonObject)
     | ({
           type: "agent:tool:call:started";
           timestamp: number;

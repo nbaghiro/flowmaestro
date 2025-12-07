@@ -90,6 +90,9 @@ export async function streamAgentHandler(
     }> = [];
     let threadUnsubscribe: (() => Promise<void>) | null = null;
 
+    // Unsubscribe callback from thread channel when client disconnects
+    let threadUnsubscribe: (() => Promise<void>) | null = null;
+
     const subscribe = (
         eventType: string,
         handler: (data: Record<string, unknown>) => void
@@ -246,7 +249,6 @@ export async function streamAgentHandler(
     };
 
     // Send initial connection event
-    console.log(`[SSE Stream] Sending connected event for execution ${executionId}`);
     sendEvent("connected", {
         executionId,
         status: execution.status

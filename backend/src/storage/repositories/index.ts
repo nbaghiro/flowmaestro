@@ -6,7 +6,6 @@ export * from "./KnowledgeBaseRepository";
 export * from "./KnowledgeDocumentRepository";
 export * from "./KnowledgeChunkRepository";
 export * from "./TriggerRepository";
-export * from "./CallExecutionRepository";
 export * from "./WorkingMemoryRepository";
 export * from "./ThreadEmbeddingRepository";
 export * from "./TemplateRepository";

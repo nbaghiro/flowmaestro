@@ -22,13 +22,12 @@ Built for TypeScript developers who need both visual workflow orchestration and 
 - **[Agent System](./.docs/agent-architecture.md)** - Autonomous agents with LLM reasoning, tool use, and iterative problem-solving
 - **[Memory Management](./.docs/agent-architecture.md#memory-system)** - Buffer, summary, working memory, and vector memory with RAG
 - **[Streaming](./.docs/agent-architecture.md#streaming)** - Real-time SSE token streaming for responsive UIs
-- **[MCP Integration](./.docs/agent-architecture.md#mcp-integration)** - Model Context Protocol client and server support
+- **[MCP Tools](./.docs/mcp-tools.md)** - Auto-wrapped integration provider operations as MCP-compatible tools
 
 ### Integrations & Context
 
 - **[Integration System](./.docs/integrations-system.md)** - Provider SDK architecture with OAuth 2.0, API keys, and MCP support
 - **[Knowledge Bases](./.docs/workflow-system.md#knowledge-base)** - RAG with document processing, chunking, and vector search
-- **[Voice Calls](./.docs/voice-calls.md)** - Telnyx + LiveKit integration for phone-based AI agents
 - **Multi-LLM Support** - OpenAI, Anthropic, Google Gemini, Cohere through unified interface
 
 ### Production Ready
@@ -97,7 +96,6 @@ Comprehensive documentation is available in the `.docs/` directory:
 
 ### Real-Time Features
 
-- **[Voice Calls](./.docs/voice-calls.md)** - Telnyx & LiveKit integration
 - **[WebSocket Events](./.docs/websocket-events.md)** - Real-time update system
 
 ## Architecture

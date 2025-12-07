@@ -4,7 +4,7 @@
 
 import type { JsonObject, JsonValue } from "./types";
 
-export type TriggerType = "schedule" | "webhook" | "event" | "manual" | "phone_call";
+export type TriggerType = "schedule" | "webhook" | "event" | "manual";
 
 export interface ScheduleTriggerConfig {
     cronExpression: string;
@@ -35,36 +35,11 @@ export interface ManualTriggerConfig {
     description?: string;
 }
 
-export interface PhoneCallTriggerConfig {
-    phoneNumber: string; // E.164 format: +15551234567
-    sipProvider: "telnyx";
-    connectionId: string;
-    greetingMessage?: string;
-    language?: string;
-    maxCallDuration?: number;
-    enableRecording?: boolean;
-    businessHoursEnabled?: boolean;
-    businessHoursSchedule?: {
-        monday?: string; // "9-17"
-        tuesday?: string;
-        wednesday?: string;
-        thursday?: string;
-        friday?: string;
-        saturday?: string;
-        sunday?: string;
-        timezone?: string; // "America/New_York"
-    };
-    voiceProvider?: "elevenlabs" | "openai";
-    voiceId?: string;
-    sttProvider?: "deepgram" | "openai";
-}
-
 export type TriggerConfig =
     | ScheduleTriggerConfig
     | WebhookTriggerConfig
     | EventTriggerConfig
-    | ManualTriggerConfig
-    | PhoneCallTriggerConfig;
+    | ManualTriggerConfig;
 
 export interface WorkflowTrigger {
     id: string;
