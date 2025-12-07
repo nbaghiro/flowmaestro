@@ -66,12 +66,23 @@ const analysis = JSON.parse(result.text);
 
 **Purpose**: Classify content into predefined categories
 
-**Config**:
+**Config Interface**:
 
-- Categories list (name + description each)
-- Multi-label (allow multiple categories)
-- Include confidence threshold
-- "Other" category option
+```typescript
+export interface CategorizerNodeConfig {
+    provider: string;
+    model: string;
+    connectionId: string;
+    categories: Array<{
+        name: string;
+        description: string;
+    }>;
+    multiLabel: boolean;
+    confidenceThreshold: number; // 0-1, default 0.7
+    includeOther: boolean;
+    outputVariable: string;
+}
+```
 
 **Inputs**: `text` (string)
 **Outputs**: `category` (string), `confidence` (number), `allScores` (object)
@@ -80,11 +91,33 @@ const analysis = JSON.parse(result.text);
 
 **Purpose**: Analyze emotional tone of text
 
-**Config**:
+**Config Interface**:
 
-- Granularity: 3-way / 5-way / continuous
-- Aspects to analyze (optional)
-- Include emotion labels
+```typescript
+export interface SentimentAnalyzerNodeConfig {
+    provider: string;
+    model: string;
+    connectionId: string;
+    granularity: "3-way" | "5-way" | "continuous";
+    aspects?: string[]; // e.g., ["product", "service", "delivery"]
+    includeEmotions: boolean;
+    outputVariable: string;
+}
+
+// Output structure
+interface SentimentResult {
+    sentiment: "positive" | "negative" | "neutral" | "mixed";
+    score: number; // -1 to 1
+    emotions?: {
+        joy: number;
+        anger: number;
+        sadness: number;
+        fear: number;
+        surprise: number;
+    };
+    aspectSentiments?: Record<string, { sentiment: string; score: number }>;
+}
+```
 
 **Inputs**: `text` (string)
 **Outputs**: `sentiment` (positive/neutral/negative), `score` (-1 to 1), `emotions` (object)
@@ -93,12 +126,33 @@ const analysis = JSON.parse(result.text);
 
 **Purpose**: Assign numeric scores based on criteria
 
-**Config**:
+**Config Interface**:
 
-- Scoring criteria (list of factors)
-- Score range (0-100, 1-10, etc.)
-- Weights per criteria (optional)
-- Explanation required
+```typescript
+export interface ScorerNodeConfig {
+    provider: string;
+    model: string;
+    connectionId: string;
+    criteria: Array<{
+        name: string;
+        description: string;
+        weight: number; // 0-1, defaults to equal weight
+    }>;
+    scoreRange: {
+        min: number;
+        max: number;
+    };
+    requireExplanation: boolean;
+    outputVariable: string;
+}
+
+// Output structure
+interface ScorerResult {
+    score: number;
+    breakdown: Record<string, number>; // score per criterion
+    explanation?: string;
+}
+```
 
 **Inputs**: `text` (string)
 **Outputs**: `score` (number), `breakdown` (object), `explanation` (string)
@@ -107,14 +161,269 @@ const analysis = JSON.parse(result.text);
 
 **Purpose**: Sort/rank items using AI judgment
 
-**Config**:
+**Config Interface**:
 
-- Sorting criteria (natural language)
-- Order: ascending / descending
-- Limit results (optional)
+```typescript
+export interface AIListSorterNodeConfig {
+    provider: string;
+    model: string;
+    connectionId: string;
+    criteria: string; // Natural language: "most relevant to topic X"
+    order: "ascending" | "descending";
+    limit?: number;
+    outputVariable: string;
+}
+
+// Output structure
+interface AIListSorterResult {
+    sorted: unknown[];
+    rankings: Array<{
+        index: number;
+        score: number;
+        reasoning: string;
+    }>;
+}
+```
 
 **Inputs**: `items` (array)
 **Outputs**: `sorted` (array), `rankings` (array)
+
+---
+
+## Backend Executors
+
+### Categorizer Executor
+
+```typescript
+// backend/src/temporal/activities/node-executors/ai/categorizer-executor.ts
+import { executeLLMNode } from "../llm-executor";
+
+export async function executeCategorizerNode(
+    config: CategorizerNodeConfig,
+    context: JsonObject
+): Promise<JsonObject> {
+    const text = interpolateVariables(config.inputVariable || "text", context);
+
+    const categoryList = config.categories.map((c) => `- ${c.name}: ${c.description}`).join("\n");
+
+    const systemPrompt = `You are a classification assistant. Classify the given text into one of these categories:
+
+${categoryList}
+${config.includeOther ? "- other: Does not fit any category" : ""}
+
+Return JSON: { "category": "name", "confidence": 0.0-1.0, "allScores": { "cat1": 0.9, ... } }
+${config.multiLabel ? 'For multi-label, return: { "categories": ["cat1", "cat2"], ... }' : ""}`;
+
+    const result = await executeLLMNode(
+        {
+            provider: config.provider,
+            model: config.model,
+            connectionId: config.connectionId,
+            systemPrompt,
+            prompt: text,
+            temperature: 0
+        },
+        context
+    );
+
+    const parsed = JSON.parse(result.text);
+
+    // Filter by confidence threshold
+    if (parsed.confidence < config.confidenceThreshold) {
+        parsed.category = config.includeOther ? "other" : parsed.category;
+    }
+
+    return {
+        ...context,
+        variables: {
+            ...context.variables,
+            [config.outputVariable]: parsed
+        }
+    };
+}
+```
+
+### Sentiment Analyzer Executor
+
+```typescript
+// backend/src/temporal/activities/node-executors/ai/sentiment-analyzer-executor.ts
+export async function executeSentimentAnalyzerNode(
+    config: SentimentAnalyzerNodeConfig,
+    context: JsonObject
+): Promise<JsonObject> {
+    const text = interpolateVariables(config.inputVariable || "text", context);
+
+    let outputFormat = `{ "sentiment": "positive|negative|neutral", "score": -1.0 to 1.0 }`;
+    if (config.granularity === "5-way") {
+        outputFormat = `{ "sentiment": "very_positive|positive|neutral|negative|very_negative", "score": -1.0 to 1.0 }`;
+    }
+    if (config.includeEmotions) {
+        outputFormat += `, "emotions": { "joy": 0-1, "anger": 0-1, "sadness": 0-1, "fear": 0-1, "surprise": 0-1 }`;
+    }
+    if (config.aspects?.length) {
+        outputFormat += `, "aspectSentiments": { "${config.aspects[0]}": { "sentiment": "...", "score": ... } }`;
+    }
+
+    const systemPrompt = `Analyze the sentiment of the given text.
+Return JSON: ${outputFormat}`;
+
+    const result = await executeLLMNode(
+        {
+            provider: config.provider,
+            model: config.model,
+            connectionId: config.connectionId,
+            systemPrompt,
+            prompt: text,
+            temperature: 0
+        },
+        context
+    );
+
+    return {
+        ...context,
+        variables: {
+            ...context.variables,
+            [config.outputVariable]: JSON.parse(result.text)
+        }
+    };
+}
+```
+
+### Scorer Executor
+
+```typescript
+// backend/src/temporal/activities/node-executors/ai/scorer-executor.ts
+export async function executeScorerNode(
+    config: ScorerNodeConfig,
+    context: JsonObject
+): Promise<JsonObject> {
+    const text = interpolateVariables(config.inputVariable || "text", context);
+
+    const criteriaList = config.criteria
+        .map((c) => `- ${c.name} (weight: ${c.weight}): ${c.description}`)
+        .join("\n");
+
+    const systemPrompt = `Score the given text based on these criteria:
+
+${criteriaList}
+
+Score range: ${config.scoreRange.min} to ${config.scoreRange.max}
+
+Return JSON: {
+    "score": <weighted average>,
+    "breakdown": { "criterion1": <score>, ... }
+    ${config.requireExplanation ? ', "explanation": "<why this score>"' : ""}
+}`;
+
+    const result = await executeLLMNode(
+        {
+            provider: config.provider,
+            model: config.model,
+            connectionId: config.connectionId,
+            systemPrompt,
+            prompt: text,
+            temperature: 0
+        },
+        context
+    );
+
+    return {
+        ...context,
+        variables: {
+            ...context.variables,
+            [config.outputVariable]: JSON.parse(result.text)
+        }
+    };
+}
+```
+
+### AI List Sorter Executor
+
+```typescript
+// backend/src/temporal/activities/node-executors/ai/ai-list-sorter-executor.ts
+export async function executeAIListSorterNode(
+    config: AIListSorterNodeConfig,
+    context: JsonObject
+): Promise<JsonObject> {
+    const items = interpolateVariables(config.inputVariable || "items", context);
+
+    const systemPrompt = `Sort the following items based on this criteria: "${config.criteria}"
+Order: ${config.order}
+${config.limit ? `Return only the top ${config.limit} items.` : ""}
+
+Return JSON: {
+    "sorted": [<items in order>],
+    "rankings": [{ "index": <original index>, "score": 0-100, "reasoning": "<why>" }]
+}`;
+
+    const result = await executeLLMNode(
+        {
+            provider: config.provider,
+            model: config.model,
+            connectionId: config.connectionId,
+            systemPrompt,
+            prompt: JSON.stringify(items, null, 2),
+            temperature: 0
+        },
+        context
+    );
+
+    return {
+        ...context,
+        variables: {
+            ...context.variables,
+            [config.outputVariable]: JSON.parse(result.text)
+        }
+    };
+}
+```
+
+---
+
+## Node Registration
+
+```typescript
+// Add to node-registry.ts
+registerNode({
+    type: "categorizer",
+    label: "Categorizer",
+    description: "Classify content into predefined categories",
+    icon: "Tags",
+    category: "ai",
+    subcategory: "using-ai",
+    keywords: ["classify", "label", "category", "tag", "sort"]
+});
+
+registerNode({
+    type: "sentiment-analyzer",
+    label: "Sentiment Analyzer",
+    description: "Analyze emotional tone of text",
+    icon: "Heart",
+    category: "ai",
+    subcategory: "using-ai",
+    keywords: ["sentiment", "emotion", "tone", "feeling", "mood"]
+});
+
+registerNode({
+    type: "scorer",
+    label: "Scorer",
+    description: "Assign numeric scores based on criteria",
+    icon: "Star",
+    category: "ai",
+    subcategory: "using-ai",
+    keywords: ["score", "rate", "evaluate", "grade", "rank"]
+});
+
+registerNode({
+    type: "ai-list-sorter",
+    label: "AI List Sorter",
+    description: "Sort items using AI judgment",
+    icon: "ArrowUpDown",
+    category: "ai",
+    subcategory: "using-ai",
+    keywords: ["sort", "rank", "order", "prioritize", "arrange"]
+});
+```
 
 ---
 

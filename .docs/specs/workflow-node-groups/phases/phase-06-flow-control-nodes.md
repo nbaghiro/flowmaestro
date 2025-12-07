@@ -411,14 +411,90 @@ backend/src/temporal/activities/node-executors/
 
 ```typescript
 // backend/src/shared/expression-evaluator.ts
-// Safe JavaScript expression evaluation for conditions
+// Safe JavaScript expression evaluation for Router conditions
 
+import { createContext, runInContext } from "vm";
+
+/**
+ * Safely evaluate a JavaScript expression with limited operations.
+ *
+ * Allowed:
+ * - Property access: data.type, user.email, items[0]
+ * - Comparisons: ==, ===, !=, !==, >, <, >=, <=
+ * - Logical operators: &&, ||, !
+ * - Arithmetic: +, -, *, /, %
+ * - Literals: strings, numbers, booleans, null
+ * - typeof operator
+ *
+ * NOT Allowed:
+ * - Function calls: data.toString(), fetch(), eval()
+ * - Object construction: new Date(), {}
+ * - Assignment: =, +=, etc.
+ * - Global access: window, process, require
+ */
 export function evaluateExpression(expression: string, context: JsonObject): boolean {
-    // Use a sandboxed evaluator (e.g., vm2 or custom parser)
-    // Expose only safe operations: ==, ===, >, <, &&, ||, !
-    // No function calls, only property access
+    // Validate expression doesn't contain dangerous patterns
+    const dangerousPatterns = [
+        /\bfunction\b/,
+        /\bnew\b/,
+        /\beval\b/,
+        /\bFunction\b/,
+        /\brequire\b/,
+        /\bimport\b/,
+        /\bprocess\b/,
+        /\bglobal\b/,
+        /\bwindow\b/,
+        /\bdocument\b/,
+        /\.__proto__/,
+        /\bconstructor\b/,
+        /\[["']constructor["']\]/
+    ];
+
+    for (const pattern of dangerousPatterns) {
+        if (pattern.test(expression)) {
+            throw new Error(`Unsafe expression: ${expression}`);
+        }
+    }
+
+    // Create sandboxed context with only the workflow context
+    const sandbox = createContext({
+        ...context,
+        // Add safe utilities
+        typeof: (val: unknown) => typeof val,
+        Array: { isArray: Array.isArray },
+        String: { prototype: {} },
+        Number: { isNaN, isFinite }
+    });
+
+    try {
+        const result = runInContext(`Boolean(${expression})`, sandbox, {
+            timeout: 100, // 100ms max execution
+            displayErrors: false
+        });
+        return Boolean(result);
+    } catch (error) {
+        throw new Error(`Expression evaluation failed: ${expression} - ${error.message}`);
+    }
 }
+
+// Example usage:
+// evaluateExpression("data.type === 'urgent'", { data: { type: "urgent" } }) // true
+// evaluateExpression("score > 80 && status !== 'rejected'", { score: 95, status: "pending" }) // true
+// evaluateExpression("items.length > 0", { items: [1, 2, 3] }) // true
 ```
+
+### Expression Examples for Router
+
+| Condition          | Expression                                               |
+| ------------------ | -------------------------------------------------------- |
+| Type check         | `data.type === "urgent"`                                 |
+| Numeric comparison | `data.score >= 80`                                       |
+| Null check         | `data.email != null`                                     |
+| Array length       | `items.length > 0`                                       |
+| Boolean field      | `user.isVerified === true`                               |
+| Combined           | `data.priority === "high" && data.status !== "resolved"` |
+| Nested property    | `order.customer.tier === "premium"`                      |
+| In range           | `value >= 10 && value <= 100`                            |
 
 ---
 

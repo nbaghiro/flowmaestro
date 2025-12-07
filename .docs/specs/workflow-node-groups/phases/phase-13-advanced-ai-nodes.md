@@ -84,12 +84,50 @@ const modelInfo = {
 
 **Purpose**: Send same prompt to multiple models and compare results
 
-**Config**:
+**Config Interface**:
 
-- Models to compare (2-4 models)
-- Evaluation criteria: quality / speed / cost / custom
-- Return: best / all / ranked
-- Voting mode (optional)
+```typescript
+export interface CompareModelsNodeConfig {
+    models: Array<{
+        provider: string;
+        model: string;
+        connectionId: string;
+        label?: string; // Display name for comparison
+    }>;
+    evaluationCriteria: "quality" | "speed" | "cost" | "custom";
+    customEvaluator?: string; // Natural language criteria for "custom"
+    returnMode: "best" | "all" | "ranked";
+    votingMode?: "none" | "majority" | "consensus";
+    timeout?: number; // Per-model timeout in ms
+    outputVariable: string;
+}
+
+// Output structure
+interface CompareModelsResult {
+    results: Array<{
+        model: string;
+        provider: string;
+        response: string;
+        latencyMs: number;
+        tokens: { prompt: number; completion: number };
+        cost: number;
+        score?: number;
+    }>;
+    winner?: {
+        model: string;
+        provider: string;
+        response: string;
+        reasoning: string;
+    };
+    comparison: {
+        fastestModel: string;
+        cheapestModel: string;
+        bestQualityModel?: string;
+        totalCost: number;
+        totalLatencyMs: number;
+    };
+}
+```
 
 **Inputs**: `prompt` (string), `context` (optional)
 **Outputs**: `results` (array), `winner` (object), `comparison` (object)
@@ -98,15 +136,326 @@ const modelInfo = {
 
 **Purpose**: Intelligently route to best model based on task
 
-**Config**:
+**Config Interface**:
 
-- Available models (with cost/capability info)
-- Routing criteria: complexity / topic / length / cost
-- Fallback model
-- Custom routing rules
+```typescript
+export interface ModelRouterNodeConfig {
+    availableModels: Array<{
+        provider: string;
+        model: string;
+        connectionId: string;
+        capability: number; // 1-10 scale
+        costPer1kTokens: number;
+        maxTokens: number;
+        specialties?: string[]; // e.g., ["code", "math", "creative"]
+    }>;
+    routingCriteria: "complexity" | "cost" | "quality" | "speed" | "custom";
+    customRules?: string; // Natural language routing rules
+    complexityAnalysis: boolean; // Pre-analyze prompt complexity
+    fallbackModel: {
+        provider: string;
+        model: string;
+        connectionId: string;
+    };
+    outputVariable: string;
+}
+
+// Output structure
+interface ModelRouterResult {
+    response: string;
+    selectedModel: {
+        provider: string;
+        model: string;
+    };
+    reasoning: string;
+    metrics: {
+        promptComplexity?: number;
+        estimatedTokens: number;
+        actualCost: number;
+        latencyMs: number;
+    };
+}
+```
 
 **Inputs**: `prompt` (string), `requirements` (optional)
 **Outputs**: `response` (string), `selectedModel` (string), `reasoning` (string)
+
+---
+
+## Backend Executors
+
+### Compare Models Executor
+
+```typescript
+// backend/src/temporal/activities/node-executors/ai/compare-models-executor.ts
+import { executeLLMNode } from "../llm-executor";
+import { MODEL_PRICING } from "../../../shared/model-pricing";
+
+export async function executeCompareModelsNode(
+    config: CompareModelsNodeConfig,
+    context: JsonObject
+): Promise<JsonObject> {
+    const prompt = interpolateVariables(config.inputVariable || "prompt", context);
+
+    // Execute all models in parallel
+    const startTime = Date.now();
+    const results = await Promise.all(
+        config.models.map(async (model) => {
+            const modelStart = Date.now();
+            try {
+                const result = await executeLLMNode(
+                    {
+                        provider: model.provider,
+                        model: model.model,
+                        connectionId: model.connectionId,
+                        prompt,
+                        timeout: config.timeout
+                    },
+                    context
+                );
+
+                const latencyMs = Date.now() - modelStart;
+                const pricing = MODEL_PRICING[`${model.provider}/${model.model}`];
+                const cost = pricing
+                    ? (result.usage.promptTokens * pricing.input +
+                          result.usage.completionTokens * pricing.output) /
+                      1000
+                    : 0;
+
+                return {
+                    model: model.model,
+                    provider: model.provider,
+                    label: model.label || model.model,
+                    response: result.text,
+                    latencyMs,
+                    tokens: {
+                        prompt: result.usage.promptTokens,
+                        completion: result.usage.completionTokens
+                    },
+                    cost,
+                    error: null
+                };
+            } catch (error) {
+                return {
+                    model: model.model,
+                    provider: model.provider,
+                    label: model.label || model.model,
+                    response: null,
+                    latencyMs: Date.now() - modelStart,
+                    tokens: { prompt: 0, completion: 0 },
+                    cost: 0,
+                    error: error.message
+                };
+            }
+        })
+    );
+
+    // Filter successful results
+    const successfulResults = results.filter((r) => !r.error);
+
+    // Determine winner based on criteria
+    let winner = null;
+    if (config.returnMode !== "all" && successfulResults.length > 0) {
+        winner = await selectWinner(successfulResults, config, context);
+    }
+
+    // Build comparison summary
+    const comparison = {
+        fastestModel: successfulResults.reduce((a, b) => (a.latencyMs < b.latencyMs ? a : b))
+            ?.model,
+        cheapestModel: successfulResults.reduce((a, b) => (a.cost < b.cost ? a : b))?.model,
+        bestQualityModel: winner?.model,
+        totalCost: successfulResults.reduce((sum, r) => sum + r.cost, 0),
+        totalLatencyMs: Date.now() - startTime
+    };
+
+    return {
+        ...context,
+        variables: {
+            ...context.variables,
+            [config.outputVariable]: { results, winner, comparison }
+        }
+    };
+}
+
+async function selectWinner(
+    results: ModelResult[],
+    config: CompareModelsNodeConfig,
+    context: JsonObject
+): Promise<{ model: string; provider: string; response: string; reasoning: string }> {
+    if (config.evaluationCriteria === "speed") {
+        const fastest = results.reduce((a, b) => (a.latencyMs < b.latencyMs ? a : b));
+        return { ...fastest, reasoning: "Fastest response time" };
+    }
+
+    if (config.evaluationCriteria === "cost") {
+        const cheapest = results.reduce((a, b) => (a.cost < b.cost ? a : b));
+        return { ...cheapest, reasoning: "Lowest cost" };
+    }
+
+    // For quality/custom, use LLM to evaluate
+    const evaluatorPrompt = `Compare these responses and select the best one.
+Criteria: ${config.customEvaluator || "Overall quality, accuracy, and helpfulness"}
+
+${results.map((r, i) => `Response ${i + 1} (${r.label}):\n${r.response}`).join("\n\n---\n\n")}
+
+Return JSON: { "winnerIndex": 0-${results.length - 1}, "reasoning": "why this is best" }`;
+
+    const evaluation = await executeLLMNode(
+        {
+            provider: "openai",
+            model: "gpt-4",
+            prompt: evaluatorPrompt,
+            temperature: 0
+        },
+        context
+    );
+
+    const parsed = JSON.parse(evaluation.text);
+    const winner = results[parsed.winnerIndex];
+    return { ...winner, reasoning: parsed.reasoning };
+}
+```
+
+### Model Router Executor
+
+````typescript
+// backend/src/temporal/activities/node-executors/ai/model-router-executor.ts
+export async function executeModelRouterNode(
+    config: ModelRouterNodeConfig,
+    context: JsonObject
+): Promise<JsonObject> {
+    const prompt = interpolateVariables(config.inputVariable || "prompt", context);
+
+    let selectedModel = config.fallbackModel;
+    let reasoning = "Using fallback model";
+    let complexity = 0;
+
+    // Analyze prompt complexity if enabled
+    if (config.complexityAnalysis) {
+        complexity = await analyzeComplexity(prompt, context);
+    }
+
+    // Select model based on criteria
+    switch (config.routingCriteria) {
+        case "complexity":
+            selectedModel = selectByComplexity(config.availableModels, complexity);
+            reasoning = `Selected based on complexity score ${complexity.toFixed(2)}`;
+            break;
+
+        case "cost":
+            selectedModel = config.availableModels.reduce((a, b) =>
+                a.costPer1kTokens < b.costPer1kTokens ? a : b
+            );
+            reasoning = "Selected cheapest available model";
+            break;
+
+        case "quality":
+            selectedModel = config.availableModels.reduce((a, b) =>
+                a.capability > b.capability ? a : b
+            );
+            reasoning = "Selected highest capability model";
+            break;
+
+        case "custom":
+            const selection = await routeWithCustomRules(prompt, config, context);
+            selectedModel = selection.model;
+            reasoning = selection.reasoning;
+            break;
+    }
+
+    // Execute the selected model
+    const startTime = Date.now();
+    const result = await executeLLMNode(
+        {
+            provider: selectedModel.provider,
+            model: selectedModel.model,
+            connectionId: selectedModel.connectionId,
+            prompt
+        },
+        context
+    );
+
+    return {
+        ...context,
+        variables: {
+            ...context.variables,
+            [config.outputVariable]: {
+                response: result.text,
+                selectedModel: {
+                    provider: selectedModel.provider,
+                    model: selectedModel.model
+                },
+                reasoning,
+                metrics: {
+                    promptComplexity: complexity,
+                    estimatedTokens: result.usage.totalTokens,
+                    actualCost: calculateCost(result.usage, selectedModel),
+                    latencyMs: Date.now() - startTime
+                }
+            }
+        }
+    };
+}
+
+async function analyzeComplexity(prompt: string, context: JsonObject): Promise<number> {
+    // Quick heuristics for complexity
+    const wordCount = prompt.split(/\s+/).length;
+    const hasCode = /```/.test(prompt);
+    const hasMath = /[\d+\-*/^=]/.test(prompt);
+    const questionCount = (prompt.match(/\?/g) || []).length;
+
+    // Base complexity on heuristics (0-1 scale)
+    let complexity = Math.min(wordCount / 500, 1) * 0.3;
+    if (hasCode) complexity += 0.3;
+    if (hasMath) complexity += 0.2;
+    complexity += Math.min(questionCount * 0.1, 0.2);
+
+    return Math.min(complexity, 1);
+}
+
+function selectByComplexity(
+    models: ModelRouterNodeConfig["availableModels"],
+    complexity: number
+): ModelInfo {
+    // Map complexity to capability requirement
+    const requiredCapability = Math.ceil(complexity * 10);
+
+    // Find cheapest model that meets capability requirement
+    const eligible = models.filter((m) => m.capability >= requiredCapability);
+    if (eligible.length === 0) {
+        return models.reduce((a, b) => (a.capability > b.capability ? a : b));
+    }
+    return eligible.reduce((a, b) => (a.costPer1kTokens < b.costPer1kTokens ? a : b));
+}
+````
+
+---
+
+## Node Registration
+
+```typescript
+// Add to node-registry.ts
+registerNode({
+    type: "compare-models",
+    label: "Compare Models",
+    description: "Run prompt across multiple models and compare results",
+    icon: "GitCompare",
+    category: "ai",
+    subcategory: "advanced-ai",
+    keywords: ["compare", "benchmark", "evaluate", "models", "test"]
+});
+
+registerNode({
+    type: "model-router",
+    label: "Model Router",
+    description: "Intelligently route to best model for task",
+    icon: "Route",
+    category: "ai",
+    subcategory: "advanced-ai",
+    keywords: ["route", "select", "choose", "model", "optimize"]
+});
+```
 
 ---
 
