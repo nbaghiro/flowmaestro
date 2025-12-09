@@ -79,37 +79,7 @@ New Node Categories:
 | **Custom Nodes** | User-created reusable nodes          | User-defined |
 | **Subflows**     | Composable workflow components       | User-defined |
 
-### 2. Node Library UI
-
-**Before**: Static panel with scrollable list
-
-**After**:
-
-- Collapsible panel (hover/click to show)
-- Two-level navigation (categories → nodes)
-- Search across all nodes
-- Frequently used section
-- MCP badges on integrations
-
-### 3. Node Visual Design
-
-**Before**: Plain white cards with colored left border
-
-**After**:
-
-- Category-colored gradient headers
-- Category badge pills
-- I/O chips visible on hover
-- Selection glow effects
-- Running state animations
-
-### 4. Node Configuration
-
-**Before**: Separate right panel (NodeInspector)
-
-**After**: Attached sidebar connected to node's right edge
-
-### 5. Node Abstraction Level
+### 2. Node Abstraction Level
 
 **Before**: Technical primitives requiring expertise
 
@@ -128,6 +98,14 @@ New Node Categories:
 | Extract Data | Define fields you want, AI extracts them       |
 | Categorizer  | List your categories, AI classifies content    |
 | Gmail Send   | Connect account, write message, send           |
+
+### 3. UI (Preserved)
+
+The existing UI patterns remain unchanged:
+
+- **Left Sidebar**: Node library panel for browsing and adding nodes
+- **Right Panel**: NodeInspector for configuring selected node
+- **Canvas**: React Flow canvas for workflow building
 
 ---
 
@@ -553,80 +531,83 @@ These workflows are documented in detail in their respective phase spec files wi
 
 | Example                                 | Primary Nodes Used                              | Spec Location                 |
 | --------------------------------------- | ----------------------------------------------- | ----------------------------- |
-| **Customer Support Automation**         | Categorizer, KB Chat, Agent Chat, PII Redactor  | Phase 09-13 (AI Nodes)        |
-| **Lead Enrichment & Qualification**     | Run Agent, Scorer, Router, HubSpot              | Phase 09-13 (AI Nodes)        |
-| **Content Review Pipeline**             | Ask AI, Generate Image, Human-in-the-Loop       | Phase 09-13 (AI Nodes)        |
-| **Intelligent Data Sync Pipeline**      | Webhook, Run Agent, Categorizer, HubSpot, Slack | Phase 14-16 (Automation)      |
-| **Multi-Stage Purchase Order Approval** | Approval Gate, Audit Log, Router                | Phase 19-20 (Governance)      |
-| **Document Processing Pipeline**        | Parse PDF, Extract Data, Scorer, Add to KB      | Phase 17-18 (Knowledge)       |
-| **Company Enrichment Custom Node**      | HTTP Request, Transform, Ask AI                 | Phase 24-25 (Custom/Subflows) |
-| **Manager Approval Subflow**            | Approval Gate, Transform, Slack                 | Phase 24-25 (Custom/Subflows) |
+| **Customer Support Automation**         | Categorizer, KB Chat, Agent Chat, PII Redactor  | Phase 05-09 (AI Nodes)        |
+| **Lead Enrichment & Qualification**     | Run Agent, Scorer, Router, HubSpot              | Phase 05-09 (AI Nodes)        |
+| **Content Review Pipeline**             | Ask AI, Generate Image, Human-in-the-Loop       | Phase 05-09 (AI Nodes)        |
+| **Intelligent Data Sync Pipeline**      | Webhook, Run Agent, Categorizer, HubSpot, Slack | Phase 10-12 (Automation)      |
+| **Multi-Stage Purchase Order Approval** | Approval Gate, Audit Log, Router                | Phase 15-16 (Governance)      |
+| **Document Processing Pipeline**        | Parse PDF, Extract Data, Scorer, Add to KB      | Phase 13-14 (Knowledge)       |
+| **Company Enrichment Custom Node**      | HTTP Request, Transform, Ask AI                 | Phase 20-21 (Custom/Subflows) |
+| **Manager Approval Subflow**            | Approval Gate, Transform, Slack                 | Phase 20-21 (Custom/Subflows) |
 
 ---
 
 ## Implementation Phases
 
-25 phases organized by capability area. Each phase spec in `./phases/` includes:
+21 phases organized by capability area. Each phase spec in `./phases/` includes:
 
 - Node definitions with TypeScript interfaces
 - Backend executor implementations
-- Frontend component patterns
+- Frontend component patterns (using existing right-panel config and left sidebar)
 - Test workflows for validation
+
+**Note**: This spec focuses purely on node functionality. The existing UI patterns are preserved:
+
+- Right panel for node configuration (NodeInspector)
+- Left sidebar for node library (NodeLibrary)
 
 ### Phase Overview
 
-| Group            | Phases | What It Covers                                                                      |
-| ---------------- | ------ | ----------------------------------------------------------------------------------- |
-| **Foundation**   | 01-05  | Node registry, category system, BaseNode component, config sidebar, node library UI |
-| **Core Tools**   | 06-08  | Router, Loop, Delay, Transform, Code, file parsers (PDF, CSV, Excel)                |
-| **AI**           | 09-13  | Ask AI, Extract Data, Categorizer, Summarizer, vision nodes, Run Agent, Agent Chat  |
-| **Automation**   | 14-16  | Schedule, Webhook, Email/Drive/Sheets triggers, Notion/Airtable/HTTP readers        |
-| **Knowledge**    | 17-18  | Search KB, Add to KB, KB Chat, source sync, analytics                               |
-| **Governance**   | 19-20  | Approval Gate, Audit Log, PII Redactor, Rate Limiter, Circuit Breaker               |
-| **Integrations** | 21-23  | IntegrationNode framework, provider operations (Slack, Gmail, HubSpot, etc.)        |
-| **Custom**       | 24-25  | Custom node builder, subflow composition                                            |
+| Group            | Phases | What It Covers                                                          |
+| ---------------- | ------ | ----------------------------------------------------------------------- |
+| **Foundation**   | 01     | Node registry, category types, shared type definitions                  |
+| **Core Tools**   | 02-04  | Router, Loop, Delay, Transform, Code, file parsers (PDF, CSV, Excel)    |
+| **AI**           | 05-09  | Ask AI, Extract Data, Categorizer, Summarizer, vision nodes, Run Agent  |
+| **Automation**   | 10-12  | Schedule, Webhook, Email/Drive/Sheets triggers, Notion/Airtable readers |
+| **Knowledge**    | 13-14  | Search KB, Add to KB, KB Chat, source sync, analytics                   |
+| **Governance**   | 15-16  | Approval Gate, Audit Log, PII Redactor, Rate Limiter, Circuit Breaker   |
+| **Integrations** | 17-19  | IntegrationNode framework, provider operations (Slack, Gmail, HubSpot)  |
+| **Custom**       | 20-21  | Custom node builder, subflow composition                                |
 
 ### Phase Dependencies
 
 ```
-01 (Types, Registry, Styles)
+01 (Types, Registry)
  │
- └─► 02 (BaseNode Visual) ──► 03 (Node Sidebar)
-                                      │
-                                      └─► 04 (Collapsible Library) ──► 05 (Nav & Search)
-                                                                              │
-                    ┌─────────────────────────────────────────────────────────┼─────────────────────────────────────┐
-                    │                                                         │                                     │
-                    ▼                                                         ▼                                     ▼
-              06-08 (Core Tools)                                        09-13 (AI)                            14-16 (Automation)
-                    │                                                         │                                     │
-                    │                                                         ▼                                     │
-                    │                                                   17-18 (Knowledge)                           │
-                    │                                                         │                                     │
-                    └─────────────────────────────────────────────────────────┼─────────────────────────────────────┘
-                                                                              │
-                                                                              ▼
-                                                                        19-20 (Governance)
-                                                                              │
-                                                                              ▼
-                                                                        21-23 (Integrations)
-                                                                              │
-                                                                              ▼
-                                                                        24-25 (Custom/Subflows)
+ ├─────────────────────────────────────────────────────────────────────────────────┐
+ │                                                                                 │
+ ▼                                                                                 ▼
+02-04 (Core Tools) ─────────────────────────┬───────────────────── 10-12 (Automation)
+ │                                          │                                      │
+ │                                          ▼                                      │
+ │                                    05-09 (AI)                                   │
+ │                                          │                                      │
+ │                                          ▼                                      │
+ │                                    13-14 (Knowledge)                            │
+ │                                          │                                      │
+ └──────────────────────────────────────────┼──────────────────────────────────────┘
+                                            │
+                                            ▼
+                                      15-16 (Governance)
+                                            │
+                                            ▼
+                                      17-19 (Integrations)
+                                            │
+                                            ▼
+                                      20-21 (Custom/Subflows)
 ```
 
 ### Verification Checkpoints
 
-| After Phase | Milestone    | What Works                                         |
-| ----------- | ------------ | -------------------------------------------------- |
-| 05          | UI Complete  | New node library, attached sidebar, visual refresh |
-| 08          | Core Tools   | Basic data processing workflows                    |
-| 13          | AI Complete  | AI-powered workflows                               |
-| 16          | Automation   | External event triggers                            |
-| 18          | Knowledge    | RAG and knowledge base workflows                   |
-| 20          | Governance   | Compliance and security features                   |
-| 23          | Integrations | Third-party connections                            |
-| 25          | Complete     | Full system with custom nodes                      |
+| After Phase | Milestone    | What Works                       |
+| ----------- | ------------ | -------------------------------- |
+| 04          | Core Tools   | Basic data processing workflows  |
+| 09          | AI Complete  | AI-powered workflows             |
+| 12          | Automation   | External event triggers          |
+| 14          | Knowledge    | RAG and knowledge base workflows |
+| 16          | Governance   | Compliance and security features |
+| 19          | Integrations | Third-party connections          |
+| 21          | Complete     | Full system with custom nodes    |
 
 See the `/phases` directory for detailed implementation specs.
 
@@ -655,7 +636,7 @@ Existing workflows using primitive nodes will continue to work. The old nodes re
 ## Getting Started
 
 1. Review the phase dependency graph above to understand parallel work opportunities
-2. Read phase specs in `./phases/` starting with `phase-01-*.md` through `phase-05-*.md` for foundation
+2. Read phase specs in `./phases/` starting with `phase-01-*.md` (Foundation) then `phase-02-*.md` through `phase-04-*.md` (Core Tools)
 3. Each phase should have its own PR for easier review
 
 ---
@@ -719,4 +700,4 @@ npm run test:integration --workspace=backend  # Integration only
 
 ## Related Documents
 
-- [Phase Specifications](./phases/) - Detailed implementation specs for all 25 phases
+- [Phase Specifications](./phases/) - Detailed implementation specs for all 21 phases

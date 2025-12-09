@@ -1,4 +1,4 @@
-# Phase 22: Core Integrations
+# Phase 18: Core Integrations
 
 ## Overview
 

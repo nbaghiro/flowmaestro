@@ -1,4 +1,4 @@
-# Phase 17: Knowledge Base Core
+# Phase 13: Knowledge Base Core
 
 ## Overview
 

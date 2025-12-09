@@ -1,4 +1,4 @@
-# Phase 09: Core AI Nodes
+# Phase 05: Core AI Nodes
 
 ## Overview
 
@@ -8,7 +8,7 @@ Implement 4 fundamental AI nodes: Ask AI, Extract Data, Summarizer, and Translat
 
 ## Prerequisites
 
-- **Phase 08**: File Processing nodes (Parse PDF for document input)
+- **Phase 04**: File Processing nodes (Parse PDF for document input)
 
 ---
 
@@ -672,5 +672,5 @@ These nodes are the foundation for all AI-powered workflows.
 
 Enables:
 
-- **Phase 10**: Analysis nodes build on AI executor
-- **Phase 17**: KB Chat uses Ask AI pattern
+- **Phase 06**: Analysis nodes build on AI executor
+- **Phase 13**: KB Chat uses Ask AI pattern

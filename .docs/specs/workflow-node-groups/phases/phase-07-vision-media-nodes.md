@@ -1,4 +1,4 @@
-# Phase 11: Vision & Media Nodes
+# Phase 07: Vision & Media Nodes
 
 ## Overview
 
@@ -8,7 +8,7 @@ Implement 3 vision/media AI nodes: Generate Image, Analyze Image, and Analyze Vi
 
 ## Prerequisites
 
-- **Phase 09**: Core AI nodes (provider patterns)
+- **Phase 05**: Core AI nodes (provider patterns)
 
 ---
 

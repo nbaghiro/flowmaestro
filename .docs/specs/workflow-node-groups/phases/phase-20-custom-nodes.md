@@ -1,4 +1,4 @@
-# Phase 24: Custom Nodes
+# Phase 20: Custom Nodes
 
 ## Overview
 
@@ -8,9 +8,8 @@ Enable users to create reusable custom nodes that encapsulate multiple workflow 
 
 ## Prerequisites
 
-- **Phase 06**: Flow Control Nodes (custom nodes wrap other nodes)
-- **Phase 05**: Node Library (custom nodes appear in library)
-- **Phase 23**: Additional Integrations (all node types available)
+- **Phase 02**: Flow Control Nodes (custom nodes wrap other nodes)
+- **Phase 19**: Additional Integrations (all node types available)
 
 ---
 

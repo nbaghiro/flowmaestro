@@ -1,4 +1,4 @@
-# Phase 06: Flow Control Nodes
+# Phase 02: Flow Control Nodes
 
 ## Overview
 
@@ -8,8 +8,6 @@ Implement the 5 core flow control nodes that define how data moves through workf
 
 ## Prerequisites
 
-- **Phase 05**: Node Library with drag-and-drop
-- **Phase 03**: NodeConfigWrapper for config forms
 - **Phase 01**: Node registry (`registerNode()`)
 
 ---

@@ -1,4 +1,4 @@
-# Phase 15: Reader Nodes (Google)
+# Phase 11: Reader Nodes (Google)
 
 ## Overview
 
@@ -8,7 +8,7 @@ Implement 3 Google reader nodes: Gmail Reader, Sheets Reader, and Drive Reader.
 
 ## Prerequisites
 
-- **Phase 14**: Trigger nodes (readers often follow triggers)
+- **Phase 10**: Trigger nodes (readers often follow triggers)
 
 ---
 

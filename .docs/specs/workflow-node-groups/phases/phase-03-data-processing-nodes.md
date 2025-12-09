@@ -1,4 +1,4 @@
-# Phase 07: Data Processing Nodes
+# Phase 03: Data Processing Nodes
 
 ## Overview
 
@@ -8,7 +8,7 @@ Implement 4 data processing nodes for transforming, filtering, aggregating, and 
 
 ## Prerequisites
 
-- **Phase 06**: Flow Control nodes (Router, Loop for testing)
+- **Phase 02**: Flow Control nodes (Router, Loop for testing)
 
 ---
 

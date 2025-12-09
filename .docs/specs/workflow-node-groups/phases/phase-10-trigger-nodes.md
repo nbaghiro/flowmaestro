@@ -1,4 +1,4 @@
-# Phase 14: Trigger Nodes
+# Phase 10: Trigger Nodes
 
 ## Overview
 
@@ -8,7 +8,7 @@ Implement 6 trigger nodes that start workflows: Schedule, Webhook, On New Email,
 
 ## Prerequisites
 
-- **Phase 06**: Flow Control nodes (triggers connect to them)
+- **Phase 02**: Flow Control nodes (triggers connect to them)
 
 ---
 
@@ -373,4 +373,4 @@ Triggers are the entry point for all automated workflows.
 
 Required for:
 
-- **Phase 15-16**: Reader nodes often follow triggers
+- **Phase 11-12**: Reader nodes often follow triggers

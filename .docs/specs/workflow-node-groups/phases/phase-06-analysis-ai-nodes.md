@@ -1,4 +1,4 @@
-# Phase 10: Analysis AI Nodes
+# Phase 06: Analysis AI Nodes
 
 ## Overview
 
@@ -8,7 +8,7 @@ Implement 4 AI analysis nodes: Categorizer, Sentiment Analyzer, Scorer, and AI L
 
 ## Prerequisites
 
-- **Phase 09**: Core AI nodes (uses same executor patterns)
+- **Phase 05**: Core AI nodes (uses same executor patterns)
 
 ---
 

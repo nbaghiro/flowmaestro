@@ -1,4 +1,4 @@
-# Phase 20: Operational Nodes
+# Phase 16: Operational Nodes
 
 ## Overview
 
@@ -8,7 +8,7 @@ Implement 2 operational resilience nodes: Rate Limiter and Circuit Breaker.
 
 ## Prerequisites
 
-- **Phase 19**: Enterprise infrastructure patterns
+- **Phase 15**: Governance nodes (enterprise patterns)
 
 ---
 

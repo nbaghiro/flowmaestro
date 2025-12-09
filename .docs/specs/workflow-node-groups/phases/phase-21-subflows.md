@@ -1,4 +1,4 @@
-# Phase 25: Subflows
+# Phase 21: Subflows
 
 ## Overview
 
@@ -8,8 +8,8 @@ Enable complete workflows to be embedded as nodes within other workflows, allowi
 
 ## Prerequisites
 
-- **Phase 24**: Custom Nodes (similar composition pattern)
-- **Phase 06**: Flow Control Nodes (Input/Output nodes define interface)
+- **Phase 20**: Custom Nodes (similar composition pattern)
+- **Phase 02**: Flow Control Nodes (Input/Output nodes define interface)
 
 ---
 

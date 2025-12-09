@@ -1,4 +1,4 @@
-# Phase 12: Agent Nodes
+# Phase 08: Agent Nodes
 
 ## Overview
 
@@ -8,7 +8,7 @@ Implement 4 agent nodes: Run Agent, Agent Chat, Agent Handoff, and Human-in-the-
 
 ## Prerequisites
 
-- **Phase 09**: Core AI nodes (LLM execution)
+- **Phase 05**: Core AI nodes (LLM execution)
 
 ---
 
@@ -39,7 +39,7 @@ const tools = await agentRepository.getAgentTools(agentId);
 
 ```typescript
 // Agents can call integration tools via MCP protocol
-// Operations are auto-wrapped as MCP tools (see Phase 21-23)
+// Operations are auto-wrapped as MCP tools (see Phase 17-19)
 ```
 
 ### Temporal for Long-Running Agents
@@ -300,5 +300,5 @@ These nodes enable autonomous agent workflows with human oversight.
 
 Enables:
 
-- **Phase 17**: KB Chat uses Agent Chat pattern
-- **Phase 21**: Approval Gate uses similar pause mechanism
+- **Phase 13**: KB Chat uses Agent Chat pattern
+- **Phase 15**: Approval Gate uses similar pause mechanism

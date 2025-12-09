@@ -1,4 +1,4 @@
-# Phase 16: Reader Nodes (Other)
+# Phase 12: Reader Nodes (Other)
 
 ## Overview
 
@@ -8,7 +8,7 @@ Implement 3 additional reader nodes: Notion Reader, Airtable Reader, and HTTP Re
 
 ## Prerequisites
 
-- **Phase 15**: Google Reader nodes (similar patterns)
+- **Phase 11**: Google Reader nodes (similar patterns)
 
 ---
 

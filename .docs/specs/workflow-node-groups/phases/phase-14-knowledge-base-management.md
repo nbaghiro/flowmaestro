@@ -1,4 +1,4 @@
-# Phase 18: Knowledge Base Management
+# Phase 14: Knowledge Base Management
 
 ## Overview
 
@@ -8,7 +8,7 @@ Implement 2 knowledge base management nodes: Sync KB Source and KB Analytics.
 
 ## Prerequisites
 
-- **Phase 17**: Knowledge Base Core nodes
+- **Phase 13**: Knowledge Base Core nodes
 
 ---
 
@@ -30,7 +30,7 @@ Implement 2 knowledge base management nodes: Sync KB Source and KB Analytics.
 // Use for syncing Drive folders to knowledge base
 ```
 
-### Knowledge Base Repositories (from Phase 17)
+### Knowledge Base Repositories (from Phase 13)
 
 ```typescript
 // KnowledgeBaseRepository - manage KB metadata and config

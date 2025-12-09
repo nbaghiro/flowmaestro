@@ -1,8 +1,8 @@
-# Phase 01: Category Types, Registry & Styles
+# Phase 01: Category Types & Node Registry
 
 ## Overview
 
-Establish the shared type system, node registry, and category styling that all subsequent phases depend on. This creates the architectural foundation for the entire node reorganization.
+Establish the shared type system and node registry that all subsequent phases depend on. This creates the architectural foundation for the entire node reorganization.
 
 ---
 
@@ -55,13 +55,14 @@ export interface NodeMetadata {
 
 ## Deliverables
 
-| Item                          | Description                                    |
-| ----------------------------- | ---------------------------------------------- |
-| `NodeCategory` type           | Type definitions for 8 node categories         |
-| `NodeSubcategory` type        | Type definitions for 17 subcategories          |
-| `registerNode()` function     | Add nodes to the registry                      |
-| `getNodesByCategory()` helper | Retrieve nodes by category                     |
-| `getCategoryStyle()` function | Get gradients, badges, glows for each category |
+| Item                           | Description                            |
+| ------------------------------ | -------------------------------------- |
+| `NodeCategory` type            | Type definitions for 7 node categories |
+| `NodeSubcategory` type         | Type definitions for 17 subcategories  |
+| `NodeTypeDefinition` interface | Full node type definition for registry |
+| `registerNode()` function      | Add nodes to the registry              |
+| `getNodesByCategory()` helper  | Retrieve nodes by category             |
+| `searchNodes()` function       | Search nodes by query string           |
 
 ---
 
@@ -71,21 +72,20 @@ export interface NodeMetadata {
 
 ```typescript
 /**
- * Top-level node categories - 8 total
- * Each category has a distinct color theme and icon
+ * Top-level node categories - 7 total
  */
 export type NodeCategory =
-    | "ai" // Blue - LLM, vision, embeddings, agents
-    | "knowledge" // Purple/Violet - Knowledge base operations
-    | "automation" // Amber - Triggers, readers, scheduled tasks
-    | "tools" // Slate - Flow control, data processing, utilities
-    | "integration" // Rose - Third-party service integrations
-    | "custom" // Cyan - User-defined custom nodes
-    | "subflow"; // Indigo - Embedded workflows
+    | "ai" // LLM, vision, embeddings, agents
+    | "knowledge" // Knowledge base operations
+    | "automation" // Triggers, readers, scheduled tasks
+    | "tools" // Flow control, data processing, utilities
+    | "integration" // Third-party service integrations
+    | "custom" // User-defined custom nodes
+    | "subflow"; // Embedded workflows
 
 /**
- * Subcategories for two-level navigation
- * Used in NodeLibrary panel expansion
+ * Subcategories for navigation grouping
+ * Used in NodeLibrary panel
  */
 export type NodeSubcategory =
     // AI subcategories (4)
@@ -144,119 +144,7 @@ export interface SubcategoryConfig {
 }
 ```
 
-### 2. `frontend/src/config/category-styles.ts` (NEW)
-
-```typescript
-import type { NodeCategory } from "@flowmaestro/shared";
-
-/**
- * Style configuration for each category
- * Used by BaseNode gradient headers, badges, selection glows
- */
-export interface CategoryStyleConfig {
-    gradient: {
-        from: string; // Tailwind gradient start (e.g., "from-blue-500/15")
-        via: string; // Tailwind gradient middle
-        to: string; // Tailwind gradient end
-    };
-    badge: {
-        bg: string; // Badge background (e.g., "bg-blue-500/20")
-        text: string; // Badge text color
-    };
-    glow: string; // Selection glow shadow
-    accent: string; // Hex color for icons/borders
-    label: string; // Display label for badge
-    icon: string; // Lucide icon name
-}
-
-/**
- * Complete style definitions for all 8 categories
- * Colors chosen for accessibility and dark mode compatibility
- */
-export const categoryStyles: Record<NodeCategory, CategoryStyleConfig> = {
-    ai: {
-        gradient: { from: "from-blue-500/15", via: "via-blue-500/5", to: "to-transparent" },
-        badge: { bg: "bg-blue-500/20", text: "text-blue-600 dark:text-blue-400" },
-        glow: "shadow-[0_0_0_2px_rgba(59,130,246,0.5),0_4px_20px_rgba(59,130,246,0.25)]",
-        accent: "#3B82F6",
-        label: "Using AI",
-        icon: "Bot"
-    },
-    knowledge: {
-        gradient: { from: "from-violet-500/15", via: "via-violet-500/5", to: "to-transparent" },
-        badge: { bg: "bg-violet-500/20", text: "text-violet-600 dark:text-violet-400" },
-        glow: "shadow-[0_0_0_2px_rgba(139,92,246,0.5),0_4px_20px_rgba(139,92,246,0.25)]",
-        accent: "#8B5CF6",
-        label: "Knowledge",
-        icon: "BookOpen"
-    },
-    automation: {
-        gradient: { from: "from-amber-500/15", via: "via-amber-500/5", to: "to-transparent" },
-        badge: { bg: "bg-amber-500/20", text: "text-amber-600 dark:text-amber-400" },
-        glow: "shadow-[0_0_0_2px_rgba(245,158,11,0.5),0_4px_20px_rgba(245,158,11,0.25)]",
-        accent: "#F59E0B",
-        label: "Automation",
-        icon: "Zap"
-    },
-    tools: {
-        gradient: { from: "from-slate-500/15", via: "via-slate-500/5", to: "to-transparent" },
-        badge: { bg: "bg-slate-500/20", text: "text-slate-600 dark:text-slate-400" },
-        glow: "shadow-[0_0_0_2px_rgba(100,116,139,0.5),0_4px_20px_rgba(100,116,139,0.25)]",
-        accent: "#64748B",
-        label: "Tools",
-        icon: "Wrench"
-    },
-    integration: {
-        gradient: { from: "from-rose-500/15", via: "via-rose-500/5", to: "to-transparent" },
-        badge: { bg: "bg-rose-500/20", text: "text-rose-600 dark:text-rose-400" },
-        glow: "shadow-[0_0_0_2px_rgba(244,63,94,0.5),0_4px_20px_rgba(244,63,94,0.25)]",
-        accent: "#F43F5E",
-        label: "Integration",
-        icon: "Plug"
-    },
-    custom: {
-        gradient: { from: "from-cyan-500/15", via: "via-cyan-500/5", to: "to-transparent" },
-        badge: { bg: "bg-cyan-500/20", text: "text-cyan-600 dark:text-cyan-400" },
-        glow: "shadow-[0_0_0_2px_rgba(6,182,212,0.5),0_4px_20px_rgba(6,182,212,0.25)]",
-        accent: "#06B6D4",
-        label: "Custom",
-        icon: "Puzzle"
-    },
-    subflow: {
-        gradient: { from: "from-indigo-500/15", via: "via-indigo-500/5", to: "to-transparent" },
-        badge: { bg: "bg-indigo-500/20", text: "text-indigo-600 dark:text-indigo-400" },
-        glow: "shadow-[0_0_0_2px_rgba(99,102,241,0.5),0_4px_20px_rgba(99,102,241,0.25)]",
-        accent: "#6366F1",
-        label: "Subflow",
-        icon: "GitBranch"
-    }
-};
-
-/**
- * Helper to get category style
- */
-export function getCategoryStyle(category: NodeCategory): CategoryStyleConfig {
-    return categoryStyles[category] || categoryStyles.tools;
-}
-
-/**
- * Helper to get Tailwind gradient classes
- */
-export function getGradientClasses(category: NodeCategory): string {
-    const style = getCategoryStyle(category);
-    return `bg-gradient-to-r ${style.gradient.from} ${style.gradient.via} ${style.gradient.to}`;
-}
-
-/**
- * Helper to get badge classes
- */
-export function getBadgeClasses(category: NodeCategory): string {
-    const style = getCategoryStyle(category);
-    return `${style.badge.bg} ${style.badge.text}`;
-}
-```
-
-### 3. `frontend/src/config/node-registry.ts` (NEW)
+### 2. `frontend/src/config/node-registry.ts` (NEW)
 
 ```typescript
 import type { NodeTypeDefinition, NodeCategory, NodeSubcategory } from "@flowmaestro/shared";
@@ -397,7 +285,7 @@ export function getFrequentlyUsedNodes(): NodeTypeDefinition[] {
 }
 ```
 
-### 4. Update `shared/src/index.ts`
+### 3. Update `shared/src/index.ts`
 
 Add exports for new types:
 
@@ -435,25 +323,21 @@ registerNode({
 1. Create `shared/src/types/node-categories.ts` with all type definitions
 2. Update `shared/src/index.ts` to export new types
 3. Run `cd shared && npm run build` to compile shared package
-4. Create `frontend/src/config/category-styles.ts` with all 8 category styles
-5. Create `frontend/src/config/node-registry.ts` with registry functions
-6. Run `npx tsc --noEmit` to verify no type errors
-7. Create a test file that imports and uses all exported functions
+4. Create `frontend/src/config/node-registry.ts` with registry functions
+5. Run `npx tsc --noEmit` to verify no type errors
+6. Create a test file that imports and uses all exported functions
 
 ---
 
 ## How to Test
 
-| Test                                   | Expected Result                               |
-| -------------------------------------- | --------------------------------------------- |
-| Import `NodeCategory` in frontend      | Type available without errors                 |
-| Call `getCategoryStyle("ai")`          | Returns blue gradient, badge, glow config     |
-| Call `getCategoryStyle("integration")` | Returns rose gradient, badge, glow config     |
-| Call `registerNode({...})`             | Node added to registry                        |
-| Call `getNodesByCategory("ai")`        | Returns empty array (no nodes registered yet) |
-| Call `searchNodes("email")`            | Returns empty array (no nodes registered yet) |
-| Call `getGradientClasses("knowledge")` | Returns violet gradient Tailwind classes      |
-| Run TypeScript compiler                | No errors                                     |
+| Test                              | Expected Result                               |
+| --------------------------------- | --------------------------------------------- |
+| Import `NodeCategory` in frontend | Type available without errors                 |
+| Call `registerNode({...})`        | Node added to registry                        |
+| Call `getNodesByCategory("ai")`   | Returns empty array (no nodes registered yet) |
+| Call `searchNodes("email")`       | Returns empty array (no nodes registered yet) |
+| Run TypeScript compiler           | No errors                                     |
 
 ### Verification Commands
 
@@ -475,9 +359,6 @@ cd frontend && npm run build
 - [ ] `NodeCategory` type is importable from `@flowmaestro/shared`
 - [ ] `NodeSubcategory` type covers all 17 subcategories
 - [ ] `NodeTypeDefinition` interface includes all required fields
-- [ ] `getCategoryStyle()` returns correct colors for all 8 categories
-- [ ] `getGradientClasses()` returns valid Tailwind classes
-- [ ] `getBadgeClasses()` returns valid Tailwind classes
 - [ ] `registerNode()` adds nodes to registry without errors
 - [ ] `getNodesByCategory()` returns nodes grouped by category
 - [ ] `getNodesBySubcategory()` returns nodes grouped by subcategory
@@ -491,6 +372,4 @@ cd frontend && npm run build
 
 This phase enables:
 
-- **Phase 02**: BaseNode uses `getCategoryStyle()` for gradient headers and glows
-- **Phase 04-05**: Node Library uses `nodeRegistry` for categories and search
-- **Phase 06+**: Node implementations use `registerNode()` to add themselves
+- **Phase 02+**: Node implementations use `registerNode()` to add themselves

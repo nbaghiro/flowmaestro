@@ -1,4 +1,4 @@
-# Phase 08: File Processing Nodes
+# Phase 04: File Processing Nodes
 
 ## Overview
 
@@ -8,7 +8,7 @@ Implement 2 file processing nodes for extracting text from PDFs and other docume
 
 ## Prerequisites
 
-- **Phase 07**: Data Processing nodes (Transform for post-processing)
+- **Phase 03**: Data Processing nodes (Transform for post-processing)
 
 ---
 
@@ -537,4 +537,4 @@ describe("Parse PDF Node", () => {
 
 ## Dependencies
 
-These nodes prepare documents for AI processing (Phase 09: Extract Data node).
+These nodes prepare documents for AI processing (Phase 05: Extract Data node).
