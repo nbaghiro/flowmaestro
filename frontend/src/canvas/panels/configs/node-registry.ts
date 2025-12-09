@@ -134,3 +134,53 @@ export function getFrequentlyUsedNodes(): NodeTypeDefinition[] {
         .map((type) => nodeRegistry.get(type))
         .filter((node): node is NodeTypeDefinition => node !== undefined);
 }
+
+registerNode({
+    type: "input",
+    label: "Input",
+    description: "Entry point for workflow data",
+    category: "tools",
+    subcategory: "flow-control",
+    icon: "ArrowDownToLine",
+    keywords: ["start", "entry", "data", "input"]
+});
+
+registerNode({
+    type: "output",
+    label: "Output",
+    description: "Format and return workflow results",
+    category: "tools",
+    subcategory: "flow-control",
+    icon: "ArrowUpFromLine",
+    keywords: ["result", "return", "output"]
+});
+
+registerNode({
+    type: "router",
+    label: "Router",
+    description: "Branch workflow based on conditions",
+    category: "tools",
+    subcategory: "flow-control",
+    icon: "GitBranch",
+    keywords: ["condition", "branch", "if", "switch", "route"]
+});
+
+registerNode({
+    type: "loop",
+    label: "Loop",
+    description: "Iterate over array items",
+    category: "tools",
+    subcategory: "flow-control",
+    icon: "Repeat",
+    keywords: ["for", "each", "iterate", "array", "loop"]
+});
+
+registerNode({
+    type: "wait",
+    label: "Wait",
+    description: "Pause execution for a duration or until a time",
+    category: "tools",
+    subcategory: "flow-control",
+    icon: "Clock",
+    keywords: ["delay", "pause", "sleep", "timer"]
+});

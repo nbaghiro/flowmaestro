@@ -27,6 +27,7 @@ import KnowledgeBaseQueryNode from "./nodes/KnowledgeBaseQueryNode";
 import LLMNode from "./nodes/LLMNode";
 import LoopNode from "./nodes/LoopNode";
 import OutputNode from "./nodes/OutputNode";
+import RouterNode from "./nodes/RouterNode";
 import SwitchNode from "./nodes/SwitchNode";
 import TransformNode from "./nodes/TransformNode";
 import VariableNode from "./nodes/VariableNode";
@@ -49,6 +50,7 @@ const nodeTypes = {
     transform: TransformNode,
     variable: VariableNode,
     output: OutputNode,
+    router: RouterNode,
     http: HTTPNode,
     database: DatabaseNode,
     integration: IntegrationNode,
@@ -225,6 +227,7 @@ function getDefaultLabel(type: string): string {
         transform: "Transform",
         variable: "Variable",
         output: "Output",
+        router: "Router",
         http: "HTTP",
         database: "Database",
         integration: "Integration"
