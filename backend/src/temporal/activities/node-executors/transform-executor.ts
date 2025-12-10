@@ -1,6 +1,7 @@
 import jsonata from "jsonata";
 import { parseStringPromise } from "xml2js";
 import type { JsonObject, JsonValue, JsonArray } from "@flowmaestro/shared";
+import { getVariableValue } from "./utils";
 
 export interface TransformNodeConfig {
     operation:
@@ -13,29 +14,23 @@ export interface TransformNodeConfig {
         | "custom"
         | "parseXML"
         | "parseJSON";
-    inputData: string; // Variable reference like "${httpResponse}"
+    inputData: string;
     expression: string;
     outputVariable: string;
 }
 
 export interface TransformNodeResult {
-    [key: string]: JsonValue; // The transformed data stored under outputVariable name
+    [key: string]: JsonValue;
 }
 
-/**
- * Execute Transform node - performs data transformations
- */
 export async function executeTransformNode(
     config: TransformNodeConfig,
     context: JsonObject
 ): Promise<JsonObject> {
-    // Get input data from context
-    const inputData = getVariableValue(config.inputData, context);
-
-    console.log(`[Transform] Operation: ${config.operation}`);
-    console.log(
-        `[Transform] Input type: ${typeof inputData}, ${Array.isArray(inputData) ? "array" : "object"}`
-    );
+    const inputData = getVariableValue<JsonValue>(config.inputData, context);
+    if (inputData === undefined) {
+        throw new Error(`Variable ${config.inputData} is undefined`);
+    }
 
     let result: JsonValue;
 
@@ -77,14 +72,9 @@ export async function executeTransformNode(
             throw new Error(`Unsupported transform operation: ${config.operation}`);
     }
 
-    console.log(
-        `[Transform] Result type: ${typeof result}, ${Array.isArray(result) ? `array[${(result as JsonArray).length}]` : "object"}`
-    );
-
-    // Return result with the output variable name
     return {
         [config.outputVariable]: result
-    } as unknown as JsonObject;
+    } as JsonObject;
 }
 
 async function executeMap(
@@ -96,13 +86,13 @@ async function executeMap(
         throw new Error("Map operation requires array input");
     }
 
-    // If expression is JavaScript function string
+    // JavaScript arrow function
     if (expression.includes("=>")) {
         const fn = eval(`(${expression})`);
         return data.map(fn);
     }
 
-    // Otherwise use JSONata
+    // JSONata array mapping
     const expr = jsonata(expression);
     return await expr.evaluate({ items: data, ...context });
 }
@@ -116,13 +106,11 @@ async function executeFilter(
         throw new Error("Filter operation requires array input");
     }
 
-    // If expression is JavaScript function string
     if (expression.includes("=>")) {
         const fn = eval(`(${expression})`);
         return data.filter(fn);
     }
 
-    // Otherwise use JSONata with predicate
     const expr = jsonata(`items[${expression}]`);
     return await expr.evaluate({ items: data, ...context });
 }
@@ -136,13 +124,11 @@ async function executeReduce(
         throw new Error("Reduce operation requires array input");
     }
 
-    // If expression is JavaScript function string
     if (expression.includes("=>")) {
         const fn = eval(`(${expression})`);
         return data.reduce(fn);
     }
 
-    // Otherwise use JSONata aggregation
     const expr = jsonata(expression);
     return await expr.evaluate({ items: data, ...context });
 }
@@ -152,13 +138,11 @@ async function executeSort(data: JsonValue, expression: string): Promise<JsonArr
         throw new Error("Sort operation requires array input");
     }
 
-    // If expression is JavaScript comparator function
     if (expression.includes("=>")) {
         const fn = eval(`(${expression})`);
         return [...data].sort(fn);
     }
 
-    // Otherwise sort by property path
     return [...data].sort((a, b) => {
         const aVal = getNestedValue(a, expression);
         const bVal = getNestedValue(b, expression);
@@ -172,40 +156,30 @@ async function executeMerge(
     expression: string,
     context: JsonObject
 ): Promise<JsonValue> {
-    // Parse expression to get variables to merge
     const varsToMerge = expression.match(/\$\{([^}]+)\}/g) || [];
     const values = varsToMerge.map((varRef) => getVariableValue(varRef, context));
 
     if (Array.isArray(data)) {
-        // Merge arrays
         return values.reduce<JsonArray>(
-            (acc, val) => {
-                if (Array.isArray(val)) {
-                    return [...acc, ...val];
-                }
-                return acc;
-            },
+            (acc, val) => (Array.isArray(val) ? [...acc, ...val] : acc),
             [...data]
         );
-    } else if (typeof data === "object" && data !== null) {
-        // Merge objects
-        return values.reduce<JsonObject>(
-            (acc, val) => {
-                if (typeof val === "object" && val !== null && !Array.isArray(val)) {
-                    return { ...acc, ...val };
-                }
-                return acc;
-            },
-            { ...data }
-        );
-    } else {
-        // Primitive types - return as is
-        return data;
     }
+
+    if (data !== null && typeof data === "object" && !Array.isArray(data)) {
+        return values.reduce<JsonObject>(
+            (acc, val) =>
+                val !== null && typeof val === "object" && !Array.isArray(val)
+                    ? { ...acc, ...val }
+                    : acc,
+            { ...(data as JsonObject) }
+        );
+    }
+
+    return data;
 }
 
 async function executeExtract(data: JsonValue, expression: string): Promise<JsonValue> {
-    // Extract nested property
     return getNestedValue(data, expression);
 }
 
@@ -215,15 +189,10 @@ async function executeJSONata(
     context: JsonObject
 ): Promise<JsonValue> {
     const expr = jsonata(expression);
-    // Evaluate with full context so expressions can reference all variables
     return await expr.evaluate({ ...context, $data: data });
 }
 
 async function parseXML(xmlString: string): Promise<JsonValue> {
-    if (typeof xmlString !== "string") {
-        throw new Error("parseXML requires string input");
-    }
-
     return await parseStringPromise(xmlString, {
         explicitArray: false,
         mergeAttrs: true
@@ -231,10 +200,6 @@ async function parseXML(xmlString: string): Promise<JsonValue> {
 }
 
 function parseJSON(jsonString: string): JsonValue {
-    if (typeof jsonString !== "string") {
-        throw new Error("parseJSON requires string input");
-    }
-
     try {
         return JSON.parse(jsonString);
     } catch (error) {
@@ -243,16 +208,8 @@ function parseJSON(jsonString: string): JsonValue {
 }
 
 /**
- * Get variable value from context using ${variableName} syntax
- */
-function getVariableValue(varRef: string, context: JsonObject): JsonValue {
-    // Remove ${ and } if present
-    const varName = varRef.replace(/^\$\{/, "").replace(/\}$/, "");
-    return getNestedValue(context, varName);
-}
-
-/**
- * Get nested property value using dot notation
+ * Keep Transform's original `getNestedValue`
+ * because Transform relies on `null` as the “not found” sentinel.
  */
 function getNestedValue(obj: JsonValue, path: string): JsonValue {
     const keys = path.split(".");
@@ -260,7 +217,7 @@ function getNestedValue(obj: JsonValue, path: string): JsonValue {
 
     for (const key of keys) {
         if (value && typeof value === "object" && !Array.isArray(value)) {
-            value = value[key];
+            value = (value as JsonObject)[key];
         } else {
             return null;
         }

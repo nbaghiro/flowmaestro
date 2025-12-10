@@ -184,3 +184,43 @@ registerNode({
     icon: "Clock",
     keywords: ["delay", "pause", "sleep", "timer"]
 });
+
+registerNode({
+    type: "transform",
+    label: "Transform",
+    description: "Transform data using JSONata, JavaScript, or Templates",
+    category: "tools",
+    subcategory: "data-processing",
+    icon: "Wand2",
+    keywords: ["transform", "map", "jsonata", "javascript", "template", "expression"]
+});
+
+registerNode({
+    type: "filter",
+    label: "Filter",
+    description: "Filter array items based on criteria",
+    category: "tools",
+    subcategory: "data-processing",
+    icon: "Filter",
+    keywords: ["filter", "where", "match", "criteria", "remove", "keep"]
+});
+
+registerNode({
+    type: "aggregate",
+    label: "Aggregate",
+    description: "Compute sum, count, average, min, max, grouped aggregations",
+    category: "tools",
+    subcategory: "data-processing",
+    icon: "Calculator",
+    keywords: ["sum", "count", "avg", "min", "max", "aggregate", "group"]
+});
+
+registerNode({
+    type: "deduplicate",
+    label: "Deduplicate",
+    description: "Remove duplicate items by key fields",
+    category: "tools",
+    subcategory: "data-processing",
+    icon: "Copy",
+    keywords: ["dedupe", "unique", "distinct", "remove duplicates"]
+});

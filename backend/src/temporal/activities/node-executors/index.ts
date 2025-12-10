@@ -1,4 +1,5 @@
 import type { JsonObject, JsonValue } from "@flowmaestro/shared";
+import { executeAggregateNode, AggregateNodeConfig } from "./aggregate-executor";
 import { executeAudioNode, AudioNodeConfig, AudioNodeResult } from "./audio-executor";
 import { executeCodeNode, CodeNodeConfig, CodeNodeResult } from "./code-executor";
 import {
@@ -7,6 +8,7 @@ import {
     ConditionalNodeResult
 } from "./conditional-executor";
 import { executeDatabaseNode, DatabaseNodeConfig, DatabaseNodeResult } from "./database-executor";
+import { executeDeduplicateNode, DeduplicateNodeConfig } from "./deduplicate-executor";
 import { executeEchoNode, EchoNodeConfig, EchoNodeResult } from "./echo-executor";
 import {
     executeEmbeddingsNode,
@@ -18,6 +20,7 @@ import {
     FileOperationsNodeConfig,
     FileOperationsNodeResult
 } from "./file-executor";
+import { executeFilterNode, FilterNodeConfig } from "./filter-executor";
 import { executeHTTPNode, HTTPNodeConfig, HTTPNodeResult } from "./http-executor";
 import {
     executeIntegrationNode,
@@ -46,7 +49,10 @@ export type NodeConfig =
     | { type: "variable"; config: VariableNodeConfig }
     | { type: "output"; config: OutputNodeConfig }
     | { type: "input"; config: JsonObject } // Input is handled differently
-    | { type: string; config: JsonObject }; // Other node types not yet implemented
+    | { type: string; config: JsonObject } // Other node types not yet implemented
+    | { type: "filter"; config: FilterNodeConfig }
+    | { type: "aggregate"; config: AggregateNodeConfig }
+    | { type: "deduplicate"; config: DeduplicateNodeConfig };
 
 export type NodeResult =
     | HTTPNodeResult
@@ -81,6 +87,20 @@ export async function executeNode(input: ExecuteNodeInput): Promise<JsonObject> 
         case "transform":
             return await executeTransformNode(
                 nodeConfig as unknown as TransformNodeConfig,
+                context
+            );
+        case "filter":
+            return await executeFilterNode(nodeConfig as unknown as FilterNodeConfig, context);
+
+        case "aggregate":
+            return await executeAggregateNode(
+                nodeConfig as unknown as AggregateNodeConfig,
+                context
+            );
+
+        case "deduplicate":
+            return await executeDeduplicateNode(
+                nodeConfig as unknown as DeduplicateNodeConfig,
                 context
             );
 
