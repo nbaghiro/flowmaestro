@@ -1,42 +1,74 @@
-import { Send, FileText } from "lucide-react";
+import { Send } from "lucide-react";
 import { memo } from "react";
-import { NodeProps } from "reactflow";
 import { BaseNode } from "./BaseNode";
+import type { NodeStatus } from "./BaseNode";
+import type { NodeProps } from "reactflow";
 
 interface OutputNodeData {
-    label: string;
-    status?: "idle" | "pending" | "running" | "success" | "error";
-    value?: string;
-    format?: string;
+    label?: string;
+    status?: NodeStatus;
+    format?: "json" | "text" | "file";
+    template?: string;
+    fields?: string[];
+    outputVariable?: string;
+    description?: string;
 }
 
 function OutputNode({ data, selected }: NodeProps<OutputNodeData>) {
-    const value = data.value || "No output template";
-    const format = data.format || "text";
-    const valuePreview = value.substring(0, 60) + (value.length > 60 ? "..." : "");
+    const format = data.format || "json";
+    const template = data.template || "";
+    const fields = data.fields || [];
+    const outputName = data.outputVariable || "output";
+
+    const preview =
+        format === "text"
+            ? template.substring(0, 60) + (template.length > 60 ? "..." : "")
+            : format === "json"
+              ? fields.length > 0
+                  ? `{ ${fields.join(", ")} }`
+                  : "{ full context }"
+              : "[file output]";
 
     return (
         <BaseNode
             icon={Send}
             label={data.label || "Output"}
             status={data.status}
-            category="data"
+            category="tools"
+            subcategory="flow-control"
             selected={selected}
-            hasOutputHandle={true}
+            hasOutputHandle={false}
         >
-            <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">Format:</span>
-                    <div className="flex items-center gap-1">
-                        <FileText className="w-3 h-3 text-muted-foreground" />
-                        <span className="text-xs font-medium uppercase">{format}</span>
-                    </div>
+            <div className="space-y-2 text-xs">
+                <div className="flex justify-between">
+                    <span className="text-muted-foreground">Output Variable:</span>
+                    <span className="font-mono">{outputName}</span>
                 </div>
-                <div className="pt-1.5 mt-1.5 border-t border-border">
-                    <div className="text-xs text-muted-foreground italic line-clamp-2">
-                        {valuePreview}
-                    </div>
+
+                <div className="flex justify-between">
+                    <span className="text-muted-foreground">Format:</span>
+                    <span className="font-medium uppercase">{format}</span>
                 </div>
+
+                {format === "json" && (
+                    <div className="pt-1 border-t border-border">
+                        <span className="text-muted-foreground">
+                            {fields.length > 0 ? `Fields: ${fields.join(", ")}` : "Full context"}
+                        </span>
+                    </div>
+                )}
+
+                {format === "text" && (
+                    <div className="pt-1 border-t border-border line-clamp-2 italic text-muted-foreground">
+                        {preview}
+                    </div>
+                )}
+
+                {format === "file" && (
+                    <div className="pt-1 border-t border-border text-muted-foreground italic">
+                        File output (not yet generated)
+                    </div>
+                )}
             </div>
         </BaseNode>
     );

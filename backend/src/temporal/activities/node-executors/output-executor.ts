@@ -1,52 +1,36 @@
-import type { JsonObject, JsonValue } from "@flowmaestro/shared";
+import type { JsonObject } from "@flowmaestro/shared";
 import { interpolateWithObjectSupport } from "./utils";
 
 export interface OutputNodeConfig {
-    outputName: string;
-    value: string;
-    format: "json" | "string" | "number" | "boolean";
+    outputVariable: string;
+    format: "json" | "text" | "file";
+    template?: string;
+    fields?: string[];
     description?: string;
 }
 
-export interface OutputNodeResult {
-    outputs: JsonObject;
-}
-
-/**
- * Execute Output node - sets workflow output values
- */
 export async function executeOutputNode(
     config: OutputNodeConfig,
     context: JsonObject
 ): Promise<JsonObject> {
-    // Interpolate variables in value
-    const interpolated = interpolateWithObjectSupport(config.value, context);
+    // JSON mode
+    if (config.format === "json") {
+        const result =
+            config.fields && config.fields.length > 0
+                ? Object.fromEntries(config.fields.map((f) => [f, context[f]]))
+                : context;
 
-    // Ensure interpolated value is JsonValue-compatible
-    const jsonValue = interpolated as JsonValue;
-
-    // Format conversion
-    const value = formatValue(jsonValue, config.format);
-
-    console.log(`[Output] Set output '${config.outputName}' (${config.format})`);
-
-    // Return outputs directly at top level (like other executors do with outputVariable)
-    return {
-        [config.outputName]: value
-    } as unknown as JsonObject;
-}
-
-function formatValue(value: JsonValue, format: string): JsonValue {
-    switch (format) {
-        case "json":
-            return typeof value === "string" ? JSON.parse(value) : value;
-        case "string":
-            return String(value);
-        case "number":
-            return Number(value);
-        case "boolean":
-            return Boolean(value);
-        default:
-            return value;
+        return { [config.outputVariable]: result } as JsonObject;
     }
+
+    // TEXT mode
+    if (config.format === "text") {
+        const rendered = interpolateWithObjectSupport(config.template || "", context);
+        return { [config.outputVariable]: rendered } as JsonObject;
+    }
+
+    // FILE mode (placeholder)
+    return {
+        [config.outputVariable]: "[file output not implemented]"
+    } as JsonObject;
 }
