@@ -1,6 +1,6 @@
 import { Copy } from "lucide-react";
 import { memo } from "react";
-import { BaseNode } from "./BaseNode";
+import { BaseNode } from "../../BaseNode";
 import type { NodeProps } from "reactflow";
 
 interface DeduplicateNodeData {

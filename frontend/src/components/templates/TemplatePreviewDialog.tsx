@@ -14,7 +14,7 @@ import IntegrationNode from "../../canvas/nodes/IntegrationNode";
 import KnowledgeBaseQueryNode from "../../canvas/nodes/KnowledgeBaseQueryNode";
 import LLMNode from "../../canvas/nodes/LLMNode";
 import LoopNode from "../../canvas/nodes/LoopNode";
-import OutputNode from "../../canvas/nodes/OutputNode";
+import OutputNode from "../../canvas/nodes/tools/flow-control/OutputNode";
 import SwitchNode from "../../canvas/nodes/SwitchNode";
 import TransformNode from "../../canvas/nodes/TransformNode";
 import VariableNode from "../../canvas/nodes/VariableNode";

@@ -1,6 +1,6 @@
 import { Filter as FilterIcon } from "lucide-react";
 import { memo } from "react";
-import { BaseNode } from "./BaseNode";
+import { BaseNode } from "../../BaseNode";
 import type { NodeProps } from "reactflow";
 
 interface FilterNodeData {

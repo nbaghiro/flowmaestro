@@ -26,7 +26,7 @@ import IntegrationNode from "./nodes/IntegrationNode";
 import KnowledgeBaseQueryNode from "./nodes/KnowledgeBaseQueryNode";
 import LLMNode from "./nodes/LLMNode";
 import LoopNode from "./nodes/LoopNode";
-import OutputNode from "./nodes/OutputNode";
+import OutputNode from "./nodes/tools/flow-control/OutputNode";
 import RouterNode from "./nodes/RouterNode";
 import SwitchNode from "./nodes/SwitchNode";
 import TransformNode from "./nodes/TransformNode";

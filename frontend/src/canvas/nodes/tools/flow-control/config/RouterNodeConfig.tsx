@@ -1,9 +1,9 @@
 import { Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { CodeInput } from "../../../components/CodeInput";
-import { FormField, FormSection } from "../../../components/common/FormField";
-import { Input } from "../../../components/common/Input";
-import { Select } from "../../../components/common/Select";
+import { CodeInput } from "@/components/CodeInput";
+import { FormField, FormSection } from "@/components/common/FormField";
+import { Input } from "@/components/common/Input";
+import { Select } from "@/components/common/Select";
 
 interface RouterCondition {
     name: string;

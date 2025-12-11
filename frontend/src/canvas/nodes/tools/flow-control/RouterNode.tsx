@@ -1,8 +1,7 @@
 import { GitBranch } from "lucide-react";
 import { memo } from "react";
 import { Handle, Position, NodeProps } from "reactflow";
-import { BaseNode } from "./BaseNode";
-import type { NodeStatus } from "./BaseNode";
+import { BaseNode, NodeStatus } from "../../BaseNode";
 
 interface RouterCondition {
     name: string;

@@ -1,9 +1,9 @@
 import { Info } from "lucide-react";
 import { useEffect, useState } from "react";
-import { FormField, FormSection } from "../../../components/common/FormField";
-import { Input } from "../../../components/common/Input";
-import { Select } from "../../../components/common/Select";
-import { Textarea } from "../../../components/common/Textarea";
+import { FormField, FormSection } from "@/components/common/FormField";
+import { Input } from "@/components/common/Input";
+import { Select } from "@/components/common/Select";
+import { Textarea } from "@/components/common/Textarea";
 
 interface InputNodeConfigProps {
     data: Record<string, unknown>;

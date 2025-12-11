@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
-import { FormField, FormSection } from "../../../components/common/FormField";
-import { Input } from "../../../components/common/Input";
-import { Select } from "../../../components/common/Select";
-import { OutputSettingsSection } from "../../../components/OutputSettingsSection";
+import { FormField, FormSection } from "@/components/common/FormField";
+import { Input } from "@/components/common/Input";
+import { Select } from "@/components/common/Select";
+import { OutputSettingsSection } from "@/components/OutputSettingsSection";
 
 interface DeduplicateNodeConfigProps {
     data: Record<string, unknown>;

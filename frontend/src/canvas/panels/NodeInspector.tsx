@@ -18,7 +18,7 @@ import { IntegrationNodeConfig } from "./configs/IntegrationNodeConfig";
 import { KnowledgeBaseQueryNodeConfig } from "./configs/KnowledgeBaseQueryNodeConfig";
 import { LLMNodeConfig } from "./configs/LLMNodeConfig";
 import { LoopNodeConfig } from "./configs/LoopNodeConfig";
-import { OutputNodeConfig } from "./configs/OutputNodeConfig";
+import { OutputNodeConfig } from "../nodes/tools/flow-control/config/OutputNodeConfig";
 import { SwitchNodeConfig } from "./configs/SwitchNodeConfig";
 import { TransformNodeConfig } from "./configs/TransformNodeConfig";
 import { VariableNodeConfig } from "./configs/VariableNodeConfig";

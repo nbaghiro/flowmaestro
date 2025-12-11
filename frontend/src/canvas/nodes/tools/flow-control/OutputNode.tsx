@@ -1,7 +1,7 @@
 import { Send } from "lucide-react";
 import { memo } from "react";
-import { BaseNode } from "./BaseNode";
-import type { NodeStatus } from "./BaseNode";
+import { BaseNode } from "../../BaseNode";
+import type { NodeStatus } from "../../BaseNode";
 import type { NodeProps } from "reactflow";
 
 interface OutputNodeData {
