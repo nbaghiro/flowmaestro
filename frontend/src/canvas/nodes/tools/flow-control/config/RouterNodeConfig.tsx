@@ -25,17 +25,11 @@ export function RouterNodeConfig({ data, onUpdate }: RouterNodeConfigProps) {
     const [conditions, setConditions] = useState<RouterCondition[]>(
         Array.isArray(data.conditions)
             ? (data.conditions as RouterCondition[]).map((cond, index) => ({
-                  name: cond?.name || `Condition ${index + 1}`,
+                  name: cond?.name || `route-${index + 1}`,
                   expression: cond?.expression || "",
                   description: cond?.description || ""
               }))
-            : [
-                  {
-                      name: "matchA",
-                      expression: 'data.type === "A"',
-                      description: "Example condition"
-                  }
-              ]
+            : []
     );
     const [defaultOutput, setDefaultOutput] = useState((data.defaultOutput as string) || "default");
     const [evaluationMode, setEvaluationMode] = useState<"first" | "all">(
@@ -113,7 +107,7 @@ export function RouterNodeConfig({ data, onUpdate }: RouterNodeConfigProps) {
 
                 {conditions.map((cond, index) => (
                     <div
-                        key={`${cond.name}-${index}`}
+                        key={`${cond.name || "route"}-${index}`}
                         className="space-y-2 p-3 border border-border rounded-lg bg-muted/30"
                     >
                         <div className="flex items-center justify-between">

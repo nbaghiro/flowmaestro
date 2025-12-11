@@ -9,13 +9,6 @@ interface RouterCondition {
     description?: string;
 }
 
-interface RouterOutput {
-    id: string;
-    label: string;
-    expression: string;
-    isDefault?: boolean;
-}
-
 interface RouterNodeData {
     label?: string;
     status?: NodeStatus;
@@ -25,24 +18,41 @@ interface RouterNodeData {
 }
 
 function RouterNode({ data, selected }: NodeProps<RouterNodeData>) {
-    const conditions = Array.isArray(data?.conditions) ? data.conditions : [];
     const evaluationMode = data?.evaluationMode ?? "first";
-    const defaultOutput = data?.defaultOutput?.trim() || "default";
+    const defaultOutputLabel = data?.defaultOutput?.trim() || "default";
 
-    // Build final outputs list (conditions + default)
-    const outputs: RouterOutput[] = [
-        ...conditions.map((cond, index) => ({
-            id: cond.name?.trim() || `condition-${index + 1}`,
-            label: cond.name || `Condition ${index + 1}`,
-            expression: cond.expression || "No expression"
-        })),
-        {
-            id: defaultOutput,
-            label: defaultOutput,
-            expression: "Default route",
-            isDefault: true
-        }
-    ];
+    const conditions: RouterCondition[] = Array.isArray(data?.conditions)
+        ? data.conditions.map((cond, index) => ({
+              name: cond?.name?.trim() || `route-${index + 1}`,
+              expression: cond?.expression?.trim() || "",
+              description: cond?.description || ""
+          }))
+        : [];
+
+    // Stable handle ids: alphanumeric/underscore/dash only; ensure uniqueness
+    const seen = new Set<string>();
+    const outputs = conditions.map((cond, index) => {
+        const base =
+            cond.name
+                ?.trim()
+                .replace(/[^a-zA-Z0-9_-]/g, "-")
+                .replace(/-+/g, "-") || `route-${index + 1}`;
+        const uniqueId = (() => {
+            let candidate = base;
+            let counter = 1;
+            while (seen.has(candidate)) {
+                candidate = `${base}-${counter++}`;
+            }
+            seen.add(candidate);
+            return candidate;
+        })();
+
+        return {
+            id: uniqueId,
+            label: cond.name || `Route ${index + 1}`,
+            expression: cond.expression || "Add expression"
+        };
+    });
 
     const handleCount = outputs.length;
 
@@ -56,9 +66,9 @@ function RouterNode({ data, selected }: NodeProps<RouterNodeData>) {
                 className="!w-2.5 !h-2.5 !bg-card !border-2 !border-primary !shadow-sm"
             />
 
-            {/* Dynamic output handles */}
+            {/* Dynamic output handles (only when routes exist) */}
             {outputs.map((output, index) => {
-                const left = ((index + 1) * (100 / (handleCount + 1))).toFixed(1) + "%";
+                const left = `${(index + 1) * (100 / (handleCount + 1))}%`;
 
                 return (
                     <Handle
@@ -66,10 +76,8 @@ function RouterNode({ data, selected }: NodeProps<RouterNodeData>) {
                         type="source"
                         position={Position.Bottom}
                         id={output.id}
+                        className="!w-2.5 !h-2.5 !bg-card !border-2 !border-border !shadow-sm"
                         style={{ left }}
-                        className={`!w-2.5 !h-2.5 !bg-card !border-2 !shadow-sm ${
-                            output.isDefault ? "!border-dashed !border-border" : "!border-border"
-                        }`}
                     />
                 );
             })}
@@ -96,7 +104,7 @@ function RouterNode({ data, selected }: NodeProps<RouterNodeData>) {
                 {conditions.length === 0 ? (
                     <div className="text-muted-foreground">
                         No conditions set. Falls back to{" "}
-                        <span className="font-mono text-foreground">{defaultOutput}</span>.
+                        <span className="font-mono text-foreground">{defaultOutputLabel}</span>.
                     </div>
                 ) : (
                     <div className="space-y-1">
@@ -123,7 +131,7 @@ function RouterNode({ data, selected }: NodeProps<RouterNodeData>) {
 
                 <div className="text-[11px] text-muted-foreground">
                     Default route:{" "}
-                    <span className="font-mono text-foreground">{defaultOutput}</span>
+                    <span className="font-mono text-foreground">{defaultOutputLabel}</span>
                 </div>
             </div>
         </BaseNode>

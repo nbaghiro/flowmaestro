@@ -21,18 +21,16 @@ import ConditionalNode from "./nodes/ConditionalNode";
 import DatabaseNode from "./nodes/DatabaseNode";
 import EmbeddingsNode from "./nodes/EmbeddingsNode";
 import HTTPNode from "./nodes/HTTPNode";
-import InputNode from "./nodes/InputNode";
 import IntegrationNode from "./nodes/IntegrationNode";
 import KnowledgeBaseQueryNode from "./nodes/KnowledgeBaseQueryNode";
 import LLMNode from "./nodes/LLMNode";
-import LoopNode from "./nodes/LoopNode";
-import OutputNode from "./nodes/tools/flow-control/OutputNode";
-import RouterNode from "./nodes/RouterNode";
 import SwitchNode from "./nodes/SwitchNode";
-import TransformNode from "./nodes/TransformNode";
+import { AggregateNode, DeduplicateNode, FilterNode } from "./nodes/tools/data-processing";
+import TransformNode from "./nodes/tools/data-processing/TransformNode";
+import { InputNode, LoopNode, OutputNode, RouterNode, WaitNode } from "./nodes/tools/flow-control";
+import UserInputNode from "./nodes/UserInputNode";
 import VariableNode from "./nodes/VariableNode";
 import VisionNode from "./nodes/VisionNode";
-import WaitNode from "./nodes/WaitNode";
 
 // Register node types
 const nodeTypes = {
@@ -47,7 +45,11 @@ const nodeTypes = {
     code: CodeNode,
     wait: WaitNode,
     input: InputNode,
+    userInput: UserInputNode,
     transform: TransformNode,
+    filter: FilterNode,
+    aggregate: AggregateNode,
+    deduplicate: DeduplicateNode,
     variable: VariableNode,
     output: OutputNode,
     router: RouterNode,
@@ -224,7 +226,11 @@ function getDefaultLabel(type: string): string {
         code: "Code",
         wait: "Wait/Delay",
         input: "Input",
+        userInput: "User Input",
         transform: "Transform",
+        filter: "Filter",
+        aggregate: "Aggregate",
+        deduplicate: "Deduplicate",
         variable: "Variable",
         output: "Output",
         router: "Router",

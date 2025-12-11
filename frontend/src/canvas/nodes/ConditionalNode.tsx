@@ -49,7 +49,8 @@ function ConditionalNode({ data, selected }: NodeProps<ConditionalNodeData>) {
             icon={GitBranch}
             label={data.label || "Conditional"}
             status={data.status}
-            category="logic"
+            category="tools"
+            subcategory="flow-control"
             selected={selected}
             hasOutputHandle={false}
             customHandles={

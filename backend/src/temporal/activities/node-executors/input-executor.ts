@@ -17,7 +17,7 @@ export class ValidationError extends Error {
 }
 
 // Placeholder schema validator – TODO: replace with real implementation
-function validateSchema(input: unknown, schema: JsonSchema): boolean {
+function validateSchema(_input: unknown, schema: JsonSchema): boolean {
     // Naib's spec expects real validation here, but for now we keep it minimal.
     // You can later plug in a proper JSON schema validator.
     if (!schema) return true;
