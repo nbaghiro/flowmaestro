@@ -1,4 +1,4 @@
-import type { JsonObject } from "../types";
+import type { JsonObject } from "./types";
 
 /**
  * Thread-scoped streaming event types for agent message streaming.

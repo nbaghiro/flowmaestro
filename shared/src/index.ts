@@ -1,5 +1,4 @@
 export * from "./types";
-export * from "./types/streaming-events";
 export * from "./errors";
 export * from "./example-prompts";
 export * from "./connections";
@@ -9,3 +8,4 @@ export * from "./request-context";
 export * from "./triggers";
 export * from "./template";
 export * from "./agent-template";
+export * from "./streaming-events";
