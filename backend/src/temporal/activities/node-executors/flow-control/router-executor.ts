@@ -1,5 +1,5 @@
 import type { JsonObject } from "@flowmaestro/shared";
-import { evaluateExpression } from "../../../utils/node-execution/expression-evaluator";
+import { evaluateExpression } from "../../../../core/utils/expression-evaluator";
 
 export interface RouterCondition {
     name: string;

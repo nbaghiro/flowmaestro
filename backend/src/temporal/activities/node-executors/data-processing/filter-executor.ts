@@ -1,6 +1,6 @@
 import jsonata from "jsonata";
 import type { JsonObject } from "@flowmaestro/shared";
-import { getVariableValue } from "../../../utils/node-execution/utils";
+import { getVariableValue } from "../../../../core/utils/interpolate-variables";
 
 export interface FilterNodeConfig {
     inputArray: string; // "${items}" - array to filter

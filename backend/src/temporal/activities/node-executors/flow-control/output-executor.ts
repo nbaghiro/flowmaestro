@@ -1,5 +1,5 @@
 import type { JsonObject } from "@flowmaestro/shared";
-import { interpolateWithObjectSupport } from "../../../utils/node-execution/utils";
+import { interpolateWithObjectSupport } from "../../../../core/utils/interpolate-variables";
 
 export interface OutputNodeConfig {
     outputVariable: string;

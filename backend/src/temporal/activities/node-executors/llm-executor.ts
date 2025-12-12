@@ -3,8 +3,8 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { CohereClient } from "cohere-ai";
 import OpenAI from "openai";
 import type { JsonObject } from "@flowmaestro/shared";
+import { interpolateVariables } from "../../../core/utils/interpolate-variables";
 import { ConnectionRepository } from "../../../storage/repositories/ConnectionRepository";
-import { interpolateVariables } from "../../utils/node-execution/utils";
 import type { ApiKeyData } from "../../../storage/models/Connection";
 
 const connectionRepository = new ConnectionRepository();

@@ -1,7 +1,7 @@
 import jsonata from "jsonata";
 import { parseStringPromise } from "xml2js";
 import type { JsonObject, JsonValue, JsonArray } from "@flowmaestro/shared";
-import { getVariableValue } from "../../../utils/node-execution/utils";
+import { getVariableValue } from "../../../../core/utils/interpolate-variables";
 
 export interface TransformNodeConfig {
     operation:

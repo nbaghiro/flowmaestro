@@ -3,7 +3,7 @@ import * as os from "os";
 import * as path from "path";
 import OpenAI from "openai";
 import type { JsonObject } from "@flowmaestro/shared";
-import { interpolateVariables } from "../../utils/node-execution/utils";
+import { interpolateVariables } from "../../../core/utils/interpolate-variables";
 
 export interface AudioNodeConfig {
     provider: "openai" | "elevenlabs" | "google";

@@ -6,22 +6,7 @@
 import path from "path";
 import dotenv from "dotenv";
 import { Pool } from "pg";
-
-type DatabaseHelperCtor = typeof import("./tests/helpers/DatabaseHelper").DatabaseHelper;
-
-// DatabaseHelper pulls in DB repository code that may not be present/needed for unit-only runs.
-// Try to load it; if unavailable, allow unit suites to continue (integration suites will error).
-let DatabaseHelper: DatabaseHelperCtor | null = null;
-try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
-    DatabaseHelper = require("./tests/helpers/DatabaseHelper").DatabaseHelper;
-} catch {
-    DatabaseHelper = null;
-    // eslint-disable-next-line no-console
-    console.warn(
-        "[jest.setup] DatabaseHelper not available. Integration tests that rely on DB helpers will fail."
-    );
-}
+import { DatabaseHelper } from "./tests/helpers/DatabaseHelper";
 
 // Load environment variables from .env file
 dotenv.config({ path: path.resolve(__dirname, ".env") });
@@ -62,7 +47,7 @@ global.console = {
 
 // Global test database pool
 let globalTestPool: Pool | null = null;
-let globalDbHelper: InstanceType<DatabaseHelperCtor> | null = null;
+let globalDbHelper: InstanceType<typeof DatabaseHelper> | null = null;
 
 /**
  * Get or create global test pool
@@ -88,16 +73,7 @@ export function getGlobalTestPool(): Pool {
     return globalTestPool;
 }
 
-/**
- * Get or create global database helper
- */
-export function getGlobalDbHelper(): InstanceType<DatabaseHelperCtor> {
-    if (!DatabaseHelper) {
-        throw new Error(
-            "DatabaseHelper is unavailable. Ensure backend/tests/helpers/DatabaseHelper.ts and its dependencies exist before running DB-dependent tests."
-        );
-    }
-
+export function getGlobalDbHelper(): InstanceType<typeof DatabaseHelper> {
     if (!globalDbHelper) {
         const pool = getGlobalTestPool();
         globalDbHelper = new DatabaseHelper(pool);

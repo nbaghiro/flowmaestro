@@ -1,5 +1,5 @@
 {
-    "name": "Phase 01-03 Core Logic Flow",
+    "name": "Numbers Routing and Aggregation Flow",
     "description": "Pure in-memory flow covering transform, conditional branching, variable, and output nodes.",
     "entryPoint": "input-1",
     "nodes": {

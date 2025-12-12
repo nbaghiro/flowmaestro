@@ -1,9 +1,9 @@
 import { Pool } from "pg";
 import { getGlobalTestPool } from "../../../jest.setup";
 import { WorkflowTestHarness } from "../../helpers/WorkflowTestHarness";
-import workflowDefinition from "../fixtures/workflows/01-03-phase-core-logic.json";
+import workflowDefinition from "../fixtures/workflows/03-numbers-routing-and-aggregation.json";
 
-describe("Phase 01-03: Core logic flow (transform → conditional → variable → output)", () => {
+describe("Numbers routing and aggregation flow (transform → conditional → variable → output)", () => {
     let pool: Pool;
     let testHarness: WorkflowTestHarness;
     const scenarios = [

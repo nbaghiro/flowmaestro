@@ -1,4 +1,5 @@
 import { createContext, runInContext } from "vm";
+
 type JsonObject = Record<string, unknown>;
 
 /**
@@ -65,8 +66,3 @@ export function evaluateExpression(expression: string, context: JsonObject): boo
         throw new Error(`Expression evaluation failed: ${expression}`);
     }
 }
-
-// Example usage:
-// evaluateExpression("data.type === 'urgent'", { data: { type: "urgent" } }) // true
-// evaluateExpression("score > 80 && status !== 'rejected'", { score: 95, status: "pending" }) // true
-// evaluateExpression("items.length > 0", { items: [1, 2, 3] }) // true

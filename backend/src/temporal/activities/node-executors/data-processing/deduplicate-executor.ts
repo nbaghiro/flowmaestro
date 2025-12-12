@@ -1,5 +1,5 @@
 import type { JsonArray, JsonObject, JsonValue } from "@flowmaestro/shared";
-import { getVariableValue } from "../../../utils/node-execution/utils";
+import { getVariableValue } from "../../../../core/utils/interpolate-variables";
 
 export interface DeduplicateNodeConfig {
     inputArray: string;
