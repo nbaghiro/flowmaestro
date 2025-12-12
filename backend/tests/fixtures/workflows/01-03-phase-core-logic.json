@@ -53,6 +53,16 @@
             },
             "position": { "x": 360, "y": 320 }
         },
+        "aggregate-max": {
+            "type": "aggregate",
+            "name": "Max Number",
+            "config": {
+                "inputArray": "${numbers}",
+                "operation": "max",
+                "outputVariable": "maxNumber"
+            },
+            "position": { "x": 360, "y": 60 }
+        },
         "conditional-score": {
             "type": "router",
             "name": "Route by Sum",
@@ -108,6 +118,7 @@
         { "id": "e-1", "source": "input-1", "target": "transform-default" },
         { "id": "e0", "source": "transform-default", "target": "transform-sum" },
         { "id": "e0b", "source": "transform-default", "target": "transform-filter" },
+        { "id": "e0c", "source": "transform-default", "target": "aggregate-max" },
         { "id": "e1", "source": "transform-sum", "target": "conditional-score" },
         { "id": "e2", "source": "transform-filter", "target": "transform-count" },
         { "id": "e2b", "source": "transform-count", "target": "conditional-score" },
