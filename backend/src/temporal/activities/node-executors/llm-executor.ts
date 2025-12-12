@@ -4,7 +4,7 @@ import { CohereClient } from "cohere-ai";
 import OpenAI from "openai";
 import type { JsonObject } from "@flowmaestro/shared";
 import { ConnectionRepository } from "../../../storage/repositories/ConnectionRepository";
-import { interpolateVariables } from "./utils";
+import { interpolateVariables } from "../../utils/node-execution/utils";
 import type { ApiKeyData } from "../../../storage/models/Connection";
 
 const connectionRepository = new ConnectionRepository();

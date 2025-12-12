@@ -4,15 +4,15 @@ import { Button } from "../../components/common/Button";
 import { Input } from "../../components/common/Input";
 import { useWorkflowStore } from "../../stores/workflowStore";
 // AI & ML
-import { AggregateNodeConfig } from "../nodes/tools/data-processing/config/AggregateNodeConfig";
-import { DeduplicateNodeConfig } from "../nodes/tools/data-processing/config/DeduplicateNodeConfig";
-import { FilterNodeConfig } from "../nodes/tools/data-processing/config/FilterNodeConfig";
-import { TransformNodeConfig } from "../nodes/tools/data-processing/config/TransformNodeConfig";
-import { InputNodeConfig } from "../nodes/tools/flow-control/config/InputNodeConfig";
-import { LoopNodeConfig } from "../nodes/tools/flow-control/config/LoopNodeConfig";
-import { OutputNodeConfig } from "../nodes/tools/flow-control/config/OutputNodeConfig";
-import { RouterNodeConfig } from "../nodes/tools/flow-control/config/RouterNodeConfig";
-import { WaitNodeConfig } from "../nodes/tools/flow-control/config/WaitNodeConfig";
+import { AggregateNodeConfig } from "../nodes/data-processing/config/AggregateNodeConfig";
+import { DeduplicateNodeConfig } from "../nodes/data-processing/config/DeduplicateNodeConfig";
+import { FilterNodeConfig } from "../nodes/data-processing/config/FilterNodeConfig";
+import { TransformNodeConfig } from "../nodes/data-processing/config/TransformNodeConfig";
+import { InputNodeConfig } from "../nodes/flow-control/config/InputNodeConfig";
+import { LoopNodeConfig } from "../nodes/flow-control/config/LoopNodeConfig";
+import { OutputNodeConfig } from "../nodes/flow-control/config/OutputNodeConfig";
+import { RouterNodeConfig } from "../nodes/flow-control/config/RouterNodeConfig";
+import { WaitNodeConfig } from "../nodes/flow-control/config/WaitNodeConfig";
 import { AudioNodeConfig } from "./configs/AudioNodeConfig";
 // Logic & Code
 import { CodeNodeConfig } from "./configs/CodeNodeConfig";

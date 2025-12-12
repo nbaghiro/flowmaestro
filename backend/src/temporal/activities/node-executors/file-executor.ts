@@ -2,7 +2,7 @@ import * as fs from "fs/promises";
 import * as path from "path";
 import * as pdf from "pdf-parse";
 import type { JsonObject } from "@flowmaestro/shared";
-import { interpolateVariables } from "./utils";
+import { interpolateVariables } from "../../utils/node-execution/utils";
 
 export interface FileOperationsNodeConfig {
     operation: "read" | "write" | "parsePDF" | "parseCSV" | "parseJSON";

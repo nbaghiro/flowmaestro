@@ -47,13 +47,13 @@ jobs:
       - name: Check code formatting
         run: npm run format:check
 
-      # Run flow executor tests to ensure node execution pipeline coverage
-      - name: Run flow executor tests
-        run: npm run test --workspace=backend -- tests/flow-executors
+      # Run unit tests
+      - name: Run unit tests
+        run: npm run test:unit
 
       # Run integration tests
-      # - name: Run integration tests
-      #   run: npm run test
+      - name: Run integration tests
+        run: npm run test:integration
 
       # Build all packages to ensure no build errors
       - name: Build all packages

@@ -1,14 +1,18 @@
 import type { JsonObject, JsonValue } from "@flowmaestro/shared";
-import { executeAggregateNode, AggregateNodeConfig } from "./aggregate-executor";
 import { executeAudioNode, AudioNodeConfig, AudioNodeResult } from "./audio-executor";
 import { executeCodeNode, CodeNodeConfig, CodeNodeResult } from "./code-executor";
+import { executeAggregateNode, AggregateNodeConfig } from "./data-processing/aggregate-executor";
 import {
-    executeConditionalNode,
-    ConditionalNodeConfig,
-    ConditionalNodeResult
-} from "./conditional-executor";
+    executeDeduplicateNode,
+    DeduplicateNodeConfig
+} from "./data-processing/deduplicate-executor";
+import { executeFilterNode, FilterNodeConfig } from "./data-processing/filter-executor";
+import {
+    executeTransformNode,
+    TransformNodeConfig,
+    TransformNodeResult
+} from "./data-processing/transform-executor";
 import { executeDatabaseNode, DatabaseNodeConfig, DatabaseNodeResult } from "./database-executor";
-import { executeDeduplicateNode, DeduplicateNodeConfig } from "./deduplicate-executor";
 import { executeEchoNode, EchoNodeConfig, EchoNodeResult } from "./echo-executor";
 import {
     executeEmbeddingsNode,
@@ -20,7 +24,20 @@ import {
     FileOperationsNodeConfig,
     FileOperationsNodeResult
 } from "./file-executor";
-import { executeFilterNode, FilterNodeConfig } from "./filter-executor";
+import {
+    executeConditionalNode,
+    ConditionalNodeConfig,
+    ConditionalNodeResult
+} from "./flow-control/conditional-executor";
+import { executeLoopNode, LoopNodeConfig, LoopNodeResult } from "./flow-control/loop-executor";
+import { executeOutputNode, OutputNodeConfig } from "./flow-control/output-executor";
+import { executeRouterNode, RouterNodeConfig } from "./flow-control/router-executor";
+import {
+    executeSwitchNode,
+    SwitchNodeConfig,
+    SwitchNodeResult
+} from "./flow-control/switch-executor";
+import { executeWaitNode, WaitNodeConfig, WaitNodeResult } from "./flow-control/wait-executor";
 import { executeHTTPNode, HTTPNodeConfig, HTTPNodeResult } from "./http-executor";
 import {
     executeIntegrationNode,
@@ -29,18 +46,8 @@ import {
 } from "./integration-executor";
 import { executeKnowledgeBaseQueryNode, KnowledgeBaseQueryNodeConfig } from "./kb-query-executor";
 import { executeLLMNode, LLMNodeConfig, LLMNodeResult } from "./llm-executor";
-import { executeLoopNode, LoopNodeConfig, LoopNodeResult } from "./loop-executor";
-import { executeOutputNode, OutputNodeConfig } from "./output-executor";
-import { executeRouterNode, RouterNodeConfig } from "./router-executor";
-import { executeSwitchNode, SwitchNodeConfig, SwitchNodeResult } from "./switch-executor";
-import {
-    executeTransformNode,
-    TransformNodeConfig,
-    TransformNodeResult
-} from "./transform-executor";
 import { executeVariableNode, VariableNodeConfig, VariableNodeResult } from "./variable-executor";
 import { executeVisionNode, VisionNodeConfig, VisionNodeResult } from "./vision-executor";
-import { executeWaitNode, WaitNodeConfig, WaitNodeResult } from "./wait-executor";
 
 export type NodeConfig =
     | { type: "http"; config: HTTPNodeConfig }

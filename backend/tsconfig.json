@@ -9,10 +9,10 @@
     "include": [
         "src/**/*",
         "../shared/src/**/*",
-        "tests/flow-executors/input-executor.test.ts",
-        "tests/flow-executors/loop-executor.test.ts",
-        "tests/flow-executors/router-executor.test.ts",
-        "tests/flow-executors/wait-executor.test.ts"
+        "tests/unit/flow-executors/input-executor.test.ts",
+        "tests/unit/flow-executors/loop-executor.test.ts",
+        "tests/unit/flow-executors/router-executor.test.ts",
+        "tests/unit/flow-executors/wait-executor.test.ts"
     ],
     "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts"]
 }

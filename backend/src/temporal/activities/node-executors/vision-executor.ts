@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import OpenAI from "openai";
 import type { JsonObject } from "@flowmaestro/shared";
-import { interpolateVariables } from "./utils";
+import { interpolateVariables } from "../../utils/node-execution/utils";
 
 export interface VisionNodeConfig {
     provider: "openai" | "anthropic" | "google";

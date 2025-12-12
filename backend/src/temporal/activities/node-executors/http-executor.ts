@@ -1,5 +1,5 @@
 import type { JsonObject, JsonValue } from "@flowmaestro/shared";
-import { interpolateVariables } from "./utils";
+import { interpolateVariables } from "../../utils/node-execution/utils";
 
 export interface HTTPNodeConfig {
     method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
