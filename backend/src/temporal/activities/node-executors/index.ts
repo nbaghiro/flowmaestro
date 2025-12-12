@@ -31,6 +31,7 @@ import { executeKnowledgeBaseQueryNode, KnowledgeBaseQueryNodeConfig } from "./k
 import { executeLLMNode, LLMNodeConfig, LLMNodeResult } from "./llm-executor";
 import { executeLoopNode, LoopNodeConfig, LoopNodeResult } from "./loop-executor";
 import { executeOutputNode, OutputNodeConfig } from "./output-executor";
+import { executeRouterNode, RouterNodeConfig } from "./router-executor";
 import { executeSwitchNode, SwitchNodeConfig, SwitchNodeResult } from "./switch-executor";
 import {
     executeTransformNode,
@@ -51,6 +52,7 @@ export type NodeConfig =
     | { type: "input"; config: JsonObject } // Input is handled differently
     | { type: string; config: JsonObject } // Other node types not yet implemented
     | { type: "filter"; config: FilterNodeConfig }
+    | { type: "router"; config: RouterNodeConfig }
     | { type: "aggregate"; config: AggregateNodeConfig }
     | { type: "deduplicate"; config: DeduplicateNodeConfig };
 
@@ -129,10 +131,15 @@ export async function executeNode(input: ExecuteNodeInput): Promise<JsonObject> 
         }
 
         case "conditional":
-        case "switch":
         case "loop":
             // Control flow nodes are handled by the workflow orchestrator
             throw new Error(`${nodeType} nodes must be handled by workflow orchestrator`);
+
+        case "router":
+            return await executeRouterNode(nodeConfig as unknown as RouterNodeConfig, context);
+
+        case "switch":
+            return await executeSwitchNode(nodeConfig as unknown as SwitchNodeConfig, context);
 
         case "echo":
             return await executeEchoNode(nodeConfig as unknown as EchoNodeConfig, context);

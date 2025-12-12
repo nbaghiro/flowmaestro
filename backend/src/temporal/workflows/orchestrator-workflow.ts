@@ -203,6 +203,13 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
             throw new Error(`Node ${nodeId} not found in workflow definition`);
         }
 
+        // Debug: log node config for LLM and integration-dependent nodes
+        if (node.type === "llm" || node.type === "database" || node.type === "integration") {
+            console.log(
+                `[Debug][${node.type}] Node ${nodeId} config: ${JSON.stringify(node.config, null, 2)}`
+            );
+        }
+
         // Wait for all dependencies to complete
         const dependencies = incomingEdges.get(nodeId) || [];
         for (const depId of dependencies) {
@@ -384,6 +391,34 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
                     if (shouldExecute) {
                         console.log(
                             `[Orchestrator] Following ${edge.sourceHandle || "unconditional"} branch to ${edge.target}`
+                        );
+                        await executeNodeAndDependents(edge.target);
+                    }
+                }
+            } else if (node.type === "router") {
+                const routes = (context.__routeOutputs as string[] | undefined) || [];
+                const routeSet = new Set(routes);
+                console.log(
+                    `[Orchestrator] Router node ${nodeId} routes: ${
+                        routes.length ? routes.join(", ") : "none"
+                    }`
+                );
+
+                for (const edge of dependentEdges) {
+                    const shouldExecute = !edge.sourceHandle || routeSet.has(edge.sourceHandle);
+                    if (!shouldExecute) {
+                        console.log(
+                            `[Orchestrator] Marking route ${edge.sourceHandle || "default"} to ${edge.target} as skipped`
+                        );
+                        markNodeAsSkipped(edge.target);
+                    }
+                }
+
+                for (const edge of dependentEdges) {
+                    const shouldExecute = !edge.sourceHandle || routeSet.has(edge.sourceHandle);
+                    if (shouldExecute) {
+                        console.log(
+                            `[Orchestrator] Following route ${edge.sourceHandle || "default"} to ${edge.target}`
                         );
                         await executeNodeAndDependents(edge.target);
                     }

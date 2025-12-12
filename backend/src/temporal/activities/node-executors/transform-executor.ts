@@ -27,9 +27,15 @@ export async function executeTransformNode(
     config: TransformNodeConfig,
     context: JsonObject
 ): Promise<JsonObject> {
-    const inputData = getVariableValue<JsonValue>(config.inputData, context);
+    let inputData = getVariableValue<JsonValue>(config.inputData, context);
+
+    // Allow custom transforms to handle missing data (e.g., provide defaults via expression)
     if (inputData === undefined) {
-        throw new Error(`Variable ${config.inputData} is undefined`);
+        if (config.operation === "custom") {
+            inputData = null;
+        } else {
+            throw new Error(`Variable ${config.inputData} is undefined`);
+        }
     }
 
     let result: JsonValue;

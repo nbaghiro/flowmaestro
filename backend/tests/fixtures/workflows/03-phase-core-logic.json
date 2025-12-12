@@ -1,0 +1,132 @@
+{
+    "name": "Phase 01-03 Core Logic Flow",
+    "description": "Pure in-memory flow covering transform, conditional branching, variable, and output nodes.",
+    "entryPoint": "input-1",
+    "nodes": {
+        "input-1": {
+            "type": "input",
+            "name": "Numbers Input",
+            "config": {},
+            "position": { "x": 80, "y": 140 }
+        },
+        "transform-default": {
+            "type": "transform",
+            "name": "Default Numbers",
+            "config": {
+                "operation": "custom",
+                "inputData": "${numbers}",
+                "expression": "$exists($data) ? $data : [2,3,5]",
+                "outputVariable": "numbers"
+            },
+            "position": { "x": 80, "y": 220 }
+        },
+        "transform-sum": {
+            "type": "transform",
+            "name": "Sum Numbers",
+            "config": {
+                "operation": "reduce",
+                "inputData": "${numbers}",
+                "expression": "(acc, val) => acc + val",
+                "outputVariable": "sum"
+            },
+            "position": { "x": 120, "y": 160 }
+        },
+        "transform-filter": {
+            "type": "transform",
+            "name": "Filter Numbers >= 3",
+            "config": {
+                "operation": "filter",
+                "inputData": "${numbers}",
+                "expression": "item => item >= 3",
+                "outputVariable": "filteredNumbers"
+            },
+            "position": { "x": 120, "y": 320 }
+        },
+        "transform-count": {
+            "type": "transform",
+            "name": "Count Filtered",
+            "config": {
+                "operation": "custom",
+                "inputData": "${filteredNumbers}",
+                "expression": "$count($data)",
+                "outputVariable": "filteredCount"
+            },
+            "position": { "x": 360, "y": 320 }
+        },
+        "conditional-score": {
+            "type": "router",
+            "name": "Route by Sum",
+            "config": {
+                "conditions": [
+                    {
+                        "name": "high",
+                        "expression": "sum >= 10",
+                        "description": "Send to high branch when sum is 10 or more"
+                    }
+                ],
+                "defaultOutput": "low",
+                "evaluationMode": "first"
+            },
+            "position": { "x": 360, "y": 160 }
+        },
+        "variable-high": {
+            "type": "variable",
+            "name": "High Message",
+            "config": {
+                "operation": "set",
+                "variableName": "message",
+                "value": "High sum ${sum} with ${filteredCount} passing numbers",
+                "scope": "workflow",
+                "valueType": "string"
+            },
+            "position": { "x": 600, "y": 140 }
+        },
+        "variable-low": {
+            "type": "variable",
+            "name": "Low Message",
+            "config": {
+                "operation": "set",
+                "variableName": "message",
+                "value": "Low sum ${sum}",
+                "scope": "workflow",
+                "valueType": "string"
+            },
+            "position": { "x": 600, "y": 240 }
+        },
+        "output-final": {
+            "type": "output",
+            "name": "Final Output",
+            "config": {
+                "outputVariable": "result",
+                "format": "json",
+                "fields": ["sum", "filteredNumbers", "filteredCount", "message"]
+            },
+            "position": { "x": 840, "y": 200 }
+        }
+    },
+    "edges": [
+        { "id": "e-1", "source": "input-1", "target": "transform-default" },
+        { "id": "e0", "source": "transform-default", "target": "transform-sum" },
+        { "id": "e0b", "source": "transform-default", "target": "transform-filter" },
+        { "id": "e1", "source": "transform-sum", "target": "conditional-score" },
+        { "id": "e2", "source": "transform-filter", "target": "transform-count" },
+        { "id": "e2b", "source": "transform-count", "target": "conditional-score" },
+        {
+            "id": "e5",
+            "source": "conditional-score",
+            "target": "variable-high",
+            "sourceHandle": "high"
+        },
+        {
+            "id": "e6",
+            "source": "conditional-score",
+            "target": "variable-low",
+            "sourceHandle": "low"
+        },
+        { "id": "e7", "source": "variable-high", "target": "output-final" },
+        { "id": "e8", "source": "variable-low", "target": "output-final" },
+        { "id": "e9", "source": "transform-sum", "target": "output-final" },
+        { "id": "e10", "source": "transform-count", "target": "output-final" },
+        { "id": "e11", "source": "transform-filter", "target": "output-final" }
+    ]
+}
