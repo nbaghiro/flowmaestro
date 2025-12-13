@@ -339,11 +339,11 @@ export const ALL_PROVIDERS: Provider[] = [
     {
         provider: "shopify",
         displayName: "Shopify",
-        description: "Manage products and orders",
+        description: "Manage products, orders, inventory, and customers",
         logoUrl: getBrandLogo("shopify.com"),
         category: "E-commerce",
-        methods: ["api_key", "oauth2"],
-        comingSoon: true
+        methods: ["oauth2"],
+        comingSoon: false
     },
 
     // Marketing & Email

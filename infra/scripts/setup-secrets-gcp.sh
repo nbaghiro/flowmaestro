@@ -289,6 +289,8 @@ EXISTING_APOLLO_CLIENT_ID=$(get_existing_gcp_secret "flowmaestro-app-apollo-clie
 EXISTING_APOLLO_CLIENT_SECRET=$(get_existing_gcp_secret "flowmaestro-app-apollo-client-secret")
 EXISTING_JIRA_CLIENT_ID=$(get_existing_gcp_secret "flowmaestro-app-jira-client-id")
 EXISTING_JIRA_CLIENT_SECRET=$(get_existing_gcp_secret "flowmaestro-app-jira-client-secret")
+EXISTING_SHOPIFY_CLIENT_ID=$(get_existing_gcp_secret "flowmaestro-app-shopify-client-id")
+EXISTING_SHOPIFY_CLIENT_SECRET=$(get_existing_gcp_secret "flowmaestro-app-shopify-client-secret")
 
 # Try to get from Pulumi outputs as fallback for infrastructure values
 if [ -z "$EXISTING_DB_HOST" ]; then
@@ -321,6 +323,7 @@ FOUND_COUNT=0
 [ -n "$EXISTING_ZENDESK_CLIENT_ID" ] && ((FOUND_COUNT++))
 [ -n "$EXISTING_APOLLO_CLIENT_ID" ] && ((FOUND_COUNT++))
 [ -n "$EXISTING_JIRA_CLIENT_ID" ] && ((FOUND_COUNT++))
+[ -n "$EXISTING_SHOPIFY_CLIENT_ID" ] && ((FOUND_COUNT++))
 
 if [ $FOUND_COUNT -gt 0 ]; then
     print_success "Found $FOUND_COUNT existing secret(s)!"
@@ -342,6 +345,7 @@ if [ $FOUND_COUNT -gt 0 ]; then
     [ -n "$EXISTING_ZENDESK_CLIENT_ID" ] && print_info "  - Zendesk OAuth: configured"
     [ -n "$EXISTING_APOLLO_CLIENT_ID" ] && print_info "  - Apollo OAuth: configured"
     [ -n "$EXISTING_JIRA_CLIENT_ID" ] && print_info "  - Jira OAuth: configured"
+    [ -n "$EXISTING_SHOPIFY_CLIENT_ID" ] && print_info "  - Shopify OAuth: configured"
     echo ""
     if [ "$PROMPT_ALL" = false ]; then
         print_info "Mode: Only prompting for NON-EXISTING secrets"
@@ -783,6 +787,34 @@ else
     echo
 fi
 
+# Jira Cloud OAuth
+if [ -n "$EXISTING_JIRA_CLIENT_ID" ] && [ "$PROMPT_ALL" = false ]; then
+    print_info "Jira OAuth: already configured"
+    JIRA_CLIENT_ID="$EXISTING_JIRA_CLIENT_ID"
+    JIRA_CLIENT_SECRET="$EXISTING_JIRA_CLIENT_SECRET"
+elif [ -n "$EXISTING_JIRA_CLIENT_ID" ]; then
+    prompt_with_existing "Jira Client ID" "$EXISTING_JIRA_CLIENT_ID" "JIRA_CLIENT_ID"
+    prompt_with_existing "Jira Client Secret" "$EXISTING_JIRA_CLIENT_SECRET" "JIRA_CLIENT_SECRET"
+else
+    read -p "Jira Client ID: " JIRA_CLIENT_ID
+    read -p "Jira Client Secret: " -s JIRA_CLIENT_SECRET
+    echo
+fi
+
+# Shopify OAuth
+if [ -n "$EXISTING_SHOPIFY_CLIENT_ID" ] && [ "$PROMPT_ALL" = false ]; then
+    print_info "Shopify OAuth: already configured"
+    SHOPIFY_CLIENT_ID="$EXISTING_SHOPIFY_CLIENT_ID"
+    SHOPIFY_CLIENT_SECRET="$EXISTING_SHOPIFY_CLIENT_SECRET"
+elif [ -n "$EXISTING_SHOPIFY_CLIENT_ID" ]; then
+    prompt_with_existing "Shopify Client ID" "$EXISTING_SHOPIFY_CLIENT_ID" "SHOPIFY_CLIENT_ID"
+    prompt_with_existing "Shopify Client Secret" "$EXISTING_SHOPIFY_CLIENT_SECRET" "SHOPIFY_CLIENT_SECRET"
+else
+    read -p "Shopify Client ID: " SHOPIFY_CLIENT_ID
+    read -p "Shopify Client Secret: " -s SHOPIFY_CLIENT_SECRET
+    echo
+fi
+
 # Email Service (Resend)
 echo ""
 print_info "Email Service Configuration (Resend)"
@@ -843,6 +875,8 @@ create_or_update_secret "flowmaestro-app-apollo-client-id" "$APOLLO_CLIENT_ID"
 create_or_update_secret "flowmaestro-app-apollo-client-secret" "$APOLLO_CLIENT_SECRET"
 create_or_update_secret "flowmaestro-app-jira-client-id" "$JIRA_CLIENT_ID"
 create_or_update_secret "flowmaestro-app-jira-client-secret" "$JIRA_CLIENT_SECRET"
+create_or_update_secret "flowmaestro-app-shopify-client-id" "$SHOPIFY_CLIENT_ID"
+create_or_update_secret "flowmaestro-app-shopify-client-secret" "$SHOPIFY_CLIENT_SECRET"
 
 # Email Service (Resend)
 create_or_update_secret "flowmaestro-app-resend-api-key" "$RESEND_API_KEY"

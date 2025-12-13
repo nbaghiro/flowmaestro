@@ -104,14 +104,14 @@ FlowMaestro is a full-stack TypeScript monorepo:
 
 ```
 flowmaestro/
-├── frontend/          # React + Vite SPA (workflow canvas, agent builder)
-├── backend/           # Fastify API + Temporal workers
-├── shared/            # Shared TypeScript types and utilities
-├── marketing/         # Marketing website
+├── frontend/         # React + Vite SPA (workflow canvas, agent builder)
+├── backend/          # Fastify API + Temporal workers
+├── shared/           # Shared TypeScript types and utilities
+├── marketing/        # Marketing website
 └── infra/            # Kubernetes manifests and Pulumi IaC
-    ├── local/        # Docker Compose for local development
-    ├── k8s/          # Kubernetes deployments
-    └── pulumi/       # Infrastructure as Code
+    ├── local/         # Docker Compose for local development
+    ├── k8s/           # Kubernetes deployments
+    └── pulumi/        # Infrastructure as Code
 ```
 
 **Tech Stack:**

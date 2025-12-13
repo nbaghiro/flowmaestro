@@ -67,13 +67,19 @@ export class OAuthService {
     generateAuthUrl(provider: string, userId: string, options?: { subdomain?: string }): string {
         const config = getOAuthProvider(provider);
 
-        // Handle providers that require subdomain (like Zendesk)
+        // Handle providers that require subdomain/shop (like Zendesk, Shopify)
         let authUrl = config.authUrl;
         if (provider === "zendesk") {
             if (!options?.subdomain) {
                 throw new Error("Zendesk requires a subdomain to initiate OAuth flow");
             }
             authUrl = authUrl.replace("{subdomain}", options.subdomain);
+        } else if (provider === "shopify") {
+            if (!options?.subdomain) {
+                throw new Error("Shopify requires a shop name to initiate OAuth flow");
+            }
+            // Shopify uses {shop} placeholder - store shop name in subdomain field
+            authUrl = authUrl.replace("{shop}", options.subdomain);
         }
 
         // Generate PKCE parameters if provider supports it
@@ -335,10 +341,12 @@ export class OAuthService {
             delete params.client_secret;
         }
 
-        // Handle providers with dynamic subdomain (like Zendesk)
+        // Handle providers with dynamic subdomain/shop (like Zendesk, Shopify)
         let tokenUrl = config.tokenUrl;
         if (config.name === "zendesk" && subdomain) {
             tokenUrl = tokenUrl.replace("{subdomain}", subdomain);
+        } else if (config.name === "shopify" && subdomain) {
+            tokenUrl = tokenUrl.replace("{shop}", subdomain);
         }
 
         const response = await fetch(tokenUrl, {

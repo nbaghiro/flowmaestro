@@ -1705,6 +1705,93 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
         },
         refreshable: true,
         pkceEnabled: false
+    },
+
+    // ==========================================================================
+    // Shopify E-commerce
+    // NOTE: Shopify requires shop name in OAuth URLs. The {shop} placeholder
+    // is replaced at runtime based on user-provided shop name (like Zendesk subdomain).
+    // ==========================================================================
+
+    shopify: {
+        name: "shopify",
+        displayName: "Shopify",
+        // Template URLs - {shop} must be replaced at runtime with shop name
+        authUrl: "https://{shop}.myshopify.com/admin/oauth/authorize",
+        tokenUrl: "https://{shop}.myshopify.com/admin/oauth/access_token",
+        scopes: [
+            "read_products",
+            "write_products",
+            "read_orders",
+            "write_orders",
+            "read_customers",
+            "write_customers",
+            "read_inventory",
+            "write_inventory",
+            "read_fulfillments",
+            "write_fulfillments"
+        ],
+        clientId: process.env.SHOPIFY_CLIENT_ID || "",
+        clientSecret: process.env.SHOPIFY_CLIENT_SECRET || "",
+        redirectUri: `${process.env.API_URL || "http://localhost:3001"}/api/oauth/shopify/callback`,
+        getUserInfo: async (accessToken: string, shop?: string) => {
+            try {
+                if (!shop) {
+                    throw new Error("Shopify shop name is required");
+                }
+
+                // Fetch shop info using Shop API
+                const response = await fetch(
+                    `https://${shop}.myshopify.com/admin/api/2025-01/shop.json`,
+                    {
+                        headers: {
+                            "X-Shopify-Access-Token": accessToken,
+                            "Content-Type": "application/json"
+                        }
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    shop?: {
+                        id?: number;
+                        name?: string;
+                        email?: string;
+                        domain?: string;
+                        myshopify_domain?: string;
+                        plan_name?: string;
+                        shop_owner?: string;
+                        currency?: string;
+                        timezone?: string;
+                    };
+                };
+
+                return {
+                    shopId: data.shop?.id?.toString() || "unknown",
+                    shopName: data.shop?.name || "Shopify Store",
+                    email: data.shop?.email || "unknown@shopify",
+                    domain: data.shop?.domain,
+                    myshopifyDomain: data.shop?.myshopify_domain,
+                    plan: data.shop?.plan_name,
+                    owner: data.shop?.shop_owner,
+                    currency: data.shop?.currency,
+                    timezone: data.shop?.timezone,
+                    shop // Store shop name for API calls
+                };
+            } catch (error) {
+                console.error("[OAuth] Failed to get Shopify shop info:", error);
+                return {
+                    shopId: "unknown",
+                    shopName: "Shopify Store",
+                    email: "unknown@shopify",
+                    shop
+                };
+            }
+        },
+        refreshable: false // Shopify offline tokens don't expire unless app is uninstalled
     }
 };
 

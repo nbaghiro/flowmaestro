@@ -167,6 +167,8 @@ APOLLO_CLIENT_ID=$(get_secret "flowmaestro-app-apollo-client-id" "")
 APOLLO_CLIENT_SECRET=$(get_secret "flowmaestro-app-apollo-client-secret" "")
 JIRA_CLIENT_ID=$(get_secret "flowmaestro-app-jira-client-id" "")
 JIRA_CLIENT_SECRET=$(get_secret "flowmaestro-app-jira-client-secret" "")
+SHOPIFY_CLIENT_ID=$(get_secret "flowmaestro-app-shopify-client-id" "")
+SHOPIFY_CLIENT_SECRET=$(get_secret "flowmaestro-app-shopify-client-secret" "")
 
 # Email Service (Resend)
 RESEND_API_KEY=$(get_secret "flowmaestro-app-resend-api-key" "")
@@ -434,6 +436,19 @@ else
     echo "# Jira Cloud" >> "$BACKEND_ENV_FILE"
     echo "JIRA_CLIENT_ID=" >> "$BACKEND_ENV_FILE"
     echo "JIRA_CLIENT_SECRET=" >> "$BACKEND_ENV_FILE"
+    echo "" >> "$BACKEND_ENV_FILE"
+fi
+
+# Shopify OAuth
+if [ -n "$SHOPIFY_CLIENT_ID" ] || [ -n "$SHOPIFY_CLIENT_SECRET" ]; then
+    echo "# Shopify" >> "$BACKEND_ENV_FILE"
+    echo "SHOPIFY_CLIENT_ID=${SHOPIFY_CLIENT_ID}" >> "$BACKEND_ENV_FILE"
+    echo "SHOPIFY_CLIENT_SECRET=${SHOPIFY_CLIENT_SECRET}" >> "$BACKEND_ENV_FILE"
+    echo "" >> "$BACKEND_ENV_FILE"
+else
+    echo "# Shopify" >> "$BACKEND_ENV_FILE"
+    echo "SHOPIFY_CLIENT_ID=" >> "$BACKEND_ENV_FILE"
+    echo "SHOPIFY_CLIENT_SECRET=" >> "$BACKEND_ENV_FILE"
     echo "" >> "$BACKEND_ENV_FILE"
 fi
 
