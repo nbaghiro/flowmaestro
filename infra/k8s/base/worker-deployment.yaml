@@ -105,8 +105,10 @@ spec:
                   key: port
 
             # Temporal configuration
+            # Use Kubernetes-injected service IP to bypass DNS resolution issues
+            # with Temporal SDK's Rust-based NativeConnection (tonic/hyper)
             - name: TEMPORAL_ADDRESS
-              value: "temporal-service:7233"
+              value: "$(TEMPORAL_SERVICE_SERVICE_HOST):7233"
             - name: TEMPORAL_NAMESPACE
               value: "default"
 
@@ -131,14 +133,14 @@ spec:
               cpu: 4000m
               memory: 4Gi
 
-          # Worker health can be checked via logs - no HTTP endpoint
-          # Use liveness probe to restart if process crashes
+          # Worker health check using /proc filesystem (no external utils needed)
+          # Checks if PID 1 (node process) is still running
           livenessProbe:
             exec:
               command:
                 - sh
                 - -c
-                - "ps aux | grep orchestrator-worker || exit 1"
+                - "test -d /proc/1"
             initialDelaySeconds: 60
             periodSeconds: 30
             timeoutSeconds: 5
