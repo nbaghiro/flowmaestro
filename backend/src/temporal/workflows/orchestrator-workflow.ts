@@ -203,13 +203,6 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
             throw new Error(`Node ${nodeId} not found in workflow definition`);
         }
 
-        // Debug: log node config for LLM and integration-dependent nodes
-        if (node.type === "llm" || node.type === "database" || node.type === "integration") {
-            console.log(
-                `[Debug][${node.type}] Node ${nodeId} config: ${JSON.stringify(node.config, null, 2)}`
-            );
-        }
-
         // Wait for all dependencies to complete
         const dependencies = incomingEdges.get(nodeId) || [];
         for (const depId of dependencies) {

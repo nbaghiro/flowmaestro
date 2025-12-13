@@ -1,7 +1,7 @@
 import { Pool } from "pg";
 import { getGlobalTestPool } from "../../../jest.setup";
 import { WorkflowTestHarness } from "../../helpers/WorkflowTestHarness";
-import workflowDefinition from "../fixtures/workflows/03-numbers-routing-and-aggregation.json";
+import workflowDefinition from "../fixtures/workflows/01-numbers-routing-and-aggregation.json";
 
 describe("Numbers routing and aggregation flow (transform → conditional → variable → output)", () => {
     let pool: Pool;

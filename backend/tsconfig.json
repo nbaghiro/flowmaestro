@@ -6,13 +6,6 @@
         "composite": true,
         "jsx": "react"
     },
-    "include": [
-        "src/**/*",
-        "../shared/src/**/*",
-        "tests/unit/flow-executors/input-executor.test.ts",
-        "tests/unit/flow-executors/loop-executor.test.ts",
-        "tests/unit/flow-executors/router-executor.test.ts",
-        "tests/unit/flow-executors/wait-executor.test.ts"
-    ],
+    "include": ["src/**/*", "../shared/src/**/*"],
     "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts"]
 }

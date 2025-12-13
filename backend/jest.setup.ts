@@ -47,7 +47,7 @@ global.console = {
 
 // Global test database pool
 let globalTestPool: Pool | null = null;
-let globalDbHelper: InstanceType<typeof DatabaseHelper> | null = null;
+let globalDbHelper: DatabaseHelper | null = null;
 
 /**
  * Get or create global test pool
@@ -73,7 +73,10 @@ export function getGlobalTestPool(): Pool {
     return globalTestPool;
 }
 
-export function getGlobalDbHelper(): InstanceType<typeof DatabaseHelper> {
+/**
+ * Get or create global database helper
+ */
+export function getGlobalDbHelper(): DatabaseHelper {
     if (!globalDbHelper) {
         const pool = getGlobalTestPool();
         globalDbHelper = new DatabaseHelper(pool);

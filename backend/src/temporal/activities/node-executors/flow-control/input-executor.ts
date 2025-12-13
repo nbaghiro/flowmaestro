@@ -1,12 +1,4 @@
-// Minimal JSON types – can be replaced later with shared types if needed
-export type JsonPrimitive = string | number | boolean | null;
-export type JsonValue = JsonPrimitive | JsonValue[] | JsonObject;
-
-export interface JsonObject {
-    [key: string]: JsonValue | undefined;
-    input?: JsonObject;
-}
-export type JsonSchema = unknown;
+import type { JsonObject, JsonSchema, JsonValue } from "@flowmaestro/shared";
 
 // Simple ValidationError – matches spec name
 export class ValidationError extends Error {
@@ -24,8 +16,6 @@ function validateSchema(_input: unknown, schema: JsonSchema): boolean {
     return true;
 }
 
-// ---- Spec: InputNodeConfig ----
-
 interface InputNodeConfig {
     inputType: "manual" | "json" | "csv" | "form";
     schema?: JsonSchema;
@@ -34,13 +24,13 @@ interface InputNodeConfig {
     requiredFields?: string[];
 }
 
-// ---- Spec: executeInputNode ----
+type InputContext = JsonObject & { input?: JsonObject };
 
 // No execution needed - data passed from trigger/manual run
 // Validates against schema if provided
 export async function executeInputNode(
     config: InputNodeConfig,
-    context: JsonObject
+    context: InputContext
 ): Promise<JsonObject> {
     if (config.schema) {
         const valid = validateSchema(context.input, config.schema);

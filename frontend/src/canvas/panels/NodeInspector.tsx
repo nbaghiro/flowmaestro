@@ -4,15 +4,7 @@ import { Button } from "../../components/common/Button";
 import { Input } from "../../components/common/Input";
 import { useWorkflowStore } from "../../stores/workflowStore";
 // AI & ML
-import { AggregateNodeConfig } from "../nodes/data-processing/config/AggregateNodeConfig";
-import { DeduplicateNodeConfig } from "../nodes/data-processing/config/DeduplicateNodeConfig";
-import { FilterNodeConfig } from "../nodes/data-processing/config/FilterNodeConfig";
-import { TransformNodeConfig } from "../nodes/data-processing/config/TransformNodeConfig";
-import { InputNodeConfig } from "../nodes/flow-control/config/InputNodeConfig";
-import { LoopNodeConfig } from "../nodes/flow-control/config/LoopNodeConfig";
-import { OutputNodeConfig } from "../nodes/flow-control/config/OutputNodeConfig";
-import { RouterNodeConfig } from "../nodes/flow-control/config/RouterNodeConfig";
-import { WaitNodeConfig } from "../nodes/flow-control/config/WaitNodeConfig";
+import { AggregateNodeConfig } from "./configs/AggregateNodeConfig";
 import { AudioNodeConfig } from "./configs/AudioNodeConfig";
 // Logic & Code
 import { CodeNodeConfig } from "./configs/CodeNodeConfig";
@@ -20,14 +12,22 @@ import { ConditionalNodeConfig } from "./configs/ConditionalNodeConfig";
 // Data Operations
 // Connect
 import { DatabaseNodeConfig } from "./configs/DatabaseNodeConfig";
+import { DeduplicateNodeConfig } from "./configs/DeduplicateNodeConfig";
 import { EmbeddingsNodeConfig } from "./configs/EmbeddingsNodeConfig";
+import { FilterNodeConfig } from "./configs/FilterNodeConfig";
 import { HTTPNodeConfig } from "./configs/HTTPNodeConfig";
+import { InputNodeConfig } from "./configs/InputNodeConfig";
 import { IntegrationNodeConfig } from "./configs/IntegrationNodeConfig";
 import { KnowledgeBaseQueryNodeConfig } from "./configs/KnowledgeBaseQueryNodeConfig";
 import { LLMNodeConfig } from "./configs/LLMNodeConfig";
+import { LoopNodeConfig } from "./configs/LoopNodeConfig";
+import { OutputNodeConfig } from "./configs/OutputNodeConfig";
+import { RouterNodeConfig } from "./configs/RouterNodeConfig";
 import { SwitchNodeConfig } from "./configs/SwitchNodeConfig";
+import { TransformNodeConfig } from "./configs/TransformNodeConfig";
 import { VariableNodeConfig } from "./configs/VariableNodeConfig";
 import { VisionNodeConfig } from "./configs/VisionNodeConfig";
+import { WaitNodeConfig } from "./configs/WaitNodeConfig";
 
 export function NodeInspector() {
     const { nodes, selectedNode, selectNode, updateNode } = useWorkflowStore();
