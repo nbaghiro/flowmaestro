@@ -33,6 +33,8 @@ config:
   # =============================================================================
   flowmaestro-infrastructure:secrets: |
     [
+      {"name":"jwt-secret","envVar":"JWT_SECRET","category":"core","deployments":["api"],"required":true,"description":"JWT signing secret for authentication"},
+      {"name":"encryption-key","envVar":"ENCRYPTION_KEY","category":"core","deployments":["api","worker"],"required":true,"description":"AES-256 encryption key for sensitive data"},
       {"name":"resend-api-key","envVar":"RESEND_API_KEY","category":"service","deployments":["api"],"required":true,"description":"Resend email service API key"},
       {"name":"openai-api-key","envVar":"OPENAI_API_KEY","category":"llm","deployments":["api","worker"],"required":false,"description":"OpenAI API key for GPT models"},
       {"name":"anthropic-api-key","envVar":"ANTHROPIC_API_KEY","category":"llm","deployments":["api","worker"],"required":false,"description":"Anthropic API key for Claude models"},

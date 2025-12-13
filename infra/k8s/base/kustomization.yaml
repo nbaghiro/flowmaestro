@@ -8,14 +8,14 @@ resources:
   - configmap.yaml
   - gcs-configmap.yaml
   - temporal-configmap.yaml
-  # External Secrets - managed by External Secrets Operator
+  # External Secrets - Infrastructure (DB, Redis, Temporal)
+  # These are managed here because they have different lifecycles
   - external-secrets/secret-store.yaml
-  - external-secrets/app-secrets.yaml
   - external-secrets/db-credentials.yaml
   - external-secrets/redis-credentials.yaml
   - external-secrets/temporal-db-credentials.yaml
-  - external-secrets/llm-api-keys.yaml
-  - external-secrets/oauth-secrets.yaml
+  # NOTE: Application secrets (core, llm, oauth, service) are managed by Pulumi
+  # See: infra/pulumi/src/resources/app-secrets.ts
   # Deployments
   - api-deployment.yaml
   - worker-deployment.yaml
