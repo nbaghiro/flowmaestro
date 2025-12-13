@@ -1,3 +1,4 @@
+import { config as appConfig, getOAuthRedirectUri } from "../../../core/config";
 import { BaseProvider } from "../../core/BaseProvider";
 import { HubspotClient } from "./client/HubspotClient";
 import { HubspotMCPAdapter } from "./mcp/HubspotMCPAdapter";
@@ -401,9 +402,9 @@ export class HubspotProvider extends BaseProvider {
                 "conversations.read",
                 "conversations.write"
             ],
-            clientId: process.env.HUBSPOT_CLIENT_ID || "",
-            clientSecret: process.env.HUBSPOT_CLIENT_SECRET || "",
-            redirectUri: `${process.env.API_URL || "http://localhost:3001"}/api/oauth/hubspot/callback`,
+            clientId: appConfig.oauth.hubspot.clientId,
+            clientSecret: appConfig.oauth.hubspot.clientSecret,
+            redirectUri: getOAuthRedirectUri("hubspot"),
             refreshable: true
         };
 

@@ -1,3 +1,4 @@
+import { config as appConfig, getOAuthRedirectUri } from "../../../core/config";
 import { BaseProvider } from "../../core/BaseProvider";
 import { InstagramClient } from "./client/InstagramClient";
 import { InstagramMCPAdapter } from "./mcp/InstagramMCPAdapter";
@@ -106,9 +107,9 @@ export class InstagramProvider extends BaseProvider {
                 "pages_show_list",
                 "pages_read_engagement"
             ],
-            clientId: process.env.META_APP_ID || "",
-            clientSecret: process.env.META_APP_SECRET || "",
-            redirectUri: `${process.env.API_URL || "http://localhost:3001"}/api/oauth/meta/callback`,
+            clientId: appConfig.oauth.meta.appId,
+            clientSecret: appConfig.oauth.meta.appSecret,
+            redirectUri: getOAuthRedirectUri("instagram"),
             refreshable: true
         };
 

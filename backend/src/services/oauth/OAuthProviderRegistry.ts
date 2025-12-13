@@ -1,3 +1,5 @@
+import { config, getOAuthRedirectUri } from "../../core/config";
+
 /**
  * OAuth Provider Configuration
  * Defines the structure for OAuth 2.0 provider configuration
@@ -41,9 +43,9 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
             "users:read",
             "users:read.email"
         ],
-        clientId: process.env.SLACK_CLIENT_ID || "",
-        clientSecret: process.env.SLACK_CLIENT_SECRET || "",
-        redirectUri: `${process.env.API_URL || "http://localhost:3000"}/api/oauth/slack/callback`,
+        clientId: config.oauth.slack.clientId,
+        clientSecret: config.oauth.slack.clientSecret,
+        redirectUri: getOAuthRedirectUri("slack"),
         getUserInfo: async (accessToken: string) => {
             try {
                 const response = await fetch("https://slack.com/api/auth.test", {
@@ -106,9 +108,9 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
             access_type: "offline", // Required to get refresh token
             prompt: "consent" // Force consent screen to ensure refresh token
         },
-        clientId: process.env.GOOGLE_CLIENT_ID || "",
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
-        redirectUri: `${process.env.API_URL || "http://localhost:3000"}/api/oauth/google/callback`,
+        clientId: config.oauth.google.clientId,
+        clientSecret: config.oauth.google.clientSecret,
+        redirectUri: getOAuthRedirectUri("google"),
         getUserInfo: async (accessToken: string) => {
             try {
                 const response = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
@@ -155,9 +157,9 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
             access_type: "offline",
             prompt: "consent"
         },
-        clientId: process.env.GOOGLE_CLIENT_ID || "",
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
-        redirectUri: `${process.env.API_URL || "http://localhost:3000"}/api/oauth/google/callback`,
+        clientId: config.oauth.google.clientId,
+        clientSecret: config.oauth.google.clientSecret,
+        redirectUri: getOAuthRedirectUri("google"),
         getUserInfo: async (accessToken: string) => {
             try {
                 const response = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
@@ -201,9 +203,9 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
             access_type: "offline",
             prompt: "consent"
         },
-        clientId: process.env.GOOGLE_CLIENT_ID || "",
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
-        redirectUri: `${process.env.API_URL || "http://localhost:3000"}/api/oauth/google/callback`,
+        clientId: config.oauth.google.clientId,
+        clientSecret: config.oauth.google.clientSecret,
+        redirectUri: getOAuthRedirectUri("google"),
         getUserInfo: async (accessToken: string) => {
             try {
                 const response = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
@@ -247,9 +249,9 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
             access_type: "offline",
             prompt: "consent"
         },
-        clientId: process.env.GOOGLE_CLIENT_ID || "",
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
-        redirectUri: `${process.env.API_URL || "http://localhost:3000"}/api/oauth/google/callback`,
+        clientId: config.oauth.google.clientId,
+        clientSecret: config.oauth.google.clientSecret,
+        redirectUri: getOAuthRedirectUri("google"),
         getUserInfo: async (accessToken: string) => {
             try {
                 const response = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
@@ -292,9 +294,9 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
         authParams: {
             owner: "user"
         },
-        clientId: process.env.NOTION_CLIENT_ID || "",
-        clientSecret: process.env.NOTION_CLIENT_SECRET || "",
-        redirectUri: `${process.env.API_URL || "http://localhost:3000"}/api/oauth/notion/callback`,
+        clientId: config.oauth.notion.clientId,
+        clientSecret: config.oauth.notion.clientSecret,
+        redirectUri: getOAuthRedirectUri("notion"),
         tokenParams: {
             // Notion requires Basic Auth for token exchange
             grant_type: "authorization_code"
@@ -390,9 +392,9 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
             "data.recordComments:write",
             "webhook:manage"
         ],
-        clientId: process.env.AIRTABLE_CLIENT_ID || "",
-        clientSecret: process.env.AIRTABLE_CLIENT_SECRET || "",
-        redirectUri: `${process.env.API_URL || "http://localhost:3000"}/api/oauth/airtable/callback`,
+        clientId: config.oauth.airtable.clientId,
+        clientSecret: config.oauth.airtable.clientSecret,
+        redirectUri: getOAuthRedirectUri("airtable"),
         pkceEnabled: true, // Airtable requires PKCE for enhanced security
         getUserInfo: async (accessToken: string) => {
             try {
@@ -437,9 +439,9 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
             "workflow", // Manage GitHub Actions workflows
             "write:discussion" // Write discussions
         ],
-        clientId: process.env.GITHUB_CLIENT_ID || "",
-        clientSecret: process.env.GITHUB_CLIENT_SECRET || "",
-        redirectUri: `${process.env.API_URL || "http://localhost:3000"}/api/oauth/github/callback`,
+        clientId: config.oauth.github.clientId,
+        clientSecret: config.oauth.github.clientSecret,
+        redirectUri: getOAuthRedirectUri("github"),
         getUserInfo: async (accessToken: string) => {
             try {
                 const response = await fetch("https://api.github.com/user", {
@@ -530,9 +532,9 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
             "conversations.read",
             "conversations.write"
         ],
-        clientId: process.env.HUBSPOT_CLIENT_ID || "",
-        clientSecret: process.env.HUBSPOT_CLIENT_SECRET || "",
-        redirectUri: `${process.env.API_URL || "http://localhost:3000"}/api/oauth/hubspot/callback`,
+        clientId: config.oauth.hubspot.clientId,
+        clientSecret: config.oauth.hubspot.clientSecret,
+        redirectUri: getOAuthRedirectUri("hubspot"),
         getUserInfo: async (accessToken: string) => {
             try {
                 const response = await fetch(
@@ -574,9 +576,9 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
         authUrl: "https://linear.app/oauth/authorize",
         tokenUrl: "https://api.linear.app/oauth/token",
         scopes: ["read", "write"],
-        clientId: process.env.LINEAR_CLIENT_ID || "",
-        clientSecret: process.env.LINEAR_CLIENT_SECRET || "",
-        redirectUri: `${process.env.API_URL || "http://localhost:3000"}/api/oauth/linear/callback`,
+        clientId: config.oauth.linear.clientId,
+        clientSecret: config.oauth.linear.clientSecret,
+        redirectUri: getOAuthRedirectUri("linear"),
         tokenParams: {
             grant_type: "authorization_code"
         },
@@ -643,9 +645,9 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
             "file_comments:write",
             "webhooks:write"
         ],
-        clientId: process.env.FIGMA_CLIENT_ID || "",
-        clientSecret: process.env.FIGMA_CLIENT_SECRET || "",
-        redirectUri: `${process.env.API_URL || "http://localhost:3000"}/api/oauth/figma/callback`,
+        clientId: config.oauth.figma.clientId,
+        clientSecret: config.oauth.figma.clientSecret,
+        redirectUri: getOAuthRedirectUri("figma"),
         pkceEnabled: true,
         getUserInfo: async (accessToken: string) => {
             try {
@@ -694,9 +696,9 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
             access_type: "offline",
             prompt: "consent"
         },
-        clientId: process.env.GOOGLE_CLIENT_ID || "",
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
-        redirectUri: `${process.env.API_URL || "http://localhost:3000"}/api/oauth/google/callback`,
+        clientId: config.oauth.google.clientId,
+        clientSecret: config.oauth.google.clientSecret,
+        redirectUri: getOAuthRedirectUri("google"),
         getUserInfo: async (accessToken: string) => {
             try {
                 const response = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
@@ -744,9 +746,9 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
             access_type: "offline",
             prompt: "consent"
         },
-        clientId: process.env.GOOGLE_CLIENT_ID || "",
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
-        redirectUri: `${process.env.API_URL || "http://localhost:3000"}/api/oauth/google/callback`,
+        clientId: config.oauth.google.clientId,
+        clientSecret: config.oauth.google.clientSecret,
+        redirectUri: getOAuthRedirectUri("google"),
         getUserInfo: async (accessToken: string) => {
             try {
                 // Use Gmail API to get user profile
@@ -803,9 +805,9 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
             response_mode: "query",
             prompt: "consent"
         },
-        clientId: process.env.MICROSOFT_CLIENT_ID || "",
-        clientSecret: process.env.MICROSOFT_CLIENT_SECRET || "",
-        redirectUri: `${process.env.API_URL || "http://localhost:3000"}/api/oauth/microsoft/callback`,
+        clientId: config.oauth.microsoft.clientId,
+        clientSecret: config.oauth.microsoft.clientSecret,
+        redirectUri: getOAuthRedirectUri("microsoft"),
         getUserInfo: async (accessToken: string) => {
             try {
                 const response = await fetch("https://graph.microsoft.com/v1.0/me", {
@@ -852,9 +854,9 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
             response_mode: "query",
             prompt: "consent"
         },
-        clientId: process.env.MICROSOFT_CLIENT_ID || "",
-        clientSecret: process.env.MICROSOFT_CLIENT_SECRET || "",
-        redirectUri: `${process.env.API_URL || "http://localhost:3000"}/api/oauth/microsoft/callback`,
+        clientId: config.oauth.microsoft.clientId,
+        clientSecret: config.oauth.microsoft.clientSecret,
+        redirectUri: getOAuthRedirectUri("microsoft"),
         getUserInfo: async (accessToken: string) => {
             try {
                 const response = await fetch("https://graph.microsoft.com/v1.0/me", {
@@ -900,9 +902,9 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
             response_mode: "query",
             prompt: "consent"
         },
-        clientId: process.env.MICROSOFT_CLIENT_ID || "",
-        clientSecret: process.env.MICROSOFT_CLIENT_SECRET || "",
-        redirectUri: `${process.env.API_URL || "http://localhost:3000"}/api/oauth/microsoft/callback`,
+        clientId: config.oauth.microsoft.clientId,
+        clientSecret: config.oauth.microsoft.clientSecret,
+        redirectUri: getOAuthRedirectUri("microsoft"),
         getUserInfo: async (accessToken: string) => {
             try {
                 const response = await fetch("https://graph.microsoft.com/v1.0/me", {
@@ -948,9 +950,9 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
             response_mode: "query",
             prompt: "consent"
         },
-        clientId: process.env.MICROSOFT_CLIENT_ID || "",
-        clientSecret: process.env.MICROSOFT_CLIENT_SECRET || "",
-        redirectUri: `${process.env.API_URL || "http://localhost:3000"}/api/oauth/microsoft/callback`,
+        clientId: config.oauth.microsoft.clientId,
+        clientSecret: config.oauth.microsoft.clientSecret,
+        redirectUri: getOAuthRedirectUri("microsoft"),
         getUserInfo: async (accessToken: string) => {
             try {
                 const response = await fetch("https://graph.microsoft.com/v1.0/me", {
@@ -996,9 +998,9 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
             response_mode: "query",
             prompt: "consent"
         },
-        clientId: process.env.MICROSOFT_CLIENT_ID || "",
-        clientSecret: process.env.MICROSOFT_CLIENT_SECRET || "",
-        redirectUri: `${process.env.API_URL || "http://localhost:3000"}/api/oauth/microsoft/callback`,
+        clientId: config.oauth.microsoft.clientId,
+        clientSecret: config.oauth.microsoft.clientSecret,
+        redirectUri: getOAuthRedirectUri("microsoft"),
         getUserInfo: async (accessToken: string) => {
             try {
                 const response = await fetch("https://graph.microsoft.com/v1.0/me", {
@@ -1056,9 +1058,9 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
             response_mode: "query",
             prompt: "consent"
         },
-        clientId: process.env.MICROSOFT_CLIENT_ID || "",
-        clientSecret: process.env.MICROSOFT_CLIENT_SECRET || "",
-        redirectUri: `${process.env.API_URL || "http://localhost:3000"}/api/oauth/microsoft/callback`,
+        clientId: config.oauth.microsoft.clientId,
+        clientSecret: config.oauth.microsoft.clientSecret,
+        redirectUri: getOAuthRedirectUri("microsoft"),
         getUserInfo: async (accessToken: string) => {
             try {
                 const response = await fetch("https://graph.microsoft.com/v1.0/me", {
@@ -1110,13 +1112,13 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
             "business_management"
         ],
         authParams: {
-            ...(process.env.META_WHATSAPP_CONFIG_ID
-                ? { config_id: process.env.META_WHATSAPP_CONFIG_ID }
+            ...(config.oauth.meta.whatsappConfigId
+                ? { config_id: config.oauth.meta.whatsappConfigId }
                 : {})
         },
-        clientId: process.env.META_APP_ID || "",
-        clientSecret: process.env.META_APP_SECRET || "",
-        redirectUri: `${process.env.API_URL || "http://localhost:3000"}/api/oauth/meta/callback`,
+        clientId: config.oauth.meta.appId,
+        clientSecret: config.oauth.meta.appSecret,
+        redirectUri: getOAuthRedirectUri("whatsapp"),
         getUserInfo: async (accessToken: string) => {
             try {
                 // Get the WhatsApp Business Account info
@@ -1163,9 +1165,9 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
             "pages_read_engagement",
             "pages_messaging"
         ],
-        clientId: process.env.META_APP_ID || "",
-        clientSecret: process.env.META_APP_SECRET || "",
-        redirectUri: `${process.env.API_URL || "http://localhost:3000"}/api/oauth/meta/callback`,
+        clientId: config.oauth.meta.appId,
+        clientSecret: config.oauth.meta.appSecret,
+        redirectUri: getOAuthRedirectUri("facebook"),
         getUserInfo: async (accessToken: string) => {
             try {
                 // Get basic user info
@@ -1278,9 +1280,9 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
             "pages_read_engagement",
             "pages_show_list"
         ],
-        clientId: process.env.META_APP_ID || "",
-        clientSecret: process.env.META_APP_SECRET || "",
-        redirectUri: `${process.env.API_URL || "http://localhost:3000"}/api/oauth/meta/callback`,
+        clientId: config.oauth.meta.appId,
+        clientSecret: config.oauth.meta.appSecret,
+        redirectUri: getOAuthRedirectUri("facebook"),
         getUserInfo: async (accessToken: string) => {
             try {
                 // Get basic user info
@@ -1373,9 +1375,9 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
         authUrl: "https://www.facebook.com/v21.0/dialog/oauth",
         tokenUrl: "https://graph.facebook.com/v21.0/oauth/access_token",
         scopes: ["ads_management", "ads_read", "business_management"],
-        clientId: process.env.META_APP_ID || "",
-        clientSecret: process.env.META_APP_SECRET || "",
-        redirectUri: `${process.env.API_URL || "http://localhost:3000"}/api/oauth/meta/callback`,
+        clientId: config.oauth.meta.appId,
+        clientSecret: config.oauth.meta.appSecret,
+        redirectUri: getOAuthRedirectUri("facebook"),
         getUserInfo: async (accessToken: string) => {
             try {
                 const response = await fetch("https://graph.facebook.com/v21.0/me?fields=id,name", {
@@ -1428,9 +1430,9 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
         authParams: {
             prompt: "consent" // Force consent to ensure we get refresh token
         },
-        clientId: process.env.SALESFORCE_CLIENT_ID || "",
-        clientSecret: process.env.SALESFORCE_CLIENT_SECRET || "",
-        redirectUri: `${process.env.API_URL || "http://localhost:3000"}/api/oauth/salesforce/callback`,
+        clientId: config.oauth.salesforce.clientId,
+        clientSecret: config.oauth.salesforce.clientSecret,
+        redirectUri: getOAuthRedirectUri("salesforce"),
         getUserInfo: async (accessToken: string) => {
             try {
                 // Use Salesforce's userinfo endpoint which returns instance URLs
@@ -1534,9 +1536,9 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
             "hc:read",
             "hc:write"
         ],
-        clientId: process.env.ZENDESK_CLIENT_ID || "",
-        clientSecret: process.env.ZENDESK_CLIENT_SECRET || "",
-        redirectUri: `${process.env.API_URL || "http://localhost:3001"}/api/oauth/zendesk/callback`,
+        clientId: config.oauth.zendesk.clientId,
+        clientSecret: config.oauth.zendesk.clientSecret,
+        redirectUri: getOAuthRedirectUri("zendesk"),
         // PKCE required for Public OAuth clients in Zendesk
         pkceEnabled: true,
         getUserInfo: async (accessToken: string, subdomain?: string) => {
@@ -1593,9 +1595,9 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
         authUrl: "https://app.apollo.io/#/oauth/authorize",
         tokenUrl: "https://app.apollo.io/api/v1/oauth/token",
         scopes: ["read_user_profile", "app_scopes"],
-        clientId: process.env.APOLLO_CLIENT_ID || "",
-        clientSecret: process.env.APOLLO_CLIENT_SECRET || "",
-        redirectUri: `${process.env.API_URL || "http://localhost:3001"}/api/oauth/apollo/callback`,
+        clientId: config.oauth.apollo.clientId,
+        clientSecret: config.oauth.apollo.clientSecret,
+        redirectUri: getOAuthRedirectUri("apollo"),
         getUserInfo: async (accessToken: string) => {
             try {
                 const response = await fetch("https://app.apollo.io/api/v1/users/api_profile", {
@@ -1659,9 +1661,9 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
             audience: "api.atlassian.com",
             prompt: "consent"
         },
-        clientId: process.env.JIRA_CLIENT_ID || "",
-        clientSecret: process.env.JIRA_CLIENT_SECRET || "",
-        redirectUri: `${process.env.API_URL || "http://localhost:3001"}/api/oauth/jira/callback`,
+        clientId: config.oauth.jira.clientId,
+        clientSecret: config.oauth.jira.clientSecret,
+        redirectUri: getOAuthRedirectUri("jira"),
         getUserInfo: async (accessToken: string) => {
             try {
                 // Get accessible Jira sites (cloudIds)
@@ -1731,9 +1733,9 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
             "read_fulfillments",
             "write_fulfillments"
         ],
-        clientId: process.env.SHOPIFY_CLIENT_ID || "",
-        clientSecret: process.env.SHOPIFY_CLIENT_SECRET || "",
-        redirectUri: `${process.env.API_URL || "http://localhost:3001"}/api/oauth/shopify/callback`,
+        clientId: config.oauth.shopify.clientId,
+        clientSecret: config.oauth.shopify.clientSecret,
+        redirectUri: getOAuthRedirectUri("shopify"),
         getUserInfo: async (accessToken: string, shop?: string) => {
             try {
                 if (!shop) {

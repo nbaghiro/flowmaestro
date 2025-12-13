@@ -1,15 +1,15 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # FlowMaestro Local Secrets Sync Script
-# Pulls ONLY developer-provided secrets from GCP Secret Manager
-# (LLM API keys, OAuth credentials)
+# Reads secret definitions from Pulumi and fetches values from GCP Secret Manager
 #
 # System secrets (JWT, encryption key, database config) use local defaults
-# from .env.example for local development.
+# for local development. Only developer-provided secrets are synced from GCP.
 #
 # Prerequisites:
 # - gcloud CLI installed and authenticated
 # - Access to GCP project with Secret Manager read permissions
+# - Pulumi stack deployed (for secret definitions)
 #
 # Usage: ./infra/scripts/sync-secrets-local.sh
 
@@ -20,6 +20,7 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # Helper functions
@@ -43,6 +44,10 @@ print_header() {
     echo -e "\n${BLUE}========================================${NC}"
     echo -e "${BLUE}$1${NC}"
     echo -e "${BLUE}========================================${NC}\n"
+}
+
+print_category() {
+    echo -e "\n${CYAN}--- $1 ---${NC}"
 }
 
 # Check prerequisites
@@ -76,11 +81,41 @@ if [ -z "$GCP_PROJECT" ]; then
     exit 1
 fi
 
+# Get directories
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="${SCRIPT_DIR}/../.."
+PULUMI_DIR="${SCRIPT_DIR}/../pulumi"
+BACKEND_ENV_FILE="${ROOT_DIR}/backend/.env"
+
 print_header "FlowMaestro Secrets Sync"
 print_info "GCP Project: ${GCP_PROJECT}"
 print_warn "This will pull secrets from the current gcloud default project"
 
 check_prerequisites
+
+# =============================================================================
+# Read Secret Definitions from Pulumi
+# =============================================================================
+
+print_header "Reading Secret Definitions from Pulumi"
+
+# Get secret definitions from Pulumi config (not stack output, which requires successful pulumi up)
+cd "$PULUMI_DIR"
+SECRETS_JSON=$(pulumi config get secrets 2>/dev/null || echo "[]")
+cd - > /dev/null
+
+if [ "$SECRETS_JSON" = "[]" ] || [ -z "$SECRETS_JSON" ]; then
+    print_warn "No secrets defined in Pulumi config - using hardcoded list"
+    # Fallback to empty, will just sync what exists in GCP
+    SECRET_COUNT=0
+else
+    SECRET_COUNT=$(echo "$SECRETS_JSON" | python3 -c "import sys, json; print(len(json.load(sys.stdin)))")
+    print_success "Found $SECRET_COUNT secret definitions"
+fi
+
+# =============================================================================
+# Helper Functions
+# =============================================================================
 
 # Function to get secret from Secret Manager
 get_secret() {
@@ -94,10 +129,8 @@ get_secret() {
 
     if [ -z "$value" ]; then
         if [ -n "$default_value" ]; then
-            print_warn "Secret ${secret_name} not found, using default"
             echo "$default_value"
         else
-            print_warn "Secret ${secret_name} not found, skipping"
             echo ""
         fi
     else
@@ -123,64 +156,25 @@ get_json_secret_field() {
     fi
 }
 
-print_header "Fetching Developer Secrets from GCP Secret Manager"
+# =============================================================================
+# Fetch Secrets from GCP
+# =============================================================================
 
-print_info "NOTE: System secrets (JWT, encryption, database) use local defaults"
-print_info "Only fetching LLM API keys and OAuth credentials from GCP"
+print_header "Fetching Secrets from GCP Secret Manager"
+
+print_info "NOTE: System secrets (database, JWT, encryption) use local defaults"
+print_info "Fetching application secrets from GCP..."
 echo ""
 
-# Fetch LLM API keys
-print_info "Fetching LLM API keys..."
-OPENAI_API_KEY=$(get_secret "flowmaestro-app-openai-api-key" "")
-ANTHROPIC_API_KEY=$(get_secret "flowmaestro-app-anthropic-api-key" "")
-GOOGLE_API_KEY=$(get_secret "flowmaestro-app-google-api-key" "")
-COHERE_API_KEY=$(get_secret "flowmaestro-app-cohere-api-key" "")
-HUGGINGFACE_API_KEY=$(get_secret "flowmaestro-app-huggingface-api-key" "")
+# Track counts
+FETCHED_COUNT=0
+MISSING_COUNT=0
 
-# Fetch OAuth secrets
-print_info "Fetching OAuth secrets..."
-SLACK_CLIENT_ID=$(get_secret "flowmaestro-app-slack-client-id" "")
-SLACK_CLIENT_SECRET=$(get_secret "flowmaestro-app-slack-client-secret" "")
-GOOGLE_CLIENT_ID=$(get_secret "flowmaestro-app-google-client-id" "")
-GOOGLE_CLIENT_SECRET=$(get_secret "flowmaestro-app-google-client-secret" "")
-NOTION_CLIENT_ID=$(get_secret "flowmaestro-app-notion-client-id" "")
-NOTION_CLIENT_SECRET=$(get_secret "flowmaestro-app-notion-client-secret" "")
-AIRTABLE_CLIENT_ID=$(get_secret "flowmaestro-app-airtable-client-id" "")
-AIRTABLE_CLIENT_SECRET=$(get_secret "flowmaestro-app-airtable-client-secret" "")
-HUBSPOT_CLIENT_ID=$(get_secret "flowmaestro-app-hubspot-client-id" "")
-HUBSPOT_CLIENT_SECRET=$(get_secret "flowmaestro-app-hubspot-client-secret" "")
-GITHUB_CLIENT_ID=$(get_secret "flowmaestro-app-github-client-id" "")
-GITHUB_CLIENT_SECRET=$(get_secret "flowmaestro-app-github-client-secret" "")
-LINEAR_CLIENT_ID=$(get_secret "flowmaestro-app-linear-client-id" "")
-LINEAR_CLIENT_SECRET=$(get_secret "flowmaestro-app-linear-client-secret" "")
-FIGMA_CLIENT_ID=$(get_secret "flowmaestro-app-figma-client-id" "")
-FIGMA_CLIENT_SECRET=$(get_secret "flowmaestro-app-figma-client-secret" "")
-MICROSOFT_CLIENT_ID=$(get_secret "flowmaestro-app-microsoft-client-id" "")
-MICROSOFT_CLIENT_SECRET=$(get_secret "flowmaestro-app-microsoft-client-secret" "")
-META_APP_ID=$(get_secret "flowmaestro-app-meta-app-id" "")
-META_APP_SECRET=$(get_secret "flowmaestro-app-meta-app-secret" "")
-META_CLIENT_TOKEN=$(get_secret "flowmaestro-app-meta-client-token" "")
-META_WEBHOOK_VERIFY_TOKEN=$(get_secret "flowmaestro-app-meta-webhook-verify-token" "")
-ZENDESK_CLIENT_ID=$(get_secret "flowmaestro-app-zendesk-client-id" "")
-ZENDESK_CLIENT_SECRET=$(get_secret "flowmaestro-app-zendesk-client-secret" "")
-APOLLO_CLIENT_ID=$(get_secret "flowmaestro-app-apollo-client-id" "")
-APOLLO_CLIENT_SECRET=$(get_secret "flowmaestro-app-apollo-client-secret" "")
-JIRA_CLIENT_ID=$(get_secret "flowmaestro-app-jira-client-id" "")
-JIRA_CLIENT_SECRET=$(get_secret "flowmaestro-app-jira-client-secret" "")
-SHOPIFY_CLIENT_ID=$(get_secret "flowmaestro-app-shopify-client-id" "")
-SHOPIFY_CLIENT_SECRET=$(get_secret "flowmaestro-app-shopify-client-secret" "")
+# =============================================================================
+# Generate .env File
+# =============================================================================
 
-# Email Service (Resend)
-RESEND_API_KEY=$(get_secret "flowmaestro-app-resend-api-key" "")
-
-print_success "Developer secrets fetched successfully"
-
-# Generate .env file
 print_header "Generating .env File"
-
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-BACKEND_ENV_FILE="${ROOT_DIR}/backend/.env"
-
 print_info "Writing to ${BACKEND_ENV_FILE}..."
 
 cat > "$BACKEND_ENV_FILE" << EOF
@@ -190,7 +184,7 @@ cat > "$BACKEND_ENV_FILE" << EOF
 # Generated: $(date)
 #
 # NOTE: System secrets (database, JWT, encryption) use local defaults.
-#       Only developer-provided secrets (LLM keys, OAuth) are synced from GCP.
+#       Application secrets are synced from GCP Secret Manager.
 #
 # WARNING: This file contains secrets. DO NOT commit to git!
 
@@ -224,255 +218,51 @@ JWT_SECRET=dev-jwt-secret-change-in-production
 ENCRYPTION_KEY=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
 
 # ==============================================================================
-# LLM API Keys (From GCP Secret Manager)
+# Application Secrets (From GCP Secret Manager)
 # ==============================================================================
 EOF
 
-# Only add LLM keys if they exist
-if [ -n "$OPENAI_API_KEY" ]; then
-    echo "OPENAI_API_KEY=${OPENAI_API_KEY}" >> "$BACKEND_ENV_FILE"
-else
-    echo "OPENAI_API_KEY=" >> "$BACKEND_ENV_FILE"
+# Process each secret - fetch from GCP and write to .env
+if [ "$SECRET_COUNT" -gt 0 ]; then
+    CURRENT_CATEGORY=""
+
+    for i in $(seq 0 $((SECRET_COUNT - 1))); do
+        SECRET_NAME=$(echo "$SECRETS_JSON" | python3 -c "import sys, json; print(json.load(sys.stdin)[$i]['name'])")
+        SECRET_ENV_VAR=$(echo "$SECRETS_JSON" | python3 -c "import sys, json; print(json.load(sys.stdin)[$i]['envVar'])")
+        SECRET_CATEGORY=$(echo "$SECRETS_JSON" | python3 -c "import sys, json; print(json.load(sys.stdin)[$i]['category'])")
+        SECRET_DESCRIPTION=$(echo "$SECRETS_JSON" | python3 -c "import sys, json; d=json.load(sys.stdin)[$i]; print(d.get('description', ''))" 2>/dev/null || echo "")
+
+        # Add category header if new category
+        if [ "$SECRET_CATEGORY" != "$CURRENT_CATEGORY" ]; then
+            CURRENT_CATEGORY="$SECRET_CATEGORY"
+            CATEGORY_UPPER=$(echo "$SECRET_CATEGORY" | tr '[:lower:]' '[:upper:]')
+            echo "" >> "$BACKEND_ENV_FILE"
+            echo "# --- ${CATEGORY_UPPER} ---" >> "$BACKEND_ENV_FILE"
+        fi
+
+        # Fetch value from GCP
+        GCP_SECRET_NAME="flowmaestro-app-${SECRET_NAME}"
+        SECRET_VALUE=$(get_secret "$GCP_SECRET_NAME" "")
+
+        if [ -n "$SECRET_VALUE" ]; then
+            print_success "Fetched $SECRET_ENV_VAR"
+            ((FETCHED_COUNT++))
+        else
+            print_warn "Not found: $SECRET_ENV_VAR"
+            ((MISSING_COUNT++))
+        fi
+
+        # Add comment with description if available
+        if [ -n "$SECRET_DESCRIPTION" ]; then
+            echo "# $SECRET_DESCRIPTION" >> "$BACKEND_ENV_FILE"
+        fi
+
+        # Write the env var
+        echo "${SECRET_ENV_VAR}=${SECRET_VALUE}" >> "$BACKEND_ENV_FILE"
+    done
 fi
 
-if [ -n "$ANTHROPIC_API_KEY" ]; then
-    echo "ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}" >> "$BACKEND_ENV_FILE"
-else
-    echo "ANTHROPIC_API_KEY=" >> "$BACKEND_ENV_FILE"
-fi
-
-if [ -n "$GOOGLE_API_KEY" ]; then
-    echo "GOOGLE_API_KEY=${GOOGLE_API_KEY}" >> "$BACKEND_ENV_FILE"
-else
-    echo "GOOGLE_API_KEY=" >> "$BACKEND_ENV_FILE"
-fi
-
-if [ -n "$COHERE_API_KEY" ]; then
-    echo "COHERE_API_KEY=${COHERE_API_KEY}" >> "$BACKEND_ENV_FILE"
-else
-    echo "COHERE_API_KEY=" >> "$BACKEND_ENV_FILE"
-fi
-
-if [ -n "$HUGGINGFACE_API_KEY" ]; then
-    echo "HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY}" >> "$BACKEND_ENV_FILE"
-else
-    echo "HUGGINGFACE_API_KEY=" >> "$BACKEND_ENV_FILE"
-fi
-
-cat >> "$BACKEND_ENV_FILE" << EOF
-
-# ==============================================================================
-# OAuth Integration Secrets (From GCP Secret Manager)
-# ==============================================================================
-EOF
-
-# Slack OAuth
-if [ -n "$SLACK_CLIENT_ID" ] || [ -n "$SLACK_CLIENT_SECRET" ]; then
-    echo "# Slack" >> "$BACKEND_ENV_FILE"
-    echo "SLACK_CLIENT_ID=${SLACK_CLIENT_ID}" >> "$BACKEND_ENV_FILE"
-    echo "SLACK_CLIENT_SECRET=${SLACK_CLIENT_SECRET}" >> "$BACKEND_ENV_FILE"
-    echo "" >> "$BACKEND_ENV_FILE"
-else
-    echo "# Slack" >> "$BACKEND_ENV_FILE"
-    echo "SLACK_CLIENT_ID=" >> "$BACKEND_ENV_FILE"
-    echo "SLACK_CLIENT_SECRET=" >> "$BACKEND_ENV_FILE"
-    echo "" >> "$BACKEND_ENV_FILE"
-fi
-
-# Google OAuth
-if [ -n "$GOOGLE_CLIENT_ID" ] || [ -n "$GOOGLE_CLIENT_SECRET" ]; then
-    echo "# Google" >> "$BACKEND_ENV_FILE"
-    echo "GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}" >> "$BACKEND_ENV_FILE"
-    echo "GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}" >> "$BACKEND_ENV_FILE"
-    echo "" >> "$BACKEND_ENV_FILE"
-else
-    echo "# Google" >> "$BACKEND_ENV_FILE"
-    echo "GOOGLE_CLIENT_ID=" >> "$BACKEND_ENV_FILE"
-    echo "GOOGLE_CLIENT_SECRET=" >> "$BACKEND_ENV_FILE"
-    echo "" >> "$BACKEND_ENV_FILE"
-fi
-
-# Notion OAuth
-if [ -n "$NOTION_CLIENT_ID" ] || [ -n "$NOTION_CLIENT_SECRET" ]; then
-    echo "# Notion" >> "$BACKEND_ENV_FILE"
-    echo "NOTION_CLIENT_ID=${NOTION_CLIENT_ID}" >> "$BACKEND_ENV_FILE"
-    echo "NOTION_CLIENT_SECRET=${NOTION_CLIENT_SECRET}" >> "$BACKEND_ENV_FILE"
-    echo "" >> "$BACKEND_ENV_FILE"
-else
-    echo "# Notion" >> "$BACKEND_ENV_FILE"
-    echo "NOTION_CLIENT_ID=" >> "$BACKEND_ENV_FILE"
-    echo "NOTION_CLIENT_SECRET=" >> "$BACKEND_ENV_FILE"
-    echo "" >> "$BACKEND_ENV_FILE"
-fi
-
-# Airtable OAuth
-if [ -n "$AIRTABLE_CLIENT_ID" ] || [ -n "$AIRTABLE_CLIENT_SECRET" ]; then
-    echo "# Airtable" >> "$BACKEND_ENV_FILE"
-    echo "AIRTABLE_CLIENT_ID=${AIRTABLE_CLIENT_ID}" >> "$BACKEND_ENV_FILE"
-    echo "AIRTABLE_CLIENT_SECRET=${AIRTABLE_CLIENT_SECRET}" >> "$BACKEND_ENV_FILE"
-    echo "" >> "$BACKEND_ENV_FILE"
-else
-    echo "# Airtable" >> "$BACKEND_ENV_FILE"
-    echo "AIRTABLE_CLIENT_ID=" >> "$BACKEND_ENV_FILE"
-    echo "AIRTABLE_CLIENT_SECRET=" >> "$BACKEND_ENV_FILE"
-    echo "" >> "$BACKEND_ENV_FILE"
-fi
-
-# HubSpot OAuth
-if [ -n "$HUBSPOT_CLIENT_ID" ] || [ -n "$HUBSPOT_CLIENT_SECRET" ]; then
-    echo "# HubSpot" >> "$BACKEND_ENV_FILE"
-    echo "HUBSPOT_CLIENT_ID=${HUBSPOT_CLIENT_ID}" >> "$BACKEND_ENV_FILE"
-    echo "HUBSPOT_CLIENT_SECRET=${HUBSPOT_CLIENT_SECRET}" >> "$BACKEND_ENV_FILE"
-    echo "" >> "$BACKEND_ENV_FILE"
-else
-    echo "# HubSpot" >> "$BACKEND_ENV_FILE"
-    echo "HUBSPOT_CLIENT_ID=" >> "$BACKEND_ENV_FILE"
-    echo "HUBSPOT_CLIENT_SECRET=" >> "$BACKEND_ENV_FILE"
-    echo "" >> "$BACKEND_ENV_FILE"
-fi
-
-# GitHub OAuth
-if [ -n "$GITHUB_CLIENT_ID" ] || [ -n "$GITHUB_CLIENT_SECRET" ]; then
-    echo "# GitHub" >> "$BACKEND_ENV_FILE"
-    echo "GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}" >> "$BACKEND_ENV_FILE"
-    echo "GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}" >> "$BACKEND_ENV_FILE"
-    echo "" >> "$BACKEND_ENV_FILE"
-else
-    echo "# GitHub" >> "$BACKEND_ENV_FILE"
-    echo "GITHUB_CLIENT_ID=" >> "$BACKEND_ENV_FILE"
-    echo "GITHUB_CLIENT_SECRET=" >> "$BACKEND_ENV_FILE"
-    echo "" >> "$BACKEND_ENV_FILE"
-fi
-
-# Linear OAuth
-if [ -n "$LINEAR_CLIENT_ID" ] || [ -n "$LINEAR_CLIENT_SECRET" ]; then
-    echo "# Linear" >> "$BACKEND_ENV_FILE"
-    echo "LINEAR_CLIENT_ID=${LINEAR_CLIENT_ID}" >> "$BACKEND_ENV_FILE"
-    echo "LINEAR_CLIENT_SECRET=${LINEAR_CLIENT_SECRET}" >> "$BACKEND_ENV_FILE"
-    echo "" >> "$BACKEND_ENV_FILE"
-else
-    echo "# Linear" >> "$BACKEND_ENV_FILE"
-    echo "LINEAR_CLIENT_ID=" >> "$BACKEND_ENV_FILE"
-    echo "LINEAR_CLIENT_SECRET=" >> "$BACKEND_ENV_FILE"
-    echo "" >> "$BACKEND_ENV_FILE"
-fi
-
-# Figma OAuth
-if [ -n "$FIGMA_CLIENT_ID" ] || [ -n "$FIGMA_CLIENT_SECRET" ]; then
-    echo "# Figma" >> "$BACKEND_ENV_FILE"
-    echo "FIGMA_CLIENT_ID=${FIGMA_CLIENT_ID}" >> "$BACKEND_ENV_FILE"
-    echo "FIGMA_CLIENT_SECRET=${FIGMA_CLIENT_SECRET}" >> "$BACKEND_ENV_FILE"
-    echo "" >> "$BACKEND_ENV_FILE"
-else
-    echo "# Figma" >> "$BACKEND_ENV_FILE"
-    echo "FIGMA_CLIENT_ID=" >> "$BACKEND_ENV_FILE"
-    echo "FIGMA_CLIENT_SECRET=" >> "$BACKEND_ENV_FILE"
-    echo "" >> "$BACKEND_ENV_FILE"
-fi
-
-# Microsoft OAuth (OneDrive, Excel, Word, Teams, Outlook, etc.)
-if [ -n "$MICROSOFT_CLIENT_ID" ] || [ -n "$MICROSOFT_CLIENT_SECRET" ]; then
-    echo "# Microsoft (OneDrive, Excel, Word, Teams, Outlook, etc.)" >> "$BACKEND_ENV_FILE"
-    echo "MICROSOFT_CLIENT_ID=${MICROSOFT_CLIENT_ID}" >> "$BACKEND_ENV_FILE"
-    echo "MICROSOFT_CLIENT_SECRET=${MICROSOFT_CLIENT_SECRET}" >> "$BACKEND_ENV_FILE"
-    echo "" >> "$BACKEND_ENV_FILE"
-else
-    echo "# Microsoft (OneDrive, Excel, Word, Teams, Outlook, etc.)" >> "$BACKEND_ENV_FILE"
-    echo "MICROSOFT_CLIENT_ID=" >> "$BACKEND_ENV_FILE"
-    echo "MICROSOFT_CLIENT_SECRET=" >> "$BACKEND_ENV_FILE"
-    echo "" >> "$BACKEND_ENV_FILE"
-fi
-
-# Meta Platform OAuth (WhatsApp, Instagram, Messenger, Facebook Ads)
-if [ -n "$META_APP_ID" ] || [ -n "$META_APP_SECRET" ]; then
-    echo "# Meta Platform (WhatsApp, Instagram, Messenger, Facebook Ads)" >> "$BACKEND_ENV_FILE"
-    echo "META_APP_ID=${META_APP_ID}" >> "$BACKEND_ENV_FILE"
-    echo "META_APP_SECRET=${META_APP_SECRET}" >> "$BACKEND_ENV_FILE"
-    echo "META_CLIENT_TOKEN=${META_CLIENT_TOKEN}" >> "$BACKEND_ENV_FILE"
-    echo "META_WEBHOOK_VERIFY_TOKEN=${META_WEBHOOK_VERIFY_TOKEN}" >> "$BACKEND_ENV_FILE"
-    echo "" >> "$BACKEND_ENV_FILE"
-else
-    echo "# Meta Platform (WhatsApp, Instagram, Messenger, Facebook Ads)" >> "$BACKEND_ENV_FILE"
-    echo "META_APP_ID=" >> "$BACKEND_ENV_FILE"
-    echo "META_APP_SECRET=" >> "$BACKEND_ENV_FILE"
-    echo "META_CLIENT_TOKEN=" >> "$BACKEND_ENV_FILE"
-    echo "META_WEBHOOK_VERIFY_TOKEN=" >> "$BACKEND_ENV_FILE"
-    echo "" >> "$BACKEND_ENV_FILE"
-fi
-
-# Zendesk OAuth
-if [ -n "$ZENDESK_CLIENT_ID" ] || [ -n "$ZENDESK_CLIENT_SECRET" ]; then
-    echo "# Zendesk" >> "$BACKEND_ENV_FILE"
-    echo "ZENDESK_CLIENT_ID=${ZENDESK_CLIENT_ID}" >> "$BACKEND_ENV_FILE"
-    echo "ZENDESK_CLIENT_SECRET=${ZENDESK_CLIENT_SECRET}" >> "$BACKEND_ENV_FILE"
-    echo "" >> "$BACKEND_ENV_FILE"
-else
-    echo "# Zendesk" >> "$BACKEND_ENV_FILE"
-    echo "ZENDESK_CLIENT_ID=" >> "$BACKEND_ENV_FILE"
-    echo "ZENDESK_CLIENT_SECRET=" >> "$BACKEND_ENV_FILE"
-    echo "" >> "$BACKEND_ENV_FILE"
-fi
-
-# Apollo OAuth
-if [ -n "$APOLLO_CLIENT_ID" ] || [ -n "$APOLLO_CLIENT_SECRET" ]; then
-    echo "# Apollo.io" >> "$BACKEND_ENV_FILE"
-    echo "APOLLO_CLIENT_ID=${APOLLO_CLIENT_ID}" >> "$BACKEND_ENV_FILE"
-    echo "APOLLO_CLIENT_SECRET=${APOLLO_CLIENT_SECRET}" >> "$BACKEND_ENV_FILE"
-    echo "" >> "$BACKEND_ENV_FILE"
-else
-    echo "# Apollo.io" >> "$BACKEND_ENV_FILE"
-    echo "APOLLO_CLIENT_ID=" >> "$BACKEND_ENV_FILE"
-    echo "APOLLO_CLIENT_SECRET=" >> "$BACKEND_ENV_FILE"
-    echo "" >> "$BACKEND_ENV_FILE"
-fi
-
-# Jira Cloud OAuth
-if [ -n "$JIRA_CLIENT_ID" ] || [ -n "$JIRA_CLIENT_SECRET" ]; then
-    echo "# Jira Cloud" >> "$BACKEND_ENV_FILE"
-    echo "JIRA_CLIENT_ID=${JIRA_CLIENT_ID}" >> "$BACKEND_ENV_FILE"
-    echo "JIRA_CLIENT_SECRET=${JIRA_CLIENT_SECRET}" >> "$BACKEND_ENV_FILE"
-    echo "" >> "$BACKEND_ENV_FILE"
-else
-    echo "# Jira Cloud" >> "$BACKEND_ENV_FILE"
-    echo "JIRA_CLIENT_ID=" >> "$BACKEND_ENV_FILE"
-    echo "JIRA_CLIENT_SECRET=" >> "$BACKEND_ENV_FILE"
-    echo "" >> "$BACKEND_ENV_FILE"
-fi
-
-# Shopify OAuth
-if [ -n "$SHOPIFY_CLIENT_ID" ] || [ -n "$SHOPIFY_CLIENT_SECRET" ]; then
-    echo "# Shopify" >> "$BACKEND_ENV_FILE"
-    echo "SHOPIFY_CLIENT_ID=${SHOPIFY_CLIENT_ID}" >> "$BACKEND_ENV_FILE"
-    echo "SHOPIFY_CLIENT_SECRET=${SHOPIFY_CLIENT_SECRET}" >> "$BACKEND_ENV_FILE"
-    echo "" >> "$BACKEND_ENV_FILE"
-else
-    echo "# Shopify" >> "$BACKEND_ENV_FILE"
-    echo "SHOPIFY_CLIENT_ID=" >> "$BACKEND_ENV_FILE"
-    echo "SHOPIFY_CLIENT_SECRET=" >> "$BACKEND_ENV_FILE"
-    echo "" >> "$BACKEND_ENV_FILE"
-fi
-
-# Email Service (Resend)
-if [ -n "$RESEND_API_KEY" ]; then
-    cat >> "$BACKEND_ENV_FILE" << EOF
-
-# ==============================================================================
-# Email Configuration (Resend)
-# ==============================================================================
-RESEND_API_KEY=${RESEND_API_KEY}
-FRONTEND_URL=http://localhost:3000
-EOF
-else
-    cat >> "$BACKEND_ENV_FILE" << EOF
-
-# ==============================================================================
-# Email Configuration (Resend)
-# ==============================================================================
-RESEND_API_KEY=
-FRONTEND_URL=http://localhost:3000
-EOF
-fi
-
+# Add remaining configuration sections
 cat >> "$BACKEND_ENV_FILE" << EOF
 
 # ==============================================================================
@@ -516,9 +306,6 @@ print_success "backend/.env file created"
 # ==============================================================================
 # GCS Service Account Key Setup
 # ==============================================================================
-# Pulls the service account key from Secret Manager for local GCS access.
-# This avoids RAPT token expiration issues that occur with user credentials.
-# The key is created by Pulumi and stored in Secret Manager.
 
 print_header "Setting up GCS Authentication"
 
@@ -557,10 +344,15 @@ else
     GCS_KEY_CONFIGURED=""
 fi
 
+# ==============================================================================
+# Summary
+# ==============================================================================
+
 print_header "Secrets Sync Complete!"
+
 print_success "backend/.env created with:"
 echo "  • System secrets (database, JWT, encryption): Local defaults"
-echo "  • Developer secrets (LLM keys, OAuth): From ${GCP_PROJECT}"
+echo "  • Application secrets from ${GCP_PROJECT}: ${FETCHED_COUNT} found, ${MISSING_COUNT} missing"
 if [ -n "$GCS_KEY_CONFIGURED" ]; then
     echo "  • GCS authentication: Service account key configured"
 else

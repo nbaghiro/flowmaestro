@@ -6,6 +6,7 @@ namespace: flowmaestro
 resources:
   - namespace.yaml
   - configmap.yaml
+  - gcs-configmap.yaml
   - temporal-configmap.yaml
   # External Secrets - managed by External Secrets Operator
   - external-secrets/secret-store.yaml

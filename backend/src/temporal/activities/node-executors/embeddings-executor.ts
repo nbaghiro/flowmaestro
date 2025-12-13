@@ -2,6 +2,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { CohereClient } from "cohere-ai";
 import OpenAI from "openai";
 import type { JsonObject, JsonValue } from "@flowmaestro/shared";
+import { config as appConfig } from "../../../core/config";
 import { interpolateVariables } from "./utils";
 
 export interface EmbeddingsNodeConfig {
@@ -88,7 +89,7 @@ async function executeOpenAI(
     config: EmbeddingsNodeConfig,
     context: JsonObject
 ): Promise<JsonObject> {
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = appConfig.ai.openai.apiKey;
     if (!apiKey) {
         throw new Error("OPENAI_API_KEY environment variable is not set");
     }
@@ -150,7 +151,7 @@ async function executeCohere(
     config: EmbeddingsNodeConfig,
     context: JsonObject
 ): Promise<JsonObject> {
-    const apiKey = process.env.COHERE_API_KEY;
+    const apiKey = appConfig.ai.cohere.apiKey;
     if (!apiKey) {
         throw new Error("COHERE_API_KEY environment variable is not set");
     }
@@ -201,7 +202,7 @@ async function executeGoogle(
     config: EmbeddingsNodeConfig,
     context: JsonObject
 ): Promise<JsonObject> {
-    const apiKey = process.env.GOOGLE_API_KEY;
+    const apiKey = appConfig.ai.google.apiKey;
     if (!apiKey) {
         throw new Error("GOOGLE_API_KEY environment variable is not set");
     }

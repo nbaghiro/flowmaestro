@@ -1,3 +1,4 @@
+import { config as appConfig, getOAuthRedirectUri } from "../../../core/config";
 import { BaseProvider } from "../../core/BaseProvider";
 import { ApolloClient } from "./client/ApolloClient";
 import { ApolloMCPAdapter } from "./mcp/ApolloMCPAdapter";
@@ -87,9 +88,9 @@ export class ApolloProvider extends BaseProvider {
             authUrl: "https://app.apollo.io/#/oauth/authorize",
             tokenUrl: "https://app.apollo.io/api/v1/oauth/token",
             scopes: ["read_user_profile", "app_scopes"],
-            clientId: process.env.APOLLO_CLIENT_ID || "",
-            clientSecret: process.env.APOLLO_CLIENT_SECRET || "",
-            redirectUri: `${process.env.API_URL || "http://localhost:3001"}/api/oauth/apollo/callback`,
+            clientId: appConfig.oauth.apollo.clientId,
+            clientSecret: appConfig.oauth.apollo.clientSecret,
+            redirectUri: getOAuthRedirectUri("apollo"),
             refreshable: true
         };
         return config;

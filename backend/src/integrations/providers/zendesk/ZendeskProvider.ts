@@ -1,3 +1,4 @@
+import { config as appConfig, getOAuthRedirectUri } from "../../../core/config";
 import { BaseProvider } from "../../core/BaseProvider";
 import { ZendeskClient } from "./client/ZendeskClient";
 import { ZendeskMCPAdapter } from "./mcp/ZendeskMCPAdapter";
@@ -144,9 +145,9 @@ export class ZendeskProvider extends BaseProvider {
                 "hc:read",
                 "hc:write"
             ],
-            clientId: process.env.ZENDESK_CLIENT_ID || "",
-            clientSecret: process.env.ZENDESK_CLIENT_SECRET || "",
-            redirectUri: `${process.env.API_URL || "http://localhost:3001"}/api/oauth/zendesk/callback`,
+            clientId: appConfig.oauth.zendesk.clientId,
+            clientSecret: appConfig.oauth.zendesk.clientSecret,
+            redirectUri: getOAuthRedirectUri("zendesk"),
             refreshable: true
         };
 

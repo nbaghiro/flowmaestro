@@ -6,7 +6,7 @@ import {
     formatPhoneNumber,
     normalizeAndHashBackupCode
 } from "../../../core/utils/two-factor";
-import { sendSms } from "../../../services/SmsService";
+import { sendSms } from "../../../services/TwilioService";
 import { UserRepository } from "../../../storage/repositories";
 import { TwoFactorBackupCodeRepository } from "../../../storage/repositories/TwoFactorBackupCodeRepository";
 import { TwoFactorTokenRepository } from "../../../storage/repositories/TwoFactorTokenRepository";

@@ -1,3 +1,4 @@
+import { config as appConfig, getOAuthRedirectUri } from "../../../core/config";
 import { BaseProvider } from "../../core/BaseProvider";
 import { SalesforceClient } from "./client/SalesforceClient";
 import {
@@ -131,9 +132,9 @@ export class SalesforceProvider extends BaseProvider {
             authUrl: "https://login.salesforce.com/services/oauth2/authorize",
             tokenUrl: "https://login.salesforce.com/services/oauth2/token",
             scopes: ["api", "refresh_token", "id"],
-            clientId: process.env.SALESFORCE_CLIENT_ID || "",
-            clientSecret: process.env.SALESFORCE_CLIENT_SECRET || "",
-            redirectUri: `${process.env.API_URL}/api/oauth/salesforce/callback`,
+            clientId: appConfig.oauth.salesforce.clientId,
+            clientSecret: appConfig.oauth.salesforce.clientSecret,
+            redirectUri: getOAuthRedirectUri("salesforce"),
             refreshable: true
         };
 

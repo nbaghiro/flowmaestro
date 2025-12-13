@@ -104,11 +104,50 @@ const esoRelease = new k8s.helm.v3.Release(
     }
 );
 
+// =============================================================================
+// ClusterSecretStore for GCP Secret Manager
+// =============================================================================
+// This creates the ClusterSecretStore that allows ExternalSecrets in any namespace
+// to fetch secrets from GCP Secret Manager using Workload Identity authentication.
+
+const clusterSecretStore = new k8s.apiextensions.CustomResource(
+    resourceName("cluster-secret-store"),
+    {
+        apiVersion: "external-secrets.io/v1beta1",
+        kind: "ClusterSecretStore",
+        metadata: {
+            name: "gcp-secret-manager"
+        },
+        spec: {
+            provider: {
+                gcpsm: {
+                    projectID: infrastructureConfig.project,
+                    auth: {
+                        workloadIdentity: {
+                            clusterLocation: infrastructureConfig.region,
+                            clusterName: `${infrastructureConfig.appName}-cluster`,
+                            serviceAccountRef: {
+                                name: esoK8sServiceAccount.metadata.name,
+                                namespace: esoNamespace.metadata.name
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    {
+        provider: kubeProvider,
+        dependsOn: [esoRelease, esoK8sServiceAccount]
+    }
+);
+
 // Export ESO outputs
 export const esoOutputs = {
     namespace: esoNamespace.metadata.name,
     serviceAccountName: esoK8sServiceAccount.metadata.name,
     gcpServiceAccountEmail: esoServiceAccount.email,
     releaseName: esoRelease.name,
-    releaseStatus: esoRelease.status
+    releaseStatus: esoRelease.status,
+    clusterSecretStoreName: clusterSecretStore.metadata.name
 };

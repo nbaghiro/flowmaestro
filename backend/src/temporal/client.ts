@@ -1,4 +1,5 @@
 import { Connection, Client } from "@temporalio/client";
+import { config } from "../core/config";
 
 let client: Client | null = null;
 let connection: Connection | null = null;
@@ -9,7 +10,7 @@ let connection: Connection | null = null;
 export async function getTemporalClient(): Promise<Client> {
     if (!client) {
         connection = await Connection.connect({
-            address: process.env.TEMPORAL_ADDRESS || "localhost:7233"
+            address: config.temporal.address
         });
 
         client = new Client({

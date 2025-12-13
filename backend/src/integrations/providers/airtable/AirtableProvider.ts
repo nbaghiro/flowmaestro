@@ -1,3 +1,4 @@
+import { config as appConfig, getOAuthRedirectUri } from "../../../core/config";
 import { BaseProvider } from "../../core/BaseProvider";
 import { AirtableClient } from "./client/AirtableClient";
 import { AirtableMCPAdapter } from "./mcp/AirtableMCPAdapter";
@@ -120,9 +121,9 @@ export class AirtableProvider extends BaseProvider {
                 "data.recordComments:write",
                 "webhook:manage"
             ],
-            clientId: process.env.AIRTABLE_CLIENT_ID || "",
-            clientSecret: process.env.AIRTABLE_CLIENT_SECRET || "",
-            redirectUri: `${process.env.API_URL || "http://localhost:3001"}/api/oauth/airtable/callback`,
+            clientId: appConfig.oauth.airtable.clientId,
+            clientSecret: appConfig.oauth.airtable.clientSecret,
+            redirectUri: getOAuthRedirectUri("airtable"),
             refreshable: true
         };
 

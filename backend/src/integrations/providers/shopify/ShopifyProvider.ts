@@ -1,3 +1,4 @@
+import { config as appConfig, getOAuthRedirectUri } from "../../../core/config";
 import { BaseProvider } from "../../core/BaseProvider";
 import { ShopifyClient } from "./client/ShopifyClient";
 import { ShopifyMCPAdapter } from "./mcp/ShopifyMCPAdapter";
@@ -122,9 +123,9 @@ export class ShopifyProvider extends BaseProvider {
                 "read_fulfillments",
                 "write_fulfillments"
             ],
-            clientId: process.env.SHOPIFY_CLIENT_ID || "",
-            clientSecret: process.env.SHOPIFY_CLIENT_SECRET || "",
-            redirectUri: `${process.env.API_URL || "http://localhost:3001"}/api/oauth/shopify/callback`,
+            clientId: appConfig.oauth.shopify.clientId,
+            clientSecret: appConfig.oauth.shopify.clientSecret,
+            redirectUri: getOAuthRedirectUri("shopify"),
             refreshable: false // Shopify offline tokens don't expire
         };
 

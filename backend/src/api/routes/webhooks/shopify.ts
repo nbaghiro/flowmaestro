@@ -1,5 +1,6 @@
 import * as crypto from "crypto";
 import { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
+import { config } from "../../../core/config";
 
 /**
  * Shopify Webhook Payload Header Types
@@ -95,7 +96,7 @@ function verifyShopifyHmac(request: FastifyRequest, hmacHeader: string | undefin
         return false;
     }
 
-    const clientSecret = process.env.SHOPIFY_CLIENT_SECRET;
+    const clientSecret = config.oauth.shopify.clientSecret;
     if (!clientSecret) {
         console.error("[ShopifyWebhook] SHOPIFY_CLIENT_SECRET not configured");
         return false;

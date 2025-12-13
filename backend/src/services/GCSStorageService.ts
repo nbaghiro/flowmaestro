@@ -2,6 +2,7 @@ import * as path from "path";
 import { Readable } from "stream";
 import { pipeline } from "stream/promises";
 import { Storage, Bucket } from "@google-cloud/storage";
+import { config } from "../core/config";
 
 export interface UploadOptions {
     userId: string;
@@ -20,7 +21,7 @@ export class GCSStorageService {
     private bucketName: string;
 
     constructor() {
-        const bucketName = process.env.GCS_BUCKET_NAME;
+        const bucketName = config.gcs.bucketName;
 
         if (!bucketName) {
             throw new Error("GCS_BUCKET_NAME environment variable is required");

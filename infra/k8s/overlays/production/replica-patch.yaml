@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: api-server
+  namespace: flowmaestro
 spec:
   replicas: 3
 
@@ -10,6 +11,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: temporal-worker
+  namespace: flowmaestro
 spec:
   replicas: 2
 
@@ -18,6 +20,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: frontend
+  namespace: flowmaestro
 spec:
   replicas: 3
 
@@ -26,6 +29,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: marketing
+  namespace: flowmaestro
 spec:
   replicas: 2
 
@@ -34,6 +38,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: temporal-server
+  namespace: flowmaestro
 spec:
   replicas: 3
 
@@ -42,5 +47,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: temporal-ui
+  namespace: flowmaestro
 spec:
   replicas: 1

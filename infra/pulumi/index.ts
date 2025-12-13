@@ -1,4 +1,5 @@
 import * as pulumi from "@pulumi/pulumi";
+import { appSecretsOutputs } from "./src/resources/app-secrets";
 import {
     databaseOutputs,
     appDatabaseConnectionString,
@@ -6,6 +7,7 @@ import {
     temporalVisibilityDatabaseConnectionString
 } from "./src/resources/database";
 import { esoOutputs } from "./src/resources/external-secrets-operator";
+import { githubActionsOutputs } from "./src/resources/github-actions";
 import { clusterOutputs } from "./src/resources/gke-cluster";
 import { apiOutputs } from "./src/resources/google-apis";
 import { monitoringOutputs } from "./src/resources/monitoring";
@@ -69,16 +71,33 @@ export const outputs = {
     // Monitoring
     dashboardId: monitoringOutputs.dashboardId,
 
-    // Secrets Management
+    // Secrets Management (Legacy)
     secretsDbPasswordId: secretOutputs.dbPasswordSecretId,
     secretsJwtSecretId: secretOutputs.jwtSecretSecretId,
     secretsEncryptionKeyId: secretOutputs.encryptionKeySecretId,
     secretsAppSecretIds: secretOutputs.appSecretIds,
 
+    // App Secrets (New - Pulumi-driven secret management)
+    // Use `pulumi stack output secrets` to get definitions for scripts
+    secrets: appSecretsOutputs.definitions,
+    secretsCount: appSecretsOutputs.count,
+    secretsGcpNames: appSecretsOutputs.gcpSecretNames,
+    secretsCategories: appSecretsOutputs.categories,
+    secretsApiRefs: appSecretsOutputs.apiK8sSecretRefs,
+    secretsWorkerRefs: appSecretsOutputs.workerK8sSecretRefs,
+
     // External Secrets Operator
     esoNamespace: esoOutputs.namespace,
     esoServiceAccountName: esoOutputs.serviceAccountName,
     esoGcpServiceAccount: esoOutputs.gcpServiceAccountEmail,
+
+    // GitHub Actions CI/CD (Workload Identity Federation)
+    githubActionsEnabled: githubActionsOutputs.enabled,
+    githubActionsRepo: githubActionsOutputs.githubRepo,
+    githubActionsWorkloadIdentityProvider: githubActionsOutputs.workloadIdentityProvider,
+    githubActionsServiceAccountEmail: githubActionsOutputs.serviceAccountEmail,
+    githubActionsPoolId: githubActionsOutputs.poolId,
+    githubActionsSetupInstructions: githubActionsOutputs.setupInstructions,
 
     // Google Cloud APIs (Infrastructure)
     computeApiEnabled: apiOutputs.computeApiEnabled,

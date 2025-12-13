@@ -1,3 +1,4 @@
+import { config as appConfig, getOAuthRedirectUri } from "../../../core/config";
 import { BaseProvider } from "../../core/BaseProvider";
 import { FacebookClient } from "./client/FacebookClient";
 import { FacebookMCPAdapter } from "./mcp/FacebookMCPAdapter";
@@ -92,9 +93,9 @@ export class FacebookProvider extends BaseProvider {
                 "pages_read_engagement",
                 "pages_read_user_content"
             ],
-            clientId: process.env.META_APP_ID || "",
-            clientSecret: process.env.META_APP_SECRET || "",
-            redirectUri: `${process.env.API_URL || "http://localhost:3001"}/api/oauth/meta/callback`,
+            clientId: appConfig.oauth.meta.appId,
+            clientSecret: appConfig.oauth.meta.appSecret,
+            redirectUri: getOAuthRedirectUri("facebook"),
             refreshable: true
         };
 

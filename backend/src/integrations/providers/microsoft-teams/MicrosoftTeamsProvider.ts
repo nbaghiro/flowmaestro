@@ -1,3 +1,4 @@
+import { config as appConfig, getOAuthRedirectUri } from "../../../core/config";
 import { BaseProvider } from "../../core/BaseProvider";
 import { MicrosoftTeamsClient } from "./client/MicrosoftTeamsClient";
 import {
@@ -128,9 +129,9 @@ export class MicrosoftTeamsProvider extends BaseProvider {
                 "ChatMember.Read",
                 "offline_access"
             ],
-            clientId: process.env.MICROSOFT_CLIENT_ID || "",
-            clientSecret: process.env.MICROSOFT_CLIENT_SECRET || "",
-            redirectUri: `${process.env.API_URL}/api/oauth/microsoft/callback`,
+            clientId: appConfig.oauth.microsoft.clientId,
+            clientSecret: appConfig.oauth.microsoft.clientSecret,
+            redirectUri: getOAuthRedirectUri("microsoft"),
             refreshable: true
         };
 

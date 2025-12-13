@@ -227,8 +227,7 @@ frontend/src/
 │   └── [feature]/      # Feature-specific components
 ├── stores/             # Zustand state stores
 ├── lib/                # API clients, utilities, websocket
-├── hooks/              # Custom React hooks
-└── types/              # TypeScript type definitions
+└── hooks/              # Custom React hooks
 ```
 
 ### UI/UX Standards
@@ -415,7 +414,7 @@ React.useEffect(() => {
 ### Technology Stack
 
 - **Framework**: Fastify 5.6.1 (NOT Express)
-- **Runtime**: Node.js 20+
+- **Runtime**: Node.js 22+
 - **Database**: PostgreSQL 15 with connection pooling
 - **Cache**: Redis 7
 - **Orchestration**: Temporal 1.23.0 for durable workflows
@@ -431,19 +430,19 @@ backend/src/
 │   │   └── {resource}/
 │   │       └── {action}.ts
 │   ├── middleware/       # Auth, validation, error handling
-│   └── server.ts        # Fastify server setup
+│   └── server.ts         # Fastify server setup
 ├── temporal/
 │   ├── workflows/        # Temporal workflow definitions
 │   └── activities/       # Activity implementations (node executors)
 ├── storage/
 │   ├── repositories/     # Type-safe database access layer
-│   ├── models/          # TypeScript interfaces for DB entities
-│   └── database.ts      # PostgreSQL connection pool
+│   ├── models/           # TypeScript interfaces for DB entities
+│   └── database.ts       # PostgreSQL connection pool
 ├── shared/
-│   ├── config/          # Configuration management
-│   ├── registry/        # Node type registry
-│   └── utils/           # Shared utilities
-└── types/               # TypeScript type definitions
+│   ├── config/           # Configuration management
+│   ├── registry/         # Node type registry
+│   └── utils/            # Shared utilities
+└── types/                # TypeScript type definitions
 ```
 
 ### API Route Pattern
@@ -766,6 +765,127 @@ REDIS_URL=redis://localhost:6379
 JWT_SECRET=your-secret-key
 TEMPORAL_ADDRESS=localhost:7233
 ```
+
+---
+
+## Secret Management
+
+FlowMaestro uses a **Pulumi-driven secret management system** where all secrets are defined in a single location and automatically provisioned across GCP Secret Manager, Kubernetes, and local development environments.
+
+### Architecture Overview
+
+```
+Pulumi.production.yaml (single source of truth)
+        │
+        ▼
+    pulumi up
+        │
+        ├──► GCP Secret Manager (empty secrets created)
+        ├──► K8s ExternalSecrets (grouped by category)
+        └──► Pulumi outputs (JSON definitions for scripts)
+                │
+                ├──► setup-secrets-gcp.sh (prompts for values → GCP)
+                ├──► sync-secrets-local.sh (GCP → backend/.env)
+                └──► External Secrets Operator (GCP → K8s Secrets)
+```
+
+### Adding a New Secret
+
+**IMPORTANT**: Never hardcode secrets in multiple places. Always use the Pulumi-driven approach.
+
+**Step 1: Define the secret in `infra/pulumi/Pulumi.production.yaml`**
+
+Add to the `flowmaestro-infrastructure:secrets` JSON array:
+
+```json
+{
+    "name": "my-new-secret",
+    "envVar": "MY_NEW_SECRET",
+    "category": "service",
+    "deployments": ["api"],
+    "required": false,
+    "description": "Description of what this secret is for"
+}
+```
+
+Secret definition properties:
+
+- `name`: kebab-case identifier (becomes GCP secret name: `flowmaestro-app-{name}`)
+- `envVar`: SCREAMING_SNAKE_CASE environment variable name
+- `category`: `core` | `oauth` | `llm` | `service` (determines K8s secret grouping)
+- `deployments`: `["api"]` | `["worker"]` | `["api", "worker"]` (which pods need this secret)
+- `required`: `true` | `false` (whether pod should fail without it)
+- `description`: Human-readable description (shown in setup prompts)
+
+**Step 2: Apply infrastructure changes**
+
+```bash
+cd infra/pulumi && pulumi up
+```
+
+This creates:
+
+- Empty GCP secret `flowmaestro-app-my-new-secret`
+- K8s ExternalSecret mapping (grouped by category)
+- Updated Pulumi outputs
+
+**Step 3: Set the secret value**
+
+```bash
+./infra/scripts/setup-secrets-gcp.sh
+# Prompts for MY_NEW_SECRET value and writes to GCP
+```
+
+**Step 4: Sync to environments**
+
+```bash
+# For Kubernetes (automatic within 5 minutes, or force):
+kubectl annotate externalsecret -n flowmaestro --all force-sync=$(date +%s)
+kubectl rollout restart deployment/api-server -n flowmaestro
+
+# For local development:
+./infra/scripts/sync-secrets-local.sh
+```
+
+### Secret Categories
+
+Secrets are grouped into K8s secrets by category:
+
+| Category  | K8s Secret Name   | Purpose                                         |
+| --------- | ----------------- | ----------------------------------------------- |
+| `core`    | `core-secrets`    | JWT, encryption keys                            |
+| `oauth`   | `oauth-secrets`   | OAuth client IDs/secrets                        |
+| `llm`     | `llm-secrets`     | LLM API keys (OpenAI, Anthropic, etc.)          |
+| `service` | `service-secrets` | Third-party service keys (Resend, Twilio, etc.) |
+
+### Updating an Existing Secret Value
+
+```bash
+# Interactive (prompts for all secrets):
+./infra/scripts/setup-secrets-gcp.sh --prompt-all
+
+# Direct update:
+echo -n "new-value" | gcloud secrets versions add flowmaestro-app-my-secret --data-file=-
+```
+
+### Accessing Secrets in Code
+
+Secrets are available as environment variables. The backend reads them automatically:
+
+```typescript
+// backend/src/shared/config/index.ts
+const resendApiKey = process.env.RESEND_API_KEY;
+const openaiApiKey = process.env.OPENAI_API_KEY;
+```
+
+### Key Files
+
+| File                                        | Purpose                                     |
+| ------------------------------------------- | ------------------------------------------- |
+| `infra/pulumi/Pulumi.production.yaml`       | Secret definitions (single source of truth) |
+| `infra/pulumi/src/resources/app-secrets.ts` | Pulumi resource generation logic            |
+| `infra/scripts/setup-secrets-gcp.sh`        | Interactive script to set secret values     |
+| `infra/scripts/sync-secrets-local.sh`       | Sync secrets to local `.env` file           |
 
 ---
 

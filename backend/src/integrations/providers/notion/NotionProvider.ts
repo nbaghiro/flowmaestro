@@ -1,3 +1,4 @@
+import { config as appConfig, getOAuthRedirectUri } from "../../../core/config";
 import { BaseProvider } from "../../core/BaseProvider";
 import { NotionClient } from "./client/NotionClient";
 import { NotionMCPAdapter } from "./mcp/NotionMCPAdapter";
@@ -62,9 +63,9 @@ export class NotionProvider extends BaseProvider {
             authUrl: "https://api.notion.com/v1/oauth/authorize",
             tokenUrl: "https://api.notion.com/v1/oauth/token",
             scopes: [],
-            clientId: process.env.NOTION_CLIENT_ID || "",
-            clientSecret: process.env.NOTION_CLIENT_SECRET || "",
-            redirectUri: `${process.env.API_URL}/api/oauth/notion/callback`,
+            clientId: appConfig.oauth.notion.clientId,
+            clientSecret: appConfig.oauth.notion.clientSecret,
+            redirectUri: getOAuthRedirectUri("notion"),
             refreshable: false
         };
 

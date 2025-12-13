@@ -15,6 +15,9 @@ export interface InfrastructureConfig {
     environment: string;
     domain: string;
 
+    // GitHub Actions CI/CD (optional)
+    githubRepo: string; // Format: "owner/repo-name"
+
     // GKE Configuration
     gkeAutopilot: boolean;
     gkeVersion: string;
@@ -42,10 +45,31 @@ export interface InfrastructureConfig {
     // Marketing Site Configuration
     gaMeasurementId: string;
 
+    // DEPRECATED: Use "secrets" config instead (see app-secrets.ts)
     // Application Secrets (flexible key-value pairs for any integration)
     // Format: JSON object like {"OPENAI_API_KEY": "sk-...", "SLACK_TOKEN": "xoxb-..."}
     appSecrets: { [key: string]: string };
 }
+
+// =============================================================================
+// Secret Definitions Config (NEW - see app-secrets.ts)
+// =============================================================================
+// The "secrets" config defines application secrets with metadata.
+// Format: JSON array of SecretDefinition objects
+//
+// Example (set via pulumi config):
+//   pulumi config set secrets '[
+//     {"name":"resend-api-key","envVar":"RESEND_API_KEY","category":"service","deployments":["api"],"required":true},
+//     {"name":"openai-api-key","envVar":"OPENAI_API_KEY","category":"llm","deployments":["api","worker"],"required":false}
+//   ]'
+//
+// SecretDefinition schema:
+//   - name: string (kebab-case, e.g., "resend-api-key")
+//   - envVar: string (SCREAMING_SNAKE_CASE, e.g., "RESEND_API_KEY")
+//   - category: "core" | "oauth" | "llm" | "service"
+//   - deployments: ("api" | "worker")[]
+//   - required: boolean
+//   - description?: string (optional)
 
 // Default configuration values
 const defaults = {
@@ -90,6 +114,9 @@ export const infrastructureConfig: InfrastructureConfig = {
     appName: config.get("appName") || "flowmaestro",
     environment: config.get("environment") || "production",
     domain: config.require("domain"),
+
+    // GitHub Actions CI/CD (optional)
+    githubRepo: config.get("githubRepo") || "",
 
     // GKE Configuration
     gkeAutopilot: config.getBoolean("gkeAutopilot") ?? defaults.gkeAutopilot,

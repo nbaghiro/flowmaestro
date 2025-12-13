@@ -1,3 +1,4 @@
+import { config as appConfig, getOAuthRedirectUri } from "../../../core/config";
 import { BaseProvider } from "../../core/BaseProvider";
 import { GoogleDriveClient } from "./client/GoogleDriveClient";
 import {
@@ -155,9 +156,9 @@ export class GoogleDriveProvider extends BaseProvider {
             authUrl: "https://accounts.google.com/o/oauth2/v2/auth",
             tokenUrl: "https://oauth2.googleapis.com/token",
             scopes: ["https://www.googleapis.com/auth/drive"],
-            clientId: process.env.GOOGLE_CLIENT_ID || "",
-            clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
-            redirectUri: `${process.env.API_URL}/api/oauth/google/callback`,
+            clientId: appConfig.oauth.google.clientId,
+            clientSecret: appConfig.oauth.google.clientSecret,
+            redirectUri: getOAuthRedirectUri("google"),
             refreshable: true
         };
 

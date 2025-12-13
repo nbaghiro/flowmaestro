@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import OpenAI from "openai";
 import type { JsonObject } from "@flowmaestro/shared";
+import { config as appConfig } from "../../../core/config";
 import { interpolateVariables } from "./utils";
 
 export interface VisionNodeConfig {
@@ -98,7 +99,7 @@ export async function executeVisionNode(
  * Execute OpenAI vision (GPT-4 Vision for analyze, DALL-E for generate)
  */
 async function executeOpenAI(config: VisionNodeConfig, context: JsonObject): Promise<JsonObject> {
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = appConfig.ai.openai.apiKey;
     if (!apiKey) {
         throw new Error("OPENAI_API_KEY environment variable is not set");
     }
@@ -203,7 +204,7 @@ async function executeAnthropic(
     config: VisionNodeConfig,
     context: JsonObject
 ): Promise<JsonObject> {
-    const apiKey = process.env.ANTHROPIC_API_KEY;
+    const apiKey = appConfig.ai.anthropic.apiKey;
     if (!apiKey) {
         throw new Error("ANTHROPIC_API_KEY environment variable is not set");
     }
@@ -338,7 +339,7 @@ async function executeAnthropic(
  * Execute Google vision (Gemini with vision)
  */
 async function executeGoogle(config: VisionNodeConfig, context: JsonObject): Promise<JsonObject> {
-    const apiKey = process.env.GOOGLE_API_KEY;
+    const apiKey = appConfig.ai.google.apiKey;
     if (!apiKey) {
         throw new Error("GOOGLE_API_KEY environment variable is not set");
     }

@@ -1,3 +1,4 @@
+import { config as appConfig, getOAuthRedirectUri } from "../../../core/config";
 import { BaseProvider } from "../../core/BaseProvider";
 import { FigmaClient } from "./client/FigmaClient";
 import {
@@ -67,9 +68,9 @@ export class FigmaProvider extends BaseProvider {
                 "file_comments:write",
                 "webhooks:write"
             ],
-            clientId: process.env.FIGMA_CLIENT_ID || "",
-            clientSecret: process.env.FIGMA_CLIENT_SECRET || "",
-            redirectUri: `${process.env.API_URL}/api/oauth/figma/callback`,
+            clientId: appConfig.oauth.figma.clientId,
+            clientSecret: appConfig.oauth.figma.clientSecret,
+            redirectUri: getOAuthRedirectUri("figma"),
             refreshable: true
         };
 

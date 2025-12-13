@@ -65,8 +65,14 @@ npm run docker:up
 # Run database migrations
 npm run db:migrate
 
-# Start development servers
-npm run dev
+# Start backend API server (in separate terminal)
+npm run dev:backend
+
+# Start Temporal worker (in separate terminal)
+npm run dev:worker
+
+# Start frontend (in separate terminal)
+npm run dev:frontend
 ```
 
 Access the application:
@@ -75,7 +81,7 @@ Access the application:
 - **Backend API**: http://localhost:3001
 - **Temporal UI**: http://localhost:8088
 
-See [Deployment Guide](./.docs/deployment-guide.md) for production setup and [infra/scripts/README.md](./infra/scripts/README.md) for secrets management.
+See [Deployment Guide](./.docs/deployment-guide.md) for production setup.
 
 ## Documentation
 
@@ -131,8 +137,11 @@ npm run docker:up
 # Run migrations
 npm run db:migrate
 
-# Start dev servers (backend + frontend)
+# Start dev servers (backend API + frontend)
 npm run dev
+
+# Start Temporal worker (in separate terminal)
+npm run dev:worker
 
 # Run type checking
 npm run typecheck

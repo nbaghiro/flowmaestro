@@ -32,9 +32,9 @@ on:
         type: string
 
 env:
-  GCP_REGION: us-central1
-  GKE_CLUSTER: flowmaestro-prod-cluster
-  ARTIFACT_REGISTRY: us-central1-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/flowmaestro-images
+  GCP_REGION: ${{ vars.GCP_REGION || 'us-central1' }}
+  GKE_CLUSTER: flowmaestro-cluster
+  ARTIFACT_REGISTRY: ${{ vars.GCP_REGION || 'us-central1' }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/flowmaestro
   IMAGE_TAG: ${{ github.event.inputs.image_tag || github.sha }}
 
 jobs:
@@ -60,11 +60,15 @@ jobs:
           cache: "npm"
 
       # Authenticate to Google Cloud using Workload Identity Federation
+      # These values come from Pulumi outputs after running:
+      #   pulumi config set githubRepo "owner/repo-name"
+      #   pulumi up
+      # Then add the outputs as GitHub repository variables
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
 
       # Setup Cloud SDK
       - name: Set up Cloud SDK
@@ -185,9 +189,9 @@ jobs:
         working-directory: infra/k8s/overlays/${{ github.event.inputs.environment }}
         run: |
           kustomize edit set image \
-            us-central1-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/flowmaestro-images/backend=${{ env.ARTIFACT_REGISTRY }}/backend:${{ env.IMAGE_TAG }} \
-            us-central1-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/flowmaestro-images/frontend=${{ env.ARTIFACT_REGISTRY }}/frontend:${{ env.IMAGE_TAG }} \
-            us-central1-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/flowmaestro-images/marketing=${{ env.ARTIFACT_REGISTRY }}/marketing:${{ env.IMAGE_TAG }}
+            backend-image=${{ env.ARTIFACT_REGISTRY }}/backend:${{ env.IMAGE_TAG }} \
+            frontend-image=${{ env.ARTIFACT_REGISTRY }}/frontend:${{ env.IMAGE_TAG }} \
+            marketing-image=${{ env.ARTIFACT_REGISTRY }}/marketing:${{ env.IMAGE_TAG }}
 
       # Deploy to GKE
       - name: Deploy to GKE

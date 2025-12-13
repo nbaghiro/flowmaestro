@@ -3,6 +3,7 @@ import * as os from "os";
 import * as path from "path";
 import OpenAI from "openai";
 import type { JsonObject } from "@flowmaestro/shared";
+import { config as appConfig } from "../../../core/config";
 import { interpolateVariables } from "./utils";
 
 export interface AudioNodeConfig {
@@ -103,7 +104,7 @@ export async function executeAudioNode(
  * Execute OpenAI audio (Whisper for transcribe, TTS for speech)
  */
 async function executeOpenAI(config: AudioNodeConfig, context: JsonObject): Promise<JsonObject> {
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = appConfig.ai.openai.apiKey;
     if (!apiKey) {
         throw new Error("OPENAI_API_KEY environment variable is not set");
     }
@@ -205,7 +206,7 @@ async function executeElevenLabs(
     config: AudioNodeConfig,
     context: JsonObject
 ): Promise<JsonObject> {
-    const apiKey = process.env.ELEVENLABS_API_KEY;
+    const apiKey = appConfig.ai.elevenlabs.apiKey;
     if (!apiKey) {
         throw new Error("ELEVENLABS_API_KEY environment variable is not set");
     }

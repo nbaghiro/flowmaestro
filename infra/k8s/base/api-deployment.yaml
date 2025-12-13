@@ -144,6 +144,13 @@ spec:
                   key: huggingface-api-key
                   optional: true
 
+            # Email service (Resend)
+            - name: RESEND_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: resend-api-key
+
             # Google Cloud Storage configuration (from configmap)
             - name: GCS_BUCKET_NAME
               valueFrom:

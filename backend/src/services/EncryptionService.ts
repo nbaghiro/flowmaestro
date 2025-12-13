@@ -1,4 +1,5 @@
 import * as crypto from "crypto";
+import { config } from "../core/config";
 
 /**
  * EncryptionService - Handles encryption and decryption of sensitive data
@@ -11,7 +12,7 @@ export class EncryptionService {
     private readonly encryptionKey: Buffer;
 
     constructor() {
-        const key = process.env.ENCRYPTION_KEY;
+        const key = config.encryption.key;
 
         if (!key) {
             throw new Error(

@@ -1,3 +1,4 @@
+import { config as appConfig, getOAuthRedirectUri } from "../../../core/config";
 import { BaseProvider } from "../../core/BaseProvider";
 import { MicrosoftWordClient } from "./client/MicrosoftWordClient";
 import {
@@ -100,9 +101,9 @@ export class MicrosoftWordProvider extends BaseProvider {
             authUrl: "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
             tokenUrl: "https://login.microsoftonline.com/common/oauth2/v2.0/token",
             scopes: ["User.Read", "Files.ReadWrite", "offline_access"],
-            clientId: process.env.MICROSOFT_CLIENT_ID || "",
-            clientSecret: process.env.MICROSOFT_CLIENT_SECRET || "",
-            redirectUri: `${process.env.API_URL}/api/oauth/microsoft/callback`,
+            clientId: appConfig.oauth.microsoft.clientId,
+            clientSecret: appConfig.oauth.microsoft.clientSecret,
+            redirectUri: getOAuthRedirectUri("microsoft"),
             refreshable: true
         };
 

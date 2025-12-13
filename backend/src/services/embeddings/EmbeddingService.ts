@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { config } from "../../core/config";
 import { ConnectionRepository } from "../../storage/repositories/ConnectionRepository";
 
 export interface EmbeddingConfig {
@@ -175,7 +176,7 @@ export class EmbeddingService {
         }
 
         // Fallback to environment variable
-        const envKey = process.env.OPENAI_API_KEY;
+        const envKey = config.ai.openai.apiKey;
         if (!envKey) {
             throw new Error(
                 "OpenAI API key not found. Please add it to your connections or set OPENAI_API_KEY environment variable."

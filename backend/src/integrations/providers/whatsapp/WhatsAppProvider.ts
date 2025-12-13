@@ -1,3 +1,4 @@
+import { config as appConfig, getOAuthRedirectUri } from "../../../core/config";
 import { BaseProvider } from "../../core/BaseProvider";
 import { WhatsAppClient } from "./client/WhatsAppClient";
 import { WhatsAppMCPAdapter } from "./mcp/WhatsAppMCPAdapter";
@@ -83,9 +84,9 @@ export class WhatsAppProvider extends BaseProvider {
                 "whatsapp_business_messaging",
                 "business_management"
             ],
-            clientId: process.env.META_APP_ID || "",
-            clientSecret: process.env.META_APP_SECRET || "",
-            redirectUri: `${process.env.API_URL || "http://localhost:3001"}/api/oauth/meta/callback`,
+            clientId: appConfig.oauth.meta.appId,
+            clientSecret: appConfig.oauth.meta.appSecret,
+            redirectUri: getOAuthRedirectUri("whatsapp"),
             refreshable: true
         };
 

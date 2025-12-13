@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gcs-config
+  namespace: flowmaestro
+data:
+  # GCS bucket name for knowledge documents storage
+  # This value should be set via Kustomize overlay for each environment
+  # Default: flowmaestro-knowledge-docs-{PROJECT_ID}
+  GCS_BUCKET_NAME: "GCS_BUCKET_NAME_PLACEHOLDER"
