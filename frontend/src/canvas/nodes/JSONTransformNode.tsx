@@ -21,7 +21,8 @@ function JSONTransformNode({ data, selected }: NodeProps<JSONTransformNodeData>)
             icon={Shuffle}
             label={data.label || "Transform"}
             status={data.status}
-            category="data"
+            category="tools"
+            subcategory="data-processing"
             selected={selected}
         >
             <div className="space-y-2">

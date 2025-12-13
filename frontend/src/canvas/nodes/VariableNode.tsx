@@ -21,7 +21,8 @@ function VariableNode({ data, selected }: NodeProps<VariableNodeData>) {
             icon={Variable}
             label={data.label || "Variable"}
             status={data.status}
-            category="data"
+            category="tools"
+            subcategory="data-processing"
             selected={selected}
         >
             <div className="space-y-2">

@@ -22,7 +22,8 @@ function UserInputNode({ data, selected }: NodeProps<UserInputNodeData>) {
             icon={Hand}
             label={data.label || "User Input"}
             status={data.status}
-            category="interaction"
+            category="automation"
+            subcategory="triggers"
             selected={selected}
         >
             <div className="space-y-2">

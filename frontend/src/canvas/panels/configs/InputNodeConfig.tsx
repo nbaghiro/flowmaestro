@@ -1,9 +1,9 @@
 import { Info } from "lucide-react";
-import { useState, useEffect } from "react";
-import { FormField, FormSection } from "../../../components/common/FormField";
-import { Input } from "../../../components/common/Input";
-import { Select } from "../../../components/common/Select";
-import { Textarea } from "../../../components/common/Textarea";
+import { useEffect, useState } from "react";
+import { FormField, FormSection } from "@/components/common/FormField";
+import { Input } from "@/components/common/Input";
+import { Select } from "@/components/common/Select";
+import { Textarea } from "@/components/common/Textarea";
 
 interface InputNodeConfigProps {
     data: Record<string, unknown>;
@@ -11,10 +11,13 @@ interface InputNodeConfigProps {
 }
 
 const inputTypes = [
+    { value: "manual", label: "Manual" },
+    { value: "json", label: "JSON" },
+    { value: "csv", label: "CSV" },
+    { value: "form", label: "Form" },
     { value: "text", label: "Text" },
     { value: "number", label: "Number" },
     { value: "boolean", label: "Boolean" },
-    { value: "json", label: "JSON" },
     { value: "file", label: "File" }
 ];
 
@@ -49,28 +52,43 @@ const validationPresets = {
 
 export function InputNodeConfig({ data, onUpdate }: InputNodeConfigProps) {
     const [inputName, setInputName] = useState((data.inputName as string) || "");
-    const [inputType, setInputType] = useState((data.inputType as string) || "text");
+    const [inputType, setInputType] = useState((data.inputType as string) || "manual");
     const [description, setDescription] = useState((data.description as string) || "");
     const [defaultValue, setDefaultValue] = useState((data.defaultValue as string) || "");
     const [required, setRequired] = useState((data.required as boolean) ?? true);
     const [validation, setValidation] = useState((data.validation as string) || "");
     const [minValue, setMinValue] = useState((data.minValue as string) || "");
     const [maxValue, setMaxValue] = useState((data.maxValue as string) || "");
+    const [schema, setSchema] = useState((data.schema as string) || "");
+    const [sampleData, setSampleData] = useState(
+        typeof data.sampleData === "string"
+            ? (data.sampleData as string)
+            : JSON.stringify(data.sampleData || "", null, 2)
+    );
+    const [requiredFields, setRequiredFields] = useState<string[]>(
+        Array.isArray(data.requiredFields) ? (data.requiredFields as string[]) : []
+    );
 
     useEffect(() => {
         onUpdate({
-            inputName,
             inputType,
             description,
-            defaultValue,
-            required,
-            validation,
-            ...(inputType === "number" && { minValue, maxValue })
+            schema,
+            sampleData,
+            requiredFields
         });
-    }, [inputName, inputType, description, defaultValue, required, validation, minValue, maxValue]);
+    }, [inputType, description, schema, sampleData, requiredFields]);
 
     const handlePresetClick = (pattern: string) => {
         setValidation(pattern);
+    };
+
+    const updateRequiredFields = (value: string) => {
+        const list = value
+            .split(",")
+            .map((v) => v.trim())
+            .filter(Boolean);
+        setRequiredFields(list);
     };
 
     return (
@@ -92,13 +110,24 @@ export function InputNodeConfig({ data, onUpdate }: InputNodeConfigProps) {
 
                 <FormField
                     label="Description"
-                    description="Help text for users providing this input"
+                    description="Document expected input for this workflow."
                 >
                     <Textarea
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
-                        placeholder="Enter your full name..."
+                        placeholder="Describe the expected input..."
                         rows={3}
+                    />
+                </FormField>
+
+                <FormField
+                    label="Required Fields"
+                    description="Comma-separated list of required keys."
+                >
+                    <Input
+                        value={requiredFields.join(", ")}
+                        onChange={(e) => updateRequiredFields(e.target.value)}
+                        placeholder="id, email, items"
                     />
                 </FormField>
             </FormSection>
@@ -145,7 +174,6 @@ export function InputNodeConfig({ data, onUpdate }: InputNodeConfigProps) {
             </FormSection>
 
             <FormSection title="Validation">
-                {/* Text validation with regex */}
                 {inputType === "text" && (
                     <>
                         <FormField
@@ -191,7 +219,6 @@ export function InputNodeConfig({ data, onUpdate }: InputNodeConfigProps) {
                     </>
                 )}
 
-                {/* Number validation with min/max */}
                 {inputType === "number" && (
                     <>
                         <div className="grid grid-cols-2 gap-3">
@@ -224,7 +251,6 @@ export function InputNodeConfig({ data, onUpdate }: InputNodeConfigProps) {
                     </>
                 )}
 
-                {/* JSON schema validation */}
                 {inputType === "json" && (
                     <>
                         <FormField
@@ -232,23 +258,16 @@ export function InputNodeConfig({ data, onUpdate }: InputNodeConfigProps) {
                             description="Optional JSON schema for validation"
                         >
                             <Textarea
-                                value={validation}
-                                onChange={(e) => setValidation(e.target.value)}
+                                value={schema}
+                                onChange={(e) => setSchema(e.target.value)}
                                 placeholder={'{"type": "object", "properties": {...}}'}
                                 rows={6}
                                 className="font-mono"
                             />
                         </FormField>
-
-                        <div className="px-3 py-2 bg-blue-500/10 dark:bg-blue-400/20 border border-blue-500/30 dark:border-blue-400/30 text-blue-800 dark:text-blue-400 rounded-lg">
-                            <p className="text-xs text-blue-800">
-                                Use JSON Schema format to define structure and validation rules
-                            </p>
-                        </div>
                     </>
                 )}
 
-                {/* Boolean - no validation needed */}
                 {inputType === "boolean" && (
                     <div className="px-3 py-2 bg-muted rounded-lg">
                         <p className="text-xs text-muted-foreground">
@@ -257,7 +276,6 @@ export function InputNodeConfig({ data, onUpdate }: InputNodeConfigProps) {
                     </div>
                 )}
 
-                {/* File - basic info */}
                 {inputType === "file" && (
                     <div className="px-3 py-2 bg-muted rounded-lg">
                         <p className="text-xs text-muted-foreground">
@@ -266,6 +284,18 @@ export function InputNodeConfig({ data, onUpdate }: InputNodeConfigProps) {
                         </p>
                     </div>
                 )}
+            </FormSection>
+
+            <FormSection title="Sample Data">
+                <FormField label="Sample" description="Used for preview/testing in the canvas.">
+                    <Textarea
+                        value={sampleData}
+                        onChange={(e) => setSampleData(e.target.value)}
+                        placeholder='{"id": "123", "type": "A"}'
+                        rows={5}
+                        className="font-mono"
+                    />
+                </FormField>
             </FormSection>
 
             <FormSection title="Preview">

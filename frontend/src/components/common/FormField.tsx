@@ -11,7 +11,7 @@ export function FormField({ label, children, description }: FormFieldProps) {
         <div className="space-y-2">
             <label className="text-sm font-medium text-foreground">{label}</label>
             {children}
-            {description && <p className="text-xs text-muted-foreground">{description}</p>}
+            {description && <div className="text-xs text-muted-foreground">{description}</div>}
         </div>
     );
 }

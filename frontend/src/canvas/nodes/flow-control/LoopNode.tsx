@@ -1,7 +1,7 @@
 import { Repeat } from "lucide-react";
 import { memo } from "react";
 import { NodeProps } from "reactflow";
-import { BaseNode } from "./BaseNode";
+import { BaseNode } from "../BaseNode";
 
 interface LoopNodeData {
     label: string;
@@ -93,7 +93,8 @@ function LoopNode({ data, selected }: NodeProps<LoopNodeData>) {
             icon={Repeat}
             label={data.label || "Loop"}
             status={data.status}
-            category="logic"
+            category="tools"
+            subcategory="flow-control"
             selected={selected}
         >
             <div className="flex flex-col h-full">

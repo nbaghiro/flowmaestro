@@ -4,6 +4,7 @@ import { Button } from "../../components/common/Button";
 import { Input } from "../../components/common/Input";
 import { useWorkflowStore } from "../../stores/workflowStore";
 // AI & ML
+import { AggregateNodeConfig } from "./configs/AggregateNodeConfig";
 import { AudioNodeConfig } from "./configs/AudioNodeConfig";
 // Logic & Code
 import { CodeNodeConfig } from "./configs/CodeNodeConfig";
@@ -11,7 +12,9 @@ import { ConditionalNodeConfig } from "./configs/ConditionalNodeConfig";
 // Data Operations
 // Connect
 import { DatabaseNodeConfig } from "./configs/DatabaseNodeConfig";
+import { DeduplicateNodeConfig } from "./configs/DeduplicateNodeConfig";
 import { EmbeddingsNodeConfig } from "./configs/EmbeddingsNodeConfig";
+import { FilterNodeConfig } from "./configs/FilterNodeConfig";
 import { HTTPNodeConfig } from "./configs/HTTPNodeConfig";
 import { InputNodeConfig } from "./configs/InputNodeConfig";
 import { IntegrationNodeConfig } from "./configs/IntegrationNodeConfig";
@@ -19,6 +22,7 @@ import { KnowledgeBaseQueryNodeConfig } from "./configs/KnowledgeBaseQueryNodeCo
 import { LLMNodeConfig } from "./configs/LLMNodeConfig";
 import { LoopNodeConfig } from "./configs/LoopNodeConfig";
 import { OutputNodeConfig } from "./configs/OutputNodeConfig";
+import { RouterNodeConfig } from "./configs/RouterNodeConfig";
 import { SwitchNodeConfig } from "./configs/SwitchNodeConfig";
 import { TransformNodeConfig } from "./configs/TransformNodeConfig";
 import { VariableNodeConfig } from "./configs/VariableNodeConfig";
@@ -83,6 +87,8 @@ export function NodeInspector() {
                 return <SwitchNodeConfig data={node.data} onUpdate={handleUpdate} />;
             case "loop":
                 return <LoopNodeConfig data={node.data} onUpdate={handleUpdate} />;
+            case "router":
+                return <RouterNodeConfig data={node.data} onUpdate={handleUpdate} />;
             case "code":
                 return <CodeNodeConfig data={node.data} onUpdate={handleUpdate} />;
             case "wait":
@@ -93,6 +99,12 @@ export function NodeInspector() {
                 return <InputNodeConfig data={node.data} onUpdate={handleUpdate} />;
             case "transform":
                 return <TransformNodeConfig data={node.data} onUpdate={handleUpdate} />;
+            case "filter":
+                return <FilterNodeConfig data={node.data} onUpdate={handleUpdate} />;
+            case "aggregate":
+                return <AggregateNodeConfig data={node.data} onUpdate={handleUpdate} />;
+            case "deduplicate":
+                return <DeduplicateNodeConfig data={node.data} onUpdate={handleUpdate} />;
             case "variable":
                 return <VariableNodeConfig data={node.data} onUpdate={handleUpdate} />;
             case "output":

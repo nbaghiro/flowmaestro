@@ -19,7 +19,8 @@ function CodeNode({ data, selected }: NodeProps<CodeNodeData>) {
             icon={Code2}
             label={data.label || "Code"}
             status={data.status}
-            category="logic"
+            category="tools"
+            subcategory="flow-control"
             selected={selected}
         >
             <div className="space-y-2">

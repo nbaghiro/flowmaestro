@@ -18,20 +18,19 @@ import AudioNode from "./nodes/AudioNode";
 import CodeNode from "./nodes/CodeNode";
 import CommentNode from "./nodes/CommentNode";
 import ConditionalNode from "./nodes/ConditionalNode";
+import { AggregateNode, DeduplicateNode, FilterNode } from "./nodes/data-processing";
+import TransformNode from "./nodes/data-processing/TransformNode";
 import DatabaseNode from "./nodes/DatabaseNode";
 import EmbeddingsNode from "./nodes/EmbeddingsNode";
+import { InputNode, LoopNode, OutputNode, RouterNode, WaitNode } from "./nodes/flow-control";
 import HTTPNode from "./nodes/HTTPNode";
-import InputNode from "./nodes/InputNode";
 import IntegrationNode from "./nodes/IntegrationNode";
 import KnowledgeBaseQueryNode from "./nodes/KnowledgeBaseQueryNode";
 import LLMNode from "./nodes/LLMNode";
-import LoopNode from "./nodes/LoopNode";
-import OutputNode from "./nodes/OutputNode";
 import SwitchNode from "./nodes/SwitchNode";
-import TransformNode from "./nodes/TransformNode";
+import UserInputNode from "./nodes/UserInputNode";
 import VariableNode from "./nodes/VariableNode";
 import VisionNode from "./nodes/VisionNode";
-import WaitNode from "./nodes/WaitNode";
 
 // Register node types
 const nodeTypes = {
@@ -46,9 +45,14 @@ const nodeTypes = {
     code: CodeNode,
     wait: WaitNode,
     input: InputNode,
+    userInput: UserInputNode,
     transform: TransformNode,
+    filter: FilterNode,
+    aggregate: AggregateNode,
+    deduplicate: DeduplicateNode,
     variable: VariableNode,
     output: OutputNode,
+    router: RouterNode,
     http: HTTPNode,
     database: DatabaseNode,
     integration: IntegrationNode,
@@ -222,9 +226,14 @@ function getDefaultLabel(type: string): string {
         code: "Code",
         wait: "Wait/Delay",
         input: "Input",
+        userInput: "User Input",
         transform: "Transform",
+        filter: "Filter",
+        aggregate: "Aggregate",
+        deduplicate: "Deduplicate",
         variable: "Variable",
         output: "Output",
+        router: "Router",
         http: "HTTP",
         database: "Database",
         integration: "Integration"

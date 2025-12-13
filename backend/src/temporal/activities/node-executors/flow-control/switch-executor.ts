@@ -1,5 +1,5 @@
 import type { JsonObject, JsonValue } from "@flowmaestro/shared";
-import { interpolateVariables } from "./utils";
+import { interpolateVariables } from "../../../../core/utils/interpolate-variables";
 
 export interface SwitchCase {
     value: string;

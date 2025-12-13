@@ -6,11 +6,15 @@ import {
     GitBranch,
     GitMerge,
     Repeat,
+    ArrowDownToLine,
     Code2,
     Clock,
     Hand,
     Shuffle,
     Variable,
+    Filter,
+    Calculator,
+    Copy,
     Send,
     BookOpen,
     Globe,
@@ -65,100 +69,141 @@ const nodeLibrary: NodeDefinition[] = [
         description: "Generate vector embeddings for semantic search"
     },
 
-    // Logic & Code (5 nodes)
+    // Tools - Flow control
     {
         type: "conditional",
         label: "Conditional",
         icon: GitBranch,
-        category: "logic",
+        category: "tools",
         description: "Branch workflow based on if/else conditions"
     },
     {
         type: "switch",
         label: "Switch",
         icon: GitMerge,
-        category: "logic",
+        category: "tools",
         description: "Multiple branch conditions like switch/case"
     },
     {
         type: "loop",
         label: "Loop",
         icon: Repeat,
-        category: "logic",
+        category: "tools",
         description: "Iterate over arrays or lists of items"
     },
     {
         type: "code",
         label: "Code",
         icon: Code2,
-        category: "logic",
+        category: "tools",
         description: "Run custom JavaScript or Python code"
     },
     {
         type: "wait",
         label: "Wait/Delay",
         icon: Clock,
-        category: "logic",
+        category: "tools",
         description: "Pause workflow execution for a duration"
     },
+    {
+        type: "router",
+        label: "Router",
+        icon: GitBranch,
+        category: "tools",
+        description: "Route execution to multiple branches"
+    },
 
-    // Data Operations (5 nodes)
+    // Tools - Flow inputs/outputs
     {
         type: "input",
         label: "Input",
-        icon: Hand,
-        category: "data",
+        icon: ArrowDownToLine,
+        category: "tools",
         description: "Collect user input, file upload, or choices"
-    },
-    {
-        type: "transform",
-        label: "Transform",
-        icon: Shuffle,
-        category: "data",
-        description: "Transform data with JSONPath, templates, filters"
-    },
-    {
-        type: "variable",
-        label: "Variable",
-        icon: Variable,
-        category: "data",
-        description: "Set or get workflow variables"
-    },
-    {
-        type: "knowledgeBaseQuery",
-        label: "KB Query",
-        icon: BookOpen,
-        category: "data",
-        description: "Search knowledge base using semantic similarity (RAG)"
     },
     {
         type: "output",
         label: "Output",
         icon: Send,
-        category: "data",
+        category: "tools",
         description: "Display final workflow results"
     },
 
-    // Connect (3 nodes)
+    // Tools - Data processing
+    {
+        type: "transform",
+        label: "Transform",
+        icon: Shuffle,
+        category: "tools",
+        description: "Transform data with JSONPath, templates, filters"
+    },
+    {
+        type: "filter",
+        label: "Filter",
+        icon: Filter,
+        category: "tools",
+        description: "Filter arrays or objects by conditions"
+    },
+    {
+        type: "aggregate",
+        label: "Aggregate",
+        icon: Calculator,
+        category: "tools",
+        description: "Aggregate data with sum, average, min/max"
+    },
+    {
+        type: "deduplicate",
+        label: "Deduplicate",
+        icon: Copy,
+        category: "tools",
+        description: "Remove duplicate items by key"
+    },
+    {
+        type: "variable",
+        label: "Variable",
+        icon: Variable,
+        category: "tools",
+        description: "Set or get workflow variables"
+    },
+
+    // Knowledge
+    {
+        type: "knowledgeBaseQuery",
+        label: "KB Query",
+        icon: BookOpen,
+        category: "knowledge",
+        description: "Search knowledge base using semantic similarity (RAG)"
+    },
+
+    // Automation
+    {
+        type: "userInput",
+        label: "User Input",
+        icon: Hand,
+        category: "automation",
+        description: "Pause and collect human input during runs"
+    },
+
+    // Integrations
     {
         type: "http",
         label: "HTTP",
         icon: Globe,
-        category: "connect",
+        category: "integration",
         description: "Make HTTP requests to external APIs"
     },
     {
         type: "database",
         label: "Database",
         icon: Database,
-        category: "connect",
+        category: "integration",
         description: "Query SQL or NoSQL databases"
     },
     {
         type: "integration",
         label: "Integration",
         icon: Plug,
-        category: "connect",
+        category: "integration",
         description: "Connect to Slack, Email, Google Sheets, etc."
     }
 ];
@@ -171,20 +216,26 @@ const categories = [
         bgColor: "bg-blue-500/10 dark:bg-blue-400/20"
     },
     {
-        id: "logic",
-        label: "Logic & Code",
-        color: "text-purple-600 dark:text-purple-400",
-        bgColor: "bg-purple-500/10 dark:bg-purple-400/20"
+        id: "tools",
+        label: "Tools",
+        color: "text-slate-600 dark:text-slate-300",
+        bgColor: "bg-slate-500/10 dark:bg-slate-400/20"
     },
     {
-        id: "data",
-        label: "Data Operations",
-        color: "text-green-600 dark:text-green-400",
-        bgColor: "bg-green-500/10 dark:bg-green-400/20"
+        id: "knowledge",
+        label: "Knowledge",
+        color: "text-indigo-600 dark:text-indigo-400",
+        bgColor: "bg-indigo-500/10 dark:bg-indigo-400/20"
     },
     {
-        id: "connect",
-        label: "Connect",
+        id: "automation",
+        label: "Automation",
+        color: "text-amber-600 dark:text-amber-400",
+        bgColor: "bg-amber-500/10 dark:bg-amber-400/20"
+    },
+    {
+        id: "integration",
+        label: "Integrations",
         color: "text-orange-600 dark:text-orange-400",
         bgColor: "bg-orange-500/10 dark:bg-orange-400/20"
     }
@@ -197,7 +248,7 @@ interface NodeLibraryProps {
 
 export function NodeLibrary({ isCollapsed = false, onToggleCollapse }: NodeLibraryProps) {
     const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
-        new Set(["ai", "logic", "data", "connect"])
+        new Set(["ai", "tools", "knowledge", "automation", "integration"])
     );
     const [searchQuery, setSearchQuery] = useState("");
 

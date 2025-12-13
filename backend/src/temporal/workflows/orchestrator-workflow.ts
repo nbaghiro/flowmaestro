@@ -388,6 +388,34 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
                         await executeNodeAndDependents(edge.target);
                     }
                 }
+            } else if (node.type === "router") {
+                const routes = (context.__routeOutputs as string[] | undefined) || [];
+                const routeSet = new Set(routes);
+                console.log(
+                    `[Orchestrator] Router node ${nodeId} routes: ${
+                        routes.length ? routes.join(", ") : "none"
+                    }`
+                );
+
+                for (const edge of dependentEdges) {
+                    const shouldExecute = !edge.sourceHandle || routeSet.has(edge.sourceHandle);
+                    if (!shouldExecute) {
+                        console.log(
+                            `[Orchestrator] Marking route ${edge.sourceHandle || "default"} to ${edge.target} as skipped`
+                        );
+                        markNodeAsSkipped(edge.target);
+                    }
+                }
+
+                for (const edge of dependentEdges) {
+                    const shouldExecute = !edge.sourceHandle || routeSet.has(edge.sourceHandle);
+                    if (shouldExecute) {
+                        console.log(
+                            `[Orchestrator] Following route ${edge.sourceHandle || "default"} to ${edge.target}`
+                        );
+                        await executeNodeAndDependents(edge.target);
+                    }
+                }
             } else {
                 // Normal execution - execute all dependent nodes
                 for (const edge of dependentEdges) {

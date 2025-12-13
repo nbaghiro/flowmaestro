@@ -1,6 +1,7 @@
 import { LucideIcon, GripHorizontal } from "lucide-react";
 import { ReactNode, useState, useEffect } from "react";
 import { Handle, Position, useNodeId, useStore } from "reactflow";
+import type { NodeCategory, NodeSubcategory } from "@flowmaestro/shared";
 import { NodeExecutionPopover } from "../../components/execution/NodeExecutionPopover";
 import { cn } from "../../lib/utils";
 import {
@@ -15,7 +16,8 @@ interface BaseNodeProps {
     icon: LucideIcon;
     label: string;
     status?: NodeStatus;
-    category?: "ai" | "logic" | "interaction" | "data" | "connect" | "voice";
+    category?: NodeCategory;
+    subcategory?: NodeSubcategory;
     children?: ReactNode;
     selected?: boolean;
     hasInputHandle?: boolean;
@@ -32,9 +34,11 @@ const statusConfig: Record<NodeStatus, { color: string; label: string }> = {
     error: { color: "bg-red-500", label: "Error" }
 };
 
-const categoryConfig: Record<
-    string,
-    { borderColor: string; iconBg: string; iconColor: string; ringColor: string }
+const categoryConfig: Partial<
+    Record<
+        NodeCategory,
+        { borderColor: string; iconBg: string; iconColor: string; ringColor: string }
+    >
 > = {
     ai: {
         borderColor: "border-l-blue-500",
@@ -42,29 +46,41 @@ const categoryConfig: Record<
         iconColor: "text-blue-600 dark:text-blue-400",
         ringColor: "ring-blue-500"
     },
-    logic: {
-        borderColor: "border-l-purple-500",
-        iconBg: "bg-purple-500/10 dark:bg-purple-400/20",
-        iconColor: "text-purple-600 dark:text-purple-400",
-        ringColor: "ring-purple-500"
+    knowledge: {
+        borderColor: "border-l-indigo-500",
+        iconBg: "bg-indigo-500/10 dark:bg-indigo-400/20",
+        iconColor: "text-indigo-600 dark:text-indigo-400",
+        ringColor: "ring-indigo-500"
     },
-    interaction: {
-        borderColor: "border-l-green-500",
-        iconBg: "bg-green-500/10 dark:bg-green-400/20",
-        iconColor: "text-green-600 dark:text-green-400",
-        ringColor: "ring-green-500"
+    automation: {
+        borderColor: "border-l-amber-500",
+        iconBg: "bg-amber-500/10 dark:bg-amber-400/20",
+        iconColor: "text-amber-600 dark:text-amber-400",
+        ringColor: "ring-amber-500"
     },
-    data: {
-        borderColor: "border-l-teal-500",
-        iconBg: "bg-teal-500/10 dark:bg-teal-400/20",
-        iconColor: "text-teal-600 dark:text-teal-400",
-        ringColor: "ring-teal-500"
+    tools: {
+        borderColor: "border-l-slate-500",
+        iconBg: "bg-slate-500/10 dark:bg-slate-400/20",
+        iconColor: "text-slate-600 dark:text-slate-400",
+        ringColor: "ring-slate-500"
     },
-    connect: {
+    integration: {
         borderColor: "border-l-orange-500",
         iconBg: "bg-orange-500/10 dark:bg-orange-400/20",
         iconColor: "text-orange-600 dark:text-orange-400",
         ringColor: "ring-orange-500"
+    },
+    custom: {
+        borderColor: "border-l-pink-500",
+        iconBg: "bg-pink-500/10 dark:bg-pink-400/20",
+        iconColor: "text-pink-600 dark:text-pink-400",
+        ringColor: "ring-pink-500"
+    },
+    subflow: {
+        borderColor: "border-l-emerald-500",
+        iconBg: "bg-emerald-500/10 dark:bg-emerald-400/20",
+        iconColor: "text-emerald-600 dark:text-emerald-400",
+        ringColor: "ring-emerald-500"
     }
 };
 
@@ -72,7 +88,7 @@ export function BaseNode({
     icon: Icon,
     label,
     status: providedStatus,
-    category = "data",
+    category = "tools",
     children,
     selected = false,
     hasInputHandle = true,
@@ -82,7 +98,7 @@ export function BaseNode({
 }: BaseNodeProps) {
     const nodeId = useNodeId();
     const { currentExecution, selectedNode } = useWorkflowStore();
-    const categoryStyle = categoryConfig[category];
+    const categoryStyle = categoryConfig[category] || categoryConfig.tools!;
     const [showPopover, setShowPopover] = useState(false);
 
     const updateNodeStyle = useWorkflowStore((s) => s.updateNodeStyle);

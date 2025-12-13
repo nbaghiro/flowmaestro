@@ -1,7 +1,7 @@
 import { Clock } from "lucide-react";
 import { memo } from "react";
 import { NodeProps } from "reactflow";
-import { BaseNode } from "./BaseNode";
+import { BaseNode } from "../BaseNode";
 
 interface WaitNodeData {
     label: string;
@@ -19,7 +19,8 @@ function WaitNode({ data, selected }: NodeProps<WaitNodeData>) {
             icon={Clock}
             label={data.label || "Wait/Delay"}
             status={data.status}
-            category="logic"
+            category="tools"
+            subcategory="flow-control"
             selected={selected}
         >
             <div className="space-y-2">

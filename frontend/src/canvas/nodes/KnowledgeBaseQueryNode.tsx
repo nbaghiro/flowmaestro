@@ -22,7 +22,7 @@ function KnowledgeBaseQueryNode({ data, selected }: NodeProps<KnowledgeBaseQuery
             icon={BookOpen}
             label={data.label || "KB Query"}
             status={data.status}
-            category="data"
+            category="knowledge"
             selected={selected}
         >
             <div className="space-y-2">
