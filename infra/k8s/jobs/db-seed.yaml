@@ -1,4 +1,5 @@
-# Database Migration Job
+# Database Seeding Job
+# Seeds workflow templates and agent templates into the database.
 # This job is created with a unique name per deployment by the CI/CD pipeline.
 # The ${TIMESTAMP} and ${IMAGE_TAG} placeholders are replaced by sed during deployment.
 #
@@ -6,21 +7,21 @@
 #   # From CI/CD (deploy-gke.yml):
 #   TIMESTAMP=$(date +%s)
 #   sed "s/\${TIMESTAMP}/$TIMESTAMP/g; s/\${IMAGE_TAG}/${{ github.sha }}/g" \
-#     infra/k8s/jobs/db-migration.yaml | kubectl apply -f -
+#     infra/k8s/jobs/db-seed.yaml | kubectl apply -f -
 #
-#   # From local script (db-migrate.sh):
+#   # From local script (db-seed.sh):
 #   TIMESTAMP=$(date +%s)
 #   sed "s/\${TIMESTAMP}/$TIMESTAMP/g; s/\${IMAGE_TAG}/latest/g" \
-#     infra/k8s/jobs/db-migration.yaml | kubectl apply -f -
+#     infra/k8s/jobs/db-seed.yaml | kubectl apply -f -
 #
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: db-migration-${TIMESTAMP}
+  name: db-seed-${TIMESTAMP}
   namespace: flowmaestro
   labels:
     app: flowmaestro
-    component: db-migration
+    component: db-seed
 spec:
   # Auto-delete job after 1 hour (keeps cluster clean)
   ttlSecondsAfterFinished: 3600
@@ -33,13 +34,13 @@ spec:
     metadata:
       labels:
         app: flowmaestro
-        component: db-migration
+        component: db-seed
     spec:
       serviceAccountName: flowmaestro-sa
       # Never restart - let backoffLimit handle retries
       restartPolicy: Never
       containers:
-        - name: migration
+        - name: seed
           image: us-central1-docker.pkg.dev/flowmaestro-prod/flowmaestro/migrations:${IMAGE_TAG}
           imagePullPolicy: Always
           command:
@@ -48,39 +49,20 @@ spec:
             - |
               set -e
               echo "========================================"
-              echo "Starting database migration..."
+              echo "Starting database seeding..."
               echo "========================================"
               echo ""
-              echo "Connecting to database at ${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}"
-              echo "User: ${POSTGRES_USER}"
+              echo "Seeding workflow templates..."
+              npx tsx backend/scripts/seed-templates.ts
               echo ""
-
-              # URL-encode the password (handles special chars like /, +, =)
-              ENCODED_PASSWORD=$(printf '%s' "$POSTGRES_PASSWORD" | sed 's/+/%2B/g; s/\//%2F/g; s/=/%3D/g')
-
-              # Construct DATABASE_URL
-              export DATABASE_URL="postgresql://${POSTGRES_USER}:${ENCODED_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}"
-              echo "DATABASE_URL constructed (password hidden)"
-              echo ""
-
-              # Create schema if it doesn't exist
-              echo "Ensuring flowmaestro schema exists..."
-              PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "CREATE SCHEMA IF NOT EXISTS flowmaestro;"
-              echo "Schema ready."
-              echo ""
-
-              echo "Running node-pg-migrate..."
-              npx node-pg-migrate up \
-                --migrations-table flowmaestro.pgmigrations \
-                --schema flowmaestro \
-                --database-url-var DATABASE_URL \
-                --migrations-dir backend/migrations
+              echo "Seeding agent templates..."
+              npx tsx backend/scripts/seed-agent-templates.ts
               echo ""
               echo "========================================"
-              echo "Database migration completed successfully"
+              echo "Database seeding completed successfully"
               echo "========================================"
           env:
-            # Database credentials (construct DATABASE_URL in command)
+            # Database credentials (seed scripts use individual env vars, not DATABASE_URL)
             - name: POSTGRES_HOST
               valueFrom:
                 secretKeyRef:

@@ -10,6 +10,7 @@ import { redisEventBus } from "../services/events/RedisEventBus";
 import { credentialRefreshScheduler } from "../services/oauth/CredentialRefreshScheduler";
 import { eventBridge } from "../services/websocket/EventBridge";
 import { db } from "../storage/database";
+import { getTemporalClient, closeTemporalConnection } from "../temporal/client";
 import { errorHandler, requestContextMiddleware } from "./middleware";
 import { agentTemplateRoutes } from "./routes/agent-templates";
 import { agentRoutes } from "./routes/agents";
@@ -157,6 +158,14 @@ export async function startServer() {
         });
 
         fastify.log.info(`Server listening on http://${config.server.host}:${config.server.port}`);
+
+        // Proactively connect to Temporal (non-blocking)
+        // This ensures the connection is ready when the first workflow execution request comes in
+        getTemporalClient()
+            .then(() => fastify.log.info("Temporal client ready"))
+            .catch((err) =>
+                fastify.log.warn(`Temporal client pre-connection failed: ${err.message}`)
+            );
     } catch (error) {
         fastify.log.error(error);
         process.exit(1);
@@ -174,6 +183,9 @@ export async function startServer() {
 
             // Stop credential refresh scheduler
             credentialRefreshScheduler.stop();
+
+            // Close Temporal connection
+            await closeTemporalConnection();
 
             // Flush spans before shutdown
             const spanService = getSpanService();
