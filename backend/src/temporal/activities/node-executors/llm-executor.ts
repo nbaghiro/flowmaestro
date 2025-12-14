@@ -189,6 +189,19 @@ export async function executeLLMNode(
     context: JsonObject,
     callbacks?: LLMExecutionCallbacks
 ): Promise<JsonObject> {
+    // Validate required config
+    if (!config.provider) {
+        throw new Error(
+            "LLM provider is required. Please select an LLM connection in the node configuration."
+        );
+    }
+    if (!config.model) {
+        throw new Error("LLM model is required. Please select a model in the node configuration.");
+    }
+    if (!config.prompt) {
+        throw new Error("Prompt is required. Please enter a prompt in the node configuration.");
+    }
+
     // Interpolate variables in prompts
     const systemPrompt = config.systemPrompt
         ? interpolateVariables(config.systemPrompt, context)

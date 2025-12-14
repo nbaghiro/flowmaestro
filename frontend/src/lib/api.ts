@@ -467,7 +467,13 @@ function createDefaultWorkflowDefinition(name: string): WorkflowDefinition {
                 type: "input",
                 name: "Input",
                 config: {
-                    inputVariable: "userInput"
+                    inputName: "userInput",
+                    inputVariable: "userInput",
+                    inputType: "text",
+                    required: true,
+                    description: "",
+                    defaultValue: "",
+                    validation: ""
                 },
                 position: { x: 100, y: 200 }
             },
@@ -475,7 +481,13 @@ function createDefaultWorkflowDefinition(name: string): WorkflowDefinition {
                 type: "llm",
                 name: "LLM",
                 config: {
+                    provider: "openai",
+                    model: "gpt-4o",
                     prompt: "{{userInput}}",
+                    systemPrompt: "",
+                    temperature: 0.7,
+                    maxTokens: 1000,
+                    topP: 1,
                     outputVariable: "llmResponse"
                 },
                 position: { x: 400, y: 200 }
@@ -484,7 +496,10 @@ function createDefaultWorkflowDefinition(name: string): WorkflowDefinition {
                 type: "output",
                 name: "Output",
                 config: {
-                    outputVariable: "llmResponse"
+                    outputName: "result",
+                    value: "{{llmResponse.text}}",
+                    format: "string",
+                    description: ""
                 },
                 position: { x: 700, y: 200 }
             }

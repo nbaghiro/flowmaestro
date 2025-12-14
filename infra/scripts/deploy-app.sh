@@ -160,12 +160,10 @@ if ! $SKIP_BUILD; then
         docker build --platform linux/amd64 \
             -f infra/docker/backend/Dockerfile \
             -t "$REGISTRY/backend:$IMAGE_TAG" \
-            -t "$REGISTRY/backend:$(git rev-parse --short HEAD)" \
             .
 
         print_info "Pushing backend image..."
         docker push "$REGISTRY/backend:$IMAGE_TAG"
-        docker push "$REGISTRY/backend:$(git rev-parse --short HEAD)"
         print_success "Backend image pushed"
     fi
 
@@ -176,12 +174,10 @@ if ! $SKIP_BUILD; then
             --build-arg VITE_API_URL="https://api.$DOMAIN" \
             --build-arg VITE_WS_URL="https://api.$DOMAIN" \
             -t "$REGISTRY/frontend:$IMAGE_TAG" \
-            -t "$REGISTRY/frontend:$(git rev-parse --short HEAD)" \
             .
 
         print_info "Pushing frontend image..."
         docker push "$REGISTRY/frontend:$IMAGE_TAG"
-        docker push "$REGISTRY/frontend:$(git rev-parse --short HEAD)"
         print_success "Frontend image pushed"
     fi
 
@@ -190,12 +186,10 @@ if ! $SKIP_BUILD; then
         docker build --platform linux/amd64 \
             -f infra/docker/marketing/Dockerfile \
             -t "$REGISTRY/marketing:$IMAGE_TAG" \
-            -t "$REGISTRY/marketing:$(git rev-parse --short HEAD)" \
             .
 
         print_info "Pushing marketing image..."
         docker push "$REGISTRY/marketing:$IMAGE_TAG"
-        docker push "$REGISTRY/marketing:$(git rev-parse --short HEAD)"
         print_success "Marketing image pushed"
     fi
 fi

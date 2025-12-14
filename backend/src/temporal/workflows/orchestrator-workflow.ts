@@ -160,6 +160,8 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
     const executed = new Set<string>();
     const skipped = new Set<string>();
     const errors: Record<string, string> = {};
+    // Track which keys in context came from output nodes (for final workflow output)
+    const outputNodeKeys = new Set<string>();
     let completedNodeCount = 0;
 
     // Helper function to recursively mark a node and its descendants as skipped
@@ -255,6 +257,9 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
 
         const nodeStartTime = Date.now();
 
+        // Track the result from executing this node (used for output node event emission)
+        let nodeResult: JsonObject | null = null;
+
         try {
             // Handle input nodes specially
             if (node.type === "input") {
@@ -317,6 +322,12 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
                     context
                 });
 
+                // Track output node keys for final workflow output
+                if (node.type === "output") {
+                    Object.keys(result).forEach((key) => outputNodeKeys.add(key));
+                    nodeResult = result; // Store for event emission
+                }
+
                 // Merge result into context
                 Object.assign(context, result);
                 console.log(
@@ -325,13 +336,15 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
             }
 
             // Emit node completed event
+            // For output nodes, only emit the output node's result, not the full context
             const nodeDuration = Date.now() - nodeStartTime;
+            const nodeOutput = node.type === "output" && nodeResult ? nodeResult : context;
             await emitNodeCompleted({
                 executionId,
                 nodeId,
                 nodeName: node.name || nodeId,
                 nodeType: node.type,
-                output: context,
+                output: nodeOutput,
                 duration: nodeDuration
             });
 
@@ -495,10 +508,21 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
             };
         }
 
+        // Build final outputs: only include keys from output nodes
+        // If no output nodes were executed, fall back to full context for backwards compatibility
+        const finalOutputs: JsonObject =
+            outputNodeKeys.size > 0
+                ? (Object.fromEntries(
+                      Array.from(outputNodeKeys)
+                          .filter((key) => key in context)
+                          .map((key) => [key, context[key]])
+                  ) as JsonObject)
+                : context;
+
         // Emit execution completed event
         await emitExecutionCompleted({
             executionId,
-            outputs: context,
+            outputs: finalOutputs,
             duration: workflowDuration
         });
 
@@ -507,7 +531,7 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
             spanId: workflowRunSpanId,
             output: {
                 success: true,
-                outputs: context
+                outputs: finalOutputs
             },
             attributes: {
                 durationMs: workflowDuration,
@@ -518,7 +542,7 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
 
         return {
             success: true,
-            outputs: context
+            outputs: finalOutputs
         };
     } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : "Unknown error";

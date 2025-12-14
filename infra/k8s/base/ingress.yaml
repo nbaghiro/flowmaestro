@@ -109,16 +109,12 @@ spec:
         - protocol: TCP
           port: 3001
   egress:
-    # Allow DNS
-    - to:
-        - namespaceSelector: {}
-      ports:
+    # Allow DNS (both internal and external)
+    - ports:
         - protocol: UDP
           port: 53
-    # Allow HTTPS for external APIs
-    - to:
-        - namespaceSelector: {}
-      ports:
+    # Allow HTTPS for external APIs (OAuth providers, etc.)
+    - ports:
         - protocol: TCP
           port: 443
     # Allow PostgreSQL
@@ -148,16 +144,12 @@ spec:
   policyTypes:
     - Egress
   egress:
-    # Allow DNS
-    - to:
-        - namespaceSelector: {}
-      ports:
+    # Allow DNS (both internal and external)
+    - ports:
         - protocol: UDP
           port: 53
-    # Allow HTTPS for external APIs
-    - to:
-        - namespaceSelector: {}
-      ports:
+    # Allow HTTPS for external APIs (OpenAI, Anthropic, etc.)
+    - ports:
         - protocol: TCP
           port: 443
     # Allow PostgreSQL

@@ -39,12 +39,18 @@ export const Navigation: React.FC = () => {
 
                     {/* Auth Buttons */}
                     <div className="flex items-center gap-4">
-                        <button className="text-sm text-gray-400 hover:text-white transition-colors">
+                        <a
+                            href={import.meta.env.VITE_APP_URL || "http://localhost:3000"}
+                            className="text-sm text-gray-400 hover:text-white transition-colors"
+                        >
                             Log In
-                        </button>
-                        <button className="px-4 py-2 bg-white text-black text-sm font-medium rounded-md hover:bg-gray-100 transition-colors">
+                        </a>
+                        <a
+                            href={import.meta.env.VITE_APP_URL || "http://localhost:3000"}
+                            className="px-4 py-2 bg-white text-black text-sm font-medium rounded-md hover:bg-gray-100 transition-colors"
+                        >
                             Get Started
-                        </button>
+                        </a>
                     </div>
                 </div>
             </div>

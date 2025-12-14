@@ -59,6 +59,9 @@ export function BuilderHeader({
                 );
             }
 
+            // Default input for the run button trigger
+            const defaultInputs = { userInput: "Hello" };
+
             // If no background trigger exists, create one
             if (!manualTrigger) {
                 console.log("Creating background manual trigger for Run button");
@@ -68,7 +71,7 @@ export function BuilderHeader({
                     triggerType: "manual",
                     config: {
                         description: "Auto-created trigger for Run button",
-                        inputs: {}
+                        inputs: defaultInputs
                     },
                     enabled: true
                 });
@@ -82,8 +85,8 @@ export function BuilderHeader({
                 console.log("Reusing existing __run_button__ trigger:", manualTrigger.id);
             }
 
-            // Execute trigger with empty inputs
-            const response = await executeTrigger(manualTrigger.id, {});
+            // Execute trigger with default inputs
+            const response = await executeTrigger(manualTrigger.id, defaultInputs);
 
             if (response.success && response.data) {
                 // Clear any selected node to prevent auto-close

@@ -10,6 +10,10 @@ data:
   BACKEND_HOST: "0.0.0.0"
   LOG_LEVEL: "info"
 
+  # URL configuration (used for OAuth redirects, email links, etc.)
+  API_URL: "https://api.flowmaestro.ai"
+  FRONTEND_URL: "https://app.flowmaestro.ai"
+
   # CORS configuration
   CORS_ORIGIN: "https://app.flowmaestro.ai"
 

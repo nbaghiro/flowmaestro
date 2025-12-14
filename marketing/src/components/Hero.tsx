@@ -35,9 +35,12 @@ export const Hero: React.FC = () => {
 
                 {/* CTA Buttons */}
                 <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                    <button className="px-6 py-3 bg-white text-black text-sm font-medium rounded-md hover:bg-gray-100 transition-colors">
+                    <a
+                        href={import.meta.env.VITE_APP_URL || "http://localhost:3000"}
+                        className="px-6 py-3 bg-white text-black text-sm font-medium rounded-md hover:bg-gray-100 transition-colors"
+                    >
                         Get Started
-                    </button>
+                    </a>
                     <button className="px-6 py-3 text-sm text-gray-400 hover:text-white transition-colors">
                         Documentation
                     </button>

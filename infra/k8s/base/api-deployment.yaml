@@ -74,6 +74,16 @@ spec:
                 configMapKeyRef:
                   name: flowmaestro-config
                   key: CORS_ORIGIN
+            - name: API_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: flowmaestro-config
+                  key: API_URL
+            - name: FRONTEND_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: flowmaestro-config
+                  key: FRONTEND_URL
 
             # Database credentials (from infrastructure secret)
             - name: POSTGRES_HOST
@@ -115,8 +125,9 @@ spec:
                   key: port
 
             # Temporal configuration
+            # Use FQDN to ensure reliable DNS resolution for gRPC connections
             - name: TEMPORAL_ADDRESS
-              value: "temporal-service:7233"
+              value: "temporal-service.flowmaestro.svc.cluster.local:7233"
             - name: TEMPORAL_NAMESPACE
               value: "default"
 
