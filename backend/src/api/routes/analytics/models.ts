@@ -1,5 +1,5 @@
 /**
- * GET /api/analytics/models
+ * GET /analytics/models
  * Returns model usage statistics
  */
 
@@ -9,7 +9,7 @@ import { authMiddleware } from "../../middleware/auth";
 
 export async function getModelAnalyticsRoute(fastify: FastifyInstance): Promise<void> {
     fastify.get(
-        "/api/analytics/models",
+        "/analytics/models",
         {
             preHandler: [authMiddleware]
         },

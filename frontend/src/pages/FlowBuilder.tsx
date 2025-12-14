@@ -159,7 +159,7 @@ export function FlowBuilder() {
 
         try {
             const response = await getWorkflow(workflowId);
-            console.log("[FRONTEND LOAD] workflow.definition =", response.data.definition);
+            console.log("[FlowBuilder] workflow.definition =", response.data.definition);
 
             const cp = await listCheckpoints(workflowId);
             resetWorkflow();

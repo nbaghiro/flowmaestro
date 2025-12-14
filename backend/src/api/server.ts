@@ -125,20 +125,20 @@ export async function buildServer() {
     });
 
     // Register routes
-    await fastify.register(authRoutes, { prefix: "/api/auth" });
-    await fastify.register(workflowRoutes, { prefix: "/api/workflows" });
-    await fastify.register(templateRoutes, { prefix: "/api/templates" });
-    await fastify.register(agentTemplateRoutes, { prefix: "/api/agent-templates" });
-    await fastify.register(checkpointRoutes, { prefix: "/api/checkpoints" });
-    await fastify.register(executionRoutes, { prefix: "/api/executions" });
-    await fastify.register(connectionRoutes, { prefix: "/api/connections" });
-    await fastify.register(integrationRoutes, { prefix: "/api/integrations" });
-    await fastify.register(oauthRoutes, { prefix: "/api/oauth" });
-    await fastify.register(knowledgeBaseRoutes, { prefix: "/api/knowledge-bases" });
-    await fastify.register(agentRoutes, { prefix: "/api/agents" });
-    await fastify.register(threadRoutes, { prefix: "/api/threads" });
-    await fastify.register(triggerRoutes, { prefix: "/api" });
-    await fastify.register(webhookRoutes, { prefix: "/api/webhooks" });
+    await fastify.register(authRoutes, { prefix: "/auth" });
+    await fastify.register(workflowRoutes, { prefix: "/workflows" });
+    await fastify.register(templateRoutes, { prefix: "/templates" });
+    await fastify.register(agentTemplateRoutes, { prefix: "/agent-templates" });
+    await fastify.register(checkpointRoutes, { prefix: "/checkpoints" });
+    await fastify.register(executionRoutes, { prefix: "/executions" });
+    await fastify.register(connectionRoutes, { prefix: "/connections" });
+    await fastify.register(integrationRoutes, { prefix: "/integrations" });
+    await fastify.register(oauthRoutes, { prefix: "/oauth" });
+    await fastify.register(knowledgeBaseRoutes, { prefix: "/knowledge-bases" });
+    await fastify.register(agentRoutes, { prefix: "/agents" });
+    await fastify.register(threadRoutes, { prefix: "/threads" });
+    await fastify.register(triggerRoutes);
+    await fastify.register(webhookRoutes, { prefix: "/webhooks" });
     await fastify.register(analyticsRoutes);
     await fastify.register(websocketRoutes);
 

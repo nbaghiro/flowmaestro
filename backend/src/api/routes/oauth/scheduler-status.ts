@@ -2,7 +2,7 @@ import { credentialRefreshScheduler } from "../../../services/oauth/CredentialRe
 import type { FastifyRequest, FastifyReply } from "fastify";
 
 /**
- * GET /api/oauth/scheduler-status
+ * GET /oauth/scheduler-status
  *
  * Get the status of the credential refresh scheduler
  * (requires authentication)
@@ -31,7 +31,7 @@ export async function getSchedulerStatus(
 }
 
 /**
- * POST /api/oauth/scheduler-refresh
+ * POST /oauth/scheduler-refresh
  *
  * Manually trigger a credential refresh cycle
  * (requires authentication)
@@ -60,7 +60,7 @@ export async function triggerSchedulerRefresh(
 }
 
 /**
- * POST /api/oauth/scheduler-reset-circuit
+ * POST /oauth/scheduler-reset-circuit
  *
  * Manually reset the circuit breaker (for ops/admin recovery)
  * (requires authentication)

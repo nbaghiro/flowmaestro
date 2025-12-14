@@ -172,7 +172,7 @@ export const config = {
             clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
             redirectUri:
                 process.env.GOOGLE_OAUTH_REDIRECT_URI ||
-                `${process.env.API_URL || "http://localhost:3001"}/api/oauth/google/callback`
+                `${process.env.API_URL || "http://localhost:3001"}/oauth/google/callback`
         },
 
         // Slack
@@ -274,43 +274,43 @@ export function getOAuthRedirectUri(provider: string): string {
     // Map provider names to their callback paths
     const callbackPaths: Record<string, string> = {
         // Google services all use the same callback
-        google: "/api/oauth/google/callback",
-        "google-auth": "/api/oauth/google/callback",
-        "google-sheets": "/api/oauth/google/callback",
-        "google-calendar": "/api/oauth/google/callback",
-        "google-drive": "/api/oauth/google/callback",
-        gmail: "/api/oauth/google/callback",
+        google: "/oauth/google/callback",
+        "google-auth": "/oauth/google/callback",
+        "google-sheets": "/oauth/google/callback",
+        "google-calendar": "/oauth/google/callback",
+        "google-drive": "/oauth/google/callback",
+        gmail: "/oauth/google/callback",
 
         // Microsoft services all use the same callback
-        microsoft: "/api/oauth/microsoft/callback",
-        "microsoft-auth": "/api/oauth/microsoft/callback",
-        "microsoft-onedrive": "/api/oauth/microsoft/callback",
-        "microsoft-excel": "/api/oauth/microsoft/callback",
-        "microsoft-word": "/api/oauth/microsoft/callback",
-        "microsoft-teams": "/api/oauth/microsoft/callback",
+        microsoft: "/oauth/microsoft/callback",
+        "microsoft-auth": "/oauth/microsoft/callback",
+        "microsoft-onedrive": "/oauth/microsoft/callback",
+        "microsoft-excel": "/oauth/microsoft/callback",
+        "microsoft-word": "/oauth/microsoft/callback",
+        "microsoft-teams": "/oauth/microsoft/callback",
 
         // Meta services all use the same callback
-        whatsapp: "/api/oauth/meta/callback",
-        instagram: "/api/oauth/meta/callback",
-        facebook: "/api/oauth/meta/callback",
-        "facebook-ads": "/api/oauth/meta/callback",
+        whatsapp: "/oauth/meta/callback",
+        instagram: "/oauth/meta/callback",
+        facebook: "/oauth/meta/callback",
+        "facebook-ads": "/oauth/meta/callback",
 
         // Other providers have their own callbacks
-        slack: "/api/oauth/slack/callback",
-        notion: "/api/oauth/notion/callback",
-        airtable: "/api/oauth/airtable/callback",
-        github: "/api/oauth/github/callback",
-        hubspot: "/api/oauth/hubspot/callback",
-        linear: "/api/oauth/linear/callback",
-        figma: "/api/oauth/figma/callback",
-        salesforce: "/api/oauth/salesforce/callback",
-        zendesk: "/api/oauth/zendesk/callback",
-        apollo: "/api/oauth/apollo/callback",
-        jira: "/api/oauth/jira/callback",
-        shopify: "/api/oauth/shopify/callback"
+        slack: "/oauth/slack/callback",
+        notion: "/oauth/notion/callback",
+        airtable: "/oauth/airtable/callback",
+        github: "/oauth/github/callback",
+        hubspot: "/oauth/hubspot/callback",
+        linear: "/oauth/linear/callback",
+        figma: "/oauth/figma/callback",
+        salesforce: "/oauth/salesforce/callback",
+        zendesk: "/oauth/zendesk/callback",
+        apollo: "/oauth/apollo/callback",
+        jira: "/oauth/jira/callback",
+        shopify: "/oauth/shopify/callback"
     };
 
-    const callbackPath = callbackPaths[provider] || `/api/oauth/${provider}/callback`;
+    const callbackPath = callbackPaths[provider] || `/oauth/${provider}/callback`;
     return `${config.apiUrl}${callbackPath}`;
 }
 

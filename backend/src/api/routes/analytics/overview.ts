@@ -1,5 +1,5 @@
 /**
- * GET /api/analytics/overview
+ * GET /analytics/overview
  * Returns overview analytics for the last 7 days
  */
 
@@ -9,7 +9,7 @@ import { authMiddleware } from "../../middleware/auth";
 
 export async function getAnalyticsOverviewRoute(fastify: FastifyInstance): Promise<void> {
     fastify.get(
-        "/api/analytics/overview",
+        "/analytics/overview",
         {
             preHandler: [authMiddleware]
         },

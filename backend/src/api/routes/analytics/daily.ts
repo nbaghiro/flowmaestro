@@ -1,5 +1,5 @@
 /**
- * GET /api/analytics/daily
+ * GET /analytics/daily
  * Returns daily analytics time-series data
  */
 
@@ -9,7 +9,7 @@ import { authMiddleware } from "../../middleware/auth";
 
 export async function getDailyAnalyticsRoute(fastify: FastifyInstance): Promise<void> {
     fastify.get(
-        "/api/analytics/daily",
+        "/analytics/daily",
         {
             preHandler: [authMiddleware]
         },

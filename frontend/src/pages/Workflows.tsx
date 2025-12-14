@@ -194,7 +194,7 @@ export function Workflows() {
             const newName = `Copy of ${workflow.name}`;
 
             // Prepare the definition with the new name
-            const newDefinition = originalWorkflow.definition
+            const newDefinition: WorkflowDefinition = originalWorkflow.definition
                 ? { ...originalWorkflow.definition, name: newName }
                 : {
                       name: newName,
@@ -203,31 +203,8 @@ export function Workflows() {
                       entryPoint: ""
                   };
 
-            // Create workflow directly with the full definition using fetch
-            const token = localStorage.getItem("auth_token");
-            const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
-
-            const createResponse = await fetch(`${API_BASE_URL}/api/workflows`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    ...(token && { Authorization: `Bearer ${token}` })
-                },
-                body: JSON.stringify({
-                    name: newName,
-                    description: workflow.description,
-                    definition: newDefinition
-                })
-            });
-
-            if (!createResponse.ok) {
-                const errorData = await createResponse.json().catch(() => ({}));
-                throw new Error(
-                    errorData.error || `HTTP ${createResponse.status}: ${createResponse.statusText}`
-                );
-            }
-
-            const createData = await createResponse.json();
+            // Create workflow using the centralized API function
+            const createData = await createWorkflow(newName, workflow.description, newDefinition);
 
             if (createData.success && createData.data) {
                 // Refresh the workflow list

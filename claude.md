@@ -407,6 +407,54 @@ React.useEffect(() => {
 }, []);
 ```
 
+### API Centralization
+
+**IMPORTANT**: All frontend API calls MUST be defined in `frontend/src/lib/api.ts`. Do not make direct `fetch()` calls scattered throughout components.
+
+**Why this matters:**
+
+- Single source of truth for all API endpoints
+- Consistent error handling and authentication
+- Easier to update when API routes change
+- Better type safety with shared response types
+
+**How to add a new API call:**
+
+1. Add the function to `frontend/src/lib/api.ts`:
+
+```typescript
+export async function myNewApiCall(param: string): Promise<ApiResponse> {
+    const token = getAuthToken();
+
+    const response = await fetch(`${API_BASE_URL}/my-endpoint`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` })
+        },
+        body: JSON.stringify({ param })
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+```
+
+2. Import and use in your component:
+
+```typescript
+import { myNewApiCall } from "../lib/api";
+
+// In your component
+const result = await myNewApiCall("value");
+```
+
+**Exception**: React hooks that need to construct dynamic OAuth redirect URLs (e.g., `useGoogleAuth.ts`, `useMicrosoftAuth.ts`) may define URL constants locally, but should use URL helper functions from `api.ts` when available.
+
 ---
 
 ## Backend-Specific Guidelines
@@ -593,7 +641,7 @@ Routes use this middleware order:
 import { authenticate } from "../../middleware/auth";
 
 // Register route
-fastify.post("/api/workflows", { preHandler: [authenticate] }, createWorkflowHandler);
+fastify.post("/workflows", { preHandler: [authenticate] }, createWorkflowHandler);
 ```
 
 ### Temporal Workflows

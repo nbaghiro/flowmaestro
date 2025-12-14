@@ -56,7 +56,7 @@ interface SalesforceConnectionMetadata {
  *    - API Name: FlowMaestro
  *    - Contact Email: your email
  * 3. Enable OAuth Settings:
- *    - Callback URL: {API_URL}/api/oauth/salesforce/callback
+ *    - Callback URL: {API_URL}/oauth/salesforce/callback
  *    - Selected OAuth Scopes:
  *      - Full access (full)
  *      - Perform requests at any time (refresh_token, offline_access)

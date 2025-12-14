@@ -8,7 +8,7 @@ import { authMiddleware } from "../../middleware";
  */
 export async function googleAuthRoutes(fastify: FastifyInstance) {
     /**
-     * GET /api/auth/google
+     * GET /auth/google
      *
      * Initiate Google OAuth authentication flow
      * Redirects to Google consent screen for login/signup
@@ -30,7 +30,7 @@ export async function googleAuthRoutes(fastify: FastifyInstance) {
     });
 
     /**
-     * POST /api/auth/google/unlink
+     * POST /auth/google/unlink
      *
      * Unlink Google account from user
      * Requires authentication and that user has a password set

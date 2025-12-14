@@ -1,6 +1,16 @@
 import { X } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
+import {
+    updateUserName,
+    updateUserEmail,
+    setUserPassword,
+    changeUserPassword,
+    sendTwoFactorCode,
+    verifyTwoFactorCode,
+    disableTwoFactor
+} from "../lib/api";
+
 type User = NonNullable<ReturnType<typeof useAuth>["user"]>;
 
 interface AccountEditModalProps {
@@ -25,7 +35,6 @@ export function AccountEditModal({ mode, user, onClose, onUpdated }: AccountEdit
     const [twoFactorPhoneInput, setTwoFactorPhoneInput] = useState(user.two_factor_phone || "");
     const [twoFactorCode, setTwoFactorCode] = useState("");
 
-    const apiBase = import.meta.env.VITE_API_URL || "http://localhost:3001";
     const hasOAuthLink = Boolean(user.google_id || user.microsoft_id);
     const oauthProviderName = user.google_id
         ? "Google"
@@ -86,42 +95,23 @@ export function AccountEditModal({ mode, user, onClose, onUpdated }: AccountEdit
         try {
             // 1) Update name if changed
             if (name !== user.name) {
-                const res = await fetch(`${apiBase}/api/auth/me/name`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${localStorage.getItem("auth_token")}`
-                    },
-                    body: JSON.stringify({ name })
-                });
-                if (!res.ok) {
-                    throw new Error("Failed to update name");
-                }
+                await updateUserName(name);
             }
 
             // 2) Update email if changed
             if (email !== user.email) {
-                const res = await fetch(`${apiBase}/api/auth/me/email`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${localStorage.getItem("auth_token")}`
-                    },
-                    body: JSON.stringify({ email })
-                });
-
-                const data = await res.json();
-
-                if (!res.ok || data.success === false) {
-                    if (data.error === "You must set a password before changing your email") {
+                try {
+                    await updateUserEmail(email);
+                    setSuccess("Verification link sent to your new email address.");
+                } catch (err) {
+                    const message = err instanceof Error ? err.message : "";
+                    if (message.includes("must set a password before changing your email")) {
                         throw new Error(
                             "You need to set a password in Security settings before changing your email."
                         );
                     }
-                    throw new Error(data.error || "Failed to update email");
+                    throw err;
                 }
-
-                setSuccess("Verification link sent to your new email address.");
             } else if (!success) {
                 setSuccess("Profile updated.");
             }
@@ -165,20 +155,7 @@ export function AccountEditModal({ mode, user, onClose, onUpdated }: AccountEdit
         setIsSubmitting(true);
 
         try {
-            const res = await fetch(`${apiBase}/api/auth/me/set-password`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${localStorage.getItem("auth_token")}`
-                },
-                body: JSON.stringify({ password: newPassword })
-            });
-
-            const data = await res.json();
-
-            if (!res.ok || data.success === false) {
-                throw new Error(data.error || "Failed to set password");
-            }
+            await setUserPassword(newPassword);
 
             setSuccess("Password set successfully.");
             setCurrentPassword("");
@@ -201,23 +178,7 @@ export function AccountEditModal({ mode, user, onClose, onUpdated }: AccountEdit
         setIsSubmitting(true);
 
         try {
-            const res = await fetch(`${apiBase}/api/auth/me/password`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${localStorage.getItem("auth_token")}`
-                },
-                body: JSON.stringify({
-                    currentPassword,
-                    newPassword
-                })
-            });
-
-            const data = await res.json();
-
-            if (!res.ok || data.success === false) {
-                throw new Error(data.error || "Failed to change password");
-            }
+            await changeUserPassword(currentPassword, newPassword);
 
             setSuccess("Password changed successfully.");
             setCurrentPassword("");
@@ -253,20 +214,7 @@ export function AccountEditModal({ mode, user, onClose, onUpdated }: AccountEdit
 
         setIsTwoFactorSubmitting(true);
         try {
-            const res = await fetch(`${apiBase}/api/auth/2fa/send-code`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${localStorage.getItem("auth_token")}`
-                },
-                body: JSON.stringify({ phone: phoneForApi })
-            });
-
-            const data = await res.json().catch(() => ({}));
-            if (!res.ok || data.success === false) {
-                throw new Error(data.error || "Failed to send verification code");
-            }
-
+            await sendTwoFactorCode(phoneForApi);
             setSuccess("Verification code sent.");
             setTwoFactorStep("verify");
         } catch (err) {
@@ -294,19 +242,7 @@ export function AccountEditModal({ mode, user, onClose, onUpdated }: AccountEdit
                 return;
             }
 
-            const res = await fetch(`${apiBase}/api/auth/2fa/verify/code`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${localStorage.getItem("auth_token")}`
-                },
-                body: JSON.stringify({ code: twoFactorCode, phone: phoneForApi })
-            });
-
-            const data = await res.json().catch(() => ({}));
-            if (!res.ok || data.success === false) {
-                throw new Error(data.error || "Failed to verify code");
-            }
+            await verifyTwoFactorCode(twoFactorCode, phoneForApi);
 
             if (onUpdated) {
                 await onUpdated();
@@ -326,18 +262,7 @@ export function AccountEditModal({ mode, user, onClose, onUpdated }: AccountEdit
         setIsTwoFactorSubmitting(true);
 
         try {
-            const res = await fetch(`${apiBase}/api/auth/2fa/disable`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${localStorage.getItem("auth_token")}`
-                }
-            });
-
-            const data = await res.json().catch(() => ({}));
-            if (!res.ok || data.success === false) {
-                throw new Error(data.error || "Failed to disable two-factor authentication");
-            }
+            await disableTwoFactor();
 
             if (onUpdated) {
                 await onUpdated();
