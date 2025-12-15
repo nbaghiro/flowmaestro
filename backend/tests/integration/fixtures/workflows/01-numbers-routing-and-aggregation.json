@@ -15,7 +15,7 @@
             "config": {
                 "operation": "custom",
                 "inputData": "${numbers}",
-                "expression": "$exists($data) ? $data : [2,3,5]",
+                "expression": "$type($data) = 'array' ? $data : ($exists($data) ? [$data] : [2,3,5])",
                 "outputVariable": "numbers"
             },
             "position": { "x": 80, "y": 220 }

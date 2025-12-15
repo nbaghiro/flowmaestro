@@ -195,7 +195,8 @@ async function executeJSONata(
     context: JsonObject
 ): Promise<JsonValue> {
     const expr = jsonata(expression);
-    return await expr.evaluate({ ...context, $data: data });
+    // Pass data as a bound variable so expressions like $count($data) work
+    return await expr.evaluate({ ...context }, { data });
 }
 
 async function parseXML(xmlString: string): Promise<JsonValue> {

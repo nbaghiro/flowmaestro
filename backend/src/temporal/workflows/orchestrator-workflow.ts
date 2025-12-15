@@ -191,196 +191,212 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
         }
     }
 
-    // Execute nodes in topological order
-    async function executeNodeAndDependents(nodeId: string): Promise<void> {
-        if (executed.has(nodeId) || skipped.has(nodeId)) {
-            return;
-        }
+    // Execute nodes using a readiness queue (only run when all deps are done/skipped)
+    async function executeFromQueue(): Promise<void> {
+        const queue: string[] = startNodes.map(([id]) => id);
+        const maxIterations = nodeEntries.length * 10;
+        let iterations = 0;
 
-        // Mark as executed immediately to prevent circular dependency infinite recursion
-        executed.add(nodeId);
-
-        const node = nodeMap.get(nodeId);
-        if (!node) {
-            throw new Error(`Node ${nodeId} not found in workflow definition`);
-        }
-
-        // Wait for all dependencies to complete
-        const dependencies = incomingEdges.get(nodeId) || [];
-        for (const depId of dependencies) {
-            if (!executed.has(depId) && !skipped.has(depId)) {
-                await executeNodeAndDependents(depId);
+        while (queue.length > 0) {
+            if (iterations++ > maxIterations) {
+                throw new Error("Execution queue exceeded max iterations (possible cycle)");
             }
-        }
 
-        // Skip if ALL dependencies failed or were skipped
-        // (For converging nodes from conditional branches, at least one path must succeed)
-        if (
-            dependencies.length > 0 &&
-            dependencies.every((depId) => errors[depId] || skipped.has(depId))
-        ) {
-            console.log(`[Orchestrator] Skipping ${nodeId} - all dependencies failed or skipped`);
-            errors[nodeId] = "All dependencies failed or skipped";
-            return;
-        }
-
-        console.log(`[Orchestrator] Executing node ${nodeId} (${node.type})`);
-
-        // Create NODE_EXECUTION span for this node
-        const nodeContext = await createSpan({
-            traceId: executionId,
-            parentSpanId: workflowRunSpanId,
-            name: `Node: ${node.name || nodeId}`,
-            spanType: SpanType.NODE_EXECUTION,
-            entityId: nodeId,
-            input: {
-                nodeId,
-                nodeType: node.type,
-                nodeConfig: node.config
-            },
-            attributes: {
-                userId,
-                nodeId,
-                nodeType: node.type,
-                nodeName: node.name
+            const nodeId = queue.shift() as string;
+            if (executed.has(nodeId) || skipped.has(nodeId)) {
+                continue;
             }
-        });
-        const nodeSpanId = nodeContext.spanId;
 
-        // Emit node started event
-        await emitNodeStarted({
-            executionId,
-            nodeId,
-            nodeName: node.name,
-            nodeType: node.type
-        });
+            const node = nodeMap.get(nodeId);
+            if (!node) {
+                throw new Error(`Node ${nodeId} not found in workflow definition`);
+            }
 
-        const nodeStartTime = Date.now();
+            const dependencies = incomingEdges.get(nodeId) || [];
+            const depsDone = dependencies.every(
+                (depId) => executed.has(depId) || skipped.has(depId) || errors[depId]
+            );
 
-        // Track the result from executing this node (used for output node event emission)
-        let nodeResult: JsonObject | null = null;
+            if (!depsDone) {
+                queue.push(nodeId);
+                continue;
+            }
 
-        try {
-            // Handle input nodes specially
-            if (node.type === "input") {
-                if (node.config.inputName && typeof node.config.inputName === "string") {
-                    // Named input - store specific input value
-                    const inputName = node.config.inputName;
-                    const inputValue = inputs[inputName];
-                    context[inputName] = inputValue;
-                    console.log(
-                        `[Orchestrator] Input node ${nodeId}: ${inputName} = ${JSON.stringify(inputValue)}`
-                    );
-                } else {
-                    // No input name specified - this is the workflow entry point, merge all inputs
-                    Object.assign(context, inputs);
-                    console.log(
-                        `[Orchestrator] Input node ${nodeId}: merged all inputs into context`
-                    );
-                }
-            } else if (node.type === "conditional") {
-                // Handle conditional nodes in the orchestrator (not via activity)
-                // Import and execute conditional logic inline
-                const leftValue =
-                    typeof node.config.leftValue === "string" ? node.config.leftValue : "";
-                const rightValue =
-                    typeof node.config.rightValue === "string" ? node.config.rightValue : "";
-                const operator =
-                    typeof node.config.operator === "string" ? node.config.operator : "==";
-
-                // Simple variable interpolation for conditional
-                const interpolate = (str: string): string => {
-                    return str.replace(/\$\{([^}]+)\}/g, (_, key) => {
-                        const value = context[key.trim()];
-                        return value !== undefined ? String(value) : "";
-                    });
-                };
-
-                const leftInterpolated = interpolate(leftValue);
-                const rightInterpolated = interpolate(rightValue);
-
-                // Simple equality check (case-insensitive for strings)
-                const conditionMet =
-                    leftInterpolated.toLowerCase() === rightInterpolated.toLowerCase();
-                const branch = conditionMet ? "true" : "false";
-
+            // Skip if ALL dependencies failed or were skipped
+            if (
+                dependencies.length > 0 &&
+                dependencies.every((depId) => errors[depId] || skipped.has(depId))
+            ) {
                 console.log(
-                    `[Orchestrator] Conditional: "${leftInterpolated}" ${operator} "${rightInterpolated}" = ${conditionMet} (branch: ${branch})`
+                    `[Orchestrator] Skipping ${nodeId} - all dependencies failed or skipped`
                 );
-
-                // Store result in context
-                context.conditionMet = conditionMet;
-                context.branch = branch;
-                context.leftValue = leftInterpolated;
-                context.rightValue = rightInterpolated;
-                context.operator = operator;
-            } else {
-                // Execute the node using the activity
-                const result = await executeNode({
-                    nodeType: node.type,
-                    nodeConfig: node.config,
-                    context
-                });
-
-                // Track output node keys for final workflow output
-                if (node.type === "output") {
-                    Object.keys(result).forEach((key) => outputNodeKeys.add(key));
-                    nodeResult = result; // Store for event emission
-                }
-
-                // Merge result into context
-                Object.assign(context, result);
-                console.log(
-                    `[Orchestrator] Node ${nodeId} completed, added keys: ${Object.keys(result).join(", ")}`
-                );
+                errors[nodeId] = "All dependencies failed or skipped";
+                executed.add(nodeId);
+                continue;
             }
 
-            // Emit node completed event
-            // For output nodes, only emit the output node's result, not the full context
-            const nodeDuration = Date.now() - nodeStartTime;
-            const nodeOutput = node.type === "output" && nodeResult ? nodeResult : context;
-            await emitNodeCompleted({
-                executionId,
-                nodeId,
-                nodeName: node.name || nodeId,
-                nodeType: node.type,
-                output: nodeOutput,
-                duration: nodeDuration
-            });
+            console.log(`[Orchestrator] Executing node ${nodeId} (${node.type})`);
 
-            // End NODE_EXECUTION span with success
-            await endSpan({
-                spanId: nodeSpanId,
-                output: {
+            const nodeContext = await createSpan({
+                traceId: executionId,
+                parentSpanId: workflowRunSpanId,
+                name: `Node: ${node.name || nodeId}`,
+                spanType: SpanType.NODE_EXECUTION,
+                entityId: nodeId,
+                input: {
+                    nodeId,
                     nodeType: node.type,
-                    success: true
+                    nodeConfig: node.config
                 },
                 attributes: {
-                    durationMs: nodeDuration
+                    userId,
+                    nodeId,
+                    nodeType: node.type,
+                    nodeName: node.name
                 }
             });
+            const nodeSpanId = nodeContext.spanId;
 
-            // Update progress
-            completedNodeCount++;
-            const percentage = Math.round((completedNodeCount / nodeEntries.length) * 100);
-            await emitExecutionProgress({
+            await emitNodeStarted({
                 executionId,
-                completed: completedNodeCount,
-                total: nodeEntries.length,
-                percentage
+                nodeId,
+                nodeName: node.name,
+                nodeType: node.type
             });
 
-            // Execute dependent nodes
+            const nodeStartTime = Date.now();
+            let nodeResult: JsonObject | null = null;
+            let nodeFailed = false;
+
+            try {
+                if (node.type === "input") {
+                    if (node.config.inputName && typeof node.config.inputName === "string") {
+                        const inputName = node.config.inputName;
+                        const inputValue = inputs[inputName];
+                        context[inputName] = inputValue;
+                        console.log(
+                            `[Orchestrator] Input node ${nodeId}: ${inputName} = ${JSON.stringify(inputValue)}`
+                        );
+                    } else {
+                        Object.assign(context, inputs);
+                        console.log(
+                            `[Orchestrator] Input node ${nodeId}: merged all inputs into context`
+                        );
+                    }
+                } else if (node.type === "conditional") {
+                    const leftValue =
+                        typeof node.config.leftValue === "string" ? node.config.leftValue : "";
+                    const rightValue =
+                        typeof node.config.rightValue === "string" ? node.config.rightValue : "";
+                    const operator =
+                        typeof node.config.operator === "string" ? node.config.operator : "==";
+
+                    const interpolate = (str: string): string => {
+                        return str.replace(/\$\{([^}]+)\}/g, (_, key) => {
+                            const value = context[key.trim()];
+                            return value !== undefined ? String(value) : "";
+                        });
+                    };
+
+                    const leftInterpolated = interpolate(leftValue);
+                    const rightInterpolated = interpolate(rightValue);
+                    const conditionMet =
+                        leftInterpolated.toLowerCase() === rightInterpolated.toLowerCase();
+                    const branch = conditionMet ? "true" : "false";
+
+                    console.log(
+                        `[Orchestrator] Conditional: "${leftInterpolated}" ${operator} "${rightInterpolated}" = ${conditionMet} (branch: ${branch})`
+                    );
+
+                    context.conditionMet = conditionMet;
+                    context.branch = branch;
+                    context.leftValue = leftInterpolated;
+                    context.rightValue = rightInterpolated;
+                    context.operator = operator;
+                } else {
+                    const result = await executeNode({
+                        nodeType: node.type,
+                        nodeConfig: node.config,
+                        context
+                    });
+
+                    if (node.type === "output") {
+                        Object.keys(result).forEach((key) => outputNodeKeys.add(key));
+                        nodeResult = result;
+                    }
+
+                    Object.assign(context, result);
+                    console.log(
+                        `[Orchestrator] Node ${nodeId} completed, added keys: ${Object.keys(result).join(", ")}`
+                    );
+                }
+
+                const nodeDuration = Date.now() - nodeStartTime;
+                const nodeOutput = node.type === "output" && nodeResult ? nodeResult : context;
+                await emitNodeCompleted({
+                    executionId,
+                    nodeId,
+                    nodeName: node.name || nodeId,
+                    nodeType: node.type,
+                    output: nodeOutput,
+                    duration: nodeDuration
+                });
+
+                await endSpan({
+                    spanId: nodeSpanId,
+                    output: {
+                        nodeType: node.type,
+                        success: true
+                    },
+                    attributes: {
+                        durationMs: nodeDuration
+                    }
+                });
+
+                completedNodeCount++;
+                const percentage = Math.round((completedNodeCount / nodeEntries.length) * 100);
+                await emitExecutionProgress({
+                    executionId,
+                    completed: completedNodeCount,
+                    total: nodeEntries.length,
+                    percentage
+                });
+            } catch (error: unknown) {
+                const errorMessage = error instanceof Error ? error.message : "Unknown error";
+                console.error(`[Orchestrator] Node ${nodeId} failed: ${errorMessage}`);
+                errors[nodeId] = errorMessage;
+                nodeFailed = true;
+
+                await endSpan({
+                    spanId: nodeSpanId,
+                    error: error instanceof Error ? error : new Error(errorMessage),
+                    attributes: {
+                        success: false,
+                        failureReason: "node_execution_failed"
+                    }
+                });
+
+                await emitNodeFailed({
+                    executionId,
+                    nodeId,
+                    nodeName: node.name || nodeId,
+                    nodeType: node.type,
+                    error: errorMessage
+                });
+            } finally {
+                executed.add(nodeId);
+            }
+
+            if (nodeFailed) {
+                continue;
+            }
+
             const dependentEdges = outgoingEdges.get(nodeId) || [];
 
-            // Handle conditional branching
             if (node.type === "conditional") {
-                // Get the branch result from context
                 const branch = context.branch as string | undefined;
                 console.log(`[Orchestrator] Conditional node ${nodeId} branch: ${branch}`);
 
-                // PHASE 1: Mark all skipped branches FIRST (synchronous)
-                // This prevents race condition where converging nodes try to pull skipped dependencies
                 for (const edge of dependentEdges) {
                     const shouldExecute = !edge.sourceHandle || edge.sourceHandle === branch;
                     if (!shouldExecute) {
@@ -391,14 +407,10 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
                     }
                 }
 
-                // PHASE 2: Execute active branches AFTER all skipping is complete
                 for (const edge of dependentEdges) {
                     const shouldExecute = !edge.sourceHandle || edge.sourceHandle === branch;
-                    if (shouldExecute) {
-                        console.log(
-                            `[Orchestrator] Following ${edge.sourceHandle || "unconditional"} branch to ${edge.target}`
-                        );
-                        await executeNodeAndDependents(edge.target);
+                    if (shouldExecute && !executed.has(edge.target) && !skipped.has(edge.target)) {
+                        queue.push(edge.target);
                     }
                 }
             } else if (node.type === "router") {
@@ -422,52 +434,23 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
 
                 for (const edge of dependentEdges) {
                     const shouldExecute = !edge.sourceHandle || routeSet.has(edge.sourceHandle);
-                    if (shouldExecute) {
-                        console.log(
-                            `[Orchestrator] Following route ${edge.sourceHandle || "default"} to ${edge.target}`
-                        );
-                        await executeNodeAndDependents(edge.target);
+                    if (shouldExecute && !executed.has(edge.target) && !skipped.has(edge.target)) {
+                        queue.push(edge.target);
                     }
                 }
             } else {
-                // Normal execution - execute all dependent nodes
                 for (const edge of dependentEdges) {
-                    await executeNodeAndDependents(edge.target);
+                    if (!executed.has(edge.target) && !skipped.has(edge.target)) {
+                        queue.push(edge.target);
+                    }
                 }
             }
-        } catch (error: unknown) {
-            const errorMessage = error instanceof Error ? error.message : "Unknown error";
-            console.error(`[Orchestrator] Node ${nodeId} failed: ${errorMessage}`);
-            errors[nodeId] = errorMessage;
-
-            // End NODE_EXECUTION span with error
-            await endSpan({
-                spanId: nodeSpanId,
-                error: error instanceof Error ? error : new Error(errorMessage),
-                attributes: {
-                    success: false,
-                    failureReason: "node_execution_failed"
-                }
-            });
-
-            // Emit node failed event
-            await emitNodeFailed({
-                executionId,
-                nodeId,
-                nodeName: node.name || nodeId,
-                nodeType: node.type,
-                error: errorMessage
-            });
-
-            // Don't execute dependents if this node failed (already marked as executed at start)
         }
     }
 
     // Execute from all start nodes
     try {
-        for (const [startNodeId] of startNodes) {
-            await executeNodeAndDependents(startNodeId);
-        }
+        await executeFromQueue();
 
         // Check if there were any errors
         if (Object.keys(errors).length > 0) {

@@ -1,0 +1,130 @@
+{
+    "name": "Simple Transform and Output",
+    "description": "Workflow to validate ordering: input → default → sum → filter → count → router → variables → output",
+    "entryPoint": "input-1",
+    "nodes": {
+        "input-1": {
+            "type": "input",
+            "name": "Numbers Input",
+            "config": {},
+            "position": { "x": 80, "y": 80 }
+        },
+        "transform-default": {
+            "type": "transform",
+            "name": "Default Numbers",
+            "config": {
+                "operation": "custom",
+                "inputData": "${numbers}",
+                "expression": "$type($data) = 'array' ? $data : ($exists($data) ? [$data] : [4,6])",
+                "outputVariable": "numbers"
+            },
+            "position": { "x": 200, "y": 80 }
+        },
+        "transform-sum": {
+            "type": "transform",
+            "name": "Sum Numbers",
+            "config": {
+                "operation": "reduce",
+                "inputData": "${numbers}",
+                "expression": "(acc, val) => acc + val",
+                "outputVariable": "sum"
+            },
+            "position": { "x": 360, "y": 80 }
+        },
+        "transform-filter": {
+            "type": "transform",
+            "name": "Filter >= 5",
+            "config": {
+                "operation": "filter",
+                "inputData": "${numbers}",
+                "expression": "item => item >= 5",
+                "outputVariable": "filtered"
+            },
+            "position": { "x": 360, "y": 200 }
+        },
+        "transform-count": {
+            "type": "transform",
+            "name": "Count Filtered",
+            "config": {
+                "operation": "custom",
+                "inputData": "${filtered}",
+                "expression": "$count($data)",
+                "outputVariable": "filteredCount"
+            },
+            "position": { "x": 520, "y": 200 }
+        },
+        "router-branch": {
+            "type": "router",
+            "name": "Route by Sum",
+            "config": {
+                "conditions": [
+                    {
+                        "name": "high",
+                        "expression": "sum >= 12",
+                        "description": "High sum path"
+                    }
+                ],
+                "defaultOutput": "low",
+                "evaluationMode": "first"
+            },
+            "position": { "x": 520, "y": 80 }
+        },
+        "variable-message": {
+            "type": "variable",
+            "name": "Set Message",
+            "config": {
+                "operation": "set",
+                "variableName": "message",
+                "value": "High sum ${sum} with ${filteredCount} filtered",
+                "scope": "workflow",
+                "valueType": "string"
+            },
+            "position": { "x": 680, "y": 40 }
+        },
+        "variable-message-low": {
+            "type": "variable",
+            "name": "Set Low Message",
+            "config": {
+                "operation": "set",
+                "variableName": "message",
+                "value": "Low sum ${sum}",
+                "scope": "workflow",
+                "valueType": "string"
+            },
+            "position": { "x": 680, "y": 140 }
+        },
+        "output-final": {
+            "type": "output",
+            "name": "Final Output",
+            "config": {
+                "outputVariable": "result",
+                "format": "json",
+                "fields": ["sum", "message", "filteredCount", "filtered"]
+            },
+            "position": { "x": 680, "y": 80 }
+        }
+    },
+    "edges": [
+        { "id": "e1", "source": "input-1", "target": "transform-default" },
+        { "id": "e2", "source": "transform-default", "target": "transform-sum" },
+        { "id": "e2b", "source": "transform-default", "target": "transform-filter" },
+        { "id": "e2c", "source": "transform-filter", "target": "transform-count" },
+        { "id": "e3", "source": "transform-sum", "target": "router-branch" },
+        { "id": "e3b", "source": "transform-count", "target": "router-branch" },
+        {
+            "id": "e4",
+            "source": "router-branch",
+            "target": "variable-message",
+            "sourceHandle": "high"
+        },
+        {
+            "id": "e5",
+            "source": "router-branch",
+            "target": "variable-message-low",
+            "sourceHandle": "low"
+        },
+        { "id": "e6", "source": "variable-message", "target": "output-final" },
+        { "id": "e7", "source": "variable-message-low", "target": "output-final" },
+        { "id": "e8", "source": "transform-filter", "target": "output-final" }
+    ]
+}
