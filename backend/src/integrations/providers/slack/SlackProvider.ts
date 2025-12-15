@@ -1,3 +1,4 @@
+import { config as appConfig, getOAuthRedirectUri } from "../../../core/config";
 import { BaseProvider } from "../../core/BaseProvider";
 import { SlackClient } from "./client/SlackClient";
 import { SlackMCPAdapter } from "./mcp/SlackMCPAdapter";
@@ -62,9 +63,9 @@ export class SlackProvider extends BaseProvider {
                 "users:read",
                 "users:read.email"
             ],
-            clientId: process.env.SLACK_CLIENT_ID || "",
-            clientSecret: process.env.SLACK_CLIENT_SECRET || "",
-            redirectUri: `${process.env.API_URL || "http://localhost:3001"}/api/oauth/slack/callback`,
+            clientId: appConfig.oauth.slack.clientId,
+            clientSecret: appConfig.oauth.slack.clientSecret,
+            redirectUri: getOAuthRedirectUri("slack"),
             refreshable: true
         };
 

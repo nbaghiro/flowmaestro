@@ -1,3 +1,4 @@
+import { config as appConfig, getOAuthRedirectUri } from "../../../core/config";
 import { BaseProvider } from "../../core/BaseProvider";
 import { GoogleCalendarClient } from "./client/GoogleCalendarClient";
 import {
@@ -61,7 +62,7 @@ import type {
  * 4. Create OAuth client ID:
  *    - Application type: Web application
  *    - Name: FlowMaestro Google Calendar
- *    - Authorized redirect URIs: http://localhost:3001/api/oauth/google/callback
+ *    - Authorized redirect URIs: {API_URL}/oauth/google/callback
  *      (replace with your API_URL in production)
  * 5. Copy Client ID and Client Secret
  *
@@ -140,9 +141,9 @@ export class GoogleCalendarProvider extends BaseProvider {
             authUrl: "https://accounts.google.com/o/oauth2/v2/auth",
             tokenUrl: "https://oauth2.googleapis.com/token",
             scopes: ["https://www.googleapis.com/auth/calendar.events"],
-            clientId: process.env.GOOGLE_CLIENT_ID || "",
-            clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
-            redirectUri: `${process.env.API_URL}/api/oauth/google/callback`,
+            clientId: appConfig.oauth.google.clientId,
+            clientSecret: appConfig.oauth.google.clientSecret,
+            redirectUri: getOAuthRedirectUri("google"),
             refreshable: true
         };
 

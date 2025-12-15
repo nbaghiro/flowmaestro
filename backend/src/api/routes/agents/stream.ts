@@ -1,6 +1,7 @@
 import { FastifyRequest, FastifyReply } from "fastify";
 import { z } from "zod";
 import type { ThreadStreamingEvent } from "@flowmaestro/shared";
+import { config } from "../../../core/config";
 import { redisEventBus } from "../../../services/events/RedisEventBus";
 import { AgentExecutionRepository } from "../../../storage/repositories/AgentExecutionRepository";
 import { NotFoundError } from "../../middleware";
@@ -30,10 +31,10 @@ export async function streamAgentHandler(
     }
     const threadId = execution.thread_id;
 
-    // Set SSE headers
+    // Set SSE headers - use config.cors.origin for allowed origins
     const origin = request.headers.origin;
-    const allowedOrigins = ["http://localhost:3000"];
-    const corsOrigin = origin && allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
+    const corsOrigin =
+        origin && config.cors.origin.includes(origin) ? origin : config.cors.origin[0];
 
     reply.raw.writeHead(200, {
         "Content-Type": "text/event-stream",

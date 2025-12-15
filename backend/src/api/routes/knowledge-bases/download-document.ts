@@ -65,9 +65,9 @@ export async function downloadDocumentRoute(fastify: FastifyInstance) {
                 });
             }
 
-            // Generate signed URL
+            // Generate signed URL (default 1 hour expiration)
             const gcsService = getGCSStorageService();
-            const expiresIn = parseInt(process.env.GCS_SIGNED_URL_EXPIRATION || "3600", 10);
+            const expiresIn = 3600;
 
             try {
                 const signedUrl = await gcsService.getSignedDownloadUrl(

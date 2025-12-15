@@ -51,7 +51,7 @@ export function useOAuth() {
         if (!token) return;
 
         try {
-            const response = await fetch(`${API_BASE_URL}/api/oauth/providers`, {
+            const response = await fetch(`${API_BASE_URL}/oauth/providers`, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
@@ -88,7 +88,7 @@ export function useOAuth() {
             }
 
             // Build URL with optional settings as query params
-            const url = new URL(`${API_BASE_URL}/api/oauth/${provider}/authorize`);
+            const url = new URL(`${API_BASE_URL}/oauth/${provider}/authorize`);
             if (settings) {
                 Object.entries(settings).forEach(([key, value]) => {
                     if (value) {
@@ -203,15 +203,12 @@ export function useOAuth() {
             throw new Error("Not authenticated");
         }
 
-        const response = await fetch(
-            `${API_BASE_URL}/api/oauth/${provider}/revoke/${connectionId}`,
-            {
-                method: "POST",
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
+        const response = await fetch(`${API_BASE_URL}/oauth/${provider}/revoke/${connectionId}`, {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${token}`
             }
-        );
+        });
 
         const data = await response.json();
 
@@ -229,15 +226,12 @@ export function useOAuth() {
             throw new Error("Not authenticated");
         }
 
-        const response = await fetch(
-            `${API_BASE_URL}/api/oauth/${provider}/refresh/${connectionId}`,
-            {
-                method: "POST",
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
+        const response = await fetch(`${API_BASE_URL}/oauth/${provider}/refresh/${connectionId}`, {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${token}`
             }
-        );
+        });
 
         const data = await response.json();
 

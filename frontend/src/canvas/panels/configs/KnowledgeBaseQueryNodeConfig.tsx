@@ -4,25 +4,11 @@ import { FormField, FormSection } from "../../../components/common/FormField";
 import { Select } from "../../../components/common/Select";
 import { Textarea } from "../../../components/common/Textarea";
 import { OutputSettingsSection } from "../../../components/OutputSettingsSection";
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
+import { getKnowledgeBases, type KnowledgeBase } from "../../../lib/api";
 
 interface KnowledgeBaseQueryNodeConfigProps {
     data: Record<string, unknown>;
     onUpdate: (config: unknown) => void;
-}
-
-interface KnowledgeBase {
-    id: string;
-    name: string;
-    description: string;
-}
-
-/**
- * Get auth token from localStorage
- */
-function getAuthToken(): string | null {
-    return localStorage.getItem("auth_token");
 }
 
 export function KnowledgeBaseQueryNodeConfig({
@@ -37,19 +23,7 @@ export function KnowledgeBaseQueryNodeConfig({
     const { data: kbData, isLoading } = useQuery({
         queryKey: ["knowledge-bases"],
         queryFn: async () => {
-            const token = getAuthToken();
-            const response = await fetch(`${API_BASE_URL}/api/knowledge-bases`, {
-                headers: {
-                    "Content-Type": "application/json",
-                    ...(token && { Authorization: `Bearer ${token}` })
-                }
-            });
-
-            if (!response.ok) {
-                throw new Error("Failed to fetch knowledge bases");
-            }
-
-            const result = await response.json();
+            const result = await getKnowledgeBases();
             return result.data as KnowledgeBase[];
         }
     });

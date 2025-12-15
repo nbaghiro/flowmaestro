@@ -7,7 +7,7 @@ import {
     normalizeAndHashBackupCode
 } from "../../../core/utils/two-factor";
 import { emailService } from "../../../services/email/EmailService";
-import { sendSms } from "../../../services/SmsService";
+import { sendSms } from "../../../services/TwilioService";
 import { UserRepository } from "../../../storage/repositories";
 import { TwoFactorBackupCodeRepository } from "../../../storage/repositories/TwoFactorBackupCodeRepository";
 import { TwoFactorTokenRepository } from "../../../storage/repositories/TwoFactorTokenRepository";

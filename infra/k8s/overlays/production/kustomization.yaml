@@ -12,6 +12,7 @@ commonLabels:
 # Patches for production-specific configuration
 patchesStrategicMerge:
   - replica-patch.yaml
+  - gcs-configmap-patch.yaml
 
 # Image overrides (set during deployment)
 images:

@@ -1,5 +1,6 @@
 import { EventEmitter } from "events";
 import { FastifyRequest, FastifyReply } from "fastify";
+import { config } from "../../../core/config";
 
 interface StreamParams {
     executionId: string;
@@ -30,13 +31,17 @@ export async function chatStreamHandler(
         request.raw.socket.setKeepAlive(true);
     }
 
-    // Setup SSE headers with CORS
+    // Setup SSE headers with CORS - use config.cors.origin for allowed origins
+    const origin = request.headers.origin;
+    const corsOrigin =
+        origin && config.cors.origin.includes(origin) ? origin : config.cors.origin[0];
+
     reply.raw.writeHead(200, {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",
         Connection: "keep-alive",
         "X-Accel-Buffering": "no", // Disable nginx buffering
-        "Access-Control-Allow-Origin": request.headers.origin || "*",
+        "Access-Control-Allow-Origin": corsOrigin,
         "Access-Control-Allow-Credentials": "true"
     });
 

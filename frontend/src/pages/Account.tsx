@@ -3,6 +3,12 @@ import { useEffect, useRef, useState } from "react";
 import { ConfirmDialog } from "../components/common/ConfirmDialog";
 import { PageHeader } from "../components/common/PageHeader";
 import { useAuth } from "../contexts/AuthContext";
+import {
+    getGoogleAuthUrl,
+    getMicrosoftAuthUrl,
+    unlinkGoogleAccount,
+    unlinkMicrosoftAccount
+} from "../lib/api";
 import type { LucideIcon } from "lucide-react";
 import { AccountEditModal } from "@/components/AccountEditModal";
 
@@ -31,30 +37,17 @@ export function Account() {
     const canUnlinkMicrosoft = hasPassword || isGoogleConnected;
 
     const handleConnectGoogle = () => {
-        window.location.href = `${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/auth/google`;
+        window.location.href = getGoogleAuthUrl();
     };
 
     const handleConnectMicrosoft = () => {
-        window.location.href = `${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/auth/microsoft`;
+        window.location.href = getMicrosoftAuthUrl();
     };
 
     const handleUnlinkGoogle = async () => {
         setIsUnlinking(true);
         try {
-            const response = await fetch(
-                `${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/auth/google/unlink`,
-                {
-                    method: "POST",
-                    headers: {
-                        Authorization: `Bearer ${localStorage.getItem("auth_token")}`
-                    }
-                }
-            );
-
-            if (!response.ok) {
-                throw new Error("Failed to unlink Google account");
-            }
-
+            await unlinkGoogleAccount();
             window.location.reload();
         } catch (error) {
             console.error("Failed to unlink Google:", error);
@@ -67,20 +60,7 @@ export function Account() {
     const handleUnlinkMicrosoft = async () => {
         setIsUnlinking(true);
         try {
-            const response = await fetch(
-                `${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/auth/microsoft/unlink`,
-                {
-                    method: "POST",
-                    headers: {
-                        Authorization: `Bearer ${localStorage.getItem("auth_token")}`
-                    }
-                }
-            );
-
-            if (!response.ok) {
-                throw new Error("Failed to unlink Microsoft account");
-            }
-
+            await unlinkMicrosoftAccount();
             window.location.reload();
         } catch (error) {
             console.error("Failed to unlink Microsoft:", error);

@@ -27,6 +27,26 @@ spec:
             - name: http
               containerPort: 3001
               protocol: TCP
+          # =================================================================
+          # Environment Variables - Inject secrets by category using envFrom
+          # Secrets are managed by Pulumi and synced via External Secrets Operator
+          # =================================================================
+          envFrom:
+            # Core secrets (JWT_SECRET, ENCRYPTION_KEY)
+            - secretRef:
+                name: core-secrets
+            # LLM API keys (OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.)
+            - secretRef:
+                name: llm-secrets
+                optional: true
+            # OAuth secrets (SLACK_CLIENT_ID, GOOGLE_CLIENT_ID, etc.)
+            - secretRef:
+                name: oauth-secrets
+                optional: true
+            # Service secrets (RESEND_API_KEY, TWILIO_*, etc.)
+            - secretRef:
+                name: service-secrets
+                optional: true
           env:
             # From ConfigMap
             - name: NODE_ENV
@@ -49,13 +69,23 @@ spec:
                 configMapKeyRef:
                   name: flowmaestro-config
                   key: LOG_LEVEL
-            - name: CORS_ORIGIN
+            - name: API_URL
               valueFrom:
                 configMapKeyRef:
                   name: flowmaestro-config
-                  key: CORS_ORIGIN
+                  key: API_URL
+            - name: APP_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: flowmaestro-config
+                  key: APP_URL
+            - name: MARKETING_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: flowmaestro-config
+                  key: MARKETING_URL
 
-            # Database credentials (from secret)
+            # Database credentials (from infrastructure secret)
             - name: POSTGRES_HOST
               valueFrom:
                 secretKeyRef:
@@ -82,7 +112,7 @@ spec:
                   name: db-credentials
                   key: password
 
-            # Redis credentials (from secret)
+            # Redis credentials (from infrastructure secret)
             - name: REDIS_HOST
               valueFrom:
                 secretKeyRef:
@@ -95,54 +125,11 @@ spec:
                   key: port
 
             # Temporal configuration
+            # Use FQDN to ensure reliable DNS resolution for gRPC connections
             - name: TEMPORAL_ADDRESS
-              value: "temporal-service:7233"
+              value: "temporal-service.flowmaestro.svc.cluster.local:7233"
             - name: TEMPORAL_NAMESPACE
               value: "default"
-
-            # Application secrets (from secret)
-            - name: JWT_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: jwt-secret
-            - name: ENCRYPTION_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: encryption-key
-
-            # Optional: LLM API keys (from secret, if exists)
-            - name: OPENAI_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: llm-api-keys
-                  key: openai-api-key
-                  optional: true
-            - name: ANTHROPIC_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: llm-api-keys
-                  key: anthropic-api-key
-                  optional: true
-            - name: GOOGLE_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: llm-api-keys
-                  key: google-api-key
-                  optional: true
-            - name: COHERE_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: llm-api-keys
-                  key: cohere-api-key
-                  optional: true
-            - name: HUGGINGFACE_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: llm-api-keys
-                  key: huggingface-api-key
-                  optional: true
 
             # Google Cloud Storage configuration (from configmap)
             - name: GCS_BUCKET_NAME

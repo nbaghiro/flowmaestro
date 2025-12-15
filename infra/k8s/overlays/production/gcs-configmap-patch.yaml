@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gcs-config
+  namespace: flowmaestro
+data:
+  # Production GCS bucket for knowledge documents
+  GCS_BUCKET_NAME: "flowmaestro-knowledge-docs-flowmaestro-prod"

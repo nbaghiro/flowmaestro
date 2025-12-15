@@ -3,14 +3,14 @@
  */
 
 /**
- * Interpolate variables in a string using ${varName} syntax.
+ * Interpolate variables in a string using ${varName} or {{varName}} syntax
  * Supports nested object paths and array indices:
- * - Simple: ${username}
- * - Nested: ${user.profile.name}
- * - Array indices: ${users[0].name}
+ * - Simple: ${username} or {{username}}
+ * - Nested: ${user.profile.name} or {{user.profile.name}}
+ * - Array indices: ${users[0].name} or {{users[0].name}}
  * - Complex: ${paper.link[0].$.href}
  *
- * @param str - String containing ${...} placeholders
+ * @param str - String containing ${...} or {{...}} placeholders
  * @param context - Object with variable values
  * @param options - Optional configuration
  * @returns String with variables replaced
@@ -20,7 +20,9 @@ export function interpolateVariables(
     context: Record<string, unknown>,
     options?: { stringifyObjects?: boolean }
 ): string {
-    return str.replace(/\$\{([^}]+)\}/g, (match, varName) => {
+    // Support both ${varName} and {{varName}} syntaxes
+    return str.replace(/(?:\$\{([^}]+)\}|\{\{([^}]+)\}\})/g, (match, dollarVar, braceVar) => {
+        const varName = dollarVar || braceVar;
         // Split path handling array indices like: firstPaper.link[0].$.href
         // Results in: ['firstPaper', 'link', '0', '$', 'href']
         const keys = varName

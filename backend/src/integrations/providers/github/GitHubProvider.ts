@@ -1,3 +1,4 @@
+import { config as appConfig, getOAuthRedirectUri } from "../../../core/config";
 import { BaseProvider } from "../../core/BaseProvider";
 import { GitHubClient } from "./client/GitHubClient";
 import { GitHubMCPAdapter } from "./mcp/GitHubMCPAdapter";
@@ -142,9 +143,9 @@ export class GitHubProvider extends BaseProvider {
                 "workflow", // Manage GitHub Actions workflows
                 "write:discussion" // Write discussions (for some PR operations)
             ],
-            clientId: process.env.GITHUB_CLIENT_ID || "",
-            clientSecret: process.env.GITHUB_CLIENT_SECRET || "",
-            redirectUri: `${process.env.API_URL || "http://localhost:3001"}/api/oauth/github/callback`,
+            clientId: appConfig.oauth.github.clientId,
+            clientSecret: appConfig.oauth.github.clientSecret,
+            redirectUri: getOAuthRedirectUri("github"),
             refreshable: false // GitHub OAuth apps don't support refresh tokens by default
         };
 

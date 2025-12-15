@@ -1,3 +1,4 @@
+import { config as appConfig, getOAuthRedirectUri } from "../../../core/config";
 import { BaseProvider } from "../../core/BaseProvider";
 import { LinearClient } from "./client/LinearClient";
 import {
@@ -63,9 +64,9 @@ export class LinearProvider extends BaseProvider {
             authUrl: "https://linear.app/oauth/authorize",
             tokenUrl: "https://api.linear.app/oauth/token",
             scopes: ["read", "write"],
-            clientId: process.env.LINEAR_CLIENT_ID || "",
-            clientSecret: process.env.LINEAR_CLIENT_SECRET || "",
-            redirectUri: `${process.env.API_URL}/api/oauth/linear/callback`,
+            clientId: appConfig.oauth.linear.clientId,
+            clientSecret: appConfig.oauth.linear.clientSecret,
+            redirectUri: getOAuthRedirectUri("linear"),
             refreshable: true
         };
 

@@ -1,5 +1,6 @@
 import * as crypto from "crypto";
 import { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
+import { config } from "../../../core/config";
 import { FacebookWebhookHandler } from "../../../integrations/providers/facebook/webhooks/FacebookWebhookHandler";
 import { InstagramWebhookHandler } from "../../../integrations/providers/instagram/webhooks/InstagramWebhookHandler";
 import { WhatsAppWebhookHandler } from "../../../integrations/providers/whatsapp/webhooks/WhatsAppWebhookHandler";
@@ -37,8 +38,8 @@ export async function metaWebhookRoutes(fastify: FastifyInstance) {
 
         fastify.log.info(`[MetaWebhook] Verification request: mode=${mode}`);
 
-        // Get verify token from environment
-        const verifyToken = process.env.META_WEBHOOK_VERIFY_TOKEN;
+        // Get verify token from config
+        const verifyToken = config.oauth.meta.webhookVerifyToken;
 
         if (!verifyToken) {
             fastify.log.error("[MetaWebhook] META_WEBHOOK_VERIFY_TOKEN not configured");
@@ -130,7 +131,7 @@ function verifySignature(request: FastifyRequest, signature: string | undefined)
         return false;
     }
 
-    const appSecret = process.env.META_APP_SECRET;
+    const appSecret = config.oauth.meta.appSecret;
     if (!appSecret) {
         console.error("[MetaWebhook] META_APP_SECRET not configured");
         return false;

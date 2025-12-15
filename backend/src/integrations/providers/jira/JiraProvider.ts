@@ -1,3 +1,4 @@
+import { config as appConfig, getOAuthRedirectUri } from "../../../core/config";
 import { BaseProvider } from "../../core/BaseProvider";
 import { JiraClient } from "./client/JiraClient";
 import { JiraMCPAdapter } from "./mcp/JiraMCPAdapter";
@@ -139,9 +140,9 @@ export class JiraProvider extends BaseProvider {
                 "manage:jira-webhook",
                 "offline_access"
             ],
-            clientId: process.env.JIRA_CLIENT_ID || "",
-            clientSecret: process.env.JIRA_CLIENT_SECRET || "",
-            redirectUri: `${process.env.API_URL || "http://localhost:3001"}/api/oauth/jira/callback`,
+            clientId: appConfig.oauth.jira.clientId,
+            clientSecret: appConfig.oauth.jira.clientSecret,
+            redirectUri: getOAuthRedirectUri("jira"),
             refreshable: true
         };
         return config;

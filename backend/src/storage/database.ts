@@ -1,10 +1,5 @@
-import path from "path";
-import dotenv from "dotenv";
 import { Pool, PoolClient, QueryResult, QueryResultRow } from "pg";
-
-// Load .env from project root
-// When compiled, this will be in dist/storage/, so we go up to backend/, then to project root
-dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
+import { config } from "../core/config";
 
 interface DatabaseConfig {
     host: string;
@@ -21,16 +16,16 @@ class Database {
     private pool: Pool;
     private static instance: Database;
 
-    private constructor(config: DatabaseConfig) {
+    private constructor(dbConfig: DatabaseConfig) {
         this.pool = new Pool({
-            host: config.host,
-            port: config.port,
-            database: config.database,
-            user: config.user,
-            password: config.password,
-            max: config.max || 20,
-            idleTimeoutMillis: config.idleTimeoutMillis || 30000,
-            connectionTimeoutMillis: config.connectionTimeoutMillis || 2000,
+            host: dbConfig.host,
+            port: dbConfig.port,
+            database: dbConfig.database,
+            user: dbConfig.user,
+            password: dbConfig.password,
+            max: dbConfig.max || 20,
+            idleTimeoutMillis: dbConfig.idleTimeoutMillis || 30000,
+            connectionTimeoutMillis: dbConfig.connectionTimeoutMillis || 2000,
             // Set timezone to UTC to ensure consistent timestamp handling
             // This prevents timezone mismatches between Node.js and PostgreSQL
             options: "-c timezone=UTC"
@@ -43,14 +38,14 @@ class Database {
 
     public static getInstance(): Database {
         if (!Database.instance) {
-            const config: DatabaseConfig = {
-                host: process.env.POSTGRES_HOST || "localhost",
-                port: parseInt(process.env.POSTGRES_PORT || "5432"),
-                database: process.env.POSTGRES_DB || "flowmaestro",
-                user: process.env.POSTGRES_USER || "flowmaestro",
-                password: process.env.POSTGRES_PASSWORD || "flowmaestro_dev_password"
+            const dbConfig: DatabaseConfig = {
+                host: config.database.host,
+                port: config.database.port,
+                database: config.database.database,
+                user: config.database.user,
+                password: config.database.password
             };
-            Database.instance = new Database(config);
+            Database.instance = new Database(dbConfig);
         }
         return Database.instance;
     }
@@ -64,7 +59,7 @@ class Database {
             const result = await this.pool.query<T>(text, params);
             const duration = Date.now() - start;
 
-            if (process.env.LOG_LEVEL === "debug") {
+            if (config.logLevel === "debug") {
                 console.log("Executed query", { text, duration, rows: result.rowCount });
             }
 

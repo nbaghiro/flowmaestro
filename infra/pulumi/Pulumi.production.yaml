@@ -13,3 +13,65 @@ config:
   flowmaestro-infrastructure:redisMemorySizeGb: "5"
   flowmaestro-infrastructure:redisTier: STANDARD_HA
   flowmaestro-infrastructure:gaMeasurementId: G-JKESHN6FT6
+  flowmaestro-infrastructure:githubRepo: nbaghiro/flowmaestro
+  # =============================================================================
+  # Application Secrets (Pulumi-Driven Secret Management)
+  # =============================================================================
+  # Each secret defines:
+  #   - name: kebab-case identifier (used for GCP secret name)
+  #   - envVar: SCREAMING_SNAKE_CASE environment variable name
+  #   - category: core | oauth | llm | service (determines K8s secret grouping)
+  #   - deployments: [api] | [worker] | [api, worker] (which pods need this secret)
+  #   - required: true | false (whether the pod should fail without it)
+  #   - description: optional human-readable description
+  #
+  # Workflow:
+  #   1. Add secret definition here
+  #   2. Run: pulumi up (creates empty GCP secret + K8s ExternalSecret)
+  #   3. Run: ./infra/scripts/setup-secrets-gcp.sh (prompts for value)
+  #   4. ESO syncs to K8s within 5 minutes
+  # =============================================================================
+  flowmaestro-infrastructure:secrets: |
+    [
+      {"name":"jwt-secret","envVar":"JWT_SECRET","category":"core","deployments":["api"],"required":true,"description":"JWT signing secret for authentication"},
+      {"name":"encryption-key","envVar":"ENCRYPTION_KEY","category":"core","deployments":["api","worker"],"required":true,"description":"AES-256 encryption key for sensitive data"},
+      {"name":"resend-api-key","envVar":"RESEND_API_KEY","category":"service","deployments":["api"],"required":true,"description":"Resend email service API key"},
+      {"name":"openai-api-key","envVar":"OPENAI_API_KEY","category":"llm","deployments":["api","worker"],"required":false,"description":"OpenAI API key for GPT models"},
+      {"name":"anthropic-api-key","envVar":"ANTHROPIC_API_KEY","category":"llm","deployments":["api","worker"],"required":false,"description":"Anthropic API key for Claude models"},
+      {"name":"google-api-key","envVar":"GOOGLE_API_KEY","category":"llm","deployments":["api","worker"],"required":false,"description":"Google AI API key for Gemini models"},
+      {"name":"cohere-api-key","envVar":"COHERE_API_KEY","category":"llm","deployments":["api","worker"],"required":false,"description":"Cohere API key"},
+      {"name":"huggingface-api-key","envVar":"HUGGINGFACE_API_KEY","category":"llm","deployments":["api","worker"],"required":false,"description":"Hugging Face API key"},
+      {"name":"slack-client-id","envVar":"SLACK_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Slack OAuth client ID"},
+      {"name":"slack-client-secret","envVar":"SLACK_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Slack OAuth client secret"},
+      {"name":"google-client-id","envVar":"GOOGLE_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Google OAuth client ID"},
+      {"name":"google-client-secret","envVar":"GOOGLE_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Google OAuth client secret"},
+      {"name":"notion-client-id","envVar":"NOTION_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Notion OAuth client ID"},
+      {"name":"notion-client-secret","envVar":"NOTION_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Notion OAuth client secret"},
+      {"name":"airtable-client-id","envVar":"AIRTABLE_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Airtable OAuth client ID"},
+      {"name":"airtable-client-secret","envVar":"AIRTABLE_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Airtable OAuth client secret"},
+      {"name":"hubspot-client-id","envVar":"HUBSPOT_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"HubSpot OAuth client ID"},
+      {"name":"hubspot-client-secret","envVar":"HUBSPOT_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"HubSpot OAuth client secret"},
+      {"name":"github-client-id","envVar":"GITHUB_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"GitHub OAuth client ID"},
+      {"name":"github-client-secret","envVar":"GITHUB_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"GitHub OAuth client secret"},
+      {"name":"linear-client-id","envVar":"LINEAR_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Linear OAuth client ID"},
+      {"name":"linear-client-secret","envVar":"LINEAR_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Linear OAuth client secret"},
+      {"name":"figma-client-id","envVar":"FIGMA_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Figma OAuth client ID"},
+      {"name":"figma-client-secret","envVar":"FIGMA_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Figma OAuth client secret"},
+      {"name":"microsoft-client-id","envVar":"MICROSOFT_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Microsoft OAuth client ID (OneDrive, Excel, Teams, etc.)"},
+      {"name":"microsoft-client-secret","envVar":"MICROSOFT_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Microsoft OAuth client secret"},
+      {"name":"meta-app-id","envVar":"META_APP_ID","category":"oauth","deployments":["api"],"required":false,"description":"Meta Platform App ID (WhatsApp, Instagram, Messenger)"},
+      {"name":"meta-app-secret","envVar":"META_APP_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Meta Platform App Secret"},
+      {"name":"meta-client-token","envVar":"META_CLIENT_TOKEN","category":"oauth","deployments":["api"],"required":false,"description":"Meta Platform Client Token"},
+      {"name":"meta-webhook-verify-token","envVar":"META_WEBHOOK_VERIFY_TOKEN","category":"oauth","deployments":["api"],"required":false,"description":"Meta Webhook verification token"},
+      {"name":"zendesk-client-id","envVar":"ZENDESK_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Zendesk OAuth client ID"},
+      {"name":"zendesk-client-secret","envVar":"ZENDESK_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Zendesk OAuth client secret"},
+      {"name":"apollo-client-id","envVar":"APOLLO_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Apollo.io OAuth client ID"},
+      {"name":"apollo-client-secret","envVar":"APOLLO_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Apollo.io OAuth client secret"},
+      {"name":"jira-client-id","envVar":"JIRA_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Jira Cloud OAuth client ID"},
+      {"name":"jira-client-secret","envVar":"JIRA_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Jira Cloud OAuth client secret"},
+      {"name":"shopify-client-id","envVar":"SHOPIFY_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Shopify OAuth client ID"},
+      {"name":"shopify-client-secret","envVar":"SHOPIFY_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Shopify OAuth client secret"},
+      {"name":"twilio-account-sid","envVar":"TWILIO_ACCOUNT_SID","category":"service","deployments":["api"],"required":false,"description":"Twilio Account SID"},
+      {"name":"twilio-auth-token","envVar":"TWILIO_AUTH_TOKEN","category":"service","deployments":["api"],"required":false,"description":"Twilio Auth Token"},
+      {"name":"twilio-phone-number","envVar":"TWILIO_PHONE_NUMBER","category":"service","deployments":["api"],"required":false,"description":"Twilio Phone Number"}
+    ]

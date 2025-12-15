@@ -14,6 +14,7 @@
         "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
         "dev:backend": "npm run dev --workspace=backend",
         "dev:frontend": "npm run dev --workspace=frontend",
+        "dev:worker": "npm run worker:orchestrator:dev --workspace=backend",
         "dev:marketing": "npm run dev --workspace=marketing",
         "build": "npm run build --workspaces",
         "test": "npm run test --workspace=backend",
@@ -49,7 +50,7 @@
         "typescript": "^5.3.3"
     },
     "engines": {
-        "node": ">=20.0.0",
+        "node": ">=22.0.0",
         "npm": ">=10.0.0"
     },
     "lint-staged": {

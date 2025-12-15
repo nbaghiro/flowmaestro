@@ -305,7 +305,7 @@ export class WebhookService {
      * Get webhook URL for a trigger
      */
     getWebhookUrl(triggerId: string, baseUrl: string): string {
-        return `${baseUrl}/api/webhooks/${triggerId}`;
+        return `${baseUrl}/webhooks/${triggerId}`;
     }
 
     /**

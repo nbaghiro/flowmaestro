@@ -717,8 +717,9 @@ TEMPORAL_CLIENT_KEY: <from temporal-credentials>
 JWT_SECRET: <from app-secrets>
 ENCRYPTION_KEY: <from app-secrets>
 
-# CORS
-CORS_ORIGIN: https://app.yourdomain.com
+# URLs (used for CORS, OAuth redirects, email links)
+APP_URL: https://app.yourdomain.com
+MARKETING_URL: https://yourdomain.com
 
 # Optional: LLM API keys
 OPENAI_API_KEY: <from secret>

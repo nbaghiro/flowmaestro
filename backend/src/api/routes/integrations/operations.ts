@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { config } from "../../../core/config";
 import { ExecutionRouter } from "../../../integrations/core/ExecutionRouter";
 import { providerRegistry } from "../../../integrations/registry";
 import type { FastifyRequest, FastifyReply } from "fastify";
@@ -51,7 +52,7 @@ export async function getOperationsHandler(
             success: false,
             error: {
                 message: errorMessage,
-                ...(process.env.NODE_ENV === "development" && { stack: errorStack })
+                ...(config.env === "development" && { stack: errorStack })
             }
         });
     }

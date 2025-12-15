@@ -64,14 +64,14 @@ export function AppSidebar() {
             <div className="h-16 border-b border-border flex items-center justify-between px-4">
                 {!isCollapsed && (
                     <div className="flex items-center gap-2">
-                        <Logo size="md" />
+                        <Logo size="sm" />
                         <span className="font-semibold text-foreground">FlowMaestro</span>
                     </div>
                 )}
 
                 {isCollapsed && (
                     <div className="mx-auto">
-                        <Logo size="md" />
+                        <Logo size="sm" />
                     </div>
                 )}
 

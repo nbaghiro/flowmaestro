@@ -25,6 +25,18 @@ spec:
           imagePullPolicy: Always
           # Override command to run worker instead of API server
           command: ["node", "backend/dist/backend/src/temporal/workers/orchestrator-worker.js"]
+          # =================================================================
+          # Environment Variables - Inject secrets by category using envFrom
+          # Secrets are managed by Pulumi and synced via External Secrets Operator
+          # =================================================================
+          envFrom:
+            # Core secrets (ENCRYPTION_KEY - worker needs this for decryption)
+            - secretRef:
+                name: core-secrets
+            # LLM API keys (OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.)
+            - secretRef:
+                name: llm-secrets
+                optional: true
           env:
             # From ConfigMap
             - name: NODE_ENV
@@ -53,7 +65,7 @@ spec:
                   name: flowmaestro-config
                   key: TEMPORAL_MAX_CONCURRENT_WORKFLOWS
 
-            # Database credentials (from secret)
+            # Database credentials (from infrastructure secret)
             - name: POSTGRES_HOST
               valueFrom:
                 secretKeyRef:
@@ -80,7 +92,7 @@ spec:
                   name: db-credentials
                   key: password
 
-            # Redis credentials (from secret)
+            # Redis credentials (from infrastructure secret)
             - name: REDIS_HOST
               valueFrom:
                 secretKeyRef:
@@ -93,49 +105,12 @@ spec:
                   key: port
 
             # Temporal configuration
+            # Use Kubernetes-injected service IP to bypass DNS resolution issues
+            # with Temporal SDK's Rust-based NativeConnection (tonic/hyper)
             - name: TEMPORAL_ADDRESS
-              value: "temporal-service:7233"
+              value: "$(TEMPORAL_SERVICE_SERVICE_HOST):7233"
             - name: TEMPORAL_NAMESPACE
               value: "default"
-
-            # Application secrets (from secret)
-            - name: ENCRYPTION_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: encryption-key
-
-            # Optional: LLM API keys (from secret, if exists)
-            - name: OPENAI_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: llm-api-keys
-                  key: openai-api-key
-                  optional: true
-            - name: ANTHROPIC_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: llm-api-keys
-                  key: anthropic-api-key
-                  optional: true
-            - name: GOOGLE_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: llm-api-keys
-                  key: google-api-key
-                  optional: true
-            - name: COHERE_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: llm-api-keys
-                  key: cohere-api-key
-                  optional: true
-            - name: HUGGINGFACE_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: llm-api-keys
-                  key: huggingface-api-key
-                  optional: true
 
             # Google Cloud Storage configuration (from configmap)
             - name: GCS_BUCKET_NAME
@@ -158,14 +133,14 @@ spec:
               cpu: 4000m
               memory: 4Gi
 
-          # Worker health can be checked via logs - no HTTP endpoint
-          # Use liveness probe to restart if process crashes
+          # Worker health check using /proc filesystem (no external utils needed)
+          # Checks if PID 1 (node process) is still running
           livenessProbe:
             exec:
               command:
                 - sh
                 - -c
-                - "ps aux | grep orchestrator-worker || exit 1"
+                - "test -d /proc/1"
             initialDelaySeconds: 60
             periodSeconds: 30
             timeoutSeconds: 5

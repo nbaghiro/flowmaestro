@@ -2,7 +2,7 @@ import { useState } from "react";
 
 // Determine API URL - fallback to localhost if not set
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
-const GOOGLE_AUTH_URL = `${API_URL}/api/auth/google`;
+const GOOGLE_AUTH_URL = `${API_URL}/auth/google`;
 
 /**
  * Hook for Google OAuth authentication

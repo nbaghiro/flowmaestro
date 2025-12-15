@@ -93,23 +93,28 @@ spec:
     - Ingress
     - Egress
   ingress:
-    # Allow traffic from GCP Load Balancer
+    # Allow traffic from within the cluster (other pods/namespaces)
     - from:
         - namespaceSelector: {}
       ports:
         - protocol: TCP
           port: 3001
-  egress:
-    # Allow DNS
-    - to:
-        - namespaceSelector: {}
+    # Allow GCP Load Balancer health check probes
+    - from:
+        - ipBlock:
+            cidr: 130.211.0.0/22
+        - ipBlock:
+            cidr: 35.191.0.0/16
       ports:
+        - protocol: TCP
+          port: 3001
+  egress:
+    # Allow DNS (both internal and external)
+    - ports:
         - protocol: UDP
           port: 53
-    # Allow HTTPS for external APIs
-    - to:
-        - namespaceSelector: {}
-      ports:
+    # Allow HTTPS for external APIs (OAuth providers, etc.)
+    - ports:
         - protocol: TCP
           port: 443
     # Allow PostgreSQL
@@ -139,16 +144,12 @@ spec:
   policyTypes:
     - Egress
   egress:
-    # Allow DNS
-    - to:
-        - namespaceSelector: {}
-      ports:
+    # Allow DNS (both internal and external)
+    - ports:
         - protocol: UDP
           port: 53
-    # Allow HTTPS for external APIs
-    - to:
-        - namespaceSelector: {}
-      ports:
+    # Allow HTTPS for external APIs (OpenAI, Anthropic, etc.)
+    - ports:
         - protocol: TCP
           port: 443
     # Allow PostgreSQL

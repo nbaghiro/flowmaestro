@@ -32,9 +32,9 @@ on:
         type: string
 
 env:
-  GCP_REGION: us-central1
-  GKE_CLUSTER: flowmaestro-prod-cluster
-  ARTIFACT_REGISTRY: us-central1-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/flowmaestro-images
+  GCP_REGION: ${{ vars.GCP_REGION || 'us-central1' }}
+  GKE_CLUSTER: flowmaestro-cluster
+  ARTIFACT_REGISTRY: ${{ vars.GCP_REGION || 'us-central1' }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/flowmaestro
   IMAGE_TAG: ${{ github.event.inputs.image_tag || github.sha }}
 
 jobs:
@@ -56,15 +56,19 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20.x
+          node-version: 22.x
           cache: "npm"
 
       # Authenticate to Google Cloud using Workload Identity Federation
+      # These values come from Pulumi outputs after running:
+      #   pulumi config set githubRepo "owner/repo-name"
+      #   pulumi up
+      # Then add the outputs as GitHub repository variables
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
 
       # Setup Cloud SDK
       - name: Set up Cloud SDK
@@ -131,6 +135,20 @@ jobs:
           cache-from: type=registry,ref=${{ env.ARTIFACT_REGISTRY }}/marketing:latest
           cache-to: type=inline
 
+      # Build and push migrations image (includes node-pg-migrate and tsx for seeding)
+      - name: Build and push migrations image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: infra/docker/migrations/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.ARTIFACT_REGISTRY }}/migrations:${{ env.IMAGE_TAG }}
+            ${{ env.ARTIFACT_REGISTRY }}/migrations:latest
+          cache-from: type=registry,ref=${{ env.ARTIFACT_REGISTRY }}/migrations:latest
+          cache-to: type=inline
+
       # Verify External Secrets are synced
       - name: Verify External Secrets are ready
         run: |
@@ -174,6 +192,60 @@ jobs:
           echo ""
           echo "✅ All secrets are ready for deployment"
 
+      # Run database migrations before deploying new code
+      - name: Run database migrations
+        run: |
+          echo "Running database migrations..."
+
+          # Delete any existing migration jobs (clean slate)
+          kubectl delete job -n flowmaestro -l component=db-migration --ignore-not-found
+
+          # Create migration job with unique timestamp
+          TIMESTAMP=$(date +%s)
+          echo "Creating migration job: db-migration-$TIMESTAMP"
+
+          # Replace placeholders and apply
+          sed "s/\${TIMESTAMP}/$TIMESTAMP/g; s/\${IMAGE_TAG}/${{ env.IMAGE_TAG }}/g" \
+            infra/k8s/jobs/db-migration.yaml | kubectl apply -f -
+
+          # Wait for job to complete (timeout after 5 minutes)
+          echo "Waiting for migration job to complete..."
+          kubectl wait --for=condition=complete "job/db-migration-$TIMESTAMP" \
+            -n flowmaestro --timeout=300s
+
+          echo ""
+          echo "✅ Database migrations completed successfully"
+          echo ""
+          echo "Migration logs:"
+          kubectl logs "job/db-migration-$TIMESTAMP" -n flowmaestro
+
+      # Run database seeding after migrations
+      - name: Run database seeding
+        run: |
+          echo "Running database seeding..."
+
+          # Delete any existing seed jobs
+          kubectl delete job -n flowmaestro -l component=db-seed --ignore-not-found
+
+          # Create seed job with unique timestamp
+          TIMESTAMP=$(date +%s)
+          echo "Creating seed job: db-seed-$TIMESTAMP"
+
+          # Replace placeholders and apply
+          sed "s/\${TIMESTAMP}/$TIMESTAMP/g; s/\${IMAGE_TAG}/${{ env.IMAGE_TAG }}/g" \
+            infra/k8s/jobs/db-seed.yaml | kubectl apply -f -
+
+          # Wait for job to complete (timeout after 5 minutes)
+          echo "Waiting for seed job to complete..."
+          kubectl wait --for=condition=complete "job/db-seed-$TIMESTAMP" \
+            -n flowmaestro --timeout=300s
+
+          echo ""
+          echo "✅ Database seeding completed successfully"
+          echo ""
+          echo "Seed logs:"
+          kubectl logs "job/db-seed-$TIMESTAMP" -n flowmaestro
+
       # Install kustomize
       - name: Install kustomize
         run: |
@@ -185,9 +257,9 @@ jobs:
         working-directory: infra/k8s/overlays/${{ github.event.inputs.environment }}
         run: |
           kustomize edit set image \
-            us-central1-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/flowmaestro-images/backend=${{ env.ARTIFACT_REGISTRY }}/backend:${{ env.IMAGE_TAG }} \
-            us-central1-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/flowmaestro-images/frontend=${{ env.ARTIFACT_REGISTRY }}/frontend:${{ env.IMAGE_TAG }} \
-            us-central1-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/flowmaestro-images/marketing=${{ env.ARTIFACT_REGISTRY }}/marketing:${{ env.IMAGE_TAG }}
+            backend-image=${{ env.ARTIFACT_REGISTRY }}/backend:${{ env.IMAGE_TAG }} \
+            frontend-image=${{ env.ARTIFACT_REGISTRY }}/frontend:${{ env.IMAGE_TAG }} \
+            marketing-image=${{ env.ARTIFACT_REGISTRY }}/marketing:${{ env.IMAGE_TAG }}
 
       # Deploy to GKE
       - name: Deploy to GKE

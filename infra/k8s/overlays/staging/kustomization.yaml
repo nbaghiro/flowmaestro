@@ -16,6 +16,7 @@ namespace: flowmaestro-staging
 patchesStrategicMerge:
   - replica-patch.yaml
   - resource-patch.yaml
+  - gcs-configmap-patch.yaml
 
 # Image overrides
 images:

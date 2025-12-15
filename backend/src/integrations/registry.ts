@@ -349,5 +349,19 @@ providerRegistry.register(zendeskEntry);
 providerRegistry.register(apolloEntry);
 providerRegistry.register(jiraEntry);
 
+// Register Shopify provider
+const shopifyEntry: ProviderRegistryEntry = {
+    name: "shopify",
+    displayName: "Shopify",
+    authMethod: "oauth2",
+    category: "ecommerce",
+    loader: async () => {
+        const { ShopifyProvider } = await import("./providers/shopify/ShopifyProvider");
+        return new ShopifyProvider();
+    }
+};
+
+providerRegistry.register(shopifyEntry);
+
 // Export for use in application
 export { providerRegistry };

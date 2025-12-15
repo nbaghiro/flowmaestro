@@ -8,7 +8,7 @@ import { authMiddleware } from "../../middleware";
  */
 export async function microsoftAuthRoutes(fastify: FastifyInstance) {
     /**
-     * GET /api/auth/microsoft
+     * GET /auth/microsoft
      *
      * Initiate Microsoft OAuth authentication flow
      * Redirects to Microsoft consent screen for login/signup
@@ -30,7 +30,7 @@ export async function microsoftAuthRoutes(fastify: FastifyInstance) {
     });
 
     /**
-     * POST /api/auth/microsoft/unlink
+     * POST /auth/microsoft/unlink
      *
      * Unlink Microsoft account from user
      * Requires authentication and that user has a password set

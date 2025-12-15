@@ -4,6 +4,7 @@ process.env.TZ = "UTC";
 
 import path from "path";
 import { Worker, NativeConnection } from "@temporalio/worker";
+import { config } from "../../core/config";
 import { initializeSpanService } from "../../core/tracing";
 import { redisEventBus } from "../../services/events/RedisEventBus";
 import { db } from "../../storage/database";
@@ -42,7 +43,7 @@ async function run() {
         try {
             console.log(`Attempting to connect to Temporal (attempt ${attempt}/${maxRetries})...`);
             connection = await NativeConnection.connect({
-                address: process.env.TEMPORAL_ADDRESS || "localhost:7233"
+                address: config.temporal.address
             });
             console.log("✅ Connected to Temporal successfully");
             break;
@@ -91,7 +92,7 @@ async function run() {
 
     console.log("🚀 Orchestrator worker starting...");
     console.log("   Task Queue: flowmaestro-orchestrator");
-    console.log(`   Temporal Address: ${process.env.TEMPORAL_ADDRESS || "localhost:7233"}`);
+    console.log(`   Temporal Address: ${config.temporal.address}`);
 
     // Graceful shutdown handler
     const signals = ["SIGINT", "SIGTERM"];

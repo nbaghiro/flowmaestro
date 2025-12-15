@@ -1,3 +1,4 @@
+import { config as appConfig, getOAuthRedirectUri } from "../../../core/config";
 import { BaseProvider } from "../../core/BaseProvider";
 import { GmailClient } from "./client/GmailClient";
 import {
@@ -151,9 +152,9 @@ export class GmailProvider extends BaseProvider {
                 "https://www.googleapis.com/auth/gmail.send",
                 "https://www.googleapis.com/auth/gmail.compose"
             ],
-            clientId: process.env.GOOGLE_CLIENT_ID || "",
-            clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
-            redirectUri: `${process.env.API_URL}/api/oauth/google/callback`,
+            clientId: appConfig.oauth.google.clientId,
+            clientSecret: appConfig.oauth.google.clientSecret,
+            redirectUri: getOAuthRedirectUri("google"),
             refreshable: true
         };
 

@@ -1,4 +1,5 @@
 import type { JsonObject, JsonValue } from "@flowmaestro/shared";
+import { config as appConfig } from "../../../core/config";
 import {
     validateToolInput,
     coerceToolArguments,
@@ -106,19 +107,19 @@ export async function callLLM(input: CallLLMInput): Promise<LLMResponse> {
     if (!apiKey) {
         switch (actualProvider) {
             case "openai":
-                apiKey = process.env.OPENAI_API_KEY || null;
+                apiKey = appConfig.ai.openai.apiKey || null;
                 break;
             case "anthropic":
-                apiKey = process.env.ANTHROPIC_API_KEY || null;
+                apiKey = appConfig.ai.anthropic.apiKey || null;
                 break;
             case "google":
-                apiKey = process.env.GOOGLE_API_KEY || null;
+                apiKey = appConfig.ai.google.apiKey || null;
                 break;
             case "cohere":
-                apiKey = process.env.COHERE_API_KEY || null;
+                apiKey = appConfig.ai.cohere.apiKey || null;
                 break;
             case "huggingface":
-                apiKey = process.env.HUGGINGFACE_API_KEY || null;
+                apiKey = appConfig.ai.huggingface.apiKey || null;
                 break;
         }
     }
@@ -1226,11 +1227,11 @@ async function executeWorkflowTool(input: ExecuteWorkflowToolInput): Promise<Jso
     // Import Temporal client for workflow execution
     const { Connection, Client } = await import("@temporalio/client");
     const connection = await Connection.connect({
-        address: process.env.TEMPORAL_ADDRESS || "localhost:7233"
+        address: appConfig.temporal.address
     });
     const client = new Client({
         connection,
-        namespace: process.env.TEMPORAL_NAMESPACE || "default"
+        namespace: "default"
     });
 
     // Generate execution ID for the workflow
@@ -1239,7 +1240,7 @@ async function executeWorkflowTool(input: ExecuteWorkflowToolInput): Promise<Jso
     try {
         // Start workflow execution
         const handle = await client.workflow.start("orchestratorWorkflow", {
-            taskQueue: process.env.TEMPORAL_TASK_QUEUE || "flowmaestro",
+            taskQueue: "flowmaestro-orchestrator",
             workflowId: workflowExecutionId,
             args: [
                 {
@@ -1705,11 +1706,11 @@ async function executeAgentTool(input: ExecuteAgentToolInput): Promise<JsonObjec
     // Import Temporal client for agent execution
     const { Connection, Client } = await import("@temporalio/client");
     const connection = await Connection.connect({
-        address: process.env.TEMPORAL_ADDRESS || "localhost:7233"
+        address: appConfig.temporal.address
     });
     const client = new Client({
         connection,
-        namespace: process.env.TEMPORAL_NAMESPACE || "default"
+        namespace: "default"
     });
 
     // Generate execution ID for the agent
@@ -1749,7 +1750,7 @@ async function executeAgentTool(input: ExecuteAgentToolInput): Promise<JsonObjec
 
         // Start agent execution workflow
         const handle = await client.workflow.start("agentOrchestratorWorkflow", {
-            taskQueue: process.env.TEMPORAL_TASK_QUEUE || "flowmaestro-orchestrator",
+            taskQueue: "flowmaestro-orchestrator",
             workflowId: agentExecutionId,
             args: [
                 {

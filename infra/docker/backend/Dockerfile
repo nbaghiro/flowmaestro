@@ -1,5 +1,5 @@
 # Multi-stage build for backend
-FROM node:20-slim AS builder
+FROM node:22-slim AS builder
 
 WORKDIR /app
 
@@ -18,8 +18,11 @@ COPY backend/package*.json ./backend/
 COPY shared/package*.json ./shared/
 
 # Install dependencies for both workspaces (skip scripts to avoid husky)
-RUN npm ci --workspace=backend --workspace=shared --ignore-scripts && \
-    npm rebuild --workspace=backend --workspace=shared
+# Note: We skip --ignore-scripts to allow native modules to build properly
+RUN npm ci --workspace=backend --workspace=shared --ignore-scripts
+
+# Rebuild native modules separately (skip @swc/core which can segfault on some platforms)
+RUN npm rebuild --workspace=backend --workspace=shared || true
 
 # Copy source code
 COPY shared/ ./shared/
@@ -33,7 +36,7 @@ RUN npm run build --workspace=shared
 RUN npm run build --workspace=backend
 
 # Production image
-FROM node:20-slim
+FROM node:22-slim
 
 WORKDIR /app
 

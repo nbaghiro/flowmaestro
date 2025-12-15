@@ -2,7 +2,7 @@ import { useState } from "react";
 
 // Determine API URL - fallback to localhost if not set
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
-const MICROSOFT_AUTH_URL = `${API_URL}/api/auth/microsoft`;
+const MICROSOFT_AUTH_URL = `${API_URL}/auth/microsoft`;
 
 /**
  * Hook for Microsoft OAuth authentication

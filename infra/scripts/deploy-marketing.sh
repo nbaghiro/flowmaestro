@@ -24,8 +24,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 PULUMI_DIR="$REPO_ROOT/infra/pulumi"
 
-# Get environment from argument or default to prod
-ENVIRONMENT="${1:-prod}"
+# Get environment from argument or default to production
+ENVIRONMENT="${1:-production}"
 
 print_info "Marketing site update for environment: $ENVIRONMENT"
 echo ""
@@ -52,14 +52,16 @@ fi
 
 REGISTRY="$GCP_REGION-docker.pkg.dev/$GCP_PROJECT/flowmaestro"
 
-# Get Google Analytics Measurement ID from Pulumi config
+# Get configuration from Pulumi config
 GA_MEASUREMENT_ID=$(pulumi config get gaMeasurementId 2>/dev/null || echo "")
+APP_URL=$(pulumi config get appUrl 2>/dev/null || echo "https://app.flowmaestro.ai")
 
 print_info "Configuration:"
-echo "  Project: $GCP_PROJECT"
-echo "  Region:  $GCP_REGION"
+echo "  Project:  $GCP_PROJECT"
+echo "  Region:   $GCP_REGION"
 echo "  Registry: $REGISTRY"
-[ -n "$GA_MEASUREMENT_ID" ] && echo "  GA ID:   $GA_MEASUREMENT_ID"
+echo "  App URL:  $APP_URL"
+[ -n "$GA_MEASUREMENT_ID" ] && echo "  GA ID:    $GA_MEASUREMENT_ID"
 echo ""
 
 cd "$REPO_ROOT" || exit 1
@@ -84,6 +86,7 @@ print_info "Building marketing Docker image for linux/amd64..."
 docker build \
     --platform linux/amd64 \
     --build-arg VITE_GA_MEASUREMENT_ID="$GA_MEASUREMENT_ID" \
+    --build-arg VITE_APP_URL="$APP_URL" \
     -f infra/docker/marketing/Dockerfile \
     -t "$REGISTRY/marketing:latest" \
     -t "$REGISTRY/marketing:$ENVIRONMENT" \
