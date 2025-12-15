@@ -90,7 +90,14 @@ jobs:
           npm run worker:orchestrator:dev --workspace=backend > /tmp/worker.log 2>&1 &
           echo $! > /tmp/orchestrator_worker_pid
           sleep 15
-          ps -fp $(cat /tmp/orchestrator_worker_pid)
+          pid=$(cat /tmp/orchestrator_worker_pid)
+          if ps -p "$pid" > /dev/null; then
+            ps -fp "$pid"
+          else
+            echo "Orchestrator worker exited early. Last 200 log lines:"
+            if [ -f /tmp/worker.log ]; then tail -n 200 /tmp/worker.log; fi
+            exit 1
+          fi
 
       # Run unit tests
       - name: Run unit tests
