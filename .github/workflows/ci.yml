@@ -35,6 +35,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # Ensure we have netcat for readiness probes
+      - name: Install nc for readiness checks
+        run: sudo apt-get update && sudo apt-get install -y netcat-openbsd
+
       # Setup Node.js
       - name: Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
@@ -67,11 +71,12 @@ jobs:
           docker volume create flowmaestro_redis_data
           docker compose -f infra/local/docker-compose.yml up -d postgres postgres-test mongo-test redis temporal
           echo "Waiting for Temporal and databases..."
-          for i in {1..30}; do
+          for i in {1..60}; do
             if nc -z localhost 5432 && nc -z localhost 7233 && nc -z localhost 6379; then
               echo "Temporal stack is ready"
               break
             fi
+            docker compose -f infra/local/docker-compose.yml ps
             sleep 5
           done
 
@@ -84,7 +89,8 @@ jobs:
         run: |
           npm run worker:orchestrator:dev --workspace=backend > /tmp/worker.log 2>&1 &
           echo $! > /tmp/orchestrator_worker_pid
-          sleep 5
+          sleep 15
+          ps -fp $(cat /tmp/orchestrator_worker_pid)
 
       # Run unit tests
       - name: Run unit tests
@@ -98,6 +104,10 @@ jobs:
       - name: Stop Temporal worker
         if: always()
         run: |
+          echo "----- Orchestrator worker log -----"
+          if [ -f /tmp/worker.log ]; then tail -n 200 /tmp/worker.log; fi
+          echo "-----------------------------------"
+          docker compose -f infra/local/docker-compose.yml ps || true
           if [ -f /tmp/orchestrator_worker_pid ]; then
             kill $(cat /tmp/orchestrator_worker_pid) || true
           fi
