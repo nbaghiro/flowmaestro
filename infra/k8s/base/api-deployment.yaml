@@ -69,21 +69,21 @@ spec:
                 configMapKeyRef:
                   name: flowmaestro-config
                   key: LOG_LEVEL
-            - name: CORS_ORIGIN
-              valueFrom:
-                configMapKeyRef:
-                  name: flowmaestro-config
-                  key: CORS_ORIGIN
             - name: API_URL
               valueFrom:
                 configMapKeyRef:
                   name: flowmaestro-config
                   key: API_URL
-            - name: FRONTEND_URL
+            - name: APP_URL
               valueFrom:
                 configMapKeyRef:
                   name: flowmaestro-config
-                  key: FRONTEND_URL
+                  key: APP_URL
+            - name: MARKETING_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: flowmaestro-config
+                  key: MARKETING_URL
 
             # Database credentials (from infrastructure secret)
             - name: POSTGRES_HOST

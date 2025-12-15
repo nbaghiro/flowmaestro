@@ -223,7 +223,7 @@ export async function callbackRoute(fastify: FastifyInstance) {
                         })
                     );
 
-                    const redirectUrl = `${config.frontend.url}#auth_token=${token}&user_data=${userData}`;
+                    const redirectUrl = `${config.appUrl}#auth_token=${token}&user_data=${userData}`;
 
                     return reply.redirect(redirectUrl);
                 }
@@ -301,7 +301,7 @@ export async function callbackRoute(fastify: FastifyInstance) {
                         })
                     );
 
-                    const redirectUrl = `${config.frontend.url}#auth_token=${token}&user_data=${userData}`;
+                    const redirectUrl = `${config.appUrl}#auth_token=${token}&user_data=${userData}`;
 
                     return reply.redirect(redirectUrl);
                 }

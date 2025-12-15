@@ -586,7 +586,8 @@ metadata:
   name: flowmaestro-config
   namespace: flowmaestro
 data:
-  CORS_ORIGIN: "https://app.$DOMAIN"
+  APP_URL: "https://app.$DOMAIN"
+  MARKETING_URL: "https://$DOMAIN"
   NODE_ENV: "$ENVIRONMENT"
 EOF
 

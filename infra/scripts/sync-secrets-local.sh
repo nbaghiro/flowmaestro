@@ -286,7 +286,8 @@ BACKEND_PORT=3001
 BACKEND_HOST=localhost
 PORT=3001
 API_URL=http://localhost:3001
-CORS_ORIGIN=http://localhost:3000
+APP_URL=http://localhost:3000
+MARKETING_URL=http://localhost:5173
 
 # ==============================================================================
 # Frontend Configuration

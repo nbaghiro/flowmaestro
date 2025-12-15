@@ -10,12 +10,10 @@ data:
   BACKEND_HOST: "0.0.0.0"
   LOG_LEVEL: "info"
 
-  # URL configuration (used for OAuth redirects, email links, etc.)
+  # URL configuration (used for OAuth redirects, email links, CORS, etc.)
   API_URL: "https://api.flowmaestro.ai"
-  FRONTEND_URL: "https://app.flowmaestro.ai"
-
-  # CORS configuration
-  CORS_ORIGIN: "https://app.flowmaestro.ai"
+  APP_URL: "https://app.flowmaestro.ai"
+  MARKETING_URL: "https://flowmaestro.ai"
 
   # Temporal worker configuration
   TEMPORAL_TASK_QUEUE: "flowmaestro-orchestrator"

@@ -23,7 +23,7 @@ export class EmailService {
         userName?: string,
         from?: string
     ): Promise<void> {
-        const resetUrl = `${config.frontend.url}/reset-password?token=${token}`;
+        const resetUrl = `${config.appUrl}/reset-password?token=${token}`;
 
         await this.resend.emails.send({
             from: from || DEFAULT_FROM_EMAIL,
@@ -40,7 +40,7 @@ export class EmailService {
         from?: string,
         context: "signup" | "change-email" = "signup"
     ): Promise<void> {
-        const verificationUrl = `${config.frontend.url}/verify-email?token=${token}`;
+        const verificationUrl = `${config.appUrl}/verify-email?token=${token}`;
         const subject =
             context === "change-email"
                 ? "Confirm your new FlowMaestro email"

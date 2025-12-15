@@ -125,11 +125,9 @@ export function BuilderHeader({
                         className="hover:opacity-80 transition-opacity"
                         title="Back to Library"
                     >
-                        <Logo size="md" />
+                        <Logo size="sm" />
                     </button>
-                    <span className="text-sm font-medium text-muted-foreground">
-                        Workflow Builder
-                    </span>
+                    <span className="text-sm font-medium text-foreground">Workflow Builder</span>
                 </div>
 
                 {/* Center: Workflow Name and Status */}
