@@ -15,6 +15,16 @@ jobs:
   test:
     name: Test and Lint
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://flowmaestro:flowmaestro_dev_password@localhost:5432/flowmaestro
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: flowmaestro
+      POSTGRES_USER: flowmaestro
+      POSTGRES_PASSWORD: flowmaestro_dev_password
+      TEMPORAL_ADDRESS: localhost:7233
+      REDIS_HOST: localhost
+      REDIS_PORT: "6379"
 
     strategy:
       matrix:
