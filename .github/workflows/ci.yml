@@ -48,6 +48,34 @@ jobs:
       - name: Check code formatting
         run: npm run format:check
 
+      # Start Temporal + DB infra for integration tests
+      - name: Start Temporal stack
+        run: |
+          docker volume create flowmaestro_postgres_data
+          docker volume create flowmaestro_postgres_test_data
+          docker volume create flowmaestro_mongo_test_data
+          docker volume create flowmaestro_redis_data
+          docker compose -f infra/local/docker-compose.yml up -d postgres postgres-test mongo-test redis temporal
+          echo "Waiting for Temporal and databases..."
+          for i in {1..30}; do
+            if nc -z localhost 5432 && nc -z localhost 7233 && nc -z localhost 6379; then
+              echo "Temporal stack is ready"
+              break
+            fi
+            sleep 5
+          done
+
+      # Run database migrations against local Postgres
+      - name: Run database migrations
+        run: npm run db:migrate --workspace=backend
+
+      # Start orchestrator worker (background) for Temporal workflows
+      - name: Start Temporal worker
+        run: |
+          npm run worker:orchestrator:dev --workspace=backend > /tmp/worker.log 2>&1 &
+          echo $! > /tmp/orchestrator_worker_pid
+          sleep 5
+
       # Run unit tests
       - name: Run unit tests
         run: npm run test:unit
@@ -55,6 +83,14 @@ jobs:
       # Run integration tests
       - name: Run integration tests
         run: npm run test:integration
+
+      # Stop worker (best-effort) to keep logs clean
+      - name: Stop Temporal worker
+        if: always()
+        run: |
+          if [ -f /tmp/orchestrator_worker_pid ]; then
+            kill $(cat /tmp/orchestrator_worker_pid) || true
+          fi
 
       # Build all packages to ensure no build errors
       - name: Build all packages
