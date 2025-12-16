@@ -22,7 +22,29 @@ export const Navigation: React.FC = () => {
                 <div className="flex items-center justify-between h-16">
                     {/* Logo */}
                     <div className="flex items-center">
-                        <a href="/" className="text-white font-semibold text-lg">
+                        <a
+                            href="/"
+                            className="flex items-center gap-2 text-white font-semibold text-lg"
+                        >
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="32"
+                                height="32"
+                                viewBox="0 0 32 32"
+                            >
+                                <rect width="32" height="32" rx="6" fill="white" />
+                                <text
+                                    x="16"
+                                    y="21"
+                                    fontFamily="Arial, sans-serif"
+                                    fontSize="13"
+                                    fontWeight="bold"
+                                    fill="black"
+                                    textAnchor="middle"
+                                >
+                                    FM
+                                </text>
+                            </svg>
                             FlowMaestro
                         </a>
                     </div>

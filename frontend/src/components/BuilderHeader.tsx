@@ -125,7 +125,7 @@ export function BuilderHeader({
                         className="hover:opacity-80 transition-opacity"
                         title="Back to Library"
                     >
-                        <Logo size="sm" />
+                        <Logo size="md" />
                     </button>
                     <span className="text-sm font-medium text-foreground">Workflow Builder</span>
                 </div>
