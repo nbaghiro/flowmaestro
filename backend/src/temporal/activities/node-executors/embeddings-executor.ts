@@ -3,7 +3,7 @@ import { CohereClient } from "cohere-ai";
 import OpenAI from "openai";
 import type { JsonObject, JsonValue } from "@flowmaestro/shared";
 import { config as appConfig } from "../../../core/config";
-import { interpolateVariables } from "./utils";
+import { interpolateVariables } from "../../../core/utils/interpolate-variables";
 
 export interface EmbeddingsNodeConfig {
     provider: "openai" | "cohere" | "google";

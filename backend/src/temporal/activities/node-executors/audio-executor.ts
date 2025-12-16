@@ -4,7 +4,7 @@ import * as path from "path";
 import OpenAI from "openai";
 import type { JsonObject } from "@flowmaestro/shared";
 import { config as appConfig } from "../../../core/config";
-import { interpolateVariables } from "./utils";
+import { interpolateVariables } from "../../../core/utils/interpolate-variables";
 
 export interface AudioNodeConfig {
     provider: "openai" | "elevenlabs" | "google";

@@ -6,20 +6,17 @@ import { ALL_PROVIDERS, TEMPLATE_CATEGORY_META, type Template } from "@flowmaest
 import AudioNode from "../../canvas/nodes/AudioNode";
 import CodeNode from "../../canvas/nodes/CodeNode";
 import ConditionalNode from "../../canvas/nodes/ConditionalNode";
+import TransformNode from "../../canvas/nodes/data-processing/TransformNode";
 import DatabaseNode from "../../canvas/nodes/DatabaseNode";
 import EmbeddingsNode from "../../canvas/nodes/EmbeddingsNode";
+import { InputNode, LoopNode, OutputNode, WaitNode } from "../../canvas/nodes/flow-control";
 import HTTPNode from "../../canvas/nodes/HTTPNode";
-import InputNode from "../../canvas/nodes/InputNode";
 import IntegrationNode from "../../canvas/nodes/IntegrationNode";
 import KnowledgeBaseQueryNode from "../../canvas/nodes/KnowledgeBaseQueryNode";
 import LLMNode from "../../canvas/nodes/LLMNode";
-import LoopNode from "../../canvas/nodes/LoopNode";
-import OutputNode from "../../canvas/nodes/OutputNode";
 import SwitchNode from "../../canvas/nodes/SwitchNode";
-import TransformNode from "../../canvas/nodes/TransformNode";
 import VariableNode from "../../canvas/nodes/VariableNode";
 import VisionNode from "../../canvas/nodes/VisionNode";
-import WaitNode from "../../canvas/nodes/WaitNode";
 import { cn } from "../../lib/utils";
 
 // Register node types

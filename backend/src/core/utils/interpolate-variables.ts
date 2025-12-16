@@ -1,5 +1,5 @@
 /**
- * Shared utility functions for node executors
+ * Shared utility functions for string interpolation and deep cloning.
  */
 
 /**
@@ -55,8 +55,8 @@ export function interpolateVariables(
 }
 
 /**
- * Advanced interpolation that supports object merging and complex expressions
- * Primarily used by output nodes that need to construct complex JSON
+ * Advanced interpolation that supports object merging and complex expressions.
+ * Primarily used by output nodes that need to construct complex JSON.
  */
 export function interpolateWithObjectSupport(
     str: string,
@@ -85,7 +85,7 @@ export function interpolateWithObjectSupport(
 }
 
 /**
- * Deep clone an object to avoid mutation
+ * Deep clone an object to avoid mutation.
  */
 export function deepClone<T>(obj: T): T {
     if (obj === null || typeof obj !== "object") {
@@ -107,4 +107,35 @@ export function deepClone<T>(obj: T): T {
         return cloned as T;
     }
     return obj;
+}
+
+/**
+ * Resolve a ${variable} reference against the context without stringifying.
+ * Supports nested paths and array indices like interpolateVariables.
+ */
+export function getVariableValue<T = unknown>(
+    varRef: string,
+    context: Record<string, unknown>
+): T | undefined {
+    // Strip ${ and } if present
+    const varName = varRef.replace(/^\$\{/, "").replace(/\}$/, "");
+
+    // Same path parsing rules as interpolateVariables
+    const keys = varName
+        .replace(/\[(\w+)\]/g, ".$1") // [0] -> .0
+        .replace(/\['([^']+)'\]/g, ".$1") // ['key'] -> .key
+        .replace(/\["([^"]+)"\]/g, ".$1") // ["key"] -> .key
+        .split(".")
+        .filter((k) => k !== "");
+
+    let value: unknown = context;
+
+    for (const key of keys) {
+        if (value === null || value === undefined || typeof value !== "object") {
+            return undefined;
+        }
+        value = (value as Record<string, unknown>)[key];
+    }
+
+    return value as T | undefined;
 }
