@@ -1,11 +1,10 @@
 import * as fs from "fs/promises";
-import * as pdf from "pdf-parse";
-import Tesseract from "tesseract.js";
-import type { JsonArray, JsonObject, JsonValue } from "@flowmaestro/shared";
+import type { JsonObject, JsonValue } from "@flowmaestro/shared";
 import {
     getVariableValue,
     interpolateVariables
 } from "../../../../core/utils/interpolate-variables";
+import { parsePdfDocument, type PdfParseResult } from "../../../services/document-parsing";
 
 export interface ParsePdfNodeConfig {
     // Input source
@@ -23,93 +22,20 @@ export interface ParsePdfNodeConfig {
     outputVariable: string;
 }
 
-export interface ParsePdfNodeResult {
-    text: string;
-    pages: Array<{
-        pageNumber: number;
-        text: string;
-        tables?: JsonArray[];
-    }>;
-    metadata: {
-        title?: string;
-        author?: string;
-        creationDate?: string;
-        pageCount: number;
-    };
-}
-
-type PdfParseFn = (
-    dataBuffer: Buffer,
-    options?: Record<string, unknown>
-) => Promise<{
-    text: string;
-    info?: {
-        Title?: string;
-        Author?: string;
-        CreationDate?: string;
-    };
-    numpages: number;
-}>;
-
-const OCR_TEXT_THRESHOLD = 100;
+export type ParsePdfNodeResult = PdfParseResult;
 
 export async function executeParsePdfNode(
     config: ParsePdfNodeConfig,
     context: JsonObject
 ): Promise<JsonObject> {
     const pdfBuffer = await getPdfBuffer(config, context);
-    const pageTexts: string[] = [];
-    let pageIndex = 0;
-
-    const parsed = await (pdf as unknown as PdfParseFn)(pdfBuffer, {
-        pagerender: async (pageData: {
-            getTextContent: () => Promise<{ items: Array<{ str: string }> }>;
-        }) => {
-            pageIndex += 1;
-            const textContent = await pageData.getTextContent();
-            const text = textContent.items.map((item) => item.str).join(" ");
-            pageTexts[pageIndex - 1] = text;
-            return text;
-        }
+    validatePdfSignature(pdfBuffer);
+    const result = await parsePdfDocument(pdfBuffer, {
+        ocrEnabled: config.ocrEnabled,
+        ocrLanguage: config.ocrLanguage,
+        extractTables: config.extractTables,
+        pageRange: config.pageRange
     });
-
-    const pagesBeforeRange = pageTexts.map((text, idx) => ({
-        pageNumber: idx + 1,
-        text
-    }));
-
-    let pages = applyPageRange(pagesBeforeRange, config.pageRange);
-    let extractedText =
-        pages.length > 0 ? pages.map((page) => page.text).join("\n\n") : parsed.text || "";
-
-    if (config.ocrEnabled && extractedText.trim().length < OCR_TEXT_THRESHOLD) {
-        const ocrResult = await Tesseract.recognize(pdfBuffer, config.ocrLanguage || "eng");
-        const ocrText = ocrResult.data?.text || "";
-        const ocrPages = buildPagesFromOcrText(ocrText, config.pageRange);
-
-        extractedText = ocrText;
-        if (ocrPages.length > 0) {
-            pages = ocrPages;
-        } else if (pages.length === 0) {
-            pages = [
-                {
-                    pageNumber: Math.max(1, config.pageRange?.start ?? 1),
-                    text: ocrText
-                }
-            ];
-        }
-    }
-
-    const result: ParsePdfNodeResult = {
-        text: extractedText,
-        pages: config.extractTables ? pages.map((page) => ({ ...page, tables: [] })) : pages,
-        metadata: {
-            title: parsed.info?.Title,
-            author: parsed.info?.Author,
-            creationDate: parsed.info?.CreationDate,
-            pageCount: parsed.numpages || pages.length
-        }
-    };
 
     const output: JsonObject = {
         [config.outputVariable]: result as unknown as JsonValue
@@ -130,6 +56,7 @@ async function getPdfBuffer(config: ParsePdfNodeConfig, context: JsonObject): Pr
     }
 
     const variableValue = getVariableValue(config.fileInput, context);
+
     if (variableValue instanceof Uint8Array) {
         return Buffer.from(variableValue);
     }
@@ -215,42 +142,9 @@ function decodeBase64(value: string): Buffer {
     return Buffer.from(normalized, "base64");
 }
 
-function applyPageRange(
-    pages: ParsePdfNodeResult["pages"],
-    pageRange?: { start?: number; end?: number }
-): ParsePdfNodeResult["pages"] {
-    if (!pageRange) {
-        return pages;
+function validatePdfSignature(buffer: Buffer): void {
+    const signature = buffer.slice(0, 5).toString("ascii");
+    if (!signature.startsWith("%PDF-")) {
+        throw new Error("Parse PDF: input is not a valid PDF file");
     }
-
-    const start = Math.max(1, pageRange.start ?? 1);
-    const end = pageRange.end && pageRange.end > 0 ? pageRange.end : undefined;
-
-    return pages.filter((page) => page.pageNumber >= start && (!end || page.pageNumber <= end));
-}
-
-function buildPagesFromOcrText(
-    text: string,
-    pageRange?: { start?: number; end?: number }
-): ParsePdfNodeResult["pages"] {
-    const segments = text
-        .split(/\f+/)
-        .map((segment) => segment.trim())
-        .filter((segment) => segment.length > 0);
-
-    if (segments.length === 0) {
-        return [];
-    }
-
-    const start = Math.max(1, pageRange?.start ?? 1);
-    const end = pageRange?.end && pageRange.end > 0 ? pageRange.end : undefined;
-
-    return segments.reduce<ParsePdfNodeResult["pages"]>((acc, segment, idx) => {
-        const pageNumber = start + idx;
-        if (end && pageNumber > end) {
-            return acc;
-        }
-        acc.push({ pageNumber, text: segment });
-        return acc;
-    }, []);
 }

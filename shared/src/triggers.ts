@@ -4,7 +4,7 @@
 
 import type { JsonObject, JsonValue } from "./types";
 
-export type TriggerType = "schedule" | "webhook" | "event" | "manual";
+export type TriggerType = "schedule" | "webhook" | "event" | "manual" | "file";
 
 export interface ScheduleTriggerConfig {
     cronExpression: string;
@@ -35,11 +35,19 @@ export interface ManualTriggerConfig {
     description?: string;
 }
 
+export interface FileTriggerConfig {
+    fileName?: string;
+    contentType?: string;
+    base64?: string;
+    description?: string;
+}
+
 export type TriggerConfig =
     | ScheduleTriggerConfig
     | WebhookTriggerConfig
     | EventTriggerConfig
-    | ManualTriggerConfig;
+    | ManualTriggerConfig
+    | FileTriggerConfig;
 
 export interface WorkflowTrigger {
     id: string;

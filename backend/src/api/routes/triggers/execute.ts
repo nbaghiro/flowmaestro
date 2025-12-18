@@ -63,16 +63,27 @@ export async function executeTriggerRoute(fastify: FastifyInstance) {
 
                 if (trigger.trigger_type === "manual") {
                     const config = trigger.config as ManualTriggerConfig;
-                    // Use provided inputs override, or fallback to trigger config inputs
                     inputs = body.inputs || config.inputs || {};
+                } else if (trigger.trigger_type === "file") {
+                    const config = trigger.config as {
+                        fileName?: string;
+                        contentType?: string;
+                        base64?: string;
+                    };
+                    inputs =
+                        body.inputs ||
+                        (config.base64
+                            ? {
+                                  fileBase64: config.base64,
+                                  fileName: config.fileName,
+                                  contentType: config.contentType
+                              }
+                            : {});
                 } else if (trigger.trigger_type === "webhook") {
-                    // For webhook triggers, use provided inputs
                     inputs = body.inputs || {};
                 } else if (trigger.trigger_type === "schedule") {
-                    // For schedule triggers, use provided inputs override or empty
                     inputs = body.inputs || {};
                 } else {
-                    // For other trigger types
                     inputs = body.inputs || {};
                 }
 

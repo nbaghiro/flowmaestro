@@ -3,7 +3,7 @@
  * Modal for creating new workflow triggers
  */
 
-import { X, Calendar, Webhook, Play } from "lucide-react";
+import { X, Calendar, Webhook, Play, FileUp } from "lucide-react";
 import { useState } from "react";
 import type { TriggerType, CreateTriggerInput } from "@flowmaestro/shared";
 import { createTrigger } from "../../lib/api";
@@ -39,6 +39,11 @@ export function CreateTriggerDialog({ workflowId, onClose, onSuccess }: CreateTr
         { key: "", value: "" }
     ]);
     const [manualDescription, setManualDescription] = useState("");
+
+    // File trigger fields
+    const [fileName, setFileName] = useState("");
+    const [fileBase64, setFileBase64] = useState("");
+    const [fileContentType, setFileContentType] = useState("");
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -84,6 +89,17 @@ export function CreateTriggerDialog({ workflowId, onClose, onSuccess }: CreateTr
                     description: manualDescription || undefined,
                     requireInputs: Object.keys(inputsObject).length > 0
                 };
+            } else if (triggerType === "file") {
+                if (!fileBase64) {
+                    setError("Please upload a file");
+                    setLoading(false);
+                    return;
+                }
+                config = {
+                    fileName: fileName || undefined,
+                    contentType: fileContentType || undefined,
+                    base64: fileBase64
+                };
             }
 
             const input: CreateTriggerInput = {
@@ -111,6 +127,23 @@ export function CreateTriggerDialog({ workflowId, onClose, onSuccess }: CreateTr
         { label: "Every Monday at 9 AM", value: "0 9 * * 1" },
         { label: "First day of month", value: "0 0 1 * *" }
     ];
+
+    const handleFileSelect = (file?: File) => {
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+            const result = reader.result;
+            if (typeof result === "string") {
+                const [prefix, data] = result.split(",", 2);
+                setFileBase64(data || result);
+                setFileContentType(
+                    file.type || prefix?.split(";")?.[0]?.replace("data:", "") || ""
+                );
+                setFileName(file.name);
+            }
+        };
+        reader.readAsDataURL(file);
+    };
 
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -144,7 +177,7 @@ export function CreateTriggerDialog({ workflowId, onClose, onSuccess }: CreateTr
                         {/* Trigger Type */}
                         <div>
                             <label className="block text-sm font-medium mb-1.5">Trigger Type</label>
-                            <div className="grid grid-cols-3 gap-2">
+                            <div className="grid grid-cols-4 gap-2">
                                 <button
                                     type="button"
                                     onClick={() => setTriggerType("manual")}
@@ -192,6 +225,21 @@ export function CreateTriggerDialog({ workflowId, onClose, onSuccess }: CreateTr
                                     <div className="text-xs text-muted-foreground">
                                         HTTP endpoint
                                     </div>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setTriggerType("file")}
+                                    className={`p-3 border rounded-lg transition-all ${
+                                        triggerType === "file"
+                                            ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                                            : "border-border hover:bg-muted"
+                                    }`}
+                                    disabled={loading}
+                                >
+                                    <FileUp className="w-5 h-5 mx-auto mb-1 text-orange-500" />
+                                    <div className="text-sm font-medium">File</div>
+                                    <div className="text-xs text-muted-foreground">Upload file</div>
                                 </button>
                             </div>
                         </div>
@@ -278,6 +326,71 @@ export function CreateTriggerDialog({ workflowId, onClose, onSuccess }: CreateTr
                                     >
                                         + Add Input
                                     </button>
+                                </div>
+                            </>
+                        )}
+
+                        {/* File Configuration */}
+                        {triggerType === "file" && (
+                            <>
+                                <div>
+                                    <label className="block text-sm font-medium mb-1.5">
+                                        Upload File
+                                    </label>
+                                    <Input
+                                        type="file"
+                                        accept="*/*"
+                                        onChange={(e) => handleFileSelect(e.target.files?.[0])}
+                                        disabled={loading}
+                                    />
+                                    {fileName && (
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                            Selected: {fileName}
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1.5">
+                                            File Name (optional)
+                                        </label>
+                                        <Input
+                                            type="text"
+                                            value={fileName}
+                                            onChange={(e) => setFileName(e.target.value)}
+                                            placeholder="invoice.pdf"
+                                            disabled={loading}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1.5">
+                                            Content Type (optional)
+                                        </label>
+                                        <Input
+                                            type="text"
+                                            value={fileContentType}
+                                            onChange={(e) => setFileContentType(e.target.value)}
+                                            placeholder="application/pdf"
+                                            disabled={loading}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium mb-1.5">
+                                        Base64 (optional override)
+                                    </label>
+                                    <Input
+                                        type="text"
+                                        value={fileBase64}
+                                        onChange={(e) => setFileBase64(e.target.value)}
+                                        placeholder="Paste base64 content"
+                                        disabled={loading}
+                                    />
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                        If provided, this overrides the uploaded file.
+                                    </p>
                                 </div>
                             </>
                         )}

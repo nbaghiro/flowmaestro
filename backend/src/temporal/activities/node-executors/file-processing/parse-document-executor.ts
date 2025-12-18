@@ -1,10 +1,10 @@
 import * as fs from "fs/promises";
-import mammoth from "mammoth";
 import type { JsonObject, JsonValue } from "@flowmaestro/shared";
 import {
     getVariableValue,
     interpolateVariables
 } from "../../../../core/utils/interpolate-variables";
+import { parseDocumentBuffer, type DocumentParseResult } from "../../../services/document-parsing";
 
 export interface ParseDocumentNodeConfig {
     // Input source
@@ -23,53 +23,19 @@ export interface ParseDocumentNodeConfig {
     outputVariable: string;
 }
 
-export interface ParseDocumentNodeResult {
-    text: string;
-    html?: string;
-    sections: Array<{
-        type: "heading" | "paragraph" | "list" | "table";
-        level?: number;
-        content: string;
-    }>;
-    images?: Array<{
-        id: string;
-        contentType: string;
-        base64: string;
-    }>;
-    metadata: {
-        wordCount: number;
-        characterCount: number;
-        fileType: string;
-    };
-}
+export type ParseDocumentNodeResult = DocumentParseResult;
 
 export async function executeParseDocumentNode(
     config: ParseDocumentNodeConfig,
     context: JsonObject
 ): Promise<JsonObject> {
     const { buffer, extensionHint } = await getDocumentBuffer(config, context);
-    const fileType = config.fileType || detectFileType(buffer, extensionHint);
-
-    let result: ParseDocumentNodeResult;
-
-    switch (fileType) {
-        case "docx":
-            result = await parseDocx(buffer, config);
-            break;
-        case "html":
-            result = parseHtml(buffer, config);
-            break;
-        case "md":
-        case "text":
-        case "doc":
-        case "rtf":
-        case "odt":
-            result = parsePlainText(buffer, fileType);
-            break;
-        default:
-            result = parsePlainText(buffer, "text");
-            break;
-    }
+    const result = await parseDocumentBuffer(buffer, {
+        preserveFormatting: config.preserveFormatting,
+        extractImages: config.extractImages,
+        fileTypeHint: config.fileType,
+        extensionHint
+    });
 
     const output: JsonObject = {
         [config.outputVariable]: result as unknown as JsonValue
@@ -179,191 +145,4 @@ function decodeBase64(value: string): Buffer {
 function getExtensionFromPath(path: string): string | undefined {
     const match = path.match(/\.([a-z0-9]+)(?:[#?].*)?$/i);
     return match ? match[1].toLowerCase() : undefined;
-}
-
-function detectFileType(
-    buffer: Buffer,
-    extensionHint?: string
-): ParseDocumentNodeConfig["fileType"] {
-    if (extensionHint) {
-        const normalized = extensionHint.toLowerCase();
-        const extMap: Record<string, ParseDocumentNodeConfig["fileType"]> = {
-            txt: "text",
-            text: "text",
-            docx: "docx",
-            doc: "doc",
-            rtf: "rtf",
-            odt: "odt",
-            html: "html",
-            htm: "html",
-            md: "md",
-            markdown: "md"
-        };
-        if (extMap[normalized]) {
-            return extMap[normalized];
-        }
-    }
-
-    const asString = buffer.toString("utf-8").trimStart();
-
-    if (asString.startsWith("<!doctype html") || asString.startsWith("<html")) {
-        return "html";
-    }
-
-    if (asString.startsWith("{\\rtf")) {
-        return "rtf";
-    }
-
-    if (buffer.length >= 2 && buffer[0] === 0x50 && buffer[1] === 0x4b) {
-        return "docx";
-    }
-
-    return "text";
-}
-
-async function parseDocx(
-    buffer: Buffer,
-    config: ParseDocumentNodeConfig
-): Promise<ParseDocumentNodeResult> {
-    const images: ParseDocumentNodeResult["images"] = [];
-    let imageIndex = 0;
-
-    const options: Record<string, unknown> = {};
-
-    if (config.extractImages) {
-        options.convertImage = mammoth.images.imgElement(async (image) => {
-            const imgBuffer = await image.read();
-            const base64 = imgBuffer.toString("base64");
-            imageIndex += 1;
-
-            images.push({
-                id: `image-${imageIndex}`,
-                contentType: image.contentType,
-                base64
-            });
-
-            return {
-                src: `data:${image.contentType};base64,${base64}`
-            };
-        });
-    }
-
-    const extracted = config.preserveFormatting
-        ? await mammoth.convertToHtml({ buffer }, options)
-        : await mammoth.extractRawText({ buffer });
-
-    const html = config.preserveFormatting ? extracted.value : undefined;
-    const text = config.preserveFormatting ? stripHtml(extracted.value) : extracted.value;
-
-    return buildResult({
-        text,
-        html,
-        sections: parseSections(config.preserveFormatting ? html || text : text),
-        images: config.extractImages ? images : undefined,
-        fileType: "docx"
-    });
-}
-
-function parseHtml(buffer: Buffer, config: ParseDocumentNodeConfig): ParseDocumentNodeResult {
-    const html = buffer.toString("utf-8");
-    const text = stripHtml(html);
-
-    return buildResult({
-        text,
-        html: config.preserveFormatting ? html : undefined,
-        sections: parseSections(config.preserveFormatting ? html : text),
-        fileType: "html"
-    });
-}
-
-function parsePlainText(buffer: Buffer, fileType: string): ParseDocumentNodeResult {
-    const text = buffer.toString("utf-8");
-    return buildResult({
-        text,
-        sections: parseSections(text),
-        fileType: fileType || "text"
-    });
-}
-
-function parseSections(content: string): ParseDocumentNodeResult["sections"] {
-    if (!content || content.trim().length === 0) {
-        return [];
-    }
-
-    // Normalize HTML line breaks to aid simple parsing
-    let normalized = content.replace(/<\/(p|div|br|li)>/gi, "\n");
-    normalized = normalized.replace(/<\/h([1-6])>/gi, "\n");
-
-    // Simple parsing for headings/lists in markdown or HTML
-    const sections: ParseDocumentNodeResult["sections"] = [];
-
-    const lines = normalized.split(/\r?\n/);
-    for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed) continue;
-
-        const mdHeading = trimmed.match(/^(#{1,6})\s+(.*)$/);
-        if (mdHeading) {
-            sections.push({
-                type: "heading",
-                level: mdHeading[1].length,
-                content: mdHeading[2].trim()
-            });
-            continue;
-        }
-
-        if (/^[-*+]\s+/.test(trimmed)) {
-            sections.push({ type: "list", content: trimmed.replace(/^[-*+]\s+/, "") });
-            continue;
-        }
-
-        const htmlHeading = trimmed.match(/^<h([1-6])[^>]*>(.*?)<\/h\1>$/i);
-        if (htmlHeading) {
-            sections.push({
-                type: "heading",
-                level: Number(htmlHeading[1]),
-                content: stripHtml(htmlHeading[2]).trim()
-            });
-            continue;
-        }
-
-        if (/^<li[^>]*>/.test(trimmed)) {
-            sections.push({ type: "list", content: stripHtml(trimmed) });
-            continue;
-        }
-
-        sections.push({ type: "paragraph", content: stripHtml(trimmed) });
-    }
-
-    return sections;
-}
-
-function stripHtml(value: string): string {
-    return value
-        .replace(/<\/?[^>]+(>|$)/g, "")
-        .replace(/\s+/g, " ")
-        .trim();
-}
-
-function buildResult(input: {
-    text: string;
-    html?: string;
-    sections: ParseDocumentNodeResult["sections"];
-    images?: ParseDocumentNodeResult["images"];
-    fileType: string;
-}): ParseDocumentNodeResult {
-    const wordCount = input.text ? input.text.trim().split(/\s+/).length : 0;
-    const characterCount = input.text ? input.text.length : 0;
-
-    return {
-        text: input.text,
-        html: input.html,
-        sections: input.sections,
-        images: input.images,
-        metadata: {
-            wordCount,
-            characterCount,
-            fileType: input.fileType
-        }
-    };
 }

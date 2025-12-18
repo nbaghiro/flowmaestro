@@ -13,14 +13,16 @@ import {
     PowerOff,
     MoreVertical,
     Play,
-    Pencil
+    Pencil,
+    FileUp
 } from "lucide-react";
 import { useState } from "react";
 import type {
     WorkflowTrigger,
     ScheduleTriggerConfig,
     WebhookTriggerConfig,
-    ManualTriggerConfig
+    ManualTriggerConfig,
+    FileTriggerConfig
 } from "@flowmaestro/shared";
 import { getWebhookUrl, deleteTrigger, updateTrigger, executeTrigger } from "../../lib/api";
 import { cn } from "../../lib/utils";
@@ -60,6 +62,8 @@ export function TriggerCard({ trigger, onUpdate }: TriggerCardProps) {
                 return <Webhook className="w-5 h-5 text-purple-500" />;
             case "event":
                 return <Zap className="w-5 h-5 text-amber-500" />;
+            case "file":
+                return <FileUp className="w-5 h-5 text-orange-500" />;
             default:
                 return <Zap className="w-5 h-5 text-gray-500" />;
         }
@@ -133,6 +137,26 @@ export function TriggerCard({ trigger, onUpdate }: TriggerCardProps) {
                             <Copy className="w-3.5 h-3.5" />
                         </button>
                     </div>
+                </div>
+            );
+        }
+
+        if (trigger.trigger_type === "file") {
+            const config = trigger.config as FileTriggerConfig;
+            return (
+                <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">File:</span>
+                        <span className="text-xs font-medium">
+                            {config.fileName || "Uploaded file"}
+                        </span>
+                    </div>
+                    {config.contentType && (
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground">Type:</span>
+                            <span className="text-xs">{config.contentType}</span>
+                        </div>
+                    )}
                 </div>
             );
         }
@@ -218,6 +242,15 @@ export function TriggerCard({ trigger, onUpdate }: TriggerCardProps) {
             if (trigger.trigger_type === "manual") {
                 const config = trigger.config as ManualTriggerConfig;
                 inputs = config.inputs;
+            } else if (trigger.trigger_type === "file") {
+                const config = trigger.config as FileTriggerConfig;
+                if (config.base64) {
+                    inputs = {
+                        fileBase64: config.base64,
+                        fileName: config.fileName,
+                        contentType: config.contentType
+                    };
+                }
             }
 
             const response = await executeTrigger(

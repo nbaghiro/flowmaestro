@@ -9,6 +9,7 @@ import ConditionalNode from "../../canvas/nodes/ConditionalNode";
 import TransformNode from "../../canvas/nodes/data-processing/TransformNode";
 import DatabaseNode from "../../canvas/nodes/DatabaseNode";
 import EmbeddingsNode from "../../canvas/nodes/EmbeddingsNode";
+import { ParseDocumentNode, ParsePDFNode } from "../../canvas/nodes/file-processing";
 import { InputNode, LoopNode, OutputNode, WaitNode } from "../../canvas/nodes/flow-control";
 import HTTPNode from "../../canvas/nodes/HTTPNode";
 import IntegrationNode from "../../canvas/nodes/IntegrationNode";
@@ -37,7 +38,9 @@ const nodeTypes = {
     http: HTTPNode,
     database: DatabaseNode,
     integration: IntegrationNode,
-    knowledgeBaseQuery: KnowledgeBaseQueryNode
+    knowledgeBaseQuery: KnowledgeBaseQueryNode,
+    parsePdf: ParsePDFNode,
+    parseDocument: ParseDocumentNode
 };
 
 interface TemplateCardProps {
