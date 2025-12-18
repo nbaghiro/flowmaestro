@@ -1,0 +1,70 @@
+{
+    "name": "Parse PDF and Document Flow",
+    "description": "Flow parses a base64 PDF and a base64 DOCX provided via input nodes, then outputs both results.",
+    "entryPoint": "pdf-input",
+    "nodes": {
+        "pdf-input": {
+            "type": "input",
+            "name": "PDF Input",
+            "config": {
+                "inputType": "text",
+                "description": "Base64 PDF content (override with uploaded PDF base64 if available)",
+                "defaultValue": "JVBERi0xLjQKJeLjz9MKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCAzMDAgMzAwXSAvQ29udGVudHMgNCAwIFIgL1Jlc291cmNlcyA8PCAvRm9udCA8PCAvRjEgNSAwIFIgPj4gPj4gPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCAxMzAgPj4Kc3RyZWFtCkJUIC9GMSAxNCBUZiA0MCAyNjAgVGQgKEludm9pY2UgMTIzKSBUagpFVCBCVCAvRjEgMTIgVGYgNDAgMjQwIFRkIChBbW91bnQ6ICQxMC4wMCkgVGoKRVQgQlQgL0YxIDEyIFRmIDQwIDIyNCBUZCAoVGhhbmsgeW91ISkgVGoKRVQKZW5kc3RyZWFtCmVuZG9iago1IDAgb2JqCjw8IC9UeXBlIC9Gb250IC9TdWJ0eXBlIC9UeXBlMSAvQmFzZUZvbnQgL0hlbHZldGljYSA+PgplbmRvYmoKeHJlZgowIDYKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDE1IDAwMDAwIG4gCjAwMDAwMDAwNjQgMDAwMDAgbiAKMDAwMDAwMDEyMSAwMDAwMCBuIAowMDAwMDAwMjQ3IDAwMDAwIG4gCjAwMDAwMDA0MjggMDAwMDAgbiAKdHJhaWxlcgo8PCAvU2l6ZSA2IC9Sb290IDEgMCBSID4+CnN0YXJ0eHJlZgo0OTgKJSVFT0YK",
+                "required": true,
+                "outputVariable": "pdfBase64"
+            },
+            "position": { "x": 40, "y": 120 }
+        },
+        "doc-input": {
+            "type": "input",
+            "name": "DOCX Input",
+            "config": {
+                "inputType": "text",
+                "description": "Base64 DOCX content (override with uploaded DOCX base64 if available)",
+                "defaultValue": "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",
+                "required": true,
+                "outputVariable": "docBase64"
+            },
+            "position": { "x": 40, "y": 300 }
+        },
+        "parse-pdf": {
+            "type": "parsePdf",
+            "name": "Parse PDF",
+            "config": {
+                "base64Input": "JVBERi0xLjQKJeLjz9MKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCAzMDAgMzAwXSAvQ29udGVudHMgNCAwIFIgL1Jlc291cmNlcyA8PCAvRm9udCA8PCAvRjEgNSAwIFIgPj4gPj4gPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCAxMzAgPj4Kc3RyZWFtCkJUIC9GMSAxNCBUZiA0MCAyNjAgVGQgKEludm9pY2UgMTIzKSBUagpFVCBCVCAvRjEgMTIgVGYgNDAgMjQwIFRkIChBbW91bnQ6ICQxMC4wMCkgVGoKRVQgQlQgL0YxIDEyIFRmIDQwIDIyNCBUZCAoVGhhbmsgeW91ISkgVGoKRVQKZW5kc3RyZWFtCmVuZG9iago1IDAgb2JqCjw8IC9UeXBlIC9Gb250IC9TdWJ0eXBlIC9UeXBlMSAvQmFzZUZvbnQgL0hlbHZldGljYSA+PgplbmRvYmoKeHJlZgowIDYKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDE1IDAwMDAwIG4gCjAwMDAwMDAwNjQgMDAwMDAgbiAKMDAwMDAwMDEyMSAwMDAwMCBuIAowMDAwMDAwMjQ3IDAwMDAwIG4gCjAwMDAwMDA0MjggMDAwMDAgbiAKdHJhaWxlcgo8PCAvU2l6ZSA2IC9Sb290IDEgMCBSID4+CnN0YXJ0eHJlZgo0OTgKJSVFT0YK",
+                "ocrEnabled": false,
+                "extractTables": false,
+                "outputVariable": "parsedPdf"
+            },
+            "position": { "x": 320, "y": 120 }
+        },
+        "parse-document": {
+            "type": "parseDocument",
+            "name": "Parse Document",
+            "config": {
+                "base64Input": "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",
+                "fileType": "docx",
+                "preserveFormatting": false,
+                "extractImages": false,
+                "outputVariable": "parsedDoc"
+            },
+            "position": { "x": 320, "y": 300 }
+        },
+        "output-final": {
+            "type": "output",
+            "name": "Output Parsed Results",
+            "config": {
+                "outputVariable": "combinedResult",
+                "format": "json",
+                "fields": ["parsedPdf", "parsedDoc"]
+            },
+            "position": { "x": 560, "y": 210 }
+        }
+    },
+    "edges": [
+        { "id": "e0", "source": "pdf-input", "target": "parse-pdf" },
+        { "id": "e1", "source": "doc-input", "target": "parse-document" },
+        { "id": "e2", "source": "parse-pdf", "target": "output-final" },
+        { "id": "e3", "source": "parse-document", "target": "output-final" }
+    ]
+}

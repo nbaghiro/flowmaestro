@@ -17,6 +17,8 @@ import {
     Copy,
     Send,
     BookOpen,
+    FileText,
+    FileSearch,
     Globe,
     Database,
     Plug,
@@ -29,11 +31,12 @@ import {
 import { useCallback, useState } from "react";
 import { Button } from "../../components/common/Button";
 import { Input } from "../../components/common/Input";
+import type { ComponentType } from "react";
 
 interface NodeDefinition {
     type: string;
     label: string;
-    icon: React.ComponentType<{ className?: string }>;
+    icon: ComponentType<{ className?: string }>;
     category: string;
     description: string;
 }
@@ -157,6 +160,20 @@ const nodeLibrary: NodeDefinition[] = [
         icon: Copy,
         category: "tools",
         description: "Remove duplicate items by key"
+    },
+    {
+        type: "parsePdf",
+        label: "Parse PDF",
+        icon: FileText,
+        category: "tools",
+        description: "Extract text, pages, and metadata from PDFs"
+    },
+    {
+        type: "parseDocument",
+        label: "Parse Document",
+        icon: FileSearch,
+        category: "tools",
+        description: "Parse DOCX, HTML, Markdown, and text files"
     },
     {
         type: "variable",

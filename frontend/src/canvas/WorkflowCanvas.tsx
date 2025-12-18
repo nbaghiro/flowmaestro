@@ -22,6 +22,7 @@ import { AggregateNode, DeduplicateNode, FilterNode } from "./nodes/data-process
 import TransformNode from "./nodes/data-processing/TransformNode";
 import DatabaseNode from "./nodes/DatabaseNode";
 import EmbeddingsNode from "./nodes/EmbeddingsNode";
+import { ParseDocumentNode, ParsePDFNode } from "./nodes/file-processing";
 import { InputNode, LoopNode, OutputNode, RouterNode, WaitNode } from "./nodes/flow-control";
 import HTTPNode from "./nodes/HTTPNode";
 import IntegrationNode from "./nodes/IntegrationNode";
@@ -56,7 +57,9 @@ const nodeTypes = {
     http: HTTPNode,
     database: DatabaseNode,
     integration: IntegrationNode,
-    knowledgeBaseQuery: KnowledgeBaseQueryNode
+    knowledgeBaseQuery: KnowledgeBaseQueryNode,
+    parsePdf: ParsePDFNode,
+    parseDocument: ParseDocumentNode
 };
 
 interface WorkflowCanvasProps {
@@ -236,7 +239,9 @@ function getDefaultLabel(type: string): string {
         router: "Router",
         http: "HTTP",
         database: "Database",
-        integration: "Integration"
+        integration: "Integration",
+        parsePdf: "Parse PDF",
+        parseDocument: "Parse Document"
     };
     return labels[type] || "Node";
 }

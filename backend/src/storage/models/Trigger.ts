@@ -5,7 +5,7 @@
 
 import type { JsonValue, JsonSchema } from "@flowmaestro/shared";
 
-export type TriggerType = "schedule" | "webhook" | "event" | "manual";
+export type TriggerType = "schedule" | "webhook" | "event" | "manual" | "file";
 
 /**
  * Schedule trigger configuration (cron-based)
@@ -49,13 +49,24 @@ export interface ManualTriggerConfig {
 }
 
 /**
+ * File trigger configuration
+ */
+export interface FileTriggerConfig {
+    fileName?: string;
+    contentType?: string;
+    base64?: string;
+    description?: string;
+}
+
+/**
  * Union type for all trigger configurations
  */
 export type TriggerConfig =
     | ScheduleTriggerConfig
     | WebhookTriggerConfig
     | EventTriggerConfig
-    | ManualTriggerConfig;
+    | ManualTriggerConfig
+    | FileTriggerConfig;
 
 /**
  * Workflow Trigger Model

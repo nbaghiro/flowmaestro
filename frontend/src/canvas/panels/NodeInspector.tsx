@@ -22,6 +22,8 @@ import { KnowledgeBaseQueryNodeConfig } from "./configs/KnowledgeBaseQueryNodeCo
 import { LLMNodeConfig } from "./configs/LLMNodeConfig";
 import { LoopNodeConfig } from "./configs/LoopNodeConfig";
 import { OutputNodeConfig } from "./configs/OutputNodeConfig";
+import { ParseDocumentNodeConfig } from "./configs/ParseDocumentNodeConfig";
+import { ParsePDFNodeConfig } from "./configs/ParsePDFNodeConfig";
 import { RouterNodeConfig } from "./configs/RouterNodeConfig";
 import { SwitchNodeConfig } from "./configs/SwitchNodeConfig";
 import { TransformNodeConfig } from "./configs/TransformNodeConfig";
@@ -109,6 +111,10 @@ export function NodeInspector() {
                 return <VariableNodeConfig data={node.data} onUpdate={handleUpdate} />;
             case "output":
                 return <OutputNodeConfig data={node.data} onUpdate={handleUpdate} />;
+            case "parsePdf":
+                return <ParsePDFNodeConfig data={node.data} onUpdate={handleUpdate} />;
+            case "parseDocument":
+                return <ParseDocumentNodeConfig data={node.data} onUpdate={handleUpdate} />;
 
             // Connect
             case "http":

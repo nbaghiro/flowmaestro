@@ -25,6 +25,11 @@ import {
     FileOperationsNodeResult
 } from "./file-executor";
 import {
+    executeParseDocumentNode,
+    ParseDocumentNodeConfig
+} from "./file-processing/parse-document-executor";
+import { executeParsePdfNode, ParsePdfNodeConfig } from "./file-processing/parse-pdf-executor";
+import {
     executeConditionalNode,
     ConditionalNodeConfig,
     ConditionalNodeResult
@@ -184,6 +189,15 @@ export async function executeNode(input: ExecuteNodeInput): Promise<JsonObject> 
                 nodeConfig,
                 context
             });
+
+        case "parsePdf":
+            return await executeParsePdfNode(nodeConfig as unknown as ParsePdfNodeConfig, context);
+
+        case "parseDocument":
+            return await executeParseDocumentNode(
+                nodeConfig as unknown as ParseDocumentNodeConfig,
+                context
+            );
 
         default:
             throw new Error(`Node type '${nodeType}' not yet implemented`);
