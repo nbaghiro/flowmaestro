@@ -6,7 +6,7 @@
 import { proxyActivities } from "@temporalio/workflow";
 import type { JsonValue, WorkflowDefinition, JsonObject } from "@flowmaestro/shared";
 import { orchestratorWorkflow, OrchestratorResult } from "./orchestrator-workflow";
-import type * as triggerActivities from "../activities/trigger-execution";
+import type * as triggerActivities from "../orchestration/triggers";
 
 // Proxy activities for database operations
 const { prepareTriggeredExecution, completeTriggeredExecution } = proxyActivities<

@@ -1,9 +1,6 @@
 import { getDefaultModelForProvider } from "@flowmaestro/shared";
 import { ConnectionRepository } from "../storage/repositories/ConnectionRepository";
-import {
-    executeLLMNode,
-    type LLMNodeConfig
-} from "../temporal/activities/node-executors/llm-executor";
+import { executeLLMNode, type LLMNodeConfig } from "../temporal/executors/ai/llm";
 
 export interface WorkflowGenerationRequest {
     userPrompt: string;
@@ -49,8 +46,8 @@ Rules:
 - Ensure proper node connections (edges)
 - Include necessary error handling where appropriate
 - Keep workflows simple but complete (3-7 nodes typically)
-- Always use "\${userConnectionId}" for connectionId fields that require authentication
-- Use variable interpolation syntax: \${variableName} for accessing data from previous nodes
+- Always use "{{userConnectionId}}" for connectionId fields that require authentication
+- Use variable interpolation syntax: {{variableName}} for accessing data from previous nodes
 
 ## Available Node Types (16 total)
 
@@ -63,8 +60,8 @@ Config:
 {
   "provider": "openai" | "anthropic" | "google" | "cohere",
   "model": string,
-  "connectionId": "\${userConnectionId}",
-  "prompt": string (supports \${variables}),
+  "connectionId": "{{userConnectionId}}",
+  "prompt": string (supports {{variables}}),
   "systemPrompt": string (optional),
   "temperature": number (0-1, default: 0.7),
   "maxTokens": number (default: 1000),
@@ -81,11 +78,11 @@ Methods: GET, POST, PUT, DELETE, PATCH
 Config:
 {
   "method": "GET" | "POST" | "PUT" | "DELETE" | "PATCH",
-  "url": string (supports \${variables}),
+  "url": string (supports {{variables}}),
   "headers": object,
   "body": any (for POST/PUT/PATCH),
   "queryParams": object,
-  "connectionId": "\${userConnectionId}" (optional, for API auth),
+  "connectionId": "{{userConnectionId}}" (optional, for API auth),
   "timeout": number (ms, default: 30000)
 }
 
@@ -99,7 +96,7 @@ Outputs: Two handles - "true" and "false"
 Config (Simple mode):
 {
   "mode": "simple",
-  "leftValue": "\${response.status}",
+  "leftValue": "{{response.status}}",
   "operator": "==" | "!=" | ">" | "<" | ">=" | "<=" | "contains" | "startsWith" | "endsWith",
   "rightValue": 200
 }
@@ -107,7 +104,7 @@ Config (Simple mode):
 Config (Expression mode):
 {
   "mode": "expression",
-  "condition": "\${response.data.length} > 0 && \${response.status} === 200"
+  "condition": "{{response.data.length}} > 0 && {{response.status}} === 200"
 }
 
 ### 4. Transform Node (type: "transform")
@@ -124,7 +121,7 @@ Config (JSONPath):
 Config (Template):
 {
   "mode": "template",
-  "template": "Summary: \${summary}\n\nTitle: \${article.title}"
+  "template": "Summary: {{summary}}\n\nTitle: {{article.title}}"
 }
 
 ### 5. Loop Node (type: "loop")
@@ -133,7 +130,7 @@ Behavior: Executes connected nodes for each item
 
 Config:
 {
-  "items": "\${articles}",
+  "items": "{{articles}}",
   "itemVariable": "article" (default: "item"),
   "indexVariable": "i" (default: "index"),
   "maxConcurrency": number (default: 1 for sequential)
@@ -159,7 +156,7 @@ Purpose: Display results to user
 Config:
 {
   "format": "text" | "json" | "markdown" | "html",
-  "value": "\${results}" (variable reference or template),
+  "value": "{{results}}" (variable reference or template),
   "label": string
 }
 
@@ -169,7 +166,7 @@ Outputs: Multiple named handles based on cases
 
 Config:
 {
-  "value": "\${category.text}",
+  "value": "{{category.text}}",
   "cases": [
     { "match": "BUG", "output": "bug" },
     { "match": "FEATURE", "output": "feature" }
@@ -214,7 +211,7 @@ Config:
 {
   "mode": "generate" | "analyze",
   "provider": "openai" | "replicate",
-  "connectionId": "\${userConnectionId}",
+  "connectionId": "{{userConnectionId}}",
   "prompt": string (for generation),
   "imageUrl": string (for analysis),
   "size": "256x256" | "512x512" | "1024x1024"
@@ -227,7 +224,7 @@ Config:
 {
   "mode": "transcribe" | "synthesize",
   "provider": "openai" | "google",
-  "connectionId": "\${userConnectionId}",
+  "connectionId": "{{userConnectionId}}",
   "audioUrl": string (for transcription),
   "text": string (for synthesis),
   "voice": string,
@@ -240,7 +237,7 @@ Purpose: Query SQL/NoSQL databases
 Config:
 {
   "databaseType": "postgres" | "mysql" | "mongodb",
-  "connectionId": "\${userConnectionId}",
+  "connectionId": "{{userConnectionId}}",
   "query": string,
   "parameters": object
 }
@@ -252,7 +249,7 @@ Config:
 {
   "service": "slack" | "email" | "googlesheets",
   "action": string (service-specific),
-  "connectionId": "\${userConnectionId}",
+  "connectionId": "{{userConnectionId}}",
   "config": object (service-specific)
 }
 
@@ -263,7 +260,7 @@ Config:
 {
   "provider": "openai" | "cohere",
   "model": string,
-  "connectionId": "\${userConnectionId}",
+  "connectionId": "{{userConnectionId}}",
   "text": string
 }
 
@@ -331,7 +328,7 @@ Output: Input node → LLM node (enhance prompt) → Vision node → Output node
 
 Remember:
 - Use descriptive labels ("Fetch Tech News" not "HTTP Node")
-- Use \${userConnectionId} for all connection fields
+- Use {{userConnectionId}} for all connection fields
 - Keep it simple (3-7 nodes)
 - Always include proper edges connecting all nodes
 - Return ONLY the JSON, no explanations`;

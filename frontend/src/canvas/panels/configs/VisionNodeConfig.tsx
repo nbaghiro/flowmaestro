@@ -89,13 +89,13 @@ export function VisionNodeConfig({ data, onUpdate }: VisionNodeConfigProps) {
                 <FormSection title="Input">
                     <FormField
                         label="Image Source"
-                        description="URL or use ${variableName} to reference node outputs"
+                        description="URL or use {{variableName}} to reference node outputs"
                     >
                         <Input
                             type="text"
                             value={imageInput}
                             onChange={(e) => setImageInput(e.target.value)}
-                            placeholder="https://example.com/image.jpg or ${imageUrl}"
+                            placeholder="https://example.com/image.jpg or {{imageUrl}}"
                             className="font-mono"
                         />
                     </FormField>

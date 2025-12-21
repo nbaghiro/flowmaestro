@@ -63,13 +63,13 @@ export function ConditionalNodeConfig({ data, onUpdate }: ConditionalNodeConfigP
                 <FormSection title="Simple Comparison">
                     <FormField
                         label="Left Value"
-                        description="Use ${variableName} to reference variables"
+                        description="Use {{variableName}} to reference variables"
                     >
                         <Input
                             type="text"
                             value={leftValue}
                             onChange={(e) => setLeftValue(e.target.value)}
-                            placeholder="${variable} or literal value"
+                            placeholder="{{variable}} or literal value"
                             className="font-mono"
                         />
                     </FormField>
@@ -80,13 +80,13 @@ export function ConditionalNodeConfig({ data, onUpdate }: ConditionalNodeConfigP
 
                     <FormField
                         label="Right Value"
-                        description="Use ${variableName} to reference variables"
+                        description="Use {{variableName}} to reference variables"
                     >
                         <Input
                             type="text"
                             value={rightValue}
                             onChange={(e) => setRightValue(e.target.value)}
-                            placeholder="${variable} or literal value"
+                            placeholder="{{variable}} or literal value"
                             className="font-mono"
                         />
                     </FormField>
@@ -97,13 +97,13 @@ export function ConditionalNodeConfig({ data, onUpdate }: ConditionalNodeConfigP
                 <FormSection title="JavaScript Expression">
                     <FormField
                         label="Expression"
-                        description="Write JavaScript that evaluates to true/false. Use ${variableName} for variables."
+                        description="Write JavaScript that evaluates to true/false. Use {{variableName}} for variables."
                     >
                         <CodeInput
                             value={expression}
                             onChange={setExpression}
                             language="javascript"
-                            placeholder="${var1} > 10 && ${var2}.includes('text')"
+                            placeholder="{{var1}} > 10 && {{var2}}.includes('text')"
                             rows={6}
                         />
                     </FormField>

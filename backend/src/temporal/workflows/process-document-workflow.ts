@@ -1,6 +1,6 @@
 import { proxyActivities } from "@temporalio/workflow";
 import type { DocumentFileType } from "../../storage/models/KnowledgeDocument";
-import type * as activities from "../activities/process-document";
+import type * as activities from "../orchestration/documents";
 
 // Proxy the activities with retry policies
 const {

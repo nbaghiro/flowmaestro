@@ -78,7 +78,7 @@ export function VariableNodeConfig({ data, onUpdate }: VariableNodeConfigProps) 
 
                     <FormField
                         label="Value"
-                        description="Literal value or ${variableName} reference"
+                        description="Literal value or {{variableName}} reference"
                     >
                         <Textarea
                             value={value}
@@ -88,7 +88,7 @@ export function VariableNodeConfig({ data, onUpdate }: VariableNodeConfigProps) 
                                     ? '{"key": "value"}'
                                     : valueType === "boolean"
                                       ? "true"
-                                      : "Value or ${otherVariable}"
+                                      : "Value or {{otherVariable}}"
                             }
                             rows={valueType === "json" ? 6 : 4}
                             className="font-mono"
@@ -106,7 +106,7 @@ export function VariableNodeConfig({ data, onUpdate }: VariableNodeConfigProps) 
                         </p>
                         <p className="mt-2">
                             <strong>Access via:</strong>{" "}
-                            <code className="text-foreground">{`\${${variableName || "variableName"}}`}</code>
+                            <code className="text-foreground">{`{{${variableName || "variableName"}}}`}</code>
                         </p>
                     </div>
                 </FormSection>

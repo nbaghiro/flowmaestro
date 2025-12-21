@@ -64,15 +64,15 @@ export function OutputNodeConfig({ data, onUpdate }: OutputNodeConfigProps) {
             <FormSection title="Value">
                 <FormField
                     label="Output Value"
-                    description="Value to output (supports ${variableName} references)"
+                    description="Value to output (supports {{variableName}} references)"
                 >
                     <Textarea
                         value={value}
                         onChange={(e) => setValue(e.target.value)}
                         placeholder={
                             format === "json"
-                                ? '{\n  "key": "${variableName}",\n  "processed": true\n}'
-                                : "${variableName}"
+                                ? '{\n  "key": "{{variableName}}",\n  "processed": true\n}'
+                                : "{{variableName}}"
                         }
                         rows={format === "json" ? 8 : 4}
                         className="font-mono"
@@ -82,9 +82,9 @@ export function OutputNodeConfig({ data, onUpdate }: OutputNodeConfigProps) {
                 <div className="px-3 py-2 bg-blue-500/10 dark:bg-blue-400/20 border border-blue-500/30 dark:border-blue-400/30 text-blue-800 dark:text-blue-400 rounded-lg">
                     <p className="text-xs text-blue-800">
                         <strong>Examples:</strong>
-                        <br />• {"${llmResponse}"} - Reference a variable
-                        <br />• {"${user.name}"} - Access nested properties
-                        <br />• {'{{...${object}, extra: "value"}}'} - Merge objects
+                        <br />• {"{{llmResponse}}"} - Reference a variable
+                        <br />• {"{{user.name}}"} - Access nested properties
+                        <br />• {'{{...{{object}}, extra: "value"}}'} - Merge objects
                     </p>
                 </div>
             </FormSection>

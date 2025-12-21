@@ -1,8 +1,5 @@
 import { ConnectionRepository } from "../storage/repositories/ConnectionRepository";
-import {
-    executeLLMNode,
-    type LLMExecutionCallbacks
-} from "../temporal/activities/node-executors/llm-executor";
+import { executeLLMNode, type LLMExecutionCallbacks } from "../temporal/executors/ai/llm";
 import type {
     WorkflowContext,
     ChatResponse,

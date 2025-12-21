@@ -1,5 +1,5 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
-import { WebhookService, WebhookRequestData } from "../../../temporal/services/WebhookService";
+import { WebhookService, WebhookRequestData } from "../../../temporal/services/webhook";
 
 /**
  * Webhook receiver endpoint

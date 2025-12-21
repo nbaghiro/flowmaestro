@@ -31,7 +31,7 @@ function UserInputNode({ data, selected }: NodeProps<UserInputNodeData>) {
                     <div className="flex items-center justify-between">
                         <span className="text-xs text-muted-foreground">Variable:</span>
                         <span className="text-xs font-mono bg-muted px-1.5 py-0.5 rounded">
-                            ${variableName}
+                            {`{{${variableName}}}`}
                         </span>
                     </div>
                     <div className="flex items-center justify-between">

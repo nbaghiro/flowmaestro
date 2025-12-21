@@ -85,12 +85,12 @@ export function WaitNodeConfig({ data, onUpdate }: WaitNodeConfigProps) {
 
             {waitType === "until" && (
                 <FormSection title="Until Timestamp">
-                    <FormField label="Timestamp" description="ISO 8601 format or use ${variable}">
+                    <FormField label="Timestamp" description="ISO 8601 format or use {{variable}}">
                         <Input
                             type="text"
                             value={timestamp}
                             onChange={(e) => setTimestamp(e.target.value)}
-                            placeholder="2024-12-31T23:59:59Z or ${scheduledTime}"
+                            placeholder="2024-12-31T23:59:59Z or {{scheduledTime}}"
                             className="font-mono"
                         />
                     </FormField>
