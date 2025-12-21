@@ -87,9 +87,26 @@ ROOT_DIR="${SCRIPT_DIR}/../.."
 PULUMI_DIR="${SCRIPT_DIR}/../pulumi"
 BACKEND_ENV_FILE="${ROOT_DIR}/backend/.env"
 
+# Preserve existing JWT_SECRET and ENCRYPTION_KEY if they exist
+EXISTING_JWT_SECRET=""
+EXISTING_ENCRYPTION_KEY=""
+
+if [ -f "$BACKEND_ENV_FILE" ]; then
+    EXISTING_JWT_SECRET=$(grep "^JWT_SECRET=" "$BACKEND_ENV_FILE" 2>/dev/null | tail -1 | cut -d'=' -f2-)
+    EXISTING_ENCRYPTION_KEY=$(grep "^ENCRYPTION_KEY=" "$BACKEND_ENV_FILE" 2>/dev/null | tail -1 | cut -d'=' -f2-)
+fi
+
 print_header "FlowMaestro Secrets Sync"
 print_info "GCP Project: ${GCP_PROJECT}"
 print_warn "This will pull secrets from the current gcloud default project"
+
+# Notify user about preserved secrets
+if [ -n "$EXISTING_JWT_SECRET" ]; then
+    print_info "Preserving existing JWT_SECRET from .env"
+fi
+if [ -n "$EXISTING_ENCRYPTION_KEY" ]; then
+    print_info "Preserving existing ENCRYPTION_KEY from .env"
+fi
 
 check_prerequisites
 
@@ -212,10 +229,10 @@ REDIS_PORT=6379
 REDIS_URL=redis://localhost:6379
 
 # ==============================================================================
-# Security Secrets (Local Defaults - Safe for Development)
+# Security Secrets (Preserved from existing .env or defaults)
 # ==============================================================================
-JWT_SECRET=dev-jwt-secret-change-in-production
-ENCRYPTION_KEY=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+JWT_SECRET=${EXISTING_JWT_SECRET:-dev-jwt-secret-change-in-production}
+ENCRYPTION_KEY=${EXISTING_ENCRYPTION_KEY:-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef}
 
 # ==============================================================================
 # Application Secrets (From GCP Secret Manager)

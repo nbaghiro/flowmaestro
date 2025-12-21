@@ -285,6 +285,55 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
         refreshable: true
     },
 
+    "google-docs": {
+        name: "google-docs",
+        displayName: "Google Docs",
+        authUrl: "https://accounts.google.com/o/oauth2/v2/auth",
+        tokenUrl: "https://oauth2.googleapis.com/token",
+        scopes: [
+            "https://www.googleapis.com/auth/documents",
+            "https://www.googleapis.com/auth/drive.file"
+        ],
+        authParams: {
+            access_type: "offline",
+            prompt: "consent"
+        },
+        clientId: config.oauth.google.clientId,
+        clientSecret: config.oauth.google.clientSecret,
+        redirectUri: getOAuthRedirectUri("google"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`
+                    }
+                });
+
+                const data = (await response.json()) as {
+                    email?: string;
+                    name?: string;
+                    picture?: string;
+                    id?: string;
+                };
+
+                return {
+                    email: data.email,
+                    name: data.name,
+                    picture: data.picture,
+                    userId: data.id
+                };
+            } catch (error) {
+                console.error("[OAuth] Failed to get Google Docs user info:", error);
+                return {
+                    email: "unknown@google",
+                    name: "Google User"
+                };
+            }
+        },
+        revokeUrl: "https://oauth2.googleapis.com/revoke",
+        refreshable: true
+    },
+
     notion: {
         name: "notion",
         displayName: "Notion",

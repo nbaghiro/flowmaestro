@@ -182,6 +182,18 @@ const googleCalendarEntry: ProviderRegistryEntry = {
     }
 };
 
+// Register Google Docs provider
+const googleDocsEntry: ProviderRegistryEntry = {
+    name: "google-docs",
+    displayName: "Google Docs",
+    authMethod: "oauth2",
+    category: "productivity",
+    loader: async () => {
+        const { GoogleDocsProvider } = await import("./providers/google-docs/GoogleDocsProvider");
+        return new GoogleDocsProvider();
+    }
+};
+
 // Register Gmail provider
 const gmailEntry: ProviderRegistryEntry = {
     name: "gmail",
@@ -337,6 +349,7 @@ providerRegistry.register(figmaEntry);
 providerRegistry.register(googleSheetsEntry);
 providerRegistry.register(googleDriveEntry);
 providerRegistry.register(googleCalendarEntry);
+providerRegistry.register(googleDocsEntry);
 providerRegistry.register(gmailEntry);
 providerRegistry.register(whatsappEntry);
 providerRegistry.register(instagramEntry);
