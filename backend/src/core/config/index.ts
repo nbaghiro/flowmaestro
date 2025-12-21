@@ -263,6 +263,18 @@ export const config = {
         typeform: {
             clientId: process.env.TYPEFORM_CLIENT_ID || "",
             clientSecret: process.env.TYPEFORM_CLIENT_SECRET || ""
+        },
+
+        // Dropbox
+        dropbox: {
+            clientId: process.env.DROPBOX_CLIENT_ID || "",
+            clientSecret: process.env.DROPBOX_CLIENT_SECRET || ""
+        },
+
+        // Box
+        box: {
+            clientId: process.env.BOX_CLIENT_ID || "",
+            clientSecret: process.env.BOX_CLIENT_SECRET || ""
         }
     }
 };
@@ -312,7 +324,9 @@ export function getOAuthRedirectUri(provider: string): string {
         apollo: "/oauth/apollo/callback",
         jira: "/oauth/jira/callback",
         shopify: "/oauth/shopify/callback",
-        typeform: "/oauth/typeform/callback"
+        typeform: "/oauth/typeform/callback",
+        dropbox: "/oauth/dropbox/callback",
+        box: "/oauth/box/callback"
     };
 
     const callbackPath = callbackPaths[provider] || `/oauth/${provider}/callback`;
@@ -360,7 +374,9 @@ export function getOAuthCredentials(provider: string): { clientId: string; clien
         apollo: "apollo",
         jira: "jira",
         shopify: "shopify",
-        typeform: "typeform"
+        typeform: "typeform",
+        dropbox: "dropbox",
+        box: "box"
     };
 
     const configKey = providerMap[provider];

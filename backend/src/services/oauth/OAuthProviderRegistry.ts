@@ -1843,6 +1843,126 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
             }
         },
         refreshable: true
+    },
+
+    // ==========================================================================
+    // Dropbox File Storage
+    // ==========================================================================
+
+    dropbox: {
+        name: "dropbox",
+        displayName: "Dropbox",
+        authUrl: "https://www.dropbox.com/oauth2/authorize",
+        tokenUrl: "https://api.dropboxapi.com/oauth2/token",
+        scopes: [
+            "account_info.read",
+            "files.content.write",
+            "files.content.read",
+            "files.metadata.write",
+            "files.metadata.read",
+            "sharing.write",
+            "sharing.read"
+        ],
+        authParams: {
+            token_access_type: "offline" // Required to get refresh token
+        },
+        clientId: config.oauth.dropbox.clientId,
+        clientSecret: config.oauth.dropbox.clientSecret,
+        redirectUri: getOAuthRedirectUri("dropbox"),
+        pkceEnabled: true, // Dropbox recommends PKCE
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch(
+                    "https://api.dropboxapi.com/2/users/get_current_account",
+                    {
+                        method: "POST",
+                        headers: {
+                            Authorization: `Bearer ${accessToken}`,
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify(null)
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    account_id?: string;
+                    name?: { display_name?: string };
+                    email?: string;
+                };
+
+                return {
+                    userId: data.account_id || "unknown",
+                    name: data.name?.display_name || "Dropbox User",
+                    email: data.email || "unknown@dropbox"
+                };
+            } catch (error) {
+                console.error("[OAuth] Failed to get Dropbox user info:", error);
+                return {
+                    userId: "unknown",
+                    name: "Dropbox User",
+                    email: "unknown@dropbox"
+                };
+            }
+        },
+        refreshable: true
+    },
+
+    // ==========================================================================
+    // Box File Storage
+    // ==========================================================================
+
+    box: {
+        name: "box",
+        displayName: "Box",
+        authUrl: "https://account.box.com/api/oauth2/authorize",
+        tokenUrl: "https://api.box.com/oauth2/token",
+        scopes: [], // Box uses application scopes configured in Developer Console
+        clientId: config.oauth.box.clientId,
+        clientSecret: config.oauth.box.clientSecret,
+        redirectUri: getOAuthRedirectUri("box"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://api.box.com/2.0/users/me", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    id?: string;
+                    name?: string;
+                    login?: string;
+                    space_amount?: number;
+                    space_used?: number;
+                    avatar_url?: string;
+                };
+
+                return {
+                    userId: data.id || "unknown",
+                    name: data.name || "Box User",
+                    email: data.login || "unknown@box.com",
+                    spaceAmount: data.space_amount,
+                    spaceUsed: data.space_used,
+                    avatar: data.avatar_url
+                };
+            } catch (error) {
+                console.error("[OAuth] Failed to get Box user info:", error);
+                return {
+                    userId: "unknown",
+                    name: "Box User",
+                    email: "unknown@box.com"
+                };
+            }
+        },
+        refreshable: true
     }
 };
 

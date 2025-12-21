@@ -377,5 +377,33 @@ const typeformEntry: ProviderRegistryEntry = {
 
 providerRegistry.register(typeformEntry);
 
+// Register Dropbox provider
+const dropboxEntry: ProviderRegistryEntry = {
+    name: "dropbox",
+    displayName: "Dropbox",
+    authMethod: "oauth2",
+    category: "file_storage",
+    loader: async () => {
+        const { DropboxProvider } = await import("./providers/dropbox/DropboxProvider");
+        return new DropboxProvider();
+    }
+};
+
+providerRegistry.register(dropboxEntry);
+
+// Register Box provider
+const boxEntry: ProviderRegistryEntry = {
+    name: "box",
+    displayName: "Box",
+    authMethod: "oauth2",
+    category: "file_storage",
+    loader: async () => {
+        const { BoxProvider } = await import("./providers/box/BoxProvider");
+        return new BoxProvider();
+    }
+};
+
+providerRegistry.register(boxEntry);
+
 // Export for use in application
 export { providerRegistry };

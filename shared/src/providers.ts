@@ -382,8 +382,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Manage files and folders",
         logoUrl: getBrandLogo("dropbox.com"),
         category: "File Storage",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "box",
@@ -391,8 +390,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Manage enterprise files",
         logoUrl: getBrandLogo("box.com"),
         category: "File Storage",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "microsoft-onedrive",
