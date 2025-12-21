@@ -60,5 +60,20 @@ export const HEARTBEAT_INTERVALS = {
     /** Default heartbeat interval */
     DEFAULT: 30000, // 30 seconds
     /** Shorter interval for operations with progress tracking */
-    FREQUENT: 10000 // 10 seconds
+    FREQUENT: 10000, // 10 seconds
+    /** For streaming operations (LLM streaming, file downloads) */
+    STREAMING: 5000 // 5 seconds
+} as const;
+
+/**
+ * Heartbeat timeout configurations (how long before Temporal considers activity dead)
+ * Should be 2-3x the heartbeat interval
+ */
+export const HEARTBEAT_TIMEOUTS = {
+    /** Default timeout - activity should heartbeat at least every 60s */
+    DEFAULT: "60 seconds",
+    /** For streaming operations */
+    STREAMING: "15 seconds",
+    /** For long-running operations with progress tracking */
+    LONG_RUNNING: "90 seconds"
 } as const;

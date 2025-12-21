@@ -1,16 +1,13 @@
 import type { JsonObject, JsonValue } from "@flowmaestro/shared";
+import {
+    SwitchNodeConfigSchema,
+    validateOrThrow,
+    type SwitchNodeConfig
+} from "../../shared/schemas";
 import { interpolateVariables } from "../../shared/utils";
 
-export interface SwitchCase {
-    value: string;
-    label?: string;
-}
-
-export interface SwitchNodeConfig {
-    expression: string; // Variable to evaluate: ${status}, ${count}, etc.
-    cases: SwitchCase[]; // Array of cases to match against
-    defaultCase?: string; // Default case if no match (optional)
-}
+// Re-export the Zod-inferred type for backwards compatibility
+export type { SwitchNodeConfig };
 
 export interface SwitchNodeResult {
     matchedCase: string | null;
@@ -21,19 +18,19 @@ export interface SwitchNodeResult {
 /**
  * Execute Switch node - multi-way branching based on expression value
  */
-export async function executeSwitchNode(
-    config: SwitchNodeConfig,
-    context: JsonObject
-): Promise<JsonObject> {
+export async function executeSwitchNode(config: unknown, context: JsonObject): Promise<JsonObject> {
+    // Validate config with Zod schema
+    const validatedConfig = validateOrThrow(SwitchNodeConfigSchema, config, "Switch");
+
     // Interpolate and evaluate the expression
-    const expressionValue = interpolateVariables(config.expression, context);
+    const expressionValue = interpolateVariables(validatedConfig.expression, context);
 
     console.log(
-        `[Switch] Evaluating expression: ${config.expression} → ${JSON.stringify(expressionValue)}`
+        `[Switch] Evaluating expression: ${validatedConfig.expression} → ${JSON.stringify(expressionValue)}`
     );
 
     // Try to match against each case
-    for (const switchCase of config.cases) {
+    for (const switchCase of validatedConfig.cases) {
         const caseValue = interpolateVariables(switchCase.value, context);
 
         if (matchesCase(expressionValue, caseValue)) {
@@ -50,7 +47,7 @@ export async function executeSwitchNode(
     }
 
     // No match found - use default case
-    const defaultCase = config.defaultCase || null;
+    const defaultCase = validatedConfig.defaultCase || null;
     console.log(`[Switch] No match found, using default: ${defaultCase}`);
 
     return {

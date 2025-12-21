@@ -4,6 +4,8 @@ import * as path from "path";
 import OpenAI from "openai";
 import type { JsonObject } from "@flowmaestro/shared";
 import { config as appConfig } from "../../../core/config";
+import { ConfigurationError, ProviderError, ValidationError } from "../../shared/errors";
+import { withHeartbeat, type HeartbeatOperations } from "../../shared/heartbeat";
 import { interpolateVariables } from "../../shared/utils";
 
 export interface AudioNodeConfig {
@@ -62,51 +64,71 @@ export async function executeAudioNode(
     config: AudioNodeConfig,
     context: JsonObject
 ): Promise<JsonObject> {
-    const startTime = Date.now();
+    return withHeartbeat("audio", async (heartbeat) => {
+        const startTime = Date.now();
 
-    console.log(`[Audio] Provider: ${config.provider}, Operation: ${config.operation}`);
+        heartbeat.update({
+            step: "initializing",
+            provider: config.provider,
+            operation: config.operation
+        });
+        console.log(`[Audio] Provider: ${config.provider}, Operation: ${config.operation}`);
 
-    let result: JsonObject;
+        let result: JsonObject;
 
-    switch (config.provider) {
-        case "openai":
-            result = await executeOpenAI(config, context);
-            break;
+        switch (config.provider) {
+            case "openai":
+                heartbeat.update({ step: "calling_openai" });
+                result = await executeOpenAI(config, context, heartbeat);
+                break;
 
-        case "elevenlabs":
-            result = await executeElevenLabs(config, context);
-            break;
+            case "elevenlabs":
+                heartbeat.update({ step: "calling_elevenlabs" });
+                result = await executeElevenLabs(config, context, heartbeat);
+                break;
 
-        case "google":
-            throw new Error("Google audio provider not yet implemented");
+            case "google":
+                throw new ValidationError("Google audio provider not yet implemented", "provider");
 
-        default:
-            throw new Error(`Unsupported audio provider: ${config.provider}`);
-    }
+            default:
+                throw new ValidationError(
+                    `Unsupported audio provider: ${config.provider}`,
+                    "provider"
+                );
+        }
 
-    result.metadata = {
-        ...(result.metadata as JsonObject),
-        processingTime: Date.now() - startTime
-    };
+        result.metadata = {
+            ...(result.metadata as JsonObject),
+            processingTime: Date.now() - startTime
+        };
 
-    console.log(
-        `[Audio] Completed in ${((result.metadata as JsonObject)?.processingTime as number) || 0}ms`
-    );
+        heartbeat.update({ step: "completed", percentComplete: 100 });
+        console.log(
+            `[Audio] Completed in ${((result.metadata as JsonObject)?.processingTime as number) || 0}ms`
+        );
 
-    if (config.outputVariable) {
-        return { [config.outputVariable]: result } as unknown as JsonObject;
-    }
+        if (config.outputVariable) {
+            return { [config.outputVariable]: result } as unknown as JsonObject;
+        }
 
-    return result as unknown as JsonObject;
+        return result as unknown as JsonObject;
+    });
 }
 
 /**
  * Execute OpenAI audio (Whisper for transcribe, TTS for speech)
  */
-async function executeOpenAI(config: AudioNodeConfig, context: JsonObject): Promise<JsonObject> {
+async function executeOpenAI(
+    config: AudioNodeConfig,
+    context: JsonObject,
+    heartbeat: HeartbeatOperations
+): Promise<JsonObject> {
     const apiKey = appConfig.ai.openai.apiKey;
     if (!apiKey) {
-        throw new Error("OPENAI_API_KEY environment variable is not set");
+        throw new ConfigurationError(
+            "OPENAI_API_KEY environment variable is not set",
+            "OPENAI_API_KEY"
+        );
     }
 
     const openai = new OpenAI({ apiKey });
@@ -117,10 +139,12 @@ async function executeOpenAI(config: AudioNodeConfig, context: JsonObject): Prom
 
         console.log("[Audio/OpenAI] Transcribing audio");
 
+        heartbeat.update({ step: "downloading_audio" });
         // Download or read audio file
         const { file: audioFile, path: audioPath } = await getAudioFile(audioInput);
 
         try {
+            heartbeat.update({ step: "transcribing" });
             const response = await openai.audio.transcriptions.create({
                 file: audioFile as unknown as File,
                 model: config.model || "whisper-1",
@@ -146,12 +170,15 @@ async function executeOpenAI(config: AudioNodeConfig, context: JsonObject): Prom
                 await fs.unlink(audioPath).catch(() => {});
             }
         }
-    } else if (config.operation === "tts") {
+    }
+
+    if (config.operation === "tts") {
         // Text-to-speech
         const text = interpolateVariables(config.textInput || "", context);
 
         console.log(`[Audio/OpenAI] Generating speech for ${text.length} characters`);
 
+        heartbeat.update({ step: "generating_speech", characters: text.length });
         const response = await openai.audio.speech.create({
             model: config.model || "tts-1",
             voice:
@@ -194,9 +221,9 @@ async function executeOpenAI(config: AudioNodeConfig, context: JsonObject): Prom
                 charactersUsed: text.length
             }
         } as unknown as JsonObject;
-    } else {
-        throw new Error(`Unsupported operation for OpenAI: ${config.operation}`);
     }
+
+    throw new ValidationError(`Unsupported operation for OpenAI: ${config.operation}`, "operation");
 }
 
 /**
@@ -204,15 +231,19 @@ async function executeOpenAI(config: AudioNodeConfig, context: JsonObject): Prom
  */
 async function executeElevenLabs(
     config: AudioNodeConfig,
-    context: JsonObject
+    context: JsonObject,
+    heartbeat: HeartbeatOperations
 ): Promise<JsonObject> {
     const apiKey = appConfig.ai.elevenlabs.apiKey;
     if (!apiKey) {
-        throw new Error("ELEVENLABS_API_KEY environment variable is not set");
+        throw new ConfigurationError(
+            "ELEVENLABS_API_KEY environment variable is not set",
+            "ELEVENLABS_API_KEY"
+        );
     }
 
     if (config.operation !== "tts") {
-        throw new Error('ElevenLabs only supports "tts" operation');
+        throw new ValidationError('ElevenLabs only supports "tts" operation', "operation");
     }
 
     const text = interpolateVariables(config.textInput || "", context);
@@ -220,6 +251,7 @@ async function executeElevenLabs(
 
     console.log(`[Audio/ElevenLabs] Generating speech for ${text.length} characters`);
 
+    heartbeat.update({ step: "generating_speech", characters: text.length });
     const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
         method: "POST",
         headers: {
@@ -238,7 +270,7 @@ async function executeElevenLabs(
     });
 
     if (!response.ok) {
-        throw new Error(`ElevenLabs API error: HTTP ${response.status}`);
+        throw new ProviderError("ElevenLabs", response.status, await response.text());
     }
 
     const arrayBuffer = await response.arrayBuffer();

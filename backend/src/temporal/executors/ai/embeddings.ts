@@ -3,6 +3,8 @@ import { CohereClient } from "cohere-ai";
 import OpenAI from "openai";
 import type { JsonObject, JsonValue } from "@flowmaestro/shared";
 import { config as appConfig } from "../../../core/config";
+import { ConfigurationError, ValidationError } from "../../shared/errors";
+import { withHeartbeat, type HeartbeatOperations } from "../../shared/heartbeat";
 import { interpolateVariables } from "../../shared/utils";
 
 export interface EmbeddingsNodeConfig {
@@ -42,44 +44,54 @@ export async function executeEmbeddingsNode(
     config: EmbeddingsNodeConfig,
     context: JsonObject
 ): Promise<JsonObject> {
-    const startTime = Date.now();
+    return withHeartbeat("embeddings", async (heartbeat) => {
+        const startTime = Date.now();
 
-    console.log(`[Embeddings] Provider: ${config.provider}`);
+        heartbeat.update({ step: "initializing", provider: config.provider });
+        console.log(`[Embeddings] Provider: ${config.provider}`);
 
-    let result: JsonObject;
+        let result: JsonObject;
 
-    switch (config.provider) {
-        case "openai":
-            result = await executeOpenAI(config, context);
-            break;
+        switch (config.provider) {
+            case "openai":
+                heartbeat.update({ step: "calling_openai" });
+                result = await executeOpenAI(config, context, heartbeat);
+                break;
 
-        case "cohere":
-            result = await executeCohere(config, context);
-            break;
+            case "cohere":
+                heartbeat.update({ step: "calling_cohere" });
+                result = await executeCohere(config, context, heartbeat);
+                break;
 
-        case "google":
-            result = await executeGoogle(config, context);
-            break;
+            case "google":
+                heartbeat.update({ step: "calling_google" });
+                result = await executeGoogle(config, context, heartbeat);
+                break;
 
-        default:
-            throw new Error(`Unsupported embeddings provider: ${config.provider}`);
-    }
+            default:
+                throw new ValidationError(
+                    `Unsupported embeddings provider: ${config.provider}`,
+                    "provider"
+                );
+        }
 
-    const processingTime = Date.now() - startTime;
-    result.metadata = {
-        ...(result.metadata as JsonObject),
-        processingTime
-    };
+        const processingTime = Date.now() - startTime;
+        result.metadata = {
+            ...(result.metadata as JsonObject),
+            processingTime
+        };
 
-    console.log(
-        `[Embeddings] Generated ${(result.embeddings as JsonValue[])?.length || 0} embeddings in ${processingTime}ms`
-    );
+        heartbeat.update({ step: "completed", percentComplete: 100 });
+        console.log(
+            `[Embeddings] Generated ${(result.embeddings as JsonValue[])?.length || 0} embeddings in ${processingTime}ms`
+        );
 
-    if (config.outputVariable) {
-        return { [config.outputVariable]: result } as unknown as JsonObject;
-    }
+        if (config.outputVariable) {
+            return { [config.outputVariable]: result } as unknown as JsonObject;
+        }
 
-    return result as unknown as JsonObject;
+        return result as unknown as JsonObject;
+    });
 }
 
 /**
@@ -87,11 +99,15 @@ export async function executeEmbeddingsNode(
  */
 async function executeOpenAI(
     config: EmbeddingsNodeConfig,
-    context: JsonObject
+    context: JsonObject,
+    heartbeat: HeartbeatOperations
 ): Promise<JsonObject> {
     const apiKey = appConfig.ai.openai.apiKey;
     if (!apiKey) {
-        throw new Error("OPENAI_API_KEY environment variable is not set");
+        throw new ConfigurationError(
+            "OPENAI_API_KEY environment variable is not set",
+            "OPENAI_API_KEY"
+        );
     }
 
     const openai = new OpenAI({ apiKey });
@@ -111,6 +127,13 @@ async function executeOpenAI(
 
     for (let i = 0; i < interpolatedInputs.length; i += batchSize) {
         const batch = interpolatedInputs.slice(i, i + batchSize);
+
+        heartbeat.update({
+            step: "processing_batch",
+            itemsProcessed: i,
+            totalItems: interpolatedInputs.length,
+            percentComplete: Math.round((i / interpolatedInputs.length) * 100)
+        });
 
         const response = await openai.embeddings.create({
             model: config.model || "text-embedding-3-small",
@@ -149,11 +172,15 @@ async function executeOpenAI(
  */
 async function executeCohere(
     config: EmbeddingsNodeConfig,
-    context: JsonObject
+    context: JsonObject,
+    _heartbeat: HeartbeatOperations
 ): Promise<JsonObject> {
     const apiKey = appConfig.ai.cohere.apiKey;
     if (!apiKey) {
-        throw new Error("COHERE_API_KEY environment variable is not set");
+        throw new ConfigurationError(
+            "COHERE_API_KEY environment variable is not set",
+            "COHERE_API_KEY"
+        );
     }
 
     const cohere = new CohereClient({ token: apiKey });
@@ -200,11 +227,15 @@ async function executeCohere(
  */
 async function executeGoogle(
     config: EmbeddingsNodeConfig,
-    context: JsonObject
+    context: JsonObject,
+    heartbeat: HeartbeatOperations
 ): Promise<JsonObject> {
     const apiKey = appConfig.ai.google.apiKey;
     if (!apiKey) {
-        throw new Error("GOOGLE_API_KEY environment variable is not set");
+        throw new ConfigurationError(
+            "GOOGLE_API_KEY environment variable is not set",
+            "GOOGLE_API_KEY"
+        );
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
@@ -223,8 +254,15 @@ async function executeGoogle(
     const embeddings: number[][] = [];
 
     // Google API requires processing one at a time
-    for (const text of interpolatedInputs) {
-        const result = await model.embedContent(text);
+    for (let i = 0; i < interpolatedInputs.length; i++) {
+        heartbeat.update({
+            step: "processing_input",
+            itemsProcessed: i,
+            totalItems: interpolatedInputs.length,
+            percentComplete: Math.round((i / interpolatedInputs.length) * 100)
+        });
+
+        const result = await model.embedContent(interpolatedInputs[i]);
         embeddings.push(result.embedding.values);
     }
 

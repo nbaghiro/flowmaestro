@@ -1,20 +1,9 @@
 import type { JsonObject } from "@flowmaestro/shared";
+import { WaitNodeConfigSchema, validateOrThrow, type WaitNodeConfig } from "../../shared/schemas";
 import { interpolateVariables } from "../../shared/utils";
 
-export interface WaitNodeConfig {
-    waitType: "duration" | "until";
-
-    // For duration
-    duration?: number; // Milliseconds
-    durationUnit?: "ms" | "seconds" | "minutes" | "hours" | "days";
-    durationValue?: number; // e.g., 5 (minutes)
-
-    // For until
-    timestamp?: string; // ISO 8601 timestamp
-    timezone?: string; // IANA timezone (e.g., 'America/New_York')
-
-    outputVariable?: string;
-}
+// Re-export the Zod-inferred type for backwards compatibility
+export type { WaitNodeConfig };
 
 export interface WaitNodeResult {
     waitType: string;
@@ -29,20 +18,20 @@ export interface WaitNodeResult {
  * Execute Wait node - delays execution for a specified duration or until a timestamp
  * Note: For production with Temporal, consider using workflow-level sleep for durability
  */
-export async function executeWaitNode(
-    config: WaitNodeConfig,
-    context: JsonObject
-): Promise<JsonObject> {
+export async function executeWaitNode(config: unknown, context: JsonObject): Promise<JsonObject> {
+    // Validate config with Zod schema
+    const validatedConfig = validateOrThrow(WaitNodeConfigSchema, config, "Wait");
+
     const startTime = new Date();
-    console.log(`[Wait] Type: ${config.waitType}, Start: ${startTime.toISOString()}`);
+    console.log(`[Wait] Type: ${validatedConfig.waitType}, Start: ${startTime.toISOString()}`);
 
     let waitMs = 0;
     let skipped = false;
     let reason: string | undefined;
 
-    switch (config.waitType) {
+    switch (validatedConfig.waitType) {
         case "duration":
-            waitMs = calculateDuration(config);
+            waitMs = calculateDuration(validatedConfig);
             console.log(`[Wait] Waiting for ${waitMs}ms`);
 
             if (waitMs > 0) {
@@ -54,11 +43,11 @@ export async function executeWaitNode(
             break;
 
         case "until": {
-            if (!config.timestamp) {
+            if (!validatedConfig.timestamp) {
                 throw new Error('Timestamp is required for "until" wait type');
             }
 
-            const targetTimeStr = interpolateVariables(config.timestamp, context);
+            const targetTimeStr = interpolateVariables(validatedConfig.timestamp, context);
             const targetTime = new Date(targetTimeStr);
 
             if (isNaN(targetTime.getTime())) {
@@ -82,7 +71,7 @@ export async function executeWaitNode(
         }
 
         default:
-            throw new Error(`Unsupported wait type: ${config.waitType}`);
+            throw new Error(`Unsupported wait type: ${validatedConfig.waitType}`);
     }
 
     const endTime = new Date();
@@ -91,15 +80,15 @@ export async function executeWaitNode(
     console.log(`[Wait] Completed after ${actualDuration}ms`);
 
     const result: WaitNodeResult = {
-        waitType: config.waitType,
+        waitType: validatedConfig.waitType,
         startTime: startTime.toISOString(),
         endTime: endTime.toISOString(),
         actualWaitDuration: actualDuration,
         ...(skipped ? { skipped, reason } : {})
     };
 
-    if (config.outputVariable) {
-        return { [config.outputVariable]: result } as unknown as JsonObject;
+    if (validatedConfig.outputVariable) {
+        return { [validatedConfig.outputVariable]: result } as unknown as JsonObject;
     }
 
     return result as unknown as JsonObject;

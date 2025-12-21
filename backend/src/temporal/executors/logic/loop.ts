@@ -1,22 +1,9 @@
 import type { JsonObject, JsonValue } from "@flowmaestro/shared";
+import { LoopNodeConfigSchema, validateOrThrow, type LoopNodeConfig } from "../../shared/schemas";
 import { interpolateVariables } from "../../shared/utils";
 
-export interface LoopNodeConfig {
-    loopType: "forEach" | "while" | "count";
-
-    // For forEach loops
-    arrayPath?: string; // Variable path to array: ${items}, ${data.results}
-    itemVariable?: string; // Variable name for current item (default: 'item')
-    indexVariable?: string; // Variable name for index (default: 'index')
-
-    // For while loops
-    condition?: string; // Condition to evaluate: ${count} < 10
-    maxIterations?: number; // Safety limit (default: 1000)
-
-    // For count loops
-    count?: number; // Number of iterations
-    startIndex?: number; // Starting index (default: 0)
-}
+// Re-export the Zod-inferred type for backwards compatibility
+export type { LoopNodeConfig };
 
 export interface LoopNodeResult {
     iterations: number;
@@ -30,21 +17,21 @@ export interface LoopNodeResult {
  * Note: The actual loop execution happens in the workflow orchestrator.
  * This executor just prepares the loop metadata and validates config.
  */
-export async function executeLoopNode(
-    config: LoopNodeConfig,
-    context: JsonObject
-): Promise<JsonObject> {
-    console.log(`[Loop] Type: ${config.loopType}`);
+export async function executeLoopNode(config: unknown, context: JsonObject): Promise<JsonObject> {
+    // Validate config with Zod schema
+    const validatedConfig = validateOrThrow(LoopNodeConfigSchema, config, "Loop");
 
-    switch (config.loopType) {
+    console.log(`[Loop] Type: ${validatedConfig.loopType}`);
+
+    switch (validatedConfig.loopType) {
         case "forEach":
-            return await prepareForEachLoop(config, context);
+            return await prepareForEachLoop(validatedConfig, context);
         case "while":
-            return await prepareWhileLoop(config, context);
+            return await prepareWhileLoop(validatedConfig, context);
         case "count":
-            return await prepareCountLoop(config, context);
+            return await prepareCountLoop(validatedConfig, context);
         default:
-            throw new Error(`Unknown loop type: ${config.loopType}`);
+            throw new Error(`Unknown loop type: ${validatedConfig.loopType}`);
     }
 }
 

@@ -4,6 +4,11 @@ import { CohereClient } from "cohere-ai";
 import OpenAI from "openai";
 import type { JsonObject } from "@flowmaestro/shared";
 import { ConnectionRepository } from "../../../storage/repositories/ConnectionRepository";
+import { HEARTBEAT_INTERVALS } from "../../shared/config";
+import { ConfigurationError, NotFoundError, ValidationError } from "../../shared/errors";
+import { withHeartbeat } from "../../shared/heartbeat";
+import { llmCircuitBreakers, type LLMProvider } from "../../shared/llm-circuit-breakers";
+import { LLMNodeConfigSchema, validateOrThrow, type LLMNodeConfig } from "../../shared/schemas";
 import { interpolateVariables } from "../../shared/utils";
 import type { ApiKeyData } from "../../../storage/models/Connection";
 
@@ -110,17 +115,8 @@ async function withRetry<T>(fn: () => Promise<T>, context: string): Promise<T> {
     throw lastError;
 }
 
-export interface LLMNodeConfig {
-    provider: "openai" | "anthropic" | "google" | "cohere" | "huggingface";
-    model: string;
-    connectionId?: string;
-    systemPrompt?: string;
-    prompt: string;
-    temperature?: number;
-    maxTokens?: number;
-    topP?: number;
-    outputVariable?: string;
-}
+// Re-export the Zod-inferred type for backwards compatibility
+export type { LLMNodeConfig };
 
 export interface LLMExecutionCallbacks {
     onToken?: (token: string) => void;
@@ -151,19 +147,23 @@ async function getApiKey(
     if (connectionId) {
         const connection = await connectionRepository.findByIdWithData(connectionId);
         if (!connection) {
-            throw new Error(`Connection with ID ${connectionId} not found`);
+            throw new NotFoundError("Connection", connectionId);
         }
         if (connection.provider !== provider) {
-            throw new Error(
-                `Connection provider mismatch: expected ${provider}, got ${connection.provider}`
+            throw new ValidationError(
+                `expected ${provider}, got ${connection.provider}`,
+                "provider"
             );
         }
         if (connection.status !== "active") {
-            throw new Error(`Connection is not active (status: ${connection.status})`);
+            throw new ValidationError(
+                `Connection is not active (status: ${connection.status})`,
+                "status"
+            );
         }
         const data = connection.data as ApiKeyData;
         if (!data.api_key) {
-            throw new Error("API key not found in connection data");
+            throw new ConfigurationError("API key not found in connection data", "api_key");
         }
         console.log(`[LLM] Using connection: ${connection.name} (${connection.id})`);
         return data.api_key;
@@ -172,9 +172,10 @@ async function getApiKey(
     // Fall back to environment variable for backwards compatibility
     const apiKey = process.env[envVarName];
     if (!apiKey) {
-        throw new Error(
+        throw new ConfigurationError(
             `No connection provided and ${envVarName} environment variable is not set. ` +
-                `Please add a connection in the Connections page or set the ${envVarName} environment variable.`
+                `Please add a connection in the Connections page or set the ${envVarName} environment variable.`,
+            envVarName
         );
     }
     console.log(`[LLM] Using environment variable: ${envVarName}`);
@@ -183,60 +184,102 @@ async function getApiKey(
 
 /**
  * Execute LLM node - calls various LLM providers
+ * Uses heartbeats to keep Temporal informed during long-running LLM calls
  */
 export async function executeLLMNode(
-    config: LLMNodeConfig,
+    config: unknown,
     context: JsonObject,
     callbacks?: LLMExecutionCallbacks
 ): Promise<JsonObject> {
-    // Validate required config
-    if (!config.provider) {
-        throw new Error(
-            "LLM provider is required. Please select an LLM connection in the node configuration."
-        );
-    }
-    if (!config.model) {
-        throw new Error("LLM model is required. Please select a model in the node configuration.");
-    }
-    if (!config.prompt) {
-        throw new Error("Prompt is required. Please enter a prompt in the node configuration.");
-    }
+    // Validate config with Zod schema
+    const validatedConfig = validateOrThrow(LLMNodeConfigSchema, config, "LLM");
 
     // Interpolate variables in prompts
-    const systemPrompt = config.systemPrompt
-        ? interpolateVariables(config.systemPrompt, context)
+    const systemPrompt = validatedConfig.systemPrompt
+        ? interpolateVariables(validatedConfig.systemPrompt, context)
         : undefined;
-    const userPrompt = interpolateVariables(config.prompt, context);
+    const userPrompt = interpolateVariables(validatedConfig.prompt, context);
 
-    console.log(`[LLM] Calling ${config.provider}/${config.model}`);
+    console.log(`[LLM] Calling ${validatedConfig.provider}/${validatedConfig.model}`);
     console.log(`[LLM] Prompt length: ${userPrompt.length} chars`);
     console.log(`[LLM] Streaming: ${callbacks?.onToken ? "enabled" : "disabled"}`);
 
-    let result: LLMNodeResult;
+    // Use heartbeat wrapper for long-running LLM calls
+    const heartbeatInterval = callbacks?.onToken
+        ? HEARTBEAT_INTERVALS.STREAMING
+        : HEARTBEAT_INTERVALS.DEFAULT;
 
-    switch (config.provider) {
-        case "openai":
-            result = await executeOpenAI(config, systemPrompt, userPrompt, callbacks);
-            break;
-        case "anthropic":
-            result = await executeAnthropic(config, systemPrompt, userPrompt, callbacks);
-            break;
-        case "google":
-            result = await executeGoogle(config, systemPrompt, userPrompt, callbacks);
-            break;
-        case "cohere":
-            result = await executeCohere(config, systemPrompt, userPrompt, callbacks);
-            break;
-        case "huggingface":
-            result = await executeHuggingFace(config, systemPrompt, userPrompt, callbacks);
-            break;
-        default:
-            throw new Error(`Unsupported LLM provider: ${config.provider}`);
-    }
+    const result = await withHeartbeat(
+        "llm",
+        async (heartbeat) => {
+            heartbeat.update({
+                step: "calling_provider",
+                provider: validatedConfig.provider,
+                model: validatedConfig.model
+            });
+
+            let llmResult: LLMNodeResult;
+
+            // Get circuit breaker for the provider (if available)
+            const circuitBreaker = llmCircuitBreakers[validatedConfig.provider as LLMProvider];
+
+            // Helper to execute with circuit breaker protection
+            const executeWithCircuitBreaker = async (
+                fn: () => Promise<LLMNodeResult>
+            ): Promise<LLMNodeResult> => {
+                if (circuitBreaker) {
+                    return circuitBreaker.execute(fn);
+                }
+                return fn();
+            };
+
+            switch (validatedConfig.provider) {
+                case "openai":
+                    llmResult = await executeWithCircuitBreaker(() =>
+                        executeOpenAI(validatedConfig, systemPrompt, userPrompt, callbacks)
+                    );
+                    break;
+                case "anthropic":
+                    llmResult = await executeWithCircuitBreaker(() =>
+                        executeAnthropic(validatedConfig, systemPrompt, userPrompt, callbacks)
+                    );
+                    break;
+                case "google":
+                    llmResult = await executeWithCircuitBreaker(() =>
+                        executeGoogle(validatedConfig, systemPrompt, userPrompt, callbacks)
+                    );
+                    break;
+                case "cohere":
+                    llmResult = await executeWithCircuitBreaker(() =>
+                        executeCohere(validatedConfig, systemPrompt, userPrompt, callbacks)
+                    );
+                    break;
+                case "huggingface":
+                    llmResult = await executeWithCircuitBreaker(() =>
+                        executeHuggingFace(validatedConfig, systemPrompt, userPrompt, callbacks)
+                    );
+                    break;
+                default:
+                    throw new ValidationError(
+                        `Unsupported LLM provider: ${validatedConfig.provider}`,
+                        "provider"
+                    );
+            }
+
+            heartbeat.update({
+                step: "completed",
+                percentComplete: 100,
+                responseLength: llmResult.text.length
+            });
+
+            return llmResult;
+        },
+        heartbeatInterval
+    );
 
     // Wrap result in outputVariable if specified
-    if (config.outputVariable) {
-        return { [config.outputVariable]: result } as unknown as JsonObject;
+    if (validatedConfig.outputVariable) {
+        return { [validatedConfig.outputVariable]: result } as unknown as JsonObject;
     }
 
     return result as unknown as JsonObject;

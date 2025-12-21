@@ -1,9 +1,15 @@
-import { spawn } from "child_process";
+import { spawn, ChildProcess } from "child_process";
 import { writeFile, unlink } from "fs/promises";
 import * as os from "os";
 import * as path from "path";
 import { VM } from "vm2";
 import type { JsonObject, JsonValue } from "@flowmaestro/shared";
+import { CodeExecutionError, ValidationError } from "../../shared/errors";
+import {
+    withHeartbeat,
+    getCancellationSignal,
+    type HeartbeatOperations
+} from "../../shared/heartbeat";
 
 export interface CodeNodeConfig {
     language: "javascript" | "python";
@@ -41,37 +47,43 @@ export async function executeCodeNode(
     config: CodeNodeConfig,
     context: JsonObject
 ): Promise<JsonObject> {
-    const startTime = Date.now();
+    return withHeartbeat("code", async (heartbeat) => {
+        const startTime = Date.now();
 
-    console.log(`[Code] Executing ${config.language} code`);
+        heartbeat.update({ step: "initializing", language: config.language });
+        console.log(`[Code] Executing ${config.language} code`);
 
-    let result: CodeNodeResult;
+        let result: CodeNodeResult;
 
-    switch (config.language) {
-        case "javascript":
-            result = await executeJavaScript(config, context);
-            break;
+        switch (config.language) {
+            case "javascript":
+                heartbeat.update({ step: "executing_javascript" });
+                result = await executeJavaScript(config, context);
+                break;
 
-        case "python":
-            result = await executePython(config, context);
-            break;
+            case "python":
+                heartbeat.update({ step: "executing_python" });
+                result = await executePython(config, context, heartbeat);
+                break;
 
-        default:
-            throw new Error(`Unsupported language: ${config.language}`);
-    }
+            default:
+                throw new ValidationError(`Unsupported language: ${config.language}`, "language");
+        }
 
-    result.metadata = {
-        ...result.metadata,
-        executionTime: Date.now() - startTime
-    };
+        result.metadata = {
+            ...result.metadata,
+            executionTime: Date.now() - startTime
+        };
 
-    console.log(`[Code] Execution completed in ${result.metadata.executionTime}ms`);
+        heartbeat.update({ step: "completed", percentComplete: 100 });
+        console.log(`[Code] Execution completed in ${result.metadata.executionTime}ms`);
 
-    if (config.outputVariable) {
-        return { [config.outputVariable]: result } as unknown as JsonObject;
-    }
+        if (config.outputVariable) {
+            return { [config.outputVariable]: result } as unknown as JsonObject;
+        }
 
-    return result as unknown as JsonObject;
+        return result as unknown as JsonObject;
+    });
 }
 
 /**
@@ -152,14 +164,18 @@ async function executeJavaScript(
     } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         console.error("[Code/JS] Execution failed:", errorMessage);
-        throw new Error(`JavaScript execution failed: ${errorMessage}`);
+        throw new CodeExecutionError(errorMessage, "javascript");
     }
 }
 
 /**
  * Execute Python code using child process
  */
-async function executePython(config: CodeNodeConfig, context: JsonObject): Promise<CodeNodeResult> {
+async function executePython(
+    config: CodeNodeConfig,
+    context: JsonObject,
+    heartbeat: HeartbeatOperations
+): Promise<CodeNodeResult> {
     // Create temporary file for Python code
     const tempDir = os.tmpdir();
     const tempFile = path.join(
@@ -202,20 +218,31 @@ if 'result' in globals():
 
         await writeFile(tempFile, wrappedCode, "utf-8");
 
+        heartbeat.update({ step: "running_python_process" });
+
         // Execute Python script
         return await new Promise((resolve, reject) => {
-            const python = spawn("python3", [tempFile], {
+            const python: ChildProcess = spawn("python3", [tempFile], {
                 timeout: config.timeout || 30000
             });
+
+            // Connect cancellation signal from Temporal
+            const temporalSignal = getCancellationSignal();
+            if (temporalSignal) {
+                temporalSignal.addEventListener("abort", () => {
+                    python.kill("SIGTERM");
+                    reject(new Error("Python execution cancelled"));
+                });
+            }
 
             let stdout = "";
             let stderr = "";
 
-            python.stdout.on("data", (data: Buffer) => {
+            python.stdout?.on("data", (data: Buffer) => {
                 stdout += data.toString();
             });
 
-            python.stderr.on("data", (data: Buffer) => {
+            python.stderr?.on("data", (data: Buffer) => {
                 stderr += data.toString();
             });
 

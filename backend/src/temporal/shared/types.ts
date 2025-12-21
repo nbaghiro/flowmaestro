@@ -57,15 +57,8 @@ export enum SpanType {
     DATABASE_QUERY = "database_query"
 }
 
-/**
- * Health check result
- */
-export interface HealthCheckResult {
-    redis: boolean;
-    database: boolean;
-    temporal: boolean;
-    timestamp: string;
-}
+// Note: HealthCheckResult is defined in ./health.ts with more detail
+// Import from there instead: import { HealthCheckResult } from "./health"
 
 /**
  * Re-export commonly used types from shared package
