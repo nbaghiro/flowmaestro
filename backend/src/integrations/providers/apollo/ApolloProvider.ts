@@ -35,8 +35,7 @@ import type {
     MCPTool,
     OperationResult,
     OAuthConfig,
-    ProviderCapabilities,
-    TestResult
+    ProviderCapabilities
 } from "../../core/types";
 
 // Import all operations
@@ -94,36 +93,6 @@ export class ApolloProvider extends BaseProvider {
             refreshable: true
         };
         return config;
-    }
-
-    /**
-     * Test connection
-     */
-    async testConnection(connection: ConnectionWithData): Promise<TestResult> {
-        try {
-            const client = this.getOrCreateClient(connection);
-            const response = await client.get<{
-                user?: { id?: string; email?: string };
-                team?: { name?: string };
-            }>("/api/v1/users/api_profile");
-
-            return {
-                success: true,
-                message: "Successfully connected to Apollo.io",
-                tested_at: new Date().toISOString(),
-                details: {
-                    userId: response.user?.id,
-                    email: response.user?.email,
-                    team: response.team?.name
-                }
-            };
-        } catch (error) {
-            return {
-                success: false,
-                message: error instanceof Error ? error.message : "Failed to connect to Apollo.io",
-                tested_at: new Date().toISOString()
-            };
-        }
     }
 
     /**

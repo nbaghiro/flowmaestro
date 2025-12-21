@@ -37,8 +37,7 @@ import type {
     MCPTool,
     OperationResult,
     OAuthConfig,
-    ProviderCapabilities,
-    TestResult
+    ProviderCapabilities
 } from "../../core/types";
 
 /**
@@ -136,35 +135,6 @@ export class MicrosoftTeamsProvider extends BaseProvider {
         };
 
         return config;
-    }
-
-    /**
-     * Test connection by listing joined teams
-     */
-    async testConnection(connection: ConnectionWithData): Promise<TestResult> {
-        try {
-            const data = connection.data as OAuth2TokenData;
-            const client = new MicrosoftTeamsClient({ accessToken: data.access_token });
-
-            const result = await client.listJoinedTeams();
-
-            return {
-                success: true,
-                message: "Successfully connected to Microsoft Teams",
-                tested_at: new Date().toISOString(),
-                details: {
-                    teamsCount: result.value.length,
-                    teams: result.value.slice(0, 3).map((t) => t.displayName)
-                }
-            };
-        } catch (error) {
-            return {
-                success: false,
-                message:
-                    error instanceof Error ? error.message : "Failed to connect to Microsoft Teams",
-                tested_at: new Date().toISOString()
-            };
-        }
     }
 
     /**

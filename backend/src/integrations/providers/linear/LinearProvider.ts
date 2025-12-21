@@ -24,8 +24,7 @@ import type {
     MCPTool,
     OperationResult,
     OAuthConfig,
-    ProviderCapabilities,
-    TestResult
+    ProviderCapabilities
 } from "../../core/types";
 
 /**
@@ -71,35 +70,6 @@ export class LinearProvider extends BaseProvider {
         };
 
         return config;
-    }
-
-    /**
-     * Test connection
-     */
-    async testConnection(connection: ConnectionWithData): Promise<TestResult> {
-        try {
-            const client = this.getOrCreateClient(connection);
-            // Query viewer info as a simple test
-            const response = await client.query<{ viewer: { id: string; name: string } }>(
-                "query { viewer { id name } }"
-            );
-
-            return {
-                success: true,
-                message: "Successfully connected to Linear",
-                tested_at: new Date().toISOString(),
-                details: {
-                    user: response.viewer.name,
-                    userId: response.viewer.id
-                }
-            };
-        } catch (error) {
-            return {
-                success: false,
-                message: error instanceof Error ? error.message : "Failed to connect to Linear",
-                tested_at: new Date().toISOString()
-            };
-        }
     }
 
     /**

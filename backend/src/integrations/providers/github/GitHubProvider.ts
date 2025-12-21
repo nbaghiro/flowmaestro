@@ -67,8 +67,7 @@ import type {
     MCPTool,
     OperationResult,
     OAuthConfig,
-    ProviderCapabilities,
-    TestResult
+    ProviderCapabilities
 } from "../../core/types";
 
 /**
@@ -150,33 +149,6 @@ export class GitHubProvider extends BaseProvider {
         };
 
         return config;
-    }
-
-    /**
-     * Test connection by checking authenticated user
-     */
-    async testConnection(connection: ConnectionWithData): Promise<TestResult> {
-        try {
-            const client = this.getOrCreateClient(connection);
-            const response = await client.get<{ login: string; id: number; name: string }>("/user");
-
-            return {
-                success: true,
-                message: "Successfully connected to GitHub",
-                tested_at: new Date().toISOString(),
-                details: {
-                    username: response.login,
-                    userId: response.id,
-                    name: response.name
-                }
-            };
-        } catch (error) {
-            return {
-                success: false,
-                message: error instanceof Error ? error.message : "Failed to connect to GitHub",
-                tested_at: new Date().toISOString()
-            };
-        }
     }
 
     /**

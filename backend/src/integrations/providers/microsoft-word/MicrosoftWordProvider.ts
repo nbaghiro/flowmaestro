@@ -30,8 +30,7 @@ import type {
     MCPTool,
     OperationResult,
     OAuthConfig,
-    ProviderCapabilities,
-    TestResult
+    ProviderCapabilities
 } from "../../core/types";
 
 /**
@@ -108,45 +107,6 @@ export class MicrosoftWordProvider extends BaseProvider {
         };
 
         return config;
-    }
-
-    /**
-     * Test connection
-     */
-    async testConnection(connection: ConnectionWithData): Promise<TestResult> {
-        try {
-            // Word API uses OneDrive - we'll verify the token works
-            // by making a basic request to the drive endpoint
-            const data = connection.data as OAuth2TokenData;
-            const response = await fetch("https://graph.microsoft.com/v1.0/me/drive", {
-                headers: {
-                    Authorization: `Bearer ${data.access_token}`
-                }
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-
-            const drive = (await response.json()) as { driveType: string; id: string };
-
-            return {
-                success: true,
-                message: "Successfully connected to Microsoft Word",
-                tested_at: new Date().toISOString(),
-                details: {
-                    driveType: drive.driveType,
-                    note: "Word API ready. Provide document itemId to perform operations."
-                }
-            };
-        } catch (error) {
-            return {
-                success: false,
-                message:
-                    error instanceof Error ? error.message : "Failed to connect to Microsoft Word",
-                tested_at: new Date().toISOString()
-            };
-        }
     }
 
     /**

@@ -2,10 +2,8 @@ import { create } from "zustand";
 import {
     getConnections,
     createConnection,
-    testConnection,
     updateConnection,
     deleteConnection,
-    testConnectionBeforeSave,
     CreateConnectionInput
 } from "../lib/api";
 import type { Connection, ConnectionMethod, ConnectionStatus } from "../lib/api";
@@ -22,8 +20,6 @@ interface ConnectionStore {
         status?: ConnectionStatus;
     }) => Promise<void>;
     addConnection: (input: CreateConnectionInput) => Promise<Connection>;
-    testConnectionById: (id: string) => Promise<boolean>;
-    testConnectionBeforeSaving: (input: CreateConnectionInput) => Promise<boolean>;
     updateConnectionById: (id: string, input: Partial<CreateConnectionInput>) => Promise<void>;
     deleteConnectionById: (id: string) => Promise<void>;
     getByProvider: (provider: string) => Connection[];
@@ -69,57 +65,6 @@ export const useConnectionStore = create<ConnectionStore>((set, get) => ({
                 loading: false
             });
             throw error;
-        }
-    },
-
-    testConnectionById: async (id) => {
-        try {
-            const response = await testConnection(id);
-
-            // Update connection status based on test result
-            if (response.success && response.data.test_result) {
-                const testResult = response.data.test_result;
-                // Type narrow: test result should be an object with success property
-                const newStatus =
-                    typeof testResult === "object" &&
-                    testResult !== null &&
-                    "success" in testResult &&
-                    testResult.success
-                        ? "active"
-                        : "invalid";
-                set((state) => ({
-                    connections: state.connections.map((conn) =>
-                        conn.id === id
-                            ? {
-                                  ...conn,
-                                  status: newStatus,
-                                  last_tested_at: new Date().toISOString()
-                              }
-                            : conn
-                    )
-                }));
-                return (
-                    typeof testResult === "object" &&
-                    testResult !== null &&
-                    "success" in testResult &&
-                    typeof testResult.success === "boolean" &&
-                    testResult.success
-                );
-            }
-            return false;
-        } catch (error) {
-            console.error("Failed to test connection:", error);
-            return false;
-        }
-    },
-
-    testConnectionBeforeSaving: async (input) => {
-        try {
-            const response = await testConnectionBeforeSave(input);
-            return response.success && response.data.connection_valid;
-        } catch (error) {
-            console.error("Failed to test connection before saving:", error);
-            return false;
         }
     },
 

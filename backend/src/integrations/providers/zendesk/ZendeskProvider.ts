@@ -47,7 +47,7 @@ import {
     searchArticlesOperation,
     executeSearchArticles
 } from "./operations";
-import type { ZendeskConnectionData, UserResponse } from "./types";
+import type { ZendeskConnectionData } from "./types";
 import type { ConnectionWithData } from "../../../storage/models/Connection";
 import type {
     AuthConfig,
@@ -55,8 +55,7 @@ import type {
     MCPTool,
     OperationResult,
     OAuthConfig,
-    ProviderCapabilities,
-    TestResult
+    ProviderCapabilities
 } from "../../core/types";
 
 /**
@@ -152,34 +151,6 @@ export class ZendeskProvider extends BaseProvider {
         };
 
         return config;
-    }
-
-    /**
-     * Test connection by calling /users/me endpoint
-     */
-    async testConnection(connection: ConnectionWithData): Promise<TestResult> {
-        try {
-            const client = this.getOrCreateClient(connection);
-            const response = await client.get<UserResponse>("/users/me.json");
-
-            return {
-                success: true,
-                message: `Successfully connected as ${response.user.name}`,
-                tested_at: new Date().toISOString(),
-                details: {
-                    userId: response.user.id,
-                    email: response.user.email,
-                    role: response.user.role,
-                    subdomain: client.getSubdomain()
-                }
-            };
-        } catch (error) {
-            return {
-                success: false,
-                message: error instanceof Error ? error.message : "Failed to connect to Zendesk",
-                tested_at: new Date().toISOString()
-            };
-        }
     }
 
     /**

@@ -27,8 +27,7 @@ import type {
     MCPTool,
     OperationResult,
     OAuthConfig,
-    ProviderCapabilities,
-    TestResult
+    ProviderCapabilities
 } from "../../core/types";
 
 /**
@@ -91,60 +90,6 @@ export class WhatsAppProvider extends BaseProvider {
         };
 
         return config;
-    }
-
-    /**
-     * Test connection by fetching business account info
-     */
-    async testConnection(connection: ConnectionWithData): Promise<TestResult> {
-        try {
-            const client = this.getOrCreateClient(connection);
-
-            // Try to get the connected WABA ID
-            const wabaId = await client.getConnectedWABAId();
-
-            if (!wabaId) {
-                return {
-                    success: false,
-                    message:
-                        "No WhatsApp Business Account found. Please ensure the account has been properly connected.",
-                    tested_at: new Date().toISOString()
-                };
-            }
-
-            // Get business account details
-            const waba = await client.getWhatsAppBusinessAccount(wabaId);
-
-            // Get phone numbers
-            const phoneNumbers = await client.getPhoneNumbers(wabaId);
-
-            return {
-                success: true,
-                message: "Successfully connected to WhatsApp Business API",
-                tested_at: new Date().toISOString(),
-                details: {
-                    wabaId: waba.id,
-                    wabaName: waba.name,
-                    timezone: waba.timezone_id,
-                    phoneNumberCount: phoneNumbers.data.length,
-                    phoneNumbers: phoneNumbers.data.map((p) => ({
-                        id: p.id,
-                        number: p.display_phone_number,
-                        name: p.verified_name,
-                        quality: p.quality_rating
-                    }))
-                }
-            };
-        } catch (error) {
-            return {
-                success: false,
-                message:
-                    error instanceof Error
-                        ? error.message
-                        : "Failed to connect to WhatsApp Business API",
-                tested_at: new Date().toISOString()
-            };
-        }
     }
 
     /**

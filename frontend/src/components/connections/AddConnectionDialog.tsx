@@ -46,12 +46,10 @@ export function AddConnectionDialog({
     const [provider, setProvider] = useState<string>("");
     const [name, setName] = useState<string>("");
     const [config, setConfig] = useState<Record<string, unknown>>({});
-    const [testing, setTesting] = useState(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [showSuccessDialog, setShowSuccessDialog] = useState(false);
 
-    const { addConnection, testConnectionBeforeSaving } = useConnectionStore();
+    const { addConnection } = useConnectionStore();
 
     // When dialog opens with initialProvider, auto-select it
     React.useEffect(() => {
@@ -69,7 +67,6 @@ export function AddConnectionDialog({
         setName("");
         setConfig({});
         setError(null);
-        setTesting(false);
         setSaving(false);
     };
 
@@ -87,28 +84,6 @@ export function AddConnectionDialog({
         setProvider(selectedProvider);
         setName(`${providerLabels[selectedProvider]} Connection`);
         setStep("configure");
-    };
-
-    const handleTest = async () => {
-        if (!connectionMethod || !provider) return;
-
-        setTesting(true);
-        setError(null);
-
-        try {
-            const input = buildConnectionInput();
-            const isValid = await testConnectionBeforeSaving(input);
-
-            if (isValid) {
-                setShowSuccessDialog(true);
-            } else {
-                setError("Connection test failed. Please check your configuration.");
-            }
-        } catch (err) {
-            setError(err instanceof Error ? err.message : "Test failed");
-        } finally {
-            setTesting(false);
-        }
     };
 
     const buildConnectionInput = (): CreateConnectionInput => {
@@ -291,22 +266,12 @@ export function AddConnectionDialog({
 
                         {/* Actions */}
                         {connectionMethod !== "oauth2" && (
-                            <div className="flex gap-3 pt-4">
-                                <Button
-                                    variant="secondary"
-                                    onClick={handleTest}
-                                    disabled={testing || saving}
-                                    loading={testing}
-                                    className="flex-1"
-                                >
-                                    {testing ? "Testing..." : "Test Connection"}
-                                </Button>
+                            <div className="flex justify-end pt-4">
                                 <Button
                                     variant="primary"
                                     onClick={handleSave}
-                                    disabled={testing || saving || !name}
+                                    disabled={saving || !name}
                                     loading={saving}
-                                    className="flex-1"
                                 >
                                     {saving ? "Saving..." : "Save Connection"}
                                 </Button>
@@ -315,15 +280,6 @@ export function AddConnectionDialog({
                     </div>
                 </div>
             )}
-
-            {/* Success Dialog */}
-            <Dialog
-                isOpen={showSuccessDialog}
-                onClose={() => setShowSuccessDialog(false)}
-                title="Success"
-            >
-                <p className="text-sm text-gray-700">Connection test successful!</p>
-            </Dialog>
         </Dialog>
     );
 }

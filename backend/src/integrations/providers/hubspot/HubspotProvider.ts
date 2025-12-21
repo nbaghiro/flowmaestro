@@ -197,8 +197,7 @@ import type {
     MCPTool,
     OperationResult,
     OAuthConfig,
-    ProviderCapabilities,
-    TestResult
+    ProviderCapabilities
 } from "../../core/types";
 
 /**
@@ -409,33 +408,6 @@ export class HubspotProvider extends BaseProvider {
         };
 
         return config;
-    }
-
-    /**
-     * Test connection by calling owner info endpoint
-     */
-    async testConnection(connection: ConnectionWithData): Promise<TestResult> {
-        try {
-            const client = this.getOrCreateClient(connection);
-            const response = await client.get<{ portalId: number; timeZone: string }>(
-                "/account-info/v3/api-usage/daily"
-            );
-
-            return {
-                success: true,
-                message: "Successfully connected to HubSpot",
-                tested_at: new Date().toISOString(),
-                details: {
-                    portalId: response.portalId
-                }
-            };
-        } catch (error) {
-            return {
-                success: false,
-                message: error instanceof Error ? error.message : "Failed to connect to HubSpot",
-                tested_at: new Date().toISOString()
-            };
-        }
     }
 
     /**

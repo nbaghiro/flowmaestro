@@ -61,6 +61,7 @@ CREATE INDEX IF NOT EXISTS idx_webhook_logs_trigger_id ON flowmaestro.webhook_lo
 CREATE INDEX IF NOT EXISTS idx_webhook_logs_workflow_id ON flowmaestro.webhook_logs(workflow_id);
 CREATE INDEX IF NOT EXISTS idx_webhook_logs_created_at ON flowmaestro.webhook_logs(created_at DESC);
 
--- Create updated_at trigger for workflow_triggers
+-- Create updated_at trigger for workflow_triggers (drop first if exists)
+DROP TRIGGER IF EXISTS update_workflow_triggers_updated_at ON flowmaestro.workflow_triggers;
 CREATE TRIGGER update_workflow_triggers_updated_at BEFORE UPDATE ON flowmaestro.workflow_triggers
     FOR EACH ROW EXECUTE FUNCTION flowmaestro.update_updated_at_column();

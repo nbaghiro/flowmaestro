@@ -33,8 +33,7 @@ import type {
     MCPTool,
     OperationResult,
     OAuthConfig,
-    ProviderCapabilities,
-    TestResult
+    ProviderCapabilities
 } from "../../core/types";
 
 /**
@@ -100,48 +99,6 @@ export class FacebookProvider extends BaseProvider {
         };
 
         return config;
-    }
-
-    /**
-     * Test connection by discovering connected pages
-     */
-    async testConnection(connection: ConnectionWithData): Promise<TestResult> {
-        try {
-            const client = this.getOrCreateClient(connection);
-
-            // Try to discover connected pages
-            const discovery = await client.discoverPage();
-
-            if (!discovery) {
-                return {
-                    success: false,
-                    message:
-                        "No Facebook Page found. Please ensure you have a Page connected to your account.",
-                    tested_at: new Date().toISOString()
-                };
-            }
-
-            // Get page details
-            const page = await client.getPageInfo(discovery.pageId);
-
-            return {
-                success: true,
-                message: "Successfully connected to Facebook",
-                tested_at: new Date().toISOString(),
-                details: {
-                    pageId: page.id,
-                    pageName: page.name,
-                    username: page.username,
-                    category: page.category
-                }
-            };
-        } catch (error) {
-            return {
-                success: false,
-                message: error instanceof Error ? error.message : "Failed to connect to Facebook",
-                tested_at: new Date().toISOString()
-            };
-        }
     }
 
     /**

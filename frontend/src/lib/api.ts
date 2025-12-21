@@ -1178,7 +1178,6 @@ export interface Connection {
         };
     };
     capabilities: JsonObject;
-    last_tested_at: string | null;
     last_used_at: string | null;
     created_at: string;
     updated_at: string;
@@ -1274,59 +1273,6 @@ export async function getConnection(
 
     const response = await fetch(`${API_BASE_URL}/connections/${connectionId}`, {
         method: "GET",
-        headers: {
-            "Content-Type": "application/json",
-            ...(token && { Authorization: `Bearer ${token}` })
-        }
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    return response.json();
-}
-
-/**
- * Test a connection without saving it first
- */
-export async function testConnectionBeforeSave(input: CreateConnectionInput): Promise<{
-    success: boolean;
-    data: { test_result: JsonValue; connection_valid: boolean };
-    error?: string;
-}> {
-    const token = getAuthToken();
-
-    const response = await fetch(`${API_BASE_URL}/connections/test`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            ...(token && { Authorization: `Bearer ${token}` })
-        },
-        body: JSON.stringify(input)
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    return response.json();
-}
-
-/**
- * Test an existing connection
- */
-export async function testConnection(connectionId: string): Promise<{
-    success: boolean;
-    data: { connection_id: string; test_result: JsonValue };
-    error?: string;
-}> {
-    const token = getAuthToken();
-
-    const response = await fetch(`${API_BASE_URL}/connections/${connectionId}/test`, {
-        method: "POST",
         headers: {
             "Content-Type": "application/json",
             ...(token && { Authorization: `Bearer ${token}` })

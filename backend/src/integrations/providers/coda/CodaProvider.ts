@@ -16,8 +16,7 @@ import type {
     MCPTool,
     OperationResult,
     APIKeyConfig,
-    ProviderCapabilities,
-    TestResult
+    ProviderCapabilities
 } from "../../core/types";
 
 /**
@@ -58,33 +57,6 @@ export class CodaProvider extends BaseProvider {
         };
 
         return config;
-    }
-
-    /**
-     * Test connection
-     */
-    async testConnection(connection: ConnectionWithData): Promise<TestResult> {
-        try {
-            const client = this.getOrCreateClient(connection);
-            const response = await client.get("/whoami");
-
-            return {
-                success: true,
-                message: "Successfully connected to Coda",
-                tested_at: new Date().toISOString(),
-                details: {
-                    name: (response as { name?: string }).name,
-                    type: (response as { type?: string }).type,
-                    workspace: (response as { workspace?: { name?: string } }).workspace?.name
-                }
-            };
-        } catch (error) {
-            return {
-                success: false,
-                message: error instanceof Error ? error.message : "Failed to connect to Coda",
-                tested_at: new Date().toISOString()
-            };
-        }
     }
 
     /**

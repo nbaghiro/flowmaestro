@@ -48,8 +48,7 @@ import type {
     MCPTool,
     OperationResult,
     OAuthConfig,
-    ProviderCapabilities,
-    TestResult
+    ProviderCapabilities
 } from "../../core/types";
 
 /**
@@ -159,33 +158,6 @@ export class GmailProvider extends BaseProvider {
         };
 
         return config;
-    }
-
-    /**
-     * Test connection by getting user profile
-     */
-    async testConnection(connection: ConnectionWithData): Promise<TestResult> {
-        try {
-            const client = this.getOrCreateClient(connection);
-            const profile = await client.getProfile();
-
-            return {
-                success: true,
-                message: "Successfully connected to Gmail",
-                tested_at: new Date().toISOString(),
-                details: {
-                    email: profile.emailAddress,
-                    messagesTotal: profile.messagesTotal,
-                    threadsTotal: profile.threadsTotal
-                }
-            };
-        } catch (error) {
-            return {
-                success: false,
-                message: error instanceof Error ? error.message : "Failed to connect to Gmail",
-                tested_at: new Date().toISOString()
-            };
-        }
     }
 
     /**

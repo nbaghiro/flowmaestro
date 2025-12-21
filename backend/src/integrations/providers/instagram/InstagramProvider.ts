@@ -39,8 +39,7 @@ import type {
     MCPTool,
     OperationResult,
     OAuthConfig,
-    ProviderCapabilities,
-    TestResult
+    ProviderCapabilities
 } from "../../core/types";
 
 /**
@@ -114,49 +113,6 @@ export class InstagramProvider extends BaseProvider {
         };
 
         return config;
-    }
-
-    /**
-     * Test connection by discovering Instagram account
-     */
-    async testConnection(connection: ConnectionWithData): Promise<TestResult> {
-        try {
-            const client = this.getOrCreateClient(connection);
-
-            // Try to discover connected Instagram account
-            const discovery = await client.discoverInstagramAccount();
-
-            if (!discovery) {
-                return {
-                    success: false,
-                    message:
-                        "No Instagram Business Account found. Please ensure you have a Business or Creator account connected to a Facebook Page.",
-                    tested_at: new Date().toISOString()
-                };
-            }
-
-            // Get account details
-            const account = await client.getAccountInfo(discovery.igAccountId);
-
-            return {
-                success: true,
-                message: "Successfully connected to Instagram",
-                tested_at: new Date().toISOString(),
-                details: {
-                    igAccountId: account.id,
-                    username: account.username,
-                    name: account.name,
-                    followersCount: account.followers_count,
-                    mediaCount: account.media_count
-                }
-            };
-        } catch (error) {
-            return {
-                success: false,
-                message: error instanceof Error ? error.message : "Failed to connect to Instagram",
-                tested_at: new Date().toISOString()
-            };
-        }
     }
 
     /**

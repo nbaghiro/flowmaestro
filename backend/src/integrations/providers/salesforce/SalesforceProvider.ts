@@ -30,8 +30,7 @@ import type {
     MCPTool,
     OperationResult,
     OAuthConfig,
-    ProviderCapabilities,
-    TestResult
+    ProviderCapabilities
 } from "../../core/types";
 
 /**
@@ -139,38 +138,6 @@ export class SalesforceProvider extends BaseProvider {
         };
 
         return config;
-    }
-
-    /**
-     * Test connection by getting API limits
-     */
-    async testConnection(connection: ConnectionWithData): Promise<TestResult> {
-        try {
-            const client = this.getOrCreateClient(connection);
-            const testResult = await client.testConnection();
-
-            const limits = testResult.limits;
-            const dailyRequests = limits.DailyApiRequests;
-
-            return {
-                success: true,
-                message: "Successfully connected to Salesforce",
-                tested_at: new Date().toISOString(),
-                details: {
-                    instanceUrl: client.getInstanceUrl(),
-                    apiVersion: client.getApiVersion(),
-                    dailyRequestsUsed: dailyRequests.Max - dailyRequests.Remaining,
-                    dailyRequestsRemaining: dailyRequests.Remaining,
-                    dailyRequestsMax: dailyRequests.Max
-                }
-            };
-        } catch (error) {
-            return {
-                success: false,
-                message: error instanceof Error ? error.message : "Failed to connect to Salesforce",
-                tested_at: new Date().toISOString()
-            };
-        }
     }
 
     /**

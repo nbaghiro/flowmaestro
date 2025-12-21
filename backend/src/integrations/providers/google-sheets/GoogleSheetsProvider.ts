@@ -51,8 +51,7 @@ import type {
     MCPTool,
     OperationResult,
     OAuthConfig,
-    ProviderCapabilities,
-    TestResult
+    ProviderCapabilities
 } from "../../core/types";
 
 /**
@@ -173,36 +172,6 @@ export class GoogleSheetsProvider extends BaseProvider {
         };
 
         return config;
-    }
-
-    /**
-     * Test connection
-     */
-    async testConnection(connection: ConnectionWithData): Promise<TestResult> {
-        try {
-            // Verify client can be created (validates OAuth token structure)
-            this.getOrCreateClient(connection);
-
-            // Google Sheets API doesn't have a simple "test" endpoint without a spreadsheet ID
-            // The client creation validates the token structure and authentication setup
-            // Actual API access will be verified when operations are executed
-
-            return {
-                success: true,
-                message: "Successfully connected to Google Sheets",
-                tested_at: new Date().toISOString(),
-                details: {
-                    note: "Connection validated. Ready to perform operations on spreadsheets."
-                }
-            };
-        } catch (error) {
-            return {
-                success: false,
-                message:
-                    error instanceof Error ? error.message : "Failed to connect to Google Sheets",
-                tested_at: new Date().toISOString()
-            };
-        }
     }
 
     /**

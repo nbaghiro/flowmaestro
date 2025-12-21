@@ -124,16 +124,6 @@ export interface APIKeyConfig {
 export type AuthConfig = OAuthConfig | APIKeyConfig;
 
 /**
- * Connection test result
- */
-export interface TestResult {
-    success: boolean;
-    message: string;
-    tested_at: string;
-    details?: Record<string, unknown>;
-}
-
-/**
  * HTTP request configuration
  */
 export interface RequestConfig {
@@ -168,7 +158,6 @@ export interface IProvider {
 
     // Authentication
     getAuthConfig(): AuthConfig;
-    testConnection(connection: ConnectionWithData): Promise<TestResult>;
     refreshCredentials?(connection: ConnectionWithData): Promise<unknown>;
 
     // Direct API execution (workflows)

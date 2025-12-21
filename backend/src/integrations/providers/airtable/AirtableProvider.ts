@@ -41,7 +41,6 @@ import type {
     ExecutionContext,
     OAuthConfig,
     ProviderCapabilities,
-    TestResult,
     OperationResult,
     MCPTool
 } from "../../core/types";
@@ -128,32 +127,6 @@ export class AirtableProvider extends BaseProvider {
         };
 
         return config;
-    }
-
-    /**
-     * Test connection by calling whoami endpoint
-     */
-    async testConnection(connection: ConnectionWithData): Promise<TestResult> {
-        try {
-            const client = this.getOrCreateClient(connection);
-            const response = await client.get<{ id: string; scopes: string[] }>("/meta/whoami");
-
-            return {
-                success: true,
-                message: "Successfully connected to Airtable",
-                tested_at: new Date().toISOString(),
-                details: {
-                    userId: response.id,
-                    scopes: response.scopes
-                }
-            };
-        } catch (error) {
-            return {
-                success: false,
-                message: error instanceof Error ? error.message : "Failed to connect to Airtable",
-                tested_at: new Date().toISOString()
-            };
-        }
     }
 
     /**

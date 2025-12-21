@@ -21,8 +21,7 @@ import type {
     MCPTool,
     OperationResult,
     OAuthConfig,
-    ProviderCapabilities,
-    TestResult
+    ProviderCapabilities
 } from "../../core/types";
 
 /**
@@ -70,35 +69,6 @@ export class NotionProvider extends BaseProvider {
         };
 
         return config;
-    }
-
-    /**
-     * Test connection
-     */
-    async testConnection(connection: ConnectionWithData): Promise<TestResult> {
-        try {
-            const client = this.getOrCreateClient(connection);
-            // Search is a good test endpoint as it requires minimal permissions
-            const response = await client.search({
-                query: "",
-                page_size: 1
-            });
-
-            return {
-                success: true,
-                message: "Successfully connected to Notion",
-                tested_at: new Date().toISOString(),
-                details: {
-                    results: (response as { results?: unknown[] }).results?.length || 0
-                }
-            };
-        } catch (error) {
-            return {
-                success: false,
-                message: error instanceof Error ? error.message : "Failed to connect to Notion",
-                tested_at: new Date().toISOString()
-            };
-        }
     }
 
     /**

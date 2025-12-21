@@ -23,7 +23,6 @@ interface ConnectionRow {
     metadata: ConnectionMetadata | string;
     status: ConnectionStatus;
     capabilities: ConnectionCapabilities | string;
-    last_tested_at: string | Date | null;
     last_used_at: string | Date | null;
     created_at: string | Date;
     updated_at: string | Date;
@@ -298,12 +297,12 @@ export class ConnectionRepository {
     }
 
     /**
-     * Mark connection as tested (update last_tested_at and status)
+     * Update connection status
      */
-    async markAsTested(id: string, status: ConnectionStatus): Promise<void> {
+    async updateStatus(id: string, status: ConnectionStatus): Promise<void> {
         const query = `
             UPDATE flowmaestro.connections
-            SET last_tested_at = CURRENT_TIMESTAMP, status = $1
+            SET status = $1, updated_at = CURRENT_TIMESTAMP
             WHERE id = $2
         `;
 
@@ -409,7 +408,6 @@ export class ConnectionRepository {
                 typeof row.capabilities === "string"
                     ? JSON.parse(row.capabilities)
                     : row.capabilities,
-            last_tested_at: row.last_tested_at ? new Date(row.last_tested_at) : null,
             last_used_at: row.last_used_at ? new Date(row.last_used_at) : null,
             created_at: new Date(row.created_at),
             updated_at: new Date(row.updated_at)

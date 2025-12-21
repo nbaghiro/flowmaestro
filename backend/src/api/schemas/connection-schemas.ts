@@ -114,13 +114,7 @@ export const connectionIdParamSchema = z.object({
     id: z.string().uuid()
 });
 
-// Test connection request
-export const testConnectionSchema = z.object({
-    test_endpoint: z.string().url().optional() // Optional custom endpoint to test against
-});
-
 export type CreateConnectionRequest = z.infer<typeof createConnectionSchema>;
 export type UpdateConnectionRequest = z.infer<typeof updateConnectionSchema>;
 export type ListConnectionsQuery = z.infer<typeof listConnectionsQuerySchema>;
 export type ConnectionIdParam = z.infer<typeof connectionIdParamSchema>;
-export type TestConnectionRequest = z.infer<typeof testConnectionSchema>;

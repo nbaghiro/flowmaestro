@@ -474,12 +474,4 @@ export class SalesforceClient extends BaseAPIClient {
     getApiVersion(): string {
         return this.apiVersion;
     }
-
-    /**
-     * Test the connection by getting limits
-     */
-    async testConnection(): Promise<{ success: boolean; limits: SalesforceLimitsResult }> {
-        const limits = await this.getLimits();
-        return { success: true, limits };
-    }
 }

@@ -38,7 +38,6 @@ import {
     deleteWebhookOperation,
     executeDeleteWebhook
 } from "./operations";
-import type { ShopifyShopResponse } from "./operations/types";
 import type { ConnectionWithData, OAuth2TokenData } from "../../../storage/models/Connection";
 import type {
     AuthConfig,
@@ -46,8 +45,7 @@ import type {
     MCPTool,
     OperationResult,
     OAuthConfig,
-    ProviderCapabilities,
-    TestResult
+    ProviderCapabilities
 } from "../../core/types";
 
 /**
@@ -130,38 +128,6 @@ export class ShopifyProvider extends BaseProvider {
         };
 
         return config;
-    }
-
-    /**
-     * Test connection by fetching shop info
-     */
-    async testConnection(connection: ConnectionWithData): Promise<TestResult> {
-        try {
-            const client = this.getOrCreateClient(connection);
-            const response = await client.getShopInfo();
-            const data = response as ShopifyShopResponse;
-
-            return {
-                success: true,
-                message: `Successfully connected to ${data.shop.name}`,
-                tested_at: new Date().toISOString(),
-                details: {
-                    shopId: data.shop.id,
-                    shopName: data.shop.name,
-                    email: data.shop.email,
-                    domain: data.shop.domain,
-                    plan: data.shop.plan_name,
-                    currency: data.shop.currency,
-                    timezone: data.shop.timezone
-                }
-            };
-        } catch (error) {
-            return {
-                success: false,
-                message: error instanceof Error ? error.message : "Failed to connect to Shopify",
-                tested_at: new Date().toISOString()
-            };
-        }
     }
 
     /**

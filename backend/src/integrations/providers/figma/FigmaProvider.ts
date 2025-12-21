@@ -22,8 +22,7 @@ import type {
     MCPTool,
     OperationResult,
     OAuthConfig,
-    ProviderCapabilities,
-    TestResult
+    ProviderCapabilities
 } from "../../core/types";
 
 /**
@@ -75,39 +74,6 @@ export class FigmaProvider extends BaseProvider {
         };
 
         return config;
-    }
-
-    /**
-     * Test connection
-     */
-    async testConnection(connection: ConnectionWithData): Promise<TestResult> {
-        try {
-            const client = this.getOrCreateClient(connection);
-
-            // Test connection by fetching user info
-            const response = await client.get<{
-                id?: string;
-                handle?: string;
-                email?: string;
-            }>("/me");
-
-            return {
-                success: true,
-                message: "Successfully connected to Figma",
-                tested_at: new Date().toISOString(),
-                details: {
-                    user: response.handle || "Unknown",
-                    userId: response.id,
-                    email: response.email
-                }
-            };
-        } catch (error) {
-            return {
-                success: false,
-                message: error instanceof Error ? error.message : "Failed to connect to Figma",
-                tested_at: new Date().toISOString()
-            };
-        }
     }
 
     /**

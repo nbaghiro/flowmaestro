@@ -24,8 +24,7 @@ import type {
     MCPTool,
     OperationResult,
     OAuthConfig,
-    ProviderCapabilities,
-    TestResult
+    ProviderCapabilities
 } from "../../core/types";
 
 /**
@@ -105,36 +104,6 @@ export class MicrosoftOneDriveProvider extends BaseProvider {
         };
 
         return config;
-    }
-
-    /**
-     * Test connection
-     */
-    async testConnection(connection: ConnectionWithData): Promise<TestResult> {
-        try {
-            const client = this.getOrCreateClient(connection);
-            const drive = await client.getDrive();
-
-            return {
-                success: true,
-                message: "Successfully connected to Microsoft OneDrive",
-                tested_at: new Date().toISOString(),
-                details: {
-                    driveId: drive.id,
-                    driveType: drive.driveType,
-                    quota: drive.quota
-                }
-            };
-        } catch (error) {
-            return {
-                success: false,
-                message:
-                    error instanceof Error
-                        ? error.message
-                        : "Failed to connect to Microsoft OneDrive",
-                tested_at: new Date().toISOString()
-            };
-        }
     }
 
     /**

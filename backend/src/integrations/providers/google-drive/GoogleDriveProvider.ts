@@ -42,8 +42,7 @@ import type {
     MCPTool,
     OperationResult,
     OAuthConfig,
-    ProviderCapabilities,
-    TestResult
+    ProviderCapabilities
 } from "../../core/types";
 
 /**
@@ -163,42 +162,6 @@ export class GoogleDriveProvider extends BaseProvider {
         };
 
         return config;
-    }
-
-    /**
-     * Test connection
-     */
-    async testConnection(connection: ConnectionWithData): Promise<TestResult> {
-        try {
-            // Get or create client
-            const client = this.getOrCreateClient(connection);
-
-            // Test connection by getting user/drive information
-            const about = (await client.getAbout("user,storageQuota")) as {
-                user?: { emailAddress?: string; displayName?: string };
-                storageQuota?: { limit?: string; usage?: string; usageInDrive?: string };
-            };
-
-            return {
-                success: true,
-                message: "Successfully connected to Google Drive",
-                tested_at: new Date().toISOString(),
-                details: {
-                    user: about.user?.emailAddress || "Unknown",
-                    displayName: about.user?.displayName,
-                    storageLimit: about.storageQuota?.limit,
-                    storageUsed: about.storageQuota?.usage,
-                    driveUsage: about.storageQuota?.usageInDrive
-                }
-            };
-        } catch (error) {
-            return {
-                success: false,
-                message:
-                    error instanceof Error ? error.message : "Failed to connect to Google Drive",
-                tested_at: new Date().toISOString()
-            };
-        }
     }
 
     /**

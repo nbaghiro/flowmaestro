@@ -4,7 +4,6 @@ import type {
     OperationResult,
     MCPTool,
     AuthConfig,
-    TestResult,
     ProviderCapabilities,
     ExecutionContext
 } from "./types";
@@ -29,11 +28,6 @@ export abstract class BaseProvider implements IProvider {
      * Get authentication configuration
      */
     abstract getAuthConfig(): AuthConfig;
-
-    /**
-     * Test connection validity
-     */
-    abstract testConnection(connection: ConnectionWithData): Promise<TestResult>;
 
     /**
      * Refresh credentials (optional, for OAuth)

@@ -40,8 +40,7 @@ import type {
     MCPTool,
     OperationResult,
     APIKeyConfig,
-    ProviderCapabilities,
-    TestResult
+    ProviderCapabilities
 } from "../../core/types";
 
 /**
@@ -85,42 +84,6 @@ export class MongoDBProvider extends BaseProvider {
             headerTemplate: "{{connection_id}}"
         };
         return config;
-    }
-
-    /**
-     * Test connection
-     */
-    async testConnection(connection: ConnectionWithData): Promise<TestResult> {
-        let client: MongoClient | null = null;
-
-        try {
-            client = await this.createClient(connection);
-            await client.db().admin().ping();
-
-            // Get server info for version
-            const serverInfo = await client.db().admin().serverInfo();
-            const version = serverInfo.version || "Unknown";
-
-            return {
-                success: true,
-                message: "Successfully connected to MongoDB",
-                tested_at: new Date().toISOString(),
-                details: {
-                    version
-                }
-            };
-        } catch (error) {
-            return {
-                success: false,
-                message: error instanceof Error ? error.message : "Failed to connect to MongoDB",
-                tested_at: new Date().toISOString()
-            };
-        } finally {
-            // Clean up test client
-            if (client) {
-                await client.close();
-            }
-        }
     }
 
     /**

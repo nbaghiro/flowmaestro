@@ -28,8 +28,7 @@ import type {
     MCPTool,
     OperationResult,
     OAuthConfig,
-    ProviderCapabilities,
-    TestResult
+    ProviderCapabilities
 } from "../../core/types";
 
 /**
@@ -109,45 +108,6 @@ export class MicrosoftExcelProvider extends BaseProvider {
         };
 
         return config;
-    }
-
-    /**
-     * Test connection
-     */
-    async testConnection(connection: ConnectionWithData): Promise<TestResult> {
-        try {
-            // Excel API requires a specific workbook - we'll just verify the token works
-            // by making a basic request to the drive endpoint
-            const data = connection.data as OAuth2TokenData;
-            const response = await fetch("https://graph.microsoft.com/v1.0/me/drive", {
-                headers: {
-                    Authorization: `Bearer ${data.access_token}`
-                }
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-
-            const drive = (await response.json()) as { driveType: string; id: string };
-
-            return {
-                success: true,
-                message: "Successfully connected to Microsoft Excel",
-                tested_at: new Date().toISOString(),
-                details: {
-                    driveType: drive.driveType,
-                    note: "Excel API ready. Provide workbook itemId to perform operations."
-                }
-            };
-        } catch (error) {
-            return {
-                success: false,
-                message:
-                    error instanceof Error ? error.message : "Failed to connect to Microsoft Excel",
-                tested_at: new Date().toISOString()
-            };
-        }
     }
 
     /**

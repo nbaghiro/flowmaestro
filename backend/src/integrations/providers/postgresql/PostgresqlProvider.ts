@@ -23,8 +23,7 @@ import type {
     MCPTool,
     OperationResult,
     APIKeyConfig,
-    ProviderCapabilities,
-    TestResult
+    ProviderCapabilities
 } from "../../core/types";
 
 /**
@@ -64,39 +63,6 @@ export class PostgresqlProvider extends BaseProvider {
             headerTemplate: "{{connection_id}}"
         };
         return config;
-    }
-
-    /**
-     * Test connection
-     */
-    async testConnection(connection: ConnectionWithData): Promise<TestResult> {
-        let pool: Pool | null = null;
-
-        try {
-            pool = this.createPool(connection);
-            const result = await pool.query("SELECT version()");
-            const version = result.rows[0]?.version || "Unknown";
-
-            return {
-                success: true,
-                message: "Successfully connected to PostgreSQL",
-                tested_at: new Date().toISOString(),
-                details: {
-                    version
-                }
-            };
-        } catch (error) {
-            return {
-                success: false,
-                message: error instanceof Error ? error.message : "Failed to connect to PostgreSQL",
-                tested_at: new Date().toISOString()
-            };
-        } finally {
-            // Clean up test pool
-            if (pool) {
-                await pool.end();
-            }
-        }
     }
 
     /**

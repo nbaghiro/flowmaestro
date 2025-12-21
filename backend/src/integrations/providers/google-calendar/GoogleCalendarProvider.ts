@@ -33,8 +33,7 @@ import type {
     MCPTool,
     OperationResult,
     OAuthConfig,
-    ProviderCapabilities,
-    TestResult
+    ProviderCapabilities
 } from "../../core/types";
 
 /**
@@ -148,35 +147,6 @@ export class GoogleCalendarProvider extends BaseProvider {
         };
 
         return config;
-    }
-
-    /**
-     * Test connection
-     */
-    async testConnection(connection: ConnectionWithData): Promise<TestResult> {
-        try {
-            // Create client
-            const client = this.getOrCreateClient(connection);
-
-            // Test connection by listing calendars
-            await client.listCalendars({ maxResults: 1 });
-
-            return {
-                success: true,
-                message: "Successfully connected to Google Calendar",
-                tested_at: new Date().toISOString(),
-                details: {
-                    note: "Connection validated. Ready to manage calendar events and calendars."
-                }
-            };
-        } catch (error) {
-            return {
-                success: false,
-                message:
-                    error instanceof Error ? error.message : "Failed to connect to Google Calendar",
-                tested_at: new Date().toISOString()
-            };
-        }
     }
 
     /**

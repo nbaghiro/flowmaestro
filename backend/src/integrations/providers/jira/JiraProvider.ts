@@ -68,8 +68,7 @@ import type {
     MCPTool,
     OperationResult,
     OAuthConfig,
-    ProviderCapabilities,
-    TestResult
+    ProviderCapabilities
 } from "../../core/types";
 
 /**
@@ -146,39 +145,6 @@ export class JiraProvider extends BaseProvider {
             refreshable: true
         };
         return config;
-    }
-
-    /**
-     * Test connection using /rest/api/3/myself endpoint
-     */
-    async testConnection(connection: ConnectionWithData): Promise<TestResult> {
-        try {
-            const client = this.getOrCreateClient(connection);
-            const user = await client.get<{
-                accountId?: string;
-                displayName?: string;
-                emailAddress?: string;
-                active?: boolean;
-            }>("/rest/api/3/myself");
-
-            return {
-                success: true,
-                message: "Successfully connected to Jira Cloud",
-                tested_at: new Date().toISOString(),
-                details: {
-                    accountId: user.accountId,
-                    displayName: user.displayName,
-                    emailAddress: user.emailAddress,
-                    active: user.active
-                }
-            };
-        } catch (error) {
-            return {
-                success: false,
-                message: error instanceof Error ? error.message : "Failed to connect to Jira Cloud",
-                tested_at: new Date().toISOString()
-            };
-        }
     }
 
     /**

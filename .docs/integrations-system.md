@@ -110,7 +110,6 @@ interface IProvider {
 
     // Authentication
     getAuthConfig(): AuthConfig;
-    testConnection(connection: ConnectionWithData): Promise<TestResult>;
     refreshCredentials?(connection: ConnectionWithData): Promise<TokenData>;
 
     // Direct API execution (workflows)
@@ -211,7 +210,6 @@ CREATE TABLE flowmaestro.connections (
     status VARCHAR(50) DEFAULT 'active',
     capabilities JSONB DEFAULT '{}',
 
-    last_tested_at TIMESTAMP,
     last_used_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
@@ -774,7 +772,6 @@ interface ConnectionStore {
     addConnection: (input: CreateConnectionInput) => Promise<Connection>;
     updateConnectionById: (id: string, input: Partial<Connection>) => Promise<void>;
     deleteConnectionById: (id: string) => Promise<void>;
-    testConnectionById: (id: string) => Promise<boolean>;
 
     getByProvider: (provider: string) => Connection[];
     getByMethod: (method: ConnectionMethod) => Connection[];

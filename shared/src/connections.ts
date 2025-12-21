@@ -146,7 +146,6 @@ export interface ConnectionSummary {
     status: ConnectionStatus;
     metadata: ConnectionMetadata;
     capabilities: ConnectionCapabilities;
-    last_tested_at: Date | null;
     last_used_at: Date | null;
     created_at: Date;
     updated_at: Date;

@@ -15,8 +15,7 @@ import type {
     MCPTool,
     OperationResult,
     OAuthConfig,
-    ProviderCapabilities,
-    TestResult
+    ProviderCapabilities
 } from "../../core/types";
 
 /**
@@ -70,33 +69,6 @@ export class SlackProvider extends BaseProvider {
         };
 
         return config;
-    }
-
-    /**
-     * Test connection
-     */
-    async testConnection(connection: ConnectionWithData): Promise<TestResult> {
-        try {
-            const client = this.getOrCreateClient(connection);
-            const response = await client.get("/auth.test");
-
-            return {
-                success: true,
-                message: "Successfully connected to Slack",
-                tested_at: new Date().toISOString(),
-                details: {
-                    teamId: (response as { team_id?: string }).team_id,
-                    teamName: (response as { team?: string }).team,
-                    userId: (response as { user_id?: string }).user_id
-                }
-            };
-        } catch (error) {
-            return {
-                success: false,
-                message: error instanceof Error ? error.message : "Failed to connect to Slack",
-                tested_at: new Date().toISOString()
-            };
-        }
     }
 
     /**

@@ -70,7 +70,7 @@ export async function getAccessToken(connectionId: string): Promise<string> {
             );
 
             // Mark connection as expired
-            await connectionRepo.markAsTested(connectionId, "expired");
+            await connectionRepo.updateStatus(connectionId, "expired");
 
             throw new Error(
                 `Failed to refresh OAuth token: ${error instanceof Error ? error.message : "Unknown error"}. ` +
