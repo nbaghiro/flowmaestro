@@ -918,8 +918,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Online forms and surveys",
         logoUrl: getBrandLogo("typeform.com"),
         category: "Marketing",
-        methods: ["api_key"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "surveymonkey",

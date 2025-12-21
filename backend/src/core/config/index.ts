@@ -257,6 +257,12 @@ export const config = {
         shopify: {
             clientId: process.env.SHOPIFY_CLIENT_ID || "",
             clientSecret: process.env.SHOPIFY_CLIENT_SECRET || ""
+        },
+
+        // Typeform
+        typeform: {
+            clientId: process.env.TYPEFORM_CLIENT_ID || "",
+            clientSecret: process.env.TYPEFORM_CLIENT_SECRET || ""
         }
     }
 };
@@ -305,7 +311,8 @@ export function getOAuthRedirectUri(provider: string): string {
         zendesk: "/oauth/zendesk/callback",
         apollo: "/oauth/apollo/callback",
         jira: "/oauth/jira/callback",
-        shopify: "/oauth/shopify/callback"
+        shopify: "/oauth/shopify/callback",
+        typeform: "/oauth/typeform/callback"
     };
 
     const callbackPath = callbackPaths[provider] || `/oauth/${provider}/callback`;
@@ -352,7 +359,8 @@ export function getOAuthCredentials(provider: string): { clientId: string; clien
         zendesk: "zendesk",
         apollo: "apollo",
         jira: "jira",
-        shopify: "shopify"
+        shopify: "shopify",
+        typeform: "typeform"
     };
 
     const configKey = providerMap[provider];

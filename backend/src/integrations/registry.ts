@@ -363,5 +363,19 @@ const shopifyEntry: ProviderRegistryEntry = {
 
 providerRegistry.register(shopifyEntry);
 
+// Register Typeform provider
+const typeformEntry: ProviderRegistryEntry = {
+    name: "typeform",
+    displayName: "Typeform",
+    authMethod: "oauth2",
+    category: "marketing",
+    loader: async () => {
+        const { TypeformProvider } = await import("./providers/typeform/TypeformProvider");
+        return new TypeformProvider();
+    }
+};
+
+providerRegistry.register(typeformEntry);
+
 // Export for use in application
 export { providerRegistry };

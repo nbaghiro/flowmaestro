@@ -71,6 +71,8 @@ config:
       {"name":"jira-client-secret","envVar":"JIRA_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Jira Cloud OAuth client secret"},
       {"name":"shopify-client-id","envVar":"SHOPIFY_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Shopify OAuth client ID"},
       {"name":"shopify-client-secret","envVar":"SHOPIFY_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Shopify OAuth client secret"},
+      {"name":"typeform-client-id","envVar":"TYPEFORM_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Typeform OAuth client ID"},
+      {"name":"typeform-client-secret","envVar":"TYPEFORM_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Typeform OAuth client secret"},
       {"name":"twilio-account-sid","envVar":"TWILIO_ACCOUNT_SID","category":"service","deployments":["api"],"required":false,"description":"Twilio Account SID"},
       {"name":"twilio-auth-token","envVar":"TWILIO_AUTH_TOKEN","category":"service","deployments":["api"],"required":false,"description":"Twilio Auth Token"},
       {"name":"twilio-phone-number","envVar":"TWILIO_PHONE_NUMBER","category":"service","deployments":["api"],"required":false,"description":"Twilio Phone Number"}

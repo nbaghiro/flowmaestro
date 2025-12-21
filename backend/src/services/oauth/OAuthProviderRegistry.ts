@@ -1794,6 +1794,55 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
             }
         },
         refreshable: false // Shopify offline tokens don't expire unless app is uninstalled
+    },
+
+    // ==========================================================================
+    // Typeform Forms & Surveys
+    // ==========================================================================
+
+    typeform: {
+        name: "typeform",
+        displayName: "Typeform",
+        authUrl: "https://api.typeform.com/oauth/authorize",
+        tokenUrl: "https://api.typeform.com/oauth/token",
+        scopes: ["accounts:read", "forms:read", "responses:read", "workspaces:read", "offline"],
+        clientId: config.oauth.typeform.clientId,
+        clientSecret: config.oauth.typeform.clientSecret,
+        redirectUri: getOAuthRedirectUri("typeform"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://api.typeform.com/me", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    user_id?: string;
+                    email?: string;
+                    alias?: string;
+                    language?: string;
+                };
+
+                return {
+                    userId: data.user_id || "unknown",
+                    email: data.email || "unknown@typeform",
+                    alias: data.alias,
+                    language: data.language
+                };
+            } catch (error) {
+                console.error("[OAuth] Failed to get Typeform user info:", error);
+                return {
+                    userId: "unknown",
+                    email: "unknown@typeform"
+                };
+            }
+        },
+        refreshable: true
     }
 };
 
