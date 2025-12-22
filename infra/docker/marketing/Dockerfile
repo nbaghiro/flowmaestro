@@ -7,17 +7,20 @@ ARG VITE_APP_URL="https://app.flowmaestro.ai"
 
 WORKDIR /app
 
-# Copy root package files
+# Copy root package files and tsconfig
 COPY package*.json ./
+COPY tsconfig.base.json ./
 
 # Copy workspace package files
 COPY marketing/package*.json ./marketing/
+COPY shared/package*.json ./shared/
 
 # Install dependencies (skip scripts to avoid husky)
-RUN npm ci --workspace=marketing --ignore-scripts && \
-    npm rebuild --workspace=marketing
+RUN npm ci --workspace=marketing --workspace=shared --ignore-scripts && \
+    npm rebuild --workspace=marketing --workspace=shared
 
 # Copy source code
+COPY shared/ ./shared/
 COPY marketing/ ./marketing/
 
 # Set environment variables for build

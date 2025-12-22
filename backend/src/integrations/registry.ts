@@ -418,5 +418,33 @@ const boxEntry: ProviderRegistryEntry = {
 
 providerRegistry.register(boxEntry);
 
+// Register X (Twitter) provider
+const twitterEntry: ProviderRegistryEntry = {
+    name: "twitter",
+    displayName: "X (Twitter)",
+    authMethod: "oauth2",
+    category: "social_media",
+    loader: async () => {
+        const { TwitterProvider } = await import("./providers/twitter/TwitterProvider");
+        return new TwitterProvider();
+    }
+};
+
+providerRegistry.register(twitterEntry);
+
+// Register LinkedIn provider
+const linkedinEntry: ProviderRegistryEntry = {
+    name: "linkedin",
+    displayName: "LinkedIn",
+    authMethod: "oauth2",
+    category: "social_media",
+    loader: async () => {
+        const { LinkedInProvider } = await import("./providers/linkedin/LinkedInProvider");
+        return new LinkedInProvider();
+    }
+};
+
+providerRegistry.register(linkedinEntry);
+
 // Export for use in application
 export { providerRegistry };

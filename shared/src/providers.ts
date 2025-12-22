@@ -404,21 +404,19 @@ export const ALL_PROVIDERS: Provider[] = [
     // Social Media
     {
         provider: "twitter",
-        displayName: "Twitter/X",
-        description: "Post tweets and manage account",
+        displayName: "X (Twitter)",
+        description: "Post tweets, read timeline, and manage your X account",
         logoUrl: getBrandLogo("x.com"),
         category: "Social Media",
-        methods: ["api_key", "oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "linkedin",
         displayName: "LinkedIn",
-        description: "Post content and manage connections",
+        description: "Create posts, share articles, manage comments and reactions on LinkedIn",
         logoUrl: getBrandLogo("linkedin.com"),
         category: "Social Media",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "facebook",

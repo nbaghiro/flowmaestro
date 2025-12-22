@@ -275,6 +275,18 @@ export const config = {
         box: {
             clientId: process.env.BOX_CLIENT_ID || "",
             clientSecret: process.env.BOX_CLIENT_SECRET || ""
+        },
+
+        // X (Twitter)
+        twitter: {
+            clientId: process.env.TWITTER_CLIENT_ID || "",
+            clientSecret: process.env.TWITTER_CLIENT_SECRET || ""
+        },
+
+        // LinkedIn
+        linkedin: {
+            clientId: process.env.LINKEDIN_CLIENT_ID || "",
+            clientSecret: process.env.LINKEDIN_CLIENT_SECRET || ""
         }
     }
 };
@@ -326,7 +338,9 @@ export function getOAuthRedirectUri(provider: string): string {
         shopify: "/oauth/shopify/callback",
         typeform: "/oauth/typeform/callback",
         dropbox: "/oauth/dropbox/callback",
-        box: "/oauth/box/callback"
+        box: "/oauth/box/callback",
+        twitter: "/oauth/twitter/callback",
+        linkedin: "/oauth/linkedin/callback"
     };
 
     const callbackPath = callbackPaths[provider] || `/oauth/${provider}/callback`;
@@ -376,7 +390,9 @@ export function getOAuthCredentials(provider: string): { clientId: string; clien
         shopify: "shopify",
         typeform: "typeform",
         dropbox: "dropbox",
-        box: "box"
+        box: "box",
+        twitter: "twitter",
+        linkedin: "linkedin"
     };
 
     const configKey = providerMap[provider];

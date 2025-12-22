@@ -2012,6 +2012,129 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
             }
         },
         refreshable: true
+    },
+
+    // ==========================================================================
+    // X (Twitter) - Social Media
+    // Uses OAuth 2.0 with PKCE (Proof Key for Code Exchange)
+    // ==========================================================================
+
+    twitter: {
+        name: "twitter",
+        displayName: "X (Twitter)",
+        authUrl: "https://x.com/i/oauth2/authorize",
+        tokenUrl: "https://api.x.com/2/oauth2/token",
+        scopes: ["tweet.read", "tweet.write", "users.read", "offline.access"],
+        clientId: config.oauth.twitter.clientId,
+        clientSecret: config.oauth.twitter.clientSecret,
+        redirectUri: getOAuthRedirectUri("twitter"),
+        pkceEnabled: true, // X requires PKCE
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch(
+                    "https://api.x.com/2/users/me?user.fields=id,name,username,profile_image_url",
+                    {
+                        headers: {
+                            Authorization: `Bearer ${accessToken}`
+                        }
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const result = (await response.json()) as {
+                    data?: {
+                        id?: string;
+                        name?: string;
+                        username?: string;
+                        profile_image_url?: string;
+                    };
+                };
+
+                return {
+                    userId: result.data?.id || "unknown",
+                    name: result.data?.name || "X User",
+                    username: result.data?.username || "unknown",
+                    user: `@${result.data?.username || "unknown"}`,
+                    email: `@${result.data?.username || "unknown"}`,
+                    avatar: result.data?.profile_image_url
+                };
+            } catch (error) {
+                console.error("[OAuth] Failed to get X user info:", error);
+                return {
+                    userId: "unknown",
+                    name: "X User",
+                    user: "@unknown",
+                    email: "@unknown"
+                };
+            }
+        },
+        revokeUrl: "https://api.x.com/2/oauth2/revoke",
+        refreshable: true
+    },
+
+    // ==========================================================================
+    // LinkedIn - Professional Network & Social Media
+    // Uses OAuth 2.0 with OpenID Connect
+    // ==========================================================================
+
+    linkedin: {
+        name: "linkedin",
+        displayName: "LinkedIn",
+        authUrl: "https://www.linkedin.com/oauth/v2/authorization",
+        tokenUrl: "https://www.linkedin.com/oauth/v2/accessToken",
+        scopes: ["openid", "profile", "email", "w_member_social"],
+        clientId: config.oauth.linkedin.clientId,
+        clientSecret: config.oauth.linkedin.clientSecret,
+        redirectUri: getOAuthRedirectUri("linkedin"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                // Use LinkedIn's OpenID Connect userinfo endpoint
+                const response = await fetch("https://api.linkedin.com/v2/userinfo", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    sub?: string;
+                    name?: string;
+                    given_name?: string;
+                    family_name?: string;
+                    picture?: string;
+                    email?: string;
+                    email_verified?: boolean;
+                    locale?: string;
+                };
+
+                return {
+                    userId: data.sub || "unknown",
+                    name: data.name || "LinkedIn User",
+                    firstName: data.given_name,
+                    lastName: data.family_name,
+                    email: data.email || "unknown@linkedin.com",
+                    emailVerified: data.email_verified,
+                    picture: data.picture,
+                    locale: data.locale,
+                    user: data.name || data.email || "LinkedIn User"
+                };
+            } catch (error) {
+                console.error("[OAuth] Failed to get LinkedIn user info:", error);
+                return {
+                    userId: "unknown",
+                    name: "LinkedIn User",
+                    email: "unknown@linkedin.com",
+                    user: "LinkedIn User"
+                };
+            }
+        },
+        refreshable: true
     }
 };
 
