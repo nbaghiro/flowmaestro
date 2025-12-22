@@ -118,7 +118,7 @@ export function HTTPNodeConfig({ data, onUpdate }: HTTPNodeConfigProps) {
                     <Select value={method} onChange={setMethod} options={methods} />
                 </FormField>
 
-                <FormField label="URL" description="Supports {{variableName}} interpolation">
+                <FormField label="URL" description="Supports ${variableName} interpolation">
                     <Input
                         type="text"
                         value={url}

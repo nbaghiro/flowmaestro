@@ -64,7 +64,7 @@ export function SwitchNodeConfig({ data, onUpdate }: SwitchNodeConfigProps) {
                         type="text"
                         value={inputVariable}
                         onChange={(e) => setInputVariable(e.target.value)}
-                        placeholder="{{variableName}}"
+                        placeholder="${variableName}"
                         className="font-mono"
                     />
                 </FormField>

@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
-import { CodeInput } from "../../../components/CodeInput";
-import { FormField, FormSection } from "../../../components/common/FormField";
-import { Input } from "../../../components/common/Input";
-import { Select } from "../../../components/common/Select";
-import { OutputSettingsSection } from "../../../components/OutputSettingsSection";
+import { CodeInput } from "@/components/CodeInput";
+import { FormField, FormSection } from "@/components/common/FormField";
+import { Input } from "@/components/common/Input";
+import { Select } from "@/components/common/Select";
+import { OutputSettingsSection } from "@/components/OutputSettingsSection";
 
 interface WaitNodeConfigProps {
     data: Record<string, unknown>;
@@ -85,12 +85,12 @@ export function WaitNodeConfig({ data, onUpdate }: WaitNodeConfigProps) {
 
             {waitType === "until" && (
                 <FormSection title="Until Timestamp">
-                    <FormField label="Timestamp" description="ISO 8601 format or use {{variable}}">
+                    <FormField label="Timestamp" description="ISO 8601 format or use ${variable}">
                         <Input
                             type="text"
                             value={timestamp}
                             onChange={(e) => setTimestamp(e.target.value)}
-                            placeholder="2024-12-31T23:59:59Z or {{scheduledTime}}"
+                            placeholder="2024-12-31T23:59:59Z or ${scheduledTime}"
                             className="font-mono"
                         />
                     </FormField>

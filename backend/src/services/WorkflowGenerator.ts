@@ -1,6 +1,9 @@
 import { getDefaultModelForProvider } from "@flowmaestro/shared";
 import { ConnectionRepository } from "../storage/repositories/ConnectionRepository";
-import { executeLLMNode, type LLMNodeConfig } from "../temporal/executors/ai/llm";
+import {
+    executeLLMNode,
+    type LLMNodeConfig
+} from "../temporal/activities/node-executors/llm-executor";
 
 export interface WorkflowGenerationRequest {
     userPrompt: string;

@@ -163,7 +163,7 @@ export function LLMNodeConfig({ data, onUpdate }: LLMNodeConfigProps) {
 
                 <FormField
                     label="User Prompt"
-                    description="Use {{variableName}} to reference other node outputs"
+                    description="Use ${variableName} to reference other node outputs"
                 >
                     <Textarea
                         value={prompt}

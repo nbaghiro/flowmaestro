@@ -112,7 +112,7 @@ export function EmbeddingsNodeConfig({ data, onUpdate }: EmbeddingsNodeConfigPro
 
                 <FormField
                     label={batchMode ? "Text Inputs (one per line)" : "Text Input"}
-                    description="Use {{variableName}} to reference other node outputs"
+                    description="Use ${variableName} to reference other node outputs"
                 >
                     <Textarea
                         value={input}

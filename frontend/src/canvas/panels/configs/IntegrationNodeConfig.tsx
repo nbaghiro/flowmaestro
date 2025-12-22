@@ -149,7 +149,7 @@ export function IntegrationNodeConfig({ data, onUpdate }: IntegrationNodeConfigP
                                 handleParameterChange(param.name, e.target.value);
                             }
                         }}
-                        placeholder={"{ ... } or {{variableName}}"}
+                        placeholder={"{ ... } or ${variableName}"}
                         rows={6}
                         className="font-mono"
                     />

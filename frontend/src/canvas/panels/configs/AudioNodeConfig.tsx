@@ -100,13 +100,13 @@ export function AudioNodeConfig({ data, onUpdate }: AudioNodeConfigProps) {
                 <FormSection title="Transcription">
                     <FormField
                         label="Audio Source"
-                        description="URL or use {{variableName}} to reference node outputs"
+                        description="URL or use ${variableName} to reference node outputs"
                     >
                         <Input
                             type="text"
                             value={audioInput}
                             onChange={(e) => setAudioInput(e.target.value)}
-                            placeholder="https://example.com/audio.mp3 or {{audioFile}}"
+                            placeholder="https://example.com/audio.mp3 or ${audioFile}"
                             className="font-mono"
                         />
                     </FormField>
