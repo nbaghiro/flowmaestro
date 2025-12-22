@@ -1,5 +1,6 @@
 import { Github, Twitter, Linkedin, Mail } from "lucide-react";
 import React from "react";
+import { Link } from "react-router-dom";
 
 export const Footer: React.FC = () => {
     const currentYear = new Date().getFullYear();
@@ -17,25 +18,32 @@ export const Footer: React.FC = () => {
                         </p>
                         <div className="flex gap-4">
                             <a
-                                href="#"
+                                href="https://github.com/nbaghiro/flowmaestro"
+                                target="_blank"
+                                rel="noopener noreferrer"
                                 className="w-10 h-10 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center transition-colors"
                             >
                                 <Github className="w-5 h-5" />
                             </a>
+                            {/* TODO: Update to company X/Twitter account when available */}
                             <a
-                                href="#"
+                                href="https://x.com/nbaghiro"
+                                target="_blank"
+                                rel="noopener noreferrer"
                                 className="w-10 h-10 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center transition-colors"
                             >
                                 <Twitter className="w-5 h-5" />
                             </a>
                             <a
-                                href="#"
+                                href="https://www.linkedin.com/company/flowmaestro/"
+                                target="_blank"
+                                rel="noopener noreferrer"
                                 className="w-10 h-10 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center transition-colors"
                             >
                                 <Linkedin className="w-5 h-5" />
                             </a>
                             <a
-                                href="#"
+                                href="mailto:support@flowmaestro.ai"
                                 className="w-10 h-10 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center transition-colors"
                             >
                                 <Mail className="w-5 h-5" />
@@ -53,14 +61,17 @@ export const Footer: React.FC = () => {
                                 </a>
                             </li>
                             <li>
-                                <a href="#" className="hover:text-white transition-colors">
+                                <Link
+                                    to="/integrations"
+                                    className="hover:text-white transition-colors"
+                                >
                                     Integrations
-                                </a>
+                                </Link>
                             </li>
                             <li>
-                                <a href="#" className="hover:text-white transition-colors">
+                                <Link to="/pricing" className="hover:text-white transition-colors">
                                     Pricing
-                                </a>
+                                </Link>
                             </li>
                             <li>
                                 <a href="#" className="hover:text-white transition-colors">

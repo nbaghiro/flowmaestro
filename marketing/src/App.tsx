@@ -1,23 +1,16 @@
 import React from "react";
-import { CTA } from "./components/CTA";
-import { Features } from "./components/Features";
-import { Footer } from "./components/Footer";
-import { Hero } from "./components/Hero";
-import { Integrations } from "./components/Integrations";
-import { Navigation } from "./components/Navigation";
-import { SocialProof } from "./components/SocialProof";
+import { Routes, Route } from "react-router-dom";
+import { Home } from "./pages/Home";
+import { IntegrationsPage } from "./pages/IntegrationsPage";
+import { PricingPage } from "./pages/PricingPage";
 
 const App: React.FC = () => {
     return (
-        <div className="min-h-screen bg-black text-white">
-            <Navigation />
-            <Hero />
-            <Features />
-            <Integrations />
-            <SocialProof />
-            <CTA />
-            <Footer />
-        </div>
+        <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/integrations" element={<IntegrationsPage />} />
+            <Route path="/pricing" element={<PricingPage />} />
+        </Routes>
     );
 };
 

@@ -50,19 +50,29 @@ export const CTA: React.FC = () => {
 
                         {/* Buttons */}
                         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                            <button className="group px-8 py-4 bg-white text-black hover:bg-gray-100 rounded-lg font-semibold transition-all duration-200 flex items-center gap-2 shadow-lg">
+                            <a
+                                href={import.meta.env.VITE_APP_URL || "http://localhost:3000"}
+                                className="group px-8 py-4 bg-white text-black hover:bg-gray-100 rounded-lg font-semibold transition-all duration-200 flex items-center gap-2 shadow-lg"
+                            >
                                 Start Building Now
                                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                            </button>
-                            <button className="px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg font-semibold transition-all duration-200">
+                            </a>
+                            <a
+                                href="https://cal.com/naib-baghirov-o5surn/30min"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg font-semibold transition-all duration-200"
+                            >
                                 Schedule a Demo
-                            </button>
+                            </a>
                         </div>
 
                         <p className="text-sm text-gray-400 mt-8">
                             Have questions?{" "}
                             <a
-                                href="#"
+                                href="https://form.typeform.com/to/DF4VPClq"
+                                target="_blank"
+                                rel="noopener noreferrer"
                                 className="text-primary-400 hover:text-primary-300 underline"
                             >
                                 Talk to our sales team

@@ -1,31 +1,133 @@
 import { motion, useInView } from "framer-motion";
-import { Database, Cloud, MessageSquare, Zap } from "lucide-react";
 import React from "react";
+import { Link } from "react-router-dom";
+
+// Brandfetch Logo API
+const BRANDFETCH_CLIENT_ID = "1idCpJZqz6etuVweFEJ";
+const getBrandLogo = (domain: string): string =>
+    `https://cdn.brandfetch.io/${domain}?c=${BRANDFETCH_CLIENT_ID}`;
 
 interface Integration {
     name: string;
-    category: string;
-    icon: React.ReactNode;
+    logoUrl: string;
 }
 
-const integrations: Integration[] = [
-    { name: "PostgreSQL", category: "Database", icon: <Database /> },
-    { name: "Redis", category: "Cache", icon: <Database /> },
-    { name: "MongoDB", category: "Database", icon: <Database /> },
-    { name: "AWS S3", category: "Storage", icon: <Cloud /> },
-    { name: "Google Cloud", category: "Cloud", icon: <Cloud /> },
-    { name: "Azure", category: "Cloud", icon: <Cloud /> },
-    { name: "Slack", category: "Communication", icon: <MessageSquare /> },
-    { name: "Discord", category: "Communication", icon: <MessageSquare /> },
-    { name: "Teams", category: "Communication", icon: <MessageSquare /> },
-    { name: "Temporal", category: "Orchestration", icon: <Zap /> },
-    { name: "OpenAI", category: "AI", icon: <Zap /> },
-    { name: "Anthropic", category: "AI", icon: <Zap /> }
+// Row 1: CRM, Sales, Marketing, E-commerce - Business/Sales focused
+const row1Integrations: Integration[] = [
+    { name: "Salesforce", logoUrl: getBrandLogo("salesforce.com") },
+    { name: "HubSpot", logoUrl: getBrandLogo("hubspot.com") },
+    { name: "Shopify", logoUrl: getBrandLogo("shopify.com") },
+    { name: "Stripe", logoUrl: getBrandLogo("stripe.com") },
+    { name: "Mailchimp", logoUrl: getBrandLogo("mailchimp.com") },
+    { name: "Apollo.io", logoUrl: getBrandLogo("apollo.io") },
+    { name: "Pipedrive", logoUrl: getBrandLogo("pipedrive.com") },
+    { name: "Klaviyo", logoUrl: getBrandLogo("klaviyo.com") },
+    { name: "Zendesk", logoUrl: getBrandLogo("zendesk.com") },
+    { name: "Intercom", logoUrl: getBrandLogo("intercom.com") },
+    { name: "PayPal", logoUrl: getBrandLogo("paypal.com") },
+    { name: "Square", logoUrl: getBrandLogo("squareup.com") },
+    { name: "QuickBooks", logoUrl: getBrandLogo("quickbooks.intuit.com") },
+    { name: "Xero", logoUrl: getBrandLogo("xero.com") },
+    { name: "DocuSign", logoUrl: getBrandLogo("docusign.com") },
+    { name: "ActiveCampaign", logoUrl: getBrandLogo("activecampaign.com") },
+    { name: "Freshdesk", logoUrl: getBrandLogo("freshdesk.com") },
+    { name: "Gorgias", logoUrl: getBrandLogo("gorgias.com") }
 ];
+
+// Row 2: Productivity, Project Management, Communication, Collaboration
+const row2Integrations: Integration[] = [
+    { name: "Slack", logoUrl: getBrandLogo("slack.com") },
+    { name: "Microsoft Teams", logoUrl: getBrandLogo("teams.microsoft.com") },
+    { name: "Notion", logoUrl: getBrandLogo("notion.so") },
+    { name: "Airtable", logoUrl: getBrandLogo("airtable.com") },
+    { name: "Asana", logoUrl: getBrandLogo("asana.com") },
+    { name: "Jira", logoUrl: getBrandLogo("atlassian.com/jira") },
+    { name: "Trello", logoUrl: getBrandLogo("trello.com") },
+    { name: "Monday.com", logoUrl: getBrandLogo("monday.com") },
+    { name: "Linear", logoUrl: getBrandLogo("linear.app") },
+    { name: "ClickUp", logoUrl: getBrandLogo("clickup.com") },
+    { name: "Discord", logoUrl: getBrandLogo("discord.com") },
+    { name: "Zoom", logoUrl: getBrandLogo("zoom.us") },
+    { name: "Google Calendar", logoUrl: getBrandLogo("calendar.google.com") },
+    { name: "Gmail", logoUrl: getBrandLogo("gmail.com") },
+    { name: "WhatsApp", logoUrl: getBrandLogo("whatsapp.com") },
+    { name: "Telegram", logoUrl: getBrandLogo("telegram.org") },
+    { name: "Calendly", logoUrl: getBrandLogo("calendly.com") },
+    { name: "Miro", logoUrl: getBrandLogo("miro.com") }
+];
+
+// Row 3: AI/ML, Developer Tools, Databases, Cloud, Analytics
+const row3Integrations: Integration[] = [
+    { name: "OpenAI", logoUrl: getBrandLogo("openai.com") },
+    { name: "Anthropic", logoUrl: getBrandLogo("anthropic.com") },
+    { name: "Google AI", logoUrl: getBrandLogo("google.com") },
+    { name: "GitHub", logoUrl: getBrandLogo("github.com") },
+    { name: "GitLab", logoUrl: getBrandLogo("gitlab.com") },
+    { name: "AWS", logoUrl: getBrandLogo("aws.amazon.com") },
+    { name: "Google Cloud", logoUrl: getBrandLogo("cloud.google.com") },
+    { name: "Azure", logoUrl: getBrandLogo("azure.microsoft.com") },
+    { name: "MongoDB", logoUrl: getBrandLogo("mongodb.com") },
+    { name: "PostgreSQL", logoUrl: getBrandLogo("postgrespro.com") },
+    { name: "Snowflake", logoUrl: getBrandLogo("snowflake.com") },
+    { name: "Vercel", logoUrl: getBrandLogo("vercel.com") },
+    { name: "Datadog", logoUrl: getBrandLogo("datadoghq.com") },
+    { name: "Mixpanel", logoUrl: getBrandLogo("mixpanel.com") },
+    { name: "Segment", logoUrl: getBrandLogo("segment.com") },
+    { name: "Figma", logoUrl: getBrandLogo("figma.com") },
+    { name: "Hugging Face", logoUrl: getBrandLogo("huggingface.co") },
+    { name: "Pinecone", logoUrl: getBrandLogo("pinecone.io") }
+];
+
+interface LogoRowProps {
+    integrations: Integration[];
+    direction: "left" | "right";
+    speed?: number;
+}
+
+const LogoRow: React.FC<LogoRowProps> = ({ integrations, direction, speed = 30 }) => {
+    // Duplicate the integrations to create a seamless loop
+    const duplicatedIntegrations = [...integrations, ...integrations];
+
+    return (
+        <div className="relative flex overflow-hidden py-4">
+            {/* Gradient masks for fade effect */}
+            <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-black to-transparent z-10 pointer-events-none" />
+            <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-black to-transparent z-10 pointer-events-none" />
+
+            <div
+                className={`flex items-center gap-12 ${
+                    direction === "left" ? "animate-scroll-left" : "animate-scroll-right"
+                }`}
+                style={{
+                    animationDuration: `${speed}s`
+                }}
+            >
+                {duplicatedIntegrations.map((integration, index) => (
+                    <div
+                        key={`${integration.name}-${index}`}
+                        className="flex-shrink-0 flex items-center justify-center w-16 h-16 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all duration-300 group"
+                    >
+                        <img
+                            src={integration.logoUrl}
+                            alt={integration.name}
+                            className="w-10 h-10 object-contain filter brightness-90 group-hover:brightness-110 transition-all"
+                            loading="lazy"
+                            onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = "none";
+                            }}
+                        />
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
 
 export const Integrations: React.FC = () => {
     const ref = React.useRef<HTMLDivElement>(null);
     const isInView = useInView(ref, { once: true, margin: "-100px" });
+
+    const totalIntegrations = 110;
 
     return (
         <section
@@ -41,55 +143,46 @@ export const Integrations: React.FC = () => {
                     initial={{ opacity: 0, y: 30 }}
                     animate={isInView ? { opacity: 1, y: 0 } : {}}
                     transition={{ duration: 0.6 }}
-                    className="text-center mb-16"
+                    className="text-center mb-4"
                 >
+                    <p className="text-sm font-medium tracking-widest text-gray-400 uppercase mb-6">
+                        Integrations
+                    </p>
                     <h2 className="text-4xl sm:text-5xl font-bold mb-4">
                         Connect
                         <span className="gradient-text"> Everything</span>
                     </h2>
                     <p className="text-xl text-gray-400 max-w-2xl mx-auto">
-                        Pre-built integrations for the tools you already use. Plus custom API
-                        support for anything else.
+                        With {totalIntegrations}+ enterprise integrations, your AI agents can read,
+                        write, and execute tasks within your existing systems.
                     </p>
                 </motion.div>
 
-                {/* Integration Grid */}
+                {/* Sliding Logo Rows */}
                 <motion.div
                     initial={{ opacity: 0 }}
                     animate={isInView ? { opacity: 1 } : {}}
                     transition={{ duration: 0.8, delay: 0.2 }}
-                    className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-12"
+                    className="mt-16 space-y-4"
                 >
-                    {integrations.map((integration, index) => (
-                        <motion.div
-                            key={integration.name}
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={isInView ? { opacity: 1, scale: 1 } : {}}
-                            transition={{ duration: 0.4, delay: index * 0.05 }}
-                            className="group relative p-6 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 hover:border-primary-500/50 transition-all duration-300"
-                        >
-                            <div className="flex flex-col items-center text-center">
-                                <div className="w-12 h-12 rounded-lg bg-primary-500/10 flex items-center justify-center mb-3 text-primary-400 group-hover:bg-primary-500/20 transition-colors">
-                                    {integration.icon}
-                                </div>
-                                <h3 className="font-semibold text-sm mb-1">{integration.name}</h3>
-                                <p className="text-xs text-gray-400">{integration.category}</p>
-                            </div>
-                        </motion.div>
-                    ))}
+                    <LogoRow integrations={row1Integrations} direction="left" speed={40} />
+                    <LogoRow integrations={row2Integrations} direction="right" speed={35} />
+                    <LogoRow integrations={row3Integrations} direction="left" speed={38} />
                 </motion.div>
 
-                {/* Stats */}
+                {/* CTA */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={isInView ? { opacity: 1, y: 0 } : {}}
                     transition={{ duration: 0.6, delay: 0.4 }}
-                    className="text-center"
+                    className="text-center mt-12"
                 >
-                    <p className="text-gray-400 mb-4">+ 98 more integrations available</p>
-                    <button className="px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg font-semibold transition-all duration-200">
+                    <Link
+                        to="/integrations"
+                        className="px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg font-semibold transition-all duration-200 inline-block"
+                    >
                         View All Integrations
-                    </button>
+                    </Link>
                 </motion.div>
             </div>
         </section>

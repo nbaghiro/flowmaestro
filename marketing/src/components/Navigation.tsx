@@ -1,5 +1,6 @@
 import { ChevronDown } from "lucide-react";
 import React from "react";
+import { Link } from "react-router-dom";
 
 interface NavLinkProps {
     label: string;
@@ -52,11 +53,21 @@ export const Navigation: React.FC = () => {
                     {/* Navigation Links */}
                     <div className="hidden md:flex items-center gap-8">
                         <NavLink label="Features" hasDropdown />
+                        <Link
+                            to="/integrations"
+                            className="text-sm text-gray-400 hover:text-white transition-colors"
+                        >
+                            Integrations
+                        </Link>
                         <NavLink label="Company" hasDropdown />
                         <NavLink label="Resources" hasDropdown />
-                        <NavLink label="Help" hasDropdown />
                         <NavLink label="Docs" />
-                        <NavLink label="Pricing" />
+                        <Link
+                            to="/pricing"
+                            className="text-sm text-gray-400 hover:text-white transition-colors"
+                        >
+                            Pricing
+                        </Link>
                     </div>
 
                     {/* Auth Buttons */}
