@@ -20,6 +20,7 @@ function VisionNode({ data, selected }: NodeProps<VisionNodeData>) {
             label={data.label || "Vision"}
             status={data.status}
             category="ai"
+            subcategory="vision-media"
             selected={selected}
         >
             <div className="space-y-2">

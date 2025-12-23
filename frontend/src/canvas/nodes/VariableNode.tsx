@@ -21,7 +21,8 @@ function VariableNode({ data, selected }: NodeProps<VariableNodeData>) {
             icon={Variable}
             label={data.label || "Variable"}
             status={data.status}
-            category="data"
+            category="tools"
+            subcategory="data-processing"
             selected={selected}
         >
             <div className="space-y-2">
@@ -32,7 +33,7 @@ function VariableNode({ data, selected }: NodeProps<VariableNodeData>) {
                 <div className="flex items-center justify-between">
                     <span className="text-xs text-muted-foreground">Name:</span>
                     <span className="text-xs font-mono bg-muted px-1.5 py-0.5 rounded">
-                        {`{{${variableName}}}`}
+                        ${variableName}
                     </span>
                 </div>
                 {value && (

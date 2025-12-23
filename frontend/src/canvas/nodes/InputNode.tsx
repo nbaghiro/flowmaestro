@@ -20,7 +20,8 @@ function InputNode({ data, selected }: NodeProps<InputNodeData>) {
             icon={Hand}
             label={data.label || "Input"}
             status={data.status}
-            category="data"
+            category="tools"
+            subcategory="flow-control"
             selected={selected}
         >
             <div className="space-y-2">

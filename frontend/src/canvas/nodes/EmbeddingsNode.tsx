@@ -20,6 +20,7 @@ function EmbeddingsNode({ data, selected }: NodeProps<EmbeddingsNodeData>) {
             label={data.label || "Embeddings"}
             status={data.status}
             category="ai"
+            subcategory="advanced-ai"
             selected={selected}
         >
             <div className="space-y-2">

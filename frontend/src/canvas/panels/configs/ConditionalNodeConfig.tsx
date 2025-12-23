@@ -4,6 +4,7 @@ import { FormField, FormSection } from "../../../components/common/FormField";
 import { Input } from "../../../components/common/Input";
 import { Select } from "../../../components/common/Select";
 import { OutputSettingsSection } from "../../../components/OutputSettingsSection";
+import { RouterNodeConfig } from "./RouterNodeConfig";
 
 interface ConditionalNodeConfigProps {
     data: Record<string, unknown>;
@@ -35,17 +36,21 @@ export function ConditionalNodeConfig({ data, onUpdate }: ConditionalNodeConfigP
     const [rightValue, setRightValue] = useState((data.rightValue as string) || "");
     const [expression, setExpression] = useState((data.expression as string) || "");
     const [outputVariable, setOutputVariable] = useState((data.outputVariable as string) || "");
+    const [mode, setMode] = useState((data.mode as string) || "boolean");
 
     useEffect(() => {
-        onUpdate({
-            conditionType,
-            leftValue,
-            operator,
-            rightValue,
-            expression,
-            outputVariable
-        });
-    }, [conditionType, leftValue, operator, rightValue, expression, outputVariable]);
+        if (mode === "boolean") {
+            onUpdate({
+                mode,
+                conditionType,
+                leftValue,
+                operator,
+                rightValue,
+                expression,
+                outputVariable
+            });
+        }
+    }, [mode, conditionType, leftValue, operator, rightValue, expression, outputVariable]);
 
     return (
         <div>
@@ -58,6 +63,33 @@ export function ConditionalNodeConfig({ data, onUpdate }: ConditionalNodeConfigP
                     />
                 </FormField>
             </FormSection>
+
+            <FormSection title="Mode">
+                <FormField label="Conditional Mode">
+                    <Select
+                        value={mode}
+                        onChange={setMode}
+                        options={[
+                            { value: "boolean", label: "If / Else" },
+                            { value: "router", label: "Router" }
+                        ]}
+                    />
+                </FormField>
+            </FormSection>
+
+            {mode === "boolean" && <>{/* existing simple / expression conditional UI */}</>}
+
+            {mode === "router" && (
+                <RouterNodeConfig
+                    data={data}
+                    onUpdate={(routerConfig) =>
+                        onUpdate({
+                            mode,
+                            ...(routerConfig as Record<string, unknown>)
+                        })
+                    }
+                />
+            )}
 
             {conditionType === "simple" && (
                 <FormSection title="Simple Comparison">

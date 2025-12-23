@@ -19,7 +19,8 @@ function SwitchNode({ data, selected }: NodeProps<SwitchNodeData>) {
             icon={GitMerge}
             label={data.label || "Switch"}
             status={data.status}
-            category="logic"
+            category="tools"
+            subcategory="flow-control"
             selected={selected}
             hasOutputHandle={false}
             customHandles={

@@ -37,7 +37,8 @@ function DatabaseNode({ data, selected }: NodeProps<DatabaseNodeData>) {
             icon={Database}
             label={data.label || "Database"}
             status={data.status}
-            category="connect"
+            category="integration"
+            subcategory="database"
             selected={selected}
         >
             <div className="space-y-2">

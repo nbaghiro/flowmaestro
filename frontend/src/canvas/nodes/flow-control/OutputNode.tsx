@@ -1,7 +1,7 @@
 import { Send, FileText } from "lucide-react";
 import { memo } from "react";
 import { NodeProps } from "reactflow";
-import { BaseNode } from "./BaseNode";
+import { BaseNode } from "../BaseNode";
 
 interface OutputNodeData {
     label: string;
@@ -20,7 +20,8 @@ function OutputNode({ data, selected }: NodeProps<OutputNodeData>) {
             icon={Send}
             label={data.label || "Output"}
             status={data.status}
-            category="data"
+            category="tools"
+            subcategory="flow-control"
             selected={selected}
             hasOutputHandle={true}
         >

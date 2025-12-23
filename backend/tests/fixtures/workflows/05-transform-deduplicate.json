@@ -1,0 +1,47 @@
+{
+    "name": "Transform - Deduplicate Customers",
+    "description": "Tests deduplicate operation with case-insensitive key fields and keep last",
+    "entryPoint": "seed-customers",
+    "nodes": {
+        "seed-customers": {
+            "type": "variable",
+            "name": "Seed Customers",
+            "config": {
+                "operation": "set",
+                "variableName": "customers",
+                "valueType": "json",
+                "value": "[{\"id\":\"c1\",\"email\":\"USER@example.com\",\"name\":\"Ava\",\"updatedAt\":\"2024-01-01\"},{\"id\":\"c2\",\"email\":\"user@example.com\",\"name\":\"Ava M\",\"updatedAt\":\"2024-02-10\"},{\"id\":\"c3\",\"email\":\"sam@example.com\",\"name\":\"Sam\",\"updatedAt\":\"2024-01-15\"},{\"id\":\"c4\",\"email\":\"lisa@example.com\",\"name\":\"Lisa\",\"updatedAt\":\"2024-03-02\"},{\"id\":\"c5\",\"email\":\"SAM@example.com\",\"name\":\"Samuel\",\"updatedAt\":\"2024-02-01\"}]",
+                "scope": "workflow"
+            },
+            "position": { "x": 120, "y": 120 }
+        },
+        "transform-deduplicate": {
+            "type": "transform",
+            "name": "Deduplicate by Email",
+            "config": {
+                "mode": "javascript",
+                "operation": "deduplicate",
+                "inputData": "${customers}",
+                "keyFields": ["email"],
+                "keep": "last",
+                "caseSensitive": false,
+                "outputVariable": "uniqueCustomers"
+            },
+            "position": { "x": 380, "y": 120 }
+        },
+        "output-1": {
+            "type": "output",
+            "name": "Unique Customers",
+            "config": {
+                "value": "${uniqueCustomers}",
+                "format": "json",
+                "outputName": "uniqueCustomers"
+            },
+            "position": { "x": 640, "y": 120 }
+        }
+    },
+    "edges": [
+        { "id": "e1", "source": "seed-customers", "target": "transform-deduplicate" },
+        { "id": "e2", "source": "transform-deduplicate", "target": "output-1" }
+    ]
+}

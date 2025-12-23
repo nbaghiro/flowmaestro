@@ -1,0 +1,129 @@
+{
+    "name": "Conditional - Router Routing",
+    "description": "Tests router-mode branching based on priority and score",
+    "entryPoint": "seed-priority",
+    "nodes": {
+        "seed-priority": {
+            "type": "variable",
+            "name": "Seed Priority",
+            "config": {
+                "operation": "set",
+                "variableName": "priority",
+                "valueType": "string",
+                "value": "high",
+                "scope": "workflow"
+            },
+            "position": { "x": 120, "y": 120 }
+        },
+        "seed-score": {
+            "type": "variable",
+            "name": "Seed Score",
+            "config": {
+                "operation": "set",
+                "variableName": "score",
+                "valueType": "number",
+                "value": "92",
+                "scope": "workflow"
+            },
+            "position": { "x": 320, "y": 120 }
+        },
+        "conditional-1": {
+            "type": "conditional",
+            "name": "Route by Priority",
+            "config": {
+                "mode": "router",
+                "conditions": [
+                    {
+                        "name": "high",
+                        "expression": "priority === 'high' && score >= 80",
+                        "description": "High priority + strong score"
+                    },
+                    {
+                        "name": "medium",
+                        "expression": "priority === 'medium' || score >= 50",
+                        "description": "Medium priority or decent score"
+                    }
+                ],
+                "defaultOutput": "low",
+                "evaluationMode": "first"
+            },
+            "position": { "x": 540, "y": 120 }
+        },
+        "set-high": {
+            "type": "variable",
+            "name": "Set Route High",
+            "config": {
+                "operation": "set",
+                "variableName": "route",
+                "valueType": "string",
+                "value": "high",
+                "scope": "workflow"
+            },
+            "position": { "x": 760, "y": 40 }
+        },
+        "set-medium": {
+            "type": "variable",
+            "name": "Set Route Medium",
+            "config": {
+                "operation": "set",
+                "variableName": "route",
+                "valueType": "string",
+                "value": "medium",
+                "scope": "workflow"
+            },
+            "position": { "x": 760, "y": 120 }
+        },
+        "set-low": {
+            "type": "variable",
+            "name": "Set Route Low",
+            "config": {
+                "operation": "set",
+                "variableName": "route",
+                "valueType": "string",
+                "value": "low",
+                "scope": "workflow"
+            },
+            "position": { "x": 760, "y": 200 }
+        },
+        "output-high": {
+            "type": "output",
+            "name": "Output High",
+            "config": {
+                "outputVariable": "routeResult",
+                "format": "json",
+                "fields": ["route", "priority", "score"]
+            },
+            "position": { "x": 980, "y": 40 }
+        },
+        "output-medium": {
+            "type": "output",
+            "name": "Output Medium",
+            "config": {
+                "outputVariable": "routeResult",
+                "format": "json",
+                "fields": ["route", "priority", "score"]
+            },
+            "position": { "x": 980, "y": 120 }
+        },
+        "output-low": {
+            "type": "output",
+            "name": "Output Low",
+            "config": {
+                "outputVariable": "routeResult",
+                "format": "json",
+                "fields": ["route", "priority", "score"]
+            },
+            "position": { "x": 980, "y": 200 }
+        }
+    },
+    "edges": [
+        { "id": "e1", "source": "seed-priority", "target": "seed-score" },
+        { "id": "e2", "source": "seed-score", "target": "conditional-1" },
+        { "id": "e3", "source": "conditional-1", "target": "set-high", "sourceHandle": "high" },
+        { "id": "e4", "source": "conditional-1", "target": "set-medium", "sourceHandle": "medium" },
+        { "id": "e5", "source": "conditional-1", "target": "set-low", "sourceHandle": "low" },
+        { "id": "e6", "source": "set-high", "target": "output-high" },
+        { "id": "e7", "source": "set-medium", "target": "output-medium" },
+        { "id": "e8", "source": "set-low", "target": "output-low" }
+    ]
+}

@@ -138,8 +138,13 @@ export async function executeNode(input: ExecuteNodeInput): Promise<JsonObject> 
         }
 
         case "conditional":
+            return await executeConditionalNode(
+                nodeConfig as unknown as ConditionalNodeConfig,
+                context
+            );
+
         case "loop":
-            // Control flow nodes are handled by the workflow orchestrator
+            // Loop nodes are handled by the workflow orchestrator
             throw new Error(`${nodeType} nodes must be handled by workflow orchestrator`);
 
         case "router":

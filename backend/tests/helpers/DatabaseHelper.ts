@@ -5,7 +5,6 @@
 
 import { randomUUID } from "crypto";
 import { Pool, QueryResultRow } from "pg";
-import { DatabaseConnectionRepository } from "../../src/storage/repositories/DatabaseConnectionRepository";
 
 export class DatabaseHelper {
     private pool: Pool;
@@ -103,22 +102,43 @@ export class DatabaseHelper {
             ssl_enabled?: boolean;
         }
     ): Promise<string> {
-        const repository = new DatabaseConnectionRepository();
-        const connection = await repository.create({
-            user_id: userId,
-            name: `Test ${provider} Connection`,
-            provider,
-            host: connectionDetails.host,
-            port: connectionDetails.port,
-            database: connectionDetails.database,
-            username: connectionDetails.username,
-            password: connectionDetails.password,
-            connection_string: connectionDetails.connection_string,
-            ssl_enabled: connectionDetails.ssl_enabled ?? false
-        });
+        const result = await this.pool.query<{ id: string }>(
+            `INSERT INTO database_connections (
+                user_id,
+                name,
+                provider,
+                host,
+                port,
+                database,
+                username,
+                password,
+                connection_string,
+                ssl_enabled,
+                options
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, '{}'::jsonb)
+            RETURNING id`,
+            [
+                userId,
+                `Test ${provider} Connection`,
+                provider,
+                connectionDetails.host ?? null,
+                connectionDetails.port ?? null,
+                connectionDetails.database ?? null,
+                connectionDetails.username ?? null,
+                connectionDetails.password ?? null,
+                connectionDetails.connection_string ?? null,
+                connectionDetails.ssl_enabled ?? false
+            ]
+        );
 
-        console.log(`✅ Created test database connection: ${connection.id} (${provider})`);
-        return connection.id;
+        const connectionId = result.rows[0]?.id;
+        if (!connectionId) {
+            throw new Error("Failed to create test database connection");
+        }
+
+        console.log(`✅ Created test database connection: ${connectionId} (${provider})`);
+        return connectionId;
     }
 
     /**

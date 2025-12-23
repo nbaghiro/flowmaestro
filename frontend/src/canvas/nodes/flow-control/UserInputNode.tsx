@@ -1,7 +1,7 @@
 import { Hand } from "lucide-react";
 import { memo } from "react";
 import { NodeProps } from "reactflow";
-import { BaseNode } from "./BaseNode";
+import { BaseNode } from "../BaseNode";
 
 interface UserInputNodeData {
     label: string;
@@ -22,7 +22,8 @@ function UserInputNode({ data, selected }: NodeProps<UserInputNodeData>) {
             icon={Hand}
             label={data.label || "User Input"}
             status={data.status}
-            category="interaction"
+            category="automation"
+            subcategory="triggers"
             selected={selected}
         >
             <div className="space-y-2">
@@ -31,7 +32,7 @@ function UserInputNode({ data, selected }: NodeProps<UserInputNodeData>) {
                     <div className="flex items-center justify-between">
                         <span className="text-xs text-muted-foreground">Variable:</span>
                         <span className="text-xs font-mono bg-muted px-1.5 py-0.5 rounded">
-                            {`{{${variableName}}}`}
+                            ${variableName}
                         </span>
                     </div>
                     <div className="flex items-center justify-between">

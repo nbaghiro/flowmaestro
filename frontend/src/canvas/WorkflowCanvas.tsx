@@ -17,21 +17,21 @@ import { useWorkflowStore } from "../stores/workflowStore";
 import AudioNode from "./nodes/AudioNode";
 import CodeNode from "./nodes/CodeNode";
 import CommentNode from "./nodes/CommentNode";
-import ConditionalNode from "./nodes/ConditionalNode";
+import TransformNode from "./nodes/data-processing/TransformNode";
 import DatabaseNode from "./nodes/DatabaseNode";
 import EmbeddingsNode from "./nodes/EmbeddingsNode";
+import ConditionalNode from "./nodes/flow-control/ConditionalNode";
+import LoopNode from "./nodes/flow-control/LoopNode";
+import OutputNode from "./nodes/flow-control/OutputNode";
+import WaitNode from "./nodes/flow-control/WaitNode";
 import HTTPNode from "./nodes/HTTPNode";
 import InputNode from "./nodes/InputNode";
 import IntegrationNode from "./nodes/IntegrationNode";
 import KnowledgeBaseQueryNode from "./nodes/KnowledgeBaseQueryNode";
 import LLMNode from "./nodes/LLMNode";
-import LoopNode from "./nodes/LoopNode";
-import OutputNode from "./nodes/OutputNode";
 import SwitchNode from "./nodes/SwitchNode";
-import TransformNode from "./nodes/TransformNode";
 import VariableNode from "./nodes/VariableNode";
 import VisionNode from "./nodes/VisionNode";
-import WaitNode from "./nodes/WaitNode";
 
 // Register node types
 const nodeTypes = {

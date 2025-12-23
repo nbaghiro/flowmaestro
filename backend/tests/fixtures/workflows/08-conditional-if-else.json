@@ -1,0 +1,81 @@
+{
+    "name": "Conditional - If / Else",
+    "description": "Tests if/else branching with a simple equality check",
+    "entryPoint": "seed-status",
+    "nodes": {
+        "seed-status": {
+            "type": "variable",
+            "name": "Seed Status",
+            "config": {
+                "operation": "set",
+                "variableName": "status",
+                "valueType": "string",
+                "value": "approved",
+                "scope": "workflow"
+            },
+            "position": { "x": 120, "y": 120 }
+        },
+        "conditional-1": {
+            "type": "conditional",
+            "name": "Check Approval",
+            "config": {
+                "mode": "boolean",
+                "leftValue": "${status}",
+                "operator": "==",
+                "rightValue": "approved"
+            },
+            "position": { "x": 340, "y": 120 }
+        },
+        "set-true": {
+            "type": "variable",
+            "name": "Set Decision Ship",
+            "config": {
+                "operation": "set",
+                "variableName": "decision",
+                "valueType": "string",
+                "value": "ship",
+                "scope": "workflow"
+            },
+            "position": { "x": 560, "y": 60 }
+        },
+        "set-false": {
+            "type": "variable",
+            "name": "Set Decision Hold",
+            "config": {
+                "operation": "set",
+                "variableName": "decision",
+                "valueType": "string",
+                "value": "hold",
+                "scope": "workflow"
+            },
+            "position": { "x": 560, "y": 180 }
+        },
+        "output-true": {
+            "type": "output",
+            "name": "Output Ship",
+            "config": {
+                "outputVariable": "decisionResult",
+                "format": "json",
+                "fields": ["decision", "status", "branch"]
+            },
+            "position": { "x": 780, "y": 60 }
+        },
+        "output-false": {
+            "type": "output",
+            "name": "Output Hold",
+            "config": {
+                "outputVariable": "decisionResult",
+                "format": "json",
+                "fields": ["decision", "status", "branch"]
+            },
+            "position": { "x": 780, "y": 180 }
+        }
+    },
+    "edges": [
+        { "id": "e1", "source": "seed-status", "target": "conditional-1" },
+        { "id": "e2", "source": "conditional-1", "target": "set-true", "sourceHandle": "true" },
+        { "id": "e3", "source": "conditional-1", "target": "set-false", "sourceHandle": "false" },
+        { "id": "e4", "source": "set-true", "target": "output-true" },
+        { "id": "e5", "source": "set-false", "target": "output-false" }
+    ]
+}

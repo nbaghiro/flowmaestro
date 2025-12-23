@@ -1,5 +1,6 @@
 import type { JsonObject, JsonValue } from "@flowmaestro/shared";
 import { interpolateVariables } from "../../../../core/utils/interpolate-variables";
+import { executeRouterNode } from "./router-executor";
 
 export type ComparisonOperator =
     | "=="
@@ -13,9 +14,21 @@ export type ComparisonOperator =
     | "endsWith";
 
 export interface ConditionalNodeConfig {
-    leftValue: string;
-    operator: ComparisonOperator;
-    rightValue: string;
+    mode?: "boolean" | "router";
+
+    // boolean mode (existing)
+    leftValue?: string;
+    operator?: ComparisonOperator;
+    rightValue?: string;
+
+    // router mode (delegate)
+    conditions?: Array<{
+        name: string;
+        expression: string;
+        description?: string;
+    }>;
+    defaultOutput?: string;
+    evaluationMode?: "first" | "all";
 }
 
 export interface ConditionalNodeResult {
@@ -34,8 +47,21 @@ export async function executeConditionalNode(
     context: JsonObject
 ): Promise<JsonObject> {
     // Interpolate variables in both values
-    const leftInterpolated = interpolateVariables(config.leftValue, context);
-    const rightInterpolated = interpolateVariables(config.rightValue, context);
+    const mode = config.mode ?? "boolean";
+
+    if (mode === "router") {
+        return executeRouterNode(
+            {
+                conditions: config.conditions ?? [],
+                defaultOutput: config.defaultOutput ?? "default",
+                evaluationMode: config.evaluationMode ?? "first"
+            },
+            context
+        );
+    }
+
+    const leftInterpolated = interpolateVariables(config.leftValue ?? "", context);
+    const rightInterpolated = interpolateVariables(config.rightValue ?? "", context);
 
     // Try to parse as JSON if it looks like a JSON value
     const leftValue = parseValue(leftInterpolated);
@@ -46,7 +72,8 @@ export async function executeConditionalNode(
     );
 
     // Evaluate the condition
-    const conditionMet = evaluateCondition(leftValue, config.operator, rightValue);
+    const operator = config.operator ?? "==";
+    const conditionMet = evaluateCondition(leftValue, operator, rightValue);
     const branch = conditionMet ? "true" : "false";
 
     console.log(`[Conditional] Result: ${conditionMet} → taking '${branch}' branch`);

@@ -283,6 +283,22 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
                             `[Orchestrator] Input node ${nodeId}: merged all inputs into context`
                         );
                     }
+                } else if (
+                    node.type === "conditional" &&
+                    typeof node.config === "object" &&
+                    node.config !== null &&
+                    (node.config as { mode?: string }).mode === "router"
+                ) {
+                    const result = await executeNode({
+                        nodeType: node.type,
+                        nodeConfig: node.config,
+                        context
+                    });
+
+                    Object.assign(context, result);
+                    console.log(
+                        `[Orchestrator] Node ${nodeId} completed, added keys: ${Object.keys(result).join(", ")}`
+                    );
                 } else if (node.type === "conditional") {
                     const leftValue =
                         typeof node.config.leftValue === "string" ? node.config.leftValue : "";
@@ -394,23 +410,63 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
             const dependentEdges = outgoingEdges.get(nodeId) || [];
 
             if (node.type === "conditional") {
-                const branch = context.branch as string | undefined;
-                console.log(`[Orchestrator] Conditional node ${nodeId} branch: ${branch}`);
+                const conditionalMode =
+                    typeof node.config === "object" && node.config !== null
+                        ? (node.config as { mode?: string }).mode
+                        : undefined;
 
-                for (const edge of dependentEdges) {
-                    const shouldExecute = !edge.sourceHandle || edge.sourceHandle === branch;
-                    if (!shouldExecute) {
-                        console.log(
-                            `[Orchestrator] Marking ${edge.sourceHandle} branch to ${edge.target} as skipped (branch is ${branch})`
-                        );
-                        markNodeAsSkipped(edge.target);
+                if (conditionalMode === "router") {
+                    const routes = (context.__routeOutputs as string[] | undefined) || [];
+                    const routeSet = new Set(routes);
+                    console.log(
+                        `[Orchestrator] Conditional router ${nodeId} routes: ${
+                            routes.length ? routes.join(", ") : "none"
+                        }`
+                    );
+
+                    for (const edge of dependentEdges) {
+                        const shouldExecute = !edge.sourceHandle || routeSet.has(edge.sourceHandle);
+                        if (!shouldExecute) {
+                            console.log(
+                                `[Orchestrator] Marking route ${edge.sourceHandle || "default"} to ${edge.target} as skipped`
+                            );
+                            markNodeAsSkipped(edge.target);
+                        }
                     }
-                }
 
-                for (const edge of dependentEdges) {
-                    const shouldExecute = !edge.sourceHandle || edge.sourceHandle === branch;
-                    if (shouldExecute && !executed.has(edge.target) && !skipped.has(edge.target)) {
-                        queue.push(edge.target);
+                    for (const edge of dependentEdges) {
+                        const shouldExecute = !edge.sourceHandle || routeSet.has(edge.sourceHandle);
+                        if (
+                            shouldExecute &&
+                            !executed.has(edge.target) &&
+                            !skipped.has(edge.target)
+                        ) {
+                            queue.push(edge.target);
+                        }
+                    }
+                } else {
+                    const branch = context.branch as string | undefined;
+                    console.log(`[Orchestrator] Conditional node ${nodeId} branch: ${branch}`);
+
+                    for (const edge of dependentEdges) {
+                        const shouldExecute = !edge.sourceHandle || edge.sourceHandle === branch;
+                        if (!shouldExecute) {
+                            console.log(
+                                `[Orchestrator] Marking ${edge.sourceHandle} branch to ${edge.target} as skipped (branch is ${branch})`
+                            );
+                            markNodeAsSkipped(edge.target);
+                        }
+                    }
+
+                    for (const edge of dependentEdges) {
+                        const shouldExecute = !edge.sourceHandle || edge.sourceHandle === branch;
+                        if (
+                            shouldExecute &&
+                            !executed.has(edge.target) &&
+                            !skipped.has(edge.target)
+                        ) {
+                            queue.push(edge.target);
+                        }
                     }
                 }
             } else if (node.type === "router") {

@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - develop
+      - workspaces-node-groups
   push:
     branches:
       - main
@@ -14,6 +15,17 @@ jobs:
   test:
     name: Test and Lint
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://flowmaestro:flowmaestro_dev_password@localhost:5432/flowmaestro
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: flowmaestro
+      POSTGRES_USER: flowmaestro
+      POSTGRES_PASSWORD: flowmaestro_dev_password
+      TEMPORAL_ADDRESS: localhost:7233
+      REDIS_HOST: localhost
+      REDIS_PORT: "6379"
+      ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 
     strategy:
       matrix:
@@ -23,6 +35,10 @@ jobs:
       # Checkout code
       - name: Checkout code
         uses: actions/checkout@v4
+
+      # Ensure we have netcat for readiness probes
+      - name: Install nc for readiness checks
+        run: sudo apt-get update && sudo apt-get install -y netcat-openbsd
 
       # Setup Node.js
       - name: Setup Node.js ${{ matrix.node-version }}
@@ -47,9 +63,62 @@ jobs:
       - name: Check code formatting
         run: npm run format:check
 
+      # Start Temporal + DB infra for integration tests
+      - name: Start Temporal stack
+        run: |
+          docker volume create flowmaestro_postgres_data
+          docker volume create flowmaestro_postgres_test_data
+          docker volume create flowmaestro_mongo_test_data
+          docker volume create flowmaestro_redis_data
+          docker compose -f infra/local/docker-compose.yml up -d postgres postgres-test mongo-test redis temporal
+          echo "Waiting for Temporal and databases..."
+          for i in {1..60}; do
+            if nc -z localhost 5432 && nc -z localhost 7233 && nc -z localhost 6379; then
+              echo "Temporal stack is ready"
+              break
+            fi
+            docker compose -f infra/local/docker-compose.yml ps
+            sleep 5
+          done
+
+      # Run database migrations against local Postgres
+      - name: Run database migrations
+        run: npm run db:migrate --workspace=backend
+
+      # Start orchestrator worker (background) for Temporal workflows
+      - name: Start Temporal worker
+        run: |
+          npm run worker:orchestrator:dev --workspace=backend > /tmp/worker.log 2>&1 &
+          echo $! > /tmp/orchestrator_worker_pid
+          sleep 15
+          pid=$(cat /tmp/orchestrator_worker_pid)
+          if ps -p "$pid" > /dev/null; then
+            ps -fp "$pid"
+          else
+            echo "Orchestrator worker exited early. Last 200 log lines:"
+            if [ -f /tmp/worker.log ]; then tail -n 200 /tmp/worker.log; fi
+            exit 1
+          fi
+
+      # Run unit tests
+      - name: Run unit tests
+        run: npm run test:unit
+
       # Run integration tests
-      # - name: Run integration tests
-      #   run: npm run test
+      - name: Run integration tests
+        run: npm run test:integration
+
+      # Stop worker (best-effort) to keep logs clean
+      - name: Stop Temporal worker
+        if: always()
+        run: |
+          echo "----- Orchestrator worker log -----"
+          if [ -f /tmp/worker.log ]; then tail -n 200 /tmp/worker.log; fi
+          echo "-----------------------------------"
+          docker compose -f infra/local/docker-compose.yml ps || true
+          if [ -f /tmp/orchestrator_worker_pid ]; then
+            kill $(cat /tmp/orchestrator_worker_pid) || true
+          fi
 
       # Build all packages to ensure no build errors
       - name: Build all packages

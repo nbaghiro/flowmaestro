@@ -1,0 +1,45 @@
+{
+    "name": "Transform - Filter High Priority",
+    "description": "Tests filter operation with JSONata predicate on task list",
+    "entryPoint": "seed-tasks",
+    "nodes": {
+        "seed-tasks": {
+            "type": "variable",
+            "name": "Seed Tasks",
+            "config": {
+                "operation": "set",
+                "variableName": "tasks",
+                "valueType": "json",
+                "value": "[{\"id\":1,\"title\":\"Ship build\",\"priority\":\"high\",\"points\":8},{\"id\":2,\"title\":\"Fix lint\",\"priority\":\"low\",\"points\":1},{\"id\":3,\"title\":\"Prep demo\",\"priority\":\"high\",\"points\":5},{\"id\":4,\"title\":\"Update docs\",\"priority\":\"medium\",\"points\":3},{\"id\":5,\"title\":\"Onboard user\",\"priority\":\"high\",\"points\":13}]",
+                "scope": "workflow"
+            },
+            "position": { "x": 120, "y": 120 }
+        },
+        "transform-filter": {
+            "type": "transform",
+            "name": "Filter High Priority",
+            "config": {
+                "mode": "jsonata",
+                "operation": "filter",
+                "inputData": "${tasks}",
+                "expression": "priority = 'high' and points >= 5",
+                "outputVariable": "highPriorityTasks"
+            },
+            "position": { "x": 380, "y": 120 }
+        },
+        "output-1": {
+            "type": "output",
+            "name": "High Priority Tasks",
+            "config": {
+                "value": "${highPriorityTasks}",
+                "format": "json",
+                "outputName": "highPriorityTasks"
+            },
+            "position": { "x": 640, "y": 120 }
+        }
+    },
+    "edges": [
+        { "id": "e1", "source": "seed-tasks", "target": "transform-filter" },
+        { "id": "e2", "source": "transform-filter", "target": "output-1" }
+    ]
+}

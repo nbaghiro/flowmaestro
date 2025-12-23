@@ -24,6 +24,7 @@ function LLMNode({ data, selected }: NodeProps<LLMNodeData>) {
             label={data.label || "LLM"}
             status={data.status}
             category="ai"
+            subcategory="using-ai"
             selected={selected}
         >
             <div className="space-y-2">

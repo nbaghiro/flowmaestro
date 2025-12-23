@@ -1,0 +1,47 @@
+{
+    "name": "Transform - Aggregate by Category",
+    "description": "Tests aggregate sum with groupBy on numeric fields",
+    "entryPoint": "seed-transactions",
+    "nodes": {
+        "seed-transactions": {
+            "type": "variable",
+            "name": "Seed Transactions",
+            "config": {
+                "operation": "set",
+                "variableName": "transactions",
+                "valueType": "json",
+                "value": "[{\"id\":\"t1\",\"category\":\"books\",\"amount\":12.5},{\"id\":\"t2\",\"category\":\"books\",\"amount\":7.75},{\"id\":\"t3\",\"category\":\"games\",\"amount\":59.99},{\"id\":\"t4\",\"category\":\"games\",\"amount\":39},{\"id\":\"t5\",\"category\":\"music\",\"amount\":15}]",
+                "scope": "workflow"
+            },
+            "position": { "x": 120, "y": 120 }
+        },
+        "transform-aggregate": {
+            "type": "transform",
+            "name": "Sum by Category",
+            "config": {
+                "mode": "javascript",
+                "operation": "aggregate",
+                "inputData": "${transactions}",
+                "operationType": "sum",
+                "field": "amount",
+                "groupBy": "category",
+                "outputVariable": "totalsByCategory"
+            },
+            "position": { "x": 380, "y": 120 }
+        },
+        "output-1": {
+            "type": "output",
+            "name": "Category Totals",
+            "config": {
+                "value": "${totalsByCategory}",
+                "format": "json",
+                "outputName": "totalsByCategory"
+            },
+            "position": { "x": 640, "y": 120 }
+        }
+    },
+    "edges": [
+        { "id": "e1", "source": "seed-transactions", "target": "transform-aggregate" },
+        { "id": "e2", "source": "transform-aggregate", "target": "output-1" }
+    ]
+}

@@ -1,0 +1,58 @@
+{
+    "name": "Transform - Map and Filter",
+    "description": "Tests map (JavaScript) and filter (JSONata) operations on array input",
+    "entryPoint": "seed-items",
+    "nodes": {
+        "seed-items": {
+            "type": "variable",
+            "name": "Seed Items",
+            "config": {
+                "operation": "set",
+                "variableName": "items",
+                "valueType": "json",
+                "value": "[{\"id\":1,\"name\":\"Alpha\",\"status\":\"active\",\"score\":92,\"tags\":[\"a\",\"b\"]},{\"id\":2,\"name\":\"Beta\",\"status\":\"inactive\",\"score\":81,\"tags\":[\"a\"]},{\"id\":3,\"name\":\"Gamma\",\"status\":\"active\",\"score\":77,\"tags\":[]},{\"id\":4,\"name\":\"Delta\",\"status\":\"active\",\"score\":88,\"tags\":[\"c\",\"d\",\"e\"]}]",
+                "scope": "workflow"
+            },
+            "position": { "x": 120, "y": 120 }
+        },
+        "transform-map": {
+            "type": "transform",
+            "name": "Map Items",
+            "config": {
+                "mode": "javascript",
+                "operation": "map",
+                "inputData": "${items}",
+                "expression": "item => ({ id: item.id, name: item.name, status: item.status, score: item.score, tagCount: Array.isArray(item.tags) ? item.tags.length : 0 })",
+                "outputVariable": "mappedItems"
+            },
+            "position": { "x": 360, "y": 120 }
+        },
+        "transform-filter": {
+            "type": "transform",
+            "name": "Filter Active + High Score",
+            "config": {
+                "mode": "jsonata",
+                "operation": "filter",
+                "inputData": "${mappedItems}",
+                "expression": "status = 'active' and score >= 80",
+                "outputVariable": "activeItems"
+            },
+            "position": { "x": 620, "y": 120 }
+        },
+        "output-1": {
+            "type": "output",
+            "name": "Filtered Output",
+            "config": {
+                "value": "${activeItems}",
+                "format": "json",
+                "outputName": "activeItems"
+            },
+            "position": { "x": 860, "y": 120 }
+        }
+    },
+    "edges": [
+        { "id": "e1", "source": "seed-items", "target": "transform-map" },
+        { "id": "e2", "source": "transform-map", "target": "transform-filter" },
+        { "id": "e3", "source": "transform-filter", "target": "output-1" }
+    ]
+}

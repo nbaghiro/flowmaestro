@@ -1,7 +1,7 @@
 import { Shuffle } from "lucide-react";
 import { memo } from "react";
 import { NodeProps } from "reactflow";
-import { BaseNode } from "./BaseNode";
+import { BaseNode } from "../BaseNode";
 
 interface TransformNodeData {
     label: string;
@@ -42,7 +42,8 @@ function TransformNode({ data, selected }: NodeProps<TransformNodeData>) {
             icon={Shuffle}
             label={data.label || "Transform"}
             status={data.status}
-            category="data"
+            category="tools"
+            subcategory="data-processing"
             selected={selected}
         >
             <div className="flex h-full flex-col">

@@ -20,6 +20,7 @@ function AudioNode({ data, selected }: NodeProps<AudioNodeData>) {
             label={data.label || "Audio"}
             status={data.status}
             category="ai"
+            subcategory="vision-media"
             selected={selected}
         >
             <div className="space-y-2">
