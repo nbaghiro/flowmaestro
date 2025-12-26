@@ -21,6 +21,7 @@ export interface InfrastructureConfig {
     // GKE Configuration
     gkeAutopilot: boolean;
     gkeVersion: string;
+    gkePrivateNodes: boolean; // If false, saves ~$140/mo by not needing Cloud NAT
 
     // Database Configuration
     dbVersion: string;
@@ -33,6 +34,10 @@ export interface InfrastructureConfig {
     redisVersion: string;
     redisMemorySizeGb: number;
     redisTier: "BASIC" | "STANDARD_HA";
+
+    // Logging Configuration
+    appLogRetentionDays: number; // Days to retain app logs (default: 7 for dev, 30 for prod)
+    errorLogRetentionDays: number; // Days to retain error logs (default: 14 for dev, 90 for prod)
 
     // Secrets (required) - these are Output<string> because they're secrets
     dbPassword: pulumi.Output<string>;
@@ -71,18 +76,22 @@ export interface InfrastructureConfig {
 //   - required: boolean
 //   - description?: string (optional)
 
-// Default configuration values
+// Default configuration values (dev-friendly to minimize costs)
+// Override these in Pulumi.<stack>.yaml for production
 const defaults = {
     gkeAutopilot: true,
     gkeVersion: "latest",
+    gkePrivateNodes: false, // Public nodes (no Cloud NAT needed, saves ~$140/mo)
     dbVersion: "POSTGRES_15",
-    dbTier: "db-custom-2-7680",
-    dbDiskSize: 100,
-    dbHighAvailability: true,
-    dbBackupEnabled: true,
+    dbTier: "db-g1-small", // ~$25/month (use db-custom-2-7680 for prod)
+    dbDiskSize: 10, // 10GB (use 100+ for prod)
+    dbHighAvailability: false, // No HA replica (enable for prod)
+    dbBackupEnabled: false, // No backups (enable for prod)
     redisVersion: "REDIS_7_0",
-    redisMemorySizeGb: 5,
-    redisTier: "STANDARD_HA" as const
+    redisMemorySizeGb: 1, // 1GB (use 5+ for prod)
+    redisTier: "BASIC" as const, // No HA replica (use STANDARD_HA for prod)
+    appLogRetentionDays: 7, // 7 days for dev (use 30 for prod)
+    errorLogRetentionDays: 14 // 14 days for dev (use 90 for prod)
 };
 
 // Parse application secrets from JSON config
@@ -121,6 +130,7 @@ export const infrastructureConfig: InfrastructureConfig = {
     // GKE Configuration
     gkeAutopilot: config.getBoolean("gkeAutopilot") ?? defaults.gkeAutopilot,
     gkeVersion: config.get("gkeVersion") || defaults.gkeVersion,
+    gkePrivateNodes: config.getBoolean("gkePrivateNodes") ?? defaults.gkePrivateNodes,
 
     // Database Configuration
     dbVersion: config.get("dbVersion") || defaults.dbVersion,
@@ -133,6 +143,11 @@ export const infrastructureConfig: InfrastructureConfig = {
     redisVersion: config.get("redisVersion") || defaults.redisVersion,
     redisMemorySizeGb: config.getNumber("redisMemorySizeGb") || defaults.redisMemorySizeGb,
     redisTier: (config.get("redisTier") as "BASIC" | "STANDARD_HA") || defaults.redisTier,
+
+    // Logging Configuration
+    appLogRetentionDays: config.getNumber("appLogRetentionDays") || defaults.appLogRetentionDays,
+    errorLogRetentionDays:
+        config.getNumber("errorLogRetentionDays") || defaults.errorLogRetentionDays,
 
     // Secrets (required)
     dbPassword: config.requireSecret("dbPassword"),

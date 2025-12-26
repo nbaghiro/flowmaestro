@@ -1,22 +1,64 @@
 /**
  * Span Activities for Temporal Workflows
- * Activities for creating and ending spans from workflows
+ *
+ * Activities for creating and ending spans from workflows.
+ * Uses OpenTelemetry to export spans to GCP Cloud Trace.
  */
 
-import { getSpanService } from "../../core/tracing";
-import { AgentTracer } from "../../core/tracing/agent-helpers";
-import { WorkflowTracer } from "../../core/tracing/workflow-helpers";
-import type { CreateSpanInput, SpanContext, SpanAttributes } from "../../core/tracing/span-types";
+import {
+    SpanType,
+    startSpan,
+    endSpan as otelEndSpan,
+    setSpanAttributes as otelSetSpanAttributes,
+    setLLMAttributes,
+    type SpanContext,
+    type CreateSpanInput as OTelCreateSpanInput,
+    type LLMAttributes
+} from "../../core/observability";
+import {
+    recordWorkflowExecution,
+    recordWorkflowDuration,
+    recordNodeExecution,
+    recordNodeDuration,
+    recordLLMRequest,
+    recordLLMTokens,
+    recordLLMDuration,
+    recordLLMCost,
+    recordToolExecution
+} from "../../core/observability";
+
+// Re-export SpanType and SpanContext for compatibility
+export { SpanType, type SpanContext };
+
+/** Input for creating a span (compatible with legacy API) */
+export interface CreateSpanInput {
+    name: string;
+    spanType: SpanType;
+    entityId?: string;
+    parentSpanId?: string;
+    traceId?: string;
+    input?: Record<string, unknown>;
+    attributes?: Record<string, string | number | boolean | undefined>;
+    metadata?: Record<string, unknown>;
+}
+
+/** Attributes for span updates */
+export type SpanAttributes = Record<string, string | number | boolean>;
 
 /**
  * Create a new span
  */
 export async function createSpan(input: CreateSpanInput): Promise<SpanContext> {
-    const spanService = getSpanService();
-    const activeSpan = spanService.createSpan(input);
+    const otelInput: OTelCreateSpanInput = {
+        name: input.name,
+        spanType: input.spanType,
+        entityId: input.entityId,
+        parentSpanId: input.parentSpanId,
+        input: input.input,
+        attributes: input.attributes
+    };
 
-    // Return context for workflow to track
-    return activeSpan.getContext();
+    return startSpan(otelInput);
 }
 
 /**
@@ -28,8 +70,11 @@ export async function endSpan(params: {
     error?: Error | { message: string; type: string; stack?: string };
     attributes?: SpanAttributes;
 }): Promise<void> {
-    const spanService = getSpanService();
-    await spanService.endSpan(params);
+    otelEndSpan(params.spanId, {
+        output: params.output,
+        error: params.error,
+        attributes: params.attributes
+    });
 }
 
 /**
@@ -39,23 +84,19 @@ export async function endSpanWithError(params: {
     spanId: string;
     error: Error | { message: string; type: string; stack?: string };
 }): Promise<void> {
-    const spanService = getSpanService();
-    await spanService.endSpan({
-        spanId: params.spanId,
+    otelEndSpan(params.spanId, {
         error: params.error
     });
 }
 
 /**
- * Set attributes on a span (update in batch)
- * Note: Only works for spans that haven't been flushed yet
+ * Set attributes on a span
  */
 export async function setSpanAttributes(params: {
     spanId: string;
-    attributes: Record<string, string | number | boolean>;
+    attributes: SpanAttributes;
 }): Promise<void> {
-    const spanService = getSpanService();
-    spanService.updateSpanAttributes(params.spanId, params.attributes);
+    otelSetSpanAttributes(params.spanId, params.attributes);
 }
 
 // ========================================
@@ -73,10 +114,25 @@ export async function createAgentRunSpan(params: {
     input?: Record<string, unknown>;
     metadata?: Record<string, unknown>;
 }): Promise<SpanContext> {
-    const spanService = getSpanService();
-    const spanInput = AgentTracer.createAgentRun(params);
-    const activeSpan = spanService.createSpan(spanInput);
-    return activeSpan.getContext();
+    const spanContext = startSpan({
+        name: params.name,
+        spanType: SpanType.AGENT_RUN,
+        entityId: params.agentId,
+        input: params.input,
+        attributes: {
+            userId: params.userId,
+            sessionId: params.sessionId
+        }
+    });
+
+    // Record metric
+    recordWorkflowExecution({
+        workflowId: params.agentId,
+        userId: params.userId,
+        status: "started"
+    });
+
+    return spanContext;
 }
 
 /**
@@ -89,25 +145,15 @@ export async function createIterationSpan(params: {
     input?: Record<string, unknown>;
     metadata?: Record<string, unknown>;
 }): Promise<SpanContext> {
-    const spanService = getSpanService();
-
-    // Create a temporary parent span context
-    const parentSpan = {
-        getContext: () => ({
-            traceId: params.traceId,
-            spanId: params.parentSpanId
-        })
-    } as Parameters<typeof AgentTracer.createIteration>[0]["parentSpan"];
-
-    const spanInput = AgentTracer.createIteration({
-        parentSpan,
-        iterationNumber: params.iterationNumber,
+    return startSpan({
+        name: `Iteration ${params.iterationNumber}`,
+        spanType: SpanType.AGENT_ITERATION,
+        parentSpanId: params.parentSpanId,
         input: params.input,
-        metadata: params.metadata
+        attributes: {
+            iterationNumber: params.iterationNumber
+        }
     });
-
-    const activeSpan = spanService.createSpan(spanInput);
-    return activeSpan.getContext();
 }
 
 /**
@@ -121,25 +167,24 @@ export async function createToolCallSpan(params: {
     input?: Record<string, unknown>;
     metadata?: Record<string, unknown>;
 }): Promise<SpanContext> {
-    const spanService = getSpanService();
-
-    const parentSpan = {
-        getContext: () => ({
-            traceId: params.traceId,
-            spanId: params.parentSpanId
-        })
-    } as Parameters<typeof AgentTracer.createToolCall>[0]["parentSpan"];
-
-    const spanInput = AgentTracer.createToolCall({
-        parentSpan,
-        toolName: params.toolName,
-        toolType: params.toolType,
+    const spanContext = startSpan({
+        name: params.toolName,
+        spanType: SpanType.TOOL_EXECUTION,
+        parentSpanId: params.parentSpanId,
         input: params.input,
-        metadata: params.metadata
+        attributes: {
+            toolName: params.toolName,
+            toolType: params.toolType
+        }
     });
 
-    const activeSpan = spanService.createSpan(spanInput);
-    return activeSpan.getContext();
+    // Record metric
+    recordToolExecution({
+        toolName: params.toolName,
+        status: "success"
+    });
+
+    return spanContext;
 }
 
 /**
@@ -155,27 +200,95 @@ export async function createModelGenerationSpan(params: {
     input?: Record<string, unknown>;
     metadata?: Record<string, unknown>;
 }): Promise<SpanContext> {
-    const spanService = getSpanService();
-
-    const parentSpan = {
-        getContext: () => ({
-            traceId: params.traceId,
-            spanId: params.parentSpanId
-        })
-    } as Parameters<typeof AgentTracer.createModelGeneration>[0]["parentSpan"];
-
-    const spanInput = AgentTracer.createModelGeneration({
-        parentSpan,
-        modelId: params.modelId,
-        provider: params.provider,
-        temperature: params.temperature,
-        maxTokens: params.maxTokens,
+    const spanContext = startSpan({
+        name: `${params.provider}/${params.modelId}`,
+        spanType: SpanType.MODEL_GENERATION,
+        parentSpanId: params.parentSpanId,
         input: params.input,
-        metadata: params.metadata
+        attributes: {
+            modelId: params.modelId,
+            provider: params.provider,
+            temperature: params.temperature,
+            maxTokens: params.maxTokens
+        }
     });
 
-    const activeSpan = spanService.createSpan(spanInput);
-    return activeSpan.getContext();
+    // Set LLM-specific attributes
+    setLLMAttributes(spanContext.spanId, {
+        provider: params.provider,
+        model: params.modelId,
+        temperature: params.temperature,
+        maxTokens: params.maxTokens
+    });
+
+    return spanContext;
+}
+
+/**
+ * End a model generation span with token usage and cost
+ */
+export async function endModelGenerationSpan(params: {
+    spanId: string;
+    provider: string;
+    model: string;
+    promptTokens?: number;
+    completionTokens?: number;
+    totalCost?: number;
+    durationMs?: number;
+    output?: Record<string, unknown>;
+    error?: Error | { message: string; type: string; stack?: string };
+}): Promise<void> {
+    // Update LLM attributes
+    const llmAttrs: LLMAttributes = {
+        provider: params.provider,
+        model: params.model
+    };
+
+    if (params.promptTokens !== undefined) {
+        llmAttrs.promptTokens = params.promptTokens;
+    }
+    if (params.completionTokens !== undefined) {
+        llmAttrs.completionTokens = params.completionTokens;
+    }
+    if (params.promptTokens !== undefined && params.completionTokens !== undefined) {
+        llmAttrs.totalTokens = params.promptTokens + params.completionTokens;
+    }
+    if (params.totalCost !== undefined) {
+        llmAttrs.totalCost = params.totalCost;
+    }
+
+    setLLMAttributes(params.spanId, llmAttrs);
+
+    // Record metrics
+    const status = params.error ? "error" : "success";
+    const metricAttrs = {
+        provider: params.provider,
+        model: params.model,
+        status: status as "success" | "error"
+    };
+
+    recordLLMRequest(metricAttrs);
+
+    if (params.promptTokens !== undefined && params.completionTokens !== undefined) {
+        recordLLMTokens(metricAttrs, {
+            prompt: params.promptTokens,
+            completion: params.completionTokens
+        });
+    }
+
+    if (params.durationMs !== undefined) {
+        recordLLMDuration(metricAttrs, params.durationMs);
+    }
+
+    if (params.totalCost !== undefined) {
+        recordLLMCost(metricAttrs, params.totalCost);
+    }
+
+    // End the span
+    otelEndSpan(params.spanId, {
+        output: params.output,
+        error: params.error
+    });
 }
 
 // ========================================
@@ -193,10 +306,64 @@ export async function createWorkflowRunSpan(params: {
     input?: Record<string, unknown>;
     metadata?: Record<string, unknown>;
 }): Promise<SpanContext> {
-    const spanService = getSpanService();
-    const spanInput = WorkflowTracer.createWorkflowRun(params);
-    const activeSpan = spanService.createSpan(spanInput);
-    return activeSpan.getContext();
+    const spanContext = startSpan({
+        name: params.name,
+        spanType: SpanType.WORKFLOW_RUN,
+        entityId: params.workflowId,
+        input: params.input,
+        attributes: {
+            userId: params.userId,
+            requestId: params.requestId
+        }
+    });
+
+    // Record metric
+    recordWorkflowExecution({
+        workflowId: params.workflowId,
+        userId: params.userId,
+        status: "started"
+    });
+
+    return spanContext;
+}
+
+/**
+ * End a workflow run span
+ */
+export async function endWorkflowRunSpan(params: {
+    spanId: string;
+    workflowId: string;
+    userId?: string;
+    durationMs: number;
+    status: "completed" | "failed" | "cancelled";
+    output?: Record<string, unknown>;
+    error?: Error | { message: string; type: string; stack?: string };
+}): Promise<void> {
+    // Record metrics
+    recordWorkflowExecution({
+        workflowId: params.workflowId,
+        userId: params.userId,
+        status: params.status
+    });
+
+    recordWorkflowDuration(
+        {
+            workflowId: params.workflowId,
+            userId: params.userId,
+            status: params.status
+        },
+        params.durationMs
+    );
+
+    // End the span
+    otelEndSpan(params.spanId, {
+        output: params.output,
+        error: params.error,
+        attributes: {
+            durationMs: params.durationMs,
+            status: params.status
+        }
+    });
 }
 
 /**
@@ -208,27 +375,76 @@ export async function createNodeExecutionSpan(params: {
     nodeId: string;
     nodeName: string;
     nodeType?: string;
+    workflowId?: string;
     input?: Record<string, unknown>;
     metadata?: Record<string, unknown>;
 }): Promise<SpanContext> {
-    const spanService = getSpanService();
-
-    const parentSpan = {
-        getContext: () => ({
-            traceId: params.traceId,
-            spanId: params.parentSpanId
-        })
-    } as Parameters<typeof WorkflowTracer.createNodeExecution>[0]["parentSpan"];
-
-    const spanInput = WorkflowTracer.createNodeExecution({
-        parentSpan,
-        nodeId: params.nodeId,
-        nodeName: params.nodeName,
-        nodeType: params.nodeType,
+    const spanContext = startSpan({
+        name: params.nodeName,
+        spanType: SpanType.NODE_EXECUTION,
+        entityId: params.nodeId,
+        parentSpanId: params.parentSpanId,
         input: params.input,
-        metadata: params.metadata
+        attributes: {
+            nodeId: params.nodeId,
+            nodeType: params.nodeType,
+            workflowId: params.workflowId
+        }
     });
 
-    const activeSpan = spanService.createSpan(spanInput);
-    return activeSpan.getContext();
+    // Record metric
+    if (params.workflowId && params.nodeType) {
+        recordNodeExecution({
+            workflowId: params.workflowId,
+            nodeId: params.nodeId,
+            nodeType: params.nodeType,
+            status: "started"
+        });
+    }
+
+    return spanContext;
+}
+
+/**
+ * End a node execution span
+ */
+export async function endNodeExecutionSpan(params: {
+    spanId: string;
+    workflowId?: string;
+    nodeId: string;
+    nodeType?: string;
+    durationMs: number;
+    status: "completed" | "failed" | "skipped";
+    output?: Record<string, unknown>;
+    error?: Error | { message: string; type: string; stack?: string };
+}): Promise<void> {
+    // Record metrics
+    if (params.workflowId && params.nodeType) {
+        recordNodeExecution({
+            workflowId: params.workflowId,
+            nodeId: params.nodeId,
+            nodeType: params.nodeType,
+            status: params.status
+        });
+
+        recordNodeDuration(
+            {
+                workflowId: params.workflowId,
+                nodeId: params.nodeId,
+                nodeType: params.nodeType,
+                status: params.status
+            },
+            params.durationMs
+        );
+    }
+
+    // End the span
+    otelEndSpan(params.spanId, {
+        output: params.output,
+        error: params.error,
+        attributes: {
+            durationMs: params.durationMs,
+            status: params.status
+        }
+    });
 }

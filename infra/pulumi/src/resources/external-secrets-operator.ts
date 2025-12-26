@@ -116,7 +116,11 @@ const clusterSecretStore = new k8s.apiextensions.CustomResource(
         apiVersion: "external-secrets.io/v1beta1",
         kind: "ClusterSecretStore",
         metadata: {
-            name: "gcp-secret-manager"
+            name: "gcp-secret-manager",
+            annotations: {
+                // Allow Pulumi to manage this resource even if it was modified by kubectl
+                "pulumi.com/patchForce": "true"
+            }
         },
         spec: {
             provider: {

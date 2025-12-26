@@ -7,7 +7,7 @@ metadata:
     app: flowmaestro
     component: frontend
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: flowmaestro
@@ -97,7 +97,7 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: frontend
-  minReplicas: 2
+  minReplicas: 1
   maxReplicas: 10
   metrics:
     - type: Resource

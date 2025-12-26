@@ -23,11 +23,17 @@ export const cluster = new gcp.container.Cluster(resourceName("cluster"), {
     },
 
     // Private cluster configuration
-    privateClusterConfig: {
-        enablePrivateNodes: true,
-        enablePrivateEndpoint: false, // Allow public access to control plane
-        masterIpv4CidrBlock: "172.16.0.0/28"
-    },
+    // When gkePrivateNodes=false, nodes get public IPs and Cloud NAT is not needed (~$140/mo savings)
+    privateClusterConfig: infrastructureConfig.gkePrivateNodes
+        ? {
+              enablePrivateNodes: true,
+              enablePrivateEndpoint: false, // Allow public access to control plane
+              masterIpv4CidrBlock: "172.16.0.0/28"
+          }
+        : {
+              enablePrivateNodes: false,
+              enablePrivateEndpoint: false
+          },
 
     // Master authorized networks (optional - can restrict control plane access)
     masterAuthorizedNetworksConfig: {
@@ -108,6 +114,27 @@ new gcp.projects.IAMMember(resourceName("k8s-sa-cloudsql"), {
 new gcp.projects.IAMMember(resourceName("k8s-sa-secrets"), {
     project: infrastructureConfig.project,
     role: "roles/secretmanager.secretAccessor",
+    member: pulumi.interpolate`serviceAccount:${k8sServiceAccount.email}`
+});
+
+// Cloud Trace Agent (for OpenTelemetry span export)
+new gcp.projects.IAMMember(resourceName("k8s-sa-cloudtrace"), {
+    project: infrastructureConfig.project,
+    role: "roles/cloudtrace.agent",
+    member: pulumi.interpolate`serviceAccount:${k8sServiceAccount.email}`
+});
+
+// Cloud Monitoring Metrics Writer (for OpenTelemetry metrics export)
+new gcp.projects.IAMMember(resourceName("k8s-sa-monitoring"), {
+    project: infrastructureConfig.project,
+    role: "roles/monitoring.metricWriter",
+    member: pulumi.interpolate`serviceAccount:${k8sServiceAccount.email}`
+});
+
+// Cloud Logging Writer (for structured logging)
+new gcp.projects.IAMMember(resourceName("k8s-sa-logging"), {
+    project: infrastructureConfig.project,
+    role: "roles/logging.logWriter",
     member: pulumi.interpolate`serviceAccount:${k8sServiceAccount.email}`
 });
 

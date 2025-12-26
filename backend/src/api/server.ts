@@ -5,7 +5,7 @@ import websocket from "@fastify/websocket";
 import Fastify from "fastify";
 import { config } from "../core/config";
 import { initializeLogger, shutdownLogger } from "../core/logging";
-import { initializeSpanService, getSpanService } from "../core/tracing";
+import { initializeOTel, shutdownOTel } from "../core/observability";
 import { analyticsScheduler } from "../services/AnalyticsService";
 import { redisEventBus } from "../services/events/RedisEventBus";
 import { credentialRefreshScheduler } from "../services/oauth/CredentialRefreshScheduler";
@@ -86,14 +86,14 @@ export async function buildServer() {
     // Initialize event bridge (connect orchestrator events to WebSocket via Redis)
     await eventBridge.initialize();
 
-    // Initialize observability (distributed tracing with spans)
-    initializeSpanService({
-        pool: db.getPool(),
-        batchSize: 10,
-        flushIntervalMs: 5000
+    // Initialize OpenTelemetry (exports to GCP Cloud Trace/Monitoring)
+    initializeOTel({
+        serviceName: "flowmaestro-api",
+        serviceVersion: "1.0.0",
+        enabled: config.env === "production"
     });
 
-    fastify.log.info("SpanService initialized for distributed tracing");
+    fastify.log.info("OpenTelemetry initialized for distributed tracing");
 
     // Start analytics scheduler for periodic aggregation
     await analyticsScheduler.start();
@@ -190,9 +190,8 @@ export async function startServer() {
             // Close Temporal connection
             await closeTemporalConnection();
 
-            // Flush spans before shutdown
-            const spanService = getSpanService();
-            await spanService.shutdown();
+            // Shutdown OpenTelemetry (flush pending telemetry)
+            await shutdownOTel();
 
             // Flush and shutdown logger
             await shutdownLogger();

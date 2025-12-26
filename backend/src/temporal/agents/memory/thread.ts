@@ -2,7 +2,7 @@
  * Thread Activities - Activities for managing conversations with ThreadManager
  */
 
-import { calculateCost } from "../../../core/tracing/cost-calculator";
+import { calculateCost } from "../../../core/observability";
 import { ThreadManager } from "../../../services/agents/ThreadManager";
 import { db } from "../../../storage/database";
 import { AgentExecutionRepository } from "../../../storage/repositories/AgentExecutionRepository";

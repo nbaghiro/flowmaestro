@@ -48,9 +48,18 @@ export const RETRY_POLICIES = {
 
 /**
  * Task queue names
+ * Separate queues allow for:
+ * - Priority-based processing (urgent vs background)
+ * - Resource isolation between workflow types
+ * - Independent scaling of different workload types
  */
 export const TASK_QUEUES = {
-    ORCHESTRATOR: "flowmaestro-orchestrator"
+    /** Main orchestrator queue for workflow executions */
+    ORCHESTRATOR: "flowmaestro-orchestrator",
+    /** Heavy document processing (PDF parsing, embeddings) */
+    DOCUMENT_PROCESSING: "flowmaestro-documents",
+    /** Agent workflows (LLM calls, tool execution) */
+    AGENTS: "flowmaestro-agents"
 } as const;
 
 /**

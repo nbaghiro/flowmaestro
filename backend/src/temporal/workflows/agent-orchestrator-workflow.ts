@@ -10,7 +10,7 @@ import {
     continueAsNew
 } from "@temporalio/workflow";
 import type { JsonObject } from "@flowmaestro/shared";
-import { SpanType } from "../../core/tracing/span-types";
+import { SpanType } from "../orchestration/spans";
 import { createWorkflowLogger } from "../shared/workflow-logger";
 import type { SerializedThread } from "../../services/agents/ThreadManager";
 import type { Tool } from "../../storage/models/Agent";

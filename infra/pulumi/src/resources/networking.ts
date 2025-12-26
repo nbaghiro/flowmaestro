@@ -28,26 +28,36 @@ export const subnet = new gcp.compute.Subnetwork(resourceName("subnet"), {
     description: "Subnet for GKE cluster"
 });
 
-// Create Cloud Router for NAT
-export const router = new gcp.compute.Router(resourceName("router"), {
-    name: resourceName("router"),
-    region: infrastructureConfig.region,
-    network: network.id,
-    description: "Router for Cloud NAT"
-});
+// =============================================================================
+// Cloud Router + NAT (only needed for private GKE nodes)
+// Saves ~$140/month when using public nodes in dev/staging
+// =============================================================================
 
-// Create Cloud NAT for outbound traffic from private GKE nodes
-export const nat = new gcp.compute.RouterNat(resourceName("nat"), {
-    name: resourceName("nat"),
-    router: router.name,
-    region: infrastructureConfig.region,
-    natIpAllocateOption: "AUTO_ONLY",
-    sourceSubnetworkIpRangesToNat: "ALL_SUBNETWORKS_ALL_IP_RANGES",
-    logConfig: {
-        enable: true,
-        filter: "ERRORS_ONLY"
-    }
-});
+// Create Cloud Router for NAT (only if using private nodes)
+export const router = infrastructureConfig.gkePrivateNodes
+    ? new gcp.compute.Router(resourceName("router"), {
+          name: resourceName("router"),
+          region: infrastructureConfig.region,
+          network: network.id,
+          description: "Router for Cloud NAT"
+      })
+    : undefined;
+
+// Create Cloud NAT for outbound traffic from private GKE nodes (only if using private nodes)
+export const nat =
+    infrastructureConfig.gkePrivateNodes && router
+        ? new gcp.compute.RouterNat(resourceName("nat"), {
+              name: resourceName("nat"),
+              router: router.name,
+              region: infrastructureConfig.region,
+              natIpAllocateOption: "AUTO_ONLY",
+              sourceSubnetworkIpRangesToNat: "ALL_SUBNETWORKS_ALL_IP_RANGES",
+              logConfig: {
+                  enable: true,
+                  filter: "ERRORS_ONLY"
+              }
+          })
+        : undefined;
 
 // Reserve global static IP for Load Balancer
 export const staticIp = new gcp.compute.GlobalAddress(resourceName("static-ip"), {

@@ -2,8 +2,12 @@
 // This prevents timezone mismatches between Node.js and PostgreSQL
 process.env.TZ = "UTC";
 
+import http from "http";
+import os from "os";
 import path from "path";
 import { createWorkerLogger } from "../core/logging";
+import { initializeOTel, shutdownOTel } from "../core/observability";
+import { createOTelActivityInterceptor } from "./interceptors";
 
 const logger = createWorkerLogger("flowmaestro-worker");
 
@@ -57,17 +61,16 @@ async function run() {
 
     // Dynamic imports for modules that depend on Temporal
     const { config } = await import("../core/config");
-    const { initializeSpanService } = await import("../core/tracing");
     const { redisEventBus } = await import("../services/events/RedisEventBus");
-    const { db } = await import("../storage/database");
     const activities = await import("./activities");
-    // Initialize SpanService for observability
-    initializeSpanService({
-        pool: db.getPool(),
-        batchSize: 10,
-        flushIntervalMs: 5000
+
+    // Initialize OpenTelemetry SDK (exports to GCP Cloud Trace/Monitoring)
+    initializeOTel({
+        serviceName: "flowmaestro-worker",
+        serviceVersion: "1.0.0",
+        enabled: process.env.NODE_ENV === "production"
     });
-    logger.info("SpanService initialized for worker");
+    logger.info("OpenTelemetry SDK initialized");
 
     // Connect to Redis for cross-process event communication
     try {
@@ -119,37 +122,108 @@ async function run() {
 
     logger.info({ workflowsPath }, "Loading workflows");
 
+    // Generate worker identity for debugging in Temporal UI
+    const workerIdentity = `orchestrator-${process.env.HOSTNAME || os.hostname()}-${process.pid}`;
+
+    // Import task queue config
+    const { TASK_QUEUES } = await import("./shared/config");
+
     // Create worker
     const worker = await Worker.create({
         connection,
         namespace: "default",
-        taskQueue: "flowmaestro-orchestrator",
+        taskQueue: TASK_QUEUES.ORCHESTRATOR,
         workflowsPath,
         activities,
+        identity: workerIdentity,
         maxConcurrentActivityTaskExecutions: 10,
         maxConcurrentWorkflowTaskExecutions: 10,
+        // Grace period for in-flight activities to complete during shutdown
+        shutdownGraceTime: "30 seconds",
+        // Sticky queue timeout for workflow caching performance
+        stickyQueueScheduleToStartTimeout: "10 seconds",
         // Add bundler options for TypeScript
         bundlerOptions: {
             ignoreModules: ["uuid", "pg", "redis", "fastify"]
+        },
+        // Activity interceptors for OTel tracing
+        interceptors: {
+            activity: [createOTelActivityInterceptor]
         }
     });
 
     logger.info(
         {
-            taskQueue: "flowmaestro-orchestrator",
-            temporalAddress: config.temporal.address
+            taskQueue: TASK_QUEUES.ORCHESTRATOR,
+            temporalAddress: config.temporal.address,
+            workerIdentity
         },
         "Orchestrator worker starting"
     );
 
+    // Health check HTTP server for Kubernetes liveness/readiness probes
+    const healthPort = parseInt(process.env.WORKER_HEALTH_PORT || "8080", 10);
+    let isReady = true; // Track readiness state
+
+    const healthServer = http.createServer((req, res) => {
+        if (req.url === "/health") {
+            // Liveness probe - returns 200 if the process is running
+            res.writeHead(200, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ status: "healthy", identity: workerIdentity }));
+        } else if (req.url === "/ready") {
+            // Readiness probe - returns 200 if connected to Temporal
+            if (isReady) {
+                res.writeHead(200, { "Content-Type": "application/json" });
+                res.end(JSON.stringify({ status: "ready", identity: workerIdentity }));
+            } else {
+                res.writeHead(503, { "Content-Type": "application/json" });
+                res.end(JSON.stringify({ status: "not ready", identity: workerIdentity }));
+            }
+        } else {
+            res.writeHead(404);
+            res.end();
+        }
+    });
+
+    healthServer.listen(healthPort, () => {
+        logger.info({ healthPort }, "Health check server started");
+    });
+
     // Graceful shutdown handler
-    const signals = ["SIGINT", "SIGTERM"];
+    const signals: NodeJS.Signals[] = ["SIGINT", "SIGTERM"];
     signals.forEach((signal) => {
         process.on(signal, async () => {
-            logger.info({ signal }, "Received shutdown signal, shutting down worker");
-            worker.shutdown();
-            await redisEventBus.disconnect();
-            process.exit(0);
+            logger.info({ signal }, "Received shutdown signal, initiating graceful shutdown");
+
+            // Mark as not ready immediately to stop receiving new traffic
+            isReady = false;
+
+            try {
+                // Close health check server
+                await new Promise<void>((resolve) => healthServer.close(() => resolve()));
+                logger.info("Health check server closed");
+
+                // Await worker shutdown - allows in-flight activities to complete
+                await worker.shutdown();
+                logger.info("Worker shutdown complete");
+
+                // Close Temporal connection
+                await connection.close();
+                logger.info("Temporal connection closed");
+
+                // Disconnect from Redis
+                await redisEventBus.disconnect();
+                logger.info("Redis disconnected");
+
+                // Shutdown OpenTelemetry (flushes pending telemetry)
+                await shutdownOTel();
+                logger.info("OpenTelemetry SDK shutdown");
+
+                process.exit(0);
+            } catch (error) {
+                logger.error({ err: error }, "Error during shutdown");
+                process.exit(1);
+            }
         });
     });
 

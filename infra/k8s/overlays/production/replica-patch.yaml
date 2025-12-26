@@ -4,7 +4,7 @@ metadata:
   name: api-server
   namespace: flowmaestro
 spec:
-  replicas: 3
+  replicas: 1
 
 ---
 apiVersion: apps/v1
@@ -13,7 +13,7 @@ metadata:
   name: temporal-worker
   namespace: flowmaestro
 spec:
-  replicas: 2
+  replicas: 1
 
 ---
 apiVersion: apps/v1
@@ -22,7 +22,7 @@ metadata:
   name: frontend
   namespace: flowmaestro
 spec:
-  replicas: 3
+  replicas: 1
 
 ---
 apiVersion: apps/v1
@@ -31,7 +31,7 @@ metadata:
   name: marketing
   namespace: flowmaestro
 spec:
-  replicas: 2
+  replicas: 1
 
 ---
 apiVersion: apps/v1
@@ -40,7 +40,7 @@ metadata:
   name: temporal-server
   namespace: flowmaestro
 spec:
-  replicas: 3
+  replicas: 1
 
 ---
 apiVersion: apps/v1

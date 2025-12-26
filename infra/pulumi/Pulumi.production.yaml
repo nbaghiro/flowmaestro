@@ -8,10 +8,30 @@ config:
     secure: AAABAMgRMr1oT9aozil50NE56TU3GiL9zroL0wsVSN1KFIksVp1h3wck7gRFGEb4s7jmdTpCDtta83e7ea8HlAnQVnouWU4CqTChbdWStu1vpf+FLRX+yeBmkhxqgziXIqzLsxu7yT3GyxyyZpL9ob2gpSMyWg3gKw==
   flowmaestro-infrastructure:encryptionKey:
     secure: AAABAIs7j19ykCx7Ly/DM8rP/tWOpjx7lOik9xRlorHTSwIt/dLH+sKpWR+WS+81yidojn2R+xL+zXg13wjACUOIuiJ9oK/DGJHkpw==
-  flowmaestro-infrastructure:dbTier: db-custom-2-7680
-  flowmaestro-infrastructure:dbHighAvailability: "true"
-  flowmaestro-infrastructure:redisMemorySizeGb: "5"
-  flowmaestro-infrastructure:redisTier: STANDARD_HA
+  # =============================================================================
+  # Infrastructure Sizing (DEV-FRIENDLY - update for production traffic)
+  # =============================================================================
+  # Current: Extreme dev config (~$350/month)
+  # Production: Uncomment HA settings when you have real users (~$1,100/month)
+  # =============================================================================
+
+  # GKE Networking - Switching requires cluster recreation (data loss risk)
+  # Keep private nodes for existing cluster - only change for NEW deployments
+  flowmaestro-infrastructure:gkePrivateNodes: "true"          # Current: private | New deploys can use "false" to save ~$140/mo
+
+  # Database - DEV CONFIG (downgraded to save ~$320/mo)
+  flowmaestro-infrastructure:dbTier: db-g1-small              # Dev: ~$25/mo | Prod: db-custom-2-7680 (~$170/mo)
+  flowmaestro-infrastructure:dbDiskSize: "10"                 # Dev: 10GB    | Prod: 100+
+  flowmaestro-infrastructure:dbHighAvailability: "false"      # Dev: no HA   | Prod: "true" (adds ~$175/mo)
+  flowmaestro-infrastructure:dbBackupEnabled: "false"         # Dev: no backup | Prod: "true"
+
+  # Redis
+  flowmaestro-infrastructure:redisMemorySizeGb: "1"           # Dev: 1GB     | Prod: 5+
+  flowmaestro-infrastructure:redisTier: BASIC                 # Dev: no HA   | Prod: STANDARD_HA (adds ~$140/mo)
+
+  # Logging - Shorter retention saves ~$15-25/mo
+  flowmaestro-infrastructure:appLogRetentionDays: "7"         # Dev: 7 days  | Prod: 30
+  flowmaestro-infrastructure:errorLogRetentionDays: "14"      # Dev: 14 days | Prod: 90
   flowmaestro-infrastructure:gaMeasurementId: G-JKESHN6FT6
   flowmaestro-infrastructure:githubRepo: nbaghiro/flowmaestro
   # =============================================================================

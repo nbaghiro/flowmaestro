@@ -8,6 +8,7 @@ spec:
     - api.flowmaestro.ai
     - app.flowmaestro.ai
     - www.flowmaestro.ai
+    - docs.flowmaestro.ai
     - flowmaestro.ai
 
 ---
@@ -75,6 +76,18 @@ spec:
             backend:
               service:
                 name: marketing-service
+                port:
+                  number: 80
+
+    # Documentation site
+    - host: docs.flowmaestro.ai
+      http:
+        paths:
+          - path: /*
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: docs-service
                 port:
                   number: 80
 
