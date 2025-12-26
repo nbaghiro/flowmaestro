@@ -2,56 +2,42 @@
 
 ## Executive Summary
 
-After analyzing FlowMaestro's Temporal-based execution system and SIM Studio's production-grade implementation, this plan outlines a comprehensive rebuild of the workflow execution engine. Given the clean-slate approach and openness to alternatives, we recommend **replacing Temporal with a custom DAG-based execution engine** similar to SIM's proven architecture.
+After analyzing FlowMaestro's Temporal-based execution system and SIM Studio's production-grade implementation, this plan outlines improvements to the workflow execution engine. We will **keep Temporal** as our execution backbone while adopting key patterns from SIM to address current gaps.
 
-**Key Decision: Temporal vs Custom Engine**
+**Key Decision: Keep Temporal, Adopt SIM Patterns**
 
-SIM demonstrates that a custom execution engine can be simpler, more flexible, and equally robust without Temporal's complexity. Their approach handles pause/resume, parallel execution, error routing, and durability through a well-designed snapshot + database persistence model.
+Temporal provides battle-tested durability, automatic retries, and workflow history. Rather than replacing it, we'll build SIM's superior patterns on top of Temporal:
+
+- **4-stage construction pipeline** → Pre-process workflow before execution
+- **Error-as-routing** → Activities return structured results; workflow routes errors
+- **Parallel execution** → Use Temporal's native activity fan-out
+- **Pause/Resume** → Temporal signals + snapshot serialization
+- **Handler registry** → Refactor executors into pluggable handlers
 
 ---
 
-## Temporal vs Custom Engine Evaluation
+## Why Keep Temporal
 
-### Why SIM Doesn't Use Temporal
+### Temporal Advantages We Want to Preserve
 
-SIM's execution engine achieves durability and reliability without Temporal through:
+1. **Durability** - Automatic persistence via event history, no custom implementation needed
+2. **Automatic Retries** - Built-in retry policies with exponential backoff
+3. **Workflow History** - Complete audit trail of every execution step
+4. **Long-Running Support** - Handles workflows that run for days/weeks via continue-as-new
+5. **Worker Management** - Scalable worker pools with automatic load balancing
+6. **Observability** - Native integration with Temporal UI for debugging
 
-1. **ExecutionSnapshot** - Complete state serialization to database
-2. **DAG-Based Execution** - Clear dependency graph, no event sourcing needed
-3. **Database as Event Log** - Node logs, execution records provide audit trail
-4. **Queue-Based Resume** - Simple FIFO queue for pause/resume
+### What SIM Does Differently (That We'll Adopt)
 
-### Comparison
-
-| Aspect                 | Temporal                                                   | Custom (SIM-style)                     |
-| ---------------------- | ---------------------------------------------------------- | -------------------------------------- |
-| **Complexity**         | High (event sourcing, replay semantics, determinism rules) | Medium (straightforward state machine) |
-| **Durability**         | Built-in via event history                                 | Database snapshots + node logs         |
-| **Debugging**          | Hard (need to understand replay)                           | Easy (inspect snapshot, logs)          |
-| **Flexibility**        | Constrained by determinism                                 | Full control over execution model      |
-| **Streaming**          | Activities can stream, workflows can't                     | Native streaming support               |
-| **Pause/Resume**       | Signals + continue-as-new                                  | Simple snapshot serialize/deserialize  |
-| **Infrastructure**     | Temporal server + workers                                  | Just API + database + Redis            |
-| **Parallel Execution** | Activity fan-out                                           | Native concurrent node execution       |
-| **Error Routing**      | Complex (workflow must handle)                             | Natural (just follow error edge)       |
-| **Learning Curve**     | Steep                                                      | Moderate                               |
-
-### Recommendation: Custom Execution Engine
-
-**Reasons:**
-
-1. **Simpler Architecture** - No Temporal server to manage, no replay semantics to reason about
-2. **Better Streaming** - SSE directly from execution, not through activity indirection
-3. **Natural Error Routing** - Errors as edges, not exceptions to catch
-4. **Cleaner Pause/Resume** - Serialize state, store in DB, restore and continue
-5. **Easier Development** - No determinism constraints, standard async/await
-6. **Production Proven** - SIM runs this architecture at scale
-
-**Trade-offs:**
-
-- Must implement durability ourselves (but it's straightforward with snapshots)
-- No automatic retry at infrastructure level (but we control retry logic)
-- Must manage our own worker scaling (but Kubernetes handles this)
+| Pattern                | Current FlowMaestro      | SIM Approach     | Our Adaptation                                                |
+| ---------------------- | ------------------------ | ---------------- | ------------------------------------------------------------- |
+| **Construction**       | Runtime topological sort | 4-stage pipeline | Pre-build node execution order before running                 |
+| **Error Handling**     | Fail workflow            | Error-as-routing | Activities return `{ success, data, error }`; workflow routes |
+| **Parallel Execution** | Sequential               | Ready queue      | Use Temporal's `Promise.all` for parallel activities          |
+| **Context**            | Unbounded growth         | Pruning + limits | ContextManager with output limits                             |
+| **Pause/Resume**       | Limited signals          | Full snapshots   | Enhance signals with serialized state                         |
+| **Events**             | Redis pub/sub            | SSE              | Add SSE endpoint that consumes Redis                          |
+| **Handlers**           | Switch statement         | Handler registry | Refactor into pluggable handlers                              |
 
 ---
 
@@ -67,27 +53,27 @@ SIM's execution engine achieves durability and reliability without Temporal thro
 
 ### Critical Gaps Identified
 
-| Gap                     | FlowMaestro                     | SIM                                        | Impact                                      |
-| ----------------------- | ------------------------------- | ------------------------------------------ | ------------------------------------------- |
-| **DAG Construction**    | Runtime topological sort        | 4-stage construction pipeline              | Race conditions in complex workflows        |
-| **Error Handling**      | Fail workflow on error          | Error-as-routing with ports                | Users can't build resilient workflows       |
-| **Parallel Execution**  | Sequential node execution       | Concurrent independent nodes               | 2-10x slower for parallelizable workflows   |
-| **Context Management**  | Unbounded growth                | Token-aware sliding window                 | Memory blowup on large workflows            |
-| **Pause/Resume**        | Limited to UserInputWorkflow    | Full snapshot serialization                | Can't pause mid-workflow for human approval |
-| **Variable Resolution** | Basic interpolation             | Lazy resolution with loop/parallel context | Limited expressiveness                      |
-| **Streaming**           | Redis pub/sub (fire-and-forget) | SSE with stream tee pattern                | Lost events, inconsistent UX                |
+| Gap                       | FlowMaestro                     | SIM                                        | Impact                                      |
+| ------------------------- | ------------------------------- | ------------------------------------------ | ------------------------------------------- |
+| **Workflow Construction** | Runtime topological sort        | 4-stage construction pipeline              | Race conditions in complex workflows        |
+| **Error Handling**        | Fail workflow on error          | Error-as-routing with ports                | Users can't build resilient workflows       |
+| **Parallel Execution**    | Sequential node execution       | Concurrent independent nodes               | 2-10x slower for parallelizable workflows   |
+| **Context Management**    | Unbounded growth                | Token-aware sliding window                 | Memory blowup on large workflows            |
+| **Pause/Resume**          | Limited to UserInputWorkflow    | Full snapshot serialization                | Can't pause mid-workflow for human approval |
+| **Variable Resolution**   | Basic interpolation             | Lazy resolution with loop/parallel context | Limited expressiveness                      |
+| **Streaming**             | Redis pub/sub (fire-and-forget) | SSE with stream splitter pattern           | Lost events, inconsistent UX                |
 
 ---
 
 ## Design Patterns Reference
 
-The following sections document the key patterns from SIM that inform our custom engine design. These are reference materials - the actual implementation plan is in the "Implementation Plan: Custom Execution Engine" section above.
+The following sections document the key patterns from SIM that we'll adapt for our enhanced Temporal engine. These are reference materials - the actual implementation plan is in the "Implementation Plan: Enhanced Temporal Engine" section below.
 
 ---
 
 ## Pattern Details
 
-### 1. DAG Construction Pipeline
+### 1. Workflow Construction Pipeline
 
 **Current Problem:** `orchestrator-workflow.ts` builds the execution graph at runtime with manual topological sorting and two-phase branching to prevent race conditions.
 
@@ -102,29 +88,29 @@ PathConstructor → LoopConstructor → NodeConstructor → EdgeConstructor
 **Files to modify:**
 
 - `backend/src/temporal/workflows/orchestrator-workflow.ts`
-- Create `backend/src/temporal/dag/` directory with:
+- Create `backend/src/temporal/workflow-builder/` directory with:
     - `path-constructor.ts` - BFS reachability from trigger
     - `loop-constructor.ts` - Loop sentinels (START/END pairs)
     - `node-constructor.ts` - Expand parallels into branch nodes
     - `edge-constructor.ts` - Wire edges with handle types
-    - `dag-builder.ts` - Orchestrate construction
+    - `builder.ts` - Orchestrate construction
 
 **Implementation Steps:**
 
-1. Create `DAGNode` interface with incoming/outgoing edges, type, config
+1. Create `ExecutableNode` interface extending existing node types with execution metadata
 2. Implement PathConstructor for reachability analysis
 3. Implement LoopConstructor to insert sentinel nodes
 4. Implement NodeConstructor to expand parallel nodes
 5. Implement EdgeConstructor to wire conditional/router/loop handles
-6. Refactor orchestrator to build DAG once at start, then execute
-7. Store DAG in workflow state for resume capability
+6. Refactor orchestrator to build execution order once at start, then execute
+7. Store execution state in workflow for resume capability
 
 **Benefits:**
 
 - Eliminates two-phase branching hack
 - Enables parallel execution (nodes with satisfied dependencies)
 - Cleaner loop/parallel handling
-- Resume capability with DAG state
+- Resume capability with execution state
 
 ---
 
@@ -186,44 +172,44 @@ interface NodeOutput {
 
 **Current Problem:** `executeNodeAndDependents` executes nodes sequentially, even when independent.
 
-**SIM Pattern:** WorkflowEngine maintains `readyQueue` and executes all ready nodes concurrently.
+**SIM Pattern:** Maintains `readyQueue` and executes all ready nodes concurrently.
 
 **Recommended Changes:**
 
 **Files to modify:**
 
 - `backend/src/temporal/workflows/orchestrator-workflow.ts`
-- Create `backend/src/temporal/execution/engine.ts`
+- `backend/src/temporal/shared/execution-queue.ts` (new)
 
 **New Execution Pattern:**
 
 ```typescript
-interface WorkflowEngine {
-    readyQueue: Set<string>; // Nodes ready to execute
+interface ExecutionQueue {
+    readyNodes: Set<string>; // Nodes ready to execute
     executing: Map<string, Promise<void>>; // In-flight executions
     completed: Set<string>; // Finished nodes
 
-    initialize(dag: DAG): void;
-    processQueue(): Promise<void>;
-    updateReadyQueue(): void;
-    waitForCompletion(): Promise<void>;
+    initialize(nodes: ExecutableNode[], edges: Edge[]): void;
+    getReadyNodes(): string[];
+    markCompleted(nodeId: string): void;
+    getNextBatch(): string[];
 }
 ```
 
 **Implementation Steps:**
 
-1. Create WorkflowEngine class with queue management
-2. Initialize ready queue with nodes that have no dependencies (or all deps satisfied)
-3. Dequeue ALL ready nodes and execute concurrently (using `Promise.all` with tracking)
+1. Create ExecutionQueue class with queue management
+2. Initialize with nodes that have no dependencies (or all deps satisfied)
+3. Execute ALL ready nodes concurrently using Temporal's activity fan-out
 4. As each completes, update context and check if dependents are now ready
 5. Use Temporal's built-in concurrency controls for activity limits
 6. Continue until queue empty and no executing
 
-**Temporal Considerations:**
+**Temporal Integration:**
 
-- Activities can run in parallel via multiple `executeNode` calls
+- Use `Promise.all()` to fan out multiple `executeNode` activity calls
+- Temporal handles activity retries and timeouts automatically
 - Use `workflow.allHandled()` to wait for all pending activities
-- Track promises without blocking workflow determinism
 
 **Benefits:**
 
@@ -272,14 +258,14 @@ interface ContextManager {
     getVariable(path: string): JsonValue; // Lazy resolution
     setNodeOutput(nodeId: string, output: JsonObject): void;
     getNodeOutput(nodeId: string): JsonObject | undefined;
-    pruneUnusedOutputs(dag: DAG, currentNode: string): void;
+    pruneUnusedOutputs(executedNodes: string[], currentNode: string): void;
 }
 ```
 
 **Implementation Steps:**
 
 1. Create ContextManager class with Map-based storage
-2. Track which nodes' outputs are referenced by downstream nodes (via DAG analysis)
+2. Track which nodes' outputs are referenced by downstream nodes (via edge analysis)
 3. After node execution, check if any upstream outputs are no longer needed
 4. Prune unreferenced outputs (with configurable retention policy)
 5. Add output size limits with truncation for debugging
@@ -299,7 +285,7 @@ interface ContextManager {
 
 **SIM Pattern:** Full snapshot serialization with:
 
-- Complete DAG state
+- Complete execution state
 - Node outputs
 - Workflow variables
 - Loop/parallel iteration state
@@ -310,8 +296,8 @@ interface ContextManager {
 **Files to modify:**
 
 - `backend/src/temporal/workflows/orchestrator-workflow.ts`
-- Create `backend/src/temporal/execution/snapshot.ts`
-- Create `backend/src/temporal/execution/pause-manager.ts`
+- Create `backend/src/temporal/shared/snapshot.ts`
+- Create `backend/src/temporal/shared/pause-manager.ts`
 - `backend/src/storage/repositories/ExecutionRepository.ts`
 
 **Snapshot Structure:**
@@ -321,8 +307,7 @@ interface WorkflowSnapshot {
     executionId: string;
     workflowId: string;
 
-    // DAG state
-    dagState: SerializedDAG;
+    // Execution state
     completedNodes: string[];
     pendingNodes: string[];
 
@@ -347,7 +332,7 @@ interface WorkflowSnapshot {
 **Implementation Steps:**
 
 1. Create WorkflowSnapshot class with serialization
-2. Add `pause` signal handler to orchestrator workflow
+2. Add `pause` signal handler to orchestrator workflow (Temporal signals)
 3. When pause signal received:
     - Complete current activity
     - Serialize full state to snapshot
@@ -355,8 +340,8 @@ interface WorkflowSnapshot {
     - Return workflow with `status: paused`
 4. Create resume endpoint that:
     - Loads snapshot
-    - Starts new workflow with snapshot as input
-    - Restores DAG, context, control flow state
+    - Sends resume signal with user input
+    - Restores context, control flow state
     - Continues from pending nodes
 5. Add pause node type for explicit pause points
 
@@ -378,7 +363,7 @@ interface WorkflowSnapshot {
 <loop.index/item/iteration>
 <parallel.index/currentItem>
 <variable.name>
-<blockId.path>
+<nodeId.path>
 {{ENV_VAR}}
 ```
 
@@ -387,7 +372,7 @@ interface WorkflowSnapshot {
 **Files to modify:**
 
 - `backend/src/temporal/shared/utils.ts` - Enhance interpolation
-- Create `backend/src/temporal/execution/variable-resolver.ts`
+- Create `backend/src/temporal/shared/variable-resolver.ts`
 
 **Resolver Architecture:**
 
@@ -453,7 +438,7 @@ interface ResolutionContext {
 **SIM Pattern:** Server-Sent Events (SSE) with:
 
 - Persistent connection per execution
-- Stream tee for streaming + billing
+- Stream splitter for streaming + billing
 - Event acknowledgment
 
 **Recommended Changes:**
@@ -514,7 +499,7 @@ function useExecutionStream(executionId: string) {
 3. Activities publish to channel, SSE endpoint forwards
 4. Add event sequence numbers for ordering
 5. Store events in database for replay (if client reconnects)
-6. Implement stream tee for LLM streaming (one stream to client, one for token counting)
+6. Implement stream splitter for LLM streaming (one stream to client, one for token counting)
 
 **Benefits:**
 
@@ -603,55 +588,56 @@ class NodeHandlerRegistry {
 
 ---
 
-## Implementation Plan: Custom Execution Engine
+## Implementation Plan: Enhanced Temporal Engine
 
-### New Architecture Overview
+### Architecture Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                     API Server (Fastify)                     │
-│  - SSE streaming endpoints                                   │
+│                     API Server (Fastify)                    │
+│  - SSE streaming endpoints                                  │
 │  - Execution triggers (manual, webhook, schedule)           │
-│  - Resume endpoints                                          │
+│  - Resume endpoints                                         │
 └────────────────┬────────────────────────────────────────────┘
                  │
 ┌────────────────▼────────────────────────────────────────────┐
-│              Execution Core (in-process or worker)           │
-│                                                              │
+│                   Temporal Workflows                        │
+│                                                             │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │
-│  │ DAG Builder  │  │  Execution   │  │   Variable   │       │
-│  │  (4 stages)  │→ │    Engine    │→ │   Resolver   │       │
+│  │  Workflow    │  │  Execution   │  │   Variable   │       │
+│  │   Builder    │→ │    Queue     │→ │   Resolver   │       │
+│  │  (4 stages)  │  │  (parallel)  │  │              │       │
 │  └──────────────┘  └──────────────┘  └──────────────┘       │
-│         │                │                    │              │
-│         ▼                ▼                    ▼              │
+│         │                │                    │             │
+│         ▼                ▼                    ▼             │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │
 │  │  Snapshot    │  │ NodeHandler  │  │ Orchestrators│       │
 │  │  Manager     │  │   Registry   │  │ (Loop/Para)  │       │
 │  └──────────────┘  └──────────────┘  └──────────────┘       │
-│                                                              │
+│                                                             │
 └────────────────┬────────────────────────────────────────────┘
                  │
          ┌───────┴───────┐
          ▼               ▼
-┌──────────────┐  ┌──────────────┐
-│  PostgreSQL  │  │    Redis     │
-│  - Snapshots │  │  - Events    │
-│  - Node logs │  │  - Pub/Sub   │
-│  - Executions│  │  - Caching   │
-└──────────────┘  └──────────────┘
+┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+│   Temporal   │  │  PostgreSQL  │  │    Redis     │
+│   Server     │  │  - Snapshots │  │  - Events    │
+│  - History   │  │  - Node logs │  │  - Pub/Sub   │
+│  - Workers   │  │  - Executions│  │  - Caching   │
+└──────────────┘  └──────────────┘  └──────────────┘
 ```
 
 ---
 
-### Phase 1: Core Execution Engine (Week 1-2)
+### Phase 1: Workflow Builder & Execution Queue
 
-**Goal:** Replace Temporal orchestrator with custom DAG-based engine.
+**Goal:** Add 4-stage workflow construction and parallel execution to existing Temporal workflows.
 
-#### 1.1 DAG Builder (`backend/src/execution/dag/`)
+#### 1.1 Workflow Builder (`backend/src/temporal/workflow-builder/`)
 
 **Files to create:**
 
-- `types.ts` - DAG node/edge types
+- `types.ts` - ExecutableNode, execution metadata types
 - `path-constructor.ts` - BFS reachability from trigger
 - `loop-constructor.ts` - Insert loop sentinel nodes (START/END)
 - `node-constructor.ts` - Expand parallel nodes into branches
@@ -661,76 +647,60 @@ class NodeHandlerRegistry {
 **Key Types:**
 
 ```typescript
-interface DAGNode {
+interface ExecutableNode {
     id: string;
     type: string;
     config: JsonObject;
-    incoming: Set<string>; // Edge IDs
-    outgoing: Set<string>; // Edge IDs
+    dependencies: string[]; // Node IDs this depends on
+    dependents: string[]; // Node IDs that depend on this
+    handleType?: "source" | "error" | "condition" | "router";
 }
 
-interface DAGEdge {
-    id: string;
-    source: string;
-    target: string;
-    handleType: "source" | "error" | "condition" | "router" | "loop_continue" | "loop_exit";
-    condition?: string; // For conditional edges
-}
-
-interface DAG {
-    nodes: Map<string, DAGNode>;
-    edges: Map<string, DAGEdge>;
-    startNodes: string[]; // Nodes with no incoming edges
+interface ExecutionPlan {
+    nodes: Map<string, ExecutableNode>;
+    startNodes: string[]; // Nodes with no dependencies
+    executionOrder: string[][]; // Nodes grouped by execution level
 }
 ```
 
-#### 1.2 Workflow Engine (`backend/src/execution/engine/`)
+#### 1.2 Execution Queue (`backend/src/temporal/shared/`)
 
 **Files to create:**
 
-- `types.ts` - ExecutionContext, NodeState
-- `engine.ts` - Queue-based parallel execution
-- `context-manager.ts` - Node output management
+- `execution-queue.ts` - Queue-based parallel execution within Temporal
+- `context-manager.ts` - Node output management with pruning
 
-**Execution Loop:**
+**Integration with Temporal:**
 
 ```typescript
-class WorkflowEngine {
-    private readyQueue: Set<string> = new Set();
-    private executing: Map<string, Promise<void>> = new Map();
-    private completed: Set<string> = new Set();
-    private context: ExecutionContext;
+// In orchestrator-workflow.ts
+async function orchestratorWorkflow(input: WorkflowInput) {
+    // Build execution plan once at start
+    const plan = buildExecutionPlan(input.definition);
 
-    async execute(dag: DAG, snapshot?: ExecutionSnapshot): Promise<ExecutionResult> {
-        // Initialize from snapshot or start fresh
-        this.initialize(dag, snapshot);
+    // Initialize queue and context
+    const queue = new ExecutionQueue(plan);
+    const context = new ContextManager();
 
-        // Main execution loop
-        while (this.hasWork()) {
-            // Execute all ready nodes in parallel
-            await this.processReadyQueue();
+    // Execute in batches (parallel within each batch)
+    while (queue.hasWork()) {
+        const batch = queue.getNextBatch();
 
-            // Update ready queue based on completed nodes
-            this.updateReadyQueue();
+        // Fan out activities in parallel using Temporal
+        const results = await Promise.all(batch.map((nodeId) => executeNode(nodeId, context)));
 
-            // Check for pause signals
-            if (this.shouldPause()) {
-                return this.createPauseResult();
-            }
+        // Update context and queue
+        for (const result of results) {
+            context.setNodeOutput(result.nodeId, result.output);
+            queue.markCompleted(result.nodeId);
         }
-
-        return this.createCompleteResult();
     }
 
-    private async processReadyQueue(): Promise<void> {
-        const promises = [...this.readyQueue].map((nodeId) => this.executeNode(nodeId));
-        this.readyQueue.clear();
-        await Promise.allSettled(promises);
-    }
+    return context.getFinalOutputs();
 }
 ```
 
-#### 1.3 Node Handlers (`backend/src/execution/node-handlers/`)
+#### 1.3 Node Handlers (`backend/src/temporal/node-handlers/`)
 
 **Files to create:**
 
@@ -771,11 +741,11 @@ interface NodeHandlerOutput {
 
 ---
 
-### Phase 2: State Management & Durability (Week 2-3)
+### Phase 2: State Management & Enhanced Logging
 
-**Goal:** Implement snapshot-based persistence and pause/resume.
+**Goal:** Add snapshot persistence and structured node logging (Temporal provides base durability).
 
-#### 2.1 Snapshot Manager (`backend/src/execution/snapshot/`)
+#### 2.1 Snapshot Manager (`backend/src/temporal/shared/snapshot/`)
 
 **Files to create:**
 
@@ -793,8 +763,7 @@ interface WorkflowSnapshot {
     userId: string;
     startedAt: Date;
 
-    // DAG state (for resume)
-    serializedDAG: SerializedDAG;
+    // Execution state
     completedNodes: string[];
     pendingNodes: string[];
 
@@ -817,12 +786,12 @@ interface WorkflowSnapshot {
 }
 ```
 
-#### 2.2 Node Logging (`backend/src/execution/logging/`)
+#### 2.2 Node Logging (`backend/src/temporal/shared/logging/`)
 
 **Files to create:**
 
 - `types.ts` - NodeLog structure
-- `logger.ts` - Log creation and storage
+- `node-logger.ts` - Log creation and storage
 
 **Node Log:**
 
@@ -849,28 +818,38 @@ interface NodeLog {
 }
 ```
 
-#### 2.3 Resume System (`backend/src/execution/resume/`)
+#### 2.3 Pause/Resume with Temporal Signals
 
-**Files to create:**
+**Files to modify:**
 
-- `resume-manager.ts` - Handle resume requests
-- `resume-queue.ts` - Queue for multiple pending resumes
+- `backend/src/temporal/workflows/orchestrator-workflow.ts` - Add signal handlers
+- `backend/src/api/routes/executions/resume.ts` - Resume endpoint
 
-**Resume Flow:**
+**Temporal Signal Integration:**
 
-1. Load snapshot from database
-2. Reconstruct DAG from serialized state
-3. Restore completed nodes and context
-4. Process pending resume input
-5. Continue execution from pending nodes
+```typescript
+// In orchestrator-workflow.ts
+const pauseSignal = wf.defineSignal<[PauseRequest]>("pause");
+const resumeSignal = wf.defineSignal<[ResumeInput]>("resume");
+
+wf.setHandler(pauseSignal, (request) => {
+    // Save snapshot to database
+    // Set workflow to paused state
+});
+
+wf.setHandler(resumeSignal, (input) => {
+    // Restore from snapshot
+    // Continue execution with user input
+});
+```
 
 ---
 
-### Phase 3: Streaming & Events (Week 3-4)
+### Phase 3: Streaming & Events
 
 **Goal:** Implement SSE-based real-time updates and LLM streaming.
 
-#### 3.1 SSE Manager (`backend/src/execution/streaming/`)
+#### 3.1 SSE Manager (`backend/src/temporal/shared/streaming/`)
 
 **Files to create:**
 
@@ -892,7 +871,7 @@ type ExecutionEvent =
     | { type: "stream:done"; executionId: string; nodeId: string };
 ```
 
-#### 3.2 Stream Splitter Pattern (`backend/src/execution/streaming/`)
+#### 3.2 Stream Splitter Pattern (`backend/src/temporal/shared/streaming/`)
 
 **Files to create:**
 
@@ -928,11 +907,11 @@ function splitStream(llmStream: ReadableStream): {
 
 ---
 
-### Phase 4: Variable Resolution & Orchestrators (Week 4-5)
+### Phase 4: Variable Resolution & Orchestrators
 
 **Goal:** Implement advanced variable resolution and loop/parallel handling.
 
-#### 4.1 Variable Resolver (`backend/src/execution/variables/`)
+#### 4.1 Variable Resolver (`backend/src/temporal/shared/variables/`)
 
 **Files to create:**
 
@@ -953,7 +932,7 @@ function splitStream(llmStream: ReadableStream): {
 {{env.API_KEY}}              - Environment variable
 ```
 
-#### 4.2 Loop Orchestrator (`backend/src/execution/orchestrators/`)
+#### 4.2 Loop Orchestrator (`backend/src/temporal/orchestrators/`)
 
 **Files to create:**
 
@@ -966,7 +945,7 @@ function splitStream(llmStream: ReadableStream): {
 - `while` - Condition-based
 - `doWhile` - At least one iteration
 
-#### 4.3 Parallel Orchestrator (`backend/src/execution/orchestrators/`)
+#### 4.3 Parallel Orchestrator (`backend/src/temporal/orchestrators/`)
 
 **Files to create:**
 
@@ -979,103 +958,251 @@ function splitStream(llmStream: ReadableStream): {
 
 ---
 
-### Phase 5: Migration & Cleanup (Week 5-6)
+### Phase 5: Frontend Updates & Polish
 
-**Goal:** Migrate from Temporal, update frontend, remove old code.
+**Goal:** Update frontend for new features, add error port UI, improve UX.
 
 #### 5.1 Database Migrations
 
 **New tables:**
 
-- `execution_snapshots` - Serialized execution state
-- `node_logs` - Per-node execution logs
+- `workflow_snapshots` - Serialized execution state for pause/resume
+- `node_logs` - Per-node execution logs with timing and tokens
 - `resume_queue` - Pending resume requests
 
 **Modified tables:**
 
-- `executions` - Add snapshot_id, remove Temporal-specific fields
+- `executions` - Add snapshot_id for pause/resume support
 
 #### 5.2 Frontend Updates
 
 **Files to modify:**
 
-- `frontend/src/lib/execution-stream.ts` - SSE client
+- `frontend/src/lib/execution-stream.ts` - SSE client hook
 - `frontend/src/stores/execution/` - Update for new event types
 - `frontend/src/components/canvas/` - Error port UI, execution path visualization
 
-#### 5.3 Remove Temporal
+#### 5.3 Refactor Existing Code
 
-**Delete:**
+**Files to refactor:**
 
-- `backend/src/temporal/` - All workflows, activities
-- Temporal server from docker-compose
-- Temporal client configuration
+- `backend/src/temporal/workflows/orchestrator-workflow.ts` - Use new WorkflowBuilder
+- `backend/src/temporal/activities/execute-node.ts` - Use NodeHandler registry
+- `backend/src/temporal/shared/utils.ts` - Use new VariableResolver
 
-**Keep patterns from:**
+**Keep and enhance:**
 
-- Span tracking → move to new logging
-- Heartbeat → use for long-running handlers
-- Error classes → keep and enhance
-
----
-
-## Implementation Priority (Revised)
-
-### Week 1-2: Core Engine
-
-- [ ] DAG Builder (4-stage construction)
-- [ ] Execution Engine (queue-based parallel)
-- [ ] Handler Registry (signal-based)
-- [ ] Basic handlers (HTTP, Transform)
-
-### Week 2-3: State & Durability
-
-- [ ] Snapshot Manager
-- [ ] Node Logging
-- [ ] Resume System
-- [ ] Database migrations
-
-### Week 3-4: Streaming & Events
-
-- [ ] SSE Manager
-- [ ] Stream Splitter for LLM
-- [ ] API Routes
-- [ ] Frontend SSE client
-
-### Week 4-5: Advanced Features
-
-- [ ] Variable Resolver with loop/parallel context
-- [ ] Loop Orchestrator
-- [ ] Parallel Orchestrator
-- [ ] Error-as-routing
-
-### Week 5-6: Migration
-
-- [ ] Migrate existing workflows
-- [ ] Frontend updates
-- [ ] Remove Temporal
-- [ ] Testing & documentation
+- Span tracking → integrate with NodeLogger
+- Heartbeat → use for long-running node handlers
+- Error classes → enhance with error port support
 
 ---
 
-## Files Summary (Updated for Custom Engine)
+## Prioritized Implementation Phases
 
-**New Directory Structure:**
+### 🔴 Phase 1: Workflow Builder & Parallel Execution (CRITICAL - Foundation)
+
+**Priority: HIGHEST** | **Blocking: Performance improvements**
+
+Adds 4-stage construction and parallel execution to existing Temporal workflows.
+
+| Task                        | Files                                                       | Effort |
+| --------------------------- | ----------------------------------------------------------- | ------ |
+| ExecutableNode Types        | `backend/src/temporal/workflow-builder/types.ts`            | S      |
+| Path Constructor            | `backend/src/temporal/workflow-builder/path-constructor.ts` | M      |
+| Loop Constructor            | `backend/src/temporal/workflow-builder/loop-constructor.ts` | M      |
+| Node Constructor            | `backend/src/temporal/workflow-builder/node-constructor.ts` | M      |
+| Edge Constructor            | `backend/src/temporal/workflow-builder/edge-constructor.ts` | M      |
+| Workflow Builder            | `backend/src/temporal/workflow-builder/builder.ts`          | M      |
+| Execution Queue             | `backend/src/temporal/shared/execution-queue.ts`            | M      |
+| Context Manager             | `backend/src/temporal/shared/context-manager.ts`            | M      |
+| Integrate with orchestrator | `backend/src/temporal/workflows/orchestrator-workflow.ts`   | L      |
+
+**Exit Criteria:** Orchestrator uses WorkflowBuilder; nodes execute in parallel batches.
+
+---
+
+### 🔴 Phase 2: Node Handler Registry (CRITICAL - Maintainability)
+
+**Priority: HIGHEST** | **Blocking: Clean node execution**
+
+Refactors executors into pluggable handler pattern.
+
+| Task                          | Files                                                            | Effort |
+| ----------------------------- | ---------------------------------------------------------------- | ------ |
+| NodeHandler Interface         | `backend/src/temporal/node-handlers/types.ts`                    | S      |
+| Handler Registry              | `backend/src/temporal/node-handlers/registry.ts`                 | M      |
+| LLM Node Handler              | `backend/src/temporal/node-handlers/llm-node-handler.ts`         | L      |
+| HTTP Node Handler             | `backend/src/temporal/node-handlers/http-node-handler.ts`        | M      |
+| Transform Node Handler        | `backend/src/temporal/node-handlers/transform-node-handler.ts`   | M      |
+| Logic Node Handler            | `backend/src/temporal/node-handlers/logic-node-handler.ts`       | M      |
+| Integration Node Handler      | `backend/src/temporal/node-handlers/integration-node-handler.ts` | L      |
+| Refactor executeNode activity | `backend/src/temporal/activities/execute-node.ts`                | M      |
+
+**Exit Criteria:** executeNode uses handler registry; adding new node types doesn't modify core code.
+
+---
+
+### 🟠 Phase 3: Snapshot & Node Logging (HIGH - Observability)
+
+**Priority: HIGH** | **Enables: Pause/resume, debugging**
+
+Adds structured logging and snapshot persistence.
+
+| Task                             | Files                                                      | Effort |
+| -------------------------------- | ---------------------------------------------------------- | ------ |
+| Snapshot Types                   | `backend/src/temporal/shared/snapshot/types.ts`            | S      |
+| Snapshot Manager                 | `backend/src/temporal/shared/snapshot/snapshot-manager.ts` | M      |
+| Snapshot Storage                 | `backend/src/temporal/shared/snapshot/storage.ts`          | M      |
+| Node Log Types                   | `backend/src/temporal/shared/logging/types.ts`             | S      |
+| Node Logger                      | `backend/src/temporal/shared/logging/node-logger.ts`       | M      |
+| DB Migration: workflow_snapshots | `backend/src/storage/migrations/`                          | S      |
+| DB Migration: node_logs          | `backend/src/storage/migrations/`                          | S      |
+
+**Exit Criteria:** Each node execution logged with timing/tokens; snapshots saved for pause/resume.
+
+---
+
+### 🟠 Phase 4: SSE Streaming (HIGH - UX Critical)
+
+**Priority: HIGH** | **Blocking: Real-time frontend**
+
+Reliable event delivery and LLM streaming.
+
+| Task                    | Files                                                      | Effort |
+| ----------------------- | ---------------------------------------------------------- | ------ |
+| SSE Event Types         | `backend/src/temporal/shared/streaming/event-types.ts`     | S      |
+| SSE Manager             | `backend/src/temporal/shared/streaming/sse-manager.ts`     | M      |
+| Stream Splitter         | `backend/src/temporal/shared/streaming/stream-splitter.ts` | M      |
+| Stream API Route        | `backend/src/api/routes/executions/stream.ts`              | M      |
+| Frontend SSE Client     | `frontend/src/lib/execution-stream.ts`                     | M      |
+| Update Execution Stores | `frontend/src/stores/execution/`                           | M      |
+
+**Exit Criteria:** Frontend receives SSE events; LLM streaming works with token counting.
+
+---
+
+### 🟡 Phase 5: Error-as-Routing (MEDIUM - Resilience)
+
+**Priority: MEDIUM** | **Enables: User-built error recovery**
+
+Allows workflows to route errors instead of failing.
+
+| Task                             | Files                                                     | Effort |
+| -------------------------------- | --------------------------------------------------------- | ------ |
+| Add errorPort to NodeDefinition  | `shared/src/types/workflow.ts`                            | S      |
+| Add handleType to EdgeDefinition | `shared/src/types/workflow.ts`                            | S      |
+| Error routing in orchestrator    | `backend/src/temporal/workflows/orchestrator-workflow.ts` | M      |
+| Error handle UI component        | `frontend/src/components/canvas/`                         | M      |
+| Error edge connection logic      | `frontend/src/components/canvas/`                         | M      |
+
+**Exit Criteria:** Nodes can have error ports; errors route to connected nodes.
+
+---
+
+### 🟡 Phase 6: Pause/Resume with Signals (MEDIUM - Human-in-the-Loop)
+
+**Priority: MEDIUM** | **Enables: Approval workflows**
+
+Enhanced pause/resume using Temporal signals + snapshots.
+
+| Task                       | Files                                                     | Effort |
+| -------------------------- | --------------------------------------------------------- | ------ |
+| Pause/Resume Signals       | `backend/src/temporal/workflows/orchestrator-workflow.ts` | M      |
+| Resume API Route           | `backend/src/api/routes/executions/resume.ts`             | M      |
+| DB Migration: resume_queue | `backend/src/storage/migrations/`                         | S      |
+| Pause Node UI              | `frontend/src/components/canvas/`                         | M      |
+
+**Exit Criteria:** Workflows can pause; users provide input via signal; execution resumes.
+
+---
+
+### 🟢 Phase 7: Variable Resolver (LOWER - Expressiveness)
+
+**Priority: LOWER** | **Enhances: Loop/parallel syntax**
+
+Priority-chain variable resolution with loop/parallel context.
+
+| Task                         | Files                                               | Effort |
+| ---------------------------- | --------------------------------------------------- | ------ |
+| Variable Types               | `backend/src/temporal/shared/variables/types.ts`    | S      |
+| Expression Parser            | `backend/src/temporal/shared/variables/parser.ts`   | M      |
+| Variable Resolver            | `backend/src/temporal/shared/variables/resolver.ts` | M      |
+| Integrate with orchestrators | `backend/src/temporal/orchestrators/`               | M      |
+
+**Exit Criteria:** Support for `{{loop.index}}`, `{{parallel.currentItem}}` syntax.
+
+---
+
+### 🟢 Phase 8: Loop & Parallel Enhancements (LOWER - Control Flow)
+
+**Priority: LOWER** | **Enhances: Complex patterns**
+
+Improved loop and parallel orchestration.
+
+| Task                           | Files                                                         | Effort |
+| ------------------------------ | ------------------------------------------------------------- | ------ |
+| Enhanced Loop Orchestrator     | `backend/src/temporal/orchestrators/loop-orchestrator.ts`     | L      |
+| Enhanced Parallel Orchestrator | `backend/src/temporal/orchestrators/parallel-orchestrator.ts` | L      |
+
+**Exit Criteria:** Support for `for`, `forEach`, `while` loops; parallel with aggregation.
+
+---
+
+### ⚪ Phase 9: Frontend Polish & Testing (FINAL)
+
+**Priority: LOWEST** | **Timing: After core features stable**
+
+Polish UI, comprehensive testing, documentation.
+
+| Task                         | Files                             | Effort |
+| ---------------------------- | --------------------------------- | ------ |
+| Execution path visualization | `frontend/src/components/canvas/` | M      |
+| Comprehensive tests          | `backend/tests/`                  | L      |
+| Update documentation         | `.docs/`                          | M      |
+
+**Exit Criteria:** All features tested; documentation updated.
+
+---
+
+## Quick Reference: Priority Summary
+
+| Priority    | Phase | What               | Why                              |
+| ----------- | ----- | ------------------ | -------------------------------- |
+| 🔴 CRITICAL | 1     | Workflow Builder   | Parallel execution, 2-10x faster |
+| 🔴 CRITICAL | 2     | Handler Registry   | Maintainability, pluggable nodes |
+| 🟠 HIGH     | 3     | Snapshot & Logging | Observability, debugging         |
+| 🟠 HIGH     | 4     | SSE Streaming      | Real-time UX                     |
+| 🟡 MEDIUM   | 5     | Error-as-Routing   | Resilience                       |
+| 🟡 MEDIUM   | 6     | Pause/Resume       | Human-in-the-loop                |
+| 🟢 LOWER    | 7     | Variable Resolver  | Expressiveness                   |
+| 🟢 LOWER    | 8     | Loop/Parallel      | Advanced control flow            |
+| ⚪ FINAL    | 9     | Polish & Testing   | Quality assurance                |
+
+---
+
+## Effort Key
+
+- **S** = Small (< 1 day)
+- **M** = Medium (1-3 days)
+- **L** = Large (3-5 days)
+
+---
+
+## Files Summary (Enhanced Temporal Engine)
+
+**New Directories in `backend/src/temporal/`:**
 
 ```
-backend/src/execution/           # NEW - replaces backend/src/temporal/
-├── dag/                         # DAG construction pipeline
+backend/src/temporal/
+├── workflow-builder/            # 4-stage construction pipeline
 │   ├── types.ts
 │   ├── path-constructor.ts
 │   ├── loop-constructor.ts
 │   ├── node-constructor.ts
 │   ├── edge-constructor.ts
 │   └── builder.ts
-├── engine/                      # Core execution engine
-│   ├── types.ts
-│   ├── engine.ts
-│   └── context-manager.ts
-├── node-handlers/               # Node handlers (signal-based)
+├── node-handlers/               # Pluggable node handlers
 │   ├── types.ts
 │   ├── registry.ts
 │   ├── llm-node-handler.ts
@@ -1085,41 +1212,39 @@ backend/src/execution/           # NEW - replaces backend/src/temporal/
 │   ├── integration-node-handler.ts
 │   ├── control-flow-node-handler.ts
 │   └── generic-node-handler.ts
-├── snapshot/                    # State persistence
-│   ├── types.ts
-│   ├── snapshot-manager.ts
-│   └── storage.ts
-├── resume/                      # Pause/resume system
-│   ├── resume-manager.ts
-│   └── resume-queue.ts
-├── streaming/                   # SSE and LLM streaming
-│   ├── sse-manager.ts
-│   ├── stream-splitter.ts
-│   └── event-types.ts
-├── variables/                   # Variable resolution
-│   ├── types.ts
-│   ├── resolver.ts
-│   └── parser.ts
-├── orchestrators/               # Loop/parallel handling
-│   ├── loop-orchestrator.ts
-│   └── parallel-orchestrator.ts
-├── logging/                     # Node logging
-│   ├── types.ts
-│   └── logger.ts
-└── index.ts                     # Main entry point
+├── shared/
+│   ├── execution-queue.ts       # Parallel execution queue
+│   ├── context-manager.ts       # Node output management
+│   ├── variable-resolver.ts     # Enhanced variable resolution
+│   ├── snapshot/                # State persistence
+│   │   ├── types.ts
+│   │   ├── snapshot-manager.ts
+│   │   └── storage.ts
+│   ├── logging/                 # Node logging
+│   │   ├── types.ts
+│   │   └── node-logger.ts
+│   ├── streaming/               # SSE and LLM streaming
+│   │   ├── sse-manager.ts
+│   │   ├── stream-splitter.ts
+│   │   └── event-types.ts
+│   └── variables/               # Variable resolution
+│       ├── types.ts
+│       ├── resolver.ts
+│       └── parser.ts
+└── orchestrators/               # Enhanced loop/parallel
+    ├── loop-orchestrator.ts
+    └── parallel-orchestrator.ts
 ```
 
-**API Routes:**
+**New API Routes:**
 
 ```
 backend/src/api/routes/executions/
-├── execute.ts                   # POST /workflows/:id/execute (SSE)
-├── resume.ts                    # POST /executions/:id/resume
-├── stream.ts                    # GET /executions/:id/stream
-└── status.ts                    # GET /executions/:id
+├── stream.ts                    # GET /executions/:id/stream (SSE)
+└── resume.ts                    # POST /executions/:id/resume
 ```
 
-**Frontend:**
+**Frontend Updates:**
 
 ```
 frontend/src/lib/
@@ -1127,63 +1252,57 @@ frontend/src/lib/
 
 frontend/src/stores/execution/
 └── (update existing stores)     # New event types
+
+frontend/src/components/canvas/
+└── (add error port UI)          # Error handle components
 ```
 
 **Database Migrations:**
 
 ```
 backend/src/storage/migrations/
-├── XXX_create_execution_snapshots.ts
+├── XXX_create_workflow_snapshots.ts
 ├── XXX_create_node_logs.ts
-├── XXX_create_resume_queue.ts
-└── XXX_update_executions_table.ts
-```
-
-**Files to Delete (after migration):**
-
-```
-backend/src/temporal/            # Entire directory
-infra/docker/temporal/           # Temporal server config
-docker-compose.yml               # Remove Temporal service
+└── XXX_create_resume_queue.ts
 ```
 
 **Files to Modify:**
 
-- `shared/src/types/workflow.ts` - Add error ports, DAG types
+- `backend/src/temporal/workflows/orchestrator-workflow.ts` - Use WorkflowBuilder, ExecutionQueue
+- `backend/src/temporal/activities/execute-node.ts` - Use NodeHandler registry
+- `shared/src/types/workflow.ts` - Add error ports, handle types
 - `frontend/src/components/canvas/` - Error port UI
-- `backend/src/storage/repositories/ExecutionRepository.ts` - New fields
+- `backend/src/storage/repositories/ExecutionRepository.ts` - Snapshot fields
 
 ---
 
 ## Success Criteria
 
-1. **Reliability**: No lost events, graceful error handling, complete audit trail
-2. **Performance**: 2-10x faster execution via parallel node execution
+1. **Performance**: 2-10x faster execution via parallel node execution
+2. **Reliability**: Temporal durability + enhanced snapshots for pause/resume
 3. **Flexibility**: Error-as-routing, pause/resume, loop/parallel primitives
-4. **Streaming**: Native LLM streaming with token counting
+4. **Streaming**: SSE-based event delivery with LLM streaming
 5. **Maintainability**: New node types via handlers without core changes
-6. **Observability**: Node logs, execution history, token tracking
-7. **Simplicity**: No Temporal complexity, standard async/await patterns
+6. **Observability**: Structured node logs with timing and token tracking
 
 ---
 
 ## Risk Mitigation
 
-| Risk                         | Mitigation                                                      |
-| ---------------------------- | --------------------------------------------------------------- |
-| Durability loss              | Database snapshots after each node; recovery from last snapshot |
-| Long-running executions      | Snapshot-based persistence; no memory/process dependency        |
-| Concurrent access            | Database transactions; optimistic locking on snapshots          |
-| Worker failure mid-execution | Execution marked incomplete; resume from snapshot               |
-| Event ordering               | Sequence numbers on events; client-side reordering              |
-| Memory pressure              | Context manager with pruning; node output size limits           |
+| Risk                        | Mitigation                                                   |
+| --------------------------- | ------------------------------------------------------------ |
+| Breaking existing workflows | Incremental refactoring; keep existing APIs working          |
+| Temporal determinism        | WorkflowBuilder runs in workflow; handlers run in activities |
+| Memory in large workflows   | ContextManager with pruning; output size limits              |
+| SSE reliability             | Fallback to Redis pub/sub; sequence numbers for ordering     |
+| Handler migration           | Gradual migration; generic handler as fallback               |
 
 ---
 
 ## Testing Strategy
 
 1. **Unit Tests**: Each component in isolation
-    - DAG builder stages
+    - Workflow builder stages
     - Variable resolver
     - Handler signal interpretation
     - Snapshot serialization

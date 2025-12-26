@@ -7,7 +7,8 @@
         "frontend",
         "backend",
         "shared",
-        "marketing"
+        "marketing",
+        "docs"
     ],
     "scripts": {
         "prepare": "husky",

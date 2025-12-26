@@ -1,0 +1,12 @@
+# Dependencies
+node_modules/
+
+# Build output
+build/
+.docusaurus/
+
+# OS files
+.DS_Store
+
+# Cache
+.cache/

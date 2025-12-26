@@ -74,7 +74,15 @@ export const Footer: React.FC = () => {
                                 </Link>
                             </li>
                             <li>
-                                <a href="#" className="hover:text-white transition-colors">
+                                <a
+                                    href={
+                                        import.meta.env.VITE_DOCS_URL ||
+                                        "https://docs.flowmaestro.ai"
+                                    }
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="hover:text-white transition-colors"
+                                >
                                     Documentation
                                 </a>
                             </li>

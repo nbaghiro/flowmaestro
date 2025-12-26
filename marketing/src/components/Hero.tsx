@@ -41,9 +41,14 @@ export const Hero: React.FC = () => {
                     >
                         Get Started
                     </a>
-                    <button className="px-6 py-3 text-sm text-gray-400 hover:text-white transition-colors">
+                    <a
+                        href={import.meta.env.VITE_DOCS_URL || "https://docs.flowmaestro.ai"}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-6 py-3 text-sm text-gray-400 hover:text-white transition-colors"
+                    >
                         Documentation
-                    </button>
+                    </a>
                 </div>
             </div>
         </section>
