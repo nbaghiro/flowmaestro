@@ -1,8 +1,8 @@
 import { proxyActivities } from "@temporalio/workflow";
 import type { WorkflowDefinition, WorkflowNode, JsonObject } from "@flowmaestro/shared";
 import { SpanType } from "../../core/tracing/span-types";
-import type * as activities from "../activities";
 import { createWorkflowLogger } from "../shared/workflow-logger";
+import type * as activities from "../activities";
 
 // Re-export WorkflowDefinition for use by other workflow files
 export type { WorkflowDefinition, WorkflowNode };
@@ -423,7 +423,9 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
             }
         } catch (error: unknown) {
             const errorMessage = error instanceof Error ? error.message : "Unknown error";
-            logger.error("Node failed", error instanceof Error ? error : new Error(errorMessage), { nodeId });
+            logger.error("Node failed", error instanceof Error ? error : new Error(errorMessage), {
+                nodeId
+            });
             errors[nodeId] = errorMessage;
 
             // End NODE_EXECUTION span with error

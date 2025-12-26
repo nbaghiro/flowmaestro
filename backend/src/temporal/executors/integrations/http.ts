@@ -1,9 +1,9 @@
 import type { JsonObject, JsonValue } from "@flowmaestro/shared";
 import { ProviderError, ValidationError } from "../../shared/errors";
 import { withHeartbeat, getCancellationSignal } from "../../shared/heartbeat";
+import { createActivityLogger } from "../../shared/logger";
 import { HTTPNodeConfigSchema, validateOrThrow, type HTTPNodeConfig } from "../../shared/schemas";
 import { interpolateVariables } from "../../shared/utils";
-import { createActivityLogger } from "../../shared/logger";
 
 const logger = createActivityLogger({ nodeType: "HTTP" });
 

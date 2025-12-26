@@ -59,7 +59,10 @@ export async function executeVisionNode(
 ): Promise<JsonObject> {
     const startTime = Date.now();
 
-    activityLogger.info("Vision node execution starting", { provider: config.provider, operation: config.operation });
+    activityLogger.info("Vision node execution starting", {
+        provider: config.provider,
+        operation: config.operation
+    });
 
     let result: JsonObject;
 
@@ -115,7 +118,9 @@ async function executeOpenAI(config: VisionNodeConfig, context: JsonObject): Pro
             context
         );
 
-        activityLogger.info("OpenAI analyzing image", { imageUrlPrefix: imageUrl.substring(0, 100) });
+        activityLogger.info("OpenAI analyzing image", {
+            imageUrlPrefix: imageUrl.substring(0, 100)
+        });
 
         const response = await openai.chat.completions.create({
             model: config.model || "gpt-4-vision-preview",

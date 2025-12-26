@@ -143,7 +143,8 @@ function formatWorkflowLog(
 
     // Add error details
     if (error) {
-        payload["@type"] = "type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent";
+        payload["@type"] =
+            "type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent";
         payload.serviceContext = {
             service: SERVICE_NAME,
             version: SERVICE_VERSION
@@ -166,7 +167,11 @@ function formatWorkflowLog(
  */
 export function createWorkflowLogger(context: WorkflowLogContext): WorkflowLogger {
     const logMethod = (level: LogLevel) => {
-        return (message: string, dataOrError?: Record<string, unknown> | Error | unknown, additionalData?: Record<string, unknown>) => {
+        return (
+            message: string,
+            dataOrError?: Record<string, unknown> | Error | unknown,
+            additionalData?: Record<string, unknown>
+        ) => {
             if (!shouldLog(level)) {
                 return;
             }
@@ -179,7 +184,11 @@ export function createWorkflowLogger(context: WorkflowLogContext): WorkflowLogge
                 if (dataOrError instanceof Error) {
                     error = dataOrError;
                     data = additionalData;
-                } else if (dataOrError && typeof dataOrError === "object" && "message" in dataOrError) {
+                } else if (
+                    dataOrError &&
+                    typeof dataOrError === "object" &&
+                    "message" in dataOrError
+                ) {
                     // Could be an error-like object
                     error = dataOrError as Error;
                     data = additionalData;
@@ -213,7 +222,8 @@ export function createWorkflowLogger(context: WorkflowLogContext): WorkflowLogge
             if (!shouldLog("error")) {
                 return;
             }
-            const errorObj = error instanceof Error ? error : error ? new Error(String(error)) : undefined;
+            const errorObj =
+                error instanceof Error ? error : error ? new Error(String(error)) : undefined;
             const formatted = formatWorkflowLog("error", message, context, data, errorObj);
             console.error(formatted);
         },

@@ -1,6 +1,6 @@
-import type { FastifyRequest, FastifyReply } from "fastify";
 import { createServiceLogger } from "../../../core/logging";
 import { providerRegistry } from "../../../integrations/registry";
+import type { FastifyRequest, FastifyReply } from "fastify";
 
 const logger = createServiceLogger("IntegrationProviders");
 

@@ -1,7 +1,7 @@
 import type { JsonObject } from "@flowmaestro/shared";
+import { createActivityLogger } from "../../shared/logger";
 import { WaitNodeConfigSchema, validateOrThrow, type WaitNodeConfig } from "../../shared/schemas";
 import { interpolateVariables } from "../../shared/utils";
-import { createActivityLogger } from "../../shared/logger";
 
 const logger = createActivityLogger({ nodeType: "Wait" });
 
@@ -26,7 +26,10 @@ export async function executeWaitNode(config: unknown, context: JsonObject): Pro
     const validatedConfig = validateOrThrow(WaitNodeConfigSchema, config, "Wait");
 
     const startTime = new Date();
-    logger.info("Starting wait", { waitType: validatedConfig.waitType, startTime: startTime.toISOString() });
+    logger.info("Starting wait", {
+        waitType: validatedConfig.waitType,
+        startTime: startTime.toISOString()
+    });
 
     let waitMs = 0;
     let skipped = false;
@@ -60,7 +63,10 @@ export async function executeWaitNode(config: unknown, context: JsonObject): Pro
             waitMs = targetTime.getTime() - startTime.getTime();
 
             if (waitMs > 0) {
-                logger.debug("Waiting until target time", { targetTime: targetTime.toISOString(), waitMs });
+                logger.debug("Waiting until target time", {
+                    targetTime: targetTime.toISOString(),
+                    waitMs
+                });
                 await sleep(waitMs);
             } else {
                 logger.debug("Target time already passed, continuing immediately", {

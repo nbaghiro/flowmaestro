@@ -1,10 +1,8 @@
 import { config as appConfig, getOAuthRedirectUri } from "../../../core/config";
+import { getLogger } from "../../../core/logging";
 import { BaseProvider } from "../../core/BaseProvider";
 import { ZendeskClient } from "./client/ZendeskClient";
 import { ZendeskMCPAdapter } from "./mcp/ZendeskMCPAdapter";
-import { getLogger } from "../../../core/logging";
-
-const logger = getLogger();
 import {
     // Ticket Operations
     createTicketOperation,
@@ -60,6 +58,8 @@ import type {
     OAuthConfig,
     ProviderCapabilities
 } from "../../core/types";
+
+const logger = getLogger();
 
 /**
  * Zendesk Provider

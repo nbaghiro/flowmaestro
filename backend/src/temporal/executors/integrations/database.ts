@@ -3,8 +3,8 @@ import { providerRegistry } from "../../../integrations/registry";
 import { ConnectionRepository } from "../../../storage/repositories/ConnectionRepository";
 import { ConfigurationError, NotFoundError, ValidationError } from "../../shared/errors";
 import { withHeartbeat } from "../../shared/heartbeat";
-import type { ExecutionContext } from "../../../integrations/core/types";
 import { createActivityLogger } from "../../shared/logger";
+import type { ExecutionContext } from "../../../integrations/core/types";
 
 const logger = createActivityLogger({ nodeType: "Database" });
 
@@ -169,11 +169,15 @@ export async function executeDatabaseNode(
         } catch (error) {
             const queryTime = Date.now() - startTime;
 
-            logger.error("Database operation failed", error instanceof Error ? error : new Error(String(error)), {
-                queryTime,
-                provider,
-                operation: config.operation
-            });
+            logger.error(
+                "Database operation failed",
+                error instanceof Error ? error : new Error(String(error)),
+                {
+                    queryTime,
+                    provider,
+                    operation: config.operation
+                }
+            );
 
             const errorResult: DatabaseNodeResult = {
                 operation: config.operation,

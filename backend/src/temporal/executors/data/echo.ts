@@ -1,6 +1,6 @@
 import type { JsonObject, JsonValue } from "@flowmaestro/shared";
-import { interpolateVariables } from "../../shared/utils";
 import { createActivityLogger } from "../../shared/logger";
+import { interpolateVariables } from "../../shared/utils";
 
 const logger = createActivityLogger({ nodeType: "Echo" });
 

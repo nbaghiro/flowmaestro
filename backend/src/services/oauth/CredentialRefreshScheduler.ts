@@ -1,7 +1,7 @@
+import { createServiceLogger } from "../../core/logging";
 import { CircuitBreaker, CircuitBreakerOpenError } from "../../core/utils/circuit-breaker";
 import { ConnectionRepository } from "../../storage/repositories/ConnectionRepository";
 import { getAccessToken } from "./TokenRefreshService";
-import { createServiceLogger } from "../../core/logging";
 
 const logger = createServiceLogger("CredentialRefreshScheduler");
 
@@ -34,11 +34,15 @@ export class CredentialRefreshScheduler {
         failureThreshold: 3, // Open circuit after 3 consecutive failures
         resetTimeout: 5 * 60 * 1000, // Try again after 5 minutes
         onOpen: () => {
-            logger.error("Circuit breaker OPENED - scheduler paused after repeated failures. Will retry in 5 minutes.");
+            logger.error(
+                "Circuit breaker OPENED - scheduler paused after repeated failures. Will retry in 5 minutes."
+            );
             // TODO: Send alert to ops team
         },
         onClose: () => {
-            logger.info("Circuit breaker CLOSED - scheduler recovered and resumed normal operation");
+            logger.info(
+                "Circuit breaker CLOSED - scheduler recovered and resumed normal operation"
+            );
         }
     });
 
@@ -52,7 +56,10 @@ export class CredentialRefreshScheduler {
         }
 
         logger.info(
-            { checkIntervalSec: this.CHECK_INTERVAL / 1000, refreshBufferSec: this.REFRESH_BUFFER / 1000 },
+            {
+                checkIntervalSec: this.CHECK_INTERVAL / 1000,
+                refreshBufferSec: this.REFRESH_BUFFER / 1000
+            },
             "Starting scheduler"
         );
 
@@ -132,7 +139,9 @@ export class CredentialRefreshScheduler {
         } catch (error) {
             if (error instanceof CircuitBreakerOpenError) {
                 // Circuit is open, skip this cycle
-                logger.warn("Skipping refresh cycle - circuit breaker is OPEN. Will retry when circuit resets.");
+                logger.warn(
+                    "Skipping refresh cycle - circuit breaker is OPEN. Will retry when circuit resets."
+                );
             } else {
                 // Other error, log it
                 logger.error({ err: error }, "Unexpected error in refresh cycle");
@@ -180,7 +189,11 @@ export class CredentialRefreshScheduler {
 
                 stats.refreshed++;
                 logger.info(
-                    { provider: connection.provider, connectionId: connection.id, userId: connection.user_id },
+                    {
+                        provider: connection.provider,
+                        connectionId: connection.id,
+                        userId: connection.user_id
+                    },
                     "Refreshed connection"
                 );
             } catch (error) {
@@ -200,7 +213,12 @@ export class CredentialRefreshScheduler {
 
         const duration = Date.now() - startTime;
         logger.info(
-            { durationMs: duration, scanned: stats.scanned, refreshed: stats.refreshed, failed: stats.failed },
+            {
+                durationMs: duration,
+                scanned: stats.scanned,
+                refreshed: stats.refreshed,
+                failed: stats.failed
+            },
             "Cycle complete"
         );
 
@@ -247,13 +265,21 @@ export class CredentialRefreshScheduler {
                 stats.refreshed++;
             } catch (error) {
                 stats.failed++;
-                logger.error({ connectionId: connection.id, err: error }, "Failed to refresh connection");
+                logger.error(
+                    { connectionId: connection.id, err: error },
+                    "Failed to refresh connection"
+                );
             }
         }
 
         const duration = Date.now() - startTime;
         logger.info(
-            { durationMs: duration, scanned: stats.scanned, refreshed: stats.refreshed, failed: stats.failed },
+            {
+                durationMs: duration,
+                scanned: stats.scanned,
+                refreshed: stats.refreshed,
+                failed: stats.failed
+            },
             "Manual refresh complete"
         );
 

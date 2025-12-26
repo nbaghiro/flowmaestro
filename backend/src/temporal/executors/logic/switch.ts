@@ -1,11 +1,11 @@
 import type { JsonObject, JsonValue } from "@flowmaestro/shared";
+import { createActivityLogger } from "../../shared/logger";
 import {
     SwitchNodeConfigSchema,
     validateOrThrow,
     type SwitchNodeConfig
 } from "../../shared/schemas";
 import { interpolateVariables } from "../../shared/utils";
-import { createActivityLogger } from "../../shared/logger";
 
 const logger = createActivityLogger({ nodeType: "Switch" });
 

@@ -1,8 +1,8 @@
 import { z } from "zod";
+import { getLogger } from "../../../../core/logging";
 import { toJSONSchema } from "../../../core/schema-utils";
 import { LinkedInClient } from "../client/LinkedInClient";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
-import { getLogger } from "../../../../core/logging";
 
 const logger = getLogger();
 
@@ -41,7 +41,10 @@ export const getOrganizationsOperation: OperationDefinition = (() => {
             timeout: 15000
         };
     } catch (error) {
-        logger.error({ component: "LinkedIn", err: error }, "Failed to create getOrganizationsOperation");
+        logger.error(
+            { component: "LinkedIn", err: error },
+            "Failed to create getOrganizationsOperation"
+        );
         throw new Error(
             `Failed to create getOrganizations operation: ${error instanceof Error ? error.message : "Unknown error"}`
         );

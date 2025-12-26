@@ -1,9 +1,9 @@
+import { getLogger } from "../../../../core/logging";
 import { toJSONSchema } from "../../../core/schema-utils";
 import { ShopifyClient } from "../client/ShopifyClient";
 import { SetInventorySchema, type SetInventoryParams } from "../schemas";
 import type { ShopifyInventoryLevelResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
-import { getLogger } from "../../../../core/logging";
 
 const logger = getLogger();
 
@@ -23,7 +23,10 @@ export const setInventoryOperation: OperationDefinition = (() => {
             timeout: 15000
         };
     } catch (error) {
-        logger.error({ component: "Shopify", err: error }, "Failed to create setInventoryOperation");
+        logger.error(
+            { component: "Shopify", err: error },
+            "Failed to create setInventoryOperation"
+        );
         throw new Error(
             `Failed to create setInventory operation: ${error instanceof Error ? error.message : "Unknown error"}`
         );

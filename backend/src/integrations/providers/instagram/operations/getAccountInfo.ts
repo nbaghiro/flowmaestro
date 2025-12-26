@@ -1,9 +1,9 @@
 import { z } from "zod";
+import { getLogger } from "../../../../core/logging";
 import { toJSONSchema } from "../../../core/schema-utils";
 import { InstagramClient } from "../client/InstagramClient";
 import type { InstagramAccountResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
-import { getLogger } from "../../../../core/logging";
 
 const logger = getLogger();
 
@@ -32,7 +32,10 @@ export const getAccountInfoOperation: OperationDefinition = (() => {
             timeout: 15000
         };
     } catch (error) {
-        logger.error({ component: "Instagram", err: error }, "Failed to create getAccountInfoOperation");
+        logger.error(
+            { component: "Instagram", err: error },
+            "Failed to create getAccountInfoOperation"
+        );
         throw new Error(
             `Failed to create getAccountInfo operation: ${error instanceof Error ? error.message : "Unknown error"}`
         );

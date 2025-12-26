@@ -705,7 +705,10 @@ export function AgentBuilder() {
                                                         model: connModel
                                                     });
                                                 } catch (err) {
-                                                    logger.error("Failed to update agent model", err);
+                                                    logger.error(
+                                                        "Failed to update agent model",
+                                                        err
+                                                    );
                                                 }
                                             }
                                         }}

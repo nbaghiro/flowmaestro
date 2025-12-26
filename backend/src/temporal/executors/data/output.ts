@@ -1,6 +1,6 @@
 import type { JsonObject, JsonValue } from "@flowmaestro/shared";
-import { interpolateWithObjectSupport } from "../../shared/utils";
 import { createActivityLogger } from "../../shared/logger";
+import { interpolateWithObjectSupport } from "../../shared/utils";
 
 const logger = createActivityLogger({ nodeType: "Output" });
 
@@ -55,7 +55,8 @@ function formatValue(value: JsonValue, format: string): JsonValue {
                     // If the string is not valid JSON, return it as-is
                     // This handles cases like LLM text responses that aren't JSON
                     logger.warn("Value is not valid JSON, returning as string", {
-                        suggestion: 'Consider changing output format to "string" if this is expected.'
+                        suggestion:
+                            'Consider changing output format to "string" if this is expected.'
                     });
                     return value;
                 }

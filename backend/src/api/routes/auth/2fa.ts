@@ -68,7 +68,10 @@ export async function twoFactorRoutes(fastify: FastifyInstance) {
             preHandler: [authMiddleware]
         },
         async (request, reply) => {
-            logger.debug({ userId: request.user.id, headers: request.headers }, "Verification request received");
+            logger.debug(
+                { userId: request.user.id, headers: request.headers },
+                "Verification request received"
+            );
 
             const userId = request.user.id;
             const { code } = request.body as { code: string; phone?: string };

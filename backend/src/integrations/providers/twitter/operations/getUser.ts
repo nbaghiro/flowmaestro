@@ -1,10 +1,10 @@
 import { z } from "zod";
+import { getLogger } from "../../../../core/logging";
 import { toJSONSchema } from "../../../core/schema-utils";
 import { TwitterClient } from "../client/TwitterClient";
 import { UsernameSchema } from "../schemas";
 import type { XAPIResponse, XUser } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
-import { getLogger } from "../../../../core/logging";
 
 const logger = getLogger();
 

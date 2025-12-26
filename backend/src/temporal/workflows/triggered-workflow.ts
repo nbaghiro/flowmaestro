@@ -5,9 +5,9 @@
 
 import { proxyActivities } from "@temporalio/workflow";
 import type { JsonValue, WorkflowDefinition, JsonObject } from "@flowmaestro/shared";
+import { createWorkflowLogger } from "../shared/workflow-logger";
 import { orchestratorWorkflow, OrchestratorResult } from "./orchestrator-workflow";
 import type * as triggerActivities from "../orchestration/triggers";
-import { createWorkflowLogger } from "../shared/workflow-logger";
 
 // Proxy activities for database operations
 const { prepareTriggeredExecution, completeTriggeredExecution } = proxyActivities<
@@ -104,7 +104,10 @@ export async function triggeredWorkflow(
             error: orchestratorResult.error
         };
     } catch (error) {
-        wfLogger.error("Fatal error in triggered workflow", error as Error, { triggerId, workflowId });
+        wfLogger.error("Fatal error in triggered workflow", error as Error, {
+            triggerId,
+            workflowId
+        });
         return {
             success: false,
             executionId: "",

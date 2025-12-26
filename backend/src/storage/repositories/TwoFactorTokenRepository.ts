@@ -93,7 +93,10 @@ export class TwoFactorTokenRepository {
         logger.debug({ userId, rawTokens: rawTokens.rows }, "Raw tokens for verification");
 
         const result = await db.query<TwoFactorTokenModel>(query, [userId]);
-        logger.debug({ userId, rowCount: result.rows.length, rows: result.rows }, "findValidCode result");
+        logger.debug(
+            { userId, rowCount: result.rows.length, rows: result.rows },
+            "findValidCode result"
+        );
 
         return result.rows[0] || null;
     }

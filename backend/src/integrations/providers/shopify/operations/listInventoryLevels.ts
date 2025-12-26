@@ -1,9 +1,9 @@
+import { getLogger } from "../../../../core/logging";
 import { toJSONSchema } from "../../../core/schema-utils";
 import { ShopifyClient } from "../client/ShopifyClient";
 import { ListInventoryLevelsSchema, type ListInventoryLevelsParams } from "../schemas";
 import type { ShopifyInventoryLevelsResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
-import { getLogger } from "../../../../core/logging";
 
 const logger = getLogger();
 
@@ -23,7 +23,10 @@ export const listInventoryLevelsOperation: OperationDefinition = (() => {
             timeout: 30000
         };
     } catch (error) {
-        logger.error({ component: "Shopify", err: error }, "Failed to create listInventoryLevelsOperation");
+        logger.error(
+            { component: "Shopify", err: error },
+            "Failed to create listInventoryLevelsOperation"
+        );
         throw new Error(
             `Failed to create listInventoryLevels operation: ${error instanceof Error ? error.message : "Unknown error"}`
         );

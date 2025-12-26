@@ -32,9 +32,13 @@ export async function validateInputsActivity(params: {
     );
 
     if (!result.success) {
-        activityLogger.error("Input validation failed", new Error(result.error?.message || "Unknown error"), {
-            errors: result.error?.errors
-        });
+        activityLogger.error(
+            "Input validation failed",
+            new Error(result.error?.message || "Unknown error"),
+            {
+                errors: result.error?.errors
+            }
+        );
     } else {
         activityLogger.info("Input validation passed");
     }
@@ -61,9 +65,13 @@ export async function validateOutputsActivity(params: {
     );
 
     if (!result.success) {
-        activityLogger.error("Output validation failed", new Error(result.error?.message || "Unknown error"), {
-            errors: result.error?.errors
-        });
+        activityLogger.error(
+            "Output validation failed",
+            new Error(result.error?.message || "Unknown error"),
+            {
+                errors: result.error?.errors
+            }
+        );
     } else {
         activityLogger.info("Output validation passed");
     }
@@ -89,10 +97,14 @@ export async function validateContextActivity(params: {
     );
 
     if (!result.success) {
-        activityLogger.error("Context validation failed", new Error(result.error?.message || "Unknown error"), {
-            nodeId,
-            errors: result.error?.errors
-        });
+        activityLogger.error(
+            "Context validation failed",
+            new Error(result.error?.message || "Unknown error"),
+            {
+                nodeId,
+                errors: result.error?.errors
+            }
+        );
     } else {
         activityLogger.info("Context validation passed", { nodeId });
     }

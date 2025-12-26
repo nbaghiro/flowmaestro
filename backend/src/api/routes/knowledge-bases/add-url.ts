@@ -134,7 +134,10 @@ export async function addUrlRoute(fastify: FastifyInstance) {
             } catch (error: unknown) {
                 const errorMsg = error instanceof Error ? error.message : String(error);
                 fastify.log.error(`Failed to start Temporal workflow: ${errorMsg}`);
-                logger.error({ documentId: document.id, url: body.url, error }, "Workflow start failed");
+                logger.error(
+                    { documentId: document.id, url: body.url, error },
+                    "Workflow start failed"
+                );
             }
 
             return reply.status(201).send({

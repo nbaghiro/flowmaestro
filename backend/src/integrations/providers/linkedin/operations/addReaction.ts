@@ -1,9 +1,9 @@
 import { z } from "zod";
+import { getLogger } from "../../../../core/logging";
 import { toJSONSchema } from "../../../core/schema-utils";
 import { LinkedInClient } from "../client/LinkedInClient";
 import { PostIdSchema, AuthorUrnSchema, ReactionTypeSchema } from "../schemas";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
-import { getLogger } from "../../../../core/logging";
 
 const logger = getLogger();
 
@@ -35,7 +35,10 @@ export const addReactionOperation: OperationDefinition = (() => {
             timeout: 15000
         };
     } catch (error) {
-        logger.error({ component: "LinkedIn", err: error }, "Failed to create addReactionOperation");
+        logger.error(
+            { component: "LinkedIn", err: error },
+            "Failed to create addReactionOperation"
+        );
         throw new Error(
             `Failed to create addReaction operation: ${error instanceof Error ? error.message : "Unknown error"}`
         );

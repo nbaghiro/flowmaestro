@@ -441,10 +441,13 @@ export function calculateCost(input: CostCalculationInput): CostCalculationResul
     const pricing = getModelPricing(input.provider, input.model);
 
     if (!pricing) {
-        logger.warn({
-            provider: input.provider,
-            model: input.model
-        }, "No pricing found for model");
+        logger.warn(
+            {
+                provider: input.provider,
+                model: input.model
+            },
+            "No pricing found for model"
+        );
         return {
             inputCost: 0,
             outputCost: 0,

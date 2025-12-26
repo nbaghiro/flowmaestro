@@ -1,10 +1,10 @@
 import { z } from "zod";
+import { getLogger } from "../../../../core/logging";
 import { toJSONSchema } from "../../../core/schema-utils";
 import { LinkedInClient } from "../client/LinkedInClient";
 import { PostIdSchema } from "../schemas";
 import type { LinkedInPost } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
-import { getLogger } from "../../../../core/logging";
 
 const logger = getLogger();
 

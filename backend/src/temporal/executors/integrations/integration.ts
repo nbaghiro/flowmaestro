@@ -43,7 +43,10 @@ export async function executeIntegrationNode(
 ): Promise<JsonObject> {
     const startTime = Date.now();
 
-    logger.info("Executing integration", { provider: config.provider, operation: config.operation });
+    logger.info("Executing integration", {
+        provider: config.provider,
+        operation: config.operation
+    });
 
     try {
         // Get connection with decrypted data

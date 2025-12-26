@@ -73,7 +73,10 @@ export async function executeAudioNode(
             provider: config.provider,
             operation: config.operation
         });
-        activityLogger.info("Audio node execution starting", { provider: config.provider, operation: config.operation });
+        activityLogger.info("Audio node execution starting", {
+            provider: config.provider,
+            operation: config.operation
+        });
 
         let result: JsonObject;
 
@@ -153,7 +156,9 @@ async function executeOpenAI(
                 prompt: config.prompt
             });
 
-            activityLogger.info("OpenAI transcription complete", { transcriptionLength: response.text.length });
+            activityLogger.info("OpenAI transcription complete", {
+                transcriptionLength: response.text.length
+            });
 
             return {
                 operation: "transcribe",

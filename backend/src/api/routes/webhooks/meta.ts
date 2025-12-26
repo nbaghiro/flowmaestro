@@ -2,14 +2,14 @@ import * as crypto from "crypto";
 import { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import { config } from "../../../core/config";
 import { createServiceLogger } from "../../../core/logging";
-
-const logger = createServiceLogger("MetaWebhook");
 import { FacebookWebhookHandler } from "../../../integrations/providers/facebook/webhooks/FacebookWebhookHandler";
 import { InstagramWebhookHandler } from "../../../integrations/providers/instagram/webhooks/InstagramWebhookHandler";
 import { WhatsAppWebhookHandler } from "../../../integrations/providers/whatsapp/webhooks/WhatsAppWebhookHandler";
 import type { MessengerWebhookPayload } from "../../../integrations/providers/facebook/types";
 import type { InstagramWebhookPayload } from "../../../integrations/providers/instagram/types";
 import type { WhatsAppWebhookPayload } from "../../../integrations/providers/whatsapp/types";
+
+const logger = createServiceLogger("MetaWebhook");
 
 /**
  * Meta Platform Webhook Routes

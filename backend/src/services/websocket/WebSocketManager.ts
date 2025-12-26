@@ -1,6 +1,6 @@
 import { WebSocketEvent } from "@flowmaestro/shared";
-import type { WebSocket } from "@fastify/websocket";
 import { createServiceLogger } from "../../core/logging";
+import type { WebSocket } from "@fastify/websocket";
 
 const logger = createServiceLogger("WebSocketManager");
 
@@ -110,7 +110,10 @@ export class WebSocketManager {
         // If it's an execution-related event, send to subscribers
         if ("executionId" in event) {
             const executionId = (event as WebSocketEvent & { executionId: string }).executionId;
-            logger.info({ eventType: event.type, executionId }, "Broadcasting to execution subscribers");
+            logger.info(
+                { eventType: event.type, executionId },
+                "Broadcasting to execution subscribers"
+            );
             this.broadcastToExecution(executionId, event);
         } else {
             // Broadcast to all connections
@@ -132,7 +135,10 @@ export class WebSocketManager {
         }
 
         const message = JSON.stringify(event);
-        logger.info({ eventType: event.type, subscriberCount: subscribers.size }, "Sending event to subscribers");
+        logger.info(
+            { eventType: event.type, subscriberCount: subscribers.size },
+            "Sending event to subscribers"
+        );
 
         subscribers.forEach((connectionId) => {
             const connection = this.connections.get(connectionId);

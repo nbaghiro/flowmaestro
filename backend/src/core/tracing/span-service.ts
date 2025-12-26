@@ -6,8 +6,6 @@
 import { randomUUID } from "crypto";
 import { createServiceLogger } from "../logging";
 import { calculateCost } from "./cost-calculator";
-
-const logger = createServiceLogger("SpanService");
 import {
     CreateSpanInput,
     EndSpanInput,
@@ -22,6 +20,8 @@ import {
     PaginationOptions
 } from "./span-types";
 import type { Pool } from "pg";
+
+const logger = createServiceLogger("SpanService");
 
 /**
  * Configuration for SpanService
@@ -230,16 +230,22 @@ export class SpanService {
                 span.attributes.outputCost = costResult.outputCost;
                 span.attributes.totalCost = costResult.totalCost;
 
-                logger.info({
-                    provider: span.attributes.provider,
-                    model: span.attributes.model,
-                    totalCost: costResult.totalCost.toFixed(6)
-                }, "Calculated cost for model generation");
+                logger.info(
+                    {
+                        provider: span.attributes.provider,
+                        model: span.attributes.model,
+                        totalCost: costResult.totalCost.toFixed(6)
+                    },
+                    "Calculated cost for model generation"
+                );
             } else {
-                logger.warn({
-                    provider: span.attributes.provider,
-                    model: span.attributes.model
-                }, "No pricing found for model");
+                logger.warn(
+                    {
+                        provider: span.attributes.provider,
+                        model: span.attributes.model
+                    },
+                    "No pricing found for model"
+                );
             }
         }
 
@@ -489,7 +495,10 @@ export class SpanService {
                 values
             );
         } catch (error) {
-            logger.error({ error, spanCount: spansToWrite.length }, "Failed to flush spans to database");
+            logger.error(
+                { error, spanCount: spansToWrite.length },
+                "Failed to flush spans to database"
+            );
             // Re-add failed spans back to batch for retry
             this.spanBatch.push(...spansToWrite);
         }

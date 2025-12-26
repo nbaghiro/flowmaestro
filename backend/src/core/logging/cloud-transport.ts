@@ -105,7 +105,9 @@ export class CloudLoggingWriter {
         // Build the log entry payload
         const payload: Record<string, unknown> = {
             message: data.msg || data.message || "",
-            timestamp: data.time ? new Date(data.time as number).toISOString() : new Date().toISOString(),
+            timestamp: data.time
+                ? new Date(data.time as number).toISOString()
+                : new Date().toISOString(),
             "logging.googleapis.com/labels": labels
         };
 
@@ -119,7 +121,8 @@ export class CloudLoggingWriter {
 
         // Add error reporting fields for error-level logs
         if (level === "error" || level === "fatal") {
-            payload["@type"] = "type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent";
+            payload["@type"] =
+                "type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent";
             payload.serviceContext = {
                 service: this.config.serviceName,
                 version: this.config.serviceVersion

@@ -2,7 +2,6 @@
  * API Client for FlowMaestro Backend
  */
 
-import { logger } from "./logger";
 import type {
     JsonObject,
     JsonValue,
@@ -23,6 +22,7 @@ import type {
     AgentTemplateListResponse,
     CopyAgentTemplateResponse
 } from "@flowmaestro/shared";
+import { logger } from "./logger";
 
 // Re-export types for use in components
 export type { JsonObject };
@@ -2863,13 +2863,16 @@ export async function getProviderOperations(provider: string): Promise<{
 }> {
     const token = getAuthToken();
 
-    const response = await apiFetch(`${API_BASE_URL}/integrations/providers/${provider}/operations`, {
-        method: "GET",
-        headers: {
-            "Content-Type": "application/json",
-            ...(token && { Authorization: `Bearer ${token}` })
+    const response = await apiFetch(
+        `${API_BASE_URL}/integrations/providers/${provider}/operations`,
+        {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+                ...(token && { Authorization: `Bearer ${token}` })
+            }
         }
-    });
+    );
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));

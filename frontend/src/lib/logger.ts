@@ -255,7 +255,12 @@ class FrontendLogger {
     /**
      * Add entry to queue and potentially flush
      */
-    private log(level: LogLevel, message: string, data?: Record<string, unknown>, error?: Error): void {
+    private log(
+        level: LogLevel,
+        message: string,
+        data?: Record<string, unknown>,
+        error?: Error
+    ): void {
         if (!this.shouldLog(level)) {
             return;
         }
@@ -265,7 +270,8 @@ class FrontendLogger {
 
         // Console output in development
         if (this.config.enableConsole) {
-            const consoleMethod = level === "error" ? console.error : level === "warn" ? console.warn : console.log;
+            const consoleMethod =
+                level === "error" ? console.error : level === "warn" ? console.warn : console.log;
             const prefix = `[${level.toUpperCase()}]`;
             if (error) {
                 consoleMethod(prefix, message, data || "", error);
@@ -307,7 +313,8 @@ class FrontendLogger {
      * Error level log
      */
     error(message: string, error?: Error | unknown, data?: Record<string, unknown>): void {
-        const errorObj = error instanceof Error ? error : error ? new Error(String(error)) : undefined;
+        const errorObj =
+            error instanceof Error ? error : error ? new Error(String(error)) : undefined;
         this.log("error", message, data, errorObj);
     }
 
@@ -358,7 +365,9 @@ class FrontendLogger {
                 this.queue = [...entries, ...this.queue];
                 // Console fallback
                 if (this.config.enableConsole) {
-                    console.warn("[Logger] Failed to flush logs to backend, entries queued for retry");
+                    console.warn(
+                        "[Logger] Failed to flush logs to backend, entries queued for retry"
+                    );
                 }
             }
         } catch {
@@ -385,7 +394,9 @@ class FrontendLogger {
         this.queue = [];
 
         try {
-            const blob = new Blob([JSON.stringify({ logs: entries })], { type: "application/json" });
+            const blob = new Blob([JSON.stringify({ logs: entries })], {
+                type: "application/json"
+            });
             navigator.sendBeacon(this.config.apiEndpoint, blob);
         } catch {
             // Best effort, nothing we can do on page unload

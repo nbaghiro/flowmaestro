@@ -7,8 +7,8 @@ import { ConnectionRepository } from "../../../storage/repositories/ConnectionRe
 import { HEARTBEAT_INTERVALS } from "../../shared/config";
 import { ConfigurationError, NotFoundError, ValidationError } from "../../shared/errors";
 import { withHeartbeat } from "../../shared/heartbeat";
-import { activityLogger } from "../../shared/logger";
 import { llmCircuitBreakers, type LLMProvider } from "../../shared/llm-circuit-breakers";
+import { activityLogger } from "../../shared/logger";
 import { LLMNodeConfigSchema, validateOrThrow, type LLMNodeConfig } from "../../shared/schemas";
 import { interpolateVariables } from "../../shared/utils";
 import type { ApiKeyData } from "../../../storage/models/Connection";
@@ -86,10 +86,14 @@ async function withRetry<T>(fn: () => Promise<T>, context: string): Promise<T> {
 
             // Don't retry if we've exhausted attempts
             if (attempt >= RETRY_CONFIG.maxRetries) {
-                activityLogger.error("Max retries exceeded", error instanceof Error ? error : new Error(String(error)), {
-                    context,
-                    maxRetries: RETRY_CONFIG.maxRetries
-                });
+                activityLogger.error(
+                    "Max retries exceeded",
+                    error instanceof Error ? error : new Error(String(error)),
+                    {
+                        context,
+                        maxRetries: RETRY_CONFIG.maxRetries
+                    }
+                );
                 throw error;
             }
 
@@ -171,7 +175,10 @@ async function getApiKey(
         if (!data.api_key) {
             throw new ConfigurationError("API key not found in connection data", "api_key");
         }
-        activityLogger.info("Using connection for API key", { connectionName: connection.name, connectionId: connection.id });
+        activityLogger.info("Using connection for API key", {
+            connectionName: connection.name,
+            connectionId: connection.id
+        });
         return data.api_key;
     }
 
@@ -330,7 +337,9 @@ async function executeOpenAI(
                 }
             }
 
-            activityLogger.info("OpenAI streaming response completed", { responseLength: fullContent.length });
+            activityLogger.info("OpenAI streaming response completed", {
+                responseLength: fullContent.length
+            });
 
             return {
                 text: fullContent,
@@ -351,7 +360,10 @@ async function executeOpenAI(
         const text = response.choices[0]?.message?.content || "";
         const usage = response.usage;
 
-        activityLogger.info("OpenAI response completed", { responseLength: text.length, totalTokens: usage?.total_tokens });
+        activityLogger.info("OpenAI response completed", {
+            responseLength: text.length,
+            totalTokens: usage?.total_tokens
+        });
 
         return {
             text,
@@ -398,7 +410,9 @@ async function executeAnthropic(
                 }
             }
 
-            activityLogger.info("Anthropic streaming response completed", { responseLength: fullContent.length });
+            activityLogger.info("Anthropic streaming response completed", {
+                responseLength: fullContent.length
+            });
 
             return {
                 text: fullContent,
@@ -469,7 +483,9 @@ async function executeGoogle(
                 callbacks.onToken(delta);
             }
 
-            activityLogger.info("Google streaming response completed", { responseLength: fullContent.length });
+            activityLogger.info("Google streaming response completed", {
+                responseLength: fullContent.length
+            });
 
             return {
                 text: fullContent,
@@ -536,7 +552,9 @@ async function executeCohere(
                 }
             }
 
-            activityLogger.info("Cohere streaming response completed", { responseLength: fullContent.length });
+            activityLogger.info("Cohere streaming response completed", {
+                responseLength: fullContent.length
+            });
 
             return {
                 text: fullContent,
@@ -654,7 +672,9 @@ async function executeHuggingFace(
                     }
                 }
 
-                activityLogger.info("HuggingFace streaming response completed", { responseLength: fullContent.length });
+                activityLogger.info("HuggingFace streaming response completed", {
+                    responseLength: fullContent.length
+                });
 
                 return {
                     text: fullContent,

@@ -6,8 +6,8 @@ import {
     setAuthToken,
     clearAuthToken
 } from "../lib/api";
-import type { ApiUser } from "../lib/api";
 import { logger } from "../lib/logger";
+import type { ApiUser } from "../lib/api";
 
 interface AuthContextType {
     user: ApiUser | null;

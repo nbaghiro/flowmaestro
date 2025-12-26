@@ -1,6 +1,6 @@
 import { Connection, Client } from "@temporalio/client";
-import { createServiceLogger } from "../core/logging";
 import { config } from "../core/config";
+import { createServiceLogger } from "../core/logging";
 
 const logger = createServiceLogger("temporal-client");
 
@@ -61,7 +61,10 @@ async function connectWithRetry(): Promise<Client> {
             }
             const delay = baseDelay * Math.pow(2, attempt - 1);
             const errorMessage = error instanceof Error ? error.message : String(error);
-            logger.warn({ attempt, maxRetries, errorMessage, delayMs: delay }, "Temporal client connection failed, retrying");
+            logger.warn(
+                { attempt, maxRetries, errorMessage, delayMs: delay },
+                "Temporal client connection failed, retrying"
+            );
             await new Promise((resolve) => setTimeout(resolve, delay));
         }
     }

@@ -2,8 +2,8 @@ import * as fs from "fs/promises";
 import * as cheerio from "cheerio";
 import mammoth from "mammoth";
 import { PDFParse } from "pdf-parse";
-import { DocumentFileType } from "../../storage/models/KnowledgeDocument";
 import { createServiceLogger } from "../../core/logging";
+import { DocumentFileType } from "../../storage/models/KnowledgeDocument";
 
 const logger = createServiceLogger("TextExtractor");
 
@@ -151,14 +151,20 @@ export class TextExtractor {
 
                 // Check actual content size
                 if (htmlContent.length > 10 * 1024 * 1024) {
-                    logger.error({ sizeMB: (htmlContent.length / 1024 / 1024).toFixed(2) }, "HTML content too large");
+                    logger.error(
+                        { sizeMB: (htmlContent.length / 1024 / 1024).toFixed(2) },
+                        "HTML content too large"
+                    );
                     throw new Error(
                         `HTML content too large: ${(htmlContent.length / 1024 / 1024).toFixed(2)}MB. Maximum size is 10MB.`
                     );
                 }
 
                 const result = this.extractFromHTML(htmlContent, finalUrl);
-                logger.info({ charCount: result.content.length, wordCount: result.metadata.wordCount || 0 }, "Extracted content");
+                logger.info(
+                    { charCount: result.content.length, wordCount: result.metadata.wordCount || 0 },
+                    "Extracted content"
+                );
                 return result;
             } else if (contentType.includes("text/plain")) {
                 const textContent = await response.text();

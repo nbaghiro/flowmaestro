@@ -9,8 +9,8 @@
  *   npm run analytics:aggregate -- --date 2024-01-15  # Aggregate specific date
  */
 
-import { db } from "../storage/database";
 import { createServiceLogger } from "../core/logging";
+import { db } from "../storage/database";
 
 const logger = createServiceLogger("AnalyticsService");
 
@@ -566,7 +566,10 @@ async function runCLI(): Promise<void> {
             const startDate = new Date(endDate);
             startDate.setDate(startDate.getDate() - days);
 
-            logger.info({ days, startDate: startDate.toISOString(), endDate: endDate.toISOString() }, "Backfilling analytics");
+            logger.info(
+                { days, startDate: startDate.toISOString(), endDate: endDate.toISOString() },
+                "Backfilling analytics"
+            );
 
             await analyticsAggregator.backfillDateRange(startDate, endDate);
 
@@ -585,7 +588,10 @@ async function runCLI(): Promise<void> {
                 throw new Error(`Invalid date format: ${dateStr}. Use YYYY-MM-DD`);
             }
 
-            logger.info({ targetDate: targetDate.toISOString() }, "Aggregating analytics for specific date");
+            logger.info(
+                { targetDate: targetDate.toISOString() },
+                "Aggregating analytics for specific date"
+            );
 
             await analyticsAggregator.aggregateForDate(targetDate);
 
@@ -596,7 +602,10 @@ async function runCLI(): Promise<void> {
             yesterday.setDate(yesterday.getDate() - 1);
             yesterday.setHours(0, 0, 0, 0);
 
-            logger.info({ yesterday: yesterday.toISOString() }, "Aggregating analytics for yesterday");
+            logger.info(
+                { yesterday: yesterday.toISOString() },
+                "Aggregating analytics for yesterday"
+            );
 
             await analyticsAggregator.aggregateForDate(yesterday);
 

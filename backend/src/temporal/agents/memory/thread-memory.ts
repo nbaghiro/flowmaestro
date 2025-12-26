@@ -4,8 +4,8 @@
  */
 
 import { ThreadMemoryService } from "../../../services/agents/ThreadMemoryService";
-import type { ThreadMessage } from "../../../storage/models/AgentExecution";
 import { createActivityLogger } from "../../shared/logger";
+import type { ThreadMessage } from "../../../storage/models/AgentExecution";
 
 const logger = createActivityLogger({ component: "ThreadMemory" });
 

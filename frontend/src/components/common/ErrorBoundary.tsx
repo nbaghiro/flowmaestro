@@ -3,10 +3,10 @@
  * Catches React render errors and logs them with correlation IDs
  */
 
+import { AlertTriangle, RefreshCw, Copy, Check } from "lucide-react";
 import React from "react";
 import { logger } from "../../lib/logger";
 import { Button } from "./Button";
-import { AlertTriangle, RefreshCw, Copy, Check } from "lucide-react";
 
 interface ErrorBoundaryProps {
     children: React.ReactNode;

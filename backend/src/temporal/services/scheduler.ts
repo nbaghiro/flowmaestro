@@ -112,7 +112,10 @@ export class SchedulerService {
 
             logger.info({ scheduleId: trigger.temporal_schedule_id }, "Updated Temporal schedule");
         } catch (error) {
-            logger.error({ scheduleId: trigger.temporal_schedule_id, err: error }, "Failed to update schedule");
+            logger.error(
+                { scheduleId: trigger.temporal_schedule_id, err: error },
+                "Failed to update schedule"
+            );
             throw new Error(`Failed to update schedule: ${error}`);
         }
     }
@@ -135,7 +138,10 @@ export class SchedulerService {
             await this.triggerRepo.update(triggerId, { enabled: false });
             logger.info({ scheduleId: trigger.temporal_schedule_id }, "Paused schedule");
         } catch (error) {
-            logger.error({ scheduleId: trigger.temporal_schedule_id, err: error }, "Failed to pause schedule");
+            logger.error(
+                { scheduleId: trigger.temporal_schedule_id, err: error },
+                "Failed to pause schedule"
+            );
             throw new Error(`Failed to pause schedule: ${error}`);
         }
     }
@@ -158,7 +164,10 @@ export class SchedulerService {
             await this.triggerRepo.update(triggerId, { enabled: true });
             logger.info({ scheduleId: trigger.temporal_schedule_id }, "Resumed schedule");
         } catch (error) {
-            logger.error({ scheduleId: trigger.temporal_schedule_id, err: error }, "Failed to resume schedule");
+            logger.error(
+                { scheduleId: trigger.temporal_schedule_id, err: error },
+                "Failed to resume schedule"
+            );
             throw new Error(`Failed to resume schedule: ${error}`);
         }
     }
@@ -186,7 +195,10 @@ export class SchedulerService {
             logger.info({ scheduleId: trigger.temporal_schedule_id }, "Deleted Temporal schedule");
         } catch (error) {
             // Log but don't fail if schedule doesn't exist
-            logger.error({ scheduleId: trigger.temporal_schedule_id, err: error }, "Failed to delete schedule");
+            logger.error(
+                { scheduleId: trigger.temporal_schedule_id, err: error },
+                "Failed to delete schedule"
+            );
         }
     }
 
@@ -213,7 +225,10 @@ export class SchedulerService {
                 nextRunTime: description.info.nextActionTimes?.[0]
             };
         } catch (error) {
-            logger.error({ scheduleId: trigger.temporal_schedule_id, err: error }, "Failed to get schedule info");
+            logger.error(
+                { scheduleId: trigger.temporal_schedule_id, err: error },
+                "Failed to get schedule info"
+            );
             throw new Error(`Failed to get schedule info: ${error}`);
         }
     }
@@ -233,10 +248,16 @@ export class SchedulerService {
             const handle = client.schedule.getHandle(trigger.temporal_schedule_id);
             await handle.trigger(ScheduleOverlapPolicy.ALLOW_ALL);
 
-            logger.info({ scheduleId: trigger.temporal_schedule_id }, "Manually triggered schedule");
+            logger.info(
+                { scheduleId: trigger.temporal_schedule_id },
+                "Manually triggered schedule"
+            );
             return trigger.temporal_schedule_id;
         } catch (error) {
-            logger.error({ scheduleId: trigger.temporal_schedule_id, err: error }, "Failed to trigger schedule");
+            logger.error(
+                { scheduleId: trigger.temporal_schedule_id, err: error },
+                "Failed to trigger schedule"
+            );
             throw new Error(`Failed to trigger schedule: ${error}`);
         }
     }
@@ -260,11 +281,17 @@ export class SchedulerService {
                     try {
                         const handle = client.schedule.getHandle(trigger.temporal_schedule_id);
                         await handle.describe();
-                        logger.info({ scheduleId: trigger.temporal_schedule_id }, "Schedule already exists");
+                        logger.info(
+                            { scheduleId: trigger.temporal_schedule_id },
+                            "Schedule already exists"
+                        );
                         continue;
                     } catch (_error) {
                         // Schedule doesn't exist, will recreate
-                        logger.info({ scheduleId: trigger.temporal_schedule_id }, "Schedule not found in Temporal, recreating");
+                        logger.info(
+                            { scheduleId: trigger.temporal_schedule_id },
+                            "Schedule not found in Temporal, recreating"
+                        );
                     }
                 }
 

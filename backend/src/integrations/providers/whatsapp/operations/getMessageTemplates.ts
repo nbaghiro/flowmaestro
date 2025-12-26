@@ -1,9 +1,9 @@
 import { z } from "zod";
+import { getLogger } from "../../../../core/logging";
 import { toJSONSchema } from "../../../core/schema-utils";
 import { WhatsAppClient } from "../client/WhatsAppClient";
 import type { WhatsAppMessageTemplateResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
-import { getLogger } from "../../../../core/logging";
 
 const logger = getLogger();
 
@@ -43,7 +43,10 @@ export const getMessageTemplatesOperation: OperationDefinition = (() => {
             timeout: 15000
         };
     } catch (error) {
-        logger.error({ component: "WhatsApp", err: error }, "Failed to create getMessageTemplatesOperation");
+        logger.error(
+            { component: "WhatsApp", err: error },
+            "Failed to create getMessageTemplatesOperation"
+        );
         throw new Error(
             `Failed to create getMessageTemplates operation: ${error instanceof Error ? error.message : "Unknown error"}`
         );

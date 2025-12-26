@@ -167,7 +167,8 @@ export function formatErrorForCloudReporting(
     }
 ): CloudErrorPayload {
     const payload: CloudErrorPayload = {
-        "@type": "type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent",
+        "@type":
+            "type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent",
         message: error.message,
         serviceContext: {
             service: serviceName,

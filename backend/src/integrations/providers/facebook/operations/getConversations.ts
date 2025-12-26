@@ -1,9 +1,9 @@
 import { z } from "zod";
+import { getLogger } from "../../../../core/logging";
 import { toJSONSchema } from "../../../core/schema-utils";
 import { FacebookClient } from "../client/FacebookClient";
 import type { MessengerConversationResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
-import { getLogger } from "../../../../core/logging";
 
 const logger = getLogger();
 
@@ -40,7 +40,10 @@ export const getConversationsOperation: OperationDefinition = (() => {
             timeout: 15000
         };
     } catch (error) {
-        logger.error({ component: "Messenger", err: error }, "Failed to create getConversationsOperation");
+        logger.error(
+            { component: "Messenger", err: error },
+            "Failed to create getConversationsOperation"
+        );
         throw new Error(
             `Failed to create getConversations operation: ${error instanceof Error ? error.message : "Unknown error"}`
         );

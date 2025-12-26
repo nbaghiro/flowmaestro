@@ -1,5 +1,5 @@
-import type { IProvider, ProviderRegistryEntry, ProviderSummary } from "./types";
 import { getLogger } from "../../core/logging";
+import type { IProvider, ProviderRegistryEntry, ProviderSummary } from "./types";
 
 const logger = getLogger();
 

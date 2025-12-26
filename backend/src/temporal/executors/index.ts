@@ -5,8 +5,6 @@
 
 import type { JsonObject, JsonValue } from "@flowmaestro/shared";
 import { createActivityLogger } from "../shared/logger";
-
-const logger = createActivityLogger({ nodeType: "NodeExecutor" });
 import { executeAudioNode, AudioNodeConfig, AudioNodeResult } from "./ai/audio";
 import { executeEmbeddingsNode, EmbeddingsNodeConfig, EmbeddingsNodeResult } from "./ai/embeddings";
 import { executeLLMNode, LLMNodeConfig, LLMNodeResult } from "./ai/llm";
@@ -44,6 +42,8 @@ import {
 import { executeLoopNode, LoopNodeConfig, LoopNodeResult } from "./logic/loop";
 import { executeSwitchNode, SwitchNodeConfig, SwitchNodeResult } from "./logic/switch";
 import { executeWaitNode, WaitNodeConfig, WaitNodeResult } from "./logic/wait";
+
+const logger = createActivityLogger({ nodeType: "NodeExecutor" });
 
 export type NodeConfig =
     | { type: "http"; config: HTTPNodeConfig }

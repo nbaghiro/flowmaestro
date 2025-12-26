@@ -92,11 +92,14 @@ export class SafetyPipeline {
 
             // Warnings don't block but are logged
             if (result.action === "warn") {
-                logger.warn({
-                    type: result.type,
-                    message: result.message,
-                    metadata: result.metadata
-                }, "Safety warning");
+                logger.warn(
+                    {
+                        type: result.type,
+                        message: result.message,
+                        metadata: result.metadata
+                    },
+                    "Safety warning"
+                );
             }
         }
 

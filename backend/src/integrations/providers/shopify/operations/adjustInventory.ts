@@ -1,9 +1,9 @@
+import { getLogger } from "../../../../core/logging";
 import { toJSONSchema } from "../../../core/schema-utils";
 import { ShopifyClient } from "../client/ShopifyClient";
 import { AdjustInventorySchema, type AdjustInventoryParams } from "../schemas";
 import type { ShopifyInventoryLevelResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
-import { getLogger } from "../../../../core/logging";
 
 const logger = getLogger();
 
@@ -24,7 +24,10 @@ export const adjustInventoryOperation: OperationDefinition = (() => {
             timeout: 15000
         };
     } catch (error) {
-        logger.error({ component: "Shopify", err: error }, "Failed to create adjustInventoryOperation");
+        logger.error(
+            { component: "Shopify", err: error },
+            "Failed to create adjustInventoryOperation"
+        );
         throw new Error(
             `Failed to create adjustInventory operation: ${error instanceof Error ? error.message : "Unknown error"}`
         );

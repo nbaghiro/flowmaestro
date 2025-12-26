@@ -11,11 +11,11 @@ import {
 } from "@temporalio/workflow";
 import type { JsonObject } from "@flowmaestro/shared";
 import { SpanType } from "../../core/tracing/span-types";
+import { createWorkflowLogger } from "../shared/workflow-logger";
 import type { SerializedThread } from "../../services/agents/ThreadManager";
 import type { Tool } from "../../storage/models/Agent";
 import type { ThreadMessage, ToolCall } from "../../storage/models/AgentExecution";
 import type * as activities from "../activities";
-import { createWorkflowLogger } from "../shared/workflow-logger";
 
 // Proxy activities
 const {
@@ -417,11 +417,17 @@ export async function agentOrchestratorWorkflow(
                     model: agent.model
                 });
             } catch (error) {
-                logger.error("Failed to update thread tokens", error instanceof Error ? error : new Error(String(error)));
+                logger.error(
+                    "Failed to update thread tokens",
+                    error instanceof Error ? error : new Error(String(error))
+                );
             }
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : "Unknown LLM error";
-            logger.error("LLM call failed", error instanceof Error ? error : new Error(errorMessage));
+            logger.error(
+                "LLM call failed",
+                error instanceof Error ? error : new Error(errorMessage)
+            );
 
             // End MODEL_GENERATION span with error
             await endSpan({
@@ -792,7 +798,11 @@ export async function agentOrchestratorWorkflow(
                 });
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : "Unknown tool error";
-                logger.error("Tool execution failed", error instanceof Error ? error : new Error(errorMessage), { toolName: toolCall.name });
+                logger.error(
+                    "Tool execution failed",
+                    error instanceof Error ? error : new Error(errorMessage),
+                    { toolName: toolCall.name }
+                );
 
                 // Add error result to thread messages
                 const toolMessage: ThreadMessage = {

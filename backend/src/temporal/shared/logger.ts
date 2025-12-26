@@ -140,7 +140,16 @@ function formatLog(entry: LogEntry): string {
         cloudPayload.userId = sanitizedContext.userId;
 
         // Add remaining context fields
-        const { traceId, spanId, executionId, workflowId, nodeId, nodeType, userId, ...rest } = sanitizedContext;
+        const {
+            traceId: _traceId,
+            spanId: _spanId,
+            executionId: _executionId,
+            workflowId: _workflowId,
+            nodeId: _nodeId,
+            nodeType: _nodeType,
+            userId: _userId,
+            ...rest
+        } = sanitizedContext;
         if (Object.keys(rest).length > 0) {
             cloudPayload.context = rest;
         }
@@ -148,7 +157,8 @@ function formatLog(entry: LogEntry): string {
 
     // Add error details for Cloud Error Reporting
     if (entry.error) {
-        cloudPayload["@type"] = "type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent";
+        cloudPayload["@type"] =
+            "type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent";
         cloudPayload.serviceContext = {
             service: entry.service,
             version: SERVICE_VERSION

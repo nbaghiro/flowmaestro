@@ -1,10 +1,8 @@
 import { config as appConfig, getOAuthRedirectUri } from "../../../core/config";
+import { getLogger } from "../../../core/logging";
 import { BaseProvider } from "../../core/BaseProvider";
 import { AirtableClient } from "./client/AirtableClient";
 import { AirtableMCPAdapter } from "./mcp/AirtableMCPAdapter";
-import { getLogger } from "../../../core/logging";
-
-const logger = getLogger();
 import {
     // Core Data Operations
     listRecordsOperation,
@@ -47,6 +45,8 @@ import type {
     OperationResult,
     MCPTool
 } from "../../core/types";
+
+const logger = getLogger();
 
 /**
  * Airtable Provider

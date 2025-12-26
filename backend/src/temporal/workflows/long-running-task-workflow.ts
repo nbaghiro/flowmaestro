@@ -1,6 +1,6 @@
 import { proxyActivities } from "@temporalio/workflow";
-import type * as activities from "../activities";
 import { createWorkflowLogger } from "../shared/workflow-logger";
+import type * as activities from "../activities";
 
 const { executeNodeBatch } = proxyActivities<typeof activities>({
     startToCloseTimeout: "10 minutes",

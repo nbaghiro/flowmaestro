@@ -77,7 +77,11 @@ export async function extractTextActivity(input: ProcessDocumentInput): Promise<
                 });
             } catch (error: unknown) {
                 const errorMsg = error instanceof Error ? error.message : String(error);
-                activityLogger.error("Failed to extract from URL", error instanceof Error ? error : new Error(errorMsg), { sourceUrl: input.sourceUrl });
+                activityLogger.error(
+                    "Failed to extract from URL",
+                    error instanceof Error ? error : new Error(errorMsg),
+                    { sourceUrl: input.sourceUrl }
+                );
                 throw error;
             }
         } else if (input.filePath) {
@@ -125,7 +129,11 @@ export async function extractTextActivity(input: ProcessDocumentInput): Promise<
         return sanitizedContent;
     } catch (error: unknown) {
         const errorMsg = error instanceof Error ? error.message : String(error);
-        activityLogger.error("Extract text activity error", error instanceof Error ? error : new Error(errorMsg), { documentId: input.documentId });
+        activityLogger.error(
+            "Extract text activity error",
+            error instanceof Error ? error : new Error(errorMsg),
+            { documentId: input.documentId }
+        );
         await documentRepository.updateStatus(input.documentId, "failed", errorMsg);
 
         // Emit document failed event
@@ -138,7 +146,7 @@ export async function extractTextActivity(input: ProcessDocumentInput): Promise<
             try {
                 await fs.unlink(tempFilePath);
                 activityLogger.info("Cleaned up temp file", { tempFilePath });
-            } catch (error: unknown) {
+            } catch (_error: unknown) {
                 activityLogger.warn("Failed to delete temp file", { tempFilePath });
             }
         }
@@ -185,12 +193,19 @@ export async function chunkTextActivity(input: ProcessDocumentInput & { content:
             content: sanitizeText(chunk.content)
         }));
 
-        activityLogger.info("Created chunks", { documentId: input.documentId, chunkCount: sanitizedChunks.length });
+        activityLogger.info("Created chunks", {
+            documentId: input.documentId,
+            chunkCount: sanitizedChunks.length
+        });
 
         return sanitizedChunks;
     } catch (error: unknown) {
         const errorMsg = error instanceof Error ? error.message : String(error);
-        activityLogger.error("Chunk text activity error", error instanceof Error ? error : new Error(errorMsg), { documentId: input.documentId });
+        activityLogger.error(
+            "Chunk text activity error",
+            error instanceof Error ? error : new Error(errorMsg),
+            { documentId: input.documentId }
+        );
         await documentRepository.updateStatus(input.documentId, "failed", errorMsg);
 
         // Emit document failed event
@@ -213,7 +228,10 @@ export async function generateAndStoreEmbeddingsActivity(
         }>;
     }
 ): Promise<{ chunkCount: number; totalTokens: number }> {
-    activityLogger.info("Processing chunks for embeddings", { chunkCount: input.chunks.length, documentId: input.documentId });
+    activityLogger.info("Processing chunks for embeddings", {
+        chunkCount: input.chunks.length,
+        documentId: input.documentId
+    });
 
     try {
         // Get KB config for embedding settings
@@ -269,7 +287,11 @@ export async function generateAndStoreEmbeddingsActivity(
         };
     } catch (error: unknown) {
         const errorMsg = error instanceof Error ? error.message : String(error);
-        activityLogger.error("Generate and store embeddings activity error", error instanceof Error ? error : new Error(errorMsg), { documentId: input.documentId });
+        activityLogger.error(
+            "Generate and store embeddings activity error",
+            error instanceof Error ? error : new Error(errorMsg),
+            { documentId: input.documentId }
+        );
         await documentRepository.updateStatus(input.documentId, "failed", errorMsg);
 
         // Emit document failed event
@@ -301,7 +323,11 @@ export async function completeDocumentProcessingActivity(
             chunks.length
         );
     } catch (error: unknown) {
-        activityLogger.error("Complete document processing activity error", error instanceof Error ? error : new Error(String(error)), { documentId: input.documentId });
+        activityLogger.error(
+            "Complete document processing activity error",
+            error instanceof Error ? error : new Error(String(error)),
+            { documentId: input.documentId }
+        );
         throw error;
     }
 }

@@ -1,7 +1,7 @@
 import { randomBytes } from "crypto";
+import { createServiceLogger } from "../../core/logging";
 import { getOAuthProvider, OAuthProvider } from "./OAuthProviderRegistry";
 import { generatePKCEPair } from "./utils/pkce";
-import { createServiceLogger } from "../../core/logging";
 
 const logger = createServiceLogger("OAuthService");
 
@@ -170,7 +170,10 @@ export class OAuthService {
                     accountInfo = userInfo as Record<string, unknown>;
                     logger.info({ provider: actualProvider, accountInfo }, "Retrieved user info");
                 } catch (error: unknown) {
-                    logger.error({ provider: actualProvider, err: error }, "Failed to get user info");
+                    logger.error(
+                        { provider: actualProvider, err: error },
+                        "Failed to get user info"
+                    );
                     // Continue anyway, user info is optional
                 }
             }

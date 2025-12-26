@@ -1,8 +1,8 @@
 import type { JsonObject } from "@flowmaestro/shared";
 import { EmbeddingService } from "../../../services/embeddings/EmbeddingService";
 import { KnowledgeBaseRepository, KnowledgeChunkRepository } from "../../../storage/repositories";
-import { ExecuteNodeInput } from "../index";
 import { createActivityLogger } from "../../shared/logger";
+import { ExecuteNodeInput } from "../index";
 
 const logger = createActivityLogger({ nodeType: "KnowledgeBaseQuery" });
 
@@ -111,9 +111,13 @@ export async function executeKnowledgeBaseQueryNode(input: ExecuteNodeInput): Pr
             }
         } as unknown as JsonObject;
     } catch (error: unknown) {
-        logger.error("KB Query execution error", error instanceof Error ? error : new Error(String(error)), {
-            knowledgeBaseId: config.knowledgeBaseId
-        });
+        logger.error(
+            "KB Query execution error",
+            error instanceof Error ? error : new Error(String(error)),
+            {
+                knowledgeBaseId: config.knowledgeBaseId
+            }
+        );
         const errorMessage =
             error instanceof Error ? error.message : "Failed to query knowledge base";
         return {

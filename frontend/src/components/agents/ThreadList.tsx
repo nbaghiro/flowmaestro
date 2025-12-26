@@ -10,8 +10,8 @@ import {
     Loader2
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
-import { cn } from "../../lib/utils";
 import { logger } from "../../lib/logger";
+import { cn } from "../../lib/utils";
 import { Input } from "../common/Input";
 import type { Thread } from "../../lib/api";
 

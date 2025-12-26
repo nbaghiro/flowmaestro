@@ -1,3 +1,4 @@
+import { getLogger } from "../../core/logging";
 import { ProviderRegistry } from "./ProviderRegistry";
 import type {
     IProvider,
@@ -7,7 +8,6 @@ import type {
     OperationSummary
 } from "./types";
 import type { ConnectionWithData } from "../../storage/models/Connection";
-import { getLogger } from "../../core/logging";
 
 const logger = getLogger();
 

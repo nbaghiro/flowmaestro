@@ -48,7 +48,10 @@ export async function createTriggerRoute(fastify: FastifyInstance) {
                     data: trigger
                 });
             } catch (error) {
-                logger.error({ workflowId: body.workflowId, triggerType: body.triggerType, error }, "Error creating trigger");
+                logger.error(
+                    { workflowId: body.workflowId, triggerType: body.triggerType, error },
+                    "Error creating trigger"
+                );
                 return reply.status(500).send({
                     success: false,
                     error: String(error)

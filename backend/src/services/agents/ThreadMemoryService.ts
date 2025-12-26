@@ -3,6 +3,7 @@
  * Integrates EmbeddingService with ThreadEmbeddingRepository for semantic search
  */
 
+import { getLogger } from "../../core/logging";
 import {
     ThreadEmbeddingRepository,
     type CreateThreadEmbeddingInput,
@@ -10,7 +11,6 @@ import {
     type SimilarMessageResult
 } from "../../storage/repositories/ThreadEmbeddingRepository";
 import { EmbeddingService } from "../embeddings/EmbeddingService";
-import { getLogger } from "../../core/logging";
 import type { ThreadMessage } from "../../storage/models/AgentExecution";
 
 const logger = getLogger();
@@ -193,7 +193,11 @@ export class ThreadMemoryService {
         const results = await this.repository.searchSimilar(searchInput);
 
         logger.info(
-            { component: "ThreadMemoryService", resultCount: results.length, queryPreview: query.substring(0, 50) },
+            {
+                component: "ThreadMemoryService",
+                resultCount: results.length,
+                queryPreview: query.substring(0, 50)
+            },
             "Found similar messages for query"
         );
 

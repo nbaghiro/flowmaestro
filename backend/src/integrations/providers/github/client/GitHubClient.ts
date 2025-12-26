@@ -1,5 +1,5 @@
-import { BaseAPIClient } from "../../../core/BaseAPIClient";
 import { getLogger } from "../../../../core/logging";
+import { BaseAPIClient } from "../../../core/BaseAPIClient";
 
 const logger = getLogger();
 

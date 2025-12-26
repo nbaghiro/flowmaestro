@@ -1,8 +1,6 @@
+import { getLogger } from "../../../../core/logging";
 import { isFetchError } from "../../../../core/utils/fetch-client";
 import { BaseAPIClient, BaseAPIClientConfig } from "../../../core/BaseAPIClient";
-import { getLogger } from "../../../../core/logging";
-
-const logger = getLogger();
 import {
     META_GRAPH_API_BASE_URL,
     isMetaGraphAPIError,
@@ -15,6 +13,8 @@ import {
     type WhatsAppBusinessProfile
 } from "../types";
 import type { RequestConfig } from "../../../core/types";
+
+const logger = getLogger();
 
 export interface WhatsAppClientConfig {
     accessToken: string;
@@ -469,7 +469,10 @@ export class WhatsAppClient extends BaseAPIClient {
 
             return null;
         } catch (error) {
-            logger.error({ component: "WhatsAppClient", err: error }, "Failed to get connected WABA ID");
+            logger.error(
+                { component: "WhatsAppClient", err: error },
+                "Failed to get connected WABA ID"
+            );
             return null;
         }
     }

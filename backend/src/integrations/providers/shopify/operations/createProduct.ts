@@ -1,9 +1,9 @@
+import { getLogger } from "../../../../core/logging";
 import { toJSONSchema } from "../../../core/schema-utils";
 import { ShopifyClient } from "../client/ShopifyClient";
 import { CreateProductSchema, type CreateProductParams } from "../schemas";
 import type { ShopifyProductResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
-import { getLogger } from "../../../../core/logging";
 
 const logger = getLogger();
 
@@ -23,7 +23,10 @@ export const createProductOperation: OperationDefinition = (() => {
             timeout: 30000
         };
     } catch (error) {
-        logger.error({ component: "Shopify", err: error }, "Failed to create createProductOperation");
+        logger.error(
+            { component: "Shopify", err: error },
+            "Failed to create createProductOperation"
+        );
         throw new Error(
             `Failed to create createProduct operation: ${error instanceof Error ? error.message : "Unknown error"}`
         );

@@ -1,10 +1,10 @@
 import { z } from "zod";
+import { getLogger } from "../../../../core/logging";
 import { toJSONSchema } from "../../../core/schema-utils";
 import { TwitterClient } from "../client/TwitterClient";
 import { UserIdSchema, MaxResultsSchema, PaginationTokenSchema } from "../schemas";
 import type { TweetsResponse, XAPIResponse, XUser } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
-import { getLogger } from "../../../../core/logging";
 
 const logger = getLogger();
 
@@ -38,7 +38,10 @@ export const getUserTimelineOperation: OperationDefinition = (() => {
             timeout: 15000
         };
     } catch (error) {
-        logger.error({ component: "Twitter", err: error }, "Failed to create getUserTimelineOperation");
+        logger.error(
+            { component: "Twitter", err: error },
+            "Failed to create getUserTimelineOperation"
+        );
         throw new Error(
             `Failed to create getUserTimeline operation: ${error instanceof Error ? error.message : "Unknown error"}`
         );

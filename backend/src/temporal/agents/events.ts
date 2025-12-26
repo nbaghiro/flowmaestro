@@ -1,7 +1,7 @@
 import type { JsonObject, WebSocketEvent } from "@flowmaestro/shared";
 import { redisEventBus } from "../../services/events/RedisEventBus";
-import type { ThreadMessage } from "../../storage/models/AgentExecution";
 import { createActivityLogger } from "../shared/logger";
+import type { ThreadMessage } from "../../storage/models/AgentExecution";
 
 const logger = createActivityLogger({ component: "AgentEvents" });
 

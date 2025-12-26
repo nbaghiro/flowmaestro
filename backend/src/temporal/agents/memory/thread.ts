@@ -6,9 +6,9 @@ import { calculateCost } from "../../../core/tracing/cost-calculator";
 import { ThreadManager } from "../../../services/agents/ThreadManager";
 import { db } from "../../../storage/database";
 import { AgentExecutionRepository } from "../../../storage/repositories/AgentExecutionRepository";
+import { createActivityLogger } from "../../shared/logger";
 import { emitTokensUpdated } from "../streaming";
 import type { ThreadMessage } from "../../../storage/models/AgentExecution";
-import { createActivityLogger } from "../../shared/logger";
 
 const logger = createActivityLogger({ component: "ThreadActivity" });
 

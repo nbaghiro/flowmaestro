@@ -1,7 +1,7 @@
+import { createServiceLogger } from "../../core/logging";
 import { OAuth2TokenData } from "../../storage/models/Connection";
 import { ConnectionRepository } from "../../storage/repositories/ConnectionRepository";
 import { oauthService } from "./OAuthService";
-import { createServiceLogger } from "../../core/logging";
 
 const connectionRepo = new ConnectionRepository();
 const logger = createServiceLogger("TokenRefreshService");
@@ -156,7 +156,10 @@ export async function refreshExpiringTokens(userId?: string): Promise<{
                     connectionId: connection.id,
                     error: errorMessage
                 });
-                logger.error({ connectionId: connection.id, err: error }, "Failed to refresh connection");
+                logger.error(
+                    { connectionId: connection.id, err: error },
+                    "Failed to refresh connection"
+                );
             }
         }
 

@@ -105,12 +105,15 @@ export async function streamAgentHandler(
         eventHandlers.push({ channel, handler });
         redisEventBus.subscribe(channel, (event: unknown) => {
             const eventData = event as Record<string, unknown>;
-            logger.debug({
-                channel,
-                type: eventData.type,
-                executionId: eventData.executionId,
-                hasToken: !!eventData.token
-            }, "Received event on channel");
+            logger.debug(
+                {
+                    channel,
+                    type: eventData.type,
+                    executionId: eventData.executionId,
+                    hasToken: !!eventData.token
+                },
+                "Received event on channel"
+            );
             handler(eventData);
         });
     };
@@ -143,10 +146,13 @@ export async function streamAgentHandler(
     });
 
     subscribe("token", (data) => {
-        logger.debug({
-            receivedExecutionId: data.executionId,
-            currentExecutionId: executionId
-        }, "Received token event");
+        logger.debug(
+            {
+                receivedExecutionId: data.executionId,
+                currentExecutionId: executionId
+            },
+            "Received token event"
+        );
         if (data.executionId === executionId) {
             logger.debug({ token: data.token }, "Sending token to client");
             sendEvent("token", {
@@ -154,10 +160,13 @@ export async function streamAgentHandler(
                 executionId: data.executionId
             });
         } else {
-            logger.debug({
-                receivedExecutionId: data.executionId,
-                expectedExecutionId: executionId
-            }, "Token event executionId mismatch");
+            logger.debug(
+                {
+                    receivedExecutionId: data.executionId,
+                    expectedExecutionId: executionId
+                },
+                "Token event executionId mismatch"
+            );
         }
     });
 
@@ -201,11 +210,14 @@ export async function streamAgentHandler(
     });
 
     subscribe("execution:completed", (data) => {
-        logger.info({
-            receivedExecutionId: data.executionId,
-            currentExecutionId: executionId,
-            data
-        }, "Received execution:completed event");
+        logger.info(
+            {
+                receivedExecutionId: data.executionId,
+                currentExecutionId: executionId,
+                data
+            },
+            "Received execution:completed event"
+        );
         if (data.executionId === executionId) {
             logger.info({ executionId }, "Sending completed event to client");
             sendEvent("completed", {

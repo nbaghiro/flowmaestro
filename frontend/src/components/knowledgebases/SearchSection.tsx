@@ -10,8 +10,8 @@ import {
     ChevronUp
 } from "lucide-react";
 import { useState } from "react";
-import { Input } from "../common/Input";
 import { logger } from "../../lib/logger";
+import { Input } from "../common/Input";
 import type { ChunkSearchResult, KnowledgeDocument } from "../../lib/api";
 
 interface SearchSectionProps {

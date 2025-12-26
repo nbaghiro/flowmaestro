@@ -1,7 +1,7 @@
 import { zodToJsonSchema } from "zod-to-json-schema";
+import { getLogger } from "../../core/logging";
 import type { JSONSchema } from "./types";
 import type { z } from "zod";
-import { getLogger } from "../../core/logging";
 
 const logger = getLogger();
 

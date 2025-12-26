@@ -1,10 +1,10 @@
 import { z } from "zod";
+import { getLogger } from "../../../../core/logging";
 import { toJSONSchema } from "../../../core/schema-utils";
 import { TwitterClient } from "../client/TwitterClient";
 import { TweetTextSchema, TweetIdSchema } from "../schemas";
 import type { CreateTweetResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
-import { getLogger } from "../../../../core/logging";
 
 const logger = getLogger();
 
@@ -34,7 +34,10 @@ export const replyToTweetOperation: OperationDefinition = (() => {
             timeout: 15000
         };
     } catch (error) {
-        logger.error({ component: "Twitter", err: error }, "Failed to create replyToTweetOperation");
+        logger.error(
+            { component: "Twitter", err: error },
+            "Failed to create replyToTweetOperation"
+        );
         throw new Error(
             `Failed to create replyToTweet operation: ${error instanceof Error ? error.message : "Unknown error"}`
         );

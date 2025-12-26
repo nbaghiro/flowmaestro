@@ -1,6 +1,6 @@
 import type { JsonObject, JsonValue } from "@flowmaestro/shared";
-import { interpolateVariables } from "../../shared/utils";
 import { createActivityLogger } from "../../shared/logger";
+import { interpolateVariables } from "../../shared/utils";
 
 const logger = createActivityLogger({ nodeType: "Variable" });
 
@@ -76,7 +76,10 @@ function getVariable(config: VariableNodeConfig, store: VariableStore): Variable
     const value =
         store instanceof Map ? store.get(config.variableName) : store[config.variableName];
 
-    logger.debug("Variable get", { variableName: config.variableName, hasValue: value !== undefined });
+    logger.debug("Variable get", {
+        variableName: config.variableName,
+        hasValue: value !== undefined
+    });
 
     return { [config.variableName]: value ?? null };
 }

@@ -45,11 +45,14 @@ export async function getOperationsHandler(
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
         const errorStack = error instanceof Error ? error.stack : undefined;
 
-        logger.error({
-            provider: request.params.provider,
-            error: errorMessage,
-            stack: errorStack
-        }, "Error getting operations");
+        logger.error(
+            {
+                provider: request.params.provider,
+                error: errorMessage,
+                stack: errorStack
+            },
+            "Error getting operations"
+        );
 
         reply.code(500).send({
             success: false,

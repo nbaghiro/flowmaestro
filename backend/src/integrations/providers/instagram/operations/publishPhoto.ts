@@ -1,9 +1,9 @@
 import { z } from "zod";
+import { getLogger } from "../../../../core/logging";
 import { toJSONSchema } from "../../../core/schema-utils";
 import { InstagramClient } from "../client/InstagramClient";
 import type { InstagramPublishResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
-import { getLogger } from "../../../../core/logging";
 
 const logger = getLogger();
 
@@ -35,7 +35,10 @@ export const publishPhotoOperation: OperationDefinition = (() => {
             timeout: 60000
         };
     } catch (error) {
-        logger.error({ component: "Instagram", err: error }, "Failed to create publishPhotoOperation");
+        logger.error(
+            { component: "Instagram", err: error },
+            "Failed to create publishPhotoOperation"
+        );
         throw new Error(
             `Failed to create publishPhoto operation: ${error instanceof Error ? error.message : "Unknown error"}`
         );

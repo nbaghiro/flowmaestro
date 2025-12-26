@@ -5,8 +5,8 @@ import type { JsonObject, JsonValue } from "@flowmaestro/shared";
 import { config as appConfig } from "../../../core/config";
 import { ConfigurationError, ValidationError } from "../../shared/errors";
 import { withHeartbeat, type HeartbeatOperations } from "../../shared/heartbeat";
-import { interpolateVariables } from "../../shared/utils";
 import { createActivityLogger } from "../../shared/logger";
+import { interpolateVariables } from "../../shared/utils";
 
 const logger = createActivityLogger({ nodeType: "Embeddings" });
 

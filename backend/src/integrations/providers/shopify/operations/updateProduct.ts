@@ -1,9 +1,9 @@
+import { getLogger } from "../../../../core/logging";
 import { toJSONSchema } from "../../../core/schema-utils";
 import { ShopifyClient } from "../client/ShopifyClient";
 import { UpdateProductSchema, type UpdateProductParams } from "../schemas";
 import type { ShopifyProductResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
-import { getLogger } from "../../../../core/logging";
 
 const logger = getLogger();
 
@@ -23,7 +23,10 @@ export const updateProductOperation: OperationDefinition = (() => {
             timeout: 15000
         };
     } catch (error) {
-        logger.error({ component: "Shopify", err: error }, "Failed to create updateProductOperation");
+        logger.error(
+            { component: "Shopify", err: error },
+            "Failed to create updateProductOperation"
+        );
         throw new Error(
             `Failed to create updateProduct operation: ${error instanceof Error ? error.message : "Unknown error"}`
         );

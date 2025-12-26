@@ -9,7 +9,6 @@
  */
 
 import pino, { Logger as PinoLogger } from "pino";
-import type { FastifyRequest } from "fastify";
 import {
     CloudLoggingWriter,
     initializeCloudLogging,
@@ -24,6 +23,7 @@ import {
     LogLevel
 } from "./logger";
 import type { CorrelatedLogger, LogEntry, CloudErrorPayload } from "./logger";
+import type { FastifyRequest } from "fastify";
 
 // Re-export types and utilities
 export {

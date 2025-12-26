@@ -20,10 +20,13 @@ export async function chatRoute(fastify: FastifyInstance) {
             const body = request.body as ChatRequest;
 
             try {
-                logger.info({
-                    userId: request.user!.id,
-                    action: body.action
-                }, "Received chat request");
+                logger.info(
+                    {
+                        userId: request.user!.id,
+                        action: body.action
+                    },
+                    "Received chat request"
+                );
 
                 // Generate execution ID
                 const executionId = randomUUID();
@@ -57,11 +60,14 @@ export async function chatRoute(fastify: FastifyInstance) {
                             },
                             onComplete: (response) => {
                                 const duration = firstTokenTime ? Date.now() - firstTokenTime : 0;
-                                logger.info({
-                                    executionId,
-                                    tokenCount,
-                                    durationMs: duration
-                                }, "Completed execution");
+                                logger.info(
+                                    {
+                                        executionId,
+                                        tokenCount,
+                                        durationMs: duration
+                                    },
+                                    "Completed execution"
+                                );
                                 emitChatEvent(executionId, "complete", response);
                             },
                             onError: (error: Error) => {

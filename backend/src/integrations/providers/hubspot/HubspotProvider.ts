@@ -1,10 +1,8 @@
 import { config as appConfig, getOAuthRedirectUri } from "../../../core/config";
+import { getLogger } from "../../../core/logging";
 import { BaseProvider } from "../../core/BaseProvider";
 import { HubspotClient } from "./client/HubspotClient";
 import { HubspotMCPAdapter } from "./mcp/HubspotMCPAdapter";
-import { getLogger } from "../../../core/logging";
-
-const logger = getLogger();
 import {
     // Contact Operations
     createContactOperation,
@@ -202,6 +200,8 @@ import type {
     OAuthConfig,
     ProviderCapabilities
 } from "../../core/types";
+
+const logger = getLogger();
 
 /**
  * HubSpot Provider

@@ -98,7 +98,10 @@ async function run() {
             }
             const delay = baseDelay * Math.pow(2, attempt - 1);
             const errorMessage = error instanceof Error ? error.message : String(error);
-            logger.warn({ attempt, maxRetries, error: errorMessage, retryDelayMs: delay }, "Failed to connect to Temporal, retrying");
+            logger.warn(
+                { attempt, maxRetries, error: errorMessage, retryDelayMs: delay },
+                "Failed to connect to Temporal, retrying"
+            );
             await new Promise((resolve) => setTimeout(resolve, delay));
         }
     }
@@ -131,10 +134,13 @@ async function run() {
         }
     });
 
-    logger.info({
-        taskQueue: "flowmaestro-orchestrator",
-        temporalAddress: config.temporal.address
-    }, "Orchestrator worker starting");
+    logger.info(
+        {
+            taskQueue: "flowmaestro-orchestrator",
+            temporalAddress: config.temporal.address
+        },
+        "Orchestrator worker starting"
+    );
 
     // Graceful shutdown handler
     const signals = ["SIGINT", "SIGTERM"];

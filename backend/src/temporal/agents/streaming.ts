@@ -41,7 +41,10 @@ export async function emitMessageStart(input: {
     };
 
     await publishWithRetry(input.threadId, event);
-    activityLogger.info("Message start event emitted", { messageId: input.messageId, threadId: input.threadId });
+    activityLogger.info("Message start event emitted", {
+        messageId: input.messageId,
+        threadId: input.threadId
+    });
 }
 
 /**
@@ -118,7 +121,9 @@ export async function emitMessageError(input: {
     };
 
     await publishWithRetry(input.threadId, event);
-    activityLogger.error("Message error event emitted", new Error(input.error), { messageId: input.messageId });
+    activityLogger.error("Message error event emitted", new Error(input.error), {
+        messageId: input.messageId
+    });
 }
 
 /**
@@ -177,20 +182,28 @@ async function publishWithRetry(threadId: string, event: ThreadStreamingEvent): 
             await redisEventBus.publishThreadEvent(threadId, event);
             return; // Success
         } catch (error) {
-            activityLogger.error("Publish attempt failed", error instanceof Error ? error : new Error(String(error)), {
-                attempt,
-                maxRetries: MAX_RETRIES,
-                eventType: event.type,
-                threadId
-            });
+            activityLogger.error(
+                "Publish attempt failed",
+                error instanceof Error ? error : new Error(String(error)),
+                {
+                    attempt,
+                    maxRetries: MAX_RETRIES,
+                    eventType: event.type,
+                    threadId
+                }
+            );
 
             if (attempt === MAX_RETRIES) {
                 // CRITICAL: Event emission failed after all retries
-                activityLogger.error("FAILED to publish event after all retries", new Error("Max retries exceeded"), {
-                    eventType: event.type,
-                    threadId,
-                    maxRetries: MAX_RETRIES
-                });
+                activityLogger.error(
+                    "FAILED to publish event after all retries",
+                    new Error("Max retries exceeded"),
+                    {
+                        eventType: event.type,
+                        threadId,
+                        maxRetries: MAX_RETRIES
+                    }
+                );
 
                 // Don't throw - workflow must continue
                 // Frontend will detect missing sequence numbers

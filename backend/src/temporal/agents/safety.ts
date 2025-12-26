@@ -5,8 +5,8 @@
 
 import { SafetyPipeline } from "../../core/safety/safety-pipeline";
 import { SafetyLogRepository } from "../../storage/repositories/SafetyLogRepository";
-import type { SafetyContext, SafetyCheckResult, SafetyConfig } from "../../core/safety/types";
 import { createActivityLogger } from "../shared/logger";
+import type { SafetyContext, SafetyCheckResult, SafetyConfig } from "../../core/safety/types";
 
 const logger = createActivityLogger({ component: "SafetyActivity" });
 

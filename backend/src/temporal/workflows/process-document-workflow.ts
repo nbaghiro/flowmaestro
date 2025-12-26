@@ -1,7 +1,7 @@
 import { proxyActivities } from "@temporalio/workflow";
+import { createWorkflowLogger } from "../shared/workflow-logger";
 import type { DocumentFileType } from "../../storage/models/KnowledgeDocument";
 import type * as activities from "../orchestration/documents";
-import { createWorkflowLogger } from "../shared/workflow-logger";
 
 // Proxy the activities with retry policies
 const {

@@ -181,7 +181,10 @@ async function parsePDF(
         pdf as unknown as (dataBuffer: Buffer) => Promise<{ numpages: number; text: string }>
     )(buffer);
 
-    activityLogger.info("Extracted PDF content", { pages: data.numpages, characterCount: data.text.length });
+    activityLogger.info("Extracted PDF content", {
+        pages: data.numpages,
+        characterCount: data.text.length
+    });
 
     return {
         content: data.text,

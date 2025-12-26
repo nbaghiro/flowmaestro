@@ -635,7 +635,10 @@ async function callAnthropic(input: AnthropicCallInput): Promise<LLMResponse> {
                                 arguments: JSON.parse(currentToolUse.input)
                             });
                         } catch (error) {
-                            activityLogger.error("Failed to parse Anthropic tool input JSON", error instanceof Error ? error : new Error(String(error)));
+                            activityLogger.error(
+                                "Failed to parse Anthropic tool input JSON",
+                                error instanceof Error ? error : new Error(String(error))
+                            );
                         }
                         currentToolUse = null;
                     }
@@ -1149,7 +1152,10 @@ export async function executeToolCall(input: ExecuteToolCallInput): Promise<Json
 
     if (!validation.success) {
         // Return validation error to LLM (don't throw, let LLM retry)
-        activityLogger.warn("Tool validation failed", { toolName: toolCall.name, error: validation.error?.message });
+        activityLogger.warn("Tool validation failed", {
+            toolName: toolCall.name,
+            error: validation.error?.message
+        });
 
         return createValidationErrorResponse(toolCall.name, validation);
     }
@@ -1397,7 +1403,10 @@ async function executeSearchThreadMemory(
             }))
         };
     } catch (error) {
-        activityLogger.error("Error searching conversation memory", error instanceof Error ? error : new Error(String(error)));
+        activityLogger.error(
+            "Error searching conversation memory",
+            error instanceof Error ? error : new Error(String(error))
+        );
         return {
             success: false,
             error: true,
@@ -1835,7 +1844,11 @@ async function executeMCPToolCall(input: ExecuteMCPToolInput): Promise<JsonObjec
         };
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
-        activityLogger.error("MCP tool execution failed", error instanceof Error ? error : new Error(errorMessage), { toolName: tool.name });
+        activityLogger.error(
+            "MCP tool execution failed",
+            error instanceof Error ? error : new Error(errorMessage),
+            { toolName: tool.name }
+        );
         throw new Error(`MCP tool execution failed: ${errorMessage}`);
     }
 }

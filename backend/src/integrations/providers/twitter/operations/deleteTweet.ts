@@ -1,10 +1,10 @@
 import { z } from "zod";
+import { getLogger } from "../../../../core/logging";
 import { toJSONSchema } from "../../../core/schema-utils";
 import { TwitterClient } from "../client/TwitterClient";
 import { TweetIdSchema } from "../schemas";
 import type { DeleteTweetResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
-import { getLogger } from "../../../../core/logging";
 
 const logger = getLogger();
 

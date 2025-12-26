@@ -83,7 +83,9 @@ export function BuilderHeader({
                     throw new Error("Failed to create background trigger");
                 }
             } else {
-                logger.debug("Reusing existing __run_button__ trigger", { triggerId: manualTrigger.id });
+                logger.debug("Reusing existing __run_button__ trigger", {
+                    triggerId: manualTrigger.id
+                });
             }
 
             // Execute trigger with default inputs

@@ -139,7 +139,10 @@ export class WebSocketClient {
         }
 
         if (d.type === "subscribed" || d.type === "unsubscribed") {
-            logger.debug("Execution subscription changed", { type: d.type, executionId: d.executionId });
+            logger.debug("Execution subscription changed", {
+                type: d.type,
+                executionId: d.executionId
+            });
             return;
         }
 

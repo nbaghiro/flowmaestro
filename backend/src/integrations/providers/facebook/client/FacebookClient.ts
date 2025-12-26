@@ -1,8 +1,6 @@
+import { getLogger } from "../../../../core/logging";
 import { isFetchError } from "../../../../core/utils/fetch-client";
 import { BaseAPIClient, BaseAPIClientConfig } from "../../../core/BaseAPIClient";
-import { getLogger } from "../../../../core/logging";
-
-const logger = getLogger();
 import {
     META_GRAPH_API_BASE_URL,
     isMetaGraphAPIError,
@@ -30,6 +28,8 @@ import {
     type FacebookPaginatedResponse
 } from "../types";
 import type { RequestConfig } from "../../../core/types";
+
+const logger = getLogger();
 
 export interface FacebookClientConfig {
     accessToken: string;

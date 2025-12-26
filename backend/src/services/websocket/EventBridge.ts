@@ -1,8 +1,8 @@
 import { WebSocketEvent, WebSocketEventType } from "@flowmaestro/shared";
+import { createServiceLogger } from "../../core/logging";
 import { globalEventEmitter } from "../../services/events/EventEmitter";
 import { redisEventBus } from "../../services/events/RedisEventBus";
 import { wsManager } from "./WebSocketManager";
-import { createServiceLogger } from "../../core/logging";
 
 const logger = createServiceLogger("EventBridge");
 

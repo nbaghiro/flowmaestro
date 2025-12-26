@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { getLogger } from "../../../../core/logging";
 import { toJSONSchema } from "../../../core/schema-utils";
 import { SlackClient } from "../client/SlackClient";
 import {
@@ -9,7 +10,6 @@ import {
 } from "../schemas";
 import type { SlackMessageResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
-import { getLogger } from "../../../../core/logging";
 
 const logger = getLogger();
 

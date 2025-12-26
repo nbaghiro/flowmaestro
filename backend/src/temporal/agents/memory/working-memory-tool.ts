@@ -5,8 +5,8 @@
 
 import type { JsonObject } from "@flowmaestro/shared";
 import { getWorkingMemoryService } from "../../../services/agents/WorkingMemoryService";
-import type { Tool } from "../../../storage/models/Agent";
 import { createActivityLogger } from "../../shared/logger";
+import type { Tool } from "../../../storage/models/Agent";
 
 const logger = createActivityLogger({ component: "WorkingMemoryTool" });
 

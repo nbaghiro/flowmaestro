@@ -84,11 +84,14 @@ export async function streamThreadHandler(
 
     // Subscribe to thread-specific Redis channel
     const eventHandler = (event: ThreadStreamingEvent) => {
-        logger.debug({
-            threadId,
-            eventType: event.type,
-            executionId: event.executionId
-        }, "Received event for thread");
+        logger.debug(
+            {
+                threadId,
+                eventType: event.type,
+                executionId: event.executionId
+            },
+            "Received event for thread"
+        );
         sendEvent(event);
     };
 
