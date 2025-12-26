@@ -6,6 +6,9 @@
 import { SafetyPipeline } from "../../core/safety/safety-pipeline";
 import { SafetyLogRepository } from "../../storage/repositories/SafetyLogRepository";
 import type { SafetyContext, SafetyCheckResult, SafetyConfig } from "../../core/safety/types";
+import { createActivityLogger } from "../shared/logger";
+
+const logger = createActivityLogger({ component: "SafetyActivity" });
 
 export interface ValidateInputInput {
     content: string;
@@ -45,9 +48,13 @@ export interface LogSafetyEventInput {
  * Validate user input through safety pipeline
  */
 export async function validateInput(input: ValidateInputInput): Promise<ValidateInputResult> {
-    console.log(
-        `[Safety] Validating input for execution ${input.context.executionId} (direction: ${input.context.direction})`
-    );
+    logger.info("Validating input through safety pipeline", {
+        executionId: input.context.executionId,
+        agentId: input.context.agentId,
+        userId: input.context.userId,
+        direction: input.context.direction,
+        contentLength: input.content.length
+    });
 
     // Create safety pipeline with agent's config
     const pipeline = new SafetyPipeline(input.config);
@@ -63,10 +70,14 @@ export async function validateInput(input: ValidateInputInput): Promise<Validate
 
     // Log violations
     if (violations.length > 0) {
-        console.log(
-            `[Safety] Found ${violations.length} violation(s):`,
-            violations.map((v) => `${v.type} (${v.action})`)
-        );
+        logger.warn("Safety violations found in input", {
+            executionId: input.context.executionId,
+            agentId: input.context.agentId,
+            userId: input.context.userId,
+            direction: input.context.direction,
+            violationCount: violations.length,
+            violations: violations.map((v) => ({ type: v.type, action: v.action }))
+        });
 
         // Log each violation to database
         const safetyLogRepo = new SafetyLogRepository();
@@ -97,9 +108,13 @@ export async function validateInput(input: ValidateInputInput): Promise<Validate
  * Validate agent output through safety pipeline
  */
 export async function validateOutput(input: ValidateOutputInput): Promise<ValidateOutputResult> {
-    console.log(
-        `[Safety] Validating output for execution ${input.context.executionId} (direction: ${input.context.direction})`
-    );
+    logger.info("Validating output through safety pipeline", {
+        executionId: input.context.executionId,
+        agentId: input.context.agentId,
+        userId: input.context.userId,
+        direction: input.context.direction,
+        contentLength: input.content.length
+    });
 
     // Create safety pipeline with agent's config
     const pipeline = new SafetyPipeline(input.config);
@@ -115,10 +130,14 @@ export async function validateOutput(input: ValidateOutputInput): Promise<Valida
 
     // Log violations
     if (violations.length > 0) {
-        console.log(
-            `[Safety] Found ${violations.length} violation(s) in output:`,
-            violations.map((v) => `${v.type} (${v.action})`)
-        );
+        logger.warn("Safety violations found in output", {
+            executionId: input.context.executionId,
+            agentId: input.context.agentId,
+            userId: input.context.userId,
+            direction: input.context.direction,
+            violationCount: violations.length,
+            violations: violations.map((v) => ({ type: v.type, action: v.action }))
+        });
 
         // Log each violation to database
         const safetyLogRepo = new SafetyLogRepository();

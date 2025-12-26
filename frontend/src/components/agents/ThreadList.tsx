@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { cn } from "../../lib/utils";
+import { logger } from "../../lib/logger";
 import { Input } from "../common/Input";
 import type { Thread } from "../../lib/api";
 
@@ -79,7 +80,7 @@ export function ThreadList({
             await onUpdateTitle(editingThreadId, editTitle.trim());
             setEditingThreadId(null);
         } catch (error) {
-            console.error("Failed to update thread title:", error);
+            logger.error("Failed to update thread title", error);
         } finally {
             setIsUpdating(false);
         }

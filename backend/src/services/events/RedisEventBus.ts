@@ -1,6 +1,9 @@
 import Redis from "ioredis";
 import { WebSocketEvent, ThreadStreamingEvent } from "@flowmaestro/shared";
 import { config } from "../../core/config";
+import { createServiceLogger } from "../../core/logging";
+
+const logger = createServiceLogger("RedisEventBus");
 
 /**
  * RedisEventBus - Cross-process event communication via Redis Pub/Sub
@@ -27,7 +30,7 @@ export class RedisEventBus {
             lazyConnect: true,
             retryStrategy: (times) => {
                 const delay = Math.min(times * 50, 2000);
-                console.log(`[RedisEventBus] Retrying connection in ${delay}ms (attempt ${times})`);
+                logger.info({ delayMs: delay, attempt: times }, "Retrying connection");
                 return delay;
             }
         });
@@ -38,7 +41,7 @@ export class RedisEventBus {
             lazyConnect: true,
             retryStrategy: (times) => {
                 const delay = Math.min(times * 50, 2000);
-                console.log(`[RedisEventBus] Retrying connection in ${delay}ms (attempt ${times})`);
+                logger.info({ delayMs: delay, attempt: times }, "Retrying subscriber connection");
                 return delay;
             }
         });
@@ -47,19 +50,19 @@ export class RedisEventBus {
 
         // Set up event handlers
         this.publisher.on("connect", () => {
-            console.log("[RedisEventBus] Publisher connected to Redis");
+            logger.info("Publisher connected to Redis");
         });
 
         this.publisher.on("error", (error) => {
-            console.error("[RedisEventBus] Publisher error:", error.message);
+            logger.error({ err: error.message }, "Publisher error");
         });
 
         this.subscriber.on("connect", () => {
-            console.log("[RedisEventBus] Subscriber connected to Redis");
+            logger.info("Subscriber connected to Redis");
         });
 
         this.subscriber.on("error", (error) => {
-            console.error("[RedisEventBus] Subscriber error:", error.message);
+            logger.error({ err: error.message }, "Subscriber error");
         });
 
         // Handle pattern-based messages
@@ -74,15 +77,12 @@ export class RedisEventBus {
                         try {
                             handler(event);
                         } catch (error) {
-                            console.error(
-                                `[RedisEventBus] Error in handler for ${pattern}:`,
-                                error
-                            );
+                            logger.error({ pattern, err: error }, "Error in handler");
                         }
                     });
                 }
             } catch (error) {
-                console.error("[RedisEventBus] Failed to parse message:", error);
+                logger.error({ err: error }, "Failed to parse message");
             }
         });
     }
@@ -105,9 +105,9 @@ export class RedisEventBus {
         try {
             await Promise.all([this.publisher.connect(), this.subscriber.connect()]);
             this.isConnected = true;
-            console.log("[RedisEventBus] Connected to Redis successfully");
+            logger.info("Connected to Redis successfully");
         } catch (error) {
-            console.error("[RedisEventBus] Failed to connect to Redis:", error);
+            logger.error({ err: error }, "Failed to connect to Redis");
             throw error;
         }
     }
@@ -117,16 +117,16 @@ export class RedisEventBus {
      */
     async publish(channel: string, event: WebSocketEvent): Promise<void> {
         if (!this.isConnected) {
-            console.warn("[RedisEventBus] Not connected, skipping publish");
+            logger.warn("Not connected, skipping publish");
             return;
         }
 
         try {
             const message = JSON.stringify(event);
             await this.publisher.publish(channel, message);
-            console.log(`[RedisEventBus] Published ${event.type} to ${channel}`);
+            logger.info({ eventType: event.type, channel }, "Published event");
         } catch (error) {
-            console.error(`[RedisEventBus] Failed to publish to ${channel}:`, error);
+            logger.error({ channel, err: error }, "Failed to publish");
         }
     }
 
@@ -145,7 +145,7 @@ export class RedisEventBus {
             this.handlers.set(pattern, new Set());
             // Subscribe to pattern in Redis
             await this.subscriber.psubscribe(pattern);
-            console.log(`[RedisEventBus] Subscribed to pattern: ${pattern}`);
+            logger.info({ pattern }, "Subscribed to pattern");
         }
 
         this.handlers.get(pattern)!.add(handler);
@@ -168,7 +168,7 @@ export class RedisEventBus {
         if (!handler || patternHandlers.size === 0) {
             this.handlers.delete(pattern);
             await this.subscriber.punsubscribe(pattern);
-            console.log(`[RedisEventBus] Unsubscribed from pattern: ${pattern}`);
+            logger.info({ pattern }, "Unsubscribed from pattern");
         }
     }
 
@@ -184,9 +184,9 @@ export class RedisEventBus {
             await Promise.all([this.publisher.quit(), this.subscriber.quit()]);
             this.isConnected = false;
             this.handlers.clear();
-            console.log("[RedisEventBus] Disconnected from Redis");
+            logger.info("Disconnected from Redis");
         } catch (error) {
-            console.error("[RedisEventBus] Error during disconnect:", error);
+            logger.error({ err: error }, "Error during disconnect");
         }
     }
 

@@ -7,6 +7,9 @@ import type {
     OperationSummary
 } from "./types";
 import type { ConnectionWithData } from "../../storage/models/Connection";
+import { getLogger } from "../../core/logging";
+
+const logger = getLogger();
 
 /**
  * Execution Router - intelligently routes requests to direct API or MCP
@@ -122,8 +125,9 @@ export class ExecutionRouter {
 
             return operations.map((op) => {
                 if (!op.inputSchemaJSON) {
-                    console.error(
-                        `[ExecutionRouter] Operation ${op.id} is missing inputSchemaJSON`
+                    logger.error(
+                        { component: "ExecutionRouter", operationId: op.id },
+                        "Operation is missing inputSchemaJSON"
                     );
                     throw new Error(`Operation ${op.id} is missing inputSchemaJSON`);
                 }
@@ -142,9 +146,9 @@ export class ExecutionRouter {
                 };
             });
         } catch (error) {
-            console.error(
-                `[ExecutionRouter] Error discovering operations for ${providerName}:`,
-                error
+            logger.error(
+                { component: "ExecutionRouter", providerName, err: error },
+                "Error discovering operations for provider"
             );
             throw error;
         }

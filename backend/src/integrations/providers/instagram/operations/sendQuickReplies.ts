@@ -3,6 +3,9 @@ import { toJSONSchema } from "../../../core/schema-utils";
 import { InstagramClient } from "../client/InstagramClient";
 import type { InstagramSendResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
+import { getLogger } from "../../../../core/logging";
+
+const logger = getLogger();
 
 /**
  * Quick Reply schema
@@ -49,7 +52,7 @@ export const sendQuickRepliesOperation: OperationDefinition = (() => {
             timeout: 15000
         };
     } catch (error) {
-        console.error("[Instagram] Failed to create sendQuickRepliesOperation:", error);
+        logger.error({ component: "Instagram", err: error }, "Failed to create sendQuickRepliesOperation");
         throw new Error(
             `Failed to create sendQuickReplies operation: ${error instanceof Error ? error.message : "Unknown error"}`
         );

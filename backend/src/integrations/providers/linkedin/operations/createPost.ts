@@ -3,6 +3,9 @@ import { toJSONSchema } from "../../../core/schema-utils";
 import { LinkedInClient } from "../client/LinkedInClient";
 import { PostContentSchema, AuthorUrnSchema, VisibilitySchema } from "../schemas";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
+import { getLogger } from "../../../../core/logging";
+
+const logger = getLogger();
 
 /**
  * Create Post operation schema
@@ -32,7 +35,7 @@ export const createPostOperation: OperationDefinition = (() => {
             timeout: 15000
         };
     } catch (error) {
-        console.error("[LinkedIn] Failed to create createPostOperation:", error);
+        logger.error({ component: "LinkedIn", err: error }, "Failed to create createPostOperation");
         throw new Error(
             `Failed to create createPost operation: ${error instanceof Error ? error.message : "Unknown error"}`
         );

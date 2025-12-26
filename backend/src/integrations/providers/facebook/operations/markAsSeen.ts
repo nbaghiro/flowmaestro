@@ -3,6 +3,9 @@ import { toJSONSchema } from "../../../core/schema-utils";
 import { FacebookClient } from "../client/FacebookClient";
 import type { MessengerActionResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
+import { getLogger } from "../../../../core/logging";
+
+const logger = getLogger();
 
 /**
  * Mark as Seen operation schema
@@ -30,7 +33,7 @@ export const markAsSeenOperation: OperationDefinition = (() => {
             timeout: 5000
         };
     } catch (error) {
-        console.error("[Messenger] Failed to create markAsSeenOperation:", error);
+        logger.error({ component: "Messenger", err: error }, "Failed to create markAsSeenOperation");
         throw new Error(
             `Failed to create markAsSeen operation: ${error instanceof Error ? error.message : "Unknown error"}`
         );

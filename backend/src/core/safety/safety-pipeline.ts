@@ -3,6 +3,7 @@
  * Orchestrates all safety checks and validators
  */
 
+import { createServiceLogger } from "../logging";
 import { piiDetector } from "./pii-detector";
 import { promptInjectionDetector } from "./prompt-injection-detector";
 import type {
@@ -12,6 +13,8 @@ import type {
     SafetyConfig,
     SafetyAction
 } from "./types";
+
+const logger = createServiceLogger("SafetyPipeline");
 
 export class SafetyPipeline {
     private config: SafetyConfig;
@@ -89,7 +92,11 @@ export class SafetyPipeline {
 
             // Warnings don't block but are logged
             if (result.action === "warn") {
-                console.warn(`[Safety Warning] ${result.type}: ${result.message}`, result.metadata);
+                logger.warn({
+                    type: result.type,
+                    message: result.message,
+                    metadata: result.metadata
+                }, "Safety warning");
             }
         }
 

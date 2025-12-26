@@ -2,6 +2,7 @@ import { Settings, ChevronDown } from "lucide-react";
 import { useState, useEffect } from "react";
 import { LLM_MODELS_BY_PROVIDER, getDefaultModelForProvider } from "@flowmaestro/shared";
 import { getConnections, type Connection, type Agent } from "../../lib/api";
+import { logger } from "../../lib/logger";
 import { cn } from "../../lib/utils";
 
 // Get list of provider values from the models registry
@@ -47,7 +48,7 @@ export function AgentConnectionSelector({
                     setConnections(llmConnections);
                 }
             } catch (error) {
-                console.error("Failed to fetch connections:", error);
+                logger.error("Failed to fetch connections", error);
             } finally {
                 setIsLoading(false);
             }

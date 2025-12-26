@@ -2,6 +2,7 @@ import * as fs from "fs/promises";
 import * as path from "path";
 import * as pdf from "pdf-parse";
 import type { JsonObject } from "@flowmaestro/shared";
+import { activityLogger } from "../../shared/logger";
 import { interpolateVariables } from "../../shared/utils";
 
 export interface FileOperationsNodeConfig {
@@ -32,7 +33,7 @@ export async function executeFileOperationsNode(
     config: FileOperationsNodeConfig,
     context: JsonObject
 ): Promise<JsonObject> {
-    console.log(`[FileOps] Operation: ${config.operation}`);
+    activityLogger.info("File operations node", { operation: config.operation });
 
     let result: FileOperationsNodeResult;
 
@@ -72,7 +73,7 @@ async function readFile(
 
     if (config.fileSource === "url") {
         // Download file from URL
-        console.log(`[FileOps] Downloading from URL: ${filePath}`);
+        activityLogger.info("Downloading from URL", { url: filePath });
         const response = await fetch(filePath);
 
         if (!response.ok) {
@@ -88,7 +89,7 @@ async function readFile(
         } as unknown as JsonObject;
     } else {
         // Read from local filesystem
-        console.log(`[FileOps] Reading from path: ${filePath}`);
+        activityLogger.info("Reading from path", { filePath });
         const content = await fs.readFile(filePath, "utf-8");
         const stats = await fs.stat(filePath);
         return {
@@ -113,7 +114,7 @@ async function writeFile(
     await fs.mkdir(dir, { recursive: true });
 
     // Write file
-    console.log(`[FileOps] Writing to: ${outputPath}`);
+    activityLogger.info("Writing file", { outputPath });
     await fs.writeFile(outputPath, content, "utf-8");
 
     const stats = await fs.stat(outputPath);
@@ -136,7 +137,7 @@ async function parsePDF(
     if (config.fileSource === "url") {
         // Download PDF from URL
         const url = interpolateVariables(config.filePath || "", context);
-        console.log(`[FileOps] Downloading PDF from: ${url}`);
+        activityLogger.info("Downloading PDF from URL", { url });
 
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 30000);
@@ -163,24 +164,24 @@ async function parsePDF(
     } else if (config.fileSource === "path") {
         // Read from local path
         const filePath = interpolateVariables(config.filePath || "", context);
-        console.log(`[FileOps] Reading PDF from: ${filePath}`);
+        activityLogger.info("Reading PDF from path", { filePath });
         buffer = await fs.readFile(filePath);
     } else if (config.fileData) {
         // Decode from base64
-        console.log("[FileOps] Decoding PDF from base64 data");
+        activityLogger.info("Decoding PDF from base64 data");
         buffer = Buffer.from(config.fileData, "base64");
     } else {
         throw new Error("PDF source not specified (url, path, or fileData required)");
     }
 
-    console.log(`[FileOps] Parsing PDF (${buffer.length} bytes)...`);
+    activityLogger.info("Parsing PDF", { bufferSize: buffer.length });
 
     // Parse PDF
     const data = await (
         pdf as unknown as (dataBuffer: Buffer) => Promise<{ numpages: number; text: string }>
     )(buffer);
 
-    console.log(`[FileOps] Extracted ${data.numpages} pages, ${data.text.length} characters`);
+    activityLogger.info("Extracted PDF content", { pages: data.numpages, characterCount: data.text.length });
 
     return {
         content: data.text,

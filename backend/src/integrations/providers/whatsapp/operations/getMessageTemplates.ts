@@ -3,6 +3,9 @@ import { toJSONSchema } from "../../../core/schema-utils";
 import { WhatsAppClient } from "../client/WhatsAppClient";
 import type { WhatsAppMessageTemplateResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
+import { getLogger } from "../../../../core/logging";
+
+const logger = getLogger();
 
 /**
  * Get Message Templates operation schema
@@ -40,7 +43,7 @@ export const getMessageTemplatesOperation: OperationDefinition = (() => {
             timeout: 15000
         };
     } catch (error) {
-        console.error("[WhatsApp] Failed to create getMessageTemplatesOperation:", error);
+        logger.error({ component: "WhatsApp", err: error }, "Failed to create getMessageTemplatesOperation");
         throw new Error(
             `Failed to create getMessageTemplates operation: ${error instanceof Error ? error.message : "Unknown error"}`
         );

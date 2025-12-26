@@ -1,9 +1,12 @@
 import { FastifyInstance } from "fastify";
+import { createServiceLogger } from "../../../core/logging";
 import { ExecutionRouter } from "../../../integrations/core/ExecutionRouter";
 import { providerRegistry } from "../../../integrations/registry";
 import { ConnectionRepository } from "../../../storage/repositories/ConnectionRepository";
 import { authMiddleware, validateParams } from "../../middleware";
 import { connectionIdParamSchema, ConnectionIdParam } from "../../schemas/connection-schemas";
+
+const logger = createServiceLogger("MCPTools");
 
 const executionRouter = new ExecutionRouter(providerRegistry);
 
@@ -54,7 +57,7 @@ export async function mcpToolsRoute(fastify: FastifyInstance) {
                     }
                 });
             } catch (error) {
-                console.error(`[API] Error getting MCP tools for connection ${params.id}:`, error);
+                logger.error({ connectionId: params.id, error }, "Error getting MCP tools");
 
                 // Provider might not have MCP tools implemented
                 return reply.status(400).send({

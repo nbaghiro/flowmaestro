@@ -2,6 +2,9 @@ import { WebSocketEvent, WebSocketEventType } from "@flowmaestro/shared";
 import { globalEventEmitter } from "../../services/events/EventEmitter";
 import { redisEventBus } from "../../services/events/RedisEventBus";
 import { wsManager } from "./WebSocketManager";
+import { createServiceLogger } from "../../core/logging";
+
+const logger = createServiceLogger("EventBridge");
 
 /**
  * Bridge between event sources and WebSocket manager
@@ -33,20 +36,20 @@ export class EventBridge {
 
             // Subscribe to all workflow events published by Temporal activities
             await redisEventBus.subscribe("workflow:events:*", (event: WebSocketEvent) => {
-                console.log(`[EventBridge] Received workflow event from Redis: ${event.type}`);
+                logger.info({ eventType: event.type }, "Received workflow event from Redis");
                 wsManager.broadcast(event);
             });
 
             // Subscribe to all agent events (chat agents) published by Temporal activities
             await redisEventBus.subscribe("agent:events:*", (event: WebSocketEvent) => {
-                console.log(`[EventBridge] Received agent event from Redis: ${event.type}`);
+                logger.info({ eventType: event.type }, "Received agent event from Redis");
                 wsManager.broadcast(event);
             });
 
-            console.log("✅ Event bridge subscribed to Redis workflow & agent events");
+            logger.info("Event bridge subscribed to Redis workflow and agent events");
         } catch (error) {
-            console.error("❌ Failed to subscribe to Redis events:", error);
-            console.warn("⚠️  Workflow and agent execution events will not be received");
+            logger.error({ err: error }, "Failed to subscribe to Redis events");
+            logger.warn("Workflow and agent execution events will not be received");
         }
 
         // 2. Subscribe to local in-memory events (non-Temporal events)
@@ -59,13 +62,13 @@ export class EventBridge {
 
         localEventTypes.forEach((eventType) => {
             globalEventEmitter.on(eventType, (event: WebSocketEvent) => {
-                console.log(`[EventBridge] Received from local emitter: ${event.type}`);
+                logger.info({ eventType: event.type }, "Received from local emitter");
                 wsManager.broadcast(event);
             });
         });
 
         this.initialized = true;
-        console.log("✅ Event bridge initialized - events will be broadcast via WebSocket");
+        logger.info("Event bridge initialized - events will be broadcast via WebSocket");
     }
 
     isInitialized(): boolean {

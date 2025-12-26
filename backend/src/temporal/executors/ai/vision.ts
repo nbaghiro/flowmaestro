@@ -3,6 +3,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import OpenAI from "openai";
 import type { JsonObject } from "@flowmaestro/shared";
 import { config as appConfig } from "../../../core/config";
+import { activityLogger } from "../../shared/logger";
 import { interpolateVariables } from "../../shared/utils";
 
 export interface VisionNodeConfig {
@@ -58,7 +59,7 @@ export async function executeVisionNode(
 ): Promise<JsonObject> {
     const startTime = Date.now();
 
-    console.log(`[Vision] Provider: ${config.provider}, Operation: ${config.operation}`);
+    activityLogger.info("Vision node execution starting", { provider: config.provider, operation: config.operation });
 
     let result: JsonObject;
 
@@ -84,9 +85,9 @@ export async function executeVisionNode(
         processingTime: Date.now() - startTime
     };
 
-    console.log(
-        `[Vision] Completed in ${((result.metadata as JsonObject)?.processingTime as number) || 0}ms`
-    );
+    activityLogger.info("Vision node execution completed", {
+        processingTimeMs: (result.metadata as JsonObject)?.processingTime
+    });
 
     if (config.outputVariable) {
         return { [config.outputVariable]: result } as unknown as JsonObject;
@@ -114,7 +115,7 @@ async function executeOpenAI(config: VisionNodeConfig, context: JsonObject): Pro
             context
         );
 
-        console.log(`[Vision/OpenAI] Analyzing image: ${imageUrl.substring(0, 100)}...`);
+        activityLogger.info("OpenAI analyzing image", { imageUrlPrefix: imageUrl.substring(0, 100) });
 
         const response = await openai.chat.completions.create({
             model: config.model || "gpt-4-vision-preview",
@@ -138,7 +139,7 @@ async function executeOpenAI(config: VisionNodeConfig, context: JsonObject): Pro
 
         const analysis = response.choices[0]?.message?.content || "";
 
-        console.log(`[Vision/OpenAI] Analysis complete: ${analysis.length} chars`);
+        activityLogger.info("OpenAI analysis complete", { analysisLength: analysis.length });
 
         return {
             operation: "analyze",
@@ -154,7 +155,7 @@ async function executeOpenAI(config: VisionNodeConfig, context: JsonObject): Pro
         // DALL-E for image generation
         const prompt = interpolateVariables(config.generationPrompt || "", context);
 
-        console.log(`[Vision/OpenAI] Generating image: "${prompt.substring(0, 100)}..."`);
+        activityLogger.info("OpenAI generating image", { promptPrefix: prompt.substring(0, 100) });
 
         const response = await openai.images.generate({
             model: config.model || "dall-e-3",
@@ -181,7 +182,7 @@ async function executeOpenAI(config: VisionNodeConfig, context: JsonObject): Pro
             };
         });
 
-        console.log(`[Vision/OpenAI] Generated ${images.length} image(s)`);
+        activityLogger.info("OpenAI image generation complete", { imageCount: images.length });
 
         return {
             operation: "generate",
@@ -218,7 +219,7 @@ async function executeAnthropic(
     const imageInput = interpolateVariables(config.imageInput || "", context);
     const prompt = interpolateVariables(config.prompt || "Describe this image in detail", context);
 
-    console.log("[Vision/Anthropic] Analyzing image with Claude");
+    activityLogger.info("Anthropic analyzing image with Claude");
 
     // Prepare image content - support URL or base64
     interface AnthropicImageContent {
@@ -321,7 +322,7 @@ async function executeAnthropic(
 
     const analysis = response.content[0].type === "text" ? response.content[0].text : "";
 
-    console.log(`[Vision/Anthropic] Analysis complete: ${analysis.length} chars`);
+    activityLogger.info("Anthropic analysis complete", { analysisLength: analysis.length });
 
     return {
         operation: "analyze",
@@ -356,7 +357,7 @@ async function executeGoogle(config: VisionNodeConfig, context: JsonObject): Pro
     const imageInput = interpolateVariables(config.imageInput || "", context);
     const prompt = interpolateVariables(config.prompt || "Describe this image in detail", context);
 
-    console.log("[Vision/Google] Analyzing image with Gemini");
+    activityLogger.info("Google analyzing image with Gemini");
 
     // Prepare image part
     interface GoogleImagePart {
@@ -413,7 +414,7 @@ async function executeGoogle(config: VisionNodeConfig, context: JsonObject): Pro
     const response = result.response;
     const analysis = response.text();
 
-    console.log(`[Vision/Google] Analysis complete: ${analysis.length} chars`);
+    activityLogger.info("Google analysis complete", { analysisLength: analysis.length });
 
     return {
         operation: "analyze",

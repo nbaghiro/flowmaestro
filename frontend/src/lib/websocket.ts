@@ -3,6 +3,7 @@
  */
 
 import { WebSocketEvent } from "@flowmaestro/shared";
+import { logger } from "./logger";
 
 const WS_URL = import.meta.env.VITE_WS_URL || "ws://localhost:3001";
 
@@ -45,7 +46,7 @@ export class WebSocketClient {
             this.ws = new WebSocket(wsUrl);
 
             this.ws.onopen = () => {
-                console.log("WebSocket connected");
+                logger.info("WebSocket connected");
                 this.reconnectAttempts = 0;
                 this.connectionPromise = null;
                 resolve();
@@ -56,23 +57,23 @@ export class WebSocketClient {
                     const data = JSON.parse(event.data);
                     this.handleMessage(data);
                 } catch (error) {
-                    console.error("Failed to parse WebSocket message:", error);
+                    logger.error("Failed to parse WebSocket message", error);
                 }
             };
 
             this.ws.onerror = (error) => {
-                console.error("WebSocket error:", error);
+                logger.error("WebSocket error", error);
                 this.connectionPromise = null;
                 reject(error);
             };
 
             this.ws.onclose = (event) => {
-                console.log("WebSocket disconnected", { code: event.code, reason: event.reason });
+                logger.info("WebSocket disconnected", { code: event.code, reason: event.reason });
                 this.connectionPromise = null;
 
                 // Don't reconnect if authentication failed (code 1008)
                 if (event.code === 1008) {
-                    console.error("WebSocket authentication failed, not reconnecting");
+                    logger.error("WebSocket authentication failed, not reconnecting");
                     this.shouldReconnect = false;
                     return;
                 }
@@ -133,12 +134,12 @@ export class WebSocketClient {
         const d = data as Record<string, unknown>;
         // Handle system messages
         if (d.type === "connected") {
-            console.log("WebSocket connection confirmed:", data);
+            logger.debug("WebSocket connection confirmed", { data });
             return;
         }
 
         if (d.type === "subscribed" || d.type === "unsubscribed") {
-            console.log(`${d.type} to execution:`, d.executionId);
+            logger.debug("Execution subscription changed", { type: d.type, executionId: d.executionId });
             return;
         }
 
@@ -158,12 +159,12 @@ export class WebSocketClient {
     private handleReconnect(token: string): void {
         // Don't reconnect if explicitly disabled (e.g., auth failure or manual disconnect)
         if (!this.shouldReconnect) {
-            console.log("Reconnection disabled, not attempting to reconnect");
+            logger.info("Reconnection disabled, not attempting to reconnect");
             return;
         }
 
         if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-            console.error("Max reconnect attempts reached");
+            logger.error("Max reconnect attempts reached");
             this.shouldReconnect = false;
             return;
         }
@@ -171,11 +172,11 @@ export class WebSocketClient {
         this.reconnectAttempts++;
         const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
 
-        console.log(`Reconnecting in ${delay}ms... (attempt ${this.reconnectAttempts})`);
+        logger.info("Reconnecting WebSocket", { delayMs: delay, attempt: this.reconnectAttempts });
 
         setTimeout(() => {
             this.connect(token).catch((error) => {
-                console.error("Reconnect failed:", error);
+                logger.error("Reconnect failed", error);
             });
         }, delay);
     }

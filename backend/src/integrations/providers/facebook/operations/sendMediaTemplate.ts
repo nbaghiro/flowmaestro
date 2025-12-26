@@ -3,6 +3,9 @@ import { toJSONSchema } from "../../../core/schema-utils";
 import { FacebookClient } from "../client/FacebookClient";
 import type { MessengerSendResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
+import { getLogger } from "../../../../core/logging";
+
+const logger = getLogger();
 
 /**
  * Button schema
@@ -47,7 +50,7 @@ export const sendMediaTemplateOperation: OperationDefinition = (() => {
             timeout: 30000
         };
     } catch (error) {
-        console.error("[Messenger] Failed to create sendMediaTemplateOperation:", error);
+        logger.error({ component: "Messenger", err: error }, "Failed to create sendMediaTemplateOperation");
         throw new Error(
             `Failed to create sendMediaTemplate operation: ${error instanceof Error ? error.message : "Unknown error"}`
         );

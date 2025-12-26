@@ -3,6 +3,9 @@ import { toJSONSchema } from "../../../core/schema-utils";
 import { WhatsAppClient } from "../client/WhatsAppClient";
 import type { WhatsAppBusinessProfileResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
+import { getLogger } from "../../../../core/logging";
+
+const logger = getLogger();
 
 /**
  * Get Business Profile operation schema
@@ -30,7 +33,7 @@ export const getBusinessProfileOperation: OperationDefinition = (() => {
             timeout: 10000
         };
     } catch (error) {
-        console.error("[WhatsApp] Failed to create getBusinessProfileOperation:", error);
+        logger.error({ component: "WhatsApp", err: error }, "Failed to create getBusinessProfileOperation");
         throw new Error(
             `Failed to create getBusinessProfile operation: ${error instanceof Error ? error.message : "Unknown error"}`
         );

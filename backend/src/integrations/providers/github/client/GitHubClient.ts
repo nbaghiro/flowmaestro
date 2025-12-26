@@ -1,4 +1,7 @@
 import { BaseAPIClient } from "../../../core/BaseAPIClient";
+import { getLogger } from "../../../../core/logging";
+
+const logger = getLogger();
 
 export interface GitHubClientConfig {
     accessToken: string;
@@ -62,11 +65,15 @@ export class GitHubClient extends BaseAPIClient {
                 const resetTime = headers.get("x-ratelimit-reset");
 
                 if (remaining && parseInt(remaining) < 100) {
-                    console.warn(
-                        `[GitHub] Rate limit warning: ${remaining} requests remaining` +
-                            (resetTime
-                                ? ` (resets at ${new Date(parseInt(resetTime) * 1000).toISOString()})`
-                                : "")
+                    logger.warn(
+                        {
+                            component: "GitHubClient",
+                            remaining: parseInt(remaining),
+                            resetTime: resetTime
+                                ? new Date(parseInt(resetTime) * 1000).toISOString()
+                                : undefined
+                        },
+                        "Rate limit warning: low requests remaining"
                     );
                 }
             }

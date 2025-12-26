@@ -91,8 +91,8 @@ const LogoRow: React.FC<LogoRowProps> = ({ integrations, direction, speed = 30 }
     return (
         <div className="relative flex overflow-hidden py-4">
             {/* Gradient masks for fade effect */}
-            <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-black to-transparent z-10 pointer-events-none" />
-            <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-black to-transparent z-10 pointer-events-none" />
+            <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
+            <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
 
             <div
                 className={`flex items-center gap-12 ${
@@ -105,7 +105,7 @@ const LogoRow: React.FC<LogoRowProps> = ({ integrations, direction, speed = 30 }
                 {duplicatedIntegrations.map((integration, index) => (
                     <div
                         key={`${integration.name}-${index}`}
-                        className="flex-shrink-0 flex items-center justify-center w-16 h-16 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all duration-300 group"
+                        className="flex-shrink-0 flex items-center justify-center w-16 h-16 rounded-xl bg-background-elevated backdrop-blur-sm border border-stroke hover:bg-border hover:border-stroke-hover transition-all duration-300 group"
                     >
                         <img
                             src={integration.logoUrl}
@@ -132,7 +132,7 @@ export const Integrations: React.FC = () => {
     return (
         <section
             ref={ref}
-            className="relative py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-black to-gray-950 overflow-hidden"
+            className="relative py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-background to-background-surface overflow-hidden"
         >
             {/* Background Decoration */}
             <div className="absolute inset-0 grid-pattern opacity-30"></div>
@@ -179,7 +179,7 @@ export const Integrations: React.FC = () => {
                 >
                     <Link
                         to="/integrations"
-                        className="px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg font-semibold transition-all duration-200 inline-block"
+                        className="px-6 py-3 bg-background-elevated hover:bg-border border border-stroke rounded-lg font-semibold transition-all duration-200 inline-block"
                     >
                         View All Integrations
                     </Link>

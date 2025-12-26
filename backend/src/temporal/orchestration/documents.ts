@@ -12,6 +12,7 @@ import {
     KnowledgeChunkRepository,
     KnowledgeBaseRepository
 } from "../../storage/repositories";
+import { activityLogger } from "../shared/logger";
 
 export interface ProcessDocumentInput {
     documentId: string;
@@ -46,7 +47,7 @@ function sanitizeText(text: string): string {
  * Activity: Extract text from document
  */
 export async function extractTextActivity(input: ProcessDocumentInput): Promise<string> {
-    console.log(`[extractTextActivity] Starting text extraction for document ${input.documentId}`);
+    activityLogger.info("Starting text extraction for document", { documentId: input.documentId });
 
     let tempFilePath: string | null = null;
 
@@ -68,15 +69,15 @@ export async function extractTextActivity(input: ProcessDocumentInput): Promise<
 
         if (input.sourceUrl) {
             // Extract from URL
-            console.log(`[extractTextActivity] Extracting from URL: ${input.sourceUrl}`);
+            activityLogger.info("Extracting from URL", { sourceUrl: input.sourceUrl });
             try {
                 extractedText = await textExtractor.extractFromURL(input.sourceUrl);
-                console.log(
-                    `[extractTextActivity] Successfully extracted ${extractedText.content.length} characters from URL`
-                );
+                activityLogger.info("Successfully extracted from URL", {
+                    characterCount: extractedText.content.length
+                });
             } catch (error: unknown) {
                 const errorMsg = error instanceof Error ? error.message : String(error);
-                console.error(`[extractTextActivity] Failed to extract from URL: ${errorMsg}`);
+                activityLogger.error("Failed to extract from URL", error instanceof Error ? error : new Error(errorMsg), { sourceUrl: input.sourceUrl });
                 throw error;
             }
         } else if (input.filePath) {
@@ -85,10 +86,10 @@ export async function extractTextActivity(input: ProcessDocumentInput): Promise<
 
             if (isGCSUri) {
                 // Download from GCS to temporary location
-                console.log(`[extractTextActivity] Downloading file from GCS: ${input.filePath}`);
+                activityLogger.info("Downloading file from GCS", { gcsUri: input.filePath });
                 const gcsService = getGCSStorageService();
                 tempFilePath = await gcsService.downloadToTemp({ gcsUri: input.filePath });
-                console.log(`[extractTextActivity] Downloaded to temp: ${tempFilePath}`);
+                activityLogger.info("Downloaded to temp", { tempFilePath });
 
                 // Extract from temporary file
                 extractedText = await textExtractor.extractFromFile(tempFilePath, input.fileType);
@@ -116,14 +117,15 @@ export async function extractTextActivity(input: ProcessDocumentInput): Promise<
             metadata: documentMetadata
         });
 
-        console.log(
-            `[extractTextActivity] Successfully extracted ${sanitizedContent.length} characters`
-        );
+        activityLogger.info("Successfully extracted text", {
+            documentId: input.documentId,
+            characterCount: sanitizedContent.length
+        });
 
         return sanitizedContent;
     } catch (error: unknown) {
         const errorMsg = error instanceof Error ? error.message : String(error);
-        console.error("[extractTextActivity] Error:", error);
+        activityLogger.error("Extract text activity error", error instanceof Error ? error : new Error(errorMsg), { documentId: input.documentId });
         await documentRepository.updateStatus(input.documentId, "failed", errorMsg);
 
         // Emit document failed event
@@ -135,12 +137,9 @@ export async function extractTextActivity(input: ProcessDocumentInput): Promise<
         if (tempFilePath) {
             try {
                 await fs.unlink(tempFilePath);
-                console.log(`[extractTextActivity] Cleaned up temp file: ${tempFilePath}`);
+                activityLogger.info("Cleaned up temp file", { tempFilePath });
             } catch (error: unknown) {
-                console.warn(
-                    `[extractTextActivity] Failed to delete temp file: ${tempFilePath}`,
-                    error
-                );
+                activityLogger.warn("Failed to delete temp file", { tempFilePath });
             }
         }
     }
@@ -156,7 +155,7 @@ export async function chunkTextActivity(input: ProcessDocumentInput & { content:
         metadata: unknown;
     }>
 > {
-    console.log(`[chunkTextActivity] Starting text chunking for document ${input.documentId}`);
+    activityLogger.info("Starting text chunking for document", { documentId: input.documentId });
 
     try {
         // Get KB config for chunk settings
@@ -186,12 +185,12 @@ export async function chunkTextActivity(input: ProcessDocumentInput & { content:
             content: sanitizeText(chunk.content)
         }));
 
-        console.log(`[chunkTextActivity] Created ${sanitizedChunks.length} chunks`);
+        activityLogger.info("Created chunks", { documentId: input.documentId, chunkCount: sanitizedChunks.length });
 
         return sanitizedChunks;
     } catch (error: unknown) {
         const errorMsg = error instanceof Error ? error.message : String(error);
-        console.error("[chunkTextActivity] Error:", error);
+        activityLogger.error("Chunk text activity error", error instanceof Error ? error : new Error(errorMsg), { documentId: input.documentId });
         await documentRepository.updateStatus(input.documentId, "failed", errorMsg);
 
         // Emit document failed event
@@ -214,7 +213,7 @@ export async function generateAndStoreEmbeddingsActivity(
         }>;
     }
 ): Promise<{ chunkCount: number; totalTokens: number }> {
-    console.log(`[generateAndStoreEmbeddingsActivity] Processing ${input.chunks.length} chunks`);
+    activityLogger.info("Processing chunks for embeddings", { chunkCount: input.chunks.length, documentId: input.documentId });
 
     try {
         // Get KB config for embedding settings
@@ -227,7 +226,7 @@ export async function generateAndStoreEmbeddingsActivity(
         const texts = input.chunks.map((chunk) => chunk.content);
 
         // Generate embeddings
-        console.log("[generateAndStoreEmbeddingsActivity] Generating embeddings...");
+        activityLogger.info("Generating embeddings", { documentId: input.documentId });
         const result = await embeddingService.generateEmbeddings(
             texts,
             {
@@ -238,12 +237,14 @@ export async function generateAndStoreEmbeddingsActivity(
             input.userId
         );
 
-        console.log(
-            `[generateAndStoreEmbeddingsActivity] Generated ${result.embeddings.length} embeddings, used ${result.usage.total_tokens} tokens`
-        );
+        activityLogger.info("Generated embeddings", {
+            documentId: input.documentId,
+            embeddingCount: result.embeddings.length,
+            tokensUsed: result.usage.total_tokens
+        });
 
         // Store chunks with embeddings immediately
-        console.log("[generateAndStoreEmbeddingsActivity] Storing chunks in database...");
+        activityLogger.info("Storing chunks in database", { documentId: input.documentId });
         const chunkInputs: CreateKnowledgeChunkInput[] = input.chunks.map((chunk, index) => ({
             document_id: input.documentId,
             knowledge_base_id: input.knowledgeBaseId,
@@ -257,9 +258,10 @@ export async function generateAndStoreEmbeddingsActivity(
         // Batch insert chunks
         const createdChunks = await chunkRepository.batchInsert(chunkInputs);
 
-        console.log(
-            `[generateAndStoreEmbeddingsActivity] Successfully stored ${createdChunks.length} chunks`
-        );
+        activityLogger.info("Successfully stored chunks", {
+            documentId: input.documentId,
+            chunkCount: createdChunks.length
+        });
 
         return {
             chunkCount: createdChunks.length,
@@ -267,7 +269,7 @@ export async function generateAndStoreEmbeddingsActivity(
         };
     } catch (error: unknown) {
         const errorMsg = error instanceof Error ? error.message : String(error);
-        console.error("[generateAndStoreEmbeddingsActivity] Error:", error);
+        activityLogger.error("Generate and store embeddings activity error", error instanceof Error ? error : new Error(errorMsg), { documentId: input.documentId });
         await documentRepository.updateStatus(input.documentId, "failed", errorMsg);
 
         // Emit document failed event
@@ -283,13 +285,11 @@ export async function generateAndStoreEmbeddingsActivity(
 export async function completeDocumentProcessingActivity(
     input: ProcessDocumentInput
 ): Promise<void> {
-    console.log(
-        `[completeDocumentProcessingActivity] Marking document ${input.documentId} as ready`
-    );
+    activityLogger.info("Marking document as ready", { documentId: input.documentId });
 
     try {
         await documentRepository.updateStatus(input.documentId, "ready");
-        console.log("[completeDocumentProcessingActivity] Document marked as ready");
+        activityLogger.info("Document marked as ready", { documentId: input.documentId });
 
         // Get chunk count for the completed document
         const chunks = await chunkRepository.findByDocumentId(input.documentId);
@@ -301,7 +301,7 @@ export async function completeDocumentProcessingActivity(
             chunks.length
         );
     } catch (error: unknown) {
-        console.error("[completeDocumentProcessingActivity] Error:", error);
+        activityLogger.error("Complete document processing activity error", error instanceof Error ? error : new Error(String(error)), { documentId: input.documentId });
         throw error;
     }
 }

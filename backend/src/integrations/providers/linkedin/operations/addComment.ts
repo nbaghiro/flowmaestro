@@ -3,6 +3,9 @@ import { toJSONSchema } from "../../../core/schema-utils";
 import { LinkedInClient } from "../client/LinkedInClient";
 import { PostIdSchema, AuthorUrnSchema, CommentTextSchema } from "../schemas";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
+import { getLogger } from "../../../../core/logging";
+
+const logger = getLogger();
 
 /**
  * Add Comment operation schema
@@ -31,7 +34,7 @@ export const addCommentOperation: OperationDefinition = (() => {
             timeout: 15000
         };
     } catch (error) {
-        console.error("[LinkedIn] Failed to create addCommentOperation:", error);
+        logger.error({ component: "LinkedIn", err: error }, "Failed to create addCommentOperation");
         throw new Error(
             `Failed to create addComment operation: ${error instanceof Error ? error.message : "Unknown error"}`
         );

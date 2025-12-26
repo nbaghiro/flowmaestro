@@ -3,6 +3,9 @@ import * as cheerio from "cheerio";
 import mammoth from "mammoth";
 import { PDFParse } from "pdf-parse";
 import { DocumentFileType } from "../../storage/models/KnowledgeDocument";
+import { createServiceLogger } from "../../core/logging";
+
+const logger = createServiceLogger("TextExtractor");
 
 export interface ExtractedText {
     content: string;
@@ -93,10 +96,10 @@ export class TextExtractor {
             } catch (error) {
                 clearTimeout(timeoutId);
                 if (error instanceof Error && error.name === "AbortError") {
-                    console.error("[TextExtractor] Request timeout after 60 seconds");
+                    logger.error("Request timeout after 60 seconds");
                     throw new Error("Request timeout: The URL took too long to respond");
                 }
-                console.error("[TextExtractor] Fetch error:", error);
+                logger.error({ err: error }, "Fetch error");
                 throw error;
             }
 
@@ -104,7 +107,7 @@ export class TextExtractor {
                 const status = response.status;
                 const statusText = response.statusText;
 
-                console.error(`[TextExtractor] HTTP error: ${status} ${statusText}`);
+                logger.error({ status, statusText }, "HTTP error");
 
                 if (status === 403) {
                     throw new Error(
@@ -136,9 +139,7 @@ export class TextExtractor {
             if (contentLength) {
                 const size = parseInt(contentLength, 10);
                 if (size > 10 * 1024 * 1024) {
-                    console.error(
-                        `[TextExtractor] Content too large: ${(size / 1024 / 1024).toFixed(2)}MB`
-                    );
+                    logger.error({ sizeMB: (size / 1024 / 1024).toFixed(2) }, "Content too large");
                     throw new Error(
                         `Content too large: ${(size / 1024 / 1024).toFixed(2)}MB. Maximum size is 10MB.`
                     );
@@ -150,18 +151,14 @@ export class TextExtractor {
 
                 // Check actual content size
                 if (htmlContent.length > 10 * 1024 * 1024) {
-                    console.error(
-                        `[TextExtractor] HTML content too large: ${(htmlContent.length / 1024 / 1024).toFixed(2)}MB`
-                    );
+                    logger.error({ sizeMB: (htmlContent.length / 1024 / 1024).toFixed(2) }, "HTML content too large");
                     throw new Error(
                         `HTML content too large: ${(htmlContent.length / 1024 / 1024).toFixed(2)}MB. Maximum size is 10MB.`
                     );
                 }
 
                 const result = this.extractFromHTML(htmlContent, finalUrl);
-                console.log(
-                    `[TextExtractor] Extracted ${result.content.length} characters, ${result.metadata.wordCount || 0} words`
-                );
+                logger.info({ charCount: result.content.length, wordCount: result.metadata.wordCount || 0 }, "Extracted content");
                 return result;
             } else if (contentType.includes("text/plain")) {
                 const textContent = await response.text();
@@ -224,7 +221,7 @@ export class TextExtractor {
                 }
             }
         } catch (error: unknown) {
-            console.error("[TextExtractor] Error in extractFromURL:", error);
+            logger.error({ err: error }, "Error in extractFromURL");
             if (error instanceof Error) {
                 // Re-throw with more context if it's already an Error
                 if (error.message.includes("Failed to fetch URL")) {

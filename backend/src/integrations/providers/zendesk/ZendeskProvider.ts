@@ -2,6 +2,9 @@ import { config as appConfig, getOAuthRedirectUri } from "../../../core/config";
 import { BaseProvider } from "../../core/BaseProvider";
 import { ZendeskClient } from "./client/ZendeskClient";
 import { ZendeskMCPAdapter } from "./mcp/ZendeskMCPAdapter";
+import { getLogger } from "../../../core/logging";
+
+const logger = getLogger();
 import {
     // Ticket Operations
     createTicketOperation,
@@ -119,7 +122,10 @@ export class ZendeskProvider extends BaseProvider {
         // Initialize MCP adapter
         this.mcpAdapter = new ZendeskMCPAdapter(this.operations);
 
-        console.log(`[ZendeskProvider] Registered ${this.operations.size} operations`);
+        logger.info(
+            { component: "ZendeskProvider", operationCount: this.operations.size },
+            "Registered operations"
+        );
     }
 
     /**
@@ -317,8 +323,9 @@ export class ZendeskProvider extends BaseProvider {
             });
 
             this.clientPool.set(cacheKey, client);
-            console.log(
-                `[ZendeskProvider] Created new client for connection ${connection.id} (subdomain: ${subdomain})`
+            logger.info(
+                { component: "ZendeskProvider", connectionId: connection.id, subdomain },
+                "Created new client for connection"
             );
         }
 
@@ -330,6 +337,9 @@ export class ZendeskProvider extends BaseProvider {
      */
     clearClientCache(connectionId: string): void {
         this.clientPool.delete(connectionId);
-        console.log(`[ZendeskProvider] Cleared client cache for connection ${connectionId}`);
+        logger.info(
+            { component: "ZendeskProvider", connectionId },
+            "Cleared client cache for connection"
+        );
     }
 }

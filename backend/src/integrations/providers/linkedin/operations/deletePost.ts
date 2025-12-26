@@ -3,6 +3,9 @@ import { toJSONSchema } from "../../../core/schema-utils";
 import { LinkedInClient } from "../client/LinkedInClient";
 import { PostIdSchema } from "../schemas";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
+import { getLogger } from "../../../../core/logging";
+
+const logger = getLogger();
 
 /**
  * Delete Post operation schema
@@ -30,7 +33,7 @@ export const deletePostOperation: OperationDefinition = (() => {
             timeout: 15000
         };
     } catch (error) {
-        console.error("[LinkedIn] Failed to create deletePostOperation:", error);
+        logger.error({ component: "LinkedIn", err: error }, "Failed to create deletePostOperation");
         throw new Error(
             `Failed to create deletePost operation: ${error instanceof Error ? error.message : "Unknown error"}`
         );

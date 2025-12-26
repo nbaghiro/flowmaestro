@@ -2,6 +2,9 @@ import { config as appConfig, getOAuthRedirectUri } from "../../../core/config";
 import { BaseProvider } from "../../core/BaseProvider";
 import { HubspotClient } from "./client/HubspotClient";
 import { HubspotMCPAdapter } from "./mcp/HubspotMCPAdapter";
+import { getLogger } from "../../../core/logging";
+
+const logger = getLogger();
 import {
     // Contact Operations
     createContactOperation,
@@ -351,7 +354,10 @@ export class HubspotProvider extends BaseProvider {
         // Initialize MCP adapter
         this.mcpAdapter = new HubspotMCPAdapter(this.operations);
 
-        console.log(`[HubspotProvider] Registered ${this.operations.size} operations`);
+        logger.info(
+            { component: "HubspotProvider", operationCount: this.operations.size },
+            "Registered operations"
+        );
     }
 
     /**
@@ -839,7 +845,10 @@ export class HubspotProvider extends BaseProvider {
             });
 
             this.clientPool.set(cacheKey, client);
-            console.log(`[HubspotProvider] Created new client for connection ${connection.id}`);
+            logger.info(
+                { component: "HubspotProvider", connectionId: connection.id },
+                "Created new client for connection"
+            );
         }
 
         return client;
@@ -850,6 +859,9 @@ export class HubspotProvider extends BaseProvider {
      */
     clearClientCache(connectionId: string): void {
         this.clientPool.delete(connectionId);
-        console.log(`[HubspotProvider] Cleared client cache for connection ${connectionId}`);
+        logger.info(
+            { component: "HubspotProvider", connectionId },
+            "Cleared client cache for connection"
+        );
     }
 }

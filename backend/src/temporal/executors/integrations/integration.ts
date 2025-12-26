@@ -2,8 +2,10 @@ import type { JsonObject } from "@flowmaestro/shared";
 import { ExecutionRouter } from "../../../integrations/core/ExecutionRouter";
 import { providerRegistry } from "../../../integrations/registry";
 import { ConnectionRepository } from "../../../storage/repositories/ConnectionRepository";
+import { createActivityLogger } from "../../shared/logger";
 
 const connectionRepository = new ConnectionRepository();
+const logger = createActivityLogger({ nodeType: "Integration" });
 
 // Initialize execution router (no MCP service for now, will add later)
 const executionRouter = new ExecutionRouter(providerRegistry);
@@ -41,7 +43,7 @@ export async function executeIntegrationNode(
 ): Promise<JsonObject> {
     const startTime = Date.now();
 
-    console.log(`[Integration] Provider: ${config.provider}, Operation: ${config.operation}`);
+    logger.info("Executing integration", { provider: config.provider, operation: config.operation });
 
     try {
         // Get connection with decrypted data
@@ -80,9 +82,10 @@ export async function executeIntegrationNode(
             }
         };
 
-        console.log(
-            `[Integration] Completed in ${response.metadata?.requestTime || 0}ms - Success: ${response.success}`
-        );
+        logger.info("Integration completed", {
+            requestTime: response.metadata?.requestTime || 0,
+            success: response.success
+        });
 
         // Return with output variable if specified
         if (config.outputVariable) {
@@ -99,7 +102,10 @@ export async function executeIntegrationNode(
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
 
-        console.error("[Integration] Error:", errorMessage);
+        logger.error("Integration error", new Error(errorMessage), {
+            provider: config.provider,
+            operation: config.operation
+        });
 
         const response: IntegrationNodeResult = {
             provider: config.provider,

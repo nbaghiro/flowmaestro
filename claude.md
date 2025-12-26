@@ -125,6 +125,75 @@ const data = await client.get("/endpoint");
 const created = await client.post("/endpoint", { name: "test" });
 ```
 
+### Logging Standards
+
+**IMPORTANT**: Never use `console.log`, `console.error`, `console.warn`, or `console.debug` in application code. Always use the structured logging module.
+
+#### Backend Logging
+
+Use the centralized logger from `backend/src/core/logging`:
+
+```typescript
+// ❌ BAD - Don't use console
+console.log("User logged in", { userId: "123" });
+console.error("Failed to process request", error);
+
+// ✅ GOOD - Use structured logger
+import { createServiceLogger } from "../core/logging";
+
+const logger = createServiceLogger("MyService");
+
+logger.info({ userId: "123" }, "User logged in");
+logger.error({ err: error, userId: "123" }, "Failed to process request");
+```
+
+**Logger Types:**
+
+| Function | Use Case |
+|----------|----------|
+| `createServiceLogger(name)` | For services and modules - creates a child logger with component name |
+| `createRequestLogger(request)` | For route handlers - includes correlation IDs from request |
+| `createWorkerLogger(name)` | For Temporal workers |
+
+**Log Levels:**
+- `trace` - Very detailed debugging (rarely used)
+- `debug` - Development debugging info
+- `info` - Normal operational messages
+- `warn` - Warning conditions
+- `error` - Error conditions
+- `fatal` - Critical failures
+
+#### Frontend Logging
+
+Use the frontend logger from `frontend/src/lib/logger.ts`:
+
+```typescript
+// ❌ BAD - Don't use console
+console.log("Button clicked");
+console.error("API call failed", error);
+
+// ✅ GOOD - Use structured logger
+import { logger } from "../lib/logger";
+
+logger.info("Button clicked", { buttonId: "submit" });
+logger.error("API call failed", error, { endpoint: "/api/users" });
+```
+
+The frontend logger automatically:
+- Batches logs and sends to backend every 5 seconds (or when 50 logs accumulate)
+- Captures session ID and correlation IDs
+- Redacts sensitive fields (passwords, tokens, API keys)
+- Uses `sendBeacon` on page unload to ensure logs aren't lost
+
+#### Exceptions (where console is allowed)
+
+| Location | Reason |
+|----------|--------|
+| `backend/tests/**` | Test files can use console for debugging |
+| `backend/scripts/**` | CLI scripts output to console |
+| `frontend/src/lib/logger.ts` | The logger itself uses console in dev mode |
+| `backend/src/temporal/shared/workflow-logger.ts` | Temporal workflows run in a V8 sandbox that cannot use external modules |
+
 ### Pre-Commit Type Checking Protocol
 
 **CRITICAL**: Before committing any code changes, you MUST:

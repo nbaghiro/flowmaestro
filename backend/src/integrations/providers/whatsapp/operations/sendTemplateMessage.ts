@@ -3,6 +3,9 @@ import { toJSONSchema } from "../../../core/schema-utils";
 import { WhatsAppClient } from "../client/WhatsAppClient";
 import type { WhatsAppSendResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
+import { getLogger } from "../../../../core/logging";
+
+const logger = getLogger();
 
 /**
  * Template component parameter schema
@@ -86,7 +89,7 @@ export const sendTemplateMessageOperation: OperationDefinition = (() => {
             timeout: 15000
         };
     } catch (error) {
-        console.error("[WhatsApp] Failed to create sendTemplateMessageOperation:", error);
+        logger.error({ component: "WhatsApp", err: error }, "Failed to create sendTemplateMessageOperation");
         throw new Error(
             `Failed to create sendTemplateMessage operation: ${error instanceof Error ? error.message : "Unknown error"}`
         );

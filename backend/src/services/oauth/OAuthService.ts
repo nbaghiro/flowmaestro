@@ -1,6 +1,9 @@
 import { randomBytes } from "crypto";
 import { getOAuthProvider, OAuthProvider } from "./OAuthProviderRegistry";
 import { generatePKCEPair } from "./utils/pkce";
+import { createServiceLogger } from "../../core/logging";
+
+const logger = createServiceLogger("OAuthService");
 
 /**
  * OAuth state token data
@@ -116,7 +119,7 @@ export class OAuthService {
         }
 
         const finalAuthUrl = `${authUrl}?${params.toString()}`;
-        console.log(`[OAuth] Generated auth URL for ${provider}:`, finalAuthUrl);
+        logger.info({ provider, authUrl: finalAuthUrl }, "Generated auth URL");
 
         return finalAuthUrl;
     }
@@ -141,7 +144,7 @@ export class OAuthService {
 
         const config = getOAuthProvider(actualProvider);
 
-        console.log(`[OAuth] Exchanging code for token: ${actualProvider}`);
+        logger.info({ provider: actualProvider }, "Exchanging code for token");
 
         try {
             // Exchange code for token (with PKCE verifier if applicable)
@@ -153,7 +156,7 @@ export class OAuthService {
                 stateData.subdomain
             );
 
-            console.log(`[OAuth] Token exchange successful for ${actualProvider}`);
+            logger.info({ provider: actualProvider }, "Token exchange successful");
 
             // Get user info from provider
             let accountInfo: Record<string, unknown> = {};
@@ -165,9 +168,9 @@ export class OAuthService {
                         stateData.subdomain
                     );
                     accountInfo = userInfo as Record<string, unknown>;
-                    console.log(`[OAuth] Retrieved user info for ${actualProvider}:`, accountInfo);
+                    logger.info({ provider: actualProvider, accountInfo }, "Retrieved user info");
                 } catch (error: unknown) {
-                    console.error(`[OAuth] Failed to get user info for ${actualProvider}:`, error);
+                    logger.error({ provider: actualProvider, err: error }, "Failed to get user info");
                     // Continue anyway, user info is optional
                 }
             }
@@ -187,7 +190,7 @@ export class OAuthService {
             };
         } catch (error: unknown) {
             const errorMsg = error instanceof Error ? error.message : "Unknown error";
-            console.error(`[OAuth] Token exchange failed for ${actualProvider}:`, errorMsg);
+            logger.error({ provider: actualProvider, err: errorMsg }, "Token exchange failed");
             throw new Error(`Failed to exchange authorization code: ${errorMsg}`);
         }
     }
@@ -211,7 +214,7 @@ export class OAuthService {
             throw new Error(`Provider ${provider} does not support token refresh`);
         }
 
-        console.log(`[OAuth] Refreshing token for ${provider}`);
+        logger.info({ provider }, "Refreshing token");
 
         try {
             const params: Record<string, string> = {
@@ -247,7 +250,7 @@ export class OAuthService {
                 expires_in?: number;
             };
 
-            console.log(`[OAuth] Token refresh successful for ${provider}`);
+            logger.info({ provider }, "Token refresh successful");
 
             return {
                 access_token: tokenData.access_token,
@@ -257,7 +260,7 @@ export class OAuthService {
             };
         } catch (error: unknown) {
             const errorMsg = error instanceof Error ? error.message : "Unknown error";
-            console.error(`[OAuth] Token refresh failed for ${provider}:`, errorMsg);
+            logger.error({ provider, err: errorMsg }, "Token refresh failed");
             throw new Error(`Failed to refresh token: ${errorMsg}`);
         }
     }
@@ -270,11 +273,11 @@ export class OAuthService {
         const config = getOAuthProvider(provider);
 
         if (!config.revokeUrl) {
-            console.log(`[OAuth] Provider ${provider} does not support token revocation`);
+            logger.info({ provider }, "Provider does not support token revocation");
             return;
         }
 
-        console.log(`[OAuth] Revoking token for ${provider}`);
+        logger.info({ provider }, "Revoking token");
 
         try {
             const url = new URL(config.revokeUrl);
@@ -288,10 +291,10 @@ export class OAuthService {
                 }
             });
 
-            console.log(`[OAuth] Token revoked successfully for ${provider}`);
+            logger.info({ provider }, "Token revoked successfully");
         } catch (error: unknown) {
             const errorMsg = error instanceof Error ? error.message : "Unknown error";
-            console.error(`[OAuth] Token revocation failed for ${provider}:`, errorMsg);
+            logger.error({ provider, err: errorMsg }, "Token revocation failed");
             // Don't throw - revocation failure shouldn't block deletion
         }
     }
@@ -398,12 +401,12 @@ export class OAuthService {
         const data = this.stateStore.get(state);
 
         if (!data) {
-            console.error("[OAuth] State token not found");
+            logger.error("State token not found");
             return null;
         }
 
         if (data.expiresAt < Date.now()) {
-            console.error("[OAuth] State token expired");
+            logger.error("State token expired");
             this.stateStore.delete(state);
             return null;
         }
@@ -429,7 +432,7 @@ export class OAuthService {
         }
 
         if (cleaned > 0) {
-            console.log(`[OAuth] Cleaned up ${cleaned} expired state tokens`);
+            logger.info({ count: cleaned }, "Cleaned up expired state tokens");
         }
     }
 }

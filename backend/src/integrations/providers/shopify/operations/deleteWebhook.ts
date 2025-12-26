@@ -2,6 +2,9 @@ import { toJSONSchema } from "../../../core/schema-utils";
 import { ShopifyClient } from "../client/ShopifyClient";
 import { DeleteWebhookSchema, type DeleteWebhookParams } from "../schemas";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
+import { getLogger } from "../../../../core/logging";
+
+const logger = getLogger();
 
 /**
  * Delete Webhook operation definition
@@ -19,7 +22,7 @@ export const deleteWebhookOperation: OperationDefinition = (() => {
             timeout: 15000
         };
     } catch (error) {
-        console.error("[Shopify] Failed to create deleteWebhookOperation:", error);
+        logger.error({ component: "Shopify", err: error }, "Failed to create deleteWebhookOperation");
         throw new Error(
             `Failed to create deleteWebhook operation: ${error instanceof Error ? error.message : "Unknown error"}`
         );

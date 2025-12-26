@@ -1,8 +1,11 @@
 import { FastifyInstance } from "fastify";
+import { createServiceLogger } from "../../../core/logging";
 import { TriggerType, ScheduleTriggerConfig } from "../../../storage/models/Trigger";
 import { TriggerRepository } from "../../../storage/repositories/TriggerRepository";
 import { SchedulerService } from "../../../temporal/services/scheduler";
 import { authMiddleware } from "../../middleware";
+
+const logger = createServiceLogger("TriggerRoutes");
 
 export async function createTriggerRoute(fastify: FastifyInstance) {
     fastify.post(
@@ -45,7 +48,7 @@ export async function createTriggerRoute(fastify: FastifyInstance) {
                     data: trigger
                 });
             } catch (error) {
-                console.error("Error creating trigger:", error);
+                logger.error({ workflowId: body.workflowId, triggerType: body.triggerType, error }, "Error creating trigger");
                 return reply.status(500).send({
                     success: false,
                     error: String(error)

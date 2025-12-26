@@ -8,9 +8,12 @@
 import { FastifyRequest, FastifyReply } from "fastify";
 import { z } from "zod";
 import type { ThreadStreamingEvent } from "@flowmaestro/shared";
+import { createServiceLogger } from "../../../core/logging";
 import { redisEventBus } from "../../../services/events/RedisEventBus";
 import { ThreadRepository } from "../../../storage/repositories/ThreadRepository";
 import { NotFoundError } from "../../middleware";
+
+const logger = createServiceLogger("ThreadStream");
 
 const streamParamsSchema = z.object({
     id: z.string().uuid()
@@ -27,7 +30,7 @@ export async function streamThreadHandler(
     const userId = request.user!.id;
     const { id: threadId } = streamParamsSchema.parse(request.params);
 
-    console.log(`[SSE] Stream request for thread ${threadId} from user ${userId}`);
+    logger.info({ threadId, userId }, "Stream request received");
 
     const threadRepo = new ThreadRepository();
 
@@ -60,7 +63,7 @@ export async function streamThreadHandler(
 
     // Handle client disconnect
     request.raw.on("close", () => {
-        console.log(`[SSE] Client disconnected from thread ${threadId}`);
+        logger.info({ threadId }, "Client disconnected");
         clientDisconnected = true;
         clearInterval(keepAliveInterval);
         cleanup();
@@ -74,17 +77,18 @@ export async function streamThreadHandler(
         try {
             reply.raw.write(sseData);
         } catch (error) {
-            console.error("[SSE] Error writing event:", error);
+            logger.error({ threadId, error }, "Error writing event");
             clientDisconnected = true;
         }
     };
 
     // Subscribe to thread-specific Redis channel
     const eventHandler = (event: ThreadStreamingEvent) => {
-        console.log(
-            `[SSE] Received event for thread ${threadId}: ${event.type} ` +
-                `(execution: ${event.executionId})`
-        );
+        logger.debug({
+            threadId,
+            eventType: event.type,
+            executionId: event.executionId
+        }, "Received event for thread");
         sendEvent(event);
     };
 
@@ -95,7 +99,7 @@ export async function streamThreadHandler(
         clearInterval(keepAliveInterval);
     };
 
-    console.log(`[SSE] Stream started for thread ${threadId}`);
+    logger.info({ threadId }, "Stream started");
 
     // Note: Connection stays open until client disconnects
     // No explicit end - SSE is a long-lived connection

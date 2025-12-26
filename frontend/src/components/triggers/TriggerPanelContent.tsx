@@ -6,6 +6,7 @@
 import { RefreshCw, Zap } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { getTriggers } from "../../lib/api";
+import { logger } from "../../lib/logger";
 import { useTriggerStore } from "../../stores/triggerStore";
 import { CreateTriggerDialog } from "./CreateTriggerDialog";
 import { TriggerCard } from "./TriggerCard";
@@ -32,7 +33,7 @@ export function TriggerPanelContent({ workflowId }: TriggerPanelContentProps) {
                 setTriggers(response.data);
             }
         } catch (err) {
-            console.error("Failed to load triggers:", err);
+            logger.error("Failed to load triggers", err);
             setError("Failed to load triggers. Please try again.");
         } finally {
             setLoadingTriggers(false);

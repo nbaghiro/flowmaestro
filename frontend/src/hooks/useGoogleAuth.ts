@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { logger } from "../lib/logger";
 
 // Determine API URL - fallback to localhost if not set
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
@@ -26,13 +27,13 @@ export function useGoogleAuth() {
         setError(null);
 
         try {
-            console.log("[Google Auth] Redirecting to:", GOOGLE_AUTH_URL);
+            logger.debug("Google Auth redirecting", { url: GOOGLE_AUTH_URL });
 
             // Redirect to backend Google OAuth endpoint
             // The backend will redirect to Google, and Google will redirect back to our callback
             window.location.href = GOOGLE_AUTH_URL;
         } catch (err: unknown) {
-            console.error("[Google Auth] Failed to redirect:", err);
+            logger.error("Google Auth failed to redirect", err);
             setIsLoading(false);
             setError(err instanceof Error ? err.message : "Failed to initiate Google login");
         }

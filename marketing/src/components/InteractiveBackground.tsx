@@ -20,11 +20,11 @@ export const InteractiveBackground: React.FC = () => {
             {/* Base grid pattern */}
             <div className="absolute inset-0 grid-pattern opacity-20"></div>
 
-            {/* Mouse spotlight effect - light gray glow */}
+            {/* Mouse spotlight effect - cool steel glow */}
             <div
                 className="absolute inset-0 transition-opacity duration-300"
                 style={{
-                    background: `radial-gradient(700px circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(156, 163, 175, 0.22), transparent 45%)`
+                    background: `radial-gradient(700px circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(161, 161, 170, 0.18), transparent 45%)`
                 }}
             ></div>
 

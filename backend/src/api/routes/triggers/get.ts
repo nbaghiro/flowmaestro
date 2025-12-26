@@ -1,7 +1,10 @@
 import { FastifyInstance } from "fastify";
+import { createServiceLogger } from "../../../core/logging";
 import { TriggerRepository } from "../../../storage/repositories/TriggerRepository";
 import { SchedulerService } from "../../../temporal/services/scheduler";
 import { authMiddleware } from "../../middleware";
+
+const logger = createServiceLogger("TriggerRoutes");
 
 export async function getTriggerRoute(fastify: FastifyInstance) {
     fastify.get(
@@ -30,7 +33,7 @@ export async function getTriggerRoute(fastify: FastifyInstance) {
                         const schedulerService = new SchedulerService();
                         scheduleInfo = await schedulerService.getScheduleInfo(id);
                     } catch (error) {
-                        console.error("Error fetching schedule info:", error);
+                        logger.error({ triggerId: id, error }, "Error fetching schedule info");
                     }
                 }
 
@@ -42,7 +45,7 @@ export async function getTriggerRoute(fastify: FastifyInstance) {
                     }
                 });
             } catch (error) {
-                console.error("Error getting trigger:", error);
+                logger.error({ triggerId: id, error }, "Error getting trigger");
                 return reply.status(500).send({
                     success: false,
                     error: String(error)

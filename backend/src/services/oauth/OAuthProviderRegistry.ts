@@ -1,4 +1,7 @@
 import { config, getOAuthRedirectUri } from "../../core/config";
+import { createServiceLogger } from "../../core/logging";
+
+const logger = createServiceLogger("OAuthProviderRegistry");
 
 /**
  * OAuth Provider Configuration
@@ -78,7 +81,7 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
                     email: data.email || `${data.user}@slack`
                 };
             } catch (error) {
-                console.error("[OAuth] Failed to get Slack user info:", error);
+                logger.error({ err: error }, "Failed to get Slack user info");
                 return {
                     user: "Slack User",
                     email: "unknown@slack"
@@ -133,7 +136,7 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
                     userId: data.id
                 };
             } catch (error) {
-                console.error("[OAuth] Failed to get Google user info:", error);
+                logger.error({ err: error }, "Failed to get Google user info");
                 return {
                     email: "unknown@google",
                     name: "Google User"
@@ -182,7 +185,7 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
                     userId: data.id
                 };
             } catch (error) {
-                console.error("[OAuth] Failed to get Google user info:", error);
+                logger.error({ err: error }, "Failed to get Google auth user info");
                 return {
                     email: "unknown@google",
                     name: "Google User"
@@ -228,7 +231,7 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
                     userId: data.id
                 };
             } catch (error) {
-                console.error("[OAuth] Failed to get Google Sheets user info:", error);
+                logger.error({ err: error }, "Failed to get Google Sheets user info");
                 return {
                     email: "unknown@google",
                     name: "Google User"
@@ -274,7 +277,7 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
                     userId: data.id
                 };
             } catch (error) {
-                console.error("[OAuth] Failed to get Google Calendar user info:", error);
+                logger.error({ err: error }, "Failed to get Google Calendar user info");
                 return {
                     email: "unknown@google",
                     name: "Google User"
@@ -323,7 +326,7 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
                     userId: data.id
                 };
             } catch (error) {
-                console.error("[OAuth] Failed to get Google Docs user info:", error);
+                logger.error({ err: error }, "Failed to get Google Docs user info");
                 return {
                     email: "unknown@google",
                     name: "Google User"
@@ -389,7 +392,7 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
                     workspace_name?: string;
                 };
 
-                console.log("[OAuth] Notion user info response:", JSON.stringify(data, null, 2));
+                logger.info({ data }, "Notion user info response");
 
                 // Extract workspace name and user info
                 let workspaceName = "Notion Workspace";
@@ -416,7 +419,7 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
                     userId: data.id
                 };
             } catch (error) {
-                console.error("[OAuth] Failed to get Notion user info:", error);
+                logger.error({ err: error }, "Failed to get Notion user info");
                 return {
                     workspace: "Notion Workspace",
                     user: "Notion User",
@@ -467,7 +470,7 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
                     scopes: data.scopes || []
                 };
             } catch (error) {
-                console.error("[OAuth] Failed to get Airtable user info:", error);
+                logger.error({ err: error }, "Failed to get Airtable user info");
                 return {
                     userId: "unknown",
                     scopes: []
@@ -525,7 +528,7 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
                     location: data.location
                 };
             } catch (error) {
-                console.error("[OAuth] Failed to get GitHub user info:", error);
+                logger.error({ err: error }, "Failed to get GitHub user info");
                 return {
                     username: "GitHub User",
                     userId: "unknown",
@@ -609,7 +612,7 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
                     timeZone: data.timeZone || "UTC"
                 };
             } catch (error) {
-                console.error("[OAuth] Failed to get HubSpot account info:", error);
+                logger.error({ err: error }, "Failed to get HubSpot account info");
                 return {
                     portalId: "unknown",
                     timeZone: "UTC"
@@ -671,7 +674,7 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
                     email: viewer?.email || "unknown@linear.app"
                 };
             } catch (error) {
-                console.error("[OAuth] Failed to get Linear user info:", error);
+                logger.error({ err: error }, "Failed to get Linear user info");
                 return {
                     userId: "unknown",
                     name: "Linear User",
@@ -724,7 +727,7 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
                     avatar: data.img_url
                 };
             } catch (error) {
-                console.error("[OAuth] Failed to get Figma user info:", error);
+                logger.error({ err: error }, "Failed to get Figma user info");
                 return {
                     userId: "unknown",
                     name: "Figma User",
@@ -770,7 +773,7 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
                     userId: data.id
                 };
             } catch (error) {
-                console.error("[OAuth] Failed to get Google Drive user info:", error);
+                logger.error({ err: error }, "Failed to get Google Drive user info");
                 return {
                     email: "unknown@google",
                     name: "Google User"
@@ -827,7 +830,7 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
                     userId: data.emailAddress
                 };
             } catch (error) {
-                console.error("[OAuth] Failed to get Gmail user info:", error);
+                logger.error({ err: error }, "Failed to get Gmail user info");
                 return {
                     email: "unknown@gmail.com",
                     name: "Gmail User"
@@ -883,7 +886,7 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
                     picture: null // Microsoft profile photos require separate API call
                 };
             } catch (error) {
-                console.error("[OAuth] Failed to get Microsoft user info:", error);
+                logger.error({ err: error }, "Failed to get Microsoft user info");
                 return {
                     email: "unknown@microsoft",
                     name: "Microsoft User"
@@ -931,7 +934,7 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
                     name: data.displayName
                 };
             } catch (error) {
-                console.error("[OAuth] Failed to get Microsoft 365 user info:", error);
+                logger.error({ err: error }, "Failed to get Microsoft 365 user info");
                 return {
                     email: "unknown@microsoft",
                     name: "Microsoft User"
@@ -979,7 +982,7 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
                     name: data.displayName
                 };
             } catch (error) {
-                console.error("[OAuth] Failed to get OneDrive user info:", error);
+                logger.error({ err: error }, "Failed to get OneDrive user info");
                 return {
                     email: "unknown@microsoft",
                     name: "Microsoft User"
@@ -1027,7 +1030,7 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
                     name: data.displayName
                 };
             } catch (error) {
-                console.error("[OAuth] Failed to get Excel user info:", error);
+                logger.error({ err: error }, "Failed to get Excel user info");
                 return {
                     email: "unknown@microsoft",
                     name: "Microsoft User"
@@ -1075,7 +1078,7 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
                     name: data.displayName
                 };
             } catch (error) {
-                console.error("[OAuth] Failed to get Word user info:", error);
+                logger.error({ err: error }, "Failed to get Word user info");
                 return {
                     email: "unknown@microsoft",
                     name: "Microsoft User"
@@ -1135,7 +1138,7 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
                     name: data.displayName
                 };
             } catch (error) {
-                console.error("[OAuth] Failed to get Teams user info:", error);
+                logger.error({ err: error }, "Failed to get Teams user info");
                 return {
                     email: "unknown@microsoft",
                     name: "Microsoft User"
@@ -1191,7 +1194,7 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
                     name: data.name || "WhatsApp Business User"
                 };
             } catch (error) {
-                console.error("[OAuth] Failed to get WhatsApp user info:", error);
+                logger.error({ err: error }, "Failed to get WhatsApp user info");
                 return {
                     userId: "unknown",
                     name: "WhatsApp Business User"
@@ -1272,7 +1275,7 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
                 );
 
                 if (pagesWithInstagram.length === 0) {
-                    console.warn("[OAuth] No Instagram Business Account found linked to any page");
+                    logger.warn("No Instagram Business Account found linked to any page");
                 }
 
                 // Exchange for long-lived page tokens
@@ -1308,7 +1311,7 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
                     instagramUsername: primaryPage?.instagramUsername
                 };
             } catch (error) {
-                console.error("[OAuth] Failed to get Instagram user info:", error);
+                logger.error({ err: error }, "Failed to get Instagram user info");
                 return {
                     userId: "unknown",
                     name: "Instagram User"
@@ -1382,7 +1385,7 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
                 };
 
                 if (!pagesData.data || pagesData.data.length === 0) {
-                    console.warn("[OAuth] No Facebook Pages found");
+                    logger.warn("No Facebook Pages found");
                 }
 
                 // Map pages with their access tokens
@@ -1408,7 +1411,7 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
                     pageAccessToken: primaryPage?.pageAccessToken
                 };
             } catch (error) {
-                console.error("[OAuth] Failed to get Facebook user info:", error);
+                logger.error({ err: error }, "Failed to get Facebook user info");
                 return {
                     userId: "unknown",
                     name: "Facebook User"
@@ -1449,7 +1452,7 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
                     name: data.name || "Facebook Ads User"
                 };
             } catch (error) {
-                console.error("[OAuth] Failed to get Facebook Ads user info:", error);
+                logger.error({ err: error }, "Failed to get Facebook Ads user info");
                 return {
                     userId: "unknown",
                     name: "Facebook Ads User"
@@ -1550,7 +1553,7 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
                     urls: data.urls
                 };
             } catch (error) {
-                console.error("[OAuth] Failed to get Salesforce user info:", error);
+                logger.error({ err: error }, "Failed to get Salesforce user info");
                 return {
                     userId: "unknown",
                     name: "Salesforce User",
@@ -1626,7 +1629,7 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
                     subdomain
                 };
             } catch (error) {
-                console.error("[OAuth] Failed to get Zendesk user info:", error);
+                logger.error({ err: error }, "Failed to get Zendesk user info");
                 return {
                     userId: "unknown",
                     name: "Zendesk User",
@@ -1682,7 +1685,7 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
                     teamName: data.team?.name
                 };
             } catch (error) {
-                console.error("[OAuth] Failed to get Apollo user info:", error);
+                logger.error({ err: error }, "Failed to get Apollo user info");
                 return {
                     userId: "unknown",
                     email: "unknown@apollo.io",
@@ -1748,7 +1751,7 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
                     }))
                 };
             } catch (error) {
-                console.error("[OAuth] Failed to get Jira accessible resources:", error);
+                logger.error({ err: error }, "Failed to get Jira accessible resources");
                 return {
                     sites: []
                 };
@@ -1833,7 +1836,7 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
                     shop // Store shop name for API calls
                 };
             } catch (error) {
-                console.error("[OAuth] Failed to get Shopify shop info:", error);
+                logger.error({ err: error }, "Failed to get Shopify shop info");
                 return {
                     shopId: "unknown",
                     shopName: "Shopify Store",
@@ -1884,7 +1887,7 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
                     language: data.language
                 };
             } catch (error) {
-                console.error("[OAuth] Failed to get Typeform user info:", error);
+                logger.error({ err: error }, "Failed to get Typeform user info");
                 return {
                     userId: "unknown",
                     email: "unknown@typeform"
@@ -1949,7 +1952,7 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
                     email: data.email || "unknown@dropbox"
                 };
             } catch (error) {
-                console.error("[OAuth] Failed to get Dropbox user info:", error);
+                logger.error({ err: error }, "Failed to get Dropbox user info");
                 return {
                     userId: "unknown",
                     name: "Dropbox User",
@@ -2003,7 +2006,7 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
                     avatar: data.avatar_url
                 };
             } catch (error) {
-                console.error("[OAuth] Failed to get Box user info:", error);
+                logger.error({ err: error }, "Failed to get Box user info");
                 return {
                     userId: "unknown",
                     name: "Box User",
@@ -2062,7 +2065,7 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
                     avatar: result.data?.profile_image_url
                 };
             } catch (error) {
-                console.error("[OAuth] Failed to get X user info:", error);
+                logger.error({ err: error }, "Failed to get X user info");
                 return {
                     userId: "unknown",
                     name: "X User",
@@ -2125,7 +2128,7 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
                     user: data.name || data.email || "LinkedIn User"
                 };
             } catch (error) {
-                console.error("[OAuth] Failed to get LinkedIn user info:", error);
+                logger.error({ err: error }, "Failed to get LinkedIn user info");
                 return {
                     userId: "unknown",
                     name: "LinkedIn User",

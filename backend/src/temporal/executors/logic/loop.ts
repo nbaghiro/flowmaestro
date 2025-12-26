@@ -1,6 +1,9 @@
 import type { JsonObject, JsonValue } from "@flowmaestro/shared";
 import { LoopNodeConfigSchema, validateOrThrow, type LoopNodeConfig } from "../../shared/schemas";
 import { interpolateVariables } from "../../shared/utils";
+import { createActivityLogger } from "../../shared/logger";
+
+const logger = createActivityLogger({ nodeType: "Loop" });
 
 // Re-export the Zod-inferred type for backwards compatibility
 export type { LoopNodeConfig };
@@ -21,7 +24,7 @@ export async function executeLoopNode(config: unknown, context: JsonObject): Pro
     // Validate config with Zod schema
     const validatedConfig = validateOrThrow(LoopNodeConfigSchema, config, "Loop");
 
-    console.log(`[Loop] Type: ${validatedConfig.loopType}`);
+    logger.info("Preparing loop", { loopType: validatedConfig.loopType });
 
     switch (validatedConfig.loopType) {
         case "forEach":
@@ -56,7 +59,7 @@ async function prepareForEachLoop(
         );
     }
 
-    console.log(`[Loop] forEach: ${array.length} items`);
+    logger.info("forEach loop prepared", { itemCount: array.length });
 
     return {
         iterations: array.length,
@@ -75,7 +78,7 @@ async function prepareWhileLoop(config: LoopNodeConfig, _context: JsonObject): P
 
     const maxIterations = config.maxIterations || 1000;
 
-    console.log(`[Loop] while: condition="${config.condition}", max=${maxIterations}`);
+    logger.info("while loop prepared", { condition: config.condition, maxIterations });
 
     // Note: Actual while loop execution happens in workflow orchestrator
     // This just returns metadata
@@ -102,7 +105,7 @@ async function prepareCountLoop(config: LoopNodeConfig, context: JsonObject): Pr
         throw new Error(`Invalid count: ${config.count}`);
     }
 
-    console.log(`[Loop] count: ${count} iterations`);
+    logger.info("count loop prepared", { count });
 
     return {
         iterations: count,

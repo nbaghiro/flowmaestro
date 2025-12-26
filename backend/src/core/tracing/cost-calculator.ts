@@ -3,6 +3,10 @@
  * Calculates costs for LLM API calls based on token usage
  */
 
+import { createServiceLogger } from "../logging";
+
+const logger = createServiceLogger("CostCalculator");
+
 export interface ModelPricing {
     provider: string;
     model: string;
@@ -437,9 +441,10 @@ export function calculateCost(input: CostCalculationInput): CostCalculationResul
     const pricing = getModelPricing(input.provider, input.model);
 
     if (!pricing) {
-        console.warn(
-            `[CostCalculator] No pricing found for provider=${input.provider}, model=${input.model}`
-        );
+        logger.warn({
+            provider: input.provider,
+            model: input.model
+        }, "No pricing found for model");
         return {
             inputCost: 0,
             outputCost: 0,

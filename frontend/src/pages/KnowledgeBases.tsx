@@ -7,6 +7,7 @@ import { Button } from "../components/common/Button";
 import { PageHeader } from "../components/common/PageHeader";
 import { LoadingState } from "../components/common/Spinner";
 import { CreateKnowledgeBaseModal } from "../components/knowledgebases";
+import { logger } from "../lib/logger";
 import { useKnowledgeBaseStore } from "../stores/knowledgeBaseStore";
 
 export function KnowledgeBases() {
@@ -47,7 +48,7 @@ export function KnowledgeBases() {
             setShowCreateModal(false);
             navigate(`/knowledge-bases/${kb.id}`);
         } catch (error) {
-            console.error("Failed to create knowledge base:", error);
+            logger.error("Failed to create knowledge base", error);
         }
     };
 
@@ -60,7 +61,7 @@ export function KnowledgeBases() {
             await fetchKnowledgeBases();
             setKbToDelete(null);
         } catch (error) {
-            console.error("Failed to delete knowledge base:", error);
+            logger.error("Failed to delete knowledge base", error);
         } finally {
             setIsDeleting(false);
         }

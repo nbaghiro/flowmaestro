@@ -3,6 +3,9 @@ import { toJSONSchema } from "../../../core/schema-utils";
 import { InstagramClient } from "../client/InstagramClient";
 import type { InstagramMessageResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
+import { getLogger } from "../../../../core/logging";
+
+const logger = getLogger();
 
 /**
  * Get Messages operation schema
@@ -37,7 +40,7 @@ export const getMessagesOperation: OperationDefinition = (() => {
             timeout: 15000
         };
     } catch (error) {
-        console.error("[Instagram] Failed to create getMessagesOperation:", error);
+        logger.error({ component: "Instagram", err: error }, "Failed to create getMessagesOperation");
         throw new Error(
             `Failed to create getMessages operation: ${error instanceof Error ? error.message : "Unknown error"}`
         );

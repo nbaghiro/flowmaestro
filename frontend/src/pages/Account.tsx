@@ -9,6 +9,7 @@ import {
     unlinkGoogleAccount,
     unlinkMicrosoftAccount
 } from "../lib/api";
+import { logger } from "../lib/logger";
 import type { LucideIcon } from "lucide-react";
 import { AccountEditModal } from "@/components/AccountEditModal";
 
@@ -50,7 +51,7 @@ export function Account() {
             await unlinkGoogleAccount();
             window.location.reload();
         } catch (error) {
-            console.error("Failed to unlink Google:", error);
+            logger.error("Failed to unlink Google", error);
         } finally {
             setIsUnlinking(false);
             setIsUnlinkGoogleDialogOpen(false);
@@ -63,7 +64,7 @@ export function Account() {
             await unlinkMicrosoftAccount();
             window.location.reload();
         } catch (error) {
-            console.error("Failed to unlink Microsoft:", error);
+            logger.error("Failed to unlink Microsoft", error);
         } finally {
             setIsUnlinking(false);
             setIsUnlinkMicrosoftDialogOpen(false);

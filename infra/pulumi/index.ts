@@ -10,6 +10,7 @@ import { esoOutputs } from "./src/resources/external-secrets-operator";
 import { githubActionsOutputs } from "./src/resources/github-actions";
 import { clusterOutputs } from "./src/resources/gke-cluster";
 import { apiOutputs } from "./src/resources/google-apis";
+import { loggingConfig } from "./src/resources/logging";
 import { monitoringOutputs } from "./src/resources/monitoring";
 import { networkOutputs, staticIp } from "./src/resources/networking";
 import { redisOutputs } from "./src/resources/redis";
@@ -70,6 +71,12 @@ export const outputs = {
 
     // Monitoring
     dashboardId: monitoringOutputs.dashboardId,
+
+    // Logging
+    loggingApplicationBucketId: loggingConfig.applicationBucketId,
+    loggingErrorBucketId: loggingConfig.errorBucketId,
+    loggingErrorSinkName: loggingConfig.errorSinkName,
+    loggingErrorMetricName: loggingConfig.errorMetricName,
 
     // Secrets Management (Legacy)
     secretsDbPasswordId: secretOutputs.dbPasswordSecretId,

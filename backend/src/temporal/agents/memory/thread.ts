@@ -8,6 +8,9 @@ import { db } from "../../../storage/database";
 import { AgentExecutionRepository } from "../../../storage/repositories/AgentExecutionRepository";
 import { emitTokensUpdated } from "../streaming";
 import type { ThreadMessage } from "../../../storage/models/AgentExecution";
+import { createActivityLogger } from "../../shared/logger";
+
+const logger = createActivityLogger({ component: "ThreadActivity" });
 
 const executionRepo = new AgentExecutionRepository();
 
@@ -115,9 +118,12 @@ export async function saveThreadIncremental(
         });
     }
 
-    console.log(
-        `[ThreadActivity] Saved ${messages.length} new messages for execution ${executionId} in thread ${threadId}${markCompleted ? " (marked as completed)" : ""}`
-    );
+    logger.info("Thread messages saved", {
+        executionId,
+        threadId,
+        messageCount: messages.length,
+        markCompleted: markCompleted || false
+    });
 
     return { saved: messages.length };
 }
@@ -271,10 +277,15 @@ export async function updateThreadTokens(input: UpdateThreadTokensInput): Promis
         [threadId, JSON.stringify(tokenUsage)]
     );
 
-    console.log(
-        `[ThreadTokens] Updated thread ${threadId}: ${tokenUsage.totalTokens} tokens` +
-            `(${tokenUsage.executionCount} executions, $${tokenUsage.totalCost.toFixed(4)})`
-    );
+    logger.info("Thread token usage updated", {
+        threadId,
+        executionId,
+        totalTokens: tokenUsage.totalTokens,
+        promptTokens: tokenUsage.promptTokens,
+        completionTokens: tokenUsage.completionTokens,
+        executionCount: tokenUsage.executionCount,
+        totalCost: tokenUsage.totalCost
+    });
 
     await emitTokensUpdated({
         threadId,

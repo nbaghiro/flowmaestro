@@ -1,5 +1,8 @@
+import { createServiceLogger } from "../../core/logging";
 import { db } from "../database";
 import { CreateTwoFactorTokenInput, TwoFactorTokenModel } from "../models/TwoFactorToken";
+
+const logger = createServiceLogger("TwoFactorTokenRepository");
 
 export class TwoFactorTokenRepository {
     async saveCode(input: CreateTwoFactorTokenInput): Promise<TwoFactorTokenModel> {
@@ -25,8 +28,7 @@ export class TwoFactorTokenRepository {
             [input.user_id]
         );
 
-        console.log("[2FA][DEBUG] BEFORE INSERT rows:", before.rows.length);
-        console.log("[2FA][DEBUG] BEFORE INSERT tokens:", before.rows);
+        logger.debug({ rowCount: before.rows.length, tokens: before.rows }, "Before insert state");
 
         const query = `
             INSERT INTO flowmaestro.two_factor_tokens (
@@ -51,7 +53,7 @@ export class TwoFactorTokenRepository {
         const result = await db.query<TwoFactorTokenModel>(query, values);
         const token = result.rows[0];
 
-        console.log("[2FA][DEBUG] SAVED TOKEN FULL:", token);
+        logger.debug({ token }, "Saved token");
 
         const after = await db.query(
             `
@@ -63,8 +65,7 @@ export class TwoFactorTokenRepository {
             [input.user_id]
         );
 
-        console.log("[2FA][DEBUG] AFTER INSERT rows:", after.rows.length);
-        console.log("[2FA][DEBUG] AFTER INSERT tokens:", after.rows);
+        logger.debug({ rowCount: after.rows.length, tokens: after.rows }, "After insert state");
 
         return token;
     }
@@ -89,14 +90,10 @@ export class TwoFactorTokenRepository {
             [userId]
         );
 
-        console.log("[2FA][DEBUG] VERIFY - RAW TOKENS:", rawTokens.rows);
-        console.log("[2FA][DEBUG] findValidCode INPUT userId:", userId);
+        logger.debug({ userId, rawTokens: rawTokens.rows }, "Raw tokens for verification");
 
         const result = await db.query<TwoFactorTokenModel>(query, [userId]);
-        console.log("[2FA][DEBUG] findValidCode RESULT:", {
-            rowCount: result.rows.length,
-            rows: result.rows
-        });
+        logger.debug({ userId, rowCount: result.rows.length, rows: result.rows }, "findValidCode result");
 
         return result.rows[0] || null;
     }

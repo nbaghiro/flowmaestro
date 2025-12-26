@@ -4,6 +4,7 @@
 
 import { useEffect, useCallback, useState } from "react";
 import { WebSocketEvent } from "@flowmaestro/shared";
+import { logger } from "../lib/logger";
 import { wsClient } from "../lib/websocket";
 
 export function useWebSocket(token: string | null) {
@@ -19,7 +20,7 @@ export function useWebSocket(token: string | null) {
             .connect(token)
             .then(() => setIsConnected(true))
             .catch((error) => {
-                console.error("Failed to connect to WebSocket:", error);
+                logger.error("Failed to connect to WebSocket", error);
                 setIsConnected(false);
             });
 

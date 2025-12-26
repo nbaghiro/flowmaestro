@@ -8,6 +8,9 @@ import type { JsonValue } from "@flowmaestro/shared";
 import { WebhookTriggerConfig } from "../../storage/models/Trigger";
 import { TriggerRepository } from "../../storage/repositories/TriggerRepository";
 import { getTemporalClient } from "../client";
+import { createActivityLogger } from "../shared/logger";
+
+const logger = createActivityLogger({ component: "WebhookService" });
 
 export interface WebhookRequestData {
     method: string;
@@ -168,9 +171,13 @@ export class WebhookService {
 
             const executionId = handle.workflowId;
 
-            console.log(
-                `Started workflow execution ${executionId} from webhook trigger ${triggerId}`
-            );
+            logger.info("Started workflow execution from webhook trigger", {
+                executionId,
+                triggerId,
+                workflowId: trigger.workflow_id,
+                requestMethod: requestData.method,
+                requestPath: requestData.path
+            });
 
             // Log successful webhook
             const processingTime = Date.now() - startTime;
@@ -202,7 +209,15 @@ export class WebhookService {
                 statusCode: 202
             };
         } catch (error) {
-            console.error(`Error processing webhook for trigger ${triggerId}:`, error);
+            logger.error(
+                "Error processing webhook",
+                error instanceof Error ? error : new Error(String(error)),
+                {
+                    triggerId,
+                    requestMethod: requestData.method,
+                    requestPath: requestData.path
+                }
+            );
 
             const processingTime = Date.now() - startTime;
             await this.logWebhookRequest(
@@ -236,7 +251,9 @@ export class WebhookService {
                 requestData.headers["x-webhook-signature"];
 
             if (!signature) {
-                console.warn("No signature found in webhook request headers");
+                logger.warn("No signature found in webhook request headers", {
+                    availableHeaders: Object.keys(requestData.headers)
+                });
                 return false;
             }
 
@@ -259,7 +276,11 @@ export class WebhookService {
                 Buffer.from(expectedSignature)
             );
         } catch (error) {
-            console.error("Error verifying webhook signature:", error);
+            logger.error(
+                "Error verifying webhook signature",
+                error instanceof Error ? error : new Error(String(error)),
+                {}
+            );
             return false;
         }
     }
@@ -296,7 +317,11 @@ export class WebhookService {
                 processing_time_ms: processingTimeMs
             });
         } catch (err) {
-            console.error("Failed to log webhook request:", err);
+            logger.error(
+                "Failed to log webhook request",
+                err instanceof Error ? err : new Error(String(err)),
+                { triggerId, responseStatus }
+            );
             // Don't throw - logging failures shouldn't break webhook processing
         }
     }

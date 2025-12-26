@@ -7,6 +7,9 @@ import type { JsonValue } from "@flowmaestro/shared";
 import { ExecutionRepository } from "../../storage/repositories/ExecutionRepository";
 import { TriggerRepository } from "../../storage/repositories/TriggerRepository";
 import { WorkflowRepository } from "../../storage/repositories/WorkflowRepository";
+import { createActivityLogger } from "../shared/logger";
+
+const logger = createActivityLogger({ component: "TriggerExecution" });
 
 export interface TriggerExecutionInput {
     triggerId: string;
@@ -83,7 +86,13 @@ export async function prepareTriggeredExecution(
         // Record trigger fired
         await triggerRepo.recordTrigger(triggerId);
 
-        console.log(`Prepared triggered execution: ${executionId} for workflow ${workflowId}`);
+        logger.info("Prepared triggered execution", {
+            executionId,
+            workflowId,
+            triggerId,
+            triggerType: trigger.trigger_type,
+            triggerName: trigger.name
+        });
 
         return {
             executionId,
@@ -91,7 +100,11 @@ export async function prepareTriggeredExecution(
             inputs: jsonPayload
         };
     } catch (error) {
-        console.error("Failed to prepare triggered execution:", error);
+        logger.error(
+            "Failed to prepare triggered execution",
+            error instanceof Error ? error : new Error(String(error)),
+            { triggerId, workflowId }
+        );
         throw error;
     }
 }
@@ -116,11 +129,18 @@ export async function completeTriggeredExecution(
             completed_at: new Date()
         });
 
-        console.log(
-            `Completed triggered execution: ${executionId} (${success ? "success" : "failed"})`
-        );
+        logger.info("Completed triggered execution", {
+            executionId,
+            success,
+            hasOutputs: !!outputs,
+            hasError: !!error
+        });
     } catch (err) {
-        console.error(`Failed to complete triggered execution ${executionId}:`, err);
+        logger.error(
+            "Failed to complete triggered execution",
+            err instanceof Error ? err : new Error(String(err)),
+            { executionId, success }
+        );
         throw err;
     }
 }

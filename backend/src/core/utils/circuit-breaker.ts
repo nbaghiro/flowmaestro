@@ -10,6 +10,10 @@
  * - HALF_OPEN: Testing if system recovered, allow one request
  */
 
+import { createServiceLogger } from "../logging";
+
+const logger = createServiceLogger("CircuitBreaker");
+
 export enum CircuitState {
     CLOSED = "CLOSED", // Normal operation
     OPEN = "OPEN", // Blocking requests
@@ -87,7 +91,7 @@ export class CircuitBreaker {
         if (this.state === CircuitState.OPEN) {
             // Check if reset timeout has passed
             if (this.shouldAttemptReset()) {
-                console.log(`[CircuitBreaker:${this.config.name}] Attempting reset (HALF_OPEN)`);
+                logger.info({ name: this.config.name }, "Attempting reset (HALF_OPEN)");
                 this.state = CircuitState.HALF_OPEN;
             } else {
                 throw new CircuitBreakerOpenError(
@@ -131,7 +135,7 @@ export class CircuitBreaker {
      * Manually open the circuit (for testing or emergency use)
      */
     forceOpen(): void {
-        console.log(`[CircuitBreaker:${this.config.name}] Manually opened`);
+        logger.info({ name: this.config.name }, "Manually opened");
         this.state = CircuitState.OPEN;
         this.lastFailureTime = Date.now();
         this.scheduleReset();
@@ -141,7 +145,7 @@ export class CircuitBreaker {
      * Manually close the circuit (reset to normal)
      */
     forceClose(): void {
-        console.log(`[CircuitBreaker:${this.config.name}] Manually closed (reset)`);
+        logger.info({ name: this.config.name }, "Manually closed (reset)");
         this.state = CircuitState.CLOSED;
         this.failureCount = 0;
         this.lastFailureTime = null;
@@ -154,10 +158,10 @@ export class CircuitBreaker {
     private onSuccess(): void {
         // If we were HALF_OPEN, we've recovered!
         if (this.state === CircuitState.HALF_OPEN) {
-            console.log(
-                `[CircuitBreaker:${this.config.name}] ✓ Recovery successful, ` +
-                    `closing circuit (failures: ${this.failureCount})`
-            );
+            logger.info({
+                name: this.config.name,
+                failureCount: this.failureCount
+            }, "Recovery successful, closing circuit");
             this.state = CircuitState.CLOSED;
             this.failureCount = 0;
             this.lastFailureTime = null;
@@ -170,10 +174,10 @@ export class CircuitBreaker {
         } else if (this.state === CircuitState.CLOSED) {
             // Reset failure count on success
             if (this.failureCount > 0) {
-                console.log(
-                    `[CircuitBreaker:${this.config.name}] Success after ${this.failureCount} failures, ` +
-                        "resetting counter"
-                );
+                logger.info({
+                    name: this.config.name,
+                    failureCount: this.failureCount
+                }, "Success after failures, resetting counter");
                 this.failureCount = 0;
             }
         }
@@ -186,16 +190,16 @@ export class CircuitBreaker {
         this.failureCount++;
         this.lastFailureTime = Date.now();
 
-        console.log(
-            `[CircuitBreaker:${this.config.name}] ✗ Failure ${this.failureCount}/${this.config.failureThreshold} ` +
-                `(state: ${this.state})`
-        );
+        logger.warn({
+            name: this.config.name,
+            failureCount: this.failureCount,
+            failureThreshold: this.config.failureThreshold,
+            state: this.state
+        }, "Circuit breaker failure recorded");
 
         // If we're HALF_OPEN and fail, go back to OPEN
         if (this.state === CircuitState.HALF_OPEN) {
-            console.log(
-                `[CircuitBreaker:${this.config.name}] HALF_OPEN test failed, reopening circuit`
-            );
+            logger.warn({ name: this.config.name }, "HALF_OPEN test failed, reopening circuit");
             this.state = CircuitState.OPEN;
             this.scheduleReset();
         }
@@ -204,10 +208,10 @@ export class CircuitBreaker {
             this.state === CircuitState.CLOSED &&
             this.failureCount >= this.config.failureThreshold
         ) {
-            console.error(
-                `[CircuitBreaker:${this.config.name}] ⚠️  Failure threshold reached, OPENING circuit ` +
-                    `(will retry in ${this.config.resetTimeout / 1000}s)`
-            );
+            logger.error({
+                name: this.config.name,
+                resetTimeoutSeconds: this.config.resetTimeout / 1000
+            }, "Failure threshold reached, OPENING circuit");
             this.state = CircuitState.OPEN;
             this.scheduleReset();
 
@@ -236,10 +240,7 @@ export class CircuitBreaker {
 
         this.resetTimer = setTimeout(() => {
             if (this.state === CircuitState.OPEN) {
-                console.log(
-                    `[CircuitBreaker:${this.config.name}] Reset timeout reached, ` +
-                        "transitioning to HALF_OPEN"
-                );
+                logger.info({ name: this.config.name }, "Reset timeout reached, transitioning to HALF_OPEN");
                 this.state = CircuitState.HALF_OPEN;
             }
         }, this.config.resetTimeout);

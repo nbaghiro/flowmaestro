@@ -1,6 +1,9 @@
 import jsonata from "jsonata";
 import { parseStringPromise } from "xml2js";
 import type { JsonObject, JsonValue, JsonArray } from "@flowmaestro/shared";
+import { createActivityLogger } from "../../shared/logger";
+
+const logger = createActivityLogger({ nodeType: "Transform" });
 
 export interface TransformNodeConfig {
     operation:
@@ -32,10 +35,11 @@ export async function executeTransformNode(
     // Get input data from context
     const inputData = getVariableValue(config.inputData, context);
 
-    console.log(`[Transform] Operation: ${config.operation}`);
-    console.log(
-        `[Transform] Input type: ${typeof inputData}, ${Array.isArray(inputData) ? "array" : "object"}`
-    );
+    logger.info("Executing transform", {
+        operation: config.operation,
+        inputType: typeof inputData,
+        isArray: Array.isArray(inputData)
+    });
 
     let result: JsonValue;
 
@@ -77,9 +81,11 @@ export async function executeTransformNode(
             throw new Error(`Unsupported transform operation: ${config.operation}`);
     }
 
-    console.log(
-        `[Transform] Result type: ${typeof result}, ${Array.isArray(result) ? `array[${(result as JsonArray).length}]` : "object"}`
-    );
+    logger.debug("Transform completed", {
+        resultType: typeof result,
+        isArray: Array.isArray(result),
+        arrayLength: Array.isArray(result) ? (result as JsonArray).length : undefined
+    });
 
     // Return result with the output variable name
     return {

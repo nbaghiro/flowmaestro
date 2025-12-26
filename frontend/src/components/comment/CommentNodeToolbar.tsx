@@ -1,5 +1,6 @@
 import * as Popover from "@radix-ui/react-popover";
 import { memo } from "react";
+import { logger } from "../../lib/logger";
 
 interface Props {
     onBold: () => void;
@@ -63,7 +64,7 @@ function CommentNodeToolbar({
                     <button
                         onPointerDown={stopPointer}
                         onClick={() => {
-                            console.log("onBold clicked");
+                            logger.debug("Toolbar bold clicked");
                             onBold();
                         }}
                         className={`px-1.5 py-0.5 border rounded text-xs dark:text-white ${
@@ -75,7 +76,7 @@ function CommentNodeToolbar({
                     <button
                         onPointerDown={stopPointer}
                         onClick={() => {
-                            console.log("onItalic clicked");
+                            logger.debug("Toolbar italic clicked");
                             onItalic();
                         }}
                         className={`px-1.5 py-0.5 border rounded text-xs italic dark:text-white ${
@@ -87,7 +88,7 @@ function CommentNodeToolbar({
                     <button
                         onPointerDown={stopPointer}
                         onClick={() => {
-                            console.log("onUnderline clicked");
+                            logger.debug("Toolbar underline clicked");
                             onUnderline();
                         }}
                         className={`px-1.5 py-0.5 border rounded text-xs underline dark:text-white ${
@@ -105,7 +106,7 @@ function CommentNodeToolbar({
                             key={color}
                             onPointerDown={stopPointer}
                             onClick={() => {
-                                console.log("onSetBg clicked", color);
+                                logger.debug("Toolbar background color set", { color });
                                 onSetBg(color);
                             }}
                             className={`w-5 h-5 rounded border ${
@@ -122,7 +123,7 @@ function CommentNodeToolbar({
                             key={c}
                             onPointerDown={stopPointer}
                             onClick={() => {
-                                console.log("onSetText clicked", c);
+                                logger.debug("Toolbar text color set", { color: c });
                                 onSetText(c);
                             }}
                             className={`w-5 h-5 rounded border ${

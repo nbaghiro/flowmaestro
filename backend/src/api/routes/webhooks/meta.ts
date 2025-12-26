@@ -1,6 +1,9 @@
 import * as crypto from "crypto";
 import { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import { config } from "../../../core/config";
+import { createServiceLogger } from "../../../core/logging";
+
+const logger = createServiceLogger("MetaWebhook");
 import { FacebookWebhookHandler } from "../../../integrations/providers/facebook/webhooks/FacebookWebhookHandler";
 import { InstagramWebhookHandler } from "../../../integrations/providers/instagram/webhooks/InstagramWebhookHandler";
 import { WhatsAppWebhookHandler } from "../../../integrations/providers/whatsapp/webhooks/WhatsAppWebhookHandler";
@@ -133,7 +136,7 @@ function verifySignature(request: FastifyRequest, signature: string | undefined)
 
     const appSecret = config.oauth.meta.appSecret;
     if (!appSecret) {
-        console.error("[MetaWebhook] META_APP_SECRET not configured");
+        logger.error("META_APP_SECRET not configured");
         return false;
     }
 
@@ -153,7 +156,7 @@ function verifySignature(request: FastifyRequest, signature: string | undefined)
 
         return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature));
     } catch (error) {
-        console.error("[MetaWebhook] Signature verification error:", error);
+        logger.error({ error }, "Signature verification error");
         return false;
     }
 }

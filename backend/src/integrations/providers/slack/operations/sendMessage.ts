@@ -9,6 +9,9 @@ import {
 } from "../schemas";
 import type { SlackMessageResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
+import { getLogger } from "../../../../core/logging";
+
+const logger = getLogger();
 
 /**
  * Send Message operation schema
@@ -38,7 +41,7 @@ export const sendMessageOperation: OperationDefinition = (() => {
             timeout: 10000
         };
     } catch (error) {
-        console.error("[Slack] Failed to create sendMessageOperation:", error);
+        logger.error({ component: "Slack", err: error }, "Failed to create sendMessageOperation");
         throw new Error(
             `Failed to create sendMessage operation: ${error instanceof Error ? error.message : "Unknown error"}`
         );

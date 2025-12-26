@@ -175,8 +175,8 @@ const PricingCard: React.FC<PricingCardProps> = ({ plan, selectedCredits, isAnnu
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className={`relative rounded-2xl bg-white/5 backdrop-blur-sm border ${
-                plan.popular ? plan.borderColor : "border-white/10"
+            className={`relative rounded-2xl bg-background-surface backdrop-blur-sm border ${
+                plan.popular ? plan.borderColor : "border-stroke"
             } p-6 flex flex-col h-full`}
         >
             {plan.popular && (
@@ -229,7 +229,7 @@ const PricingCard: React.FC<PricingCardProps> = ({ plan, selectedCredits, isAnnu
                 className={`w-full py-3 rounded-lg font-semibold text-center transition-all duration-200 ${
                     plan.popular
                         ? "bg-white text-black hover:bg-gray-100"
-                        : "bg-white/10 text-white hover:bg-white/20 border border-white/10"
+                        : "bg-background-elevated text-white hover:bg-border border border-stroke"
                 }`}
             >
                 {plan.cta}
@@ -245,7 +245,7 @@ export const PricingPage: React.FC = () => {
     const selectedCredits = sliderToCredits(sliderValue);
 
     return (
-        <div className="min-h-screen bg-black text-white">
+        <div className="min-h-screen bg-background text-gray-50">
             <Navigation />
 
             {/* Hero Section */}
@@ -296,7 +296,7 @@ export const PricingPage: React.FC = () => {
             {/* Credit Slider */}
             <section className="relative px-4 sm:px-6 lg:px-8 pb-12">
                 <div className="max-w-5xl mx-auto">
-                    <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8">
+                    <div className="bg-background-surface backdrop-blur-sm border border-stroke rounded-2xl p-8">
                         <div className="flex items-baseline gap-2 mb-6">
                             <span className="text-gray-400">I need</span>
                             <span className="text-4xl font-bold text-white font-mono">
@@ -314,7 +314,7 @@ export const PricingPage: React.FC = () => {
                                 step={0.5}
                                 value={sliderValue}
                                 onChange={(e) => setSliderValue(Number(e.target.value))}
-                                className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer slider"
+                                className="w-full h-2 bg-border rounded-lg appearance-none cursor-pointer slider"
                             />
 
                             {/* Tick marks with absolute positioning */}
@@ -365,7 +365,7 @@ export const PricingPage: React.FC = () => {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.3 }}
-                        className="mt-8 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 p-8"
+                        className="mt-8 rounded-2xl bg-background-surface backdrop-blur-sm border border-stroke p-8"
                     >
                         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 mb-8">
                             <div>

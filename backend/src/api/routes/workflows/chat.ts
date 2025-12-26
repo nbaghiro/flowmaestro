@@ -1,9 +1,12 @@
 import { randomUUID } from "crypto";
 import { FastifyInstance } from "fastify";
+import { createServiceLogger } from "../../../core/logging";
 import { WorkflowChatService } from "../../../services/WorkflowChatService";
 import { authMiddleware, validateRequest } from "../../middleware";
 import { chatRequestSchema, type ChatRequest } from "../../schemas/chat-schemas";
 import { emitChatEvent } from "./chat-stream";
+
+const logger = createServiceLogger("ChatRoute");
 
 const chatService = new WorkflowChatService();
 
@@ -17,12 +20,10 @@ export async function chatRoute(fastify: FastifyInstance) {
             const body = request.body as ChatRequest;
 
             try {
-                console.log(
-                    "[Chat Route] Received chat request from user:",
-                    request.user!.id,
-                    "- Action:",
-                    body.action
-                );
+                logger.info({
+                    userId: request.user!.id,
+                    action: body.action
+                }, "Received chat request");
 
                 // Generate execution ID
                 const executionId = randomUUID();
@@ -50,17 +51,17 @@ export async function chatRoute(fastify: FastifyInstance) {
                                 tokenCount++;
                                 if (tokenCount === 1) {
                                     firstTokenTime = Date.now();
-                                    console.log(
-                                        `[Chat] First token received for execution ${executionId}`
-                                    );
+                                    logger.info({ executionId }, "First token received");
                                 }
                                 emitChatEvent(executionId, "token", token);
                             },
                             onComplete: (response) => {
                                 const duration = firstTokenTime ? Date.now() - firstTokenTime : 0;
-                                console.log(
-                                    `[Chat] Completed execution ${executionId}: ${tokenCount} tokens in ${duration}ms`
-                                );
+                                logger.info({
+                                    executionId,
+                                    tokenCount,
+                                    durationMs: duration
+                                }, "Completed execution");
                                 emitChatEvent(executionId, "complete", response);
                             },
                             onError: (error: Error) => {
@@ -69,13 +70,13 @@ export async function chatRoute(fastify: FastifyInstance) {
                         }
                     )
                     .catch((error) => {
-                        console.error("[Chat Route] Background processing error:", error);
+                        logger.error({ executionId, error }, "Background processing error");
                         const message =
                             error instanceof Error ? error.message : "Failed to process chat";
                         emitChatEvent(executionId, "error", message);
                     });
             } catch (error) {
-                console.error("[Chat Route] Error initiating chat:", error);
+                logger.error({ error }, "Error initiating chat");
 
                 const message = error instanceof Error ? error.message : "Failed to initiate chat";
 

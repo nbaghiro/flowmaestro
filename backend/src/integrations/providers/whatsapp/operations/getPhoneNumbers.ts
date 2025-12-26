@@ -3,6 +3,9 @@ import { toJSONSchema } from "../../../core/schema-utils";
 import { WhatsAppClient } from "../client/WhatsAppClient";
 import type { WhatsAppPhoneNumberResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
+import { getLogger } from "../../../../core/logging";
+
+const logger = getLogger();
 
 /**
  * Get Phone Numbers operation schema
@@ -29,7 +32,7 @@ export const getPhoneNumbersOperation: OperationDefinition = (() => {
             timeout: 10000
         };
     } catch (error) {
-        console.error("[WhatsApp] Failed to create getPhoneNumbersOperation:", error);
+        logger.error({ component: "WhatsApp", err: error }, "Failed to create getPhoneNumbersOperation");
         throw new Error(
             `Failed to create getPhoneNumbers operation: ${error instanceof Error ? error.message : "Unknown error"}`
         );

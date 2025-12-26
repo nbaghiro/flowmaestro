@@ -2,6 +2,7 @@ import { Send, X, Bot, RotateCcw } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import type { JsonObject } from "@flowmaestro/shared";
 import { chatWorkflow, streamChatResponse } from "../lib/api";
+import { logger } from "../lib/logger";
 import { cn } from "../lib/utils";
 import { useChatStore, type ActionType, type NodeChange } from "../stores/chatStore";
 import { useWorkflowStore } from "../stores/workflowStore";
@@ -207,7 +208,7 @@ export function AIChatPanel({ workflowId }: AIChatPanelProps) {
                 }
             });
         } catch (error) {
-            console.error("Chat error:", error);
+            logger.error("Chat error", error);
             updateLastMessage(
                 `Error: ${error instanceof Error ? error.message : "Failed to get AI response. Please make sure you have an active LLM connection set up in the Connections page."}`
             );

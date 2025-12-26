@@ -1,16 +1,31 @@
 import React from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
 import { Home } from "./pages/Home";
 import { IntegrationsPage } from "./pages/IntegrationsPage";
 import { PricingPage } from "./pages/PricingPage";
+import { SolutionPage } from "./pages/SolutionPage";
+
+const ScrollToTop: React.FC = () => {
+    const { pathname } = useLocation();
+
+    React.useEffect(() => {
+        window.scrollTo(0, 0);
+    }, [pathname]);
+
+    return null;
+};
 
 const App: React.FC = () => {
     return (
-        <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/integrations" element={<IntegrationsPage />} />
-            <Route path="/pricing" element={<PricingPage />} />
-        </Routes>
+        <>
+            <ScrollToTop />
+            <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/solutions/:category" element={<SolutionPage />} />
+                <Route path="/integrations" element={<IntegrationsPage />} />
+                <Route path="/pricing" element={<PricingPage />} />
+            </Routes>
+        </>
     );
 };
 

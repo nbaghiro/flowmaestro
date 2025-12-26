@@ -1,6 +1,9 @@
 import { getDefaultModelForProvider } from "@flowmaestro/shared";
 import { ConnectionRepository } from "../storage/repositories/ConnectionRepository";
 import { executeLLMNode, type LLMNodeConfig } from "../temporal/executors/ai/llm";
+import { createServiceLogger } from "../core/logging";
+
+const logger = createServiceLogger("WorkflowGenerator");
 
 export interface WorkflowGenerationRequest {
     userPrompt: string;
@@ -342,8 +345,8 @@ export async function generateWorkflow(
 ): Promise<GeneratedWorkflow> {
     const systemPrompt = buildSystemPrompt();
 
-    console.log("[Workflow Generator] Generating workflow for user:", request.userId);
-    console.log("[Workflow Generator] User prompt:", request.userPrompt);
+    logger.info({ userId: request.userId }, "Generating workflow");
+    logger.info({ userPrompt: request.userPrompt }, "User prompt");
 
     // Fetch connection to determine provider
     const connectionRepository = new ConnectionRepository();
@@ -368,7 +371,7 @@ export async function generateWorkflow(
         throw new Error(`Unsupported LLM provider: ${provider}`);
     }
 
-    console.log("[Workflow Generator] Using provider:", provider, "model:", model);
+    logger.info({ provider, model }, "Using LLM provider and model");
 
     // Prepare LLM configuration
     const llmConfig: LLMNodeConfig = {
@@ -390,7 +393,7 @@ export async function generateWorkflow(
         throw new Error("LLM result did not contain a text string");
     }
 
-    console.log("[Workflow Generator] LLM response length:", text.length);
+    logger.info({ responseLength: text.length }, "LLM response received");
 
     // Parse JSON response
     let workflow: GeneratedWorkflow;
@@ -404,18 +407,14 @@ export async function generateWorkflow(
 
         workflow = JSON.parse(jsonText);
     } catch (_error) {
-        console.error("[Workflow Generator] Failed to parse LLM response:", text);
+        logger.error({ response: text }, "Failed to parse LLM response");
         throw new Error("Failed to parse workflow JSON from LLM response. Please try again.");
     }
 
     // Validate workflow structure
     validateWorkflow(workflow);
 
-    console.log(
-        "[Workflow Generator] Successfully generated workflow with",
-        workflow.nodes.length,
-        "nodes"
-    );
+    logger.info({ nodeCount: workflow.nodes.length }, "Successfully generated workflow");
 
     return workflow;
 }

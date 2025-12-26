@@ -1,5 +1,8 @@
 import type { JsonObject, JsonValue } from "@flowmaestro/shared";
 import { interpolateVariables } from "../../shared/utils";
+import { createActivityLogger } from "../../shared/logger";
+
+const logger = createActivityLogger({ nodeType: "Conditional" });
 
 export type ComparisonOperator =
     | "=="
@@ -41,15 +44,17 @@ export async function executeConditionalNode(
     const leftValue = parseValue(leftInterpolated);
     const rightValue = parseValue(rightInterpolated);
 
-    console.log(
-        `[Conditional] Evaluating: ${JSON.stringify(leftValue)} ${config.operator} ${JSON.stringify(rightValue)}`
-    );
+    logger.debug("Evaluating condition", {
+        leftValue: JSON.stringify(leftValue),
+        operator: config.operator,
+        rightValue: JSON.stringify(rightValue)
+    });
 
     // Evaluate the condition
     const conditionMet = evaluateCondition(leftValue, config.operator, rightValue);
     const branch = conditionMet ? "true" : "false";
 
-    console.log(`[Conditional] Result: ${conditionMet} → taking '${branch}' branch`);
+    logger.info("Condition evaluated", { conditionMet, branch });
 
     return {
         conditionMet,

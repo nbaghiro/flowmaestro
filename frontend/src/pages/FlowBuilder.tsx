@@ -21,6 +21,7 @@ import {
     restoreCheckpoint,
     renameCheckpoint
 } from "../lib/api";
+import { logger } from "../lib/logger";
 import { generateId } from "../lib/utils";
 import {
     createWorkflowSnapshot,
@@ -159,7 +160,7 @@ export function FlowBuilder() {
 
         try {
             const response = await getWorkflow(workflowId);
-            console.log("[FlowBuilder] workflow.definition =", response.data.definition);
+            logger.debug("Loaded workflow definition", { definition: response.data.definition });
 
             const cp = await listCheckpoints(workflowId);
             resetWorkflow();
@@ -215,7 +216,7 @@ export function FlowBuilder() {
             }
             setCheckpoints(cp);
         } catch (error) {
-            console.error("[FlowBuilder] Failed to load workflow:", error);
+            logger.error("Failed to load workflow", error);
         } finally {
             setIsLoading(false);
             clear();
@@ -267,7 +268,7 @@ export function FlowBuilder() {
 
             setTimeout(() => setSaveStatus("idle"), SAVE_SUCCESS_TIMEOUT);
         } catch (error: unknown) {
-            console.error("Failed to save workflow:", error);
+            logger.error("Failed to save workflow", error);
             setSaveStatus("error");
             setTimeout(() => setSaveStatus("idle"), SAVE_ERROR_TIMEOUT);
         }
@@ -366,7 +367,7 @@ export function FlowBuilder() {
             setWorkflowName(name);
             setWorkflowDescription(description);
         } catch (error) {
-            console.error("Failed to save workflow settings:", error);
+            logger.error("Failed to save workflow settings", error);
             throw error;
         }
     };

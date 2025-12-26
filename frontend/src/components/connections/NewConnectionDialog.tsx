@@ -2,6 +2,7 @@ import { ArrowLeft, X, Eye, EyeOff, Shield, Key } from "lucide-react";
 import React, { useState, useEffect, useCallback } from "react";
 import type { JsonObject, OAuthField } from "@flowmaestro/shared";
 import { useOAuth } from "../../hooks/useOAuth";
+import { logger } from "../../lib/logger";
 import { useConnectionStore } from "../../stores/connectionStore";
 import { Alert } from "../common/Alert";
 import { Button } from "../common/Button";
@@ -120,23 +121,23 @@ export function NewConnectionDialog({
         async (settings?: Record<string, string>) => {
             // Prevent multiple simultaneous OAuth attempts
             if (oauthInitiated || oauthLoading) {
-                console.log("[NewConnectionDialog] OAuth already in progress, ignoring click");
+                logger.debug("OAuth already in progress, ignoring click");
                 return;
             }
 
-            console.log("[NewConnectionDialog] OAuth button clicked for provider:", provider);
+            logger.debug("OAuth button clicked", { provider });
             setOauthInitiated(true);
             setError(null);
             try {
-                console.log("[NewConnectionDialog] Initiating OAuth flow with settings:", settings);
+                logger.debug("Initiating OAuth flow", { provider, settings });
                 await initiateOAuth(provider, settings);
-                console.log("[NewConnectionDialog] OAuth flow completed successfully");
+                logger.info("OAuth flow completed successfully", { provider });
                 if (onSuccess) onSuccess();
                 handleClose();
             } catch (err) {
                 const errorMessage =
                     err instanceof Error ? err.message : "OAuth authentication failed";
-                console.error("[NewConnectionDialog] OAuth error:", errorMessage, err);
+                logger.error("OAuth error", err, { provider });
                 // Only show error if it's not a popup-blocked error (user might have already completed it)
                 if (!errorMessage.includes("popup") && !errorMessage.includes("Failed to open")) {
                     setError(errorMessage);

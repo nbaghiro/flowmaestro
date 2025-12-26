@@ -1,4 +1,5 @@
 import { FastifyInstance } from "fastify";
+import { createServiceLogger } from "../../../core/logging";
 import {
     KnowledgeBaseRepository,
     KnowledgeDocumentRepository
@@ -6,6 +7,8 @@ import {
 import { getTemporalClient } from "../../../temporal/client";
 import { authMiddleware } from "../../middleware";
 import { serializeDocument } from "./utils";
+
+const logger = createServiceLogger("KnowledgeBaseUrl");
 
 interface AddUrlBody {
     url: string;
@@ -131,7 +134,7 @@ export async function addUrlRoute(fastify: FastifyInstance) {
             } catch (error: unknown) {
                 const errorMsg = error instanceof Error ? error.message : String(error);
                 fastify.log.error(`Failed to start Temporal workflow: ${errorMsg}`);
-                console.error("[add-url] Workflow start failed:", error);
+                logger.error({ documentId: document.id, url: body.url, error }, "Workflow start failed");
             }
 
             return reply.status(201).send({

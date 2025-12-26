@@ -1,6 +1,9 @@
 import * as crypto from "crypto";
 import { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import { config } from "../../../core/config";
+import { createServiceLogger } from "../../../core/logging";
+
+const logger = createServiceLogger("ShopifyWebhook");
 
 /**
  * Shopify Webhook Payload Header Types
@@ -92,13 +95,13 @@ export async function shopifyWebhookRoutes(fastify: FastifyInstance) {
  */
 function verifyShopifyHmac(request: FastifyRequest, hmacHeader: string | undefined): boolean {
     if (!hmacHeader) {
-        console.error("[ShopifyWebhook] Missing HMAC header");
+        logger.error("Missing HMAC header");
         return false;
     }
 
     const clientSecret = config.oauth.shopify.clientSecret;
     if (!clientSecret) {
-        console.error("[ShopifyWebhook] SHOPIFY_CLIENT_SECRET not configured");
+        logger.error("SHOPIFY_CLIENT_SECRET not configured");
         return false;
     }
 
@@ -124,7 +127,7 @@ function verifyShopifyHmac(request: FastifyRequest, hmacHeader: string | undefin
 
         return crypto.timingSafeEqual(Buffer.from(hmacHeader), Buffer.from(calculatedHmac));
     } catch (error) {
-        console.error("[ShopifyWebhook] HMAC verification error:", error);
+        logger.error({ error }, "HMAC verification error");
         return false;
     }
 }

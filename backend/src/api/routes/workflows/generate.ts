@@ -1,7 +1,10 @@
 import { FastifyInstance } from "fastify";
+import { createServiceLogger } from "../../../core/logging";
 import { generateWorkflow } from "../../../services/WorkflowGenerator";
 import { authMiddleware, validateRequest } from "../../middleware";
 import { generateWorkflowSchema } from "../../schemas/workflow-schemas";
+
+const logger = createServiceLogger("WorkflowGenerate");
 
 export async function generateWorkflowRoute(fastify: FastifyInstance) {
     fastify.post(
@@ -13,10 +16,7 @@ export async function generateWorkflowRoute(fastify: FastifyInstance) {
             const body = request.body as { prompt: string; connectionId?: string };
 
             try {
-                console.log(
-                    "[Generate Route] Received generation request from user:",
-                    request.user!.id
-                );
+                logger.info({ userId: request.user!.id }, "Received generation request");
 
                 const workflow = await generateWorkflow({
                     userPrompt: body.prompt,
@@ -29,7 +29,7 @@ export async function generateWorkflowRoute(fastify: FastifyInstance) {
                     data: workflow
                 });
             } catch (error) {
-                console.error("[Generate Route] Error generating workflow:", error);
+                logger.error({ userId: request.user!.id, error }, "Error generating workflow");
 
                 // Return user-friendly error message
                 const message =

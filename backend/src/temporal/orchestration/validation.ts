@@ -11,6 +11,7 @@ import {
     type ValidatedWorkflowDefinition,
     type WorkflowValidationResult
 } from "../../core/validation/workflow-state-validation";
+import { activityLogger } from "../shared/logger";
 
 /**
  * Validate workflow inputs before execution
@@ -21,9 +22,9 @@ export async function validateInputsActivity(params: {
 }): Promise<WorkflowValidationResult> {
     const { workflowDefinition, inputs } = params;
 
-    console.log(
-        `[Validation] Validating workflow inputs for ${workflowDefinition.name || "Unnamed Workflow"}`
-    );
+    activityLogger.info("Validating workflow inputs", {
+        workflowName: workflowDefinition.name || "Unnamed Workflow"
+    });
 
     const result = validateWorkflowInputs(
         workflowDefinition as ValidatedWorkflowDefinition,
@@ -31,12 +32,11 @@ export async function validateInputsActivity(params: {
     );
 
     if (!result.success) {
-        console.error(
-            `[Validation] Input validation failed: ${result.error?.message}`,
-            result.error?.errors
-        );
+        activityLogger.error("Input validation failed", new Error(result.error?.message || "Unknown error"), {
+            errors: result.error?.errors
+        });
     } else {
-        console.log("[Validation] Input validation passed");
+        activityLogger.info("Input validation passed");
     }
 
     return result;
@@ -51,9 +51,9 @@ export async function validateOutputsActivity(params: {
 }): Promise<WorkflowValidationResult> {
     const { workflowDefinition, outputs } = params;
 
-    console.log(
-        `[Validation] Validating workflow outputs for ${workflowDefinition.name || "Unnamed Workflow"}`
-    );
+    activityLogger.info("Validating workflow outputs", {
+        workflowName: workflowDefinition.name || "Unnamed Workflow"
+    });
 
     const result = validateWorkflowOutputs(
         workflowDefinition as ValidatedWorkflowDefinition,
@@ -61,12 +61,11 @@ export async function validateOutputsActivity(params: {
     );
 
     if (!result.success) {
-        console.error(
-            `[Validation] Output validation failed: ${result.error?.message}`,
-            result.error?.errors
-        );
+        activityLogger.error("Output validation failed", new Error(result.error?.message || "Unknown error"), {
+            errors: result.error?.errors
+        });
     } else {
-        console.log("[Validation] Output validation passed");
+        activityLogger.info("Output validation passed");
     }
 
     return result;
@@ -82,7 +81,7 @@ export async function validateContextActivity(params: {
 }): Promise<WorkflowValidationResult> {
     const { workflowDefinition, context, nodeId } = params;
 
-    console.log(`[Validation] Validating workflow context${nodeId ? ` at node ${nodeId}` : ""}`);
+    activityLogger.info("Validating workflow context", { nodeId });
 
     const result = validateWorkflowContext(
         workflowDefinition as ValidatedWorkflowDefinition,
@@ -90,12 +89,12 @@ export async function validateContextActivity(params: {
     );
 
     if (!result.success) {
-        console.error(
-            `[Validation] Context validation failed${nodeId ? ` at node ${nodeId}` : ""}: ${result.error?.message}`,
-            result.error?.errors
-        );
+        activityLogger.error("Context validation failed", new Error(result.error?.message || "Unknown error"), {
+            nodeId,
+            errors: result.error?.errors
+        });
     } else {
-        console.log(`[Validation] Context validation passed${nodeId ? ` at node ${nodeId}` : ""}`);
+        activityLogger.info("Context validation passed", { nodeId });
     }
 
     return result;

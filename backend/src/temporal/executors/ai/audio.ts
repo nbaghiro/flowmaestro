@@ -6,6 +6,7 @@ import type { JsonObject } from "@flowmaestro/shared";
 import { config as appConfig } from "../../../core/config";
 import { ConfigurationError, ProviderError, ValidationError } from "../../shared/errors";
 import { withHeartbeat, type HeartbeatOperations } from "../../shared/heartbeat";
+import { activityLogger } from "../../shared/logger";
 import { interpolateVariables } from "../../shared/utils";
 
 export interface AudioNodeConfig {
@@ -72,7 +73,7 @@ export async function executeAudioNode(
             provider: config.provider,
             operation: config.operation
         });
-        console.log(`[Audio] Provider: ${config.provider}, Operation: ${config.operation}`);
+        activityLogger.info("Audio node execution starting", { provider: config.provider, operation: config.operation });
 
         let result: JsonObject;
 
@@ -103,9 +104,9 @@ export async function executeAudioNode(
         };
 
         heartbeat.update({ step: "completed", percentComplete: 100 });
-        console.log(
-            `[Audio] Completed in ${((result.metadata as JsonObject)?.processingTime as number) || 0}ms`
-        );
+        activityLogger.info("Audio node execution completed", {
+            processingTimeMs: (result.metadata as JsonObject)?.processingTime
+        });
 
         if (config.outputVariable) {
             return { [config.outputVariable]: result } as unknown as JsonObject;
@@ -137,7 +138,7 @@ async function executeOpenAI(
         // Whisper transcription
         const audioInput = interpolateVariables(config.audioInput || "", context);
 
-        console.log("[Audio/OpenAI] Transcribing audio");
+        activityLogger.info("OpenAI transcribing audio");
 
         heartbeat.update({ step: "downloading_audio" });
         // Download or read audio file
@@ -152,7 +153,7 @@ async function executeOpenAI(
                 prompt: config.prompt
             });
 
-            console.log(`[Audio/OpenAI] Transcription complete: ${response.text.length} chars`);
+            activityLogger.info("OpenAI transcription complete", { transcriptionLength: response.text.length });
 
             return {
                 operation: "transcribe",
@@ -176,7 +177,7 @@ async function executeOpenAI(
         // Text-to-speech
         const text = interpolateVariables(config.textInput || "", context);
 
-        console.log(`[Audio/OpenAI] Generating speech for ${text.length} characters`);
+        activityLogger.info("OpenAI generating speech", { characterCount: text.length });
 
         heartbeat.update({ step: "generating_speech", characters: text.length });
         const response = await openai.audio.speech.create({
@@ -209,7 +210,7 @@ async function executeOpenAI(
             audioResult.base64 = buffer.toString("base64");
         }
 
-        console.log("[Audio/OpenAI] Speech generated");
+        activityLogger.info("OpenAI speech generated");
 
         return {
             operation: "tts",
@@ -249,7 +250,7 @@ async function executeElevenLabs(
     const text = interpolateVariables(config.textInput || "", context);
     const voiceId = config.voice || "21m00Tcm4TlvDq8ikWAM"; // Default: Rachel voice
 
-    console.log(`[Audio/ElevenLabs] Generating speech for ${text.length} characters`);
+    activityLogger.info("ElevenLabs generating speech", { characterCount: text.length });
 
     heartbeat.update({ step: "generating_speech", characters: text.length });
     const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
@@ -292,7 +293,7 @@ async function executeElevenLabs(
         audioResult.base64 = buffer.toString("base64");
     }
 
-    console.log("[Audio/ElevenLabs] Speech generated");
+    activityLogger.info("ElevenLabs speech generated");
 
     return {
         operation: "tts",

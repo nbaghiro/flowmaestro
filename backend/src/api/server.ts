@@ -4,6 +4,7 @@ import multipart from "@fastify/multipart";
 import websocket from "@fastify/websocket";
 import Fastify from "fastify";
 import { config } from "../core/config";
+import { initializeLogger, shutdownLogger } from "../core/logging";
 import { initializeSpanService, getSpanService } from "../core/tracing";
 import { analyticsScheduler } from "../services/AnalyticsService";
 import { redisEventBus } from "../services/events/RedisEventBus";
@@ -21,6 +22,7 @@ import { connectionRoutes } from "./routes/connections";
 import { executionRoutes } from "./routes/executions";
 import { integrationRoutes } from "./routes/integrations";
 import { knowledgeBaseRoutes } from "./routes/knowledge-bases";
+import { logRoutes } from "./routes/logs";
 import { oauthRoutes } from "./routes/oauth";
 import { templateRoutes } from "./routes/templates";
 import { threadRoutes } from "./routes/threads";
@@ -30,20 +32,20 @@ import { websocketRoutes } from "./routes/websocket";
 import { workflowRoutes } from "./routes/workflows";
 
 export async function buildServer() {
+    // Initialize centralized logger
+    const logger = initializeLogger({
+        level: config.logging.level,
+        serviceName: config.logging.serviceName,
+        serviceVersion: config.logging.serviceVersion,
+        environment: config.env,
+        gcpProjectId: config.logging.gcpProjectId,
+        enableCloudLogging: config.logging.enableCloudLogging
+    });
+
     const fastify = Fastify({
-        logger: {
-            level: config.logLevel,
-            transport:
-                config.env === "development"
-                    ? {
-                          target: "pino-pretty",
-                          options: {
-                              translateTime: "HH:MM:ss Z",
-                              ignore: "pid,hostname"
-                          }
-                      }
-                    : undefined
-        }
+        loggerInstance: logger,
+        // Disable default serializers since we have custom ones in the logger
+        disableRequestLogging: false
     });
 
     // Register CORS
@@ -133,6 +135,7 @@ export async function buildServer() {
     await fastify.register(executionRoutes, { prefix: "/executions" });
     await fastify.register(connectionRoutes, { prefix: "/connections" });
     await fastify.register(integrationRoutes, { prefix: "/integrations" });
+    await fastify.register(logRoutes);
     await fastify.register(oauthRoutes, { prefix: "/oauth" });
     await fastify.register(knowledgeBaseRoutes, { prefix: "/knowledge-bases" });
     await fastify.register(agentRoutes, { prefix: "/agents" });
@@ -190,6 +193,9 @@ export async function startServer() {
             // Flush spans before shutdown
             const spanService = getSpanService();
             await spanService.shutdown();
+
+            // Flush and shutdown logger
+            await shutdownLogger();
 
             await db.close();
             await redisEventBus.disconnect();

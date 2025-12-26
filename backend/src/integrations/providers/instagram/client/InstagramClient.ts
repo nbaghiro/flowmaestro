@@ -1,5 +1,8 @@
 import { isFetchError } from "../../../../core/utils/fetch-client";
 import { BaseAPIClient, BaseAPIClientConfig } from "../../../core/BaseAPIClient";
+import { getLogger } from "../../../../core/logging";
+
+const logger = getLogger();
 import {
     META_GRAPH_API_BASE_URL,
     isMetaGraphAPIError,
@@ -639,7 +642,7 @@ export class InstagramClient extends BaseAPIClient {
 
             return null;
         } catch (error) {
-            console.error("[InstagramClient] Failed to discover IG account:", error);
+            logger.error({ component: "InstagramClient", err: error }, "Failed to discover IG account");
             return null;
         }
     }

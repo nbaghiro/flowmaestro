@@ -1,5 +1,8 @@
 import { Pool, PoolClient, QueryResult, QueryResultRow } from "pg";
 import { config } from "../core/config";
+import { createServiceLogger } from "../core/logging";
+
+const logger = createServiceLogger("Database");
 
 interface DatabaseConfig {
     host: string;
@@ -32,7 +35,7 @@ class Database {
         });
 
         this.pool.on("error", (err) => {
-            console.error("Unexpected database error:", err);
+            logger.error({ error: err }, "Unexpected database error");
         });
     }
 
@@ -60,12 +63,12 @@ class Database {
             const duration = Date.now() - start;
 
             if (config.logLevel === "debug") {
-                console.log("Executed query", { text, duration, rows: result.rowCount });
+                logger.debug({ text, duration, rows: result.rowCount }, "Executed query");
             }
 
             return result;
         } catch (error) {
-            console.error("Database query error:", { text, error });
+            logger.error({ text, error }, "Database query error");
             throw error;
         }
     }

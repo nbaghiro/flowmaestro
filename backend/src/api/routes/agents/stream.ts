@@ -2,9 +2,12 @@ import { FastifyRequest, FastifyReply } from "fastify";
 import { z } from "zod";
 import type { ThreadStreamingEvent } from "@flowmaestro/shared";
 import { config } from "../../../core/config";
+import { createServiceLogger } from "../../../core/logging";
 import { redisEventBus } from "../../../services/events/RedisEventBus";
 import { AgentExecutionRepository } from "../../../storage/repositories/AgentExecutionRepository";
 import { NotFoundError } from "../../middleware";
+
+const logger = createServiceLogger("SSEStream");
 
 const streamParamsSchema = z.object({
     id: z.string().uuid(),
@@ -57,14 +60,14 @@ export async function streamAgentHandler(
 
     // Handle client disconnect
     request.raw.on("close", () => {
-        console.log(`[SSE Stream] Client disconnected for execution ${executionId}`);
+        logger.info({ executionId }, "Client disconnected");
         clientDisconnected = true;
         clearInterval(keepAliveInterval);
         unsubscribeAll();
     });
 
     request.raw.on("error", (error) => {
-        console.error(`[SSE Stream] Request error for execution ${executionId}:`, error);
+        logger.error({ executionId, error }, "Request error");
         clientDisconnected = true;
         clearInterval(keepAliveInterval);
         unsubscribeAll();
@@ -75,11 +78,11 @@ export async function streamAgentHandler(
         if (clientDisconnected) return;
 
         const message = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
-        console.log(`[SSE Stream] Writing SSE event: ${event}`, data);
+        logger.debug({ event, data }, "Writing SSE event");
         try {
             reply.raw.write(message);
         } catch (error) {
-            console.error(`[SSE Stream] Error writing SSE event ${event}:`, error);
+            logger.error({ event, error }, "Error writing SSE event");
             clientDisconnected = true;
         }
     };
@@ -98,15 +101,16 @@ export async function streamAgentHandler(
         handler: (data: Record<string, unknown>) => void
     ): void => {
         const channel = `agent:events:${eventType}`;
-        console.log(`[SSE Stream] Subscribing to channel: ${channel} for execution ${executionId}`);
+        logger.debug({ channel, executionId }, "Subscribing to channel");
         eventHandlers.push({ channel, handler });
         redisEventBus.subscribe(channel, (event: unknown) => {
             const eventData = event as Record<string, unknown>;
-            console.log(`[SSE Stream] Received event on channel ${channel}:`, {
+            logger.debug({
+                channel,
                 type: eventData.type,
                 executionId: eventData.executionId,
                 hasToken: !!eventData.token
-            });
+            }, "Received event on channel");
             handler(eventData);
         });
     };
@@ -117,7 +121,7 @@ export async function streamAgentHandler(
         });
         if (threadUnsubscribe) {
             threadUnsubscribe().catch((error) =>
-                console.error("[SSE Stream] Failed to unsubscribe from thread channel", error)
+                logger.error({ error }, "Failed to unsubscribe from thread channel")
             );
         }
     };
@@ -139,19 +143,21 @@ export async function streamAgentHandler(
     });
 
     subscribe("token", (data) => {
-        console.log(
-            `[SSE Stream] Received token event for execution ${data.executionId}, current: ${executionId}`
-        );
+        logger.debug({
+            receivedExecutionId: data.executionId,
+            currentExecutionId: executionId
+        }, "Received token event");
         if (data.executionId === executionId) {
-            console.log(`[SSE Stream] Sending token to client: "${data.token}"`);
+            logger.debug({ token: data.token }, "Sending token to client");
             sendEvent("token", {
                 token: data.token,
                 executionId: data.executionId
             });
         } else {
-            console.log(
-                `[SSE Stream] Token event executionId mismatch: ${data.executionId} !== ${executionId}`
-            );
+            logger.debug({
+                receivedExecutionId: data.executionId,
+                expectedExecutionId: executionId
+            }, "Token event executionId mismatch");
         }
     });
 
@@ -195,12 +201,13 @@ export async function streamAgentHandler(
     });
 
     subscribe("execution:completed", (data) => {
-        console.log(
-            `[SSE Stream] Received execution:completed event for execution ${data.executionId}, current execution: ${executionId}`
-        );
-        console.log("[SSE Stream] Completed event data:", JSON.stringify(data, null, 2));
+        logger.info({
+            receivedExecutionId: data.executionId,
+            currentExecutionId: executionId,
+            data
+        }, "Received execution:completed event");
         if (data.executionId === executionId) {
-            console.log("[SSE Stream] Sending completed event to client");
+            logger.info({ executionId }, "Sending completed event to client");
             sendEvent("completed", {
                 finalMessage: data.finalMessage,
                 iterations: data.iterations,
@@ -217,9 +224,7 @@ export async function streamAgentHandler(
     });
 
     subscribe("execution:failed", (data) => {
-        console.log(
-            `[SSE Stream] Received execution:failed event for execution ${data.executionId}`
-        );
+        logger.error({ executionId: data.executionId }, "Received execution:failed event");
         if (data.executionId === executionId) {
             sendEvent("error", {
                 error: data.error,
@@ -254,5 +259,5 @@ export async function streamAgentHandler(
         status: execution.status
     });
 
-    console.log(`[SSE Stream] Stream handler initialized for execution ${executionId}`);
+    logger.info({ executionId }, "Stream handler initialized");
 }

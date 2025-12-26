@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { Input } from "../common/Input";
+import { logger } from "../../lib/logger";
 import type { ChunkSearchResult, KnowledgeDocument } from "../../lib/api";
 
 interface SearchSectionProps {
@@ -81,7 +82,7 @@ export function SearchSection({ knowledgeBaseId, documents, onSearch }: SearchSe
                 return updated.slice(0, 10);
             });
         } catch (error) {
-            console.error("Failed to search knowledge base:", error);
+            logger.error("Failed to search knowledge base", error);
             setSearchResults([]);
         } finally {
             setSearching(false);

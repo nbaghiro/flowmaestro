@@ -6,6 +6,9 @@
 import type { JsonObject } from "@flowmaestro/shared";
 import { getWorkingMemoryService } from "../../../services/agents/WorkingMemoryService";
 import type { Tool } from "../../../storage/models/Agent";
+import { createActivityLogger } from "../../shared/logger";
+
+const logger = createActivityLogger({ component: "WorkingMemoryTool" });
 
 /**
  * Create the updateWorkingMemory tool definition
@@ -84,7 +87,15 @@ export async function executeUpdateWorkingMemory(
             };
         }
     } catch (error) {
-        console.error("Error updating working memory:", error);
+        logger.error(
+            "Failed to update working memory",
+            error instanceof Error ? error : new Error(String(error)),
+            {
+                agentId: input.agentId,
+                userId: input.userId,
+                hasSearchString: !!input.searchString
+            }
+        );
         return {
             success: false,
             error: true,

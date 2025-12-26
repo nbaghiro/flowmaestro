@@ -18,6 +18,7 @@ import {
     getWorkflow,
     type WorkflowDefinition
 } from "../lib/api";
+import { logger } from "../lib/logger";
 import { convertToReactFlowFormat } from "../lib/workflowLayout";
 
 interface Workflow {
@@ -66,7 +67,7 @@ export function Workflows() {
                 setWorkflows(response.data.items);
             }
         } catch (error) {
-            console.error("Failed to load workflows:", error);
+            logger.error("Failed to load workflows", error);
         } finally {
             setIsLoading(false);
         }
@@ -167,7 +168,7 @@ export function Workflows() {
             await loadWorkflows();
             setWorkflowToDelete(null);
         } catch (error: unknown) {
-            console.error("Failed to delete workflow:", error);
+            logger.error("Failed to delete workflow", error);
             const err = error as { message?: string };
             setError({
                 title: "Delete Failed",
@@ -215,7 +216,7 @@ export function Workflows() {
             }
         } catch (error: unknown) {
             const err = error as { message?: string };
-            console.error("Failed to duplicate workflow:", error);
+            logger.error("Failed to duplicate workflow", error);
             setError({
                 title: "Duplicate Failed",
                 message: err.message || "Failed to duplicate workflow. Please try again."

@@ -10,6 +10,9 @@ import {
     ArticleDescriptionSchema
 } from "../schemas";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
+import { getLogger } from "../../../../core/logging";
+
+const logger = getLogger();
 
 /**
  * Create Article Post operation schema
@@ -42,7 +45,7 @@ export const createArticlePostOperation: OperationDefinition = (() => {
             timeout: 15000
         };
     } catch (error) {
-        console.error("[LinkedIn] Failed to create createArticlePostOperation:", error);
+        logger.error({ component: "LinkedIn", err: error }, "Failed to create createArticlePostOperation");
         throw new Error(
             `Failed to create createArticlePost operation: ${error instanceof Error ? error.message : "Unknown error"}`
         );

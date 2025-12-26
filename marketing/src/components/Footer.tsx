@@ -6,7 +6,7 @@ export const Footer: React.FC = () => {
     const currentYear = new Date().getFullYear();
 
     return (
-        <footer className="relative bg-black border-t border-white/10">
+        <footer className="relative bg-background border-t border-stroke">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
                     {/* Brand */}
@@ -21,7 +21,7 @@ export const Footer: React.FC = () => {
                                 href="https://github.com/nbaghiro/flowmaestro"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="w-10 h-10 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center transition-colors"
+                                className="w-10 h-10 rounded-lg bg-background-elevated hover:bg-border border border-stroke flex items-center justify-center transition-colors"
                             >
                                 <Github className="w-5 h-5" />
                             </a>
@@ -30,7 +30,7 @@ export const Footer: React.FC = () => {
                                 href="https://x.com/nbaghiro"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="w-10 h-10 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center transition-colors"
+                                className="w-10 h-10 rounded-lg bg-background-elevated hover:bg-border border border-stroke flex items-center justify-center transition-colors"
                             >
                                 <Twitter className="w-5 h-5" />
                             </a>
@@ -38,13 +38,13 @@ export const Footer: React.FC = () => {
                                 href="https://www.linkedin.com/company/flowmaestro/"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="w-10 h-10 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center transition-colors"
+                                className="w-10 h-10 rounded-lg bg-background-elevated hover:bg-border border border-stroke flex items-center justify-center transition-colors"
                             >
                                 <Linkedin className="w-5 h-5" />
                             </a>
                             <a
                                 href="mailto:support@flowmaestro.ai"
-                                className="w-10 h-10 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center transition-colors"
+                                className="w-10 h-10 rounded-lg bg-background-elevated hover:bg-border border border-stroke flex items-center justify-center transition-colors"
                             >
                                 <Mail className="w-5 h-5" />
                             </a>
@@ -110,7 +110,7 @@ export const Footer: React.FC = () => {
                 </div>
 
                 {/* Bottom */}
-                <div className="pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-gray-400">
+                <div className="pt-8 border-t border-stroke flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-gray-400">
                     <p>© {currentYear} FlowMaestro. All rights reserved.</p>
                     <div className="flex gap-6">
                         <a href="#" className="hover:text-white transition-colors">

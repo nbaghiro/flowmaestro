@@ -1,4 +1,7 @@
 import type { IProvider, ProviderRegistryEntry, ProviderSummary } from "./types";
+import { getLogger } from "../../core/logging";
+
+const logger = getLogger();
 
 /**
  * Provider Registry - manages provider instances and lazy loading
@@ -35,7 +38,10 @@ export class ProviderRegistry {
             this.providers.set(name, provider);
             return provider;
         } catch (error) {
-            console.error(`[ProviderRegistry] Failed to load provider ${name}:`, error);
+            logger.error(
+                { component: "ProviderRegistry", providerName: name, err: error },
+                "Failed to load provider"
+            );
             throw new Error(
                 `Failed to load provider ${name}: ${error instanceof Error ? error.message : "Unknown error"}`
             );

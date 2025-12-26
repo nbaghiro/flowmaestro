@@ -3,6 +3,9 @@ import { toJSONSchema } from "../../../core/schema-utils";
 import { InstagramClient } from "../client/InstagramClient";
 import type { InstagramInsightResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
+import { getLogger } from "../../../../core/logging";
+
+const logger = getLogger();
 
 /**
  * Get Media Insights operation schema
@@ -35,7 +38,7 @@ export const getMediaInsightsOperation: OperationDefinition = (() => {
             timeout: 15000
         };
     } catch (error) {
-        console.error("[Instagram] Failed to create getMediaInsightsOperation:", error);
+        logger.error({ component: "Instagram", err: error }, "Failed to create getMediaInsightsOperation");
         throw new Error(
             `Failed to create getMediaInsights operation: ${error instanceof Error ? error.message : "Unknown error"}`
         );

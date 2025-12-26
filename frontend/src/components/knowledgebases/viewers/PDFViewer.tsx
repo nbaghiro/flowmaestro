@@ -10,6 +10,7 @@ import {
 import { useState, useEffect } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { downloadDocument } from "../../../lib/api";
+import { logger } from "../../../lib/logger";
 
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
@@ -49,7 +50,7 @@ export function PDFViewer({
                 }
             } catch (err) {
                 setError("Failed to load PDF");
-                console.error("Error fetching PDF URL:", err);
+                logger.error("Failed to fetch PDF URL", err);
             }
         };
 

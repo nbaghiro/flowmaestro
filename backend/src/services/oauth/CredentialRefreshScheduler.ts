@@ -1,6 +1,9 @@
 import { CircuitBreaker, CircuitBreakerOpenError } from "../../core/utils/circuit-breaker";
 import { ConnectionRepository } from "../../storage/repositories/ConnectionRepository";
 import { getAccessToken } from "./TokenRefreshService";
+import { createServiceLogger } from "../../core/logging";
+
+const logger = createServiceLogger("CredentialRefreshScheduler");
 
 /**
  * Automatic OAuth Token Refresh Scheduler
@@ -31,16 +34,11 @@ export class CredentialRefreshScheduler {
         failureThreshold: 3, // Open circuit after 3 consecutive failures
         resetTimeout: 5 * 60 * 1000, // Try again after 5 minutes
         onOpen: () => {
-            console.error(
-                "[CredentialRefresh] ⚠️  Circuit breaker OPENED - scheduler paused after repeated failures. " +
-                    "Will retry in 5 minutes."
-            );
+            logger.error("Circuit breaker OPENED - scheduler paused after repeated failures. Will retry in 5 minutes.");
             // TODO: Send alert to ops team
         },
         onClose: () => {
-            console.log(
-                "[CredentialRefresh] ✓ Circuit breaker CLOSED - scheduler recovered and resumed normal operation"
-            );
+            logger.info("Circuit breaker CLOSED - scheduler recovered and resumed normal operation");
         }
     });
 
@@ -49,30 +47,30 @@ export class CredentialRefreshScheduler {
      */
     start(): void {
         if (this.isRunning) {
-            console.log("[CredentialRefresh] Scheduler already running");
+            logger.info("Scheduler already running");
             return;
         }
 
-        console.log(
-            `[CredentialRefresh] Starting scheduler (check interval: ${this.CHECK_INTERVAL / 1000}s, ` +
-                `refresh buffer: ${this.REFRESH_BUFFER / 1000}s)`
+        logger.info(
+            { checkIntervalSec: this.CHECK_INTERVAL / 1000, refreshBufferSec: this.REFRESH_BUFFER / 1000 },
+            "Starting scheduler"
         );
 
         this.isRunning = true;
 
         // Run immediately on startup
         this.runRefreshCycle().catch((error) => {
-            console.error("[CredentialRefresh] Initial refresh cycle failed:", error);
+            logger.error({ err: error }, "Initial refresh cycle failed");
         });
 
         // Then run periodically
         this.intervalId = setInterval(() => {
             this.runRefreshCycle().catch((error) => {
-                console.error("[CredentialRefresh] Refresh cycle failed:", error);
+                logger.error({ err: error }, "Refresh cycle failed");
             });
         }, this.CHECK_INTERVAL);
 
-        console.log("[CredentialRefresh] Scheduler started successfully");
+        logger.info("Scheduler started successfully");
     }
 
     /**
@@ -80,7 +78,7 @@ export class CredentialRefreshScheduler {
      */
     stop(): void {
         if (!this.isRunning) {
-            console.log("[CredentialRefresh] Scheduler not running");
+            logger.info("Scheduler not running");
             return;
         }
 
@@ -90,7 +88,7 @@ export class CredentialRefreshScheduler {
         }
 
         this.isRunning = false;
-        console.log("[CredentialRefresh] Scheduler stopped");
+        logger.info("Scheduler stopped");
     }
 
     /**
@@ -119,7 +117,7 @@ export class CredentialRefreshScheduler {
      */
     resetCircuitBreaker(): void {
         this.circuitBreaker.forceClose();
-        console.log("[CredentialRefresh] Circuit breaker manually reset by admin");
+        logger.info("Circuit breaker manually reset by admin");
     }
 
     /**
@@ -134,13 +132,10 @@ export class CredentialRefreshScheduler {
         } catch (error) {
             if (error instanceof CircuitBreakerOpenError) {
                 // Circuit is open, skip this cycle
-                console.warn(
-                    "[CredentialRefresh] Skipping refresh cycle - circuit breaker is OPEN. " +
-                        "Will retry when circuit resets."
-                );
+                logger.warn("Skipping refresh cycle - circuit breaker is OPEN. Will retry when circuit resets.");
             } else {
                 // Other error, log it
-                console.error("[CredentialRefresh] Unexpected error in refresh cycle:", error);
+                logger.error({ err: error }, "Unexpected error in refresh cycle");
                 throw error;
             }
         }
@@ -151,7 +146,7 @@ export class CredentialRefreshScheduler {
      */
     private async executeRefreshCycle(): Promise<void> {
         const startTime = Date.now();
-        console.log("[CredentialRefresh] Starting refresh cycle...");
+        logger.info("Starting refresh cycle...");
 
         const stats = {
             scanned: 0,
@@ -168,12 +163,13 @@ export class CredentialRefreshScheduler {
         stats.scanned = expiringConnections.length;
 
         if (expiringConnections.length === 0) {
-            console.log("[CredentialRefresh] No expiring tokens found");
+            logger.info("No expiring tokens found");
             return;
         }
 
-        console.log(
-            `[CredentialRefresh] Found ${expiringConnections.length} connections with tokens expiring soon`
+        logger.info(
+            { count: expiringConnections.length },
+            "Found connections with tokens expiring soon"
         );
 
         // Refresh each connection
@@ -183,9 +179,9 @@ export class CredentialRefreshScheduler {
                 await getAccessToken(connection.id);
 
                 stats.refreshed++;
-                console.log(
-                    `[CredentialRefresh] ✓ Refreshed ${connection.provider} connection ` +
-                        `${connection.id} for user ${connection.user_id}`
+                logger.info(
+                    { provider: connection.provider, connectionId: connection.id, userId: connection.user_id },
+                    "Refreshed connection"
                 );
             } catch (error) {
                 stats.failed++;
@@ -195,24 +191,24 @@ export class CredentialRefreshScheduler {
                     error: errorMessage
                 });
 
-                console.error(
-                    `[CredentialRefresh] ✗ Failed to refresh connection ${connection.id}:`,
-                    errorMessage
+                logger.error(
+                    { connectionId: connection.id, err: errorMessage },
+                    "Failed to refresh connection"
                 );
             }
         }
 
         const duration = Date.now() - startTime;
-        console.log(
-            `[CredentialRefresh] Cycle complete in ${duration}ms - ` +
-                `Scanned: ${stats.scanned}, Refreshed: ${stats.refreshed}, Failed: ${stats.failed}`
+        logger.info(
+            { durationMs: duration, scanned: stats.scanned, refreshed: stats.refreshed, failed: stats.failed },
+            "Cycle complete"
         );
 
         // Log errors if any
         if (stats.errors.length > 0) {
-            console.warn(
-                `[CredentialRefresh] ${stats.errors.length} refresh failures:`,
-                stats.errors
+            logger.warn(
+                { errorCount: stats.errors.length, errors: stats.errors },
+                "Refresh failures detected"
             );
         }
 
@@ -234,7 +230,7 @@ export class CredentialRefreshScheduler {
         refreshed: number;
         failed: number;
     }> {
-        console.log("[CredentialRefresh] Manual refresh triggered");
+        logger.info("Manual refresh triggered");
 
         const startTime = Date.now();
         const stats = { scanned: 0, refreshed: 0, failed: 0 };
@@ -251,14 +247,14 @@ export class CredentialRefreshScheduler {
                 stats.refreshed++;
             } catch (error) {
                 stats.failed++;
-                console.error(`[CredentialRefresh] Failed to refresh ${connection.id}:`, error);
+                logger.error({ connectionId: connection.id, err: error }, "Failed to refresh connection");
             }
         }
 
         const duration = Date.now() - startTime;
-        console.log(
-            `[CredentialRefresh] Manual refresh complete in ${duration}ms - ` +
-                `Scanned: ${stats.scanned}, Refreshed: ${stats.refreshed}, Failed: ${stats.failed}`
+        logger.info(
+            { durationMs: duration, scanned: stats.scanned, refreshed: stats.refreshed, failed: stats.failed },
+            "Manual refresh complete"
         );
 
         return stats;

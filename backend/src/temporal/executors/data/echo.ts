@@ -1,5 +1,8 @@
 import type { JsonObject, JsonValue } from "@flowmaestro/shared";
 import { interpolateVariables } from "../../shared/utils";
+import { createActivityLogger } from "../../shared/logger";
+
+const logger = createActivityLogger({ nodeType: "Echo" });
 
 export interface EchoNodeConfig {
     mode: "simple" | "transform" | "delay" | "error";
@@ -42,7 +45,7 @@ export async function executeEchoNode(
 ): Promise<JsonObject> {
     const startTime = Date.now();
 
-    console.log(`[Echo] Mode: ${config.mode}`);
+    logger.info("Echo node executing", { mode: config.mode });
 
     let output: JsonValue;
 
@@ -87,7 +90,7 @@ export async function executeEchoNode(
 
         case "delay": {
             const delay = config.delayMs || 1000;
-            console.log(`[Echo] Delaying for ${delay}ms`);
+            logger.debug("Echo delay mode", { delayMs: delay });
             await new Promise((resolve) => setTimeout(resolve, delay));
             output = {
                 message: "Delay completed",
@@ -113,7 +116,7 @@ export async function executeEchoNode(
             throw new Error(`Unsupported echo mode: ${config.mode}`);
     }
 
-    console.log("[Echo] Output:", output);
+    logger.debug("Echo output", { outputType: typeof output });
 
     const result: EchoNodeResult = {
         mode: config.mode,

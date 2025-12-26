@@ -1,6 +1,7 @@
 import { proxyActivities } from "@temporalio/workflow";
 import type { DocumentFileType } from "../../storage/models/KnowledgeDocument";
 import type * as activities from "../orchestration/documents";
+import { createWorkflowLogger } from "../shared/workflow-logger";
 
 // Proxy the activities with retry policies
 const {
@@ -46,7 +47,17 @@ export interface ProcessDocumentWorkflowResult {
 export async function processDocumentWorkflow(
     input: ProcessDocumentWorkflowInput
 ): Promise<ProcessDocumentWorkflowResult> {
-    console.log(`[processDocumentWorkflow] Starting processing for document ${input.documentId}`);
+    const wfLogger = createWorkflowLogger({
+        executionId: input.documentId,
+        workflowName: "ProcessDocument",
+        userId: input.userId
+    });
+
+    wfLogger.info("Starting document processing", {
+        documentId: input.documentId,
+        knowledgeBaseId: input.knowledgeBaseId,
+        fileType: input.fileType
+    });
 
     try {
         // Step 1: Extract text from document
@@ -90,9 +101,7 @@ export async function processDocumentWorkflow(
             chunks
         });
 
-        console.log(
-            `[processDocumentWorkflow] Generated embeddings and stored ${chunkCount} chunks (${totalTokens} tokens)`
-        );
+        wfLogger.info("Generated embeddings and stored chunks", { chunkCount, totalTokens });
 
         // Step 4: Mark document as ready
         await completeDocumentProcessingActivity({
@@ -104,9 +113,10 @@ export async function processDocumentWorkflow(
             userId: input.userId
         });
 
-        console.log(
-            `[processDocumentWorkflow] Successfully processed document ${input.documentId} with ${chunkCount} chunks`
-        );
+        wfLogger.info("Successfully processed document", {
+            documentId: input.documentId,
+            chunkCount
+        });
 
         return {
             documentId: input.documentId,
@@ -114,7 +124,11 @@ export async function processDocumentWorkflow(
             chunkCount
         };
     } catch (error: unknown) {
-        console.error("[processDocumentWorkflow] Error processing document:", error);
+        wfLogger.error(
+            "Error processing document",
+            error instanceof Error ? error : new Error(String(error)),
+            { documentId: input.documentId }
+        );
 
         return {
             documentId: input.documentId,

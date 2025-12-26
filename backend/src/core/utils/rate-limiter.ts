@@ -1,5 +1,8 @@
 import { createClient } from "redis";
 import { config } from "../config";
+import { createServiceLogger } from "../logging";
+
+const logger = createServiceLogger("RateLimiter");
 
 export class RateLimiter {
     private redis: ReturnType<typeof createClient>;
@@ -14,7 +17,7 @@ export class RateLimiter {
         });
 
         this.redis.on("error", (err) => {
-            console.error("Redis error:", err);
+            logger.error({ error: err }, "Redis error");
         });
     }
 

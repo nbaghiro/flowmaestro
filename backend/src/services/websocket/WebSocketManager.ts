@@ -1,5 +1,8 @@
 import { WebSocketEvent } from "@flowmaestro/shared";
 import type { WebSocket } from "@fastify/websocket";
+import { createServiceLogger } from "../../core/logging";
+
+const logger = createServiceLogger("WebSocketManager");
 
 interface Connection {
     socket: WebSocket;
@@ -37,7 +40,7 @@ export class WebSocketManager {
                 const data = JSON.parse(message.toString());
                 this.handleMessage(connectionId, data);
             } catch (error) {
-                console.error("Failed to parse WebSocket message:", error);
+                logger.error({ err: error }, "Failed to parse WebSocket message");
             }
         });
 
@@ -68,7 +71,7 @@ export class WebSocketManager {
     subscribeToExecution(connectionId: string, executionId: string): void {
         const connection = this.connections.get(connectionId);
         if (!connection) {
-            console.log(`Cannot subscribe: connection ${connectionId} not found`);
+            logger.info({ connectionId }, "Cannot subscribe: connection not found");
             return;
         }
 
@@ -79,9 +82,10 @@ export class WebSocketManager {
         }
         this.executionSubscribers.get(executionId)!.add(connectionId);
 
-        console.log(`Subscribed connection ${connectionId} to execution ${executionId}`);
-        console.log(
-            `Total subscribers for ${executionId}: ${this.executionSubscribers.get(executionId)!.size}`
+        logger.info({ connectionId, executionId }, "Subscribed connection to execution");
+        logger.info(
+            { executionId, subscriberCount: this.executionSubscribers.get(executionId)!.size },
+            "Total subscribers for execution"
         );
     }
 
@@ -106,11 +110,11 @@ export class WebSocketManager {
         // If it's an execution-related event, send to subscribers
         if ("executionId" in event) {
             const executionId = (event as WebSocketEvent & { executionId: string }).executionId;
-            console.log(`Broadcasting ${event.type} to execution ${executionId} subscribers`);
+            logger.info({ eventType: event.type, executionId }, "Broadcasting to execution subscribers");
             this.broadcastToExecution(executionId, event);
         } else {
             // Broadcast to all connections
-            console.log(`Broadcasting ${event.type} to all connections`);
+            logger.info({ eventType: event.type }, "Broadcasting to all connections");
             this.connections.forEach((connection) => {
                 // 1 is the OPEN state for ws-based WebSocket implementations
                 if (connection.socket.readyState === 1) {
@@ -123,12 +127,12 @@ export class WebSocketManager {
     broadcastToExecution(executionId: string, event: WebSocketEvent): void {
         const subscribers = this.executionSubscribers.get(executionId);
         if (!subscribers || subscribers.size === 0) {
-            console.log(`No subscribers for execution ${executionId}`);
+            logger.info({ executionId }, "No subscribers for execution");
             return;
         }
 
         const message = JSON.stringify(event);
-        console.log(`Sending ${event.type} to ${subscribers.size} subscriber(s)`);
+        logger.info({ eventType: event.type, subscriberCount: subscribers.size }, "Sending event to subscribers");
 
         subscribers.forEach((connectionId) => {
             const connection = this.connections.get(connectionId);

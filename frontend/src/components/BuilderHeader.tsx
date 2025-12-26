@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { WorkflowTrigger } from "@flowmaestro/shared";
 import { executeTrigger, createTrigger, getTriggers } from "../lib/api";
+import { logger } from "../lib/logger";
 import { wsClient } from "../lib/websocket";
 import { useTriggerStore } from "../stores/triggerStore";
 import { useWorkflowStore } from "../stores/workflowStore";
@@ -39,7 +40,7 @@ export function BuilderHeader({
 
     const handleRun = async () => {
         if (!workflowId) {
-            console.error("Cannot run workflow: workflowId is not provided");
+            logger.error("Cannot run workflow: workflowId is not provided");
             setRunError("Workflow ID is missing");
             return;
         }
@@ -64,7 +65,7 @@ export function BuilderHeader({
 
             // If no background trigger exists, create one
             if (!manualTrigger) {
-                console.log("Creating background manual trigger for Run button");
+                logger.debug("Creating background manual trigger for Run button");
                 const createResponse = await createTrigger({
                     workflowId: workflowId,
                     name: "__run_button__",
@@ -82,7 +83,7 @@ export function BuilderHeader({
                     throw new Error("Failed to create background trigger");
                 }
             } else {
-                console.log("Reusing existing __run_button__ trigger:", manualTrigger.id);
+                logger.debug("Reusing existing __run_button__ trigger", { triggerId: manualTrigger.id });
             }
 
             // Execute trigger with default inputs
@@ -104,7 +105,7 @@ export function BuilderHeader({
                 setDrawerOpen(true);
             }
         } catch (error) {
-            console.error("Failed to execute workflow:", error);
+            logger.error("Failed to execute workflow", error);
             setRunError(error instanceof Error ? error.message : String(error));
         } finally {
             setIsRunning(false);

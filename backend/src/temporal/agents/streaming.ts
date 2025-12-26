@@ -18,6 +18,7 @@ import type {
     TokensUpdatedEvent
 } from "@flowmaestro/shared";
 import { redisEventBus } from "../../services/events/RedisEventBus";
+import { activityLogger } from "../shared/logger";
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 100;
@@ -40,7 +41,7 @@ export async function emitMessageStart(input: {
     };
 
     await publishWithRetry(input.threadId, event);
-    console.log(`[Streaming] Message start: ${input.messageId} (thread: ${input.threadId})`);
+    activityLogger.info("Message start event emitted", { messageId: input.messageId, threadId: input.threadId });
 }
 
 /**
@@ -89,10 +90,11 @@ export async function emitMessageComplete(input: {
     };
 
     await publishWithRetry(input.threadId, event);
-    console.log(
-        `[Streaming] Message complete: ${input.messageId} ` +
-            `(${input.tokenCount} tokens, saved: ${input.saved})`
-    );
+    activityLogger.info("Message complete event emitted", {
+        messageId: input.messageId,
+        tokenCount: input.tokenCount,
+        saved: input.saved
+    });
 }
 
 /**
@@ -116,7 +118,7 @@ export async function emitMessageError(input: {
     };
 
     await publishWithRetry(input.threadId, event);
-    console.error(`[Streaming] Message error: ${input.messageId} - ${input.error}`);
+    activityLogger.error("Message error event emitted", new Error(input.error), { messageId: input.messageId });
 }
 
 /**
@@ -157,9 +159,11 @@ export async function emitTokensUpdated(input: {
 
     await publishWithRetry(input.threadId, event);
 
-    console.log(
-        `[Streaming] Tokens updated: ${input.tokenUsage.totalTokens} tokens ($${input.tokenUsage.totalCost.toFixed(4)}) for thread ${input.threadId}`
-    );
+    activityLogger.info("Tokens updated event emitted", {
+        threadId: input.threadId,
+        totalTokens: input.tokenUsage.totalTokens,
+        totalCost: input.tokenUsage.totalCost
+    });
 }
 
 /**
@@ -173,14 +177,20 @@ async function publishWithRetry(threadId: string, event: ThreadStreamingEvent): 
             await redisEventBus.publishThreadEvent(threadId, event);
             return; // Success
         } catch (error) {
-            console.error(`[Streaming] Publish attempt ${attempt}/${MAX_RETRIES} failed:`, error);
+            activityLogger.error("Publish attempt failed", error instanceof Error ? error : new Error(String(error)), {
+                attempt,
+                maxRetries: MAX_RETRIES,
+                eventType: event.type,
+                threadId
+            });
 
             if (attempt === MAX_RETRIES) {
                 // CRITICAL: Event emission failed after all retries
-                console.error(
-                    `[Streaming] FAILED to publish event type=${event.type} ` +
-                        `thread=${threadId} after ${MAX_RETRIES} attempts`
-                );
+                activityLogger.error("FAILED to publish event after all retries", new Error("Max retries exceeded"), {
+                    eventType: event.type,
+                    threadId,
+                    maxRetries: MAX_RETRIES
+                });
 
                 // Don't throw - workflow must continue
                 // Frontend will detect missing sequence numbers

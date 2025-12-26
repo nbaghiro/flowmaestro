@@ -1,5 +1,6 @@
 import * as path from "path";
 import { FastifyInstance } from "fastify";
+import { createServiceLogger } from "../../../core/logging";
 import { getGCSStorageService } from "../../../services/GCSStorageService";
 import { DocumentFileType } from "../../../storage/models/KnowledgeDocument";
 import {
@@ -9,6 +10,8 @@ import {
 import { getTemporalClient } from "../../../temporal/client";
 import { authMiddleware } from "../../middleware";
 import { serializeDocument } from "./utils";
+
+const logger = createServiceLogger("KnowledgeBaseUpload");
 
 export async function uploadDocumentRoute(fastify: FastifyInstance) {
     fastify.post(
@@ -101,7 +104,7 @@ export async function uploadDocumentRoute(fastify: FastifyInstance) {
             } catch (error: unknown) {
                 const errorMsg = error instanceof Error ? error.message : String(error);
                 fastify.log.error(`Failed to start Temporal workflow: ${errorMsg}`);
-                console.error("[upload-document] Workflow start failed:", error);
+                logger.error({ documentId: document.id, error }, "Workflow start failed");
             }
 
             return reply.status(201).send({

@@ -3,6 +3,9 @@ import { ShopifyClient } from "../client/ShopifyClient";
 import { ListOrdersSchema, type ListOrdersParams } from "../schemas";
 import type { ShopifyOrdersResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
+import { getLogger } from "../../../../core/logging";
+
+const logger = getLogger();
 
 /**
  * List Orders operation definition
@@ -21,7 +24,7 @@ export const listOrdersOperation: OperationDefinition = (() => {
             timeout: 30000
         };
     } catch (error) {
-        console.error("[Shopify] Failed to create listOrdersOperation:", error);
+        logger.error({ component: "Shopify", err: error }, "Failed to create listOrdersOperation");
         throw new Error(
             `Failed to create listOrders operation: ${error instanceof Error ? error.message : "Unknown error"}`
         );

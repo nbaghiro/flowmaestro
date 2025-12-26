@@ -2,6 +2,9 @@ import { z } from "zod";
 import { toJSONSchema } from "../../../core/schema-utils";
 import { LinkedInClient } from "../client/LinkedInClient";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
+import { getLogger } from "../../../../core/logging";
+
+const logger = getLogger();
 
 /**
  * Get Organizations operation schema (no parameters needed)
@@ -38,7 +41,7 @@ export const getOrganizationsOperation: OperationDefinition = (() => {
             timeout: 15000
         };
     } catch (error) {
-        console.error("[LinkedIn] Failed to create getOrganizationsOperation:", error);
+        logger.error({ component: "LinkedIn", err: error }, "Failed to create getOrganizationsOperation");
         throw new Error(
             `Failed to create getOrganizations operation: ${error instanceof Error ? error.message : "Unknown error"}`
         );

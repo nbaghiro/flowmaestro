@@ -4,9 +4,12 @@
  */
 
 import { ScheduleOverlapPolicy } from "@temporalio/client";
+import { createServiceLogger } from "../../core/logging";
 import { ScheduleTriggerConfig } from "../../storage/models/Trigger";
 import { TriggerRepository } from "../../storage/repositories/TriggerRepository";
 import { getTemporalClient } from "../client";
+
+const logger = createServiceLogger("scheduler");
 
 export class SchedulerService {
     private triggerRepo: TriggerRepository;
@@ -60,7 +63,7 @@ export class SchedulerService {
                 }
             });
 
-            console.log(`Created Temporal schedule: ${scheduleId}`);
+            logger.info({ scheduleId }, "Created Temporal schedule");
 
             // Update trigger with schedule ID
             await this.triggerRepo.update(triggerId, {
@@ -69,7 +72,7 @@ export class SchedulerService {
 
             return scheduleId;
         } catch (error) {
-            console.error(`Failed to create schedule ${scheduleId}:`, error);
+            logger.error({ scheduleId, err: error }, "Failed to create schedule");
             throw new Error(`Failed to create schedule: ${error}`);
         }
     }
@@ -107,9 +110,9 @@ export class SchedulerService {
                 };
             });
 
-            console.log(`Updated Temporal schedule: ${trigger.temporal_schedule_id}`);
+            logger.info({ scheduleId: trigger.temporal_schedule_id }, "Updated Temporal schedule");
         } catch (error) {
-            console.error(`Failed to update schedule ${trigger.temporal_schedule_id}:`, error);
+            logger.error({ scheduleId: trigger.temporal_schedule_id, err: error }, "Failed to update schedule");
             throw new Error(`Failed to update schedule: ${error}`);
         }
     }
@@ -130,9 +133,9 @@ export class SchedulerService {
             await handle.pause("Paused by user");
 
             await this.triggerRepo.update(triggerId, { enabled: false });
-            console.log(`Paused schedule: ${trigger.temporal_schedule_id}`);
+            logger.info({ scheduleId: trigger.temporal_schedule_id }, "Paused schedule");
         } catch (error) {
-            console.error(`Failed to pause schedule ${trigger.temporal_schedule_id}:`, error);
+            logger.error({ scheduleId: trigger.temporal_schedule_id, err: error }, "Failed to pause schedule");
             throw new Error(`Failed to pause schedule: ${error}`);
         }
     }
@@ -153,9 +156,9 @@ export class SchedulerService {
             await handle.unpause("Resumed by user");
 
             await this.triggerRepo.update(triggerId, { enabled: true });
-            console.log(`Resumed schedule: ${trigger.temporal_schedule_id}`);
+            logger.info({ scheduleId: trigger.temporal_schedule_id }, "Resumed schedule");
         } catch (error) {
-            console.error(`Failed to resume schedule ${trigger.temporal_schedule_id}:`, error);
+            logger.error({ scheduleId: trigger.temporal_schedule_id, err: error }, "Failed to resume schedule");
             throw new Error(`Failed to resume schedule: ${error}`);
         }
     }
@@ -166,12 +169,12 @@ export class SchedulerService {
     async deleteScheduledTrigger(triggerId: string): Promise<void> {
         const trigger = await this.triggerRepo.findById(triggerId);
         if (!trigger) {
-            console.warn(`Trigger not found: ${triggerId}`);
+            logger.warn({ triggerId }, "Trigger not found");
             return;
         }
 
         if (!trigger.temporal_schedule_id) {
-            console.warn(`Trigger ${triggerId} has no schedule ID, skipping Temporal deletion`);
+            logger.warn({ triggerId }, "Trigger has no schedule ID, skipping Temporal deletion");
             return;
         }
 
@@ -180,10 +183,10 @@ export class SchedulerService {
         try {
             const handle = client.schedule.getHandle(trigger.temporal_schedule_id);
             await handle.delete();
-            console.log(`Deleted Temporal schedule: ${trigger.temporal_schedule_id}`);
+            logger.info({ scheduleId: trigger.temporal_schedule_id }, "Deleted Temporal schedule");
         } catch (error) {
             // Log but don't fail if schedule doesn't exist
-            console.error(`Failed to delete schedule ${trigger.temporal_schedule_id}:`, error);
+            logger.error({ scheduleId: trigger.temporal_schedule_id, err: error }, "Failed to delete schedule");
         }
     }
 
@@ -210,10 +213,7 @@ export class SchedulerService {
                 nextRunTime: description.info.nextActionTimes?.[0]
             };
         } catch (error) {
-            console.error(
-                `Failed to get schedule info for ${trigger.temporal_schedule_id}:`,
-                error
-            );
+            logger.error({ scheduleId: trigger.temporal_schedule_id, err: error }, "Failed to get schedule info");
             throw new Error(`Failed to get schedule info: ${error}`);
         }
     }
@@ -233,10 +233,10 @@ export class SchedulerService {
             const handle = client.schedule.getHandle(trigger.temporal_schedule_id);
             await handle.trigger(ScheduleOverlapPolicy.ALLOW_ALL);
 
-            console.log(`Manually triggered schedule: ${trigger.temporal_schedule_id}`);
+            logger.info({ scheduleId: trigger.temporal_schedule_id }, "Manually triggered schedule");
             return trigger.temporal_schedule_id;
         } catch (error) {
-            console.error(`Failed to trigger schedule ${trigger.temporal_schedule_id}:`, error);
+            logger.error({ scheduleId: trigger.temporal_schedule_id, err: error }, "Failed to trigger schedule");
             throw new Error(`Failed to trigger schedule: ${error}`);
         }
     }
@@ -246,7 +246,7 @@ export class SchedulerService {
      * This ensures schedules are synced with Temporal after a restart
      */
     async initializeScheduledTriggers(): Promise<void> {
-        console.log("Initializing scheduled triggers...");
+        logger.info("Initializing scheduled triggers");
 
         const scheduledTriggers = await this.triggerRepo.findByType("schedule");
 
@@ -260,25 +260,23 @@ export class SchedulerService {
                     try {
                         const handle = client.schedule.getHandle(trigger.temporal_schedule_id);
                         await handle.describe();
-                        console.log(`Schedule already exists: ${trigger.temporal_schedule_id}`);
+                        logger.info({ scheduleId: trigger.temporal_schedule_id }, "Schedule already exists");
                         continue;
                     } catch (_error) {
                         // Schedule doesn't exist, will recreate
-                        console.log(
-                            `Schedule not found in Temporal, recreating: ${trigger.temporal_schedule_id}`
-                        );
+                        logger.info({ scheduleId: trigger.temporal_schedule_id }, "Schedule not found in Temporal, recreating");
                     }
                 }
 
                 // Create the schedule
                 await this.createScheduledTrigger(trigger.id, trigger.workflow_id, config);
 
-                console.log(`Initialized schedule for trigger: ${trigger.id}`);
+                logger.info({ triggerId: trigger.id }, "Initialized schedule for trigger");
             } catch (error) {
-                console.error(`Failed to initialize trigger ${trigger.id}:`, error);
+                logger.error({ triggerId: trigger.id, err: error }, "Failed to initialize trigger");
             }
         }
 
-        console.log(`Initialized ${scheduledTriggers.length} scheduled triggers`);
+        logger.info({ count: scheduledTriggers.length }, "Initialized scheduled triggers");
     }
 }

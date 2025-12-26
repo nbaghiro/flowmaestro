@@ -4,7 +4,10 @@
  */
 
 import { randomUUID } from "crypto";
+import { createServiceLogger } from "../logging";
 import { calculateCost } from "./cost-calculator";
+
+const logger = createServiceLogger("SpanService");
 import {
     CreateSpanInput,
     EndSpanInput,
@@ -94,7 +97,7 @@ export class ActiveSpan {
      */
     async end(input?: Omit<EndSpanInput, "spanId">): Promise<void> {
         if (this.isEnded) {
-            console.warn(`Span ${this.spanData.spanId} already ended`);
+            logger.warn({ spanId: this.spanData.spanId }, "Span already ended");
             return;
         }
 
@@ -183,7 +186,7 @@ export class SpanService {
         const span = this.spanBatch.find((s) => s.spanId === input.spanId);
 
         if (!span) {
-            console.warn(`Span ${input.spanId} not found in batch`);
+            logger.warn({ spanId: input.spanId }, "Span not found in batch");
             return;
         }
 
@@ -227,13 +230,16 @@ export class SpanService {
                 span.attributes.outputCost = costResult.outputCost;
                 span.attributes.totalCost = costResult.totalCost;
 
-                console.log(
-                    `[SpanService] Calculated cost for ${span.attributes.provider}:${span.attributes.model}: $${costResult.totalCost.toFixed(6)}`
-                );
+                logger.info({
+                    provider: span.attributes.provider,
+                    model: span.attributes.model,
+                    totalCost: costResult.totalCost.toFixed(6)
+                }, "Calculated cost for model generation");
             } else {
-                console.warn(
-                    `[SpanService] No pricing found for ${span.attributes.provider}:${span.attributes.model}`
-                );
+                logger.warn({
+                    provider: span.attributes.provider,
+                    model: span.attributes.model
+                }, "No pricing found for model");
             }
         }
 
@@ -254,7 +260,7 @@ export class SpanService {
         const span = this.spanBatch.find((s) => s.spanId === spanId);
 
         if (!span) {
-            console.warn(`Span ${spanId} not found in batch, may have been flushed`);
+            logger.warn({ spanId }, "Span not found in batch, may have been flushed");
             return;
         }
 
@@ -483,7 +489,7 @@ export class SpanService {
                 values
             );
         } catch (error) {
-            console.error("Failed to flush spans to database:", error);
+            logger.error({ error, spanCount: spansToWrite.length }, "Failed to flush spans to database");
             // Re-add failed spans back to batch for retry
             this.spanBatch.push(...spansToWrite);
         }

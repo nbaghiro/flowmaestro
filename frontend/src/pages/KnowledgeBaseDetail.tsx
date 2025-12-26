@@ -11,6 +11,7 @@ import {
     SearchSection,
     UploadSection
 } from "../components/knowledgebases";
+import { logger } from "../lib/logger";
 import { wsClient } from "../lib/websocket";
 import { useKnowledgeBaseStore } from "../stores/knowledgeBaseStore";
 import type { KnowledgeDocument } from "../lib/api";
@@ -70,7 +71,7 @@ export function KnowledgeBaseDetail() {
         const token = localStorage.getItem("auth_token");
         if (!token) return;
 
-        wsClient.connect(token).catch(console.error);
+        wsClient.connect(token).catch((err) => logger.error("Failed to connect WebSocket", err));
 
         const handleDocumentProcessing = () => {
             fetchDocuments(id);
@@ -112,7 +113,7 @@ export function KnowledgeBaseDetail() {
             await uploadDoc(id, file);
             fetchStats(id);
         } catch (error) {
-            console.error("Failed to upload file:", error);
+            logger.error("Failed to upload file", error);
         } finally {
             setUploading(false);
         }
@@ -127,7 +128,7 @@ export function KnowledgeBaseDetail() {
             setShowUrlModal(false);
             fetchStats(id);
         } catch (error) {
-            console.error("Failed to add URL:", error);
+            logger.error("Failed to add URL", error);
         } finally {
             setUploading(false);
         }
@@ -141,7 +142,7 @@ export function KnowledgeBaseDetail() {
             await deleteDoc(id, deleteConfirmDocId);
             setDeleteConfirmDocId(null);
         } catch (error) {
-            console.error("Failed to delete document:", error);
+            logger.error("Failed to delete document", error);
         } finally {
             setProcessingDocId(null);
         }
@@ -154,7 +155,7 @@ export function KnowledgeBaseDetail() {
         try {
             await reprocessDoc(id, docId);
         } catch (error) {
-            console.error("Failed to reprocess document:", error);
+            logger.error("Failed to reprocess document", error);
         } finally {
             setProcessingDocId(null);
         }
@@ -178,7 +179,7 @@ export function KnowledgeBaseDetail() {
             await deleteKB(id);
             navigate("/knowledge-bases");
         } catch (error) {
-            console.error("Failed to delete knowledge base:", error);
+            logger.error("Failed to delete knowledge base", error);
             setDeletingKB(false);
         }
     };

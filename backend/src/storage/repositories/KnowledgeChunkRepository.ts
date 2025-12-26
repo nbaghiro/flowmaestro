@@ -1,5 +1,6 @@
 import { toSql } from "pgvector";
 import type { JsonValue } from "@flowmaestro/shared";
+import { createServiceLogger } from "../../core/logging";
 import { db } from "../database";
 import {
     KnowledgeChunkModel,
@@ -7,6 +8,8 @@ import {
     ChunkSearchResult,
     SearchChunksInput
 } from "../models/KnowledgeChunk";
+
+const logger = createServiceLogger("KnowledgeChunkRepository");
 
 interface KnowledgeChunkRow {
     id: string;
@@ -202,7 +205,7 @@ export class KnowledgeChunkRepository {
             return cleaned.split(",").map((v) => parseFloat(v.trim()));
         } catch (error: unknown) {
             const msg = error instanceof Error ? error.message : "Unknown error";
-            console.error("Error parsing vector:", msg);
+            logger.error({ error: msg }, "Error parsing vector");
             return null;
         }
     }

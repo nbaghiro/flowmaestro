@@ -1,5 +1,6 @@
 import { proxyActivities } from "@temporalio/workflow";
 import type * as activities from "../activities";
+import { createWorkflowLogger } from "../shared/workflow-logger";
 
 const { executeNodeBatch } = proxyActivities<typeof activities>({
     startToCloseTimeout: "10 minutes",
@@ -36,10 +37,13 @@ export async function longRunningTaskWorkflow(
     input: LongRunningTaskInput
 ): Promise<LongRunningTaskResult> {
     const { executionId, workflowId, userId, nodeIds } = input;
+    const wfLogger = createWorkflowLogger({
+        executionId,
+        workflowName: "LongRunningTask",
+        userId
+    });
 
-    console.log(
-        `Starting long-running task for execution: ${executionId} with ${nodeIds.length} nodes`
-    );
+    wfLogger.info("Starting long-running task", { workflowId, nodeCount: nodeIds.length });
 
     try {
         const result = await executeNodeBatch({
@@ -49,7 +53,10 @@ export async function longRunningTaskWorkflow(
             nodeIds
         });
 
-        console.log(`Long-running task completed for execution: ${executionId}`);
+        wfLogger.info("Long-running task completed", {
+            completedNodes: result.completedNodes.length,
+            failedNodes: result.failedNodes.length
+        });
 
         return {
             success: true,
@@ -57,7 +64,7 @@ export async function longRunningTaskWorkflow(
             failedNodes: result.failedNodes
         };
     } catch (error) {
-        console.error(`Long-running task failed for execution: ${executionId}`, error);
+        wfLogger.error("Long-running task failed", error as Error, { nodeIds });
 
         return {
             success: false,

@@ -10,6 +10,9 @@
  */
 
 import { db } from "../storage/database";
+import { createServiceLogger } from "../core/logging";
+
+const logger = createServiceLogger("AnalyticsService");
 
 // ============================================================================
 // Analytics Aggregator
@@ -27,9 +30,7 @@ export class AnalyticsAggregator {
         const hourEnd = new Date(hourStart);
         hourEnd.setHours(hourEnd.getHours() + 1);
 
-        console.log(
-            `[AnalyticsAggregator] Aggregating hourly analytics for ${hourStart.toISOString()}`
-        );
+        logger.info({ hourStart: hourStart.toISOString() }, "Aggregating hourly analytics");
 
         await db.query(
             `
@@ -102,7 +103,7 @@ export class AnalyticsAggregator {
             [hourStart, hourEnd]
         );
 
-        console.log("[AnalyticsAggregator] Hourly analytics aggregation completed");
+        logger.info("Hourly analytics aggregation completed");
     }
 
     /**
@@ -116,9 +117,7 @@ export class AnalyticsAggregator {
         const dayEnd = new Date(dayStart);
         dayEnd.setDate(dayEnd.getDate() + 1);
 
-        console.log(
-            `[AnalyticsAggregator] Aggregating daily analytics for ${dayStart.toISOString()}`
-        );
+        logger.info({ dayStart: dayStart.toISOString() }, "Aggregating daily analytics");
 
         await db.query(
             `
@@ -191,7 +190,7 @@ export class AnalyticsAggregator {
             [dayStart, dayEnd]
         );
 
-        console.log("[AnalyticsAggregator] Daily analytics aggregation completed");
+        logger.info("Daily analytics aggregation completed");
     }
 
     /**
@@ -205,9 +204,7 @@ export class AnalyticsAggregator {
         const dayEnd = new Date(dayStart);
         dayEnd.setDate(dayEnd.getDate() + 1);
 
-        console.log(
-            `[AnalyticsAggregator] Aggregating model usage stats for ${dayStart.toISOString()}`
-        );
+        logger.info({ dayStart: dayStart.toISOString() }, "Aggregating model usage stats");
 
         await db.query(
             `
@@ -282,20 +279,20 @@ export class AnalyticsAggregator {
             [dayStart, dayEnd]
         );
 
-        console.log("[AnalyticsAggregator] Model usage stats aggregation completed");
+        logger.info("Model usage stats aggregation completed");
     }
 
     /**
      * Refresh the materialized view for recent activity summary
      */
     async refreshRecentActivitySummary(): Promise<void> {
-        console.log("[AnalyticsAggregator] Refreshing recent activity summary view");
+        logger.info("Refreshing recent activity summary view");
 
         await db.query(`
             REFRESH MATERIALIZED VIEW CONCURRENTLY flowmaestro.recent_activity_summary
         `);
 
-        console.log("[AnalyticsAggregator] Recent activity summary refreshed");
+        logger.info("Recent activity summary refreshed");
     }
 
     /**
@@ -303,13 +300,13 @@ export class AnalyticsAggregator {
      * Useful for backfilling historical data
      */
     async aggregateForDate(date: Date): Promise<void> {
-        console.log(`[AnalyticsAggregator] Running full aggregation for ${date.toISOString()}`);
+        logger.info({ date: date.toISOString() }, "Running full aggregation");
 
         await this.aggregateHourlyAnalytics(date);
         await this.aggregateDailyAnalytics(date);
         await this.aggregateModelUsageStats(date);
 
-        console.log(`[AnalyticsAggregator] Full aggregation completed for ${date.toISOString()}`);
+        logger.info({ date: date.toISOString() }, "Full aggregation completed");
     }
 
     /**
@@ -321,11 +318,11 @@ export class AnalyticsAggregator {
         const previousHour = new Date(now);
         previousHour.setHours(previousHour.getHours() - 1);
 
-        console.log("[AnalyticsAggregator] Running hourly aggregation");
+        logger.info("Running hourly aggregation");
 
         await this.aggregateHourlyAnalytics(previousHour);
 
-        console.log("[AnalyticsAggregator] Hourly aggregation completed");
+        logger.info("Hourly aggregation completed");
     }
 
     /**
@@ -337,13 +334,13 @@ export class AnalyticsAggregator {
         const yesterday = new Date(now);
         yesterday.setDate(yesterday.getDate() - 1);
 
-        console.log("[AnalyticsAggregator] Running daily aggregation");
+        logger.info("Running daily aggregation");
 
         await this.aggregateDailyAnalytics(yesterday);
         await this.aggregateModelUsageStats(yesterday);
         await this.refreshRecentActivitySummary();
 
-        console.log("[AnalyticsAggregator] Daily aggregation completed");
+        logger.info("Daily aggregation completed");
     }
 
     /**
@@ -351,8 +348,9 @@ export class AnalyticsAggregator {
      * Useful for populating historical data
      */
     async backfillDateRange(startDate: Date, endDate: Date): Promise<void> {
-        console.log(
-            `[AnalyticsAggregator] Backfilling analytics from ${startDate.toISOString()} to ${endDate.toISOString()}`
+        logger.info(
+            { startDate: startDate.toISOString(), endDate: endDate.toISOString() },
+            "Backfilling analytics"
         );
 
         const currentDate = new Date(startDate);
@@ -364,7 +362,7 @@ export class AnalyticsAggregator {
 
         await this.refreshRecentActivitySummary();
 
-        console.log("[AnalyticsAggregator] Backfill completed");
+        logger.info("Backfill completed");
     }
 }
 
@@ -386,11 +384,11 @@ export class AnalyticsScheduler {
      */
     async start(): Promise<void> {
         if (this.isRunning) {
-            console.log("[AnalyticsScheduler] Already running");
+            logger.info("Analytics scheduler already running");
             return;
         }
 
-        console.log("[AnalyticsScheduler] Starting analytics scheduler");
+        logger.info("Starting analytics scheduler");
 
         // Run hourly aggregation every hour (at the top of the hour)
         this.scheduleHourlyAggregation();
@@ -400,15 +398,15 @@ export class AnalyticsScheduler {
 
         // Run initial aggregation on startup (for the previous hour and day)
         try {
-            console.log("[AnalyticsScheduler] Running initial aggregation on startup");
+            logger.info("Running initial aggregation on startup");
             await analyticsAggregator.runHourlyAggregation();
             await analyticsAggregator.runDailyAggregation();
         } catch (error) {
-            console.error("[AnalyticsScheduler] Error during initial aggregation:", error);
+            logger.error({ err: error }, "Error during initial aggregation");
         }
 
         this.isRunning = true;
-        console.log("[AnalyticsScheduler] Analytics scheduler started");
+        logger.info("Analytics scheduler started");
     }
 
     /**
@@ -416,11 +414,11 @@ export class AnalyticsScheduler {
      */
     stop(): void {
         if (!this.isRunning) {
-            console.log("[AnalyticsScheduler] Not running");
+            logger.info("Analytics scheduler not running");
             return;
         }
 
-        console.log("[AnalyticsScheduler] Stopping analytics scheduler");
+        logger.info("Stopping analytics scheduler");
 
         if (this.hourlyInterval) {
             clearInterval(this.hourlyInterval);
@@ -433,7 +431,7 @@ export class AnalyticsScheduler {
         }
 
         this.isRunning = false;
-        console.log("[AnalyticsScheduler] Analytics scheduler stopped");
+        logger.info("Analytics scheduler stopped");
     }
 
     /**
@@ -447,8 +445,9 @@ export class AnalyticsScheduler {
         nextHour.setMinutes(0, 0, 0);
         const msUntilNextHour = nextHour.getTime() - now.getTime();
 
-        console.log(
-            `[AnalyticsScheduler] Scheduling hourly aggregation (next run in ${Math.round(msUntilNextHour / 1000 / 60)} minutes)`
+        logger.info(
+            { nextRunInMinutes: Math.round(msUntilNextHour / 1000 / 60) },
+            "Scheduling hourly aggregation"
         );
 
         // Schedule first run at the next hour
@@ -475,8 +474,9 @@ export class AnalyticsScheduler {
         midnight.setHours(24, 0, 0, 0);
         const msUntilMidnight = midnight.getTime() - now.getTime();
 
-        console.log(
-            `[AnalyticsScheduler] Scheduling daily aggregation (next run in ${Math.round(msUntilMidnight / 1000 / 60 / 60)} hours)`
+        logger.info(
+            { nextRunInHours: Math.round(msUntilMidnight / 1000 / 60 / 60) },
+            "Scheduling daily aggregation"
         );
 
         // Schedule first run at midnight
@@ -498,10 +498,10 @@ export class AnalyticsScheduler {
      */
     private async runHourlyAggregation(): Promise<void> {
         try {
-            console.log("[AnalyticsScheduler] Running scheduled hourly aggregation");
+            logger.info("Running scheduled hourly aggregation");
             await analyticsAggregator.runHourlyAggregation();
         } catch (error) {
-            console.error("[AnalyticsScheduler] Error during hourly aggregation:", error);
+            logger.error({ err: error }, "Error during hourly aggregation");
         }
     }
 
@@ -510,10 +510,10 @@ export class AnalyticsScheduler {
      */
     private async runDailyAggregation(): Promise<void> {
         try {
-            console.log("[AnalyticsScheduler] Running scheduled daily aggregation");
+            logger.info("Running scheduled daily aggregation");
             await analyticsAggregator.runDailyAggregation();
         } catch (error) {
-            console.error("[AnalyticsScheduler] Error during daily aggregation:", error);
+            logger.error({ err: error }, "Error during daily aggregation");
         }
     }
 }
@@ -525,7 +525,7 @@ export const analyticsScheduler = new AnalyticsScheduler();
 // ============================================================================
 
 function showHelp(): void {
-    console.log(`
+    logger.info(`
 Analytics Aggregation CLI
 
 Usage:
@@ -566,13 +566,11 @@ async function runCLI(): Promise<void> {
             const startDate = new Date(endDate);
             startDate.setDate(startDate.getDate() - days);
 
-            console.log(`Backfilling analytics for the last ${days} days`);
-            console.log(`Start: ${startDate.toISOString()}`);
-            console.log(`End: ${endDate.toISOString()}`);
+            logger.info({ days, startDate: startDate.toISOString(), endDate: endDate.toISOString() }, "Backfilling analytics");
 
             await analyticsAggregator.backfillDateRange(startDate, endDate);
 
-            console.log("✓ Backfill completed successfully");
+            logger.info("Backfill completed successfully");
         } else if (args.includes("--date")) {
             // Specific date mode
             const dateIndex = args.indexOf("--date") + 1;
@@ -587,25 +585,25 @@ async function runCLI(): Promise<void> {
                 throw new Error(`Invalid date format: ${dateStr}. Use YYYY-MM-DD`);
             }
 
-            console.log(`Aggregating analytics for ${targetDate.toISOString()}`);
+            logger.info({ targetDate: targetDate.toISOString() }, "Aggregating analytics for specific date");
 
             await analyticsAggregator.aggregateForDate(targetDate);
 
-            console.log("✓ Aggregation completed successfully");
+            logger.info("Aggregation completed successfully");
         } else {
             // Default mode: aggregate yesterday's data
             const yesterday = new Date();
             yesterday.setDate(yesterday.getDate() - 1);
             yesterday.setHours(0, 0, 0, 0);
 
-            console.log(`Aggregating analytics for yesterday (${yesterday.toISOString()})`);
+            logger.info({ yesterday: yesterday.toISOString() }, "Aggregating analytics for yesterday");
 
             await analyticsAggregator.aggregateForDate(yesterday);
 
-            console.log("✓ Aggregation completed successfully");
+            logger.info("Aggregation completed successfully");
         }
     } catch (error) {
-        console.error("✗ Analytics aggregation failed:", error);
+        logger.error({ err: error }, "Analytics aggregation failed");
         process.exit(1);
     } finally {
         // Close database connection

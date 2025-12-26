@@ -3,6 +3,9 @@ import { toJSONSchema } from "../../../core/schema-utils";
 import { WhatsAppClient } from "../client/WhatsAppClient";
 import type { WhatsAppSendResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
+import { getLogger } from "../../../../core/logging";
+
+const logger = getLogger();
 
 /**
  * Send Reaction operation schema
@@ -32,7 +35,7 @@ export const sendReactionOperation: OperationDefinition = (() => {
             timeout: 10000
         };
     } catch (error) {
-        console.error("[WhatsApp] Failed to create sendReactionOperation:", error);
+        logger.error({ component: "WhatsApp", err: error }, "Failed to create sendReactionOperation");
         throw new Error(
             `Failed to create sendReaction operation: ${error instanceof Error ? error.message : "Unknown error"}`
         );

@@ -4,6 +4,9 @@ import { ConnectionRepository } from "../../../storage/repositories/ConnectionRe
 import { ConfigurationError, NotFoundError, ValidationError } from "../../shared/errors";
 import { withHeartbeat } from "../../shared/heartbeat";
 import type { ExecutionContext } from "../../../integrations/core/types";
+import { createActivityLogger } from "../../shared/logger";
+
+const logger = createActivityLogger({ nodeType: "Database" });
 
 export interface DatabaseNodeConfig {
     // Integration connection ID (required)
@@ -85,7 +88,7 @@ export async function executeDatabaseNode(
         const startTime = Date.now();
 
         heartbeat.update({ step: "connecting", provider, operation: config.operation });
-        console.log(`[Database] Provider: ${provider}, Operation: ${config.operation}`);
+        logger.info("Executing database operation", { provider, operation: config.operation });
 
         try {
             // Fetch connection with decrypted credentials
@@ -138,7 +141,7 @@ export async function executeDatabaseNode(
             const queryTime = Date.now() - startTime;
 
             heartbeat.update({ step: "completed", percentComplete: 100 });
-            console.log(`[Database] Completed in ${queryTime}ms`);
+            logger.info("Database operation completed", { queryTime });
 
             // Mark connection as used
             await connectionRepo.markAsUsed(connectionId);
@@ -166,7 +169,11 @@ export async function executeDatabaseNode(
         } catch (error) {
             const queryTime = Date.now() - startTime;
 
-            console.error(`[Database] Error after ${queryTime}ms:`, error);
+            logger.error("Database operation failed", error instanceof Error ? error : new Error(String(error)), {
+                queryTime,
+                provider,
+                operation: config.operation
+            });
 
             const errorResult: DatabaseNodeResult = {
                 operation: config.operation,
@@ -196,6 +203,6 @@ export async function executeDatabaseNode(
  * Note: With the provider system, cleanup is handled by individual providers
  */
 export async function closeDatabaseConnections(): Promise<void> {
-    console.log("[Database] Connection cleanup handled by provider system");
+    logger.debug("Database connection cleanup handled by provider system");
     // TODO: Implement provider cleanup registry if needed
 }

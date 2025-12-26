@@ -10,6 +10,9 @@ import {
     getCancellationSignal,
     type HeartbeatOperations
 } from "../../shared/heartbeat";
+import { createActivityLogger } from "../../shared/logger";
+
+const logger = createActivityLogger({ nodeType: "Code" });
 
 export interface CodeNodeConfig {
     language: "javascript" | "python";
@@ -51,7 +54,7 @@ export async function executeCodeNode(
         const startTime = Date.now();
 
         heartbeat.update({ step: "initializing", language: config.language });
-        console.log(`[Code] Executing ${config.language} code`);
+        logger.info("Executing code", { language: config.language });
 
         let result: CodeNodeResult;
 
@@ -76,7 +79,7 @@ export async function executeCodeNode(
         };
 
         heartbeat.update({ step: "completed", percentComplete: 100 });
-        console.log(`[Code] Execution completed in ${result.metadata.executionTime}ms`);
+        logger.info("Code execution completed", { executionTime: result.metadata.executionTime });
 
         if (config.outputVariable) {
             return { [config.outputVariable]: result } as unknown as JsonObject;
@@ -104,21 +107,21 @@ async function executeJavaScript(
                     .map((arg) => (typeof arg === "object" ? JSON.stringify(arg) : String(arg)))
                     .join(" ");
                 logs.push(message);
-                console.log("[Code/JS]", message);
+                logger.debug("JS code output", { output: message });
             },
             error: (...args: unknown[]) => {
                 const message = args
                     .map((arg) => (typeof arg === "object" ? JSON.stringify(arg) : String(arg)))
                     .join(" ");
                 logs.push(`ERROR: ${message}`);
-                console.error("[Code/JS]", message);
+                logger.warn("JS code error output", { output: message });
             },
             warn: (...args: unknown[]) => {
                 const message = args
                     .map((arg) => (typeof arg === "object" ? JSON.stringify(arg) : String(arg)))
                     .join(" ");
                 logs.push(`WARN: ${message}`);
-                console.warn("[Code/JS]", message);
+                logger.warn("JS code warning output", { output: message });
             }
         }
     };
@@ -163,7 +166,7 @@ async function executeJavaScript(
         };
     } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        console.error("[Code/JS] Execution failed:", errorMessage);
+        logger.error("JS execution failed", new Error(errorMessage), { language: "javascript" });
         throw new CodeExecutionError(errorMessage, "javascript");
     }
 }

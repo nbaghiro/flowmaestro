@@ -3,6 +3,9 @@ import { Readable } from "stream";
 import { pipeline } from "stream/promises";
 import { Storage, Bucket } from "@google-cloud/storage";
 import { config } from "../core/config";
+import { getLogger } from "../core/logging";
+
+const logger = getLogger();
 
 export interface UploadOptions {
     userId: string;
@@ -90,7 +93,7 @@ export class GCSStorageService {
         } catch (error: unknown) {
             // If file doesn't exist, that's okay (idempotent delete)
             if (error && typeof error === "object" && "code" in error && error.code === 404) {
-                console.warn(`File not found in GCS: ${gcsUri}`);
+                logger.warn({ component: "GCSStorageService", gcsUri }, "File not found in GCS");
                 return;
             }
             throw error;

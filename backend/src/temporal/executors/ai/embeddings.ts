@@ -6,6 +6,9 @@ import { config as appConfig } from "../../../core/config";
 import { ConfigurationError, ValidationError } from "../../shared/errors";
 import { withHeartbeat, type HeartbeatOperations } from "../../shared/heartbeat";
 import { interpolateVariables } from "../../shared/utils";
+import { createActivityLogger } from "../../shared/logger";
+
+const logger = createActivityLogger({ nodeType: "Embeddings" });
 
 export interface EmbeddingsNodeConfig {
     provider: "openai" | "cohere" | "google";
@@ -48,7 +51,7 @@ export async function executeEmbeddingsNode(
         const startTime = Date.now();
 
         heartbeat.update({ step: "initializing", provider: config.provider });
-        console.log(`[Embeddings] Provider: ${config.provider}`);
+        logger.info("Generating embeddings", { provider: config.provider });
 
         let result: JsonObject;
 
@@ -82,9 +85,10 @@ export async function executeEmbeddingsNode(
         };
 
         heartbeat.update({ step: "completed", percentComplete: 100 });
-        console.log(
-            `[Embeddings] Generated ${(result.embeddings as JsonValue[])?.length || 0} embeddings in ${processingTime}ms`
-        );
+        logger.info("Embeddings generated", {
+            count: (result.embeddings as JsonValue[])?.length || 0,
+            processingTime
+        });
 
         if (config.outputVariable) {
             return { [config.outputVariable]: result } as unknown as JsonObject;
@@ -116,9 +120,7 @@ async function executeOpenAI(
     const inputs = Array.isArray(config.input) ? config.input : [config.input];
     const interpolatedInputs = inputs.map((text) => interpolateVariables(text, context));
 
-    console.log(
-        `[Embeddings/OpenAI] Generating embeddings for ${interpolatedInputs.length} input(s)`
-    );
+    logger.debug("OpenAI embeddings request", { inputCount: interpolatedInputs.length });
 
     // Process in batches if specified
     const batchSize = config.batchSize || 2048; // OpenAI supports up to 2048 inputs
@@ -147,9 +149,10 @@ async function executeOpenAI(
             totalTokens += response.usage.total_tokens;
         }
 
-        console.log(
-            `[Embeddings/OpenAI] Processed batch ${Math.floor(i / batchSize) + 1}, embeddings: ${embeddings.length}`
-        );
+        logger.debug("OpenAI batch processed", {
+            batch: Math.floor(i / batchSize) + 1,
+            embeddingsCount: embeddings.length
+        });
     }
 
     const dimensions = allEmbeddings[0]?.length || 0;
@@ -189,9 +192,7 @@ async function executeCohere(
     const inputs = Array.isArray(config.input) ? config.input : [config.input];
     const interpolatedInputs = inputs.map((text) => interpolateVariables(text, context));
 
-    console.log(
-        `[Embeddings/Cohere] Generating embeddings for ${interpolatedInputs.length} input(s)`
-    );
+    logger.debug("Cohere embeddings request", { inputCount: interpolatedInputs.length });
 
     const truncateValue =
         config.inputTruncate === "start"
@@ -247,9 +248,7 @@ async function executeGoogle(
     const inputs = Array.isArray(config.input) ? config.input : [config.input];
     const interpolatedInputs = inputs.map((text) => interpolateVariables(text, context));
 
-    console.log(
-        `[Embeddings/Google] Generating embeddings for ${interpolatedInputs.length} input(s)`
-    );
+    logger.debug("Google embeddings request", { inputCount: interpolatedInputs.length });
 
     const embeddings: number[][] = [];
 

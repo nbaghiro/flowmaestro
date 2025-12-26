@@ -35,7 +35,7 @@ export const SocialProof: React.FC = () => {
     const isInView = useInView(ref, { once: true, margin: "-100px" });
 
     return (
-        <section ref={ref} className="relative py-24 px-4 sm:px-6 lg:px-8 bg-black">
+        <section ref={ref} className="relative py-24 px-4 sm:px-6 lg:px-8 bg-background">
             <div className="max-w-7xl mx-auto">
                 {/* Section Header */}
                 <motion.div
@@ -64,7 +64,7 @@ export const SocialProof: React.FC = () => {
                             initial={{ opacity: 0, y: 30 }}
                             animate={isInView ? { opacity: 1, y: 0 } : {}}
                             transition={{ duration: 0.6, delay: index * 0.1 }}
-                            className="relative p-8 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10"
+                            className="relative p-8 rounded-2xl bg-background-surface backdrop-blur-sm border border-stroke"
                         >
                             <Quote className="w-10 h-10 text-primary-400 mb-4 opacity-50" />
 

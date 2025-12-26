@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import * as api from "../lib/api";
+import { logger } from "../lib/logger";
 import type {
     Agent,
     CreateAgentRequest,
@@ -386,7 +387,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
                 }
             }));
         } catch (error) {
-            console.error("Failed to fetch thread messages:", error);
+            logger.error("Failed to fetch thread messages", error);
         }
     },
 

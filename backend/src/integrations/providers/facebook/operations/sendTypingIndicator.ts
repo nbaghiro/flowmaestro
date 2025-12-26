@@ -3,6 +3,9 @@ import { toJSONSchema } from "../../../core/schema-utils";
 import { FacebookClient } from "../client/FacebookClient";
 import type { MessengerActionResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
+import { getLogger } from "../../../../core/logging";
+
+const logger = getLogger();
 
 /**
  * Send Typing Indicator operation schema
@@ -31,7 +34,7 @@ export const sendTypingIndicatorOperation: OperationDefinition = (() => {
             timeout: 5000
         };
     } catch (error) {
-        console.error("[Messenger] Failed to create sendTypingIndicatorOperation:", error);
+        logger.error({ component: "Messenger", err: error }, "Failed to create sendTypingIndicatorOperation");
         throw new Error(
             `Failed to create sendTypingIndicator operation: ${error instanceof Error ? error.message : "Unknown error"}`
         );

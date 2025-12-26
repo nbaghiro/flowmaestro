@@ -2,6 +2,7 @@ import { Send, Loader2, Bot, User, Wrench, CheckCircle2, XCircle, Eye } from "lu
 import { useState, useEffect, useRef, useCallback } from "react";
 import * as api from "../../lib/api";
 import { streamAgentExecution } from "../../lib/api";
+import { logger } from "../../lib/logger";
 import { cn } from "../../lib/utils";
 import { useAgentStore } from "../../stores/agentStore";
 import { Button } from "../common/Button";
@@ -96,7 +97,7 @@ export function AgentChat({ agent }: AgentChatProps) {
                 setTokenUsage(normalizeTokenUsage(threadData.metadata?.tokenUsage || null));
             }
         } catch (error) {
-            console.error("[AgentChat] Failed to refresh token usage:", error);
+            logger.error("Failed to refresh token usage", error);
         }
     }, [currentThread?.id]);
 
@@ -138,14 +139,14 @@ export function AgentChat({ agent }: AgentChatProps) {
         streamingContentRef.current = "";
         setToolCalls([]);
 
-        console.log(`[AgentChat] Starting SSE stream for execution ${executionId}`);
+        logger.debug("Starting SSE stream for execution", { executionId });
 
         const streamingMessageId = `streaming-${executionId}`;
 
         // Start SSE stream
         const cleanup = streamAgentExecution(agentId, executionId, {
             onConnected: () => {
-                console.log(`[AgentChat] SSE connected for execution ${executionId}`);
+                logger.debug("SSE connected for execution", { executionId });
             },
             onToken: (token: string) => {
                 // Accumulate token
@@ -172,17 +173,17 @@ export function AgentChat({ agent }: AgentChatProps) {
                 }
             },
             onMessage: (message: ThreadMessage) => {
-                console.log("[AgentChat] Received message:", message);
+                logger.debug("Received message", { message });
                 if (message.role !== "user") {
                     addMessageToThread(threadId, message);
                 }
             },
             onTokenUsageUpdated: (data) => {
-                console.log("[AgentChat] Token usage updated:", data);
+                logger.debug("Token usage updated", { tokenUsage: data.tokenUsage });
                 setTokenUsage(normalizeTokenUsage(data.tokenUsage));
             },
             onToolCallStarted: (data) => {
-                console.log("[AgentChat] Tool call started:", data);
+                logger.debug("Tool call started", { toolName: data.toolName });
                 setToolCalls((prev) => [
                     ...prev,
                     {
@@ -194,7 +195,7 @@ export function AgentChat({ agent }: AgentChatProps) {
                 ]);
             },
             onToolCallCompleted: (data) => {
-                console.log("[AgentChat] Tool call completed:", data);
+                logger.debug("Tool call completed", { toolName: data.toolName });
                 setToolCalls((prev) =>
                     prev.map((tc) =>
                         tc.toolName === data.toolName && tc.status === "running"
@@ -204,7 +205,7 @@ export function AgentChat({ agent }: AgentChatProps) {
                 );
             },
             onToolCallFailed: (data) => {
-                console.log("[AgentChat] Tool call failed:", data);
+                logger.warn("Tool call failed", { toolName: data.toolName, error: data.error });
                 setToolCalls((prev) =>
                     prev.map((tc) =>
                         tc.toolName === data.toolName && tc.status === "running"
@@ -214,7 +215,7 @@ export function AgentChat({ agent }: AgentChatProps) {
                 );
             },
             onCompleted: (data) => {
-                console.log("[AgentChat] Execution completed:", data);
+                logger.info("Execution completed", { executionId });
 
                 // Finalize streaming message - replace streaming message with final
                 const finalContent = data.finalMessage || streamingContentRef.current;
@@ -238,7 +239,7 @@ export function AgentChat({ agent }: AgentChatProps) {
                 void refreshTokenUsage();
             },
             onError: (error: string) => {
-                console.error("[AgentChat] SSE error:", error);
+                logger.error("SSE error", undefined, { error });
 
                 // Remove streaming message
                 const store = useAgentStore.getState();
@@ -258,7 +259,7 @@ export function AgentChat({ agent }: AgentChatProps) {
 
         return () => {
             if (sseCleanupRef.current) {
-                console.log(`[AgentChat] Cleaning up SSE stream for execution ${executionId}`);
+                logger.debug("Cleaning up SSE stream for execution", { executionId });
                 sseCleanupRef.current();
                 sseCleanupRef.current = null;
             }
@@ -306,7 +307,7 @@ export function AgentChat({ agent }: AgentChatProps) {
                         !errorMessage.includes("already completed") &&
                         !errorMessage.includes("400")
                     ) {
-                        console.warn("[AgentChat] Unexpected error sending message:", errorMessage);
+                        logger.warn("Unexpected error sending message", { error: errorMessage });
                     }
                     // Start new execution in same thread
                     await executeAgent(
@@ -319,7 +320,7 @@ export function AgentChat({ agent }: AgentChatProps) {
                 }
             }
         } catch (error) {
-            console.error("Failed to send message:", error);
+            logger.error("Failed to send message", error);
             setIsSending(false);
         }
     };

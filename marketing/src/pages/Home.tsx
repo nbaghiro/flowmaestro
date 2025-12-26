@@ -8,7 +8,7 @@ import { Navigation } from "../components/Navigation";
 
 export const Home: React.FC = () => {
     return (
-        <div className="min-h-screen bg-black text-white">
+        <div className="min-h-screen bg-background text-gray-50">
             <Navigation />
             <Hero />
             <Integrations />

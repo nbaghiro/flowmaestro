@@ -9,14 +9,14 @@ export const CTA: React.FC = () => {
     return (
         <section
             ref={ref}
-            className="relative py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-gray-950 to-black"
+            className="relative py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-background-surface to-background"
         >
             <div className="max-w-5xl mx-auto">
                 <motion.div
                     initial={{ opacity: 0, y: 30 }}
                     animate={isInView ? { opacity: 1, y: 0 } : {}}
                     transition={{ duration: 0.6 }}
-                    className="relative rounded-3xl bg-gradient-to-br from-primary-600/20 via-accent-600/20 to-primary-600/20 p-12 md:p-16 backdrop-blur-sm border border-white/10 overflow-hidden"
+                    className="relative rounded-3xl bg-gradient-to-br from-gray-800/80 via-background-elevated to-gray-800/80 p-12 md:p-16 backdrop-blur-sm border border-stroke overflow-hidden"
                 >
                     {/* Background Pattern */}
                     <div className="absolute inset-0 grid-pattern opacity-20"></div>
@@ -61,7 +61,7 @@ export const CTA: React.FC = () => {
                                 href="https://cal.com/naib-baghirov-o5surn/30min"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg font-semibold transition-all duration-200"
+                                className="px-8 py-4 bg-background-elevated hover:bg-border border border-stroke rounded-lg font-semibold transition-all duration-200"
                             >
                                 Schedule a Demo
                             </a>

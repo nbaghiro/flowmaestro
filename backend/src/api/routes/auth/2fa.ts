@@ -1,4 +1,5 @@
 import { FastifyInstance } from "fastify";
+import { createServiceLogger } from "../../../core/logging";
 import {
     generateCode,
     hashCode,
@@ -12,6 +13,8 @@ import { UserRepository } from "../../../storage/repositories";
 import { TwoFactorBackupCodeRepository } from "../../../storage/repositories/TwoFactorBackupCodeRepository";
 import { TwoFactorTokenRepository } from "../../../storage/repositories/TwoFactorTokenRepository";
 import { authMiddleware } from "../../middleware";
+
+const logger = createServiceLogger("TwoFactorAuth");
 
 export async function twoFactorRoutes(fastify: FastifyInstance) {
     const tokenRepo = new TwoFactorTokenRepository();
@@ -65,8 +68,7 @@ export async function twoFactorRoutes(fastify: FastifyInstance) {
             preHandler: [authMiddleware]
         },
         async (request, reply) => {
-            console.log("[2FA][DEBUG] REQUEST USER:", request.user);
-            console.log("[2FA][DEBUG] HEADERS:", request.headers);
+            logger.debug({ userId: request.user.id, headers: request.headers }, "Verification request received");
 
             const userId = request.user.id;
             const { code } = request.body as { code: string; phone?: string };

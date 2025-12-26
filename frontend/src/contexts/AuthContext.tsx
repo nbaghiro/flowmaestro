@@ -7,6 +7,7 @@ import {
     clearAuthToken
 } from "../lib/api";
 import type { ApiUser } from "../lib/api";
+import { logger } from "../lib/logger";
 
 interface AuthContextType {
     user: ApiUser | null;
@@ -54,7 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                         window.history.replaceState(null, "", window.location.pathname);
                         return;
                     } catch (error) {
-                        console.error("Failed to parse user data from URL:", error);
+                        logger.error("Failed to parse user data from URL", error);
                     }
                 }
             }
@@ -80,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     setIsLoading(false);
                     return;
                 } catch (error) {
-                    console.error("Failed to parse stored user:", error);
+                    logger.error("Failed to parse stored user", error);
                     localStorage.removeItem("user");
                 }
             }
@@ -99,7 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 })
                 .catch((error) => {
                     // Token is invalid or expired, clear it
-                    console.error("Failed to validate token:", error);
+                    logger.error("Failed to validate token", error);
                     clearAuthToken();
                 })
                 .finally(() => {
@@ -128,7 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             throw new Error(response.error || "Login failed");
         } catch (error) {
-            console.error("Login failed:", error);
+            logger.error("Login failed", error);
             throw error;
         }
     };
@@ -143,7 +144,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 throw new Error(response.error || "Registration failed");
             }
         } catch (error) {
-            console.error("Registration failed:", error);
+            logger.error("Registration failed", error);
             throw error;
         }
     };
@@ -160,7 +161,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 setUser(response.data.user);
             }
         } catch (error) {
-            console.error("Failed to refresh user:", error);
+            logger.error("Failed to refresh user", error);
         }
     };
 

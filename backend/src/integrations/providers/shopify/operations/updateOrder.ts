@@ -3,6 +3,9 @@ import { ShopifyClient } from "../client/ShopifyClient";
 import { UpdateOrderSchema, type UpdateOrderParams } from "../schemas";
 import type { ShopifyOrderResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
+import { getLogger } from "../../../../core/logging";
+
+const logger = getLogger();
 
 /**
  * Update Order operation definition
@@ -20,7 +23,7 @@ export const updateOrderOperation: OperationDefinition = (() => {
             timeout: 15000
         };
     } catch (error) {
-        console.error("[Shopify] Failed to create updateOrderOperation:", error);
+        logger.error({ component: "Shopify", err: error }, "Failed to create updateOrderOperation");
         throw new Error(
             `Failed to create updateOrder operation: ${error instanceof Error ? error.message : "Unknown error"}`
         );

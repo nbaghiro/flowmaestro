@@ -1,6 +1,9 @@
 import OpenAI from "openai";
 import { config } from "../../core/config";
+import { getLogger } from "../../core/logging";
 import { ConnectionRepository } from "../../storage/repositories/ConnectionRepository";
+
+const logger = getLogger();
 
 export interface EmbeddingConfig {
     model: string; // e.g., "text-embedding-3-small"
@@ -171,7 +174,10 @@ export class EmbeddingService {
                 }
             } catch (error) {
                 // Fall through to environment variable
-                console.warn("Could not retrieve OpenAI connections from database:", error);
+                logger.warn(
+                    { component: "EmbeddingService", err: error },
+                    "Could not retrieve OpenAI connections from database"
+                );
             }
         }
 

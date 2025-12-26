@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { logger } from "../lib/logger";
 import { wsClient } from "../lib/websocket";
 import { useWorkflowStore } from "../stores/workflowStore";
 
@@ -13,7 +14,7 @@ export function useExecutionEventHandlers() {
     useEffect(() => {
         // Execution lifecycle events
         const handleExecutionStarted = (event: unknown) => {
-            console.log("[WS] Execution started:", event);
+            logger.debug("Execution started", { event });
             const e = event as Record<string, unknown>;
             addExecutionLog({
                 level: "info",
@@ -23,7 +24,7 @@ export function useExecutionEventHandlers() {
         };
 
         const handleExecutionProgress = (event: unknown) => {
-            console.log("[WS] Execution progress:", event);
+            logger.debug("Execution progress", { event });
             const e = event as Record<string, unknown>;
             addExecutionLog({
                 level: "info",
@@ -33,7 +34,7 @@ export function useExecutionEventHandlers() {
         };
 
         const handleExecutionCompleted = (event: unknown) => {
-            console.log("[WS] Execution completed:", event);
+            logger.info("Execution completed", { event });
             const e = event as Record<string, unknown>;
             updateExecutionStatus("completed");
             addExecutionLog({
@@ -44,7 +45,7 @@ export function useExecutionEventHandlers() {
         };
 
         const handleExecutionFailed = (event: unknown) => {
-            console.log("[WS] Execution failed:", event);
+            logger.error("Execution failed", undefined, { event });
             const e = event as Record<string, unknown>;
             updateExecutionStatus("failed");
             addExecutionLog({
@@ -56,7 +57,7 @@ export function useExecutionEventHandlers() {
 
         // Node lifecycle events
         const handleNodeStarted = (event: unknown) => {
-            console.log("[WS] Node started:", event);
+            logger.debug("Node started", { event });
             const e = event as Record<string, unknown>;
             updateNodeState(e.nodeId as string, {
                 status: "running",
@@ -71,7 +72,7 @@ export function useExecutionEventHandlers() {
         };
 
         const handleNodeCompleted = (event: unknown) => {
-            console.log("[WS] Node completed:", event);
+            logger.debug("Node completed", { event });
             const e = event as Record<string, unknown>;
             updateNodeState(e.nodeId as string, {
                 status: "success",
@@ -88,7 +89,7 @@ export function useExecutionEventHandlers() {
         };
 
         const handleNodeFailed = (event: unknown) => {
-            console.log("[WS] Node failed:", event);
+            logger.error("Node failed", undefined, { event });
             const e = event as Record<string, unknown>;
             updateNodeState(e.nodeId as string, {
                 status: "error",
@@ -104,7 +105,7 @@ export function useExecutionEventHandlers() {
         };
 
         const handleNodeRetry = (event: unknown) => {
-            console.log("[WS] Node retry:", event);
+            logger.warn("Node retry", { event });
             const e = event as Record<string, unknown>;
             addExecutionLog({
                 level: "warning",
@@ -115,7 +116,7 @@ export function useExecutionEventHandlers() {
         };
 
         const handleNodeStream = (event: unknown) => {
-            console.log("[WS] Node stream:", event);
+            logger.debug("Node stream", { event });
             // Handle streaming data (e.g., LLM token generation)
             // You can implement custom handling for streaming nodes here
         };

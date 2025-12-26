@@ -1,6 +1,9 @@
 import type { JsonObject } from "@flowmaestro/shared";
 import { WaitNodeConfigSchema, validateOrThrow, type WaitNodeConfig } from "../../shared/schemas";
 import { interpolateVariables } from "../../shared/utils";
+import { createActivityLogger } from "../../shared/logger";
+
+const logger = createActivityLogger({ nodeType: "Wait" });
 
 // Re-export the Zod-inferred type for backwards compatibility
 export type { WaitNodeConfig };
@@ -23,7 +26,7 @@ export async function executeWaitNode(config: unknown, context: JsonObject): Pro
     const validatedConfig = validateOrThrow(WaitNodeConfigSchema, config, "Wait");
 
     const startTime = new Date();
-    console.log(`[Wait] Type: ${validatedConfig.waitType}, Start: ${startTime.toISOString()}`);
+    logger.info("Starting wait", { waitType: validatedConfig.waitType, startTime: startTime.toISOString() });
 
     let waitMs = 0;
     let skipped = false;
@@ -32,7 +35,7 @@ export async function executeWaitNode(config: unknown, context: JsonObject): Pro
     switch (validatedConfig.waitType) {
         case "duration":
             waitMs = calculateDuration(validatedConfig);
-            console.log(`[Wait] Waiting for ${waitMs}ms`);
+            logger.debug("Waiting for duration", { waitMs });
 
             if (waitMs > 0) {
                 await sleep(waitMs);
@@ -57,12 +60,12 @@ export async function executeWaitNode(config: unknown, context: JsonObject): Pro
             waitMs = targetTime.getTime() - startTime.getTime();
 
             if (waitMs > 0) {
-                console.log(`[Wait] Waiting until ${targetTime.toISOString()} (${waitMs}ms)`);
+                logger.debug("Waiting until target time", { targetTime: targetTime.toISOString(), waitMs });
                 await sleep(waitMs);
             } else {
-                console.log(
-                    `[Wait] Target time ${targetTime.toISOString()} already passed, continuing immediately`
-                );
+                logger.debug("Target time already passed, continuing immediately", {
+                    targetTime: targetTime.toISOString()
+                });
                 skipped = true;
                 reason = "Target time already passed";
                 waitMs = 0;
@@ -77,7 +80,7 @@ export async function executeWaitNode(config: unknown, context: JsonObject): Pro
     const endTime = new Date();
     const actualDuration = endTime.getTime() - startTime.getTime();
 
-    console.log(`[Wait] Completed after ${actualDuration}ms`);
+    logger.info("Wait completed", { actualDuration });
 
     const result: WaitNodeResult = {
         waitType: validatedConfig.waitType,

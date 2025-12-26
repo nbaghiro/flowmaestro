@@ -21,7 +21,7 @@ const IntegrationCard: React.FC<IntegrationCardProps> = ({ provider }) => {
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="group relative p-4 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all duration-300"
+            className="group relative p-4 rounded-xl bg-background-surface backdrop-blur-sm border border-stroke hover:bg-background-elevated hover:border-stroke-hover transition-all duration-300"
         >
             {provider.comingSoon && (
                 <span className="absolute top-2 right-2 px-2 py-0.5 text-xs font-medium bg-gray-700 text-gray-300 rounded-full">
@@ -29,7 +29,7 @@ const IntegrationCard: React.FC<IntegrationCardProps> = ({ provider }) => {
                 </span>
             )}
             <div className="flex flex-col items-center text-center">
-                <div className="w-14 h-14 rounded-xl bg-white/5 flex items-center justify-center mb-3 group-hover:bg-white/10 transition-colors">
+                <div className="w-14 h-14 rounded-xl bg-background-elevated flex items-center justify-center mb-3 group-hover:bg-border transition-colors">
                     <img
                         src={provider.logoUrl}
                         alt={provider.displayName}
@@ -79,7 +79,7 @@ export const IntegrationsPage: React.FC = () => {
     const totalCount = ALL_PROVIDERS.length;
 
     return (
-        <div className="min-h-screen bg-black text-white">
+        <div className="min-h-screen bg-background text-gray-50">
             <Navigation />
 
             {/* Hero Section */}
@@ -104,7 +104,7 @@ export const IntegrationsPage: React.FC = () => {
                         </p>
 
                         {/* MCP Tools Feature Callout */}
-                        <div className="inline-flex items-center gap-3 px-6 py-3 rounded-full bg-white/5 border border-white/10">
+                        <div className="inline-flex items-center gap-3 px-6 py-3 rounded-full bg-background-elevated border border-stroke">
                             <Cpu className="w-5 h-5 text-primary-400" />
                             <span className="text-sm text-gray-300">
                                 All integrations are auto-wrapped as{" "}
@@ -127,7 +127,7 @@ export const IntegrationsPage: React.FC = () => {
                             placeholder="Search integrations..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-12 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-white/20 transition-colors"
+                            className="w-full pl-12 pr-4 py-3 bg-background-surface border border-stroke rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-stroke-hover transition-colors"
                         />
                     </div>
 
@@ -140,7 +140,7 @@ export const IntegrationsPage: React.FC = () => {
                                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                                     selectedCategory === category
                                         ? "bg-white text-black"
-                                        : "bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white"
+                                        : "bg-background-surface text-gray-400 hover:bg-background-elevated hover:text-white"
                                 }`}
                             >
                                 {category}

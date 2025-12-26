@@ -23,6 +23,7 @@ import type {
     ManualTriggerConfig
 } from "@flowmaestro/shared";
 import { getWebhookUrl, deleteTrigger, updateTrigger, executeTrigger } from "../../lib/api";
+import { logger } from "../../lib/logger";
 import { cn } from "../../lib/utils";
 import { wsClient } from "../../lib/websocket";
 import { useWorkflowStore } from "../../stores/workflowStore";
@@ -157,7 +158,7 @@ export function TriggerCard({ trigger, onUpdate }: TriggerCardProps) {
             await deleteTrigger(trigger.id);
             onUpdate();
         } catch (error) {
-            console.error("Failed to delete trigger:", error);
+            logger.error("Failed to delete trigger", error);
             setErrorMessage("Failed to delete trigger");
             setShowErrorDialog(true);
         } finally {
@@ -171,7 +172,7 @@ export function TriggerCard({ trigger, onUpdate }: TriggerCardProps) {
             await updateTrigger(trigger.id, { enabled: !trigger.enabled });
             onUpdate();
         } catch (error) {
-            console.error("Failed to toggle trigger:", error);
+            logger.error("Failed to toggle trigger", error);
             setErrorMessage("Failed to update trigger");
             setShowErrorDialog(true);
         } finally {
@@ -196,7 +197,7 @@ export function TriggerCard({ trigger, onUpdate }: TriggerCardProps) {
             setShowRenameDialog(false);
             onUpdate();
         } catch (error) {
-            console.error("Failed to rename trigger:", error);
+            logger.error("Failed to rename trigger", error);
             setErrorMessage("Failed to rename trigger");
             setShowErrorDialog(true);
         } finally {
@@ -240,7 +241,7 @@ export function TriggerCard({ trigger, onUpdate }: TriggerCardProps) {
                 onUpdate();
             }
         } catch (error) {
-            console.error("Failed to execute trigger:", error);
+            logger.error("Failed to execute trigger", error);
             setErrorMessage(
                 "Failed to execute trigger: " +
                     (error instanceof Error ? error.message : String(error))

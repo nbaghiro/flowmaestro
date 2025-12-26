@@ -6,6 +6,7 @@
 import { CheckCircle2, XCircle, Clock, AlertCircle, RotateCcw, ChevronRight } from "lucide-react";
 import { useState, useEffect } from "react";
 import { getExecutions, Execution } from "../../lib/api";
+import { logger } from "../../lib/logger";
 import { cn } from "../../lib/utils";
 
 interface HistoryTabProps {
@@ -31,7 +32,7 @@ export function HistoryTab({ workflowId }: HistoryTabProps) {
                 setExecutions(response.data.items);
             }
         } catch (err) {
-            console.error("Failed to load executions:", err);
+            logger.error("Failed to load executions", err);
             setError(err instanceof Error ? err.message : "Failed to load execution history");
         } finally {
             setLoading(false);

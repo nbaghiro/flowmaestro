@@ -10,7 +10,10 @@ import {
     type SimilarMessageResult
 } from "../../storage/repositories/ThreadEmbeddingRepository";
 import { EmbeddingService } from "../embeddings/EmbeddingService";
+import { getLogger } from "../../core/logging";
 import type { ThreadMessage } from "../../storage/models/AgentExecution";
+
+const logger = getLogger();
 
 export interface StoreThreadEmbeddingsInput {
     agentId: string;
@@ -128,8 +131,9 @@ export class ThreadMemoryService {
         // Store in database (batch insert)
         const stored = await this.repository.createBatch(embeddingInputs);
 
-        console.log(
-            `[ThreadMemoryService] Stored ${stored.length} embeddings for execution ${executionId}`
+        logger.info(
+            { component: "ThreadMemoryService", storedCount: stored.length, executionId },
+            "Stored thread embeddings"
         );
 
         return {
@@ -188,8 +192,9 @@ export class ThreadMemoryService {
 
         const results = await this.repository.searchSimilar(searchInput);
 
-        console.log(
-            `[ThreadMemoryService] Found ${results.length} similar messages for query: "${query.substring(0, 50)}..."`
+        logger.info(
+            { component: "ThreadMemoryService", resultCount: results.length, queryPreview: query.substring(0, 50) },
+            "Found similar messages for query"
         );
 
         return {
@@ -267,8 +272,9 @@ export class ThreadMemoryService {
      */
     async clearExecutionMemory(executionId: string): Promise<number> {
         const deleted = await this.repository.deleteByExecution(executionId);
-        console.log(
-            `[ThreadMemoryService] Cleared ${deleted} embeddings for execution ${executionId}`
+        logger.info(
+            { component: "ThreadMemoryService", deletedCount: deleted, executionId },
+            "Cleared execution embeddings"
         );
         return deleted;
     }

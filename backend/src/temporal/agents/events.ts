@@ -1,6 +1,9 @@
 import type { JsonObject, WebSocketEvent } from "@flowmaestro/shared";
 import { redisEventBus } from "../../services/events/RedisEventBus";
 import type { ThreadMessage } from "../../storage/models/AgentExecution";
+import { createActivityLogger } from "../shared/logger";
+
+const logger = createActivityLogger({ component: "AgentEvents" });
 
 /**
  * Activities for emitting agent events to WebSocket clients
@@ -140,10 +143,10 @@ export async function emitAgentToken(input: EmitAgentTokenInput): Promise<void> 
         executionId,
         token
     } as unknown as WebSocketEvent;
-    console.log(
-        `[Agent Events] Publishing token to agent:events:token for execution ${executionId}:`,
-        token
-    );
+    logger.debug("Publishing agent token event", {
+        executionId,
+        tokenLength: token.length
+    });
     await redisEventBus.publish("agent:events:token", event);
 }
 

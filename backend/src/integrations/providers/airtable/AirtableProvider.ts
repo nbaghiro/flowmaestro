@@ -2,6 +2,9 @@ import { config as appConfig, getOAuthRedirectUri } from "../../../core/config";
 import { BaseProvider } from "../../core/BaseProvider";
 import { AirtableClient } from "./client/AirtableClient";
 import { AirtableMCPAdapter } from "./mcp/AirtableMCPAdapter";
+import { getLogger } from "../../../core/logging";
+
+const logger = getLogger();
 import {
     // Core Data Operations
     listRecordsOperation,
@@ -101,7 +104,10 @@ export class AirtableProvider extends BaseProvider {
         // Initialize MCP adapter
         this.mcpAdapter = new AirtableMCPAdapter(this.operations);
 
-        console.log(`[AirtableProvider] Registered ${this.operations.size} operations`);
+        logger.info(
+            { component: "AirtableProvider", operationCount: this.operations.size },
+            "Registered operations"
+        );
     }
 
     /**
@@ -260,7 +266,10 @@ export class AirtableProvider extends BaseProvider {
             });
 
             this.clientPool.set(cacheKey, client);
-            console.log(`[AirtableProvider] Created new client for connection ${connection.id}`);
+            logger.info(
+                { component: "AirtableProvider", connectionId: connection.id },
+                "Created new client for connection"
+            );
         }
 
         return client;
@@ -271,6 +280,9 @@ export class AirtableProvider extends BaseProvider {
      */
     clearClientCache(connectionId: string): void {
         this.clientPool.delete(connectionId);
-        console.log(`[AirtableProvider] Cleared client cache for connection ${connectionId}`);
+        logger.info(
+            { component: "AirtableProvider", connectionId },
+            "Cleared client cache for connection"
+        );
     }
 }

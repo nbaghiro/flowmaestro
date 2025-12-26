@@ -1,8 +1,11 @@
 import { z } from "zod";
 import { config } from "../../../core/config";
+import { createServiceLogger } from "../../../core/logging";
 import { ExecutionRouter } from "../../../integrations/core/ExecutionRouter";
 import { providerRegistry } from "../../../integrations/registry";
 import type { FastifyRequest, FastifyReply } from "fastify";
+
+const logger = createServiceLogger("IntegrationOperations");
 
 const executionRouter = new ExecutionRouter(providerRegistry);
 
@@ -42,11 +45,11 @@ export async function getOperationsHandler(
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
         const errorStack = error instanceof Error ? error.stack : undefined;
 
-        console.error("[API] Error getting operations:", {
+        logger.error({
             provider: request.params.provider,
             error: errorMessage,
             stack: errorStack
-        });
+        }, "Error getting operations");
 
         reply.code(500).send({
             success: false,

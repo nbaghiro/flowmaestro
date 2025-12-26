@@ -3,12 +3,9 @@
 process.env.TZ = "UTC";
 
 import path from "path";
-import { Worker, NativeConnection } from "@temporalio/worker";
-import { config } from "../core/config";
-import { initializeSpanService } from "../core/tracing";
-import { redisEventBus } from "../services/events/RedisEventBus";
-import { db } from "../storage/database";
-import * as activities from "./activities";
+import { createWorkerLogger } from "../core/logging";
+
+const logger = createWorkerLogger("flowmaestro-worker");
 
 /**
  * Orchestrator Worker
@@ -17,21 +14,68 @@ import * as activities from "./activities";
  * and user input workflows.
  */
 async function run() {
+    // Configure Temporal Runtime BEFORE using Worker/NativeConnection
+    // Must use dynamic import to ensure Runtime.install() runs first
+    const { Runtime, Worker, NativeConnection } = await import("@temporalio/worker");
+
+    Runtime.install({
+        logger: {
+            trace: (message: string, meta?: Record<string, unknown>) =>
+                logger.trace({ ...meta, component: "temporal-sdk" }, message),
+            debug: (message: string, meta?: Record<string, unknown>) =>
+                logger.debug({ ...meta, component: "temporal-sdk" }, message),
+            info: (message: string, meta?: Record<string, unknown>) =>
+                logger.info({ ...meta, component: "temporal-sdk" }, message),
+            warn: (message: string, meta?: Record<string, unknown>) =>
+                logger.warn({ ...meta, component: "temporal-sdk" }, message),
+            error: (message: string, meta?: Record<string, unknown>) =>
+                logger.error({ ...meta, component: "temporal-sdk" }, message),
+            log: (level: string, message: string, meta?: Record<string, unknown>) => {
+                const logMeta = { ...meta, component: "temporal-sdk" };
+                switch (level) {
+                    case "TRACE":
+                        logger.trace(logMeta, message);
+                        break;
+                    case "DEBUG":
+                        logger.debug(logMeta, message);
+                        break;
+                    case "INFO":
+                        logger.info(logMeta, message);
+                        break;
+                    case "WARN":
+                        logger.warn(logMeta, message);
+                        break;
+                    case "ERROR":
+                        logger.error(logMeta, message);
+                        break;
+                    default:
+                        logger.info(logMeta, message);
+                }
+            }
+        }
+    });
+
+    // Dynamic imports for modules that depend on Temporal
+    const { config } = await import("../core/config");
+    const { initializeSpanService } = await import("../core/tracing");
+    const { redisEventBus } = await import("../services/events/RedisEventBus");
+    const { db } = await import("../storage/database");
+    const activities = await import("./activities");
     // Initialize SpanService for observability
     initializeSpanService({
         pool: db.getPool(),
         batchSize: 10,
         flushIntervalMs: 5000
     });
-    console.log("✅ SpanService initialized for worker");
+    logger.info("SpanService initialized for worker");
 
     // Connect to Redis for cross-process event communication
     try {
         await redisEventBus.connect();
-        console.log("✅ Worker connected to Redis for event publishing");
+        logger.info("Worker connected to Redis for event publishing");
     } catch (error) {
-        console.error("❌ Failed to connect to Redis:", error);
-        console.warn("⚠️  Workflow events will not be published");
+        logger.error({ err: error }, "Failed to connect to Redis");
+        logger.warn("Workflow events will not be published");
     }
 
     // Connect to Temporal with retry logic for DNS resolution
@@ -41,23 +85,20 @@ async function run() {
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-            console.log(`Attempting to connect to Temporal (attempt ${attempt}/${maxRetries})...`);
+            logger.info({ attempt, maxRetries }, "Attempting to connect to Temporal");
             connection = await NativeConnection.connect({
                 address: config.temporal.address
             });
-            console.log("✅ Connected to Temporal successfully");
+            logger.info("Connected to Temporal successfully");
             break;
         } catch (error) {
             if (attempt === maxRetries) {
-                console.error("❌ Failed to connect to Temporal after max retries");
+                logger.error({ err: error }, "Failed to connect to Temporal after max retries");
                 throw error;
             }
             const delay = baseDelay * Math.pow(2, attempt - 1);
             const errorMessage = error instanceof Error ? error.message : String(error);
-            console.warn(
-                `⚠️  Failed to connect (attempt ${attempt}/${maxRetries}): ${errorMessage}`
-            );
-            console.log(`   Retrying in ${delay}ms...`);
+            logger.warn({ attempt, maxRetries, error: errorMessage, retryDelayMs: delay }, "Failed to connect to Temporal, retrying");
             await new Promise((resolve) => setTimeout(resolve, delay));
         }
     }
@@ -73,7 +114,7 @@ async function run() {
         ? path.resolve(__dirname, "./workflows.bundle.ts")
         : path.resolve(__dirname, "./workflows.bundle.js");
 
-    console.log(`Loading workflows from: ${workflowsPath}`);
+    logger.info({ workflowsPath }, "Loading workflows");
 
     // Create worker
     const worker = await Worker.create({
@@ -90,15 +131,16 @@ async function run() {
         }
     });
 
-    console.log("🚀 Orchestrator worker starting...");
-    console.log("   Task Queue: flowmaestro-orchestrator");
-    console.log(`   Temporal Address: ${config.temporal.address}`);
+    logger.info({
+        taskQueue: "flowmaestro-orchestrator",
+        temporalAddress: config.temporal.address
+    }, "Orchestrator worker starting");
 
     // Graceful shutdown handler
     const signals = ["SIGINT", "SIGTERM"];
     signals.forEach((signal) => {
         process.on(signal, async () => {
-            console.log(`\nReceived ${signal}, shutting down worker...`);
+            logger.info({ signal }, "Received shutdown signal, shutting down worker");
             worker.shutdown();
             await redisEventBus.disconnect();
             process.exit(0);
@@ -110,6 +152,6 @@ async function run() {
 }
 
 run().catch((err) => {
-    console.error("Worker failed:", err);
+    logger.error({ err }, "Worker failed");
     process.exit(1);
 });

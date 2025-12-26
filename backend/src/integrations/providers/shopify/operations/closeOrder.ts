@@ -3,6 +3,9 @@ import { ShopifyClient } from "../client/ShopifyClient";
 import { CloseOrderSchema, type CloseOrderParams } from "../schemas";
 import type { ShopifyOrderResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
+import { getLogger } from "../../../../core/logging";
+
+const logger = getLogger();
 
 /**
  * Close Order operation definition
@@ -20,7 +23,7 @@ export const closeOrderOperation: OperationDefinition = (() => {
             timeout: 15000
         };
     } catch (error) {
-        console.error("[Shopify] Failed to create closeOrderOperation:", error);
+        logger.error({ component: "Shopify", err: error }, "Failed to create closeOrderOperation");
         throw new Error(
             `Failed to create closeOrder operation: ${error instanceof Error ? error.message : "Unknown error"}`
         );

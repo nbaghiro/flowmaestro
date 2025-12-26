@@ -2,6 +2,9 @@ import { z } from "zod";
 import { toJSONSchema } from "../../../core/schema-utils";
 import { WhatsAppClient } from "../client/WhatsAppClient";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
+import { getLogger } from "../../../../core/logging";
+
+const logger = getLogger();
 
 /**
  * Mark as Read operation schema
@@ -29,7 +32,7 @@ export const markAsReadOperation: OperationDefinition = (() => {
             timeout: 10000
         };
     } catch (error) {
-        console.error("[WhatsApp] Failed to create markAsReadOperation:", error);
+        logger.error({ component: "WhatsApp", err: error }, "Failed to create markAsReadOperation");
         throw new Error(
             `Failed to create markAsRead operation: ${error instanceof Error ? error.message : "Unknown error"}`
         );

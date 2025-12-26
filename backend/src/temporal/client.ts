@@ -1,5 +1,8 @@
 import { Connection, Client } from "@temporalio/client";
+import { createServiceLogger } from "../core/logging";
 import { config } from "../core/config";
+
+const logger = createServiceLogger("temporal-client");
 
 let client: Client | null = null;
 let connection: Connection | null = null;
@@ -39,9 +42,7 @@ async function connectWithRetry(): Promise<Client> {
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-            console.log(
-                `Attempting to connect Temporal client (attempt ${attempt}/${maxRetries})...`
-            );
+            logger.info({ attempt, maxRetries }, "Attempting to connect Temporal client");
             connection = await Connection.connect({
                 address: config.temporal.address
             });
@@ -51,19 +52,16 @@ async function connectWithRetry(): Promise<Client> {
                 namespace: "default"
             });
 
-            console.log("✅ Temporal client connected");
+            logger.info("Temporal client connected successfully");
             return client;
         } catch (error) {
             if (attempt === maxRetries) {
-                console.error("❌ Failed to connect Temporal client after max retries");
+                logger.error({ err: error }, "Failed to connect Temporal client after max retries");
                 throw error;
             }
             const delay = baseDelay * Math.pow(2, attempt - 1);
             const errorMessage = error instanceof Error ? error.message : String(error);
-            console.warn(
-                `⚠️  Temporal client connection failed (attempt ${attempt}/${maxRetries}): ${errorMessage}`
-            );
-            console.log(`   Retrying in ${delay}ms...`);
+            logger.warn({ attempt, maxRetries, errorMessage, delayMs: delay }, "Temporal client connection failed, retrying");
             await new Promise((resolve) => setTimeout(resolve, delay));
         }
     }
@@ -79,6 +77,6 @@ export async function closeTemporalConnection(): Promise<void> {
         await connection.close();
         connection = null;
         client = null;
-        console.log("Temporal connection closed");
+        logger.info("Temporal connection closed");
     }
 }

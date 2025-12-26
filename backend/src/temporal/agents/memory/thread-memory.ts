@@ -5,6 +5,9 @@
 
 import { ThreadMemoryService } from "../../../services/agents/ThreadMemoryService";
 import type { ThreadMessage } from "../../../storage/models/AgentExecution";
+import { createActivityLogger } from "../../shared/logger";
+
+const logger = createActivityLogger({ component: "ThreadMemory" });
 
 const conversationMemoryService = new ThreadMemoryService();
 
@@ -33,9 +36,14 @@ export async function storeThreadEmbeddings(
         embeddingProvider = "openai"
     } = input;
 
-    console.log(
-        `[StoreThreadEmbeddings] Storing embeddings for ${messages.length} messages in execution ${executionId}`
-    );
+    logger.info("Storing thread embeddings", {
+        executionId,
+        agentId,
+        userId,
+        messageCount: messages.length,
+        embeddingModel,
+        embeddingProvider
+    });
 
     const result = await conversationMemoryService.storeThreadEmbeddings({
         agentId,
@@ -46,9 +54,12 @@ export async function storeThreadEmbeddings(
         embeddingProvider
     });
 
-    console.log(
-        `[StoreThreadEmbeddings] Stored ${result.stored} embeddings, skipped ${result.skipped}`
-    );
+    logger.info("Thread embeddings stored", {
+        executionId,
+        agentId,
+        storedCount: result.stored,
+        skippedCount: result.skipped
+    });
 
     return result;
 }
@@ -104,9 +115,16 @@ export async function searchThreadMemory(
         embeddingProvider = "openai"
     } = input;
 
-    console.log(
-        `[SearchThreadMemory] Searching for: "${query.substring(0, 50)}..." (topK: ${topK}, threshold: ${similarityThreshold}, context: ${contextWindow})`
-    );
+    logger.info("Searching thread memory", {
+        agentId,
+        userId,
+        queryPreview: query.substring(0, 50),
+        topK,
+        similarityThreshold,
+        contextWindow,
+        executionId,
+        excludeCurrentExecution
+    });
 
     const searchResult = await conversationMemoryService.searchThreadMemory({
         agentId,
@@ -169,9 +187,12 @@ export async function getThreadMemoryStats(input: GetMemoryStatsInput): Promise<
 
     const stats = await conversationMemoryService.getMemoryStats(agentId, userId);
 
-    console.log(
-        `[GetMemoryStats] Agent ${agentId}: ${stats.totalMessages} total messages, ${stats.latestMessages} latest`
-    );
+    logger.info("Thread memory stats retrieved", {
+        agentId,
+        userId,
+        totalMessages: stats.totalMessages,
+        latestMessages: stats.latestMessages
+    });
 
     return stats;
 }

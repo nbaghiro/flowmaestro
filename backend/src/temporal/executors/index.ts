@@ -4,6 +4,9 @@
  */
 
 import type { JsonObject, JsonValue } from "@flowmaestro/shared";
+import { createActivityLogger } from "../shared/logger";
+
+const logger = createActivityLogger({ nodeType: "NodeExecutor" });
 import { executeAudioNode, AudioNodeConfig, AudioNodeResult } from "./ai/audio";
 import { executeEmbeddingsNode, EmbeddingsNodeConfig, EmbeddingsNodeResult } from "./ai/embeddings";
 import { executeLLMNode, LLMNodeConfig, LLMNodeResult } from "./ai/llm";
@@ -73,7 +76,7 @@ export interface ExecuteNodeInput {
 export async function executeNode(input: ExecuteNodeInput): Promise<JsonObject> {
     const { nodeType, nodeConfig, context, globalStore } = input;
 
-    console.log(`[NodeExecutor] Executing ${nodeType} node`);
+    logger.info("Executing node", { nodeType });
 
     switch (nodeType) {
         case "http":
@@ -106,7 +109,7 @@ export async function executeNode(input: ExecuteNodeInput): Promise<JsonObject> 
 
         case "input": {
             // Input nodes are handled at workflow start
-            console.log("[NodeExecutor] Input node - returning stored input value");
+            logger.debug("Input node - returning stored input value");
             const inputName =
                 typeof nodeConfig.inputName === "string" ? nodeConfig.inputName : "input";
             return { [inputName]: context[inputName] } as unknown as JsonObject;

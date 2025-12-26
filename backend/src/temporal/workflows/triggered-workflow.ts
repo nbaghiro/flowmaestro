@@ -7,6 +7,7 @@ import { proxyActivities } from "@temporalio/workflow";
 import type { JsonValue, WorkflowDefinition, JsonObject } from "@flowmaestro/shared";
 import { orchestratorWorkflow, OrchestratorResult } from "./orchestrator-workflow";
 import type * as triggerActivities from "../orchestration/triggers";
+import { createWorkflowLogger } from "../shared/workflow-logger";
 
 // Proxy activities for database operations
 const { prepareTriggeredExecution, completeTriggeredExecution } = proxyActivities<
@@ -39,8 +40,12 @@ export async function triggeredWorkflow(
     input: TriggeredWorkflowInput
 ): Promise<TriggeredWorkflowResult> {
     const { triggerId, workflowId, payload = {} } = input;
+    const wfLogger = createWorkflowLogger({
+        executionId: triggerId,
+        workflowName: "TriggeredWorkflow"
+    });
 
-    console.log(`[TriggeredWorkflow] Starting for trigger ${triggerId}, workflow ${workflowId}`);
+    wfLogger.info("Starting triggered workflow", { triggerId, workflowId });
 
     try {
         // Step 1: Prepare execution (fetch workflow, create execution record, link to trigger)
@@ -50,7 +55,8 @@ export async function triggeredWorkflow(
             payload
         });
 
-        console.log(`[TriggeredWorkflow] Prepared execution ${preparation.executionId}`);
+        const execLogger = wfLogger.child({ executionId: preparation.executionId });
+        execLogger.info("Prepared execution", { executionId: preparation.executionId });
 
         // Step 2: Execute the workflow using orchestrator
         let orchestratorResult: OrchestratorResult;
@@ -62,7 +68,7 @@ export async function triggeredWorkflow(
             });
         } catch (error) {
             // Handle orchestrator failure
-            console.error("[TriggeredWorkflow] Orchestrator failed:", error);
+            execLogger.error("Orchestrator failed", error as Error);
 
             await completeTriggeredExecution(
                 preparation.executionId,
@@ -86,7 +92,10 @@ export async function triggeredWorkflow(
             orchestratorResult.error
         );
 
-        console.log(`[TriggeredWorkflow] Completed execution ${preparation.executionId}`);
+        execLogger.info("Completed execution", {
+            success: orchestratorResult.success,
+            hasOutputs: !!orchestratorResult.outputs
+        });
 
         return {
             success: orchestratorResult.success,
@@ -95,7 +104,7 @@ export async function triggeredWorkflow(
             error: orchestratorResult.error
         };
     } catch (error) {
-        console.error("[TriggeredWorkflow] Fatal error:", error);
+        wfLogger.error("Fatal error in triggered workflow", error as Error, { triggerId, workflowId });
         return {
             success: false,
             executionId: "",

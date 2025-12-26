@@ -1,7 +1,10 @@
 import { FastifyInstance } from "fastify";
+import { createServiceLogger } from "../../../core/logging";
 import { TriggerType } from "../../../storage/models/Trigger";
 import { TriggerRepository } from "../../../storage/repositories/TriggerRepository";
 import { authMiddleware } from "../../middleware";
+
+const logger = createServiceLogger("TriggerRoutes");
 
 export async function listTriggersRoute(fastify: FastifyInstance) {
     fastify.get(
@@ -42,7 +45,7 @@ export async function listTriggersRoute(fastify: FastifyInstance) {
                     data: triggers
                 });
             } catch (error) {
-                console.error("Error listing triggers:", error);
+                logger.error({ error }, "Error listing triggers");
                 return reply.status(500).send({
                     success: false,
                     error: String(error)

@@ -3,6 +3,7 @@ import { create } from "zustand";
 import type { JsonValue, JsonObject } from "@flowmaestro/shared";
 import { getErrorMessage } from "@flowmaestro/shared";
 import { executeWorkflow as executeWorkflowAPI, generateWorkflow } from "../lib/api";
+import { logger } from "../lib/logger";
 import { convertToReactFlowFormat } from "../lib/workflowLayout";
 
 export const INITIAL_NODE_WIDTH = 260;
@@ -185,7 +186,7 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
         });
 
         try {
-            console.log("[Workflow] Executing workflow with", runnableNodes.length, "nodes");
+            logger.info("Executing workflow", { nodeCount: runnableNodes.length });
 
             // Convert React Flow nodes to WorkflowNode format
             const workflowNodes = runnableNodes.map((node) => ({
@@ -213,7 +214,7 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
             const response = await executeWorkflowAPI(workflowNodes, workflowEdges, inputs);
 
             if (response.success && response.data) {
-                console.log("[Workflow] Execution completed:", response.data.result);
+                logger.info("Workflow execution completed", { result: response.data.result });
                 set({
                     executionResult: response.data.result,
                     isExecuting: false
@@ -222,7 +223,7 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
                 throw new Error(response.error || "Workflow execution failed");
             }
         } catch (error: unknown) {
-            console.error("[Workflow] Execution failed:", error);
+            logger.error("Workflow execution failed", error);
             set({
                 executionError: getErrorMessage(error),
                 isExecuting: false
@@ -231,17 +232,13 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
     },
 
     generateWorkflowFromAI: async (prompt: string, connectionId: string, model: string) => {
-        console.log("[Workflow] Generating workflow from AI prompt:", prompt);
+        logger.info("Generating workflow from AI prompt", { prompt });
 
         try {
             const response = await generateWorkflow({ prompt, connectionId, model });
 
             if (response.success && response.data) {
-                console.log(
-                    "[Workflow] AI generated workflow with",
-                    response.data.nodes.length,
-                    "nodes"
-                );
+                logger.info("AI generated workflow", { nodeCount: response.data.nodes.length });
 
                 // Convert to React Flow format with auto-layout
                 const { nodes, edges } = convertToReactFlowFormat(
@@ -261,19 +258,19 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
                     aiPrompt: prompt
                 });
 
-                console.log("[Workflow] Successfully added AI-generated workflow to canvas");
+                logger.info("Successfully added AI-generated workflow to canvas");
             } else {
                 throw new Error(response.error || "Failed to generate workflow");
             }
         } catch (error: unknown) {
-            console.error("[Workflow] AI generation failed:", error);
+            logger.error("AI workflow generation failed", error);
             throw error; // Re-throw so dialog can show error
         }
     },
 
     // Execution state management methods
     startExecution: (executionId: string, triggerId?: string) => {
-        console.log("[Workflow] Starting execution:", executionId);
+        logger.info("Starting execution", { executionId });
         set({
             currentExecution: {
                 id: executionId,
@@ -306,7 +303,7 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
             }
         });
 
-        console.log("[Workflow] Execution status updated:", status);
+        logger.info("Execution status updated", { status });
     },
 
     updateNodeState: (nodeId: string, state: Partial<NodeExecutionState>) => {
@@ -343,7 +340,7 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
             }
         });
 
-        console.log("[Workflow] Node state updated:", nodeId, updatedState.status);
+        logger.debug("Node state updated", { nodeId, status: updatedState.status });
     },
 
     addExecutionLog: (log: Omit<ExecutionLog, "id" | "timestamp">) => {
@@ -378,16 +375,16 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
             }
         });
 
-        console.log("[Workflow] Variable updated:", key);
+        logger.debug("Variable updated", { key });
     },
 
     clearExecution: () => {
-        console.log("[Workflow] Clearing execution state");
+        logger.debug("Clearing execution state");
         set({ currentExecution: null });
     },
 
     resetWorkflow: () => {
-        console.log("[Workflow] Resetting workflow state");
+        logger.debug("Resetting workflow state");
         set({
             nodes: [],
             edges: [],

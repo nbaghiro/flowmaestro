@@ -5,6 +5,9 @@ import {
     type SwitchNodeConfig
 } from "../../shared/schemas";
 import { interpolateVariables } from "../../shared/utils";
+import { createActivityLogger } from "../../shared/logger";
+
+const logger = createActivityLogger({ nodeType: "Switch" });
 
 // Re-export the Zod-inferred type for backwards compatibility
 export type { SwitchNodeConfig };
@@ -25,18 +28,20 @@ export async function executeSwitchNode(config: unknown, context: JsonObject): P
     // Interpolate and evaluate the expression
     const expressionValue = interpolateVariables(validatedConfig.expression, context);
 
-    console.log(
-        `[Switch] Evaluating expression: ${validatedConfig.expression} → ${JSON.stringify(expressionValue)}`
-    );
+    logger.debug("Evaluating switch expression", {
+        expression: validatedConfig.expression,
+        evaluatedValue: JSON.stringify(expressionValue)
+    });
 
     // Try to match against each case
     for (const switchCase of validatedConfig.cases) {
         const caseValue = interpolateVariables(switchCase.value, context);
 
         if (matchesCase(expressionValue, caseValue)) {
-            console.log(
-                `[Switch] Matched case: ${switchCase.value} (${switchCase.label || "unlabeled"})`
-            );
+            logger.info("Switch matched case", {
+                matchedCase: switchCase.value,
+                label: switchCase.label || "unlabeled"
+            });
 
             return {
                 matchedCase: switchCase.value,
@@ -48,7 +53,7 @@ export async function executeSwitchNode(config: unknown, context: JsonObject): P
 
     // No match found - use default case
     const defaultCase = validatedConfig.defaultCase || null;
-    console.log(`[Switch] No match found, using default: ${defaultCase}`);
+    logger.info("Switch using default case", { defaultCase });
 
     return {
         matchedCase: defaultCase,

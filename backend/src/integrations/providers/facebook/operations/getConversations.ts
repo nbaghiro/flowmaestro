@@ -3,6 +3,9 @@ import { toJSONSchema } from "../../../core/schema-utils";
 import { FacebookClient } from "../client/FacebookClient";
 import type { MessengerConversationResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
+import { getLogger } from "../../../../core/logging";
+
+const logger = getLogger();
 
 /**
  * Get Conversations operation schema
@@ -37,7 +40,7 @@ export const getConversationsOperation: OperationDefinition = (() => {
             timeout: 15000
         };
     } catch (error) {
-        console.error("[Messenger] Failed to create getConversationsOperation:", error);
+        logger.error({ component: "Messenger", err: error }, "Failed to create getConversationsOperation");
         throw new Error(
             `Failed to create getConversations operation: ${error instanceof Error ? error.message : "Unknown error"}`
         );

@@ -3,6 +3,9 @@ import { toJSONSchema } from "../../../core/schema-utils";
 import { LinkedInClient } from "../client/LinkedInClient";
 import type { LinkedInUserProfile } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
+import { getLogger } from "../../../../core/logging";
+
+const logger = getLogger();
 
 /**
  * Get Profile operation schema (no parameters needed)
@@ -28,7 +31,7 @@ export const getProfileOperation: OperationDefinition = (() => {
             timeout: 15000
         };
     } catch (error) {
-        console.error("[LinkedIn] Failed to create getProfileOperation:", error);
+        logger.error({ component: "LinkedIn", err: error }, "Failed to create getProfileOperation");
         throw new Error(
             `Failed to create getProfile operation: ${error instanceof Error ? error.message : "Unknown error"}`
         );

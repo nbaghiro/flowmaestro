@@ -4,6 +4,9 @@ import { TwitterClient } from "../client/TwitterClient";
 import { UsernameSchema } from "../schemas";
 import type { XAPIResponse, XUser } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
+import { getLogger } from "../../../../core/logging";
+
+const logger = getLogger();
 
 /**
  * Get User operation schema
@@ -33,7 +36,7 @@ export const getUserOperation: OperationDefinition = (() => {
             timeout: 10000
         };
     } catch (error) {
-        console.error("[Twitter] Failed to create getUserOperation:", error);
+        logger.error({ component: "Twitter", err: error }, "Failed to create getUserOperation");
         throw new Error(
             `Failed to create getUser operation: ${error instanceof Error ? error.message : "Unknown error"}`
         );

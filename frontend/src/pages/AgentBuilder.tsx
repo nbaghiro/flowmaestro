@@ -23,6 +23,7 @@ import { ConfirmDialog } from "../components/common/ConfirmDialog";
 import { Input } from "../components/common/Input";
 import { Select } from "../components/common/Select";
 import { Textarea } from "../components/common/Textarea";
+import { logger } from "../lib/logger";
 import { cn } from "../lib/utils";
 import { useAgentStore } from "../stores/agentStore";
 import { useConnectionStore } from "../stores/connectionStore";
@@ -367,7 +368,7 @@ export function AgentBuilder() {
                 setTools(updatedAgent.available_tools || []);
             }
         } catch (error) {
-            console.error("Failed to remove tool:", error);
+            logger.error("Failed to remove tool", error);
             setError(error instanceof Error ? error.message : "Failed to remove tool");
         } finally {
             setRemovingToolId(null);
@@ -399,7 +400,7 @@ export function AgentBuilder() {
                 setTools(updatedAgent.available_tools || []);
             }
         } catch (error) {
-            console.error("Failed to add workflows:", error);
+            logger.error("Failed to add workflows", error);
             setError(error instanceof Error ? error.message : "Failed to add workflows");
         }
     };
@@ -429,7 +430,7 @@ export function AgentBuilder() {
                 setTools(updatedAgent.available_tools || []);
             }
         } catch (error) {
-            console.error("Failed to add custom MCP:", error);
+            logger.error("Failed to add custom MCP", error);
             setError(error instanceof Error ? error.message : "Failed to add custom MCP");
         }
     };
@@ -453,11 +454,11 @@ export function AgentBuilder() {
                 // If tool already exists, skip it silently
                 if (errorMessage.includes("already exists")) {
                     results.skipped.push(tool.name);
-                    console.log(`Skipped tool "${tool.name}" (already exists)`);
+                    logger.debug("Skipped tool (already exists)", { toolName: tool.name });
                 } else {
                     // Other errors are actual failures
                     results.failed.push(tool.name);
-                    console.error(`Failed to add tool "${tool.name}":`, error);
+                    logger.error("Failed to add tool", error, { toolName: tool.name });
                 }
             }
         }
@@ -470,13 +471,13 @@ export function AgentBuilder() {
 
         // Show appropriate message based on results
         if (results.added.length > 0) {
-            console.log(`Successfully added ${results.added.length} tool(s)`);
+            logger.info("Successfully added tools", { count: results.added.length });
             if (results.skipped.length > 0) {
-                console.log(`Skipped ${results.skipped.length} tool(s) (already exist)`);
+                logger.debug("Skipped tools (already exist)", { count: results.skipped.length });
             }
         } else if (results.skipped.length > 0) {
             // All tools were skipped
-            console.log("All selected tools already exist");
+            logger.debug("All selected tools already exist");
         }
 
         // Only throw error if some tools actually failed (not just duplicates)
@@ -517,7 +518,7 @@ export function AgentBuilder() {
                 isCreatingThreadRef.current = false;
             }, 100);
         } catch (error) {
-            console.error("Failed to create new thread:", error);
+            logger.error("Failed to create new thread", error);
             setError(error instanceof Error ? error.message : "Failed to create new thread");
             isCreatingThreadRef.current = false;
         }
@@ -527,7 +528,7 @@ export function AgentBuilder() {
         try {
             await archiveThread(threadId);
         } catch (error) {
-            console.error("Failed to archive thread:", error);
+            logger.error("Failed to archive thread", error);
             setError(error instanceof Error ? error.message : "Failed to archive thread");
         }
     };
@@ -539,7 +540,7 @@ export function AgentBuilder() {
             await deleteThread(threadToDelete.id);
             setThreadToDelete(null);
         } catch (error) {
-            console.error("Failed to delete thread:", error);
+            logger.error("Failed to delete thread", error);
             setError(error instanceof Error ? error.message : "Failed to delete thread");
         }
     };
@@ -704,10 +705,7 @@ export function AgentBuilder() {
                                                         model: connModel
                                                     });
                                                 } catch (err) {
-                                                    console.error(
-                                                        "Failed to update agent model:",
-                                                        err
-                                                    );
+                                                    logger.error("Failed to update agent model", err);
                                                 }
                                             }
                                         }}

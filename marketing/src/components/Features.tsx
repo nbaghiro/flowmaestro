@@ -59,10 +59,10 @@ const FeatureCard: React.FC<{ feature: Feature; index: number }> = ({ feature, i
             transition={{ duration: 0.4, delay: index * 0.05 }}
             className="relative group"
         >
-            <div className="relative p-8 rounded-lg border border-gray-800 hover:border-gray-700 transition-all duration-300 h-full">
+            <div className="relative p-8 rounded-lg border border-stroke hover:border-stroke-hover transition-all duration-300 h-full bg-background-surface">
                 {/* Animated Icon Container */}
                 <motion.div
-                    className="inline-flex p-4 rounded-2xl bg-gray-900/50 border border-gray-800 mb-6"
+                    className="inline-flex p-4 rounded-2xl bg-background-elevated border border-stroke mb-6"
                     whileHover={{ scale: 1.1, rotate: [0, -5, 5, 0] }}
                     transition={{ duration: 0.3 }}
                 >
@@ -94,7 +94,7 @@ export const Features: React.FC = () => {
     const isInView = useInView(ref, { once: true, margin: "-100px" });
 
     return (
-        <section ref={ref} className="relative py-24 px-4 sm:px-6 lg:px-8 bg-black">
+        <section ref={ref} className="relative py-24 px-4 sm:px-6 lg:px-8 bg-background">
             <div className="max-w-7xl mx-auto">
                 {/* Section Header */}
                 <motion.div

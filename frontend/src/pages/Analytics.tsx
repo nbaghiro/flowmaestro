@@ -7,6 +7,7 @@ import {
     type AnalyticsOverview,
     type ModelAnalytics
 } from "../lib/api";
+import { logger } from "../lib/logger";
 
 export function Analytics() {
     const [overview, setOverview] = useState<AnalyticsOverview | null>(null);
@@ -33,7 +34,7 @@ export function Analytics() {
                 setModels(modelsRes.data);
             }
         } catch (error) {
-            console.error("Failed to load analytics:", error);
+            logger.error("Failed to load analytics", error);
         } finally {
             setIsLoading(false);
         }

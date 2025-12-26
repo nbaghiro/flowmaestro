@@ -1,5 +1,8 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
+import { createServiceLogger } from "../../../core/logging";
 import { WebhookService, WebhookRequestData } from "../../../temporal/services/webhook";
+
+const logger = createServiceLogger("WebhookReceiver");
 
 /**
  * Webhook receiver endpoint
@@ -45,7 +48,7 @@ export async function webhookReceiverRoute(fastify: FastifyInstance) {
                     error: result.error
                 });
             } catch (error) {
-                console.error("Webhook processing error:", error);
+                logger.error({ triggerId, error }, "Webhook processing error");
                 return reply.status(500).send({
                     success: false,
                     error: "Internal server error"

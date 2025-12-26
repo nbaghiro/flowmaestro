@@ -6,6 +6,7 @@ import { Badge } from "../components/common/Badge";
 import { Button } from "../components/common/Button";
 import { PageHeader } from "../components/common/PageHeader";
 import { LoadingState } from "../components/common/Spinner";
+import { logger } from "../lib/logger";
 import { useAgentStore } from "../stores/agentStore";
 
 export function Agents() {
@@ -44,7 +45,7 @@ export function Agents() {
             await fetchAgents();
             setAgentToDelete(null);
         } catch (error) {
-            console.error("Failed to delete agent:", error);
+            logger.error("Failed to delete agent", error);
         } finally {
             setIsDeleting(false);
         }

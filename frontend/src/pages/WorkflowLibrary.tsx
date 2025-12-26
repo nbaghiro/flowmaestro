@@ -12,6 +12,7 @@ import {
     updateWorkflow,
     type WorkflowDefinition
 } from "../lib/api";
+import { logger } from "../lib/logger";
 import { convertToReactFlowFormat } from "../lib/workflowLayout";
 
 interface Workflow {
@@ -41,7 +42,7 @@ export function WorkflowLibrary() {
                 setWorkflows(response.data.items);
             }
         } catch (error) {
-            console.error("Failed to load workflows:", error);
+            logger.error("Failed to load workflows", error);
         } finally {
             setIsLoading(false);
         }

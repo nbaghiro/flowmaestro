@@ -7,6 +7,7 @@ import { X, Calendar, Webhook, Play } from "lucide-react";
 import { useState } from "react";
 import type { TriggerType, CreateTriggerInput } from "@flowmaestro/shared";
 import { createTrigger } from "../../lib/api";
+import { logger } from "../../lib/logger";
 import { Alert } from "../common/Alert";
 import { Button } from "../common/Button";
 import { Input } from "../common/Input";
@@ -97,7 +98,7 @@ export function CreateTriggerDialog({ workflowId, onClose, onSuccess }: CreateTr
             await createTrigger(input);
             onSuccess();
         } catch (err) {
-            console.error("Failed to create trigger:", err);
+            logger.error("Failed to create trigger", err);
             setError(err instanceof Error ? err.message : "Failed to create trigger");
         } finally {
             setLoading(false);

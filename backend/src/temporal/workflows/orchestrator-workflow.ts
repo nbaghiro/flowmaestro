@@ -2,6 +2,7 @@ import { proxyActivities } from "@temporalio/workflow";
 import type { WorkflowDefinition, WorkflowNode, JsonObject } from "@flowmaestro/shared";
 import { SpanType } from "../../core/tracing/span-types";
 import type * as activities from "../activities";
+import { createWorkflowLogger } from "../shared/workflow-logger";
 
 // Re-export WorkflowDefinition for use by other workflow files
 export type { WorkflowDefinition, WorkflowNode };
@@ -58,6 +59,13 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
     const { executionId, workflowDefinition, inputs = {}, userId } = input;
     const { nodes, edges } = workflowDefinition;
 
+    // Create workflow logger
+    const logger = createWorkflowLogger({
+        executionId,
+        workflowName: workflowDefinition.name || "Unnamed Workflow",
+        userId
+    });
+
     // Get workflow start time
     const workflowStartTime = Date.now();
 
@@ -83,9 +91,7 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
 
     // Convert nodes Record to entries for processing
     const nodeEntries = Object.entries(nodes);
-    console.log(
-        `[Orchestrator] Starting workflow with ${nodeEntries.length} nodes, ${edges.length} edges`
-    );
+    logger.info("Starting workflow", { nodeCount: nodeEntries.length, edgeCount: edges.length });
 
     // Validate inputs if stateSchema is defined
     const inputValidation = await validateInputsActivity({
@@ -95,7 +101,7 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
 
     if (!inputValidation.success) {
         const errorMessage = inputValidation.error?.message || "Input validation failed";
-        console.error(`[Orchestrator] Input validation failed: ${errorMessage}`);
+        logger.error("Input validation failed", new Error(errorMessage));
 
         await emitExecutionFailed({
             executionId,
@@ -150,7 +156,7 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
         ([nodeId, node]) => node.type === "input" || (incomingEdges.get(nodeId)?.length || 0) === 0
     );
 
-    console.log(`[Orchestrator] Start nodes: ${startNodes.map(([id]) => id).join(", ")}`);
+    logger.info("Identified start nodes", { startNodeIds: startNodes.map(([id]) => id) });
 
     // Execution context - stores all node outputs and includes userId for authorization
     const context: JsonObject = { ...inputs };
@@ -175,14 +181,15 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
         if (incomingPaths.length > 1) {
             // Don't mark converging nodes as skipped
             // They will handle their own execution based on dependency checks
-            console.log(
-                `[Orchestrator] Not marking ${nodeId} as skipped (converging node with ${incomingPaths.length} incoming paths)`
-            );
+            logger.info("Not marking node as skipped (converging node)", {
+                nodeId,
+                incomingPathCount: incomingPaths.length
+            });
             return;
         }
 
         skipped.add(nodeId);
-        console.log(`[Orchestrator] Marking ${nodeId} as skipped`);
+        logger.info("Marking node as skipped", { nodeId });
 
         // Recursively mark all dependent nodes as skipped
         const dependents = outgoingEdges.get(nodeId) || [];
@@ -219,12 +226,12 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
             dependencies.length > 0 &&
             dependencies.every((depId) => errors[depId] || skipped.has(depId))
         ) {
-            console.log(`[Orchestrator] Skipping ${nodeId} - all dependencies failed or skipped`);
+            logger.info("Skipping node - all dependencies failed or skipped", { nodeId });
             errors[nodeId] = "All dependencies failed or skipped";
             return;
         }
 
-        console.log(`[Orchestrator] Executing node ${nodeId} (${node.type})`);
+        logger.info("Executing node", { nodeId, nodeType: node.type });
 
         // Create NODE_EXECUTION span for this node
         const nodeContext = await createSpan({
@@ -268,15 +275,11 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
                     const inputName = node.config.inputName;
                     const inputValue = inputs[inputName];
                     context[inputName] = inputValue;
-                    console.log(
-                        `[Orchestrator] Input node ${nodeId}: ${inputName} = ${JSON.stringify(inputValue)}`
-                    );
+                    logger.info("Input node: setting named input", { nodeId, inputName });
                 } else {
                     // No input name specified - this is the workflow entry point, merge all inputs
                     Object.assign(context, inputs);
-                    console.log(
-                        `[Orchestrator] Input node ${nodeId}: merged all inputs into context`
-                    );
+                    logger.info("Input node: merged all inputs into context", { nodeId });
                 }
             } else if (node.type === "conditional") {
                 // Handle conditional nodes in the orchestrator (not via activity)
@@ -304,9 +307,14 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
                     leftInterpolated.toLowerCase() === rightInterpolated.toLowerCase();
                 const branch = conditionMet ? "true" : "false";
 
-                console.log(
-                    `[Orchestrator] Conditional: "${leftInterpolated}" ${operator} "${rightInterpolated}" = ${conditionMet} (branch: ${branch})`
-                );
+                logger.info("Conditional evaluated", {
+                    nodeId,
+                    leftValue: leftInterpolated,
+                    operator,
+                    rightValue: rightInterpolated,
+                    conditionMet,
+                    branch
+                });
 
                 // Store result in context
                 context.conditionMet = conditionMet;
@@ -330,9 +338,10 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
 
                 // Merge result into context
                 Object.assign(context, result);
-                console.log(
-                    `[Orchestrator] Node ${nodeId} completed, added keys: ${Object.keys(result).join(", ")}`
-                );
+                logger.info("Node completed", {
+                    nodeId,
+                    addedKeys: Object.keys(result)
+                });
             }
 
             // Emit node completed event
@@ -377,16 +386,19 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
             if (node.type === "conditional") {
                 // Get the branch result from context
                 const branch = context.branch as string | undefined;
-                console.log(`[Orchestrator] Conditional node ${nodeId} branch: ${branch}`);
+                logger.info("Conditional node branching", { nodeId, branch });
 
                 // PHASE 1: Mark all skipped branches FIRST (synchronous)
                 // This prevents race condition where converging nodes try to pull skipped dependencies
                 for (const edge of dependentEdges) {
                     const shouldExecute = !edge.sourceHandle || edge.sourceHandle === branch;
                     if (!shouldExecute) {
-                        console.log(
-                            `[Orchestrator] Marking ${edge.sourceHandle} branch to ${edge.target} as skipped (branch is ${branch})`
-                        );
+                        logger.info("Marking branch as skipped", {
+                            nodeId,
+                            sourceHandle: edge.sourceHandle,
+                            targetNode: edge.target,
+                            activeBranch: branch
+                        });
                         markNodeAsSkipped(edge.target);
                     }
                 }
@@ -395,9 +407,11 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
                 for (const edge of dependentEdges) {
                     const shouldExecute = !edge.sourceHandle || edge.sourceHandle === branch;
                     if (shouldExecute) {
-                        console.log(
-                            `[Orchestrator] Following ${edge.sourceHandle || "unconditional"} branch to ${edge.target}`
-                        );
+                        logger.info("Following branch", {
+                            nodeId,
+                            sourceHandle: edge.sourceHandle || "unconditional",
+                            targetNode: edge.target
+                        });
                         await executeNodeAndDependents(edge.target);
                     }
                 }
@@ -409,7 +423,7 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
             }
         } catch (error: unknown) {
             const errorMessage = error instanceof Error ? error.message : "Unknown error";
-            console.error(`[Orchestrator] Node ${nodeId} failed: ${errorMessage}`);
+            logger.error("Node failed", error instanceof Error ? error : new Error(errorMessage), { nodeId });
             errors[nodeId] = errorMessage;
 
             // End NODE_EXECUTION span with error
@@ -473,7 +487,7 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
             };
         }
 
-        console.log("[Orchestrator] Workflow completed successfully");
+        logger.info("Workflow completed successfully");
         const workflowDuration = Date.now() - workflowStartTime;
 
         // Validate outputs if stateSchema is defined
@@ -484,7 +498,7 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
 
         if (!outputValidation.success) {
             const errorMessage = outputValidation.error?.message || "Output validation failed";
-            console.error(`[Orchestrator] Output validation failed: ${errorMessage}`);
+            logger.error("Output validation failed", new Error(errorMessage));
 
             await emitExecutionFailed({
                 executionId,
@@ -546,7 +560,7 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
         };
     } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
-        console.error(`[Orchestrator] Workflow failed: ${errorMessage}`);
+        logger.error("Workflow failed", error instanceof Error ? error : new Error(errorMessage));
 
         // Emit execution failed event
         await emitExecutionFailed({

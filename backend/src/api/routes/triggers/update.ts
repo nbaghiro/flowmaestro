@@ -1,8 +1,11 @@
 import { FastifyInstance } from "fastify";
+import { createServiceLogger } from "../../../core/logging";
 import { ScheduleTriggerConfig } from "../../../storage/models/Trigger";
 import { TriggerRepository } from "../../../storage/repositories/TriggerRepository";
 import { SchedulerService } from "../../../temporal/services/scheduler";
 import { authMiddleware } from "../../middleware";
+
+const logger = createServiceLogger("TriggerRoutes");
 
 export async function updateTriggerRoute(fastify: FastifyInstance) {
     fastify.put(
@@ -58,7 +61,7 @@ export async function updateTriggerRoute(fastify: FastifyInstance) {
                     data: trigger
                 });
             } catch (error) {
-                console.error("Error updating trigger:", error);
+                logger.error({ triggerId: id, error }, "Error updating trigger");
                 return reply.status(500).send({
                     success: false,
                     error: String(error)

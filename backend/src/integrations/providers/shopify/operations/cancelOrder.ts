@@ -3,6 +3,9 @@ import { ShopifyClient } from "../client/ShopifyClient";
 import { CancelOrderSchema, type CancelOrderParams } from "../schemas";
 import type { ShopifyOrderResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
+import { getLogger } from "../../../../core/logging";
+
+const logger = getLogger();
 
 /**
  * Cancel Order operation definition
@@ -21,7 +24,7 @@ export const cancelOrderOperation: OperationDefinition = (() => {
             timeout: 15000
         };
     } catch (error) {
-        console.error("[Shopify] Failed to create cancelOrderOperation:", error);
+        logger.error({ component: "Shopify", err: error }, "Failed to create cancelOrderOperation");
         throw new Error(
             `Failed to create cancelOrder operation: ${error instanceof Error ? error.message : "Unknown error"}`
         );

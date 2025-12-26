@@ -1,5 +1,8 @@
 import { isFetchError } from "../../../../core/utils/fetch-client";
 import { BaseAPIClient, BaseAPIClientConfig } from "../../../core/BaseAPIClient";
+import { getLogger } from "../../../../core/logging";
+
+const logger = getLogger();
 import {
     META_GRAPH_API_BASE_URL,
     isMetaGraphAPIError,
@@ -466,7 +469,7 @@ export class WhatsAppClient extends BaseAPIClient {
 
             return null;
         } catch (error) {
-            console.error("[WhatsAppClient] Failed to get connected WABA ID:", error);
+            logger.error({ component: "WhatsAppClient", err: error }, "Failed to get connected WABA ID");
             return null;
         }
     }

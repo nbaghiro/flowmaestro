@@ -15,6 +15,7 @@ import type { SerializedThread } from "../../services/agents/ThreadManager";
 import type { Tool } from "../../storage/models/Agent";
 import type { ThreadMessage, ToolCall } from "../../storage/models/AgentExecution";
 import type * as activities from "../activities";
+import { createWorkflowLogger } from "../shared/workflow-logger";
 
 // Proxy activities
 const {
@@ -161,9 +162,14 @@ export async function agentOrchestratorWorkflow(
         iterations = 0
     } = input;
 
-    console.log(
-        `[Agent] Starting orchestrator for execution ${executionId} in thread ${threadId}, iteration ${iterations}`
-    );
+    // Create workflow logger
+    const logger = createWorkflowLogger({
+        executionId,
+        workflowName: "AgentOrchestrator",
+        userId
+    });
+
+    logger.info("Starting agent orchestrator", { agentId, threadId, iteration: iterations });
 
     // Load agent configuration
     const agent = await getAgentConfig({ agentId, userId });
@@ -277,7 +283,7 @@ export async function agentOrchestratorWorkflow(
     // Set up signal handler for user messages
     let pendingUserMessage: string | null = null;
     setHandler(userMessageSignal, (message: string) => {
-        console.log(`[Agent] Received user message for execution ${executionId}`);
+        logger.info("Received user message via signal");
         pendingUserMessage = message;
     });
 
@@ -287,7 +293,7 @@ export async function agentOrchestratorWorkflow(
 
     // Main agent loop (ReAct pattern)
     while (currentIterations < maxIterations) {
-        console.log(`[Agent] Iteration ${currentIterations}/${maxIterations}`);
+        logger.info("Agent iteration", { iteration: currentIterations, maxIterations });
 
         // Create AGENT_ITERATION span for this iteration
         const iterationContext = await createSpan({
@@ -309,7 +315,7 @@ export async function agentOrchestratorWorkflow(
 
         // Continue-as-new every 50 iterations to prevent history bloat
         if (currentIterations > 0 && currentIterations % CONTINUE_AS_NEW_THRESHOLD === 0) {
-            console.log(`[Agent] Continue-as-new at iteration ${currentIterations}`);
+            logger.info("Continue-as-new triggered", { iteration: currentIterations });
 
             // Save incremental messages before continue-as-new
             const unsavedMessages = getUnsavedMessages(messageState);
@@ -411,11 +417,11 @@ export async function agentOrchestratorWorkflow(
                     model: agent.model
                 });
             } catch (error) {
-                console.error("[Workflow] Failed to update thread tokens", error);
+                logger.error("Failed to update thread tokens", error instanceof Error ? error : new Error(String(error)));
             }
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : "Unknown LLM error";
-            console.error(`[Agent] LLM call failed: ${errorMessage}`);
+            logger.error("LLM call failed", error instanceof Error ? error : new Error(errorMessage));
 
             // End MODEL_GENERATION span with error
             await endSpan({
@@ -521,7 +527,7 @@ export async function agentOrchestratorWorkflow(
         if (!hasToolCalls) {
             // Check if agent needs user input
             if (llmResponse.requiresUserInput) {
-                console.log("[Agent] Waiting for user input");
+                logger.info("Waiting for user input");
 
                 // Wait for user message signal (5 minute timeout)
                 const receivedInput = await condition(() => pendingUserMessage !== null, 300000);
@@ -674,7 +680,7 @@ export async function agentOrchestratorWorkflow(
                 });
             }
 
-            console.log("[Agent] Agent completed task");
+            logger.info("Agent completed task");
 
             await emitAgentExecutionCompleted({
                 executionId,
@@ -721,7 +727,7 @@ export async function agentOrchestratorWorkflow(
 
         // Execute tool calls
         for (const toolCall of llmResponse.tool_calls!) {
-            console.log(`[Agent] Executing tool: ${toolCall.name}`);
+            logger.info("Executing tool", { toolName: toolCall.name });
 
             await emitAgentToolCallStarted({
                 executionId,
@@ -786,7 +792,7 @@ export async function agentOrchestratorWorkflow(
                 });
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : "Unknown tool error";
-                console.error(`[Agent] Tool ${toolCall.name} failed: ${errorMessage}`);
+                logger.error("Tool execution failed", error instanceof Error ? error : new Error(errorMessage), { toolName: toolCall.name });
 
                 // Add error result to thread messages
                 const toolMessage: ThreadMessage = {
@@ -847,7 +853,7 @@ export async function agentOrchestratorWorkflow(
 
     // Max iterations reached
     const maxIterError = `Max iterations (${maxIterations}) reached`;
-    console.log(`[Agent] ${maxIterError}`);
+    logger.info("Max iterations reached", { maxIterations });
 
     // Save any unsaved messages
     const unsavedMessages = getUnsavedMessages(messageState);

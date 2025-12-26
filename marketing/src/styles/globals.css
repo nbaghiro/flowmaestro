@@ -4,11 +4,11 @@
 
 @layer base {
     * {
-        @apply border-white/10;
+        border-color: #3f3f46;
     }
 
     body {
-        @apply bg-black text-white antialiased;
+        @apply bg-background text-gray-50 antialiased;
         font-feature-settings: "rlig" 1, "calt" 1;
     }
 
@@ -20,19 +20,19 @@
 @layer utilities {
     .grid-pattern {
         background-image: linear-gradient(
-                rgba(255, 255, 255, 0.05) 1px,
+                rgba(63, 63, 70, 0.5) 1px,
                 transparent 1px
             ),
             linear-gradient(
                 90deg,
-                rgba(255, 255, 255, 0.05) 1px,
+                rgba(63, 63, 70, 0.5) 1px,
                 transparent 1px
             );
         background-size: 50px 50px;
     }
 
     .text-gradient {
-        @apply bg-gradient-to-r from-white via-gray-200 to-gray-400 bg-clip-text text-transparent;
+        @apply bg-gradient-to-r from-gray-50 via-gray-200 to-gray-400 bg-clip-text text-transparent;
     }
 
     /* Infinite scroll animations for integration logos */

@@ -3,6 +3,9 @@ import { ShopifyClient } from "../client/ShopifyClient";
 import { ListWebhooksSchema, type ListWebhooksParams } from "../schemas";
 import type { ShopifyWebhooksResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
+import { getLogger } from "../../../../core/logging";
+
+const logger = getLogger();
 
 /**
  * List Webhooks operation definition
@@ -20,7 +23,7 @@ export const listWebhooksOperation: OperationDefinition = (() => {
             timeout: 15000
         };
     } catch (error) {
-        console.error("[Shopify] Failed to create listWebhooksOperation:", error);
+        logger.error({ component: "Shopify", err: error }, "Failed to create listWebhooksOperation");
         throw new Error(
             `Failed to create listWebhooks operation: ${error instanceof Error ? error.message : "Unknown error"}`
         );

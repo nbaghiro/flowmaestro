@@ -1,6 +1,9 @@
 import { zodToJsonSchema } from "zod-to-json-schema";
 import type { JSONSchema } from "./types";
 import type { z } from "zod";
+import { getLogger } from "../../core/logging";
+
+const logger = getLogger();
 
 /**
  * Convert Zod schema to JSON Schema
@@ -21,7 +24,10 @@ export function toJSONSchema(zodSchema: z.ZodSchema): JSONSchema {
 
         return rest as JSONSchema;
     } catch (error) {
-        console.error("[SchemaUtils] Failed to convert Zod schema to JSON Schema:", error);
+        logger.error(
+            { component: "SchemaUtils", err: error },
+            "Failed to convert Zod schema to JSON Schema"
+        );
         return {
             type: "object",
             properties: {},

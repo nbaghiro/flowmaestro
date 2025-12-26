@@ -1,5 +1,8 @@
 import type { JsonObject, JsonValue } from "@flowmaestro/shared";
 import { interpolateVariables } from "../../shared/utils";
+import { createActivityLogger } from "../../shared/logger";
+
+const logger = createActivityLogger({ nodeType: "Variable" });
 
 export interface VariableNodeConfig {
     operation: "set" | "get" | "delete";
@@ -23,9 +26,11 @@ export async function executeVariableNode(
     context: JsonObject,
     globalStore?: Map<string, JsonValue>
 ): Promise<JsonObject> {
-    console.log(
-        `[Variable] Operation: ${config.operation} on '${config.variableName}' (${config.scope})`
-    );
+    logger.info("Variable operation", {
+        operation: config.operation,
+        variableName: config.variableName,
+        scope: config.scope
+    });
 
     const store = config.scope === "global" ? globalStore : context;
     if (!store) {
@@ -62,9 +67,7 @@ function setVariable(
         store[config.variableName] = value;
     }
 
-    console.log(
-        `[Variable] Set '${config.variableName}' = ${JSON.stringify(value).substring(0, 100)}`
-    );
+    logger.debug("Variable set", { variableName: config.variableName });
 
     return { [config.variableName]: value };
 }
@@ -73,9 +76,7 @@ function getVariable(config: VariableNodeConfig, store: VariableStore): Variable
     const value =
         store instanceof Map ? store.get(config.variableName) : store[config.variableName];
 
-    console.log(
-        `[Variable] Get '${config.variableName}' = ${JSON.stringify(value).substring(0, 100)}`
-    );
+    logger.debug("Variable get", { variableName: config.variableName, hasValue: value !== undefined });
 
     return { [config.variableName]: value ?? null };
 }
@@ -87,7 +88,7 @@ function deleteVariable(config: VariableNodeConfig, store: VariableStore): Varia
         delete store[config.variableName];
     }
 
-    console.log(`[Variable] Deleted '${config.variableName}'`);
+    logger.debug("Variable deleted", { variableName: config.variableName });
 
     return {};
 }

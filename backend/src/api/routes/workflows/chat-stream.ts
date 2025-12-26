@@ -1,6 +1,9 @@
 import { EventEmitter } from "events";
 import { FastifyRequest, FastifyReply } from "fastify";
 import { config } from "../../../core/config";
+import { createServiceLogger } from "../../../core/logging";
+
+const logger = createServiceLogger("ChatStream");
 
 interface StreamParams {
     executionId: string;
@@ -51,7 +54,7 @@ export async function chatStreamHandler(
 
         // Debug: Log if write buffer is full (indicates backpressure)
         if (!written && event === "token") {
-            console.warn("[SSE] Write buffer full - backpressure detected");
+            logger.warn({ executionId, event }, "Write buffer full - backpressure detected");
         }
     };
 

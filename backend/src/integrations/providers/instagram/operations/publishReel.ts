@@ -3,6 +3,9 @@ import { toJSONSchema } from "../../../core/schema-utils";
 import { InstagramClient } from "../client/InstagramClient";
 import type { InstagramPublishResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
+import { getLogger } from "../../../../core/logging";
+
+const logger = getLogger();
 
 /**
  * Publish Reel operation schema
@@ -38,7 +41,7 @@ export const publishReelOperation: OperationDefinition = (() => {
             timeout: 180000 // 3 minutes for video processing
         };
     } catch (error) {
-        console.error("[Instagram] Failed to create publishReelOperation:", error);
+        logger.error({ component: "Instagram", err: error }, "Failed to create publishReelOperation");
         throw new Error(
             `Failed to create publishReel operation: ${error instanceof Error ? error.message : "Unknown error"}`
         );

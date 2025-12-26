@@ -1,11 +1,14 @@
 import { ConnectionRepository } from "../storage/repositories/ConnectionRepository";
 import { executeLLMNode, type LLMExecutionCallbacks } from "../temporal/executors/ai/llm";
+import { getLogger } from "../core/logging";
 import type {
     WorkflowContext,
     ChatResponse,
     ActionType,
     ChatMessage
 } from "../api/schemas/chat-schemas";
+
+const logger = getLogger();
 
 export interface StreamCallbacks {
     onToken?: (token: string) => void;
@@ -465,7 +468,10 @@ Please suggest nodes to add based on the user's request.`;
                 };
             }
         } catch (error) {
-            console.error("Failed to parse LLM response as JSON:", error);
+            logger.error(
+                { component: "WorkflowChatService", err: error },
+                "Failed to parse LLM response as JSON"
+            );
         }
 
         // Fallback to text-only response
@@ -560,7 +566,10 @@ Please suggest modifications based on the user's request.`;
                 };
             }
         } catch (error) {
-            console.error("Failed to parse LLM response as JSON:", error);
+            logger.error(
+                { component: "WorkflowChatService", err: error },
+                "Failed to parse LLM response as JSON"
+            );
         }
 
         // Fallback to text-only response
@@ -643,7 +652,10 @@ Please identify which nodes should be removed based on the user's request.`;
                 };
             }
         } catch (error) {
-            console.error("Failed to parse LLM response as JSON:", error);
+            logger.error(
+                { component: "WorkflowChatService", err: error },
+                "Failed to parse LLM response as JSON"
+            );
         }
 
         // Fallback to text-only response

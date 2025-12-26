@@ -4,6 +4,9 @@ import { TwitterClient } from "../client/TwitterClient";
 import { TweetTextSchema, TweetIdSchema } from "../schemas";
 import type { CreateTweetResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
+import { getLogger } from "../../../../core/logging";
+
+const logger = getLogger();
 
 /**
  * Reply to Tweet operation schema
@@ -31,7 +34,7 @@ export const replyToTweetOperation: OperationDefinition = (() => {
             timeout: 15000
         };
     } catch (error) {
-        console.error("[Twitter] Failed to create replyToTweetOperation:", error);
+        logger.error({ component: "Twitter", err: error }, "Failed to create replyToTweetOperation");
         throw new Error(
             `Failed to create replyToTweet operation: ${error instanceof Error ? error.message : "Unknown error"}`
         );

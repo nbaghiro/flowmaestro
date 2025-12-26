@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { logger } from "../lib/logger";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
@@ -62,7 +63,7 @@ export function useOAuth() {
                 setProviders(data.data);
             }
         } catch (error) {
-            console.error("Failed to fetch OAuth providers:", error);
+            logger.error("Failed to fetch OAuth providers", error);
         }
     };
 

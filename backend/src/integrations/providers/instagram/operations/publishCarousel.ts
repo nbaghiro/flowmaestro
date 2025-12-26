@@ -3,6 +3,9 @@ import { toJSONSchema } from "../../../core/schema-utils";
 import { InstagramClient } from "../client/InstagramClient";
 import type { InstagramPublishResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
+import { getLogger } from "../../../../core/logging";
+
+const logger = getLogger();
 
 /**
  * Carousel media item schema
@@ -44,7 +47,7 @@ export const publishCarouselOperation: OperationDefinition = (() => {
             timeout: 180000 // 3 minutes for video processing
         };
     } catch (error) {
-        console.error("[Instagram] Failed to create publishCarouselOperation:", error);
+        logger.error({ component: "Instagram", err: error }, "Failed to create publishCarouselOperation");
         throw new Error(
             `Failed to create publishCarousel operation: ${error instanceof Error ? error.message : "Unknown error"}`
         );

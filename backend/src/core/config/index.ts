@@ -25,6 +25,17 @@ export const config = {
     logLevel: process.env.LOG_LEVEL || "info",
 
     // ==========================================================================
+    // Logging Configuration
+    // ==========================================================================
+    logging: {
+        level: process.env.LOG_LEVEL || "info",
+        serviceName: process.env.SERVICE_NAME || "flowmaestro-api",
+        serviceVersion: process.env.APP_VERSION || "1.0.0",
+        gcpProjectId: process.env.GCP_PROJECT_ID || "",
+        enableCloudLogging: process.env.ENABLE_CLOUD_LOGGING === "true"
+    },
+
+    // ==========================================================================
     // Server Configuration
     // ==========================================================================
     server: {

@@ -7,6 +7,7 @@ import { ConnectionRepository } from "../../../storage/repositories/ConnectionRe
 import { HEARTBEAT_INTERVALS } from "../../shared/config";
 import { ConfigurationError, NotFoundError, ValidationError } from "../../shared/errors";
 import { withHeartbeat } from "../../shared/heartbeat";
+import { activityLogger } from "../../shared/logger";
 import { llmCircuitBreakers, type LLMProvider } from "../../shared/llm-circuit-breakers";
 import { LLMNodeConfigSchema, validateOrThrow, type LLMNodeConfig } from "../../shared/schemas";
 import { interpolateVariables } from "../../shared/utils";
@@ -85,9 +86,10 @@ async function withRetry<T>(fn: () => Promise<T>, context: string): Promise<T> {
 
             // Don't retry if we've exhausted attempts
             if (attempt >= RETRY_CONFIG.maxRetries) {
-                console.error(
-                    `[LLM] ${context} - Max retries (${RETRY_CONFIG.maxRetries}) exceeded`
-                );
+                activityLogger.error("Max retries exceeded", error instanceof Error ? error : new Error(String(error)), {
+                    context,
+                    maxRetries: RETRY_CONFIG.maxRetries
+                });
                 throw error;
             }
 
@@ -102,10 +104,14 @@ async function withRetry<T>(fn: () => Promise<T>, context: string): Promise<T> {
             const errorCode = err.status || err.type || "unknown";
             const errorMessage = typeof err.message === "string" ? err.message : "Unknown error";
 
-            console.warn(
-                `[LLM] ${context} - Retryable error (${errorCode}): ${errorMessage}. ` +
-                    `Retrying in ${delay}ms (attempt ${attempt + 1}/${RETRY_CONFIG.maxRetries})`
-            );
+            activityLogger.warn("Retryable error, retrying", {
+                context,
+                errorCode,
+                errorMessage,
+                delayMs: delay,
+                attempt: attempt + 1,
+                maxRetries: RETRY_CONFIG.maxRetries
+            });
 
             // Wait before retrying
             await new Promise((resolve) => setTimeout(resolve, delay));
@@ -165,7 +171,7 @@ async function getApiKey(
         if (!data.api_key) {
             throw new ConfigurationError("API key not found in connection data", "api_key");
         }
-        console.log(`[LLM] Using connection: ${connection.name} (${connection.id})`);
+        activityLogger.info("Using connection for API key", { connectionName: connection.name, connectionId: connection.id });
         return data.api_key;
     }
 
@@ -178,7 +184,7 @@ async function getApiKey(
             envVarName
         );
     }
-    console.log(`[LLM] Using environment variable: ${envVarName}`);
+    activityLogger.info("Using environment variable for API key", { envVarName });
     return apiKey;
 }
 
@@ -200,9 +206,12 @@ export async function executeLLMNode(
         : undefined;
     const userPrompt = interpolateVariables(validatedConfig.prompt, context);
 
-    console.log(`[LLM] Calling ${validatedConfig.provider}/${validatedConfig.model}`);
-    console.log(`[LLM] Prompt length: ${userPrompt.length} chars`);
-    console.log(`[LLM] Streaming: ${callbacks?.onToken ? "enabled" : "disabled"}`);
+    activityLogger.info("Calling LLM provider", {
+        provider: validatedConfig.provider,
+        model: validatedConfig.model,
+        promptLength: userPrompt.length,
+        streaming: callbacks?.onToken ? "enabled" : "disabled"
+    });
 
     // Use heartbeat wrapper for long-running LLM calls
     const heartbeatInterval = callbacks?.onToken
@@ -321,7 +330,7 @@ async function executeOpenAI(
                 }
             }
 
-            console.log(`[LLM] OpenAI streaming response: ${fullContent.length} chars`);
+            activityLogger.info("OpenAI streaming response completed", { responseLength: fullContent.length });
 
             return {
                 text: fullContent,
@@ -342,7 +351,7 @@ async function executeOpenAI(
         const text = response.choices[0]?.message?.content || "";
         const usage = response.usage;
 
-        console.log(`[LLM] OpenAI response: ${text.length} chars, ${usage?.total_tokens} tokens`);
+        activityLogger.info("OpenAI response completed", { responseLength: text.length, totalTokens: usage?.total_tokens });
 
         return {
             text,
@@ -389,7 +398,7 @@ async function executeAnthropic(
                 }
             }
 
-            console.log(`[LLM] Anthropic streaming response: ${fullContent.length} chars`);
+            activityLogger.info("Anthropic streaming response completed", { responseLength: fullContent.length });
 
             return {
                 text: fullContent,
@@ -410,9 +419,10 @@ async function executeAnthropic(
         const text = response.content[0].type === "text" ? response.content[0].text : "";
         const usage = response.usage;
 
-        console.log(
-            `[LLM] Anthropic response: ${text.length} chars, ${usage.input_tokens + usage.output_tokens} tokens`
-        );
+        activityLogger.info("Anthropic response completed", {
+            responseLength: text.length,
+            totalTokens: usage.input_tokens + usage.output_tokens
+        });
 
         return {
             text,
@@ -459,7 +469,7 @@ async function executeGoogle(
                 callbacks.onToken(delta);
             }
 
-            console.log(`[LLM] Google streaming response: ${fullContent.length} chars`);
+            activityLogger.info("Google streaming response completed", { responseLength: fullContent.length });
 
             return {
                 text: fullContent,
@@ -473,7 +483,7 @@ async function executeGoogle(
         const response = result.response;
         const text = response.text();
 
-        console.log(`[LLM] Google response: ${text.length} chars`);
+        activityLogger.info("Google response completed", { responseLength: text.length });
 
         return {
             text,
@@ -526,7 +536,7 @@ async function executeCohere(
                 }
             }
 
-            console.log(`[LLM] Cohere streaming response: ${fullContent.length} chars`);
+            activityLogger.info("Cohere streaming response completed", { responseLength: fullContent.length });
 
             return {
                 text: fullContent,
@@ -540,7 +550,7 @@ async function executeCohere(
 
         const text = response.text || "";
 
-        console.log(`[LLM] Cohere response: ${text.length} chars`);
+        activityLogger.info("Cohere response completed", { responseLength: text.length });
 
         return {
             text,
@@ -644,7 +654,7 @@ async function executeHuggingFace(
                     }
                 }
 
-                console.log(`[LLM] HuggingFace streaming response: ${fullContent.length} chars`);
+                activityLogger.info("HuggingFace streaming response completed", { responseLength: fullContent.length });
 
                 return {
                     text: fullContent,
@@ -701,7 +711,7 @@ async function executeHuggingFace(
             // OpenAI format: choices[0].message.content
             const text = result.choices?.[0]?.message?.content || "";
 
-            console.log(`[LLM] HuggingFace response: ${text.length} chars`);
+            activityLogger.info("HuggingFace response completed", { responseLength: text.length });
 
             return {
                 text,

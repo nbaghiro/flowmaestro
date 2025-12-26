@@ -4,6 +4,9 @@ import { TwitterClient } from "../client/TwitterClient";
 import { SearchQuerySchema, MaxResultsSchema, PaginationTokenSchema } from "../schemas";
 import type { TweetsResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
+import { getLogger } from "../../../../core/logging";
+
+const logger = getLogger();
 
 /**
  * Search Tweets operation schema
@@ -35,7 +38,7 @@ export const searchTweetsOperation: OperationDefinition = (() => {
             timeout: 15000
         };
     } catch (error) {
-        console.error("[Twitter] Failed to create searchTweetsOperation:", error);
+        logger.error({ component: "Twitter", err: error }, "Failed to create searchTweetsOperation");
         throw new Error(
             `Failed to create searchTweets operation: ${error instanceof Error ? error.message : "Unknown error"}`
         );

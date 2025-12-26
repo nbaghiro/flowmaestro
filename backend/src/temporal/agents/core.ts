@@ -11,6 +11,7 @@ import { AgentExecutionRepository } from "../../storage/repositories/AgentExecut
 import { AgentRepository } from "../../storage/repositories/AgentRepository";
 import { ConnectionRepository } from "../../storage/repositories/ConnectionRepository";
 import { WorkflowRepository } from "../../storage/repositories/WorkflowRepository";
+import { activityLogger } from "../shared/logger";
 import { emitAgentToken } from "./events";
 import { searchThreadMemory as searchThreadMemoryActivity } from "./memory/thread-memory";
 import { injectThreadMemoryTool } from "./memory/thread-memory-tool";
@@ -89,9 +90,11 @@ export async function callLLM(input: CallLLMInput): Promise<LLMResponse> {
             // Use the connection's provider (important for overrides)
             actualProvider = connection.provider as typeof provider;
 
-            console.log(
-                `[callLLM] Connection override detected: ${provider} -> ${actualProvider}, model: ${model}`
-            );
+            activityLogger.info("Connection override detected", {
+                originalProvider: provider,
+                actualProvider,
+                model
+            });
 
             // Extract API key from connection data
             const connectionData = connection.data;
@@ -372,9 +375,6 @@ async function callOpenAI(input: OpenAICallInput): Promise<LLMResponse> {
 
                         if (delta?.content && executionId) {
                             // Emit token for streaming
-                            console.log(
-                                `[LLM Stream] Emitting token for execution ${executionId}: "${delta.content}"`
-                            );
                             await emitAgentToken({ executionId, token: delta.content });
                             fullContent += delta.content;
                         }
@@ -597,10 +597,7 @@ async function callAnthropic(input: AnthropicCallInput): Promise<LLMResponse> {
                     ) {
                         const text = parsed.delta.text;
                         if (text && executionId) {
-                            // ✅ Emit token immediately for streaming
-                            console.log(
-                                `[LLM Stream] Emitting Anthropic token for execution ${executionId}: "${text}"`
-                            );
+                            // Emit token immediately for streaming
                             await emitAgentToken({ executionId, token: text });
                             fullContent += text;
                         }
@@ -638,7 +635,7 @@ async function callAnthropic(input: AnthropicCallInput): Promise<LLMResponse> {
                                 arguments: JSON.parse(currentToolUse.input)
                             });
                         } catch (error) {
-                            console.error("[Anthropic] Failed to parse tool input JSON:", error);
+                            activityLogger.error("Failed to parse Anthropic tool input JSON", error instanceof Error ? error : new Error(String(error)));
                         }
                         currentToolUse = null;
                     }
@@ -1152,7 +1149,7 @@ export async function executeToolCall(input: ExecuteToolCallInput): Promise<Json
 
     if (!validation.success) {
         // Return validation error to LLM (don't throw, let LLM retry)
-        console.warn(`Tool "${toolCall.name}" validation failed:`, validation.error?.message);
+        activityLogger.warn("Tool validation failed", { toolName: toolCall.name, error: validation.error?.message });
 
         return createValidationErrorResponse(toolCall.name, validation);
     }
@@ -1400,7 +1397,7 @@ async function executeSearchThreadMemory(
             }))
         };
     } catch (error) {
-        console.error("Error searching conversation memory:", error);
+        activityLogger.error("Error searching conversation memory", error instanceof Error ? error : new Error(String(error)));
         return {
             success: false,
             error: true,
@@ -1838,7 +1835,7 @@ async function executeMCPToolCall(input: ExecuteMCPToolInput): Promise<JsonObjec
         };
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
-        console.error(`[MCP Tool] Execution failed for ${tool.name}:`, errorMessage);
+        activityLogger.error("MCP tool execution failed", error instanceof Error ? error : new Error(errorMessage), { toolName: tool.name });
         throw new Error(`MCP tool execution failed: ${errorMessage}`);
     }
 }

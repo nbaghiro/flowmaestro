@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { logger } from "../lib/logger";
 
 // Determine API URL - fallback to localhost if not set
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
@@ -26,13 +27,13 @@ export function useMicrosoftAuth() {
         setError(null);
 
         try {
-            console.log("[Microsoft Auth] Redirecting to:", MICROSOFT_AUTH_URL);
+            logger.debug("Microsoft Auth redirecting", { url: MICROSOFT_AUTH_URL });
 
             // Redirect to backend Microsoft OAuth endpoint
             // The backend will redirect to Microsoft, and Microsoft will redirect back to our callback
             window.location.href = MICROSOFT_AUTH_URL;
         } catch (err: unknown) {
-            console.error("[Microsoft Auth] Failed to redirect:", err);
+            logger.error("Microsoft Auth failed to redirect", err);
             setIsLoading(false);
             setError(err instanceof Error ? err.message : "Failed to initiate Microsoft login");
         }

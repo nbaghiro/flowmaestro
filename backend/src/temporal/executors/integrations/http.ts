@@ -3,6 +3,9 @@ import { ProviderError, ValidationError } from "../../shared/errors";
 import { withHeartbeat, getCancellationSignal } from "../../shared/heartbeat";
 import { HTTPNodeConfigSchema, validateOrThrow, type HTTPNodeConfig } from "../../shared/schemas";
 import { interpolateVariables } from "../../shared/utils";
+import { createActivityLogger } from "../../shared/logger";
+
+const logger = createActivityLogger({ nodeType: "HTTP" });
 
 // Re-export the Zod-inferred type for backwards compatibility
 export type { HTTPNodeConfig };
@@ -119,9 +122,12 @@ export async function executeHTTPNode(config: unknown, context: JsonObject): Pro
                     attempt: attempt + 1,
                     maxAttempts: maxRetries + 1
                 });
-                console.log(
-                    `[HTTP] ${method} ${finalUrl} (attempt ${attempt + 1}/${maxRetries + 1})`
-                );
+                logger.info("Sending HTTP request", {
+                    method,
+                    url: finalUrl,
+                    attempt: attempt + 1,
+                    maxAttempts: maxRetries + 1
+                });
 
                 const response = await fetch(finalUrl, {
                     method,
@@ -136,9 +142,11 @@ export async function executeHTTPNode(config: unknown, context: JsonObject): Pro
 
                 const responseTime = Date.now() - startTime;
 
-                console.log(
-                    `[HTTP] Response: ${response.status} ${response.statusText} (${responseTime}ms)`
-                );
+                logger.info("HTTP response received", {
+                    status: response.status,
+                    statusText: response.statusText,
+                    responseTime
+                });
 
                 // Parse response data
                 let data: JsonValue = null;
@@ -177,13 +185,16 @@ export async function executeHTTPNode(config: unknown, context: JsonObject): Pro
                 clearTimeout(timeoutId);
 
                 lastError = error as Error;
-                console.error(`[HTTP] Attempt ${attempt + 1} failed:`, error);
+                logger.warn("HTTP request attempt failed", {
+                    attempt: attempt + 1,
+                    error: lastError.message
+                });
 
                 // If this isn't the last attempt, wait before retrying
                 if (attempt < maxRetries) {
                     heartbeat.update({ step: "retrying", attempt: attempt + 1 });
                     const delay = Math.min(1000 * Math.pow(2, attempt), 10000); // Exponential backoff, max 10s
-                    console.log(`[HTTP] Retrying in ${delay}ms...`);
+                    logger.debug("Retrying HTTP request", { delay });
                     await new Promise((resolve) => setTimeout(resolve, delay));
                 }
             }

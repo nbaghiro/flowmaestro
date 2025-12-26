@@ -1,4 +1,5 @@
 import { condition, defineSignal, defineQuery, setHandler } from "@temporalio/workflow";
+import { createWorkflowLogger } from "../shared/workflow-logger";
 
 export interface UserInputWorkflowInput {
     executionId: string;
@@ -32,15 +33,20 @@ export async function userInputWorkflow(
     input: UserInputWorkflowInput
 ): Promise<UserInputWorkflowResult> {
     const { executionId, nodeId, prompt, timeoutMs = 300000 } = input; // 5 min default timeout
+    const wfLogger = createWorkflowLogger({
+        executionId,
+        workflowName: "UserInput",
+        nodeId
+    });
 
-    console.log(`Waiting for user input: ${executionId} - ${nodeId} - "${prompt}"`);
+    wfLogger.info("Waiting for user input", { prompt, timeoutMs });
 
     let userResponse: string | undefined;
     let hasReceivedInput = false;
 
     // Set up signal handler
     setHandler(userInputSignal, (response: string) => {
-        console.log(`Received user input for ${executionId} - ${nodeId}`);
+        wfLogger.info("Received user input");
         userResponse = response;
         hasReceivedInput = true;
     });
@@ -52,7 +58,7 @@ export async function userInputWorkflow(
     const timedOut = !(await condition(() => hasReceivedInput, timeoutMs));
 
     if (timedOut) {
-        console.log(`User input timed out for ${executionId} - ${nodeId}`);
+        wfLogger.warn("User input timed out", { timeoutMs });
         return {
             success: false,
             timedOut: true,

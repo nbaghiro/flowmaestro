@@ -11,6 +11,7 @@ import {
     getModelsForProvider,
     getDefaultModelForProvider
 } from "@flowmaestro/shared";
+import { logger } from "../lib/logger";
 import { useConnectionStore } from "../stores/connectionStore";
 import { Alert } from "./common/Alert";
 import { Button } from "./common/Button";
@@ -112,7 +113,7 @@ export function AIGenerateDialog({ open, onOpenChange, onGenerate }: AIGenerateD
             setError("");
             onOpenChange(false);
         } catch (error) {
-            console.error("Failed to generate workflow:", error);
+            logger.error("Failed to generate workflow", error);
             setError(
                 error instanceof Error
                     ? error.message

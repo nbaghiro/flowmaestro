@@ -2,6 +2,9 @@ import { Context } from "@temporalio/activity";
 import { WorkflowDefinition } from "@flowmaestro/shared";
 import { Database } from "../../storage/database";
 import { ExecutionRepository } from "../../storage/repositories/ExecutionRepository";
+import { createActivityLogger } from "../shared/logger";
+
+const logger = createActivityLogger({ component: "NodeBatchExecution" });
 
 export interface ExecuteNodeBatchInput {
     executionId: string;
@@ -57,7 +60,13 @@ export async function executeNodeBatch(
                     completed: completedNodes.length
                 });
 
-                console.log(`Executing node ${nodeId} in batch for execution ${executionId}`);
+                logger.info("Executing node in batch", {
+                    executionId,
+                    workflowId,
+                    nodeId,
+                    batchSize: nodeIds.length,
+                    completedCount: completedNodes.length
+                });
 
                 // Note: This is a simplified version. In production, you'd integrate
                 // more directly with the execution context
@@ -83,7 +92,16 @@ export async function executeNodeBatch(
                     ]
                 );
             } catch (error) {
-                console.error(`Node ${nodeId} failed in batch:`, error);
+                logger.error(
+                    "Node failed in batch execution",
+                    error instanceof Error ? error : new Error(String(error)),
+                    {
+                        executionId,
+                        workflowId,
+                        nodeId,
+                        batchSize: nodeIds.length
+                    }
+                );
                 failedNodes.push(nodeId);
 
                 await db.query(
@@ -106,7 +124,17 @@ export async function executeNodeBatch(
 
         return { completedNodes, failedNodes };
     } catch (error) {
-        console.error(`Batch execution failed for execution ${executionId}:`, error);
+        logger.error(
+            "Batch execution failed",
+            error instanceof Error ? error : new Error(String(error)),
+            {
+                executionId,
+                workflowId,
+                nodeCount: nodeIds.length,
+                completedCount: completedNodes.length,
+                failedCount: failedNodes.length
+            }
+        );
         throw error;
     }
 }

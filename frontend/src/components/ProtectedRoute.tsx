@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useExecutionEventHandlers } from "../hooks/useExecutionEventHandlers";
+import { logger } from "../lib/logger";
 import { wsClient } from "../lib/websocket";
 
 interface ProtectedRouteProps {
@@ -21,7 +22,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
             const token = localStorage.getItem("auth_token");
             if (token) {
                 wsClient.connect(token).catch((error) => {
-                    console.error("Failed to connect WebSocket:", error);
+                    logger.error("Failed to connect WebSocket", error);
                 });
             }
         }
