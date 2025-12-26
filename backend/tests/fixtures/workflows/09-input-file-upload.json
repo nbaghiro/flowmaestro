@@ -1,0 +1,85 @@
+{
+    "name": "Input File Upload Smoke Test",
+    "description": "Input node configured for file uploads with a couple of simple nodes downstream.",
+    "entryPoint": "input-1",
+    "nodes": {
+        "input-1": {
+            "type": "input",
+            "name": "Upload PDF",
+            "config": {
+                "required": true,
+                "inputType": "file",
+                "inputName": "uploadedFile",
+                "description": "Upload a PDF to test the Input node file handling.",
+                "requiredFields": ["uploadedFile"],
+                "fields": [
+                    {
+                        "name": "uploadedFile",
+                        "type": "file"
+                    }
+                ]
+            },
+            "position": {
+                "x": 80,
+                "y": 120
+            }
+        },
+        "wait-1": {
+            "type": "wait",
+            "name": "Short Delay",
+            "config": {
+                "waitType": "duration",
+                "duration": 200
+            },
+            "position": {
+                "x": 360,
+                "y": 120
+            }
+        },
+        "variable-1": {
+            "type": "variable",
+            "name": "Tag Upload",
+            "config": {
+                "operation": "set",
+                "variableName": "fileTag",
+                "value": "pdf_upload",
+                "scope": "workflow",
+                "valueType": "string"
+            },
+            "position": {
+                "x": 620,
+                "y": 120
+            }
+        },
+        "output-1": {
+            "type": "output",
+            "name": "Output Summary",
+            "config": {
+                "outputVariable": "result",
+                "format": "text",
+                "template": "Uploaded file variable: ${uploadedFile} | tag: ${fileTag}"
+            },
+            "position": {
+                "x": 900,
+                "y": 120
+            }
+        }
+    },
+    "edges": [
+        {
+            "id": "e1",
+            "source": "input-1",
+            "target": "wait-1"
+        },
+        {
+            "id": "e2",
+            "source": "wait-1",
+            "target": "variable-1"
+        },
+        {
+            "id": "e3",
+            "source": "variable-1",
+            "target": "output-1"
+        }
+    ]
+}

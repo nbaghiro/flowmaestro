@@ -1,4 +1,5 @@
 import type { JsonObject, JsonSchema, JsonValue } from "@flowmaestro/shared";
+import { normalizeFileInput } from "../file-processing/normalize-file-input";
 
 // Simple ValidationError – matches spec name
 export class ValidationError extends Error {
@@ -16,8 +17,14 @@ function validateSchema(_input: unknown, schema: JsonSchema): boolean {
     return true;
 }
 
+interface InputFieldConfig {
+    name: string;
+    type: "string" | "number" | "boolean" | "file";
+}
+
 interface InputNodeConfig {
     inputType: "manual" | "json" | "csv" | "form";
+    fields?: InputFieldConfig[];
     schema?: JsonSchema;
     sampleData?: JsonValue;
     description?: string;
@@ -44,6 +51,18 @@ export async function executeInputNode(
             if (context.input?.[field] === undefined) {
                 throw new ValidationError(`Missing required field: ${field}`);
             }
+        }
+    }
+
+    const fileFields = config.fields?.filter((f) => f.type === "file") ?? [];
+
+    const normalizedFiles: Record<string, unknown> = {};
+
+    for (const field of fileFields) {
+        const rawValue = context.input?.[field.name];
+
+        if (rawValue !== undefined) {
+            normalizedFiles[field.name] = await normalizeFileInput(rawValue);
         }
     }
 

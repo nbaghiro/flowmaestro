@@ -1,5 +1,6 @@
-import { Info } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Info, Upload } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Button } from "@/components/common/Button";
 import { FormField, FormSection } from "@/components/common/FormField";
 import { Input } from "@/components/common/Input";
 import { Select } from "@/components/common/Select";
@@ -51,8 +52,10 @@ const validationPresets = {
 };
 
 export function InputNodeConfig({ data, onUpdate }: InputNodeConfigProps) {
-    const [inputName, setInputName] = useState((data.inputName as string) || "");
-    const [inputType, setInputType] = useState((data.inputType as string) || "manual");
+    const initialInputType = (data.inputType as string) || "manual";
+    const initialInputName = (data.inputName as string) || "";
+    const [inputName, setInputName] = useState(initialInputName);
+    const [inputType, setInputType] = useState(initialInputType);
     const [description, setDescription] = useState((data.description as string) || "");
     const [defaultValue, setDefaultValue] = useState((data.defaultValue as string) || "");
     const [required, setRequired] = useState((data.required as boolean) ?? true);
@@ -60,6 +63,12 @@ export function InputNodeConfig({ data, onUpdate }: InputNodeConfigProps) {
     const [minValue, setMinValue] = useState((data.minValue as string) || "");
     const [maxValue, setMaxValue] = useState((data.maxValue as string) || "");
     const [schema, setSchema] = useState((data.schema as string) || "");
+    const [fileVariable, setFileVariable] = useState(
+        initialInputType === "file" ? initialInputName || "uploadedFile" : "uploadedFile"
+    );
+    const [uploadedFileName, setUploadedFileName] = useState<string | null>(
+        (data.fileName as string) || null
+    );
     const [sampleData, setSampleData] = useState(
         typeof data.sampleData === "string"
             ? (data.sampleData as string)
@@ -68,16 +77,42 @@ export function InputNodeConfig({ data, onUpdate }: InputNodeConfigProps) {
     const [requiredFields, setRequiredFields] = useState<string[]>(
         Array.isArray(data.requiredFields) ? (data.requiredFields as string[]) : []
     );
+    const fileInputRef = useRef<HTMLInputElement | null>(null);
+    const isFileType = inputType === "file";
+
+    useEffect(() => {
+        if (isFileType && !fileVariable) {
+            setFileVariable("uploadedFile");
+        }
+    }, [isFileType, fileVariable]);
 
     useEffect(() => {
         onUpdate({
             inputType,
             description,
+            inputName: isFileType ? fileVariable : inputName,
+            fileName: uploadedFileName,
             schema,
             sampleData,
             requiredFields
         });
-    }, [inputType, description, schema, sampleData, requiredFields]);
+    }, [
+        inputType,
+        inputName,
+        isFileType,
+        fileVariable,
+        uploadedFileName,
+        description,
+        schema,
+        sampleData,
+        requiredFields
+    ]);
+
+    const handleFileUpload = async (file: File) => {
+        // TODO: replace with real upload API when ready
+        // For now, just store metadata + rely on runtime injection
+        setUploadedFileName(file.name);
+    };
 
     const handlePresetClick = (pattern: string) => {
         setValidation(pattern);
@@ -94,15 +129,17 @@ export function InputNodeConfig({ data, onUpdate }: InputNodeConfigProps) {
     return (
         <div>
             <FormSection title="Input Configuration">
-                <FormField label="Input Name" description="Variable name for this input">
-                    <Input
-                        type="text"
-                        value={inputName}
-                        onChange={(e) => setInputName(e.target.value)}
-                        placeholder="userName"
-                        className="font-mono"
-                    />
-                </FormField>
+                {!isFileType && (
+                    <FormField label="Input Name" description="Variable name for this input">
+                        <Input
+                            type="text"
+                            value={inputName}
+                            onChange={(e) => setInputName(e.target.value)}
+                            placeholder="userName"
+                            className="font-mono"
+                        />
+                    </FormField>
+                )}
 
                 <FormField label="Input Type">
                     <Select value={inputType} onChange={setInputType} options={inputTypes} />
@@ -276,13 +313,58 @@ export function InputNodeConfig({ data, onUpdate }: InputNodeConfigProps) {
                     </div>
                 )}
 
-                {inputType === "file" && (
-                    <div className="px-3 py-2 bg-muted rounded-lg">
-                        <p className="text-xs text-muted-foreground">
-                            File inputs accept file uploads. Additional validation can be configured
-                            for file types and size limits.
-                        </p>
-                    </div>
+                {isFileType && (
+                    <FormField
+                        label="Upload File"
+                        description="Select a file to make available to downstream nodes"
+                    >
+                        <div className="rounded-lg border border-dashed border-border bg-muted/40 p-3">
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept=".pdf,application/pdf"
+                                className="hidden"
+                                onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) handleFileUpload(file);
+                                }}
+                            />
+                            <div className="flex items-center justify-between gap-3">
+                                <div className="min-w-0">
+                                    <p className="text-sm font-medium text-foreground">
+                                        {uploadedFileName || "No file selected"}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                        Upload a PDF to test file input handling
+                                    </p>
+                                </div>
+                                <Button
+                                    type="button"
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={() => fileInputRef.current?.click()}
+                                >
+                                    <Upload className="w-4 h-4" />
+                                    Choose PDF
+                                </Button>
+                            </div>
+                        </div>
+                    </FormField>
+                )}
+
+                {isFileType && (
+                    <FormField
+                        label="File Variable Name"
+                        description="Used by downstream nodes (e.g. ${uploadedFile})"
+                    >
+                        <Input
+                            type="text"
+                            value={fileVariable}
+                            onChange={(e) => setFileVariable(e.target.value)}
+                            placeholder="uploadedFile"
+                            className="font-mono"
+                        />
+                    </FormField>
                 )}
             </FormSection>
 
@@ -305,7 +387,7 @@ export function InputNodeConfig({ data, onUpdate }: InputNodeConfigProps) {
                             <strong>Access in workflow:</strong>
                         </p>
                         <code className="text-foreground font-mono">
-                            {`\${${inputName || "inputName"}}`}
+                            {`\${${isFileType ? fileVariable || "uploadedFile" : inputName || "inputName"}}`}
                         </code>
                     </div>
 
