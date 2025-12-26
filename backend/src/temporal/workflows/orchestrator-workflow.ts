@@ -1,6 +1,6 @@
 import { proxyActivities } from "@temporalio/workflow";
 import type { WorkflowDefinition, WorkflowNode, JsonObject } from "@flowmaestro/shared";
-import { SpanType } from "../orchestration/spans";
+import { SpanType } from "../orchestration/span-types";
 import { createWorkflowLogger } from "../shared/workflow-logger";
 import type * as activities from "../activities";
 

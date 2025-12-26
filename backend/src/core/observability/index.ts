@@ -43,3 +43,13 @@ export type {
 // Cost calculator
 export { calculateCost, getModelPricing, formatCost, estimateCost } from "./cost-calculator";
 export type { ModelPricing, CostCalculationInput, CostCalculationResult } from "./cost-calculator";
+
+// Cloud Monitoring queries
+export { getAnalyticsOverview, getModelUsageStats, getDailyAnalytics } from "./monitoring-query";
+export type {
+    TimeRange,
+    MetricDataPoint,
+    AnalyticsOverview,
+    ModelUsageStats,
+    DailyAnalytics
+} from "./monitoring-query";

@@ -6,7 +6,6 @@ import Fastify from "fastify";
 import { config } from "../core/config";
 import { initializeLogger, shutdownLogger } from "../core/logging";
 import { initializeOTel, shutdownOTel } from "../core/observability";
-import { analyticsScheduler } from "../services/AnalyticsService";
 import { redisEventBus } from "../services/events/RedisEventBus";
 import { credentialRefreshScheduler } from "../services/oauth/CredentialRefreshScheduler";
 import { eventBridge } from "../services/websocket/EventBridge";
@@ -92,12 +91,7 @@ export async function buildServer() {
         serviceVersion: "1.0.0",
         enabled: config.env === "production"
     });
-
     fastify.log.info("OpenTelemetry initialized for distributed tracing");
-
-    // Start analytics scheduler for periodic aggregation
-    await analyticsScheduler.start();
-    fastify.log.info("Analytics scheduler started");
 
     // Start credential refresh scheduler for automatic OAuth token refresh
     credentialRefreshScheduler.start();
@@ -127,6 +121,7 @@ export async function buildServer() {
     });
 
     // Register routes
+    await fastify.register(analyticsRoutes);
     await fastify.register(authRoutes, { prefix: "/auth" });
     await fastify.register(workflowRoutes, { prefix: "/workflows" });
     await fastify.register(templateRoutes, { prefix: "/templates" });
@@ -142,7 +137,6 @@ export async function buildServer() {
     await fastify.register(threadRoutes, { prefix: "/threads" });
     await fastify.register(triggerRoutes);
     await fastify.register(webhookRoutes, { prefix: "/webhooks" });
-    await fastify.register(analyticsRoutes);
     await fastify.register(websocketRoutes);
 
     // Error handler (must be last)
@@ -180,9 +174,6 @@ export async function startServer() {
         process.on(signal, async () => {
             fastify.log.info(`Received ${signal}, closing server...`);
             await fastify.close();
-
-            // Stop analytics scheduler
-            analyticsScheduler.stop();
 
             // Stop credential refresh scheduler
             credentialRefreshScheduler.stop();

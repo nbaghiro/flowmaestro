@@ -55,8 +55,7 @@
                 "alphabetize": {
                     "order": "asc",
                     "caseInsensitive": true
-                },
-                "newlines-between": "never"
+                }
             }
         ],
         "import/no-unresolved": "off"

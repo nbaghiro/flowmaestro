@@ -6,12 +6,10 @@
  */
 
 import {
-    SpanType,
     startSpan,
     endSpan as otelEndSpan,
     setSpanAttributes as otelSetSpanAttributes,
     setLLMAttributes,
-    type SpanContext,
     type CreateSpanInput as OTelCreateSpanInput,
     type LLMAttributes
 } from "../../core/observability";
@@ -26,6 +24,7 @@ import {
     recordLLMCost,
     recordToolExecution
 } from "../../core/observability";
+import { SpanType, type SpanContext } from "./span-types";
 
 // Re-export SpanType and SpanContext for compatibility
 export { SpanType, type SpanContext };
