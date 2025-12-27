@@ -4,7 +4,7 @@ import {
     KnowledgeBaseRepository,
     KnowledgeDocumentRepository
 } from "../../../storage/repositories";
-import { getTemporalClient } from "../../../temporal/client";
+import { documentProcessor } from "../../../trigger/tasks";
 import { authMiddleware } from "../../middleware";
 import { serializeDocument } from "./utils";
 
@@ -112,31 +112,24 @@ export async function addUrlRoute(fastify: FastifyInstance) {
                 file_type: "html"
             });
 
-            // Start Temporal workflow to process the URL
-            let workflowId: string | undefined;
+            // Trigger document processing via Trigger.dev (non-blocking)
+            let taskId: string | undefined;
             try {
-                const client = await getTemporalClient();
-                workflowId = `process-document-${document.id}`;
-
-                await client.workflow.start("processDocumentWorkflow", {
-                    taskQueue: "flowmaestro-orchestrator",
-                    workflowId,
-                    args: [
-                        {
-                            documentId: document.id,
-                            knowledgeBaseId: params.id,
-                            sourceUrl: body.url,
-                            fileType: "html",
-                            userId: request.user!.id
-                        }
-                    ]
+                const run = await documentProcessor.trigger({
+                    documentId: document.id,
+                    knowledgeBaseId: params.id,
+                    filePath: "",
+                    fileType: "html",
+                    userId: request.user!.id,
+                    sourceUrl: body.url
                 });
+                taskId = run.id;
             } catch (error: unknown) {
                 const errorMsg = error instanceof Error ? error.message : String(error);
-                fastify.log.error(`Failed to start Temporal workflow: ${errorMsg}`);
+                fastify.log.error(`Failed to trigger document processor: ${errorMsg}`);
                 logger.error(
                     { documentId: document.id, url: body.url, error },
-                    "Workflow start failed"
+                    "Document processing trigger failed"
                 );
             }
 
@@ -144,7 +137,7 @@ export async function addUrlRoute(fastify: FastifyInstance) {
                 success: true,
                 data: {
                     document: serializeDocument(document),
-                    workflowId
+                    taskId
                 },
                 message: "URL added successfully and processing started"
             });

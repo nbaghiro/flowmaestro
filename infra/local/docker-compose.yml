@@ -84,51 +84,42 @@ services:
         networks:
             - flowmaestro
 
-    # Temporal Server
-    temporal:
-        image: temporalio/auto-setup:1.23.0
-        container_name: flowmaestro-temporal
+    # Trigger.dev Webapp (Dashboard & API)
+    trigger-webapp:
+        image: ghcr.io/triggerdotdev/trigger.dev:v4
+        container_name: flowmaestro-trigger-webapp
         depends_on:
             postgres:
                 condition: service_healthy
+            redis:
+                condition: service_healthy
         environment:
-            - DB=postgresql
-            - DB_PORT=5432
-            - POSTGRES_USER=flowmaestro
-            - POSTGRES_PWD=flowmaestro_dev_password
-            - POSTGRES_SEEDS=postgres
-            - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
+            - DATABASE_URL=postgresql://flowmaestro:flowmaestro_dev_password@postgres:5432/trigger
+            - DIRECT_URL=postgresql://flowmaestro:flowmaestro_dev_password@postgres:5432/trigger
+            - REDIS_URL=redis://redis:6379
+            - TRIGGER_SECRET=flowmaestro_trigger_dev_secret
+            - ENCRYPTION_KEY=0123456789abcdef0123456789abcdef
+            - MAGIC_LINK_SECRET=flowmaestro_magic_link_dev_secret
+            - SESSION_SECRET=flowmaestro_session_dev_secret
+            - LOGIN_ORIGIN=http://localhost:3040
+            - APP_ORIGIN=http://localhost:3040
         ports:
-            - "7233:7233"
+            - "3040:3000"
+        networks:
+            - flowmaestro
+
+    # Trigger.dev Supervisor (Worker Management)
+    trigger-supervisor:
+        image: ghcr.io/triggerdotdev/supervisor:v4
+        container_name: flowmaestro-trigger-supervisor
+        depends_on:
+            - trigger-webapp
+        environment:
+            - TRIGGER_API_URL=http://trigger-webapp:3000
+            - TRIGGER_WORKER_TOKEN=flowmaestro_worker_dev_token
+            - MANAGED_WORKER_SECRET=flowmaestro_managed_worker_dev_secret
         volumes:
-            - ./temporal/dynamicconfig:/etc/temporal/config/dynamicconfig
-        networks:
-            - flowmaestro
-
-    # Temporal Web UI
-    temporal-ui:
-        image: temporalio/ui:2.22.3
-        container_name: flowmaestro-temporal-ui
-        depends_on:
-            - temporal
-        environment:
-            - TEMPORAL_ADDRESS=temporal:7233
-            - TEMPORAL_CORS_ORIGINS=http://localhost:3000
-        ports:
-            - "8088:8080"
-        networks:
-            - flowmaestro
-
-    # Temporal Admin Tools (optional, for CLI access)
-    temporal-admin-tools:
-        image: temporalio/admin-tools:1.23.0
-        container_name: flowmaestro-temporal-admin
-        depends_on:
-            - temporal
-        environment:
-            - TEMPORAL_ADDRESS=temporal:7233
-        stdin_open: true
-        tty: true
+            - /var/run/docker.sock:/var/run/docker.sock:ro
         networks:
             - flowmaestro
 

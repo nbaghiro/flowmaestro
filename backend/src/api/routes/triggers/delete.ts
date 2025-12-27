@@ -1,6 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { TriggerRepository } from "../../../storage/repositories/TriggerRepository";
-import { SchedulerService } from "../../../temporal/services/scheduler";
+import { SchedulerService } from "../../../trigger/services";
 import { authMiddleware } from "../../middleware";
 
 export async function deleteTriggerRoute(fastify: FastifyInstance) {
@@ -27,18 +27,18 @@ export async function deleteTriggerRoute(fastify: FastifyInstance) {
 
                 fastify.log.info(`Found trigger: ${trigger.id}, type: ${trigger.trigger_type}`);
 
-                // If it's a schedule trigger, delete from Temporal
+                // If it's a schedule trigger, delete from Trigger.dev
                 if (trigger.trigger_type === "schedule") {
-                    fastify.log.info(`Deleting scheduled trigger from Temporal: ${id}`);
+                    fastify.log.info(`Deleting scheduled trigger: ${id}`);
                     try {
                         const schedulerService = new SchedulerService();
                         await schedulerService.deleteScheduledTrigger(id);
-                        fastify.log.info(`Successfully deleted schedule from Temporal: ${id}`);
+                        fastify.log.info(`Successfully deleted schedule: ${id}`);
                     } catch (scheduleError) {
                         // Log but continue with database deletion
                         fastify.log.error(
                             scheduleError as Error,
-                            "Failed to delete Temporal schedule, continuing with DB deletion"
+                            "Failed to delete schedule, continuing with DB deletion"
                         );
                     }
                 }

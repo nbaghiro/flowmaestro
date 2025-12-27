@@ -3,7 +3,7 @@ import { z } from "zod";
 import { AgentExecutionRepository } from "../../../storage/repositories/AgentExecutionRepository";
 import { AgentRepository } from "../../../storage/repositories/AgentRepository";
 import { ThreadRepository } from "../../../storage/repositories/ThreadRepository";
-import { getTemporalClient } from "../../../temporal/client";
+import { agentExecutor } from "../../../trigger/tasks";
 import { NotFoundError, BadRequestError } from "../../middleware";
 import type { ThreadMessage } from "../../../storage/models/AgentExecution";
 
@@ -87,22 +87,20 @@ export async function executeAgentHandler(
             iterations: 0
         });
 
-        // Start Temporal workflow
-        const client = await getTemporalClient();
-        await client.workflow.start("agentOrchestratorWorkflow", {
-            taskQueue: "flowmaestro-orchestrator",
-            workflowId: execution.id,
-            args: [
-                {
-                    executionId: execution.id,
-                    agentId,
-                    userId,
-                    threadId,
-                    initialMessage: message,
-                    ...(connection_id && { connectionId: connection_id }),
-                    ...(model && { model })
-                }
-            ]
+        // Trigger agent execution via Trigger.dev (non-blocking)
+        agentExecutor.trigger({
+            executionId: execution.id,
+            agentId,
+            userId,
+            threadId,
+            initialMessage: message,
+            ...(connection_id && { connectionId: connection_id }),
+            ...(model && { model })
+        }).catch((error) => {
+            request.log.error(
+                { executionId: execution.id, agentId, error },
+                "Failed to trigger agent execution"
+            );
         });
 
         reply.code(201).send({

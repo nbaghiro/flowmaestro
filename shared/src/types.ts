@@ -114,7 +114,7 @@ export interface ErrorHandlingConfig {
 }
 
 // Execution Types
-export type ExecutionStatus = "pending" | "running" | "completed" | "failed" | "cancelled";
+export type ExecutionStatus = "pending" | "running" | "paused" | "completed" | "failed" | "cancelled";
 export type NodeStatus = "pending" | "running" | "completed" | "failed" | "skipped";
 
 export interface Execution {

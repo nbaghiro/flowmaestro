@@ -1,6 +1,6 @@
 import { FastifyInstance } from "fastify";
+import { runs } from "@trigger.dev/sdk/v3";
 import { ExecutionRepository, WorkflowRepository } from "../../../storage/repositories";
-import { getTemporalClient } from "../../../temporal/client";
 import { authMiddleware, validateParams, NotFoundError, BadRequestError } from "../../middleware";
 import { executionIdParamSchema } from "../../schemas/execution-schemas";
 
@@ -39,10 +39,10 @@ export async function cancelExecutionRoute(fastify: FastifyInstance) {
             }
 
             try {
-                // Cancel the Temporal workflow
-                const client = await getTemporalClient();
-                const handle = client.workflow.getHandle(id);
-                await handle.cancel();
+                // Cancel the Trigger.dev run if we have a run ID
+                if (execution.run_id) {
+                    await runs.cancel(execution.run_id);
+                }
 
                 // Update execution status
                 await executionRepository.update(id, {

@@ -1,10 +1,10 @@
 import { FastifyInstance } from "fastify";
+import type { JsonObject } from "@flowmaestro/shared";
 import {
     convertFrontendToBackend,
-    FrontendWorkflowDefinition,
-    stripNonExecutableNodes
+    FrontendWorkflowDefinition
 } from "../../../core/utils/workflow-converter";
-import { getTemporalClient } from "../../../temporal/client";
+import { workflowExecutor, WorkflowExecutionPayload } from "../../../trigger/tasks";
 import { authMiddleware } from "../../middleware";
 
 interface ExecuteWorkflowBody {
@@ -29,39 +29,40 @@ export async function executeWorkflowRoute(fastify: FastifyInstance) {
             }
 
             try {
-                const client = await getTemporalClient();
-
-                // Generate unique workflow ID
+                // Generate unique execution ID
+                const executionId = `exec-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
                 const workflowId = `workflow-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
                 // Convert frontend workflow definition to backend format
-                const backendWorkflowDef = stripNonExecutableNodes(
-                    convertFrontendToBackend(body.workflowDefinition, `Workflow ${workflowId}`),
+                const definition = convertFrontendToBackend(
+                    body.workflowDefinition,
                     `Workflow ${workflowId}`
                 );
 
-                // Start the workflow
-                const handle = await client.workflow.start("orchestratorWorkflow", {
-                    taskQueue: "flowmaestro-orchestrator",
+                // Get user ID from authenticated request
+                const userId = (request as unknown as { user: { id: string } }).user?.id || "anonymous";
+
+                // Build payload for Trigger.dev task
+                const payload: WorkflowExecutionPayload = {
+                    executionId,
                     workflowId,
-                    args: [
-                        {
-                            workflowDefinition: backendWorkflowDef,
-                            inputs: body.inputs || {}
-                        }
-                    ]
-                });
+                    userId,
+                    definition,
+                    inputs: (body.inputs || {}) as JsonObject,
+                    triggerType: "manual"
+                };
 
-                fastify.log.info(`Started workflow ${workflowId}`);
+                // Trigger the workflow execution and wait for result
+                const run = await workflowExecutor.triggerAndWait(payload);
 
-                // Wait for the workflow to complete (with timeout)
-                const result = await handle.result();
+                fastify.log.info(`Completed workflow ${workflowId}`);
 
                 return reply.send({
                     success: true,
                     data: {
                         workflowId,
-                        result
+                        executionId,
+                        result: run
                     }
                 });
             } catch (error: unknown) {

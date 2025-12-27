@@ -1,6 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import { createServiceLogger } from "../../../core/logging";
-import { WebhookService, WebhookRequestData } from "../../../temporal/services/webhook";
+import { WebhookService, WebhookRequestData } from "../../../trigger/services";
 
 const logger = createServiceLogger("WebhookReceiver");
 
@@ -41,7 +41,7 @@ export async function webhookReceiverRoute(fastify: FastifyInstance) {
             try {
                 const result = await webhookService.processWebhook(triggerId, requestData);
 
-                return reply.status(result.statusCode).send({
+                return reply.status(result.statusCode || 200).send({
                     success: result.success,
                     executionId: result.executionId,
                     message: result.message,

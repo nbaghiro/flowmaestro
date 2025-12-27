@@ -1,8 +1,7 @@
 import { FastifyInstance } from "fastify";
 import { z } from "zod";
+import { wait } from "@trigger.dev/sdk/v3";
 import { ExecutionRepository, WorkflowRepository } from "../../../storage/repositories";
-import { getTemporalClient } from "../../../temporal/client";
-import { userInputSignal } from "../../../temporal/workflows/user-input-workflow";
 import {
     authMiddleware,
     validateParams,
@@ -14,7 +13,8 @@ import { executionIdParamSchema } from "../../schemas/execution-schemas";
 
 const submitInputBodySchema = z.object({
     userResponse: z.string().min(1, "User response cannot be empty"),
-    nodeId: z.string().optional()
+    nodeId: z.string().optional(),
+    waitpointId: z.string().optional()
 });
 
 interface SubmitInputParams {
@@ -24,6 +24,7 @@ interface SubmitInputParams {
 interface SubmitInputBody {
     userResponse: string;
     nodeId?: string;
+    waitpointId?: string;
 }
 
 export async function submitInputRoute(fastify: FastifyInstance) {
@@ -40,7 +41,7 @@ export async function submitInputRoute(fastify: FastifyInstance) {
             const executionRepository = new ExecutionRepository();
             const workflowRepository = new WorkflowRepository();
             const { id } = request.params;
-            const { userResponse, nodeId } = request.body;
+            const { userResponse, nodeId, waitpointId } = request.body;
 
             const execution = await executionRepository.findById(id);
 
@@ -54,25 +55,25 @@ export async function submitInputRoute(fastify: FastifyInstance) {
                 throw new NotFoundError("Execution not found");
             }
 
-            // Check if execution is running
-            if (execution.status !== "running") {
+            // Check if execution is paused or running
+            if (execution.status !== "running" && execution.status !== "paused") {
                 throw new BadRequestError(
                     `Cannot submit input for execution with status: ${execution.status}`
                 );
             }
 
             try {
-                // Get the Temporal workflow handle and send the signal
-                const client = await getTemporalClient();
-                const handle = client.workflow.getHandle(id);
+                // Complete the waitpoint with the user's response
+                // The waitpointId should be provided by the frontend from the execution metadata
+                const tokenId = waitpointId || `user-input-${id}-${nodeId || "default"}`;
 
-                // Send the user input signal to the workflow
-                await handle.signal(userInputSignal, userResponse);
+                await wait.completeToken(tokenId, { userResponse });
 
                 fastify.log.info(
                     {
                         executionId: id,
                         nodeId,
+                        waitpointId: tokenId,
                         responseLength: userResponse.length
                     },
                     "User input submitted to workflow"

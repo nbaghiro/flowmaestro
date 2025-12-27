@@ -4,16 +4,12 @@
 -- Enable pgvector extension for vector embeddings (knowledge base)
 CREATE EXTENSION IF NOT EXISTS vector;
 
--- Create Temporal database (for self-hosted Temporal workflow engine)
-CREATE DATABASE temporal;
-
--- Create Temporal visibility database (required by Temporal)
-CREATE DATABASE temporal_visibility;
+-- Create Trigger.dev database (for self-hosted Trigger.dev workflow engine)
+CREATE DATABASE trigger;
 
 -- Grant permissions to flowmaestro user
 GRANT ALL PRIVILEGES ON DATABASE flowmaestro TO flowmaestro;
-GRANT ALL PRIVILEGES ON DATABASE temporal TO flowmaestro;
-GRANT ALL PRIVILEGES ON DATABASE temporal_visibility TO flowmaestro;
+GRANT ALL PRIVILEGES ON DATABASE trigger TO flowmaestro;
 
 -- Switch to flowmaestro database and ensure vector extension is available
 \c flowmaestro;

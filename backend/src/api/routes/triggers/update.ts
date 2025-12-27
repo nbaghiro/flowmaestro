@@ -2,7 +2,7 @@ import { FastifyInstance } from "fastify";
 import { createServiceLogger } from "../../../core/logging";
 import { ScheduleTriggerConfig } from "../../../storage/models/Trigger";
 import { TriggerRepository } from "../../../storage/repositories/TriggerRepository";
-import { SchedulerService } from "../../../temporal/services/scheduler";
+import { SchedulerService } from "../../../trigger/services";
 import { authMiddleware } from "../../middleware";
 
 const logger = createServiceLogger("TriggerRoutes");
@@ -38,7 +38,7 @@ export async function updateTriggerRoute(fastify: FastifyInstance) {
                     enabled: body.enabled
                 });
 
-                // If it's a schedule trigger and config/enabled changed, update Temporal schedule
+                // If it's a schedule trigger and config/enabled changed, update schedule
                 if (trigger && trigger.trigger_type === "schedule") {
                     const schedulerService = new SchedulerService();
 

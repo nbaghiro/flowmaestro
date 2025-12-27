@@ -1,6 +1,6 @@
 import type { JsonObject } from "@flowmaestro/shared";
 
-export type AgentExecutionStatus = "running" | "completed" | "failed" | "cancelled";
+export type AgentExecutionStatus = "running" | "paused" | "completed" | "failed" | "cancelled";
 export type MessageRole = "user" | "assistant" | "system" | "tool";
 
 export interface ToolCall {

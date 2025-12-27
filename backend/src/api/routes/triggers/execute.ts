@@ -1,15 +1,10 @@
 import { FastifyInstance } from "fastify";
-import type { JsonValue } from "@flowmaestro/shared";
-import { WorkflowDefinition } from "@flowmaestro/shared";
-import {
-    convertFrontendToBackend,
-    stripNonExecutableNodes
-} from "../../../core/utils/workflow-converter";
+import type { JsonObject, JsonValue } from "@flowmaestro/shared";
 import { ManualTriggerConfig } from "../../../storage/models/Trigger";
 import { ExecutionRepository } from "../../../storage/repositories/ExecutionRepository";
 import { TriggerRepository } from "../../../storage/repositories/TriggerRepository";
 import { WorkflowRepository } from "../../../storage/repositories/WorkflowRepository";
-import { getTemporalClient } from "../../../temporal/client";
+import { workflowExecutor } from "../../../trigger/tasks";
 import { authMiddleware } from "../../middleware";
 
 interface ExecuteTriggerBody {
@@ -92,59 +87,23 @@ export async function executeTriggerRoute(fastify: FastifyInstance) {
                 // Update trigger stats
                 await triggerRepo.recordTrigger(trigger.id);
 
-                // Start Temporal workflow
-                const client = await getTemporalClient();
-                const workflowId = `execution-${execution.id}`;
-
-                // Convert frontend workflow definition to backend format if needed
-                let backendWorkflowDef: WorkflowDefinition;
-                const workflowDef = workflow.definition as { nodes?: unknown; edges?: unknown };
-
-                // Check if already in backend format (nodes is an object/Record)
-                if (workflowDef.nodes && !Array.isArray(workflowDef.nodes)) {
-                    // Already in backend format
-                    backendWorkflowDef = {
-                        ...(workflowDef as WorkflowDefinition),
-                        name: workflow.name
-                    };
-                } else if (workflowDef.nodes && Array.isArray(workflowDef.nodes)) {
-                    // Frontend format, needs conversion
-                    backendWorkflowDef = convertFrontendToBackend(
-                        workflow.definition as unknown as {
-                            nodes: Array<{
-                                id: string;
-                                type: string;
-                                data: Record<string, unknown>;
-                                position?: { x: number; y: number };
-                            }>;
-                            edges: Array<{
-                                id: string;
-                                source: string;
-                                target: string;
-                                sourceHandle?: string;
-                            }>;
-                        },
-                        workflow.name
+                // Trigger workflow execution via Trigger.dev (non-blocking)
+                workflowExecutor.trigger({
+                    executionId: execution.id,
+                    workflowId: workflow.id,
+                    userId,
+                    definition: workflow.definition,
+                    inputs: inputs as JsonObject,
+                    triggerType: trigger.trigger_type === "schedule" ? "schedule" :
+                                trigger.trigger_type === "webhook" ? "webhook" : "manual",
+                    meta: {
+                        triggerId: trigger.id
+                    }
+                }).catch((error) => {
+                    fastify.log.error(
+                        { triggerId: trigger.id, executionId: execution.id, error },
+                        "Failed to trigger workflow"
                     );
-                } else {
-                    throw new Error("Invalid workflow definition format");
-                }
-
-                // Strip non-executable nodes
-                backendWorkflowDef = stripNonExecutableNodes(backendWorkflowDef, workflow.name);
-
-                // Start the workflow (non-blocking)
-                await client.workflow.start("orchestratorWorkflow", {
-                    taskQueue: "flowmaestro-orchestrator",
-                    workflowId,
-                    args: [
-                        {
-                            executionId: execution.id,
-                            workflowDefinition: backendWorkflowDef,
-                            inputs,
-                            userId
-                        }
-                    ]
                 });
 
                 fastify.log.info(

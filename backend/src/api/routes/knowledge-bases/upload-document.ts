@@ -7,7 +7,7 @@ import {
     KnowledgeBaseRepository,
     KnowledgeDocumentRepository
 } from "../../../storage/repositories";
-import { getTemporalClient } from "../../../temporal/client";
+import { documentProcessor } from "../../../trigger/tasks";
 import { authMiddleware } from "../../middleware";
 import { serializeDocument } from "./utils";
 
@@ -82,36 +82,28 @@ export async function uploadDocumentRoute(fastify: FastifyInstance) {
                 file_size: BigInt(metadata.size)
             });
 
-            // Start Temporal workflow to process the document
-            let workflowId: string | undefined;
+            // Trigger document processing via Trigger.dev (non-blocking)
+            let taskId: string | undefined;
             try {
-                const client = await getTemporalClient();
-                workflowId = `process-document-${document.id}`;
-
-                await client.workflow.start("processDocumentWorkflow", {
-                    taskQueue: "flowmaestro-orchestrator",
-                    workflowId,
-                    args: [
-                        {
-                            documentId: document.id,
-                            knowledgeBaseId: params.id,
-                            filePath: gcsUri,
-                            fileType: fileExtension,
-                            userId: request.user!.id
-                        }
-                    ]
+                const run = await documentProcessor.trigger({
+                    documentId: document.id,
+                    knowledgeBaseId: params.id,
+                    filePath: gcsUri,
+                    fileType: fileExtension,
+                    userId: request.user!.id
                 });
+                taskId = run.id;
             } catch (error: unknown) {
                 const errorMsg = error instanceof Error ? error.message : String(error);
-                fastify.log.error(`Failed to start Temporal workflow: ${errorMsg}`);
-                logger.error({ documentId: document.id, error }, "Workflow start failed");
+                fastify.log.error(`Failed to trigger document processor: ${errorMsg}`);
+                logger.error({ documentId: document.id, error }, "Document processing trigger failed");
             }
 
             return reply.status(201).send({
                 success: true,
                 data: {
                     document: serializeDocument(document),
-                    workflowId
+                    taskId
                 },
                 message: "Document uploaded successfully and processing started"
             });

@@ -1,8 +1,7 @@
 import { FastifyRequest, FastifyReply } from "fastify";
 import { z } from "zod";
+import { wait } from "@trigger.dev/sdk/v3";
 import { AgentExecutionRepository } from "../../../storage/repositories/AgentExecutionRepository";
-import { getTemporalClient } from "../../../temporal/client";
-import { userMessageSignal } from "../../../temporal/workflows/agent-orchestrator-workflow";
 import { NotFoundError, BadRequestError } from "../../middleware";
 
 const sendMessageParamsSchema = z.object({
@@ -11,7 +10,8 @@ const sendMessageParamsSchema = z.object({
 });
 
 const sendMessageSchema = z.object({
-    message: z.string().min(1)
+    message: z.string().min(1),
+    waitpointId: z.string().optional()
 });
 
 export async function sendMessageHandler(
@@ -20,7 +20,7 @@ export async function sendMessageHandler(
 ): Promise<void> {
     const userId = request.user!.id;
     const { executionId } = sendMessageParamsSchema.parse(request.params);
-    const { message } = sendMessageSchema.parse(request.body);
+    const { message, waitpointId } = sendMessageSchema.parse(request.body);
 
     const executionRepo = new AgentExecutionRepository();
 
@@ -30,19 +30,17 @@ export async function sendMessageHandler(
         throw new NotFoundError("Agent execution not found");
     }
 
-    // Check if execution is still running
-    if (execution.status !== "running") {
+    // Check if execution is still running or paused
+    if (execution.status !== "running" && execution.status !== "paused") {
         throw new BadRequestError(
             `Cannot send message to execution with status: ${execution.status}`
         );
     }
 
     try {
-        // Send signal to Temporal workflow
-        const client = await getTemporalClient();
-        const handle = client.workflow.getHandle(executionId);
-
-        await handle.signal(userMessageSignal, message);
+        // Complete the waitpoint with the user's message
+        const tokenId = waitpointId || `agent-message-${executionId}`;
+        await wait.completeToken(tokenId, { message });
 
         reply.send({
             success: true,

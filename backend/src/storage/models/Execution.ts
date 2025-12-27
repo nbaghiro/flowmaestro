@@ -4,6 +4,7 @@ export interface ExecutionModel {
     id: string;
     workflow_id: string;
     status: ExecutionStatus;
+    run_id: string | null;
     inputs: Record<string, JsonValue> | null;
     outputs: Record<string, JsonValue> | null;
     current_state: JsonValue | null;

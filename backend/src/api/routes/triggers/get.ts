@@ -1,7 +1,7 @@
 import { FastifyInstance } from "fastify";
 import { createServiceLogger } from "../../../core/logging";
 import { TriggerRepository } from "../../../storage/repositories/TriggerRepository";
-import { SchedulerService } from "../../../temporal/services/scheduler";
+import { SchedulerService } from "../../../trigger/services";
 import { authMiddleware } from "../../middleware";
 
 const logger = createServiceLogger("TriggerRoutes");
@@ -26,7 +26,7 @@ export async function getTriggerRoute(fastify: FastifyInstance) {
                     });
                 }
 
-                // If it's a schedule trigger, get Temporal schedule info
+                // If it's a schedule trigger, get schedule info
                 let scheduleInfo = null;
                 if (trigger.trigger_type === "schedule" && trigger.temporal_schedule_id) {
                     try {

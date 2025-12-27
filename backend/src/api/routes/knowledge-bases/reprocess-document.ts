@@ -4,7 +4,7 @@ import {
     KnowledgeDocumentRepository,
     KnowledgeChunkRepository
 } from "../../../storage/repositories";
-import { getTemporalClient } from "../../../temporal/client";
+import { documentProcessor } from "../../../trigger/tasks";
 import { authMiddleware } from "../../middleware";
 
 export async function reprocessDocumentRoute(fastify: FastifyInstance) {
@@ -64,30 +64,21 @@ export async function reprocessDocumentRoute(fastify: FastifyInstance) {
                 content: undefined // Will be re-extracted
             });
 
-            // Start Temporal workflow to reprocess the document
-            const client = await getTemporalClient();
-            const workflowId = `process-document-${document.id}-${Date.now()}`; // Unique ID for retry
-
-            await client.workflow.start("processDocumentWorkflow", {
-                taskQueue: "orchestrator-queue",
-                workflowId,
-                args: [
-                    {
-                        documentId: document.id,
-                        knowledgeBaseId: params.id,
-                        filePath: document.file_path || undefined,
-                        sourceUrl: document.source_url || undefined,
-                        fileType: document.file_type,
-                        userId: request.user!.id
-                    }
-                ]
+            // Trigger document reprocessing via Trigger.dev
+            const run = await documentProcessor.trigger({
+                documentId: document.id,
+                knowledgeBaseId: params.id,
+                filePath: document.file_path || "",
+                fileType: document.file_type,
+                userId: request.user!.id,
+                sourceUrl: document.source_url || undefined
             });
 
             return reply.send({
                 success: true,
                 data: {
                     documentId: document.id,
-                    workflowId
+                    taskId: run.id
                 },
                 message: "Document reprocessing started"
             });

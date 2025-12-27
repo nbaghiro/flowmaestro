@@ -7,6 +7,7 @@ interface ExecutionRow {
     id: string;
     workflow_id: string;
     status: ExecutionStatus;
+    run_id: string | null;
     inputs: Record<string, JsonValue> | string | null;
     outputs: Record<string, JsonValue> | string | null;
     current_state: JsonValue | string | null;
@@ -261,6 +262,7 @@ export class ExecutionRepository {
             id: row.id,
             workflow_id: row.workflow_id,
             status: row.status,
+            run_id: row.run_id,
             inputs: row.inputs
                 ? typeof row.inputs === "string"
                     ? JSON.parse(row.inputs)
