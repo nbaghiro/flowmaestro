@@ -9,6 +9,7 @@
  */
 
 import pino, { Logger as PinoLogger } from "pino";
+import pinoPretty from "pino-pretty";
 import {
     CloudLoggingWriter,
     initializeCloudLogging,
@@ -77,6 +78,78 @@ function createSerializers() {
     };
 }
 
+// Color codes for pretty logging
+const colors = {
+    reset: "\x1b[0m",
+    green: "\x1b[32m",
+    cyan: "\x1b[36m",
+    yellow: "\x1b[33m",
+    red: "\x1b[31m",
+    magenta: "\x1b[35m",
+    gray: "\x1b[90m"
+};
+
+const levelColors: Record<string, string> = {
+    trace: colors.gray,
+    debug: colors.cyan,
+    info: colors.green,
+    warn: colors.yellow,
+    error: colors.red,
+    fatal: colors.red
+};
+
+const levelNames: Record<number, string> = {
+    10: "TRACE",
+    20: "DEBUG",
+    30: "INFO",
+    40: "WARN",
+    50: "ERROR",
+    60: "FATAL"
+};
+
+/**
+ * Create a pretty stream with custom formatting
+ * Format: 2025-12-27T17:35:06.273Z [INFO] Message { key: 'value' }
+ */
+function createPrettyStream(ignoreFields: string[] = []) {
+    const ignoreSet = new Set([
+        ...ignoreFields,
+        "pid",
+        "hostname",
+        "service",
+        "component",
+        "level",
+        "time",
+        "msg",
+        "v"
+    ]);
+
+    return pinoPretty({
+        colorize: true,
+        singleLine: true,
+        ignore: Array.from(ignoreSet).join(","),
+        messageFormat: (log, messageKey) => {
+            const level = log.level as number;
+            const levelName = levelNames[level] || "INFO";
+            const levelColor = levelColors[levelName.toLowerCase()] || "";
+            const reset = colors.reset;
+            const timestampColor = colors.magenta;
+
+            const time = log.time
+                ? new Date(log.time as number).toISOString()
+                : new Date().toISOString();
+
+            const msg = (log[messageKey] as string) || "";
+
+            return `${timestampColor}${time}${reset} ${levelColor}[${levelName}]${reset} ${msg}`;
+        },
+        customPrettifiers: {
+            time: () => "",
+            level: () => ""
+        }
+    });
+}
+
 /**
  * Initialize the logger
  * Must be called before using getLogger()
@@ -109,23 +182,10 @@ export function initializeLogger(config: LoggerConfig): PinoLogger {
         }
     };
 
-    // In development, use pino-pretty for human-readable output
+    // In development, use pretty stream for human-readable output
     if (config.environment === "development" && !config.enableCloudLogging) {
-        // Set default component so messageFormat always has a value
-        pinoOptions.base = {
-            ...pinoOptions.base,
-            component: config.serviceName
-        };
-        pinoOptions.transport = {
-            target: "pino-pretty",
-            options: {
-                colorize: true,
-                translateTime: "HH:MM:ss",
-                ignore: "pid,hostname,service,version,env",
-                singleLine: true,
-                messageFormat: "[{component}] {msg}"
-            }
-        };
+        const prettyStream = createPrettyStream();
+        loggerInstance = pino(pinoOptions, prettyStream);
     } else {
         // In production, use JSON-optimized formatters for Cloud Logging
         pinoOptions.base = {
@@ -139,9 +199,8 @@ export function initializeLogger(config: LoggerConfig): PinoLogger {
         };
         // Use custom timestamp format for Cloud Logging
         pinoOptions.timestamp = () => `,"time":"${new Date().toISOString()}"`;
+        loggerInstance = pino(pinoOptions);
     }
-
-    loggerInstance = pino(pinoOptions);
 
     return loggerInstance;
 }
@@ -161,21 +220,11 @@ export function getLogger(): PinoLogger {
         };
 
         if (isDev) {
-            // Set default component so messageFormat always has a value
-            pinoOpts.base = { ...pinoOpts.base, component: "server" };
-            pinoOpts.transport = {
-                target: "pino-pretty",
-                options: {
-                    colorize: true,
-                    translateTime: "HH:MM:ss",
-                    ignore: "pid,hostname,service",
-                    singleLine: true,
-                    messageFormat: "[{component}] {msg}"
-                }
-            };
+            const prettyStream = createPrettyStream();
+            loggerInstance = pino(pinoOpts, prettyStream);
+        } else {
+            loggerInstance = pino(pinoOpts);
         }
-
-        loggerInstance = pino(pinoOpts);
     }
     return loggerInstance;
 }
@@ -230,18 +279,8 @@ export function createWorkerLogger(workerName: string): PinoLogger {
     };
 
     if (isDev) {
-        // Set default component so messageFormat always has a value
-        pinoOpts.base = { ...pinoOpts.base, component: workerName };
-        pinoOpts.transport = {
-            target: "pino-pretty",
-            options: {
-                colorize: true,
-                translateTime: "HH:MM:ss",
-                ignore: "pid,hostname,service",
-                singleLine: true,
-                messageFormat: "[{component}] {msg}"
-            }
-        };
+        const prettyStream = createPrettyStream();
+        return pino(pinoOpts, prettyStream);
     } else {
         pinoOpts.base = {
             ...pinoOpts.base,
@@ -253,9 +292,8 @@ export function createWorkerLogger(workerName: string): PinoLogger {
             bindings: (bindings) => sanitizeLogData(bindings)
         };
         pinoOpts.timestamp = () => `,"time":"${new Date().toISOString()}"`;
+        return pino(pinoOpts);
     }
-
-    return pino(pinoOpts);
 }
 
 /**

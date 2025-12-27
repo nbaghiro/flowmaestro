@@ -8,6 +8,7 @@ import path from "path";
 import { createWorkerLogger } from "../core/logging";
 import { initializeOTel, shutdownOTel } from "../core/observability";
 import { createOTelActivityInterceptor } from "./interceptors";
+import { createRuntimeLogger } from "./shared/runtime-logger";
 
 const logger = createWorkerLogger("flowmaestro-worker");
 
@@ -20,44 +21,11 @@ const logger = createWorkerLogger("flowmaestro-worker");
 async function run() {
     // Configure Temporal Runtime BEFORE using Worker/NativeConnection
     // Must use dynamic import to ensure Runtime.install() runs first
-    const { Runtime, Worker, NativeConnection } = await import("@temporalio/worker");
+    const { Runtime, Worker, NativeConnection, DefaultLogger } = await import("@temporalio/worker");
 
-    Runtime.install({
-        logger: {
-            trace: (message: string, meta?: Record<string, unknown>) =>
-                logger.trace({ ...meta, component: "temporal-sdk" }, message),
-            debug: (message: string, meta?: Record<string, unknown>) =>
-                logger.debug({ ...meta, component: "temporal-sdk" }, message),
-            info: (message: string, meta?: Record<string, unknown>) =>
-                logger.info({ ...meta, component: "temporal-sdk" }, message),
-            warn: (message: string, meta?: Record<string, unknown>) =>
-                logger.warn({ ...meta, component: "temporal-sdk" }, message),
-            error: (message: string, meta?: Record<string, unknown>) =>
-                logger.error({ ...meta, component: "temporal-sdk" }, message),
-            log: (level: string, message: string, meta?: Record<string, unknown>) => {
-                const logMeta = { ...meta, component: "temporal-sdk" };
-                switch (level) {
-                    case "TRACE":
-                        logger.trace(logMeta, message);
-                        break;
-                    case "DEBUG":
-                        logger.debug(logMeta, message);
-                        break;
-                    case "INFO":
-                        logger.info(logMeta, message);
-                        break;
-                    case "WARN":
-                        logger.warn(logMeta, message);
-                        break;
-                    case "ERROR":
-                        logger.error(logMeta, message);
-                        break;
-                    default:
-                        logger.info(logMeta, message);
-                }
-            }
-        }
-    });
+    // Create runtime logger that routes all Temporal logs through pino
+    const runtimeLogger = createRuntimeLogger(DefaultLogger, { baseLogger: logger });
+    Runtime.install({ logger: runtimeLogger });
 
     // Dynamic imports for modules that depend on Temporal
     const { config } = await import("../core/config");

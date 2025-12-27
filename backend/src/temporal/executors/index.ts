@@ -63,11 +63,19 @@ export type NodeResult =
     | VariableNodeResult
     | { outputs: JsonObject };
 
+export interface ExecutionContext {
+    executionId: string;
+    workflowName?: string;
+    userId?: string;
+    nodeId?: string;
+}
+
 export interface ExecuteNodeInput {
     nodeType: string;
     nodeConfig: JsonObject;
     context: JsonObject;
     globalStore?: Map<string, JsonValue>;
+    executionContext?: ExecutionContext;
 }
 
 /**

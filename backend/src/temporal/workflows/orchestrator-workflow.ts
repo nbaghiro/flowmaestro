@@ -327,7 +327,13 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
                 const result = await executeNode({
                     nodeType: node.type,
                     nodeConfig: node.config,
-                    context
+                    context,
+                    executionContext: {
+                        executionId,
+                        workflowName: workflowDefinition.name,
+                        userId,
+                        nodeId
+                    }
                 });
 
                 // Track output node keys for final workflow output

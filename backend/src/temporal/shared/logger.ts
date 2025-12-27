@@ -1,7 +1,10 @@
 /**
  * Structured logging utility for Temporal activities
- * Outputs JSON logs for Cloud Logging compatibility
+ * Uses pino for consistent formatting with the rest of the app
  */
+
+import pino, { Logger as PinoLogger } from "pino";
+import pinoPretty from "pino-pretty";
 
 /**
  * Sensitive field names that should be automatically redacted
@@ -83,177 +86,179 @@ export interface LogContext {
     [key: string]: unknown;
 }
 
-/**
- * Map log levels to Cloud Logging severity
- */
-const SEVERITY_MAP = {
-    debug: "DEBUG",
-    info: "INFO",
-    warn: "WARNING",
-    error: "ERROR"
-} as const;
-
-interface LogEntry {
-    level: "debug" | "info" | "warn" | "error";
-    message: string;
-    timestamp: string;
-    service: string;
-    context?: LogContext;
-    error?: {
-        name: string;
-        message: string;
-        stack?: string;
-        retryable?: boolean;
-    };
-}
-
 const SERVICE_NAME = process.env.SERVICE_NAME || "flowmaestro-worker";
 const SERVICE_VERSION = process.env.APP_VERSION || "1.0.0";
 
-/**
- * Format log entry for Cloud Logging JSON format
- */
-function formatLog(entry: LogEntry): string {
-    // Sanitize context to redact sensitive fields
-    const sanitizedContext = entry.context ? sanitizeLogData(entry.context) : undefined;
+// Color codes for pretty logging
+const colors = {
+    reset: "\x1b[0m",
+    green: "\x1b[32m",
+    cyan: "\x1b[36m",
+    yellow: "\x1b[33m",
+    red: "\x1b[31m",
+    magenta: "\x1b[35m",
+    gray: "\x1b[90m"
+};
 
-    const cloudPayload: Record<string, unknown> = {
-        severity: SEVERITY_MAP[entry.level],
-        message: entry.message,
-        timestamp: entry.timestamp,
-        "logging.googleapis.com/labels": {
-            service: entry.service,
-            version: SERVICE_VERSION,
-            ...(sanitizedContext?.traceId && { traceId: sanitizedContext.traceId }),
-            ...(sanitizedContext?.executionId && { executionId: sanitizedContext.executionId }),
-            ...(sanitizedContext?.nodeId && { nodeId: sanitizedContext.nodeId })
+const levelColors: Record<string, string> = {
+    trace: colors.gray,
+    debug: colors.cyan,
+    info: colors.green,
+    warn: colors.yellow,
+    error: colors.red,
+    fatal: colors.red
+};
+
+const levelNames: Record<number, string> = {
+    10: "TRACE",
+    20: "DEBUG",
+    30: "INFO",
+    40: "WARN",
+    50: "ERROR",
+    60: "FATAL"
+};
+
+/**
+ * Create a pretty stream with custom formatting
+ * Format: 2025-12-27T17:35:06.273Z [INFO] Message { key: 'value' }
+ */
+function createPrettyStream() {
+    const ignoreFields = new Set([
+        "pid",
+        "hostname",
+        "service",
+        "component",
+        "level",
+        "time",
+        "msg",
+        "v"
+    ]);
+
+    return pinoPretty({
+        colorize: true,
+        singleLine: true,
+        ignore: Array.from(ignoreFields).join(","),
+        messageFormat: (log, messageKey) => {
+            const level = log.level as number;
+            const levelName = levelNames[level] || "INFO";
+            const levelColor = levelColors[levelName.toLowerCase()] || "";
+            const reset = colors.reset;
+            const timestampColor = colors.magenta;
+
+            const time = log.time
+                ? new Date(log.time as number).toISOString()
+                : new Date().toISOString();
+
+            const msg = (log[messageKey] as string) || "";
+
+            return `${timestampColor}${time}${reset} ${levelColor}[${levelName}]${reset} ${msg}`;
+        },
+        customPrettifiers: {
+            time: () => "",
+            level: () => ""
+        }
+    });
+}
+
+/**
+ * Create the base pino logger instance for activities
+ * Uses pino-pretty in development for readable logs
+ */
+function createBasePinoLogger(): PinoLogger {
+    const isDev = process.env.NODE_ENV !== "production";
+
+    const pinoOpts: pino.LoggerOptions = {
+        level: process.env.LOG_LEVEL || "info",
+        base: {
+            service: SERVICE_NAME
         }
     };
 
-    // Add context fields at top level for easier querying
-    if (sanitizedContext) {
-        cloudPayload.traceId = sanitizedContext.traceId || sanitizedContext.executionId;
-        cloudPayload.executionId = sanitizedContext.executionId;
-        cloudPayload.workflowId = sanitizedContext.workflowId;
-        cloudPayload.nodeId = sanitizedContext.nodeId;
-        cloudPayload.nodeType = sanitizedContext.nodeType;
-        cloudPayload.userId = sanitizedContext.userId;
-
-        // Add remaining context fields
-        const {
-            traceId: _traceId,
-            spanId: _spanId,
-            executionId: _executionId,
-            workflowId: _workflowId,
-            nodeId: _nodeId,
-            nodeType: _nodeType,
-            userId: _userId,
-            ...rest
-        } = sanitizedContext;
-        if (Object.keys(rest).length > 0) {
-            cloudPayload.context = rest;
-        }
-    }
-
-    // Add error details for Cloud Error Reporting
-    if (entry.error) {
-        cloudPayload["@type"] =
-            "type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent";
-        cloudPayload.serviceContext = {
-            service: entry.service,
-            version: SERVICE_VERSION
+    if (isDev) {
+        // Development: use synchronous pretty stream for readable logs
+        const prettyStream = createPrettyStream();
+        return pino(pinoOpts, prettyStream);
+    } else {
+        // Production: JSON format for Cloud Logging
+        pinoOpts.base = {
+            ...pinoOpts.base,
+            version: SERVICE_VERSION,
+            env: "production"
         };
-        cloudPayload.err = {
-            name: entry.error.name,
-            message: entry.error.message,
-            stack: entry.error.stack,
-            retryable: entry.error.retryable
+        pinoOpts.formatters = {
+            level: (label) => ({ severity: label.toUpperCase() }),
+            bindings: (bindings) => sanitizeLogData(bindings)
         };
-        if (entry.error.stack) {
-            cloudPayload.stack_trace = entry.error.stack;
-        }
+        pinoOpts.timestamp = () => `,"timestamp":"${new Date().toISOString()}"`;
+        return pino(pinoOpts);
     }
-
-    return JSON.stringify(cloudPayload);
 }
 
-function shouldLog(level: LogEntry["level"]): boolean {
-    const logLevel = process.env.LOG_LEVEL || "info";
-    const levels = ["debug", "info", "warn", "error"];
-    return levels.indexOf(level) >= levels.indexOf(logLevel);
+// Singleton logger instance
+let baseLogger: PinoLogger | null = null;
+
+function getBaseLogger(): PinoLogger {
+    if (!baseLogger) {
+        baseLogger = createBasePinoLogger();
+    }
+    return baseLogger;
+}
+
+/**
+ * Activity logger interface matching the existing API
+ */
+export interface ActivityLogger {
+    debug: (message: string, context?: LogContext) => void;
+    info: (message: string, context?: LogContext) => void;
+    warn: (message: string, context?: LogContext) => void;
+    error: (message: string, error: Error, context?: LogContext) => void;
 }
 
 /**
  * Structured logger for Temporal activities
- * Outputs JSON for easy parsing by log aggregation systems
+ * Uses pino for consistent formatting across the app
  */
-export const activityLogger = {
+export const activityLogger: ActivityLogger = {
     debug: (message: string, context?: LogContext): void => {
-        if (shouldLog("debug")) {
-            console.debug(
-                formatLog({
-                    level: "debug",
-                    message,
-                    timestamp: new Date().toISOString(),
-                    service: SERVICE_NAME,
-                    context
-                })
-            );
-        }
+        const logger = getBaseLogger();
+        const sanitized = context ? sanitizeLogData(context) : {};
+        logger.debug(sanitized, message);
     },
 
     info: (message: string, context?: LogContext): void => {
-        if (shouldLog("info")) {
-            console.log(
-                formatLog({
-                    level: "info",
-                    message,
-                    timestamp: new Date().toISOString(),
-                    service: SERVICE_NAME,
-                    context
-                })
-            );
-        }
+        const logger = getBaseLogger();
+        const sanitized = context ? sanitizeLogData(context) : {};
+        logger.info(sanitized, message);
     },
 
     warn: (message: string, context?: LogContext): void => {
-        if (shouldLog("warn")) {
-            console.warn(
-                formatLog({
-                    level: "warn",
-                    message,
-                    timestamp: new Date().toISOString(),
-                    service: SERVICE_NAME,
-                    context
-                })
-            );
-        }
+        const logger = getBaseLogger();
+        const sanitized = context ? sanitizeLogData(context) : {};
+        logger.warn(sanitized, message);
     },
 
     error: (message: string, error: Error, context?: LogContext): void => {
-        if (shouldLog("error")) {
-            // Check if error has retryable property (from our custom errors)
-            const retryable =
-                "retryable" in error && typeof error.retryable === "boolean"
-                    ? error.retryable
-                    : undefined;
+        const logger = getBaseLogger();
+        const sanitized = context ? sanitizeLogData(context) : {};
 
-            console.error(
-                formatLog({
-                    level: "error",
-                    message,
-                    timestamp: new Date().toISOString(),
-                    service: SERVICE_NAME,
-                    context,
-                    error: {
-                        name: error.name,
-                        message: error.message,
-                        stack: error.stack,
-                        retryable
-                    }
-                })
-            );
-        }
+        // Check if error has retryable property (from our custom errors)
+        const retryable =
+            "retryable" in error && typeof error.retryable === "boolean"
+                ? error.retryable
+                : undefined;
+
+        logger.error(
+            {
+                ...sanitized,
+                err: {
+                    name: error.name,
+                    message: error.message,
+                    stack: error.stack,
+                    retryable
+                }
+            },
+            message
+        );
     }
 };
 
@@ -261,19 +266,54 @@ export const activityLogger = {
  * Create a child logger with preset context
  * Useful for adding execution context to all logs in an activity
  */
-export function createActivityLogger(baseContext: LogContext) {
+export function createActivityLogger(baseContext: LogContext): ActivityLogger {
+    const logger = getBaseLogger();
+    const sanitizedBase = sanitizeLogData(baseContext);
+
+    // Create a child logger with the base context
+    const childLogger = logger.child({ component: sanitizedBase.nodeType || "activity" });
+
     return {
         debug: (message: string, context?: LogContext): void => {
-            activityLogger.debug(message, { ...baseContext, ...context });
+            const merged = context
+                ? { ...sanitizedBase, ...sanitizeLogData(context) }
+                : sanitizedBase;
+            childLogger.debug(merged, message);
         },
         info: (message: string, context?: LogContext): void => {
-            activityLogger.info(message, { ...baseContext, ...context });
+            const merged = context
+                ? { ...sanitizedBase, ...sanitizeLogData(context) }
+                : sanitizedBase;
+            childLogger.info(merged, message);
         },
         warn: (message: string, context?: LogContext): void => {
-            activityLogger.warn(message, { ...baseContext, ...context });
+            const merged = context
+                ? { ...sanitizedBase, ...sanitizeLogData(context) }
+                : sanitizedBase;
+            childLogger.warn(merged, message);
         },
         error: (message: string, error: Error, context?: LogContext): void => {
-            activityLogger.error(message, error, { ...baseContext, ...context });
+            const merged = context
+                ? { ...sanitizedBase, ...sanitizeLogData(context) }
+                : sanitizedBase;
+
+            const retryable =
+                "retryable" in error && typeof error.retryable === "boolean"
+                    ? error.retryable
+                    : undefined;
+
+            childLogger.error(
+                {
+                    ...merged,
+                    err: {
+                        name: error.name,
+                        message: error.message,
+                        stack: error.stack,
+                        retryable
+                    }
+                },
+                message
+            );
         }
     };
 }

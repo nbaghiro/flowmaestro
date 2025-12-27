@@ -1,9 +1,12 @@
 /**
  * Structured logging utility for Temporal workflows
  *
- * Note: Temporal workflows are deterministic and cannot use external services
- * or non-deterministic operations directly. This logger outputs JSON to console
- * which GKE will forward to Cloud Logging.
+ * Note: Temporal workflows run in a deterministic V8 sandbox where we can't
+ * use external modules like pino. Workflow logs are forwarded through Temporal's
+ * logging sink to the Runtime logger, which adds a [workflowType(workflowId)] prefix.
+ *
+ * To keep logs readable with the Temporal prefix, we output simple formatted messages
+ * rather than JSON. The Runtime logger handles final formatting.
  */
 
 /**
@@ -58,16 +61,6 @@ function sanitizeLogData<T>(data: T, depth = 0): T {
 
 type LogLevel = "debug" | "info" | "warn" | "error";
 
-/**
- * Map log levels to Cloud Logging severity
- */
-const SEVERITY_MAP: Record<LogLevel, string> = {
-    debug: "DEBUG",
-    info: "INFO",
-    warn: "WARNING",
-    error: "ERROR"
-};
-
 const LOG_LEVEL_PRIORITY: Record<LogLevel, number> = {
     debug: 0,
     info: 1,
@@ -92,80 +85,48 @@ export interface WorkflowLogger {
     child(additionalContext: Record<string, unknown>): WorkflowLogger;
 }
 
-const SERVICE_NAME = "flowmaestro-worker";
-const SERVICE_VERSION = process.env.APP_VERSION || "1.0.0";
-const currentLogLevel = (process.env.LOG_LEVEL || "info") as LogLevel;
+// Note: Temporal workflows run in a V8 sandbox without access to process.env
+const currentLogLevel: LogLevel = "info";
 
 function shouldLog(level: LogLevel): boolean {
     return LOG_LEVEL_PRIORITY[level] >= LOG_LEVEL_PRIORITY[currentLogLevel];
 }
 
-function formatWorkflowLog(
-    level: LogLevel,
-    message: string,
-    context: WorkflowLogContext,
-    data?: Record<string, unknown>,
-    error?: Error
-): string {
-    const sanitizedData = data ? sanitizeLogData(data) : undefined;
-
-    const payload: Record<string, unknown> = {
-        severity: SEVERITY_MAP[level],
-        message,
-        timestamp: new Date().toISOString(),
-        "logging.googleapis.com/labels": {
-            service: SERVICE_NAME,
-            version: SERVICE_VERSION,
-            workflowName: context.workflowName,
-            executionId: context.executionId
-        },
-        // Top-level fields for easy querying
-        traceId: context.executionId, // Use executionId as traceId for workflow correlation
-        executionId: context.executionId,
-        workflowName: context.workflowName,
-        userId: context.userId
-    };
-
-    // Add iteration if present
-    if (context.iteration !== undefined) {
-        payload.iteration = context.iteration;
+/**
+ * Format data object as compact key=value pairs
+ */
+function formatData(data?: Record<string, unknown>): string {
+    if (!data || Object.keys(data).length === 0) {
+        return "";
     }
 
-    // Add nodeId if present
-    if (context.nodeId) {
-        payload.nodeId = context.nodeId;
-    }
+    const pairs = Object.entries(data)
+        .map(([key, value]) => {
+            if (typeof value === "string") {
+                return `${key}="${value}"`;
+            }
+            if (typeof value === "object") {
+                return `${key}=${JSON.stringify(value)}`;
+            }
+            return `${key}=${value}`;
+        })
+        .join(" ");
 
-    // Add additional data
-    if (sanitizedData && Object.keys(sanitizedData).length > 0) {
-        payload.data = sanitizedData;
-    }
-
-    // Add error details
-    if (error) {
-        payload["@type"] =
-            "type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent";
-        payload.serviceContext = {
-            service: SERVICE_NAME,
-            version: SERVICE_VERSION
-        };
-        payload.err = {
-            name: error.name,
-            message: error.message,
-            stack: error.stack
-        };
-        if (error.stack) {
-            payload.stack_trace = error.stack;
-        }
-    }
-
-    return JSON.stringify(payload);
+    return pairs ? ` ${pairs}` : "";
 }
 
 /**
  * Create a logger for Temporal workflows
+ *
+ * Output format: "message key=value key=value"
+ * The Temporal SDK will prefix with [workflowType(workflowId)]
  */
 export function createWorkflowLogger(context: WorkflowLogContext): WorkflowLogger {
+    const baseData = {
+        workflow: context.workflowName,
+        ...(context.nodeId && { nodeId: context.nodeId })
+    };
+
     const logMethod = (level: LogLevel) => {
         return (
             message: string,
@@ -180,7 +141,6 @@ export function createWorkflowLogger(context: WorkflowLogContext): WorkflowLogge
             let error: Error | undefined;
 
             if (level === "error") {
-                // For error level, second param might be an error
                 if (dataOrError instanceof Error) {
                     error = dataOrError;
                     data = additionalData;
@@ -189,7 +149,6 @@ export function createWorkflowLogger(context: WorkflowLogContext): WorkflowLogge
                     typeof dataOrError === "object" &&
                     "message" in dataOrError
                 ) {
-                    // Could be an error-like object
                     error = dataOrError as Error;
                     data = additionalData;
                 } else {
@@ -199,17 +158,26 @@ export function createWorkflowLogger(context: WorkflowLogContext): WorkflowLogge
                 data = dataOrError as Record<string, unknown>;
             }
 
-            const formatted = formatWorkflowLog(level, message, context, data, error);
+            const sanitizedData = data ? sanitizeLogData(data) : undefined;
+            const mergedData = { ...baseData, ...sanitizedData };
+            const dataStr = formatData(mergedData);
 
-            // Output to console - GKE will forward to Cloud Logging
+            // Format: "message key=value key=value"
+            let output = `${message}${dataStr}`;
+
+            if (error) {
+                output += ` error="${error.message}"`;
+            }
+
+            // Use console methods - Temporal will forward to Runtime logger
             if (level === "error") {
-                console.error(formatted);
+                console.error(output);
             } else if (level === "warn") {
-                console.warn(formatted);
+                console.warn(output);
             } else if (level === "debug") {
-                console.debug(formatted);
+                console.debug(output);
             } else {
-                console.log(formatted);
+                console.log(output);
             }
         };
     };
@@ -222,10 +190,19 @@ export function createWorkflowLogger(context: WorkflowLogContext): WorkflowLogge
             if (!shouldLog("error")) {
                 return;
             }
-            const errorObj =
-                error instanceof Error ? error : error ? new Error(String(error)) : undefined;
-            const formatted = formatWorkflowLog("error", message, context, data, errorObj);
-            console.error(formatted);
+
+            const sanitizedData = data ? sanitizeLogData(data) : undefined;
+            const mergedData = { ...baseData, ...sanitizedData };
+            const dataStr = formatData(mergedData);
+
+            let errorStr = "";
+            if (error instanceof Error) {
+                errorStr = ` error="${error.message}"`;
+            } else if (error) {
+                errorStr = ` error="${String(error)}"`;
+            }
+
+            console.error(`${message}${dataStr}${errorStr}`);
         },
         child: (additionalContext: Record<string, unknown>): WorkflowLogger => {
             return createWorkflowLogger({
