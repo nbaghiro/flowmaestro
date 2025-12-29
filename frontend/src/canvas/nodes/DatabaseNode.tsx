@@ -1,6 +1,7 @@
 import { Database } from "lucide-react";
 import { memo } from "react";
 import { NodeProps } from "reactflow";
+import { ALL_PROVIDERS } from "@flowmaestro/shared";
 import { BaseNode } from "./BaseNode";
 
 interface DatabaseNodeData {
@@ -11,8 +12,20 @@ interface DatabaseNodeData {
 }
 
 function DatabaseNode({ data, selected }: NodeProps<DatabaseNodeData>) {
-    const provider = data.provider;
+    const provider = data.provider?.toLocaleLowerCase();
     const operation = data.operation;
+
+    const providerMeta = ALL_PROVIDERS.find((p) => p.provider === provider);
+
+    const providerLogoUrl = providerMeta?.logoUrl;
+    const providerBorderColor = providerMeta?.brandColor;
+    const ProviderLogo = ({ className }: { className?: string }) => (
+        <img
+            src={providerLogoUrl}
+            alt={providerMeta?.displayName || "Provider logo"}
+            className={`${className ?? ""} object-contain`}
+        />
+    );
 
     // Format provider name for display (PostgreSQL, MySQL, MongoDB)
     const formatProvider = (providerStr: string): string => {
@@ -34,7 +47,14 @@ function DatabaseNode({ data, selected }: NodeProps<DatabaseNodeData>) {
 
     return (
         <BaseNode
-            icon={Database}
+            icon={providerLogoUrl ? ProviderLogo : Database}
+            iconClassName={providerLogoUrl ? "w-5 h-5 rounded" : undefined}
+            iconWrapperClassName={providerLogoUrl ? "p-1 w-7 h-7 border bg-muted/30" : undefined}
+            iconWrapperStyle={
+                providerLogoUrl && providerBorderColor
+                    ? { borderColor: providerBorderColor }
+                    : undefined
+            }
             label={data.label || "Database"}
             status={data.status}
             category="connect"

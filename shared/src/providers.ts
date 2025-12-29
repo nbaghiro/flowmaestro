@@ -35,6 +35,7 @@ export interface Provider {
     displayName: string;
     description: string;
     logoUrl: string;
+    brandColor?: string;
     category: string;
     methods: ConnectionMethod[];
     comingSoon?: boolean;
@@ -58,6 +59,7 @@ export const ALL_PROVIDERS: Provider[] = [
         displayName: "OpenAI",
         description: "GPT models and AI capabilities",
         logoUrl: getBrandLogo("openai.com"),
+        brandColor: "#000000",
         category: "AI & ML",
         methods: ["api_key"]
     },
@@ -66,6 +68,7 @@ export const ALL_PROVIDERS: Provider[] = [
         displayName: "Anthropic",
         description: "Claude AI assistant",
         logoUrl: getBrandLogo("anthropic.com"),
+        brandColor: "#141414",
         category: "AI & ML",
         methods: ["api_key"]
     },
@@ -74,6 +77,7 @@ export const ALL_PROVIDERS: Provider[] = [
         displayName: "Google AI",
         description: "Gemini models with vision, audio, and massive context windows",
         logoUrl: getBrandLogo("google.com"),
+        brandColor: "#4285F4",
         category: "AI & ML",
         methods: ["api_key"]
     },
@@ -82,6 +86,7 @@ export const ALL_PROVIDERS: Provider[] = [
         displayName: "Hugging Face",
         description: "Access thousands of open-source AI models including Llama, Qwen, and Mistral",
         logoUrl: getBrandLogo("huggingface.co"),
+        brandColor: "#FFB000",
         category: "AI & ML",
         methods: ["api_key"]
     },
@@ -92,6 +97,7 @@ export const ALL_PROVIDERS: Provider[] = [
         displayName: "Slack",
         description: "Send messages and manage channels",
         logoUrl: getBrandLogo("slack.com"),
+        brandColor: "#4A154B",
         category: "Communication",
         methods: ["oauth2"]
     },
@@ -178,6 +184,7 @@ export const ALL_PROVIDERS: Provider[] = [
         displayName: "Airtable",
         description: "Manage records, bases, and collaborate in Airtable",
         logoUrl: getBrandLogo("airtable.com"),
+        brandColor: "#18BFFF",
         category: "Productivity",
         methods: ["oauth2"]
     },
@@ -415,6 +422,7 @@ export const ALL_PROVIDERS: Provider[] = [
         displayName: "LinkedIn",
         description: "Create posts, share articles, manage comments and reactions on LinkedIn",
         logoUrl: getBrandLogo("linkedin.com"),
+        brandColor: "#0A66C2",
         category: "Social Media",
         methods: ["oauth2"]
     },
@@ -1466,6 +1474,7 @@ export const ALL_PROVIDERS: Provider[] = [
         displayName: "MongoDB",
         description: "NoSQL database platform",
         logoUrl: getBrandLogo("mongodb.com"),
+        brandColor: "#47A248",
         category: "Databases",
         methods: ["api_key"]
     },
@@ -1474,6 +1483,7 @@ export const ALL_PROVIDERS: Provider[] = [
         displayName: "PostgreSQL",
         description: "Relational database",
         logoUrl: getBrandLogo("postgrespro.com"),
+        brandColor: "#336791",
         category: "Databases",
         methods: ["api_key"]
     },
@@ -1482,6 +1492,7 @@ export const ALL_PROVIDERS: Provider[] = [
         displayName: "MySQL",
         description: "Relational database",
         logoUrl: getBrandLogo("mysql.com"),
+        brandColor: "#4479A1",
         category: "Databases",
         methods: ["api_key"],
         comingSoon: true

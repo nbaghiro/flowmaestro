@@ -1,5 +1,5 @@
-import { LucideIcon, GripHorizontal, ArrowLeftRight } from "lucide-react";
-import { ReactNode, useState, useEffect } from "react";
+import { GripHorizontal, ArrowLeftRight } from "lucide-react";
+import { useState, useEffect } from "react";
 import { Handle, Position, useNodeId, useStore, useUpdateNodeInternals } from "reactflow";
 import { NodeExecutionPopover } from "../../components/execution/NodeExecutionPopover";
 import { cn } from "../../lib/utils";
@@ -8,13 +8,14 @@ import {
     INITIAL_NODE_WIDTH,
     INITIAL_NODE_HEIGHT
 } from "../../stores/workflowStore";
+import type { CSSProperties, ElementType, ReactNode } from "react";
 
 export type NodeStatus = "idle" | "pending" | "running" | "success" | "error";
 
 export type ConnectorLayout = "vertical" | "horizontal";
 
 interface BaseNodeProps {
-    icon: LucideIcon;
+    icon: ElementType<{ className?: string }>;
     label: string;
     status?: NodeStatus;
     category?: "ai" | "logic" | "interaction" | "data" | "connect" | "voice";
@@ -25,6 +26,9 @@ interface BaseNodeProps {
     customHandles?: ReactNode;
     onStatusClick?: () => void;
     connectorLayout?: ConnectorLayout;
+    iconClassName?: string;
+    iconWrapperClassName?: string;
+    iconWrapperStyle?: CSSProperties;
 }
 
 const statusConfig: Record<NodeStatus, { color: string; label: string }> = {
@@ -82,7 +86,10 @@ export function BaseNode({
     hasOutputHandle = true,
     customHandles,
     onStatusClick,
-    connectorLayout: connectorLayoutProp = "horizontal"
+    connectorLayout: connectorLayoutProp = "horizontal",
+    iconClassName,
+    iconWrapperClassName,
+    iconWrapperStyle
 }: BaseNodeProps) {
     const nodeId = useNodeId();
     const { currentExecution, selectedNode } = useWorkflowStore();
@@ -271,8 +278,18 @@ export function BaseNode({
             {/* Header */}
             <div className="flex items-center justify-between px-3 py-2.5 border-b border-border bg-muted/30">
                 <div className="flex items-center gap-2.5">
-                    <div className={cn("p-1.5 rounded-md", categoryStyle.iconBg)}>
-                        <Icon className={cn("w-3.5 h-3.5", categoryStyle.iconColor)} />
+                    <div
+                        className={cn(
+                            "p-1.5 rounded-md flex items-center justify-center",
+                            categoryStyle.iconBg,
+                            categoryStyle.iconColor,
+                            iconWrapperClassName
+                        )}
+                        style={iconWrapperStyle}
+                    >
+                        <Icon
+                            className={cn("w-3.5 h-3.5", categoryStyle.iconColor, iconClassName)}
+                        />
                     </div>
                     <span className="font-medium text-sm text-foreground">{label}</span>
                 </div>
@@ -337,8 +354,6 @@ export function BaseNode({
                     className="
                         w-4 h-4
                         flex items-center justify-center
-                        rounded
-                        bg-muted/70 hover:bg-muted
                         text-muted-foreground hover:text-foreground
                         mb-[2px]
                     "

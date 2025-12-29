@@ -1,6 +1,7 @@
 import { Plug } from "lucide-react";
 import { memo } from "react";
 import { NodeProps } from "reactflow";
+import { ALL_PROVIDERS } from "@flowmaestro/shared";
 import { BaseNode } from "./BaseNode";
 
 interface IntegrationNodeData {
@@ -11,8 +12,20 @@ interface IntegrationNodeData {
 }
 
 function IntegrationNode({ data, selected }: NodeProps<IntegrationNodeData>) {
-    const provider = data.provider;
+    const provider = data.provider?.toLocaleLowerCase();
     const operation = data.operation;
+
+    const providerMeta = ALL_PROVIDERS.find((p) => p.provider === provider);
+
+    const providerLogoUrl = providerMeta?.logoUrl;
+    const providerBorderColor = providerMeta?.brandColor;
+    const ProviderLogo = ({ className }: { className?: string }) => (
+        <img
+            src={providerLogoUrl}
+            alt={providerMeta?.displayName || "Provider logo"}
+            className={`${className ?? ""} object-contain`}
+        />
+    );
 
     // Format operation for display: handle both snake_case and camelCase
     const formatOperation = (opStr: string): string => {
@@ -26,7 +39,14 @@ function IntegrationNode({ data, selected }: NodeProps<IntegrationNodeData>) {
 
     return (
         <BaseNode
-            icon={Plug}
+            icon={providerLogoUrl ? ProviderLogo : Plug}
+            iconClassName={providerLogoUrl ? "w-5 h-5 rounded" : undefined}
+            iconWrapperClassName={providerLogoUrl ? "p-1 w-7 h-7 border bg-muted/30" : undefined}
+            iconWrapperStyle={
+                providerLogoUrl && providerBorderColor
+                    ? { borderColor: providerBorderColor }
+                    : undefined
+            }
             label={data.label || "Integration"}
             status={data.status}
             category="connect"
