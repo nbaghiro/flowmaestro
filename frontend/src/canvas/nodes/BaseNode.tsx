@@ -1,6 +1,6 @@
-import { LucideIcon, GripHorizontal } from "lucide-react";
+import { LucideIcon, GripHorizontal, ArrowLeftRight } from "lucide-react";
 import { ReactNode, useState, useEffect } from "react";
-import { Handle, Position, useNodeId, useStore } from "reactflow";
+import { Handle, Position, useNodeId, useStore, useUpdateNodeInternals } from "reactflow";
 import { NodeExecutionPopover } from "../../components/execution/NodeExecutionPopover";
 import { cn } from "../../lib/utils";
 import {
@@ -10,6 +10,8 @@ import {
 } from "../../stores/workflowStore";
 
 export type NodeStatus = "idle" | "pending" | "running" | "success" | "error";
+
+export type ConnectorLayout = "vertical" | "horizontal";
 
 interface BaseNodeProps {
     icon: LucideIcon;
@@ -22,6 +24,7 @@ interface BaseNodeProps {
     hasOutputHandle?: boolean;
     customHandles?: ReactNode;
     onStatusClick?: () => void;
+    connectorLayout?: ConnectorLayout;
 }
 
 const statusConfig: Record<NodeStatus, { color: string; label: string }> = {
@@ -78,14 +81,33 @@ export function BaseNode({
     hasInputHandle = true,
     hasOutputHandle = true,
     customHandles,
-    onStatusClick
+    onStatusClick,
+    connectorLayout: connectorLayoutProp = "horizontal"
 }: BaseNodeProps) {
     const nodeId = useNodeId();
     const { currentExecution, selectedNode } = useWorkflowStore();
     const categoryStyle = categoryConfig[category];
     const [showPopover, setShowPopover] = useState(false);
 
+    const connectorLayout =
+        useWorkflowStore((s) => {
+            if (!nodeId) return undefined;
+            const node = s.nodes.find((item) => item.id === nodeId);
+            return node?.data?.connectorLayout as ConnectorLayout | undefined;
+        }) ?? connectorLayoutProp;
+
+    const updateNode = useWorkflowStore((s) => s.updateNode);
     const updateNodeStyle = useWorkflowStore((s) => s.updateNodeStyle);
+
+    const toggleConnectorLayout = () => {
+        if (!nodeId) return;
+
+        updateNode(nodeId, {
+            connectorLayout: connectorLayout === "vertical" ? "horizontal" : "vertical"
+        });
+    };
+
+    const updateNodeInternals = useUpdateNodeInternals();
 
     // Resize State Management (width + height)
     const [isResizing, setIsResizing] = useState(false);
@@ -93,7 +115,18 @@ export function BaseNode({
     const [startWidth, setStartWidth] = useState<number | null>(null);
     const [startHeight, setStartHeight] = useState<number | null>(null);
     const [showResizeTip, setShowResizeTip] = useState(false);
+    const [showConnectorLayout, setShowConnectorLayout] = useState(false);
     const [didResize, setDidResize] = useState(false);
+
+    const inputHandlePosition = connectorLayout === "horizontal" ? Position.Left : Position.Top;
+    const outputHandlePosition =
+        connectorLayout === "horizontal" ? Position.Right : Position.Bottom;
+
+    useEffect(() => {
+        if (nodeId) {
+            updateNodeInternals(nodeId);
+        }
+    }, [connectorLayout, nodeId, updateNodeInternals]);
 
     useEffect(() => {
         if (!nodeId) return;
@@ -290,6 +323,49 @@ export function BaseNode({
                 </div>
             )}
 
+            {/* Connector Layout Toggle + Tooltip */}
+            <div
+                className="nodrag absolute bottom-1 right-7 z-20"
+                onMouseEnter={() => setShowConnectorLayout(true)}
+                onMouseLeave={() => setShowConnectorLayout(false)}
+            >
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        toggleConnectorLayout();
+                    }}
+                    className="
+                        w-4 h-4
+                        flex items-center justify-center
+                        rounded
+                        bg-muted/70 hover:bg-muted
+                        text-muted-foreground hover:text-foreground
+                        mb-[2px]
+                    "
+                >
+                    <ArrowLeftRight className="w-3 h-3" />
+                </button>
+
+                {showConnectorLayout && (
+                    <div
+                        className="
+                            pointer-events-none
+                            absolute top-full left-1/2 -translate-x-1/2 mt-[10px]
+                            px-2 py-1
+                            text-xs text-white
+                            bg-black/90 rounded
+                            shadow-md
+                            whitespace-nowrap
+                            z-40
+                        "
+                    >
+                        {connectorLayout === "vertical"
+                            ? "Switch to horizontal connectors"
+                            : "Switch to vertical connectors"}
+                    </div>
+                )}
+            </div>
+
             {/* Resize Handle */}
             <div
                 onMouseEnter={() => !isResizing && setShowResizeTip(true)}
@@ -340,7 +416,7 @@ export function BaseNode({
                     {hasInputHandle && (
                         <Handle
                             type="target"
-                            position={Position.Top}
+                            position={inputHandlePosition}
                             id="input"
                             className="!w-2.5 !h-2.5 !bg-white !border-2 !border-border !shadow-sm"
                         />
@@ -348,7 +424,7 @@ export function BaseNode({
                     {hasOutputHandle && (
                         <Handle
                             type="source"
-                            position={Position.Bottom}
+                            position={outputHandlePosition}
                             id="output"
                             className="!w-2.5 !h-2.5 !bg-white !border-2 !border-border !shadow-sm"
                         />
