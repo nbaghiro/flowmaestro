@@ -82,7 +82,7 @@ export function BaseNode({
     hasOutputHandle = true,
     customHandles,
     onStatusClick,
-    connectorLayout: connectorLayoutProp = "vertical"
+    connectorLayout: connectorLayoutProp = "horizontal"
 }: BaseNodeProps) {
     const nodeId = useNodeId();
     const { currentExecution, selectedNode } = useWorkflowStore();
@@ -115,6 +115,7 @@ export function BaseNode({
     const [startWidth, setStartWidth] = useState<number | null>(null);
     const [startHeight, setStartHeight] = useState<number | null>(null);
     const [showResizeTip, setShowResizeTip] = useState(false);
+    const [showConnectorLayout, setShowConnectorLayout] = useState(false);
     const [didResize, setDidResize] = useState(false);
 
     const inputHandlePosition = connectorLayout === "horizontal" ? Position.Left : Position.Top;
@@ -322,31 +323,48 @@ export function BaseNode({
                 </div>
             )}
 
-            {/* Connector Layout Toggle */}
-            <button
-                onClick={(e) => {
-                    e.stopPropagation();
-                    toggleConnectorLayout();
-                }}
-                title={
-                    connectorLayout === "vertical"
-                        ? "Switch to horizontal connectors"
-                        : "Switch to vertical connectors"
-                }
-                className="
-                    nodrag
-                    absolute bottom-1 right-7
-                    w-4 h-4
-                    flex items-center justify-center
-                    rounded
-                    bg-muted/70 hover:bg-muted
-                    text-muted-foreground hover:text-foreground
-                    mb-[2px]
-                    z-20
-                "
+            {/* Connector Layout Toggle + Tooltip */}
+            <div
+                className="nodrag absolute bottom-1 right-7 z-20"
+                onMouseEnter={() => setShowConnectorLayout(true)}
+                onMouseLeave={() => setShowConnectorLayout(false)}
             >
-                <ArrowLeftRight className="w-3 h-3" />
-            </button>
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        toggleConnectorLayout();
+                    }}
+                    className="
+                        w-4 h-4
+                        flex items-center justify-center
+                        rounded
+                        bg-muted/70 hover:bg-muted
+                        text-muted-foreground hover:text-foreground
+                        mb-[2px]
+                    "
+                >
+                    <ArrowLeftRight className="w-3 h-3" />
+                </button>
+
+                {showConnectorLayout && (
+                    <div
+                        className="
+                            pointer-events-none
+                            absolute top-full left-1/2 -translate-x-1/2 mt-[10px]
+                            px-2 py-1
+                            text-xs text-white
+                            bg-black/90 rounded
+                            shadow-md
+                            whitespace-nowrap
+                            z-40
+                        "
+                    >
+                        {connectorLayout === "vertical"
+                            ? "Switch to horizontal connectors"
+                            : "Switch to vertical connectors"}
+                    </div>
+                )}
+            </div>
 
             {/* Resize Handle */}
             <div
