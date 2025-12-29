@@ -841,6 +841,87 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
         refreshable: true
     },
 
+    youtube: {
+        name: "youtube",
+        displayName: "YouTube",
+        authUrl: "https://accounts.google.com/o/oauth2/v2/auth",
+        tokenUrl: "https://oauth2.googleapis.com/token",
+        scopes: [
+            "https://www.googleapis.com/auth/youtube",
+            "https://www.googleapis.com/auth/youtube.readonly",
+            "https://www.googleapis.com/auth/youtube.upload",
+            "https://www.googleapis.com/auth/youtube.force-ssl"
+        ],
+        authParams: {
+            access_type: "offline",
+            prompt: "consent"
+        },
+        clientId: config.oauth.google.clientId,
+        clientSecret: config.oauth.google.clientSecret,
+        redirectUri: getOAuthRedirectUri("google"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                // Fetch authenticated user's YouTube channel info
+                const response = await fetch(
+                    "https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&mine=true",
+                    {
+                        headers: {
+                            Authorization: `Bearer ${accessToken}`
+                        }
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    items?: Array<{
+                        id?: string;
+                        snippet?: {
+                            title?: string;
+                            description?: string;
+                            customUrl?: string;
+                            thumbnails?: {
+                                default?: { url?: string };
+                            };
+                        };
+                        statistics?: {
+                            subscriberCount?: string;
+                            videoCount?: string;
+                            viewCount?: string;
+                        };
+                    }>;
+                };
+
+                const channel = data.items?.[0];
+
+                return {
+                    channelId: channel?.id,
+                    channelTitle: channel?.snippet?.title,
+                    channelDescription: channel?.snippet?.description,
+                    customUrl: channel?.snippet?.customUrl,
+                    thumbnailUrl: channel?.snippet?.thumbnails?.default?.url,
+                    subscriberCount: channel?.statistics?.subscriberCount,
+                    videoCount: channel?.statistics?.videoCount,
+                    viewCount: channel?.statistics?.viewCount,
+                    email: channel?.snippet?.title || "YouTube User",
+                    user:
+                        channel?.snippet?.customUrl || channel?.snippet?.title || "YouTube Channel"
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get YouTube channel info");
+                return {
+                    email: "unknown@youtube",
+                    user: "YouTube User",
+                    channelTitle: "YouTube User"
+                };
+            }
+        },
+        revokeUrl: "https://oauth2.googleapis.com/revoke",
+        refreshable: true
+    },
+
     // ==========================================================================
     // Microsoft Platform Services (OneDrive, Excel, Word, etc.)
     // All use MICROSOFT_CLIENT_ID and MICROSOFT_CLIENT_SECRET credentials
@@ -2134,6 +2215,77 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
                     name: "LinkedIn User",
                     email: "unknown@linkedin.com",
                     user: "LinkedIn User"
+                };
+            }
+        },
+        refreshable: true
+    },
+
+    // ==========================================================================
+    // Reddit - Social Media
+    // Uses OAuth 2.0 with HTTP Basic Auth for token exchange
+    // ==========================================================================
+
+    reddit: {
+        name: "reddit",
+        displayName: "Reddit",
+        authUrl: "https://www.reddit.com/api/v1/authorize",
+        tokenUrl: "https://www.reddit.com/api/v1/access_token",
+        scopes: [
+            "identity", // User identity
+            "read", // Read content
+            "submit", // Submit posts
+            "vote", // Vote on content
+            "save", // Save posts/comments
+            "edit", // Edit submissions
+            "history" // Access history
+        ],
+        authParams: {
+            duration: "permanent" // Required to get refresh token
+        },
+        clientId: config.oauth.reddit.clientId,
+        clientSecret: config.oauth.reddit.clientSecret,
+        redirectUri: getOAuthRedirectUri("reddit"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://oauth.reddit.com/api/v1/me", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                        "User-Agent": "FlowMaestro/1.0 (by /u/flowmaestro)"
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    id?: string;
+                    name?: string;
+                    icon_img?: string;
+                    created_utc?: number;
+                    total_karma?: number;
+                    link_karma?: number;
+                    comment_karma?: number;
+                };
+
+                return {
+                    userId: data.id || "unknown",
+                    username: data.name || "Reddit User",
+                    user: `u/${data.name || "unknown"}`,
+                    email: `${data.name || "unknown"}@reddit`,
+                    avatar: data.icon_img,
+                    karma: data.total_karma,
+                    linkKarma: data.link_karma,
+                    commentKarma: data.comment_karma
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get Reddit user info");
+                return {
+                    userId: "unknown",
+                    username: "Reddit User",
+                    user: "u/unknown",
+                    email: "unknown@reddit"
                 };
             }
         },

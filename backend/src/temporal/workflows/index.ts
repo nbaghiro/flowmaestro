@@ -1,18 +1,45 @@
-export { userInputWorkflow, userInputSignal, hasReceivedInputQuery } from "./user-input-workflow";
-export { longRunningTaskWorkflow } from "./long-running-task-workflow";
+/**
+ * Temporal Workflows Index
+ *
+ * Consolidated exports from:
+ * - workflow-orchestrator.ts - Main workflow orchestrator
+ * - agent-orchestrator.ts - Agent orchestrator workflow
+ * - triggered.ts - Triggered workflow
+ * - document-processor.ts - Document processing workflow
+ */
+
+// Main workflow orchestrator
 export {
     orchestratorWorkflow,
     type OrchestratorInput,
     type OrchestratorResult,
     type WorkflowDefinition
-} from "./orchestrator-workflow";
+} from "./workflow-orchestrator";
+
+// Agent orchestrator workflow
+export {
+    agentOrchestratorWorkflow,
+    userMessageSignal,
+    type AgentOrchestratorInput,
+    type AgentOrchestratorResult,
+    type AgentConfig,
+    type LLMResponse
+} from "./agent-orchestrator";
+
+// Triggered workflow
 export {
     triggeredWorkflow,
     type TriggeredWorkflowInput,
     type TriggeredWorkflowResult
-} from "./triggered-workflow";
+} from "./trigger-handler";
+
+// Document processor workflow
 export {
     processDocumentWorkflow,
     type ProcessDocumentWorkflowInput,
     type ProcessDocumentWorkflowResult
-} from "./process-document-workflow";
+} from "./document-processor";
+
+// Workflow logger (direct import, not from barrel)
+export { createWorkflowLogger } from "../core/workflow-logger";
+export type { WorkflowLogContext, WorkflowLogger } from "../core/workflow-logger";

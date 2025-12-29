@@ -32,7 +32,8 @@ export const config = {
         serviceName: process.env.SERVICE_NAME || "flowmaestro-api",
         serviceVersion: process.env.APP_VERSION || "1.0.0",
         gcpProjectId: process.env.GCP_PROJECT_ID || "",
-        enableCloudLogging: process.env.ENABLE_CLOUD_LOGGING === "true"
+        enableCloudLogging: process.env.ENABLE_CLOUD_LOGGING === "true",
+        enableClientLogIngestion: process.env.ENABLE_CLIENT_LOG_INGESTION === "true"
     },
 
     // ==========================================================================
@@ -298,6 +299,12 @@ export const config = {
         linkedin: {
             clientId: process.env.LINKEDIN_CLIENT_ID || "",
             clientSecret: process.env.LINKEDIN_CLIENT_SECRET || ""
+        },
+
+        // Reddit
+        reddit: {
+            clientId: process.env.REDDIT_CLIENT_ID || "",
+            clientSecret: process.env.REDDIT_CLIENT_SECRET || ""
         }
     }
 };
@@ -351,7 +358,8 @@ export function getOAuthRedirectUri(provider: string): string {
         dropbox: "/oauth/dropbox/callback",
         box: "/oauth/box/callback",
         twitter: "/oauth/twitter/callback",
-        linkedin: "/oauth/linkedin/callback"
+        linkedin: "/oauth/linkedin/callback",
+        reddit: "/oauth/reddit/callback"
     };
 
     const callbackPath = callbackPaths[provider] || `/oauth/${provider}/callback`;
@@ -403,7 +411,8 @@ export function getOAuthCredentials(provider: string): { clientId: string; clien
         dropbox: "dropbox",
         box: "box",
         twitter: "twitter",
-        linkedin: "linkedin"
+        linkedin: "linkedin",
+        reddit: "reddit"
     };
 
     const configKey = providerMap[provider];

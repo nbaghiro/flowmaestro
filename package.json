@@ -56,12 +56,16 @@
     },
     "lint-staged": {
         "*.{ts,tsx}": [
-            "eslint --fix"
+            "eslint --fix",
+            "prettier --write"
         ],
         "*.{json,md}": [
             "prettier --write"
         ]
     },
     "author": "FlowMaestro Team",
-    "license": "MIT"
+    "license": "MIT",
+    "dependencies": {
+        "@swc/core": "^1.15.7"
+    }
 }

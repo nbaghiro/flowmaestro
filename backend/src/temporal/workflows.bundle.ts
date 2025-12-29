@@ -5,9 +5,7 @@
  * Temporal requires workflows to be in a specific bundle format.
  */
 
-export * from "./workflows/orchestrator-workflow";
-export * from "./workflows/user-input-workflow";
-export * from "./workflows/long-running-task-workflow";
-export * from "./workflows/triggered-workflow";
-export * from "./workflows/process-document-workflow";
-export * from "./workflows/agent-orchestrator-workflow";
+export * from "./workflows/workflow-orchestrator";
+export * from "./workflows/agent-orchestrator";
+export * from "./workflows/trigger-handler";
+export * from "./workflows/document-processor";

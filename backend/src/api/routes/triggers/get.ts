@@ -1,7 +1,7 @@
 import { FastifyInstance } from "fastify";
 import { createServiceLogger } from "../../../core/logging";
 import { TriggerRepository } from "../../../storage/repositories/TriggerRepository";
-import { SchedulerService } from "../../../temporal/services/scheduler";
+import { SchedulerService } from "../../../temporal/core/services/scheduler";
 import { authMiddleware } from "../../middleware";
 
 const logger = createServiceLogger("TriggerRoutes");

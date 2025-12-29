@@ -7,8 +7,8 @@ import os from "os";
 import path from "path";
 import { createWorkerLogger } from "../core/logging";
 import { initializeOTel, shutdownOTel } from "../core/observability";
-import { createOTelActivityInterceptor } from "./interceptors";
-import { createRuntimeLogger } from "./shared/runtime-logger";
+import { createOTelActivityInterceptor } from "./activities/interceptors";
+import { createRuntimeLogger } from "./core";
 
 const logger = createWorkerLogger("flowmaestro-worker");
 
@@ -94,7 +94,7 @@ async function run() {
     const workerIdentity = `orchestrator-${process.env.HOSTNAME || os.hostname()}-${process.pid}`;
 
     // Import task queue config
-    const { TASK_QUEUES } = await import("./shared/config");
+    const { TASK_QUEUES } = await import("./core");
 
     // Create worker
     const worker = await Worker.create({
@@ -112,7 +112,7 @@ async function run() {
         stickyQueueScheduleToStartTimeout: "10 seconds",
         // Add bundler options for TypeScript
         bundlerOptions: {
-            ignoreModules: ["uuid", "pg", "redis", "fastify"]
+            ignoreModules: ["uuid"]
         },
         // Activity interceptors for OTel tracing
         interceptors: {
@@ -130,10 +130,10 @@ async function run() {
     );
 
     // Health check HTTP server for Kubernetes liveness/readiness probes
-    const healthPort = parseInt(process.env.WORKER_HEALTH_PORT || "8080", 10);
+    const healthPort = parseInt(process.env.WORKER_HEALTH_PORT || "9090", 10);
     let isReady = true; // Track readiness state
 
-    const healthServer = http.createServer((req, res) => {
+    const healthServer: http.Server = http.createServer((req, res) => {
         if (req.url === "/health") {
             // Liveness probe - returns 200 if the process is running
             res.writeHead(200, { "Content-Type": "application/json" });

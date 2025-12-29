@@ -1,6 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import { createServiceLogger } from "../../../core/logging";
-import { WebhookService, WebhookRequestData } from "../../../temporal/services/webhook";
+import { WebhookService, WebhookRequestData } from "../../../temporal/core/services/webhook";
 
 const logger = createServiceLogger("WebhookReceiver");
 

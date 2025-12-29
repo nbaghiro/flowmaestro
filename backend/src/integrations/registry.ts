@@ -206,6 +206,18 @@ const gmailEntry: ProviderRegistryEntry = {
     }
 };
 
+// Register YouTube provider
+const youtubeEntry: ProviderRegistryEntry = {
+    name: "youtube",
+    displayName: "YouTube",
+    authMethod: "oauth2",
+    category: "social_media",
+    loader: async () => {
+        const { YouTubeProvider } = await import("./providers/youtube/YouTubeProvider");
+        return new YouTubeProvider();
+    }
+};
+
 // Register WhatsApp Business provider
 const whatsappEntry: ProviderRegistryEntry = {
     name: "whatsapp",
@@ -351,6 +363,7 @@ providerRegistry.register(googleDriveEntry);
 providerRegistry.register(googleCalendarEntry);
 providerRegistry.register(googleDocsEntry);
 providerRegistry.register(gmailEntry);
+providerRegistry.register(youtubeEntry);
 providerRegistry.register(whatsappEntry);
 providerRegistry.register(instagramEntry);
 providerRegistry.register(facebookEntry);
@@ -445,6 +458,20 @@ const linkedinEntry: ProviderRegistryEntry = {
 };
 
 providerRegistry.register(linkedinEntry);
+
+// Register Reddit provider
+const redditEntry: ProviderRegistryEntry = {
+    name: "reddit",
+    displayName: "Reddit",
+    authMethod: "oauth2",
+    category: "social_media",
+    loader: async () => {
+        const { RedditProvider } = await import("./providers/reddit/RedditProvider");
+        return new RedditProvider();
+    }
+};
+
+providerRegistry.register(redditEntry);
 
 // Export for use in application
 export { providerRegistry };

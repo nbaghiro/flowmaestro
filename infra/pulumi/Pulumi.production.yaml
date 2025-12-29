@@ -99,6 +99,8 @@ config:
       {"name":"box-client-secret","envVar":"BOX_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Box OAuth client secret"},
       {"name":"twitter-client-id","envVar":"TWITTER_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"X (Twitter) OAuth 2.0 client ID"},
       {"name":"twitter-client-secret","envVar":"TWITTER_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"X (Twitter) OAuth 2.0 client secret"},
+      {"name":"reddit-client-id","envVar":"REDDIT_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Reddit OAuth2 application client ID"},
+      {"name":"reddit-client-secret","envVar":"REDDIT_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Reddit OAuth2 application client secret"},
       {"name":"twilio-account-sid","envVar":"TWILIO_ACCOUNT_SID","category":"service","deployments":["api"],"required":false,"description":"Twilio Account SID"},
       {"name":"twilio-auth-token","envVar":"TWILIO_AUTH_TOKEN","category":"service","deployments":["api"],"required":false,"description":"Twilio Auth Token"},
       {"name":"twilio-phone-number","envVar":"TWILIO_PHONE_NUMBER","category":"service","deployments":["api"],"required":false,"description":"Twilio Phone Number"}

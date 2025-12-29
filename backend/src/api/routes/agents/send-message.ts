@@ -2,7 +2,7 @@ import { FastifyRequest, FastifyReply } from "fastify";
 import { z } from "zod";
 import { AgentExecutionRepository } from "../../../storage/repositories/AgentExecutionRepository";
 import { getTemporalClient } from "../../../temporal/client";
-import { userMessageSignal } from "../../../temporal/workflows/agent-orchestrator-workflow";
+import { userMessageSignal } from "../../../temporal/workflows/agent-orchestrator";
 import { NotFoundError, BadRequestError } from "../../middleware";
 
 const sendMessageParamsSchema = z.object({

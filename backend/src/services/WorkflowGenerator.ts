@@ -1,7 +1,10 @@
 import { getDefaultModelForProvider } from "@flowmaestro/shared";
 import { createServiceLogger } from "../core/logging";
 import { ConnectionRepository } from "../storage/repositories/ConnectionRepository";
-import { executeLLMNode, type LLMNodeConfig } from "../temporal/executors/ai/llm";
+import {
+    executeLLMNode,
+    type LLMNodeConfig
+} from "../temporal/activities/execution/handlers/ai/llm";
 
 const logger = createServiceLogger("WorkflowGenerator");
 

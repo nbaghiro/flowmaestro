@@ -3,7 +3,7 @@ import { cancelExecutionRoute } from "./cancel";
 import { getExecutionRoute } from "./get";
 import { getExecutionLogsRoute } from "./getLogs";
 import { listExecutionsRoute } from "./list";
-import { submitInputRoute } from "./submit-input";
+import { streamExecutionRoute } from "./stream";
 
 export async function executionRoutes(fastify: FastifyInstance) {
     // Register all execution routes
@@ -11,5 +11,5 @@ export async function executionRoutes(fastify: FastifyInstance) {
     await getExecutionRoute(fastify);
     await cancelExecutionRoute(fastify);
     await getExecutionLogsRoute(fastify);
-    await submitInputRoute(fastify);
+    await streamExecutionRoute(fastify);
 }

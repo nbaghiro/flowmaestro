@@ -1,6 +1,9 @@
 import { getLogger } from "../core/logging";
 import { ConnectionRepository } from "../storage/repositories/ConnectionRepository";
-import { executeLLMNode, type LLMExecutionCallbacks } from "../temporal/executors/ai/llm";
+import {
+    executeLLMNode,
+    type LLMExecutionCallbacks
+} from "../temporal/activities/execution/handlers/ai/llm";
 import type {
     WorkflowContext,
     ChatResponse,

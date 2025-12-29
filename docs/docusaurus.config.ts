@@ -39,7 +39,6 @@ const config: Config = {
         ]
     ],
 
-
     themeConfig: {
         image: "img/social-card.png",
         docs: {

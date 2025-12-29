@@ -149,13 +149,14 @@ logger.error({ err: error, userId: "123" }, "Failed to process request");
 
 **Logger Types:**
 
-| Function | Use Case |
-|----------|----------|
-| `createServiceLogger(name)` | For services and modules - creates a child logger with component name |
-| `createRequestLogger(request)` | For route handlers - includes correlation IDs from request |
-| `createWorkerLogger(name)` | For Temporal workers |
+| Function                       | Use Case                                                              |
+| ------------------------------ | --------------------------------------------------------------------- |
+| `createServiceLogger(name)`    | For services and modules - creates a child logger with component name |
+| `createRequestLogger(request)` | For route handlers - includes correlation IDs from request            |
+| `createWorkerLogger(name)`     | For Temporal workers                                                  |
 
 **Log Levels:**
+
 - `trace` - Very detailed debugging (rarely used)
 - `debug` - Development debugging info
 - `info` - Normal operational messages
@@ -180,6 +181,7 @@ logger.error("API call failed", error, { endpoint: "/api/users" });
 ```
 
 The frontend logger automatically:
+
 - Batches logs and sends to backend every 5 seconds (or when 50 logs accumulate)
 - Captures session ID and correlation IDs
 - Redacts sensitive fields (passwords, tokens, API keys)
@@ -187,11 +189,11 @@ The frontend logger automatically:
 
 #### Exceptions (where console is allowed)
 
-| Location | Reason |
-|----------|--------|
-| `backend/tests/**` | Test files can use console for debugging |
-| `backend/scripts/**` | CLI scripts output to console |
-| `frontend/src/lib/logger.ts` | The logger itself uses console in dev mode |
+| Location                                         | Reason                                                                  |
+| ------------------------------------------------ | ----------------------------------------------------------------------- |
+| `backend/tests/**`                               | Test files can use console for debugging                                |
+| `backend/scripts/**`                             | CLI scripts output to console                                           |
+| `frontend/src/lib/logger.ts`                     | The logger itself uses console in dev mode                              |
 | `backend/src/temporal/shared/workflow-logger.ts` | Temporal workflows run in a V8 sandbox that cannot use external modules |
 
 ### Pre-Commit Type Checking Protocol
@@ -224,8 +226,14 @@ The frontend logger automatically:
     - Type assertion usage (prefer type guards)
 
 4. **Run Linter** to catch additional issues:
+
     ```bash
     npm run lint
+    ```
+
+5. **Run Prettier** to ensure consistent code formatting:
+    ```bash
+    npm run format
     ```
 
 **Why This Matters**:
@@ -234,6 +242,7 @@ The frontend logger automatically:
 - Implicit `any` bypasses type safety and defeats the purpose of TypeScript
 - Type warnings indicate potential bugs or code quality issues
 - Consistent type checking prevents technical debt accumulation
+- Consistent formatting improves code readability and reduces merge conflicts
 
 ### Examples
 

@@ -1077,8 +1077,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Cloud document editing",
         logoUrl: getBrandLogo("docs.google.com"),
         category: "Productivity",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "google-slides",
@@ -1429,11 +1428,10 @@ export const ALL_PROVIDERS: Provider[] = [
     {
         provider: "youtube",
         displayName: "YouTube",
-        description: "Video sharing platform",
+        description: "Search videos, manage playlists, comments, and subscriptions",
         logoUrl: getBrandLogo("youtube.com"),
         category: "Social Media",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "tiktok",
@@ -1456,11 +1454,10 @@ export const ALL_PROVIDERS: Provider[] = [
     {
         provider: "reddit",
         displayName: "Reddit",
-        description: "Social news aggregation",
+        description: "Read and submit posts, comments, and votes on Reddit",
         logoUrl: getBrandLogo("reddit.com"),
         category: "Social Media",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
 
     // Databases & Data

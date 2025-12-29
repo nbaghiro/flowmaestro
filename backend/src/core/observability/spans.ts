@@ -13,8 +13,8 @@ import {
     type Attributes
 } from "@opentelemetry/api";
 
-// Import from workflow-safe types file (single source of truth)
-import { SpanType, type SpanContext } from "../../temporal/orchestration/span-types";
+// Import from activities/tracing (single source of truth)
+import { SpanType, type SpanContext } from "../../temporal/activities/tracing";
 
 // Re-export for convenience
 export { SpanType, type SpanContext };

@@ -3,6 +3,7 @@
 ## Overview
 
 This document provides an exhaustive technical reference for the Sim Studio execution system, covering:
+
 1. DAG Executor architecture and execution flow
 2. Block handlers with line-by-line code traces
 3. Tool execution system (127+ integrations)
@@ -14,16 +15,16 @@ This document provides an exhaustive technical reference for the Sim Studio exec
 
 ## Key Files
 
-| Component | Location |
-|-----------|----------|
-| DAG Builder | `/apps/sim/executor/dag/builder.ts` |
-| Path Constructor | `/apps/sim/executor/dag/construction/paths.ts` |
-| Node Constructor | `/apps/sim/executor/dag/construction/nodes.ts` |
-| Edge Constructor | `/apps/sim/executor/dag/construction/edges.ts` |
-| Loop Constructor | `/apps/sim/executor/dag/construction/loops.ts` |
-| Execution Engine | `/apps/sim/executor/execution/engine.ts` |
-| Edge Manager | `/apps/sim/executor/execution/edge-manager.ts` |
-| Block Executor | `/apps/sim/executor/execution/block-executor.ts` |
+| Component        | Location                                         |
+| ---------------- | ------------------------------------------------ |
+| DAG Builder      | `/apps/sim/executor/dag/builder.ts`              |
+| Path Constructor | `/apps/sim/executor/dag/construction/paths.ts`   |
+| Node Constructor | `/apps/sim/executor/dag/construction/nodes.ts`   |
+| Edge Constructor | `/apps/sim/executor/dag/construction/edges.ts`   |
+| Loop Constructor | `/apps/sim/executor/dag/construction/loops.ts`   |
+| Execution Engine | `/apps/sim/executor/execution/engine.ts`         |
+| Edge Manager     | `/apps/sim/executor/execution/edge-manager.ts`   |
+| Block Executor   | `/apps/sim/executor/execution/block-executor.ts` |
 
 ## DAG Construction Pipeline
 
@@ -58,21 +59,21 @@ DAG { nodes: Map<string, DAGNode>, loopConfigs, parallelConfigs }
 
 ```typescript
 interface DAGNode {
-  id: string
-  block: SerializedBlock
-  incomingEdges: Set<string>
-  outgoingEdges: Map<string, DAGEdge>
-  metadata: {
-    isLoopNode?: boolean
-    loopId?: string
-    isSentinel?: boolean
-    sentinelType?: 'start' | 'end'
-    isParallelBranch?: boolean
-    parallelId?: string
-    branchIndex?: number
-    branchTotal?: number
-    originalBlockId?: string
-  }
+    id: string;
+    block: SerializedBlock;
+    incomingEdges: Set<string>;
+    outgoingEdges: Map<string, DAGEdge>;
+    metadata: {
+        isLoopNode?: boolean;
+        loopId?: string;
+        isSentinel?: boolean;
+        sentinelType?: "start" | "end";
+        isParallelBranch?: boolean;
+        parallelId?: string;
+        branchIndex?: number;
+        branchTotal?: number;
+        originalBlockId?: string;
+    };
 }
 ```
 
@@ -81,10 +82,10 @@ interface DAGNode {
 ```typescript
 // ExecutionEngine.run()
 while (hasWork()) {
-  const nodeId = this.dequeue()
-  const promise = this.executeNodeAsync(nodeId)
-  this.trackExecution(promise)
-  await this.waitForAnyExecution()
+    const nodeId = this.dequeue();
+    const promise = this.executeNodeAsync(nodeId);
+    this.trackExecution(promise);
+    await this.waitForAnyExecution();
 }
 ```
 
@@ -120,12 +121,12 @@ shouldActivateEdge(edge, output) {
 
 ### Loop Types
 
-| Type | Initialization | Condition |
-|------|---------------|-----------|
-| `for` | `maxIterations` from config | `loop.index < maxIterations` |
-| `forEach` | `items` resolved from reference | `loop.index < items.length` |
-| `while` | User-defined condition | Checked before each iteration |
-| `doWhile` | User-defined condition | Checked after first iteration |
+| Type      | Initialization                  | Condition                     |
+| --------- | ------------------------------- | ----------------------------- |
+| `for`     | `maxIterations` from config     | `loop.index < maxIterations`  |
+| `forEach` | `items` resolved from reference | `loop.index < items.length`   |
+| `while`   | User-defined condition          | Checked before each iteration |
+| `doWhile` | User-defined condition          | Checked after first iteration |
 
 ### Loop Variables
 
@@ -152,10 +153,10 @@ shouldActivateEdge(edge, output) {
 
 ### Parallel Types
 
-| Type | Description |
-|------|-------------|
+| Type         | Description                                  |
+| ------------ | -------------------------------------------- |
 | `collection` | Create branch per item in distribution array |
-| `count` | Fixed number of branches |
+| `count`      | Fixed number of branches                     |
 
 ### Branch Naming
 
@@ -241,16 +242,16 @@ execute(ctx, block, inputs)
 **Three-Tier System:**
 
 1. **Custom Tools** (lines 159-234):
-   - Fetch schema from database or store
-   - Filter schema for LLM visibility
-   - Create `executeFunction` that calls `executeTool('function_execute')`
+    - Fetch schema from database or store
+    - Filter schema for LLM visibility
+    - Create `executeFunction` that calls `executeTool('function_execute')`
 
 2. **MCP Tools** (lines 308-601):
-   - Cached schema path (lines 356-418): No server call needed
-   - Discovery fallback (lines 423-471): Batch by server, discover schemas
+    - Cached schema path (lines 356-418): No server call needed
+    - Discovery fallback (lines 423-471): Batch by server, discover schemas
 
 3. **Block Tools** (lines 603-615):
-   - `transformBlockTool()` wraps workflow blocks as tools
+    - `transformBlockTool()` wraps workflow blocks as tools
 
 ### Message Building (Lines 633-708)
 
@@ -325,10 +326,9 @@ execute(ctx, block, inputs) {
 
 ```typescript
 // Critical pattern using 'with' statement
-const conditionMet = new Function(
-  'context',
-  `with(context) { return ${resolvedConditionValue} }`
-)(evalContext)
+const conditionMet = new Function("context", `with(context) { return ${resolvedConditionValue} }`)(
+    evalContext
+);
 
 // Example:
 // evalContext = { count: 5, active: true }
@@ -444,12 +444,12 @@ execute(ctx, block, inputs) {
 
 **Key Files:**
 
-| Component | Location | Lines |
-|-----------|----------|-------|
-| Main Executor | `/apps/sim/tools/index.ts` | 173-1114 |
-| Tool Registry | `/apps/sim/tools/registry.ts` | 36,433 |
-| Tool Types | `/apps/sim/tools/types.ts` | 1-139 |
-| Parameter Utils | `/apps/sim/tools/params.ts` | 1-400+ |
+| Component       | Location                      | Lines    |
+| --------------- | ----------------------------- | -------- |
+| Main Executor   | `/apps/sim/tools/index.ts`    | 173-1114 |
+| Tool Registry   | `/apps/sim/tools/registry.ts` | 36,433   |
+| Tool Types      | `/apps/sim/tools/types.ts`    | 1-139    |
+| Parameter Utils | `/apps/sim/tools/params.ts`   | 1-400+   |
 
 ## Tool Discovery Mechanisms
 
@@ -482,12 +482,12 @@ export const tools: Record<string, ToolConfig> = {
 
 ```typescript
 export async function executeTool(
-  toolId: string,
-  params: Record<string, any>,
-  skipProxy = false,
-  skipPostProcess = false,
-  executionContext?: ExecutionContext
-): Promise<ToolResponse>
+    toolId: string,
+    params: Record<string, any>,
+    skipProxy = false,
+    skipPostProcess = false,
+    executionContext?: ExecutionContext
+): Promise<ToolResponse>;
 ```
 
 ### Execution Decision Tree
@@ -505,39 +505,39 @@ executeTool(toolId, params)
 ### Three Execution Paths
 
 1. **Direct Execution** (line 305):
-   - Tool has `directExecution` callback
-   - No HTTP needed (computational tools)
+    - Tool has `directExecution` callback
+    - No HTTP needed (computational tools)
 
 2. **Internal Routes** (line 345):
-   - Routes starting with `/api/`
-   - Calls `handleInternalRequest()`
+    - Routes starting with `/api/`
+    - Calls `handleInternalRequest()`
 
 3. **External APIs** (line 379):
-   - All other routes
-   - Calls `handleProxyRequest()`
+    - All other routes
+    - Calls `handleProxyRequest()`
 
 ## Tool Configuration Structure
 
 ```typescript
 interface ToolConfig {
-  id: string                    // e.g., 'github_create_issue'
-  name: string
-  description: string
-  version: string
-  params: Record<string, ParamSchema>
-  outputs?: Record<string, OutputSchema>
-  oauth?: OAuthConfig
+    id: string; // e.g., 'github_create_issue'
+    name: string;
+    description: string;
+    version: string;
+    params: Record<string, ParamSchema>;
+    outputs?: Record<string, OutputSchema>;
+    oauth?: OAuthConfig;
 
-  request: {
-    url: string | ((params) => string)
-    method: HttpMethod | ((params) => HttpMethod)
-    headers: (params) => Record<string, string>
-    body?: (params) => Record<string, any>
-  }
+    request: {
+        url: string | ((params) => string);
+        method: HttpMethod | ((params) => HttpMethod);
+        headers: (params) => Record<string, string>;
+        body?: (params) => Record<string, any>;
+    };
 
-  postProcess?: (result, params, executeTool) => Promise<ToolResponse>
-  transformResponse?: (response: Response) => Promise<ToolResponse>
-  directExecution?: (params) => Promise<ToolResponse>
+    postProcess?: (result, params, executeTool) => Promise<ToolResponse>;
+    transformResponse?: (response: Response) => Promise<ToolResponse>;
+    directExecution?: (params) => Promise<ToolResponse>;
 }
 ```
 
@@ -545,27 +545,24 @@ interface ToolConfig {
 
 ```typescript
 type ParameterVisibility =
-  | 'user-or-llm'  // User or LLM must provide
-  | 'user-only'    // Only user provides
-  | 'llm-only'     // Only LLM generates
-  | 'hidden'       // Never shown
+    | "user-or-llm" // User or LLM must provide
+    | "user-only" // Only user provides
+    | "llm-only" // Only LLM generates
+    | "hidden"; // Never shown
 ```
 
 ### Schema Filtering for LLM
 
 ```typescript
 // Removes user-provided parameters from LLM schema
-const filteredSchema = filterSchemaForLLM(
-  schema.function.parameters,
-  userProvidedParams
-)
+const filteredSchema = filterSchemaForLLM(schema.function.parameters, userProvidedParams);
 ```
 
 ### Parameter Merging
 
 ```typescript
 // User params take precedence
-const mergedParams = mergeToolParameters(userProvidedParams, llmParams)
+const mergedParams = mergeToolParameters(userProvidedParams, llmParams);
 ```
 
 ## MCP Tool Execution
@@ -574,25 +571,25 @@ const mergedParams = mergeToolParameters(userProvidedParams, llmParams)
 
 ```typescript
 async function executeMcpTool(toolId, params) {
-  // 1. Parse tool ID: "mcp-<serverId>-<toolName>"
-  const { serverId, toolName } = parseMcpToolId(toolId)
+    // 1. Parse tool ID: "mcp-<serverId>-<toolName>"
+    const { serverId, toolName } = parseMcpToolId(toolId);
 
-  // 2. Filter system parameters
-  const args = filterSystemParams(params)
+    // 2. Filter system parameters
+    const args = filterSystemParams(params);
 
-  // 3. Execute via API
-  const result = await fetch('/api/mcp/tools/execute', {
-    method: 'POST',
-    body: JSON.stringify({
-      serverId,
-      toolName,
-      arguments: args,
-      workflowId,
-      workspaceId
-    })
-  })
+    // 3. Execute via API
+    const result = await fetch("/api/mcp/tools/execute", {
+        method: "POST",
+        body: JSON.stringify({
+            serverId,
+            toolName,
+            arguments: args,
+            workflowId,
+            workspaceId
+        })
+    });
 
-  return result.output
+    return result.output;
 }
 ```
 
@@ -600,14 +597,14 @@ async function executeMcpTool(toolId, params) {
 
 ```typescript
 interface ToolResponse {
-  success: boolean
-  output: Record<string, any>
-  error?: string
-  timing?: {
-    startTime: string    // ISO timestamp
-    endTime: string
-    duration: number     // milliseconds
-  }
+    success: boolean;
+    output: Record<string, any>;
+    error?: string;
+    timing?: {
+        startTime: string; // ISO timestamp
+        endTime: string;
+        duration: number; // milliseconds
+    };
 }
 ```
 
@@ -617,12 +614,12 @@ interface ToolResponse {
 
 ## Memory Types
 
-| Type | Description |
-|------|-------------|
-| `'none'` | No memory persistence (default) |
-| `'conversation'` | Full history with context window limit |
-| `'sliding_window'` | Keep last N messages |
-| `'sliding_window_tokens'` | Keep within N tokens |
+| Type                      | Description                            |
+| ------------------------- | -------------------------------------- |
+| `'none'`                  | No memory persistence (default)        |
+| `'conversation'`          | Full history with context window limit |
+| `'sliding_window'`        | Keep last N messages                   |
+| `'sliding_window_tokens'` | Keep within N tokens                   |
 
 ## Database Schema
 
@@ -788,14 +785,14 @@ Agent Execution Start
 
 **File:** `/apps/sim/app/api/memory/route.ts`
 
-| Method | Endpoint | Purpose |
-|--------|----------|---------|
-| GET | `/api/memory` | Search memories |
-| POST | `/api/memory` | Create/append (atomic UPSERT) |
-| DELETE | `/api/memory` | Delete by pattern |
-| GET | `/api/memory/[id]` | Get specific memory |
-| PUT | `/api/memory/[id]` | Update specific memory |
-| DELETE | `/api/memory/[id]` | Delete specific memory |
+| Method | Endpoint           | Purpose                       |
+| ------ | ------------------ | ----------------------------- |
+| GET    | `/api/memory`      | Search memories               |
+| POST   | `/api/memory`      | Create/append (atomic UPSERT) |
+| DELETE | `/api/memory`      | Delete by pattern             |
+| GET    | `/api/memory/[id]` | Get specific memory           |
+| PUT    | `/api/memory/[id]` | Update specific memory        |
+| DELETE | `/api/memory/[id]` | Delete specific memory        |
 
 ---
 
@@ -805,25 +802,25 @@ Agent Execution Start
 
 ```typescript
 resolvers = [
-  new LoopResolver(workflow),      // <loop.*>
-  new ParallelResolver(workflow),  // <parallel.*>
-  new WorkflowResolver(variables), // <variable.*>
-  new EnvResolver(),               // {{ENV_VAR}}
-  new BlockResolver(workflow),     // <blockId.path>
-]
+    new LoopResolver(workflow), // <loop.*>
+    new ParallelResolver(workflow), // <parallel.*>
+    new WorkflowResolver(variables), // <variable.*>
+    new EnvResolver(), // {{ENV_VAR}}
+    new BlockResolver(workflow) // <blockId.path>
+];
 ```
 
 ## Reference Syntax
 
-| Pattern | Example | Description |
-|---------|---------|-------------|
-| `<blockId.path>` | `<agent1.content>` | Block output reference |
-| `<loop.index>` | - | Loop iteration index |
-| `<loop.item>` | - | Current forEach item |
-| `<parallel.index>` | - | Current branch index |
-| `<parallel.currentItem>` | - | Current parallel item |
-| `<variable.name>` | `<variable.userId>` | Workflow variable |
-| `{{ENV_VAR}}` | `{{API_KEY}}` | Environment variable |
+| Pattern                  | Example             | Description            |
+| ------------------------ | ------------------- | ---------------------- |
+| `<blockId.path>`         | `<agent1.content>`  | Block output reference |
+| `<loop.index>`           | -                   | Loop iteration index   |
+| `<loop.item>`            | -                   | Current forEach item   |
+| `<parallel.index>`       | -                   | Current branch index   |
+| `<parallel.currentItem>` | -                   | Current parallel item  |
+| `<variable.name>`        | `<variable.userId>` | Workflow variable      |
+| `{{ENV_VAR}}`            | `{{API_KEY}}`       | Environment variable   |
 
 ---
 
@@ -875,7 +872,7 @@ resolvers = [
 ## 1. JavaScript Condition Evaluation
 
 ```typescript
-new Function('context', `with(context) { return ${expression} }`)(evalContext)
+new Function("context", `with(context) { return ${expression} }`)(evalContext);
 ```
 
 ## 2. Atomic JSONB Append
@@ -887,14 +884,14 @@ data = memory.data || [message]::jsonb
 ## 3. Handler Selection (First Match)
 
 ```typescript
-handlers.find(h => h.canHandle(block))
+handlers.find((h) => h.canHandle(block));
 ```
 
 ## 4. Edge Activation by Handle
 
 ```typescript
-edge.sourceHandle === `condition-${conditionId}`
-edge.sourceHandle === `router-${targetBlockId}`
+edge.sourceHandle === `condition-${conditionId}`;
+edge.sourceHandle === `router-${targetBlockId}`;
 ```
 
 ## 5. Memory Key Isolation
@@ -907,30 +904,30 @@ key = `${conversationId}:${blockId}`
 
 # File Index
 
-| Category | File | Purpose |
-|----------|------|---------|
-| **DAG** | `/executor/dag/builder.ts` | DAG construction |
-| **DAG** | `/executor/dag/construction/paths.ts` | Reachability analysis |
-| **DAG** | `/executor/dag/construction/nodes.ts` | Node creation |
-| **DAG** | `/executor/dag/construction/edges.ts` | Edge wiring |
-| **DAG** | `/executor/dag/construction/loops.ts` | Sentinel creation |
-| **Execution** | `/executor/execution/engine.ts` | Main execution loop |
-| **Execution** | `/executor/execution/block-executor.ts` | Block execution |
-| **Execution** | `/executor/execution/edge-manager.ts` | Edge activation |
-| **Handlers** | `/executor/handlers/registry.ts` | Handler registration |
-| **Handlers** | `/executor/handlers/agent/agent-handler.ts` | LLM execution |
-| **Handlers** | `/executor/handlers/condition/condition-handler.ts` | Branching |
-| **Handlers** | `/executor/handlers/router/router-handler.ts` | LLM routing |
-| **Handlers** | `/executor/handlers/function/function-handler.ts` | Code execution |
-| **Handlers** | `/executor/handlers/generic/generic-handler.ts` | Tool fallback |
-| **Tools** | `/tools/index.ts` | Tool executor |
-| **Tools** | `/tools/registry.ts` | Tool definitions |
-| **Tools** | `/tools/params.ts` | Parameter handling |
-| **Memory** | `/executor/handlers/agent/memory.ts` | Memory service |
-| **Memory** | `/app/api/memory/route.ts` | Memory API |
-| **Orchestrators** | `/executor/orchestrators/loop.ts` | Loop control |
-| **Orchestrators** | `/executor/orchestrators/parallel.ts` | Parallel control |
-| **Variables** | `/executor/variables/resolver.ts` | Reference resolution |
+| Category          | File                                                | Purpose               |
+| ----------------- | --------------------------------------------------- | --------------------- |
+| **DAG**           | `/executor/dag/builder.ts`                          | DAG construction      |
+| **DAG**           | `/executor/dag/construction/paths.ts`               | Reachability analysis |
+| **DAG**           | `/executor/dag/construction/nodes.ts`               | Node creation         |
+| **DAG**           | `/executor/dag/construction/edges.ts`               | Edge wiring           |
+| **DAG**           | `/executor/dag/construction/loops.ts`               | Sentinel creation     |
+| **Execution**     | `/executor/execution/engine.ts`                     | Main execution loop   |
+| **Execution**     | `/executor/execution/block-executor.ts`             | Block execution       |
+| **Execution**     | `/executor/execution/edge-manager.ts`               | Edge activation       |
+| **Handlers**      | `/executor/handlers/registry.ts`                    | Handler registration  |
+| **Handlers**      | `/executor/handlers/agent/agent-handler.ts`         | LLM execution         |
+| **Handlers**      | `/executor/handlers/condition/condition-handler.ts` | Branching             |
+| **Handlers**      | `/executor/handlers/router/router-handler.ts`       | LLM routing           |
+| **Handlers**      | `/executor/handlers/function/function-handler.ts`   | Code execution        |
+| **Handlers**      | `/executor/handlers/generic/generic-handler.ts`     | Tool fallback         |
+| **Tools**         | `/tools/index.ts`                                   | Tool executor         |
+| **Tools**         | `/tools/registry.ts`                                | Tool definitions      |
+| **Tools**         | `/tools/params.ts`                                  | Parameter handling    |
+| **Memory**        | `/executor/handlers/agent/memory.ts`                | Memory service        |
+| **Memory**        | `/app/api/memory/route.ts`                          | Memory API            |
+| **Orchestrators** | `/executor/orchestrators/loop.ts`                   | Loop control          |
+| **Orchestrators** | `/executor/orchestrators/parallel.ts`               | Parallel control      |
+| **Variables**     | `/executor/variables/resolver.ts`                   | Reference resolution  |
 
 ---
 
@@ -1040,9 +1037,9 @@ The system uses a fallback chain for API keys, enabling both self-hosted and man
 ```typescript
 // Priority order for resolving API keys
 async function resolveApiKey(provider, workspaceId) {
-  // 1. User's key from block configuration (highest priority)
-  // 2. Workspace-level credential (user's own keys)
-  // 3. Platform key (managed service with rate limiting)
+    // 1. User's key from block configuration (highest priority)
+    // 2. Workspace-level credential (user's own keys)
+    // 3. Platform key (managed service with rate limiting)
 }
 ```
 
@@ -1055,8 +1052,7 @@ Every LLM call records token usage and cost. The system maintains both detailed 
 The cost calculation uses a central model registry that stores pricing per model:
 
 ```typescript
-cost = (inputTokens / 1000) * model.inputCostPer1k
-     + (outputTokens / 1000) * model.outputCostPer1k
+cost = (inputTokens / 1000) * model.inputCostPer1k + (outputTokens / 1000) * model.outputCostPer1k;
 ```
 
 ---
