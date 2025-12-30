@@ -72,7 +72,7 @@ jobs:
       TEMPORAL_ADDRESS: localhost:7233
       REDIS_HOST: localhost
       REDIS_PORT: 6379
-      ENCRYPTION_KEY: test-encryption-key-32-chars-ok!
+      ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
