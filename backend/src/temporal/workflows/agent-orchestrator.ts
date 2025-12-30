@@ -292,6 +292,9 @@ export async function agentOrchestratorWorkflow(
     const CONTINUE_AS_NEW_THRESHOLD = 50;
 
     // Main agent loop (ReAct pattern)
+    // Track tools that have failed - exclude them from subsequent LLM calls
+    const failedToolNames = new Set<string>();
+
     while (currentIterations < maxIterations) {
         logger.info("Agent iteration", { iteration: currentIterations, maxIterations });
 
@@ -374,6 +377,11 @@ export async function agentOrchestratorWorkflow(
 
         // Call LLM with thread messages and available tools
         // Use override connection/model if provided, otherwise use agent's defaults
+        // Filter out tools that have failed to prevent retry loops
+        const availableTools = agent.available_tools.filter(
+            (tool) => !failedToolNames.has(tool.name)
+        );
+
         let llmResponse: LLMResponse;
         try {
             llmResponse = await callLLM({
@@ -381,7 +389,7 @@ export async function agentOrchestratorWorkflow(
                 provider: agent.provider,
                 connectionId: input.connectionId || agent.connection_id,
                 messages: messageState.messages,
-                tools: agent.available_tools,
+                tools: availableTools,
                 temperature: agent.temperature,
                 maxTokens: agent.max_tokens,
                 executionId: input.executionId,
@@ -803,6 +811,9 @@ export async function agentOrchestratorWorkflow(
                     error instanceof Error ? error : new Error(errorMessage),
                     { toolName: toolCall.name }
                 );
+
+                // Track failed tool to prevent retry loops
+                failedToolNames.add(toolCall.name);
 
                 // Add error result to thread messages
                 const toolMessage: ThreadMessage = {

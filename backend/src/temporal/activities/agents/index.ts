@@ -33,7 +33,10 @@ export {
     generateAgentToolById,
     injectAgentTools,
     isAgentTool,
-    getAgentIdFromTool
+    getAgentIdFromTool,
+    // Knowledge base tool generation
+    generateKnowledgeBaseTool,
+    generateKnowledgeBaseToolName
 } from "./core";
 
 // Agent event emissions

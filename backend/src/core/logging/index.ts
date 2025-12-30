@@ -258,6 +258,12 @@ export function getLogger(): PinoLogger {
         if (prettyStream) {
             loggerInstance = pino(pinoOpts, prettyStream);
         } else {
+            // In production, use level formatter to output string labels instead of numeric values
+            pinoOpts.formatters = {
+                level: (label) => ({ level: label }),
+                bindings: (bindings) => sanitizeLogData(bindings)
+            };
+            pinoOpts.timestamp = () => `,"time":"${new Date().toISOString()}"`;
             loggerInstance = pino(pinoOpts);
         }
     }

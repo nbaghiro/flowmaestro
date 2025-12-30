@@ -23,6 +23,7 @@ import { searchThreadMemory as searchThreadMemoryActivity, injectThreadMemoryToo
 import type { SafetyContext, SafetyCheckResult, SafetyConfig } from "../../../core/safety/types";
 import type { AgentModel, Tool } from "../../../storage/models/Agent";
 import type { ThreadMessage, ToolCall } from "../../../storage/models/AgentExecution";
+import type { KnowledgeBaseModel } from "../../../storage/models/KnowledgeBase";
 import type { AgentConfig, LLMResponse } from "../../workflows/agent-orchestrator";
 
 // =============================================================================
@@ -396,13 +397,20 @@ export async function executeToolCall(input: ExecuteToolCallInput): Promise<Json
     const validation = validateToolInput(tool, coercedArgs);
 
     if (!validation.success) {
-        // Return validation error to LLM (don't throw, let LLM retry)
+        // Throw error so orchestrator can emit tool:call:failed event
         activityLogger.warn("Tool validation failed", {
             toolName: toolCall.name,
-            error: validation.error?.message
+            error: validation.error?.message,
+            receivedArgs: toolCall.arguments,
+            coercedArgs
         });
 
-        return createValidationErrorResponse(toolCall.name, validation);
+        // Throw an error that includes the validation details
+        // The orchestrator will catch this, emit the failed event, and add error to messages
+        const errorResponse = createValidationErrorResponse(toolCall.name, validation);
+        throw new Error(
+            `Tool validation failed: ${validation.error?.message}. ${errorResponse.hint}`
+        );
     }
 
     // Use validated and coerced data
@@ -733,6 +741,64 @@ export function getAgentIdFromTool(tool: Tool): string | null {
 }
 
 // =============================================================================
+// Knowledge Base Tool Generation
+// =============================================================================
+
+/**
+ * Generate a tool definition from a knowledge base.
+ * Allows agents to search and retrieve information from the knowledge base.
+ */
+export function generateKnowledgeBaseTool(kb: KnowledgeBaseModel): Tool {
+    const schema = {
+        type: "object",
+        properties: {
+            query: {
+                type: "string",
+                description: "The search query to find relevant information in the knowledge base"
+            },
+            topK: {
+                type: "number",
+                description: "Number of results to return (default: 10)"
+            },
+            minScore: {
+                type: "number",
+                description: "Minimum similarity score threshold 0-1 (default: 0.3)"
+            }
+        },
+        required: ["query"],
+        additionalProperties: false
+    };
+
+    return {
+        id: `kb-tool-${kb.id}`,
+        type: "knowledge_base",
+        name: generateKnowledgeBaseToolName(kb.name),
+        description: `Search the "${kb.name}" knowledge base for relevant information. ${kb.description || ""}`,
+        schema,
+        config: {
+            knowledgeBaseId: kb.id
+        }
+    };
+}
+
+/**
+ * Generate a valid tool name from a knowledge base name.
+ * Tool names must be valid function names (alphanumeric + underscores, start with letter).
+ */
+export function generateKnowledgeBaseToolName(kbName: string): string {
+    let toolName = kbName
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "_")
+        .replace(/^_+|_+$/g, "");
+
+    if (!/^[a-z]/.test(toolName)) {
+        toolName = `kb_${toolName}`;
+    }
+
+    return `search_${toolName}`;
+}
+
+// =============================================================================
 // Internal Helper Functions - JSON Schema Sanitization
 // =============================================================================
 
@@ -853,6 +919,8 @@ async function callOpenAI(input: OpenAICallInput): Promise<LLMResponse> {
     const decoder = new TextDecoder();
     let fullContent = "";
     let toolCalls: ToolCall[] | undefined;
+    // Accumulate arguments as strings during streaming, then parse at the end
+    const toolCallArgsStrings: string[] = [];
     let usage: { promptTokens: number; completionTokens: number; totalTokens: number } | undefined;
     let finishReason = "";
 
@@ -925,22 +993,22 @@ async function callOpenAI(input: OpenAICallInput): Promise<LLMResponse> {
                                             name: toolCall.function?.name || "",
                                             arguments: {}
                                         };
-                                    }
-                                    if (toolCall.function?.arguments) {
-                                        try {
-                                            const existingArgs =
-                                                (toolCalls[toolCall.index].arguments as Record<
-                                                    string,
-                                                    unknown
-                                                >) || {};
-                                            const newArgs = JSON.parse(toolCall.function.arguments);
-                                            toolCalls[toolCall.index].arguments = {
-                                                ...existingArgs,
-                                                ...newArgs
-                                            };
-                                        } catch {
-                                            // Partial JSON, continue accumulating
+                                    } else {
+                                        // Update id and name if they arrive in subsequent chunks
+                                        if (toolCall.id) {
+                                            toolCalls[toolCall.index].id = toolCall.id;
                                         }
+                                        if (toolCall.function?.name) {
+                                            toolCalls[toolCall.index].name = toolCall.function.name;
+                                        }
+                                    }
+                                    // Accumulate arguments string fragments
+                                    if (toolCall.function?.arguments) {
+                                        if (!toolCallArgsStrings[toolCall.index]) {
+                                            toolCallArgsStrings[toolCall.index] = "";
+                                        }
+                                        toolCallArgsStrings[toolCall.index] +=
+                                            toolCall.function.arguments;
                                     }
                                 }
                             }
@@ -962,6 +1030,35 @@ async function callOpenAI(input: OpenAICallInput): Promise<LLMResponse> {
                     // Skip invalid JSON lines
                     continue;
                 }
+            }
+        }
+    }
+
+    // Parse accumulated argument strings into tool calls
+    if (toolCalls) {
+        for (let i = 0; i < toolCalls.length; i++) {
+            if (toolCallArgsStrings[i]) {
+                try {
+                    toolCalls[i].arguments = JSON.parse(toolCallArgsStrings[i]);
+                    activityLogger.debug("Parsed tool call arguments", {
+                        toolName: toolCalls[i].name,
+                        argsString: toolCallArgsStrings[i],
+                        parsedArgs: toolCalls[i].arguments
+                    });
+                } catch (parseError) {
+                    // If parsing fails, use empty object
+                    activityLogger.warn("Failed to parse tool call arguments", {
+                        toolName: toolCalls[i].name,
+                        argsString: toolCallArgsStrings[i],
+                        error: parseError instanceof Error ? parseError.message : "Unknown error"
+                    });
+                    toolCalls[i].arguments = {};
+                }
+            } else {
+                activityLogger.warn("No arguments string accumulated for tool call", {
+                    toolName: toolCalls[i].name,
+                    toolCallIndex: i
+                });
             }
         }
     }
@@ -1751,8 +1848,16 @@ async function executeKnowledgeBaseTool(input: ExecuteKnowledgeBaseToolInput): P
     }
 
     const query = args.query;
-    const topK = typeof args.topK === "number" ? args.topK : 5;
-    const minScore = typeof args.minScore === "number" ? args.minScore : 0.7;
+    const topK = typeof args.topK === "number" ? args.topK : 10;
+    // Default to 0.3 to match the API endpoint behavior (0.7 was too restrictive)
+    const minScore = typeof args.minScore === "number" ? args.minScore : 0.3;
+
+    activityLogger.info("Executing knowledge base search", {
+        knowledgeBaseId: tool.config.knowledgeBaseId,
+        query,
+        topK,
+        minScore
+    });
 
     // Import required services
     const { KnowledgeBaseRepository } = await import(
@@ -1796,6 +1901,14 @@ async function executeKnowledgeBaseTool(input: ExecuteKnowledgeBaseToolInput): P
             query_embedding: queryEmbedding,
             top_k: topK,
             similarity_threshold: minScore
+        });
+
+        activityLogger.info("Knowledge base search completed", {
+            knowledgeBaseId: tool.config.knowledgeBaseId,
+            knowledgeBaseName: knowledgeBase.name,
+            query,
+            resultCount: searchResults.length,
+            topSimilarity: searchResults.length > 0 ? searchResults[0].similarity : null
         });
 
         // Format results for the agent

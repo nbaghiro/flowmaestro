@@ -114,7 +114,7 @@ jobs:
       # Start worker (background) for Temporal workflows
       - name: Start Temporal worker
         run: |
-          npm run worker:dev --workspace=backend > /tmp/worker.log 2>&1 &
+          npm run worker:start --workspace=backend > /tmp/worker.log 2>&1 &
           echo $! > /tmp/worker_pid
           sleep 15
           pid=$(cat /tmp/worker_pid)

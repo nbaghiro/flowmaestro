@@ -12,6 +12,7 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { getDefaultModelForProvider } from "@flowmaestro/shared";
 import { AddCustomMCPDialog } from "../components/agents/AddCustomMCPDialog";
+import { AddKnowledgeBaseDialog } from "../components/agents/AddKnowledgeBaseDialog";
 import { AddMCPIntegrationDialog } from "../components/agents/AddMCPIntegrationDialog";
 import { AddWorkflowDialog } from "../components/agents/AddWorkflowDialog";
 import { AgentBuilderConnectionSelector } from "../components/agents/AgentBuilderConnectionSelector";
@@ -27,7 +28,13 @@ import { logger } from "../lib/logger";
 import { cn } from "../lib/utils";
 import { useAgentStore } from "../stores/agentStore";
 import { useConnectionStore } from "../stores/connectionStore";
-import type { CreateAgentRequest, UpdateAgentRequest, AddToolRequest, Tool } from "../lib/api";
+import type {
+    CreateAgentRequest,
+    UpdateAgentRequest,
+    AddToolRequest,
+    Tool,
+    KnowledgeBase
+} from "../lib/api";
 
 type AgentTab = "build" | "threads" | "slack" | "settings";
 
@@ -97,6 +104,7 @@ export function AgentBuilder() {
     const [isWorkflowDialogOpen, setIsWorkflowDialogOpen] = useState(false);
     const [isMCPDialogOpen, setIsMCPDialogOpen] = useState(false);
     const [isCustomMCPDialogOpen, setIsCustomMCPDialogOpen] = useState(false);
+    const [isKnowledgeBaseDialogOpen, setIsKnowledgeBaseDialogOpen] = useState(false);
 
     // Thread management state
     const [threadToDelete, setThreadToDelete] = useState<{
@@ -488,6 +496,62 @@ export function AgentBuilder() {
         }
     };
 
+    const handleAddKnowledgeBases = async (knowledgeBases: KnowledgeBase[]) => {
+        if (!currentAgent) return;
+
+        try {
+            for (const kb of knowledgeBases) {
+                // Generate a valid tool name from the knowledge base name
+                let toolName = kb.name
+                    .toLowerCase()
+                    .replace(/[^a-z0-9]+/g, "_")
+                    .replace(/^_+|_+$/g, "");
+
+                if (!/^[a-z]/.test(toolName)) {
+                    toolName = `kb_${toolName}`;
+                }
+
+                await addTool(currentAgent.id, {
+                    type: "knowledge_base",
+                    name: `search_${toolName}`,
+                    description: `Search the "${kb.name}" knowledge base for relevant information. ${kb.description || ""}`,
+                    schema: {
+                        type: "object",
+                        properties: {
+                            query: {
+                                type: "string",
+                                description:
+                                    "The search query to find relevant information in the knowledge base"
+                            },
+                            topK: {
+                                type: "number",
+                                description: "Number of results to return (default: 10)"
+                            },
+                            minScore: {
+                                type: "number",
+                                description: "Minimum similarity score threshold 0-1 (default: 0.3)"
+                            }
+                        },
+                        required: ["query"],
+                        additionalProperties: false
+                    },
+                    config: {
+                        knowledgeBaseId: kb.id
+                    }
+                });
+            }
+
+            // Update local state from the store's updated agent
+            const updatedAgent = useAgentStore.getState().currentAgent;
+            if (updatedAgent) {
+                setTools(updatedAgent.available_tools || []);
+            }
+        } catch (error) {
+            logger.error("Failed to add knowledge bases", error);
+            setError(error instanceof Error ? error.message : "Failed to add knowledge bases");
+        }
+    };
+
     // Thread management handlers
     const handleSelectThread = (thread: typeof currentThread) => {
         setCurrentThread(thread);
@@ -755,6 +819,16 @@ export function AgentBuilder() {
                                         {/* Add Tool Buttons */}
                                         <div className="space-y-2">
                                             <button
+                                                onClick={() => setIsKnowledgeBaseDialogOpen(true)}
+                                                className={cn(
+                                                    "w-full px-4 py-3 rounded-lg border border-dashed border-border",
+                                                    "text-sm text-muted-foreground text-left",
+                                                    "hover:border-primary/50 hover:bg-muted transition-colors"
+                                                )}
+                                            >
+                                                + Add a knowledge base
+                                            </button>
+                                            <button
                                                 onClick={() => setIsMCPDialogOpen(true)}
                                                 className={cn(
                                                     "w-full px-4 py-3 rounded-lg border border-dashed border-border",
@@ -1001,6 +1075,15 @@ export function AgentBuilder() {
                 isOpen={isCustomMCPDialogOpen}
                 onClose={() => setIsCustomMCPDialogOpen(false)}
                 onAdd={handleAddCustomMCP}
+            />
+
+            <AddKnowledgeBaseDialog
+                isOpen={isKnowledgeBaseDialogOpen}
+                onClose={() => setIsKnowledgeBaseDialogOpen(false)}
+                onAdd={handleAddKnowledgeBases}
+                existingKnowledgeBaseIds={tools
+                    .filter((t) => t.type === "knowledge_base")
+                    .map((t) => t.config.knowledgeBaseId as string)}
             />
 
             {/* Delete Thread Confirmation Dialog */}

@@ -228,7 +228,7 @@ export function validateToolOutput(tool: ValidatedTool, output: unknown): Valida
 }
 
 /**
- * Create a validation error response for LLM to retry
+ * Create a validation error response - tells LLM to proceed without the tool
  */
 export function createValidationErrorResponse(
     toolName: string,
@@ -246,7 +246,7 @@ export function createValidationErrorResponse(
         tool: toolName,
         message: validation.error?.message || "Validation failed",
         validationErrors: serializedErrors,
-        hint: "Please retry the tool call with correct arguments matching the schema."
+        hint: "This tool call failed due to invalid arguments. Do NOT retry this tool. Respond to the user without using this tool, or use a different tool if appropriate."
     };
 }
 

@@ -22,7 +22,7 @@
             "type": "node",
             "request": "launch",
             "runtimeExecutable": "npx",
-            "runtimeArgs": ["nodemon", "--config", "nodemon.temporal.json"],
+            "runtimeArgs": ["tsx", "watch", "--inspect=9230", "src/temporal/worker.ts"],
             "cwd": "${workspaceFolder}/backend",
             "envFile": "${workspaceFolder}/backend/.env",
             "console": "integratedTerminal",
@@ -31,7 +31,6 @@
             "restart": true,
             "sourceMaps": true,
             "port": 9230,
-            "outFiles": ["${workspaceFolder}/backend/dist/**/*.js"],
             "resolveSourceMapLocations": ["${workspaceFolder}/**", "!**/node_modules/**"]
         }
     ]
