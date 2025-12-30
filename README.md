@@ -102,7 +102,8 @@ Comprehensive documentation is available in the `.docs/` directory:
 
 ### Real-Time Features
 
-- **[WebSocket Events](./.docs/websocket-events.md)** - Real-time update system
+- **[WebSocket Events](./.docs/websocket-events.md)** - Bidirectional real-time communication (Socket.IO)
+- **[SSE Streaming](./.docs/sse-streaming.md)** - Server-Sent Events for execution monitoring
 
 ## Architecture
 
@@ -114,6 +115,7 @@ flowmaestro/
 ├── backend/          # Fastify API + Temporal workers
 ├── shared/           # Shared TypeScript types and utilities
 ├── marketing/        # Marketing website
+├── documentation/    # Docusaurus documentation site
 └── infra/            # Kubernetes manifests and Pulumi IaC
     ├── local/         # Docker Compose for local development
     ├── k8s/           # Kubernetes deployments

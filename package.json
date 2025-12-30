@@ -8,15 +8,16 @@
         "backend",
         "shared",
         "marketing",
-        "docs"
+        "documentation"
     ],
     "scripts": {
         "prepare": "husky",
         "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
         "dev:backend": "npm run dev --workspace=backend",
         "dev:frontend": "npm run dev --workspace=frontend",
-        "dev:worker": "npm run worker:orchestrator:dev --workspace=backend",
+        "dev:worker": "npm run worker:dev --workspace=backend",
         "dev:marketing": "npm run dev --workspace=marketing",
+        "dev:documentation": "npm run dev --workspace=documentation",
         "build": "npm run build --workspaces",
         "test": "npm run test --workspace=backend",
         "test:unit": "npm run test:unit --workspace=backend",

@@ -438,9 +438,10 @@ Node Executor Activity
 
 ## Related Documentation
 
-- **[workflows.md](./workflows.md)**: Workflow execution emitting events
-- **[agents.md](./agents.md)**: Agent streaming via WebSocket
-- **[temporal.md](./temporal.md)**: Activity-level event emission
+- **[SSE Streaming](./sse-streaming.md)**: Server-Sent Events for execution monitoring (alternative to WebSocket)
+- **[Workflow System](./workflow-system.md)**: Workflow execution emitting events
+- **[Agent Architecture](./agent-architecture.md)**: Agent streaming via WebSocket
+- **[Temporal Workflows](./temporal-workflows.md)**: Activity-level event emission
 
 ---
 

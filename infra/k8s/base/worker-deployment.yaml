@@ -24,7 +24,7 @@ spec:
           image: us-central1-docker.pkg.dev/flowmaestro-prod/flowmaestro/backend:latest
           imagePullPolicy: Always
           # Override command to run worker instead of API server
-          command: ["node", "backend/dist/backend/src/temporal/workers/orchestrator-worker.js"]
+          command: ["node", "backend/dist/backend/src/temporal/worker.js"]
           # =================================================================
           # Environment Variables - Inject secrets by category using envFrom
           # Secrets are managed by Pulumi and synced via External Secrets Operator

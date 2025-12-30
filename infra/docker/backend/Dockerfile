@@ -32,6 +32,9 @@ COPY tsconfig.base.json ./
 # Build shared package first
 RUN npm run build --workspace=shared
 
+# Clean any stale build artifacts before building
+RUN rm -rf backend/dist
+
 # Build backend
 RUN npm run build --workspace=backend
 

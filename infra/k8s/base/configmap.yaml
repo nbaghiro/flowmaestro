@@ -13,6 +13,7 @@ data:
   # URL configuration (used for OAuth redirects, email links, CORS, etc.)
   API_URL: "https://api.flowmaestro.ai"
   APP_URL: "https://app.flowmaestro.ai"
+  DOCS_URL: "https://docs.flowmaestro.ai"
   MARKETING_URL: "https://flowmaestro.ai"
 
   # Temporal worker configuration

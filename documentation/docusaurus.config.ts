@@ -11,7 +11,7 @@ const config: Config = {
     baseUrl: "/",
 
     organizationName: "flowmaestro",
-    projectName: "flowmaestro-docs",
+    projectName: "flowmaestro-documentation",
 
     onBrokenLinks: "throw",
     onBrokenMarkdownLinks: "warn",
@@ -28,7 +28,7 @@ const config: Config = {
                 docs: {
                     routeBasePath: "/",
                     sidebarPath: "./sidebars.ts",
-                    editUrl: "https://github.com/flowmaestro/flowmaestro/tree/main/docs/",
+                    editUrl: "https://github.com/flowmaestro/flowmaestro/tree/main/documentation/",
                     showLastUpdateTime: true
                 },
                 blog: false,

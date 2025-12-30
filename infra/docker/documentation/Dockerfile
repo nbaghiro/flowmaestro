@@ -7,16 +7,16 @@ WORKDIR /app
 COPY package*.json ./
 
 # Copy workspace package files
-COPY docs/package*.json ./docs/
+COPY documentation/package*.json ./documentation/
 
 # Install dependencies (skip scripts to avoid husky)
-RUN npm ci --workspace=docs --ignore-scripts
+RUN npm ci --workspace=documentation --ignore-scripts
 
 # Copy documentation source
-COPY docs/ ./docs/
+COPY documentation/ ./documentation/
 
 # Build documentation site
-RUN npm run build --workspace=docs
+RUN npm run build --workspace=documentation
 
 # Production image
 FROM nginx:alpine
@@ -25,7 +25,7 @@ FROM nginx:alpine
 COPY infra/docker/documentation/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy built files from builder stage
-COPY --from=builder /app/docs/build /usr/share/nginx/html
+COPY --from=builder /app/documentation/build /usr/share/nginx/html
 
 # Create non-root user and set permissions
 RUN chown -R nginx:nginx /usr/share/nginx/html && \

@@ -6,7 +6,6 @@
  */
 
 import pino, { Logger as PinoLogger } from "pino";
-import pinoPretty from "pino-pretty";
 import type { Logger as TemporalLogger, DefaultLogger, LogLevel } from "@temporalio/worker";
 
 // Re-export workflow logger types for convenience
@@ -133,46 +132,78 @@ const levelNames: Record<number, string> = {
     60: "FATAL"
 };
 
+// Type for pino-pretty function
+type PinoPrettyFn = typeof import("pino-pretty").default;
+type PrettyStream = ReturnType<PinoPrettyFn>;
+
+// Cached pretty stream module (loaded dynamically in dev only)
+let pinoPrettyFn: PinoPrettyFn | null = null;
+
 /**
  * Create a pretty stream with custom formatting
  * Format: 2025-12-27T17:35:06.273Z [INFO] Message { key: 'value' }
+ * Returns null if pino-pretty is not available (production)
  */
-function createPrettyStream() {
-    const ignoreFields = new Set([
-        "pid",
-        "hostname",
-        "service",
-        "component",
-        "level",
-        "time",
-        "msg",
-        "v"
-    ]);
+function createPrettyStream(): PrettyStream | null {
+    // Only attempt to load pino-pretty in development
+    if (process.env.NODE_ENV === "production") {
+        return null;
+    }
 
-    return pinoPretty({
-        colorize: true,
-        singleLine: true,
-        ignore: Array.from(ignoreFields).join(","),
-        messageFormat: (log, messageKey) => {
-            const level = log.level as number;
-            const levelName = levelNames[level] || "INFO";
-            const levelColor = levelColors[levelName.toLowerCase()] || "";
-            const reset = colors.reset;
-            const timestampColor = colors.magenta;
-
-            const time = log.time
-                ? new Date(log.time as number).toISOString()
-                : new Date().toISOString();
-
-            const msg = (log[messageKey] as string) || "";
-
-            return `${timestampColor}${time}${reset} ${levelColor}[${levelName}]${reset} ${msg}`;
-        },
-        customPrettifiers: {
-            time: () => "",
-            level: () => ""
+    try {
+        // Dynamic require for dev-only dependency
+        if (!pinoPrettyFn) {
+            // eslint-disable-next-line @typescript-eslint/no-require-imports
+            const module = require("pino-pretty");
+            // Handle both CommonJS default export and ESM interop
+            pinoPrettyFn = module.default || module;
         }
-    });
+
+        // Type guard - should never be null at this point
+        const prettyFn = pinoPrettyFn;
+        if (!prettyFn) {
+            return null;
+        }
+
+        const ignoreFields = new Set([
+            "pid",
+            "hostname",
+            "service",
+            "component",
+            "level",
+            "time",
+            "msg",
+            "v"
+        ]);
+
+        return prettyFn({
+            colorize: true,
+            singleLine: true,
+            ignore: Array.from(ignoreFields).join(","),
+            messageFormat: (log: Record<string, unknown>, messageKey: string) => {
+                const level = log.level as number;
+                const levelName = levelNames[level] || "INFO";
+                const levelColor = levelColors[levelName.toLowerCase()] || "";
+                const reset = colors.reset;
+                const timestampColor = colors.magenta;
+
+                const time = log.time
+                    ? new Date(log.time as number).toISOString()
+                    : new Date().toISOString();
+
+                const msg = (log[messageKey] as string) || "";
+
+                return `${timestampColor}${time}${reset} ${levelColor}[${levelName}]${reset} ${msg}`;
+            },
+            customPrettifiers: {
+                time: () => "",
+                level: () => ""
+            }
+        });
+    } catch {
+        // pino-pretty not available, fall back to JSON logging
+        return null;
+    }
 }
 
 /**
@@ -189,9 +220,9 @@ function createBasePinoLogger(): PinoLogger {
         }
     };
 
-    if (isDev) {
-        // Development: use synchronous pretty stream for readable logs
-        const prettyStream = createPrettyStream();
+    // Development: use synchronous pretty stream for readable logs
+    const prettyStream = isDev ? createPrettyStream() : null;
+    if (prettyStream) {
         return pino(pinoOpts, prettyStream);
     } else {
         // Production: JSON format for Cloud Logging
