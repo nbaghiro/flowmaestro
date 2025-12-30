@@ -19,8 +19,10 @@ import { KnowledgeBaseQueryNodeConfig } from "./configs/KnowledgeBaseQueryNodeCo
 import { LLMNodeConfig } from "./configs/LLMNodeConfig";
 import { LoopNodeConfig } from "./configs/LoopNodeConfig";
 import { OutputNodeConfig } from "./configs/OutputNodeConfig";
+import { RouterNodeConfig } from "./configs/RouterNodeConfig";
 import { SwitchNodeConfig } from "./configs/SwitchNodeConfig";
 import { TransformNodeConfig } from "./configs/TransformNodeConfig";
+import { TriggerNodeConfig } from "./configs/TriggerNodeConfig";
 import { VariableNodeConfig } from "./configs/VariableNodeConfig";
 import { VisionNodeConfig } from "./configs/VisionNodeConfig";
 import { WaitNodeConfig } from "./configs/WaitNodeConfig";
@@ -75,6 +77,8 @@ export function NodeInspector() {
                 return <AudioNodeConfig data={node.data} onUpdate={handleUpdate} />;
             case "embeddings":
                 return <EmbeddingsNodeConfig data={node.data} onUpdate={handleUpdate} />;
+            case "router":
+                return <RouterNodeConfig data={node.data} onUpdate={handleUpdate} />;
 
             // Logic & Code
             case "conditional":
@@ -89,6 +93,8 @@ export function NodeInspector() {
                 return <WaitNodeConfig data={node.data} onUpdate={handleUpdate} />;
 
             // Data Operations
+            case "trigger":
+                return <TriggerNodeConfig data={node.data} onUpdate={handleUpdate} />;
             case "input":
                 return <InputNodeConfig data={node.data} onUpdate={handleUpdate} />;
             case "transform":

@@ -41,7 +41,7 @@ Traditional workflow systems fail when processes crash. Temporal ensures:
 
 ### Orchestrator Worker
 
-**Location**: `backend/src/temporal/workers/orchestrator-worker.ts`
+**Location**: `backend/src/temporal/worker.ts`
 
 **Purpose**: Executes workflows and activities for FlowMaestro workflow nodes
 
@@ -56,8 +56,8 @@ Traditional workflow systems fail when processes crash. Temporal ensures:
 
 **Starting the Worker**:
 
-- Development: `npm run worker:orchestrator:dev`
-- Production: `npm run worker:orchestrator`
+- Development: `npm run worker:dev`
+- Production: `npm run worker`
 - Docker Compose: Auto-starts as service
 
 ---
@@ -182,25 +182,55 @@ Activities are side-effecting functions executed by Temporal workers.
 3. **Heartbeat-enabled**: For long-running tasks (>30s)
 4. **Error-handled**: Graceful failure handling
 
-### Central Activity Router
+### Handler Registry Pattern
 
-**Location**: `backend/src/temporal/activities/node-executors/index.ts`
+**Location**: `backend/src/temporal/activities/execution/`
 
-**Purpose**: Routes execution to appropriate node executor based on type
+The execution system uses a priority-based handler registry instead of a switch-statement router:
+
+```typescript
+// Handlers auto-register on module load
+registerHandler(createLLMNodeHandler(), "ai", 10);
+registerHandler(createHTTPNodeHandler(), "integrations", 30);
+registerHandler(createGenericNodeHandler(), "generic", 999); // fallback
+
+// First-match lookup with caching
+const handler = findHandler("llm"); // Returns LLMNodeHandler
+const output = await handler.execute(input);
+```
+
+**Benefits**:
+
+- **Extensible**: New node types require no core changes
+- **Prioritized**: Handlers can override others (fallback pattern)
+- **Type-safe**: Each handler implements `NodeHandler` interface
+- **Cached**: Handler lookups are cached for performance
+
+### Handler Structure
+
+Each handler extends `BaseNodeHandler` with helper methods:
+
+```typescript
+class LLMNodeHandler extends BaseNodeHandler {
+    readonly name = "LLMNodeHandler";
+    readonly supportedNodeTypes = ["llm"] as const;
+
+    async execute(input: NodeHandlerInput): Promise<NodeHandlerOutput> {
+        // 1. Validate config with Zod schema
+        // 2. Execute node logic
+        // 3. Return result with signals
+        return this.success(output, metrics);
+    }
+}
+```
 
 **Supported Node Types** (20+):
 
-- **LLM**: Language model completions
-- **HTTP**: REST API calls
-- **Transform**: Data transformation
-- **Conditional**: Branching logic
-- **Loop**: Iteration over data
-- **Agent**: AI agent execution
-- **Integration**: Third-party service calls
-- **Database**: SQL queries
-- **File**: File operations
-- **Email**: Email sending
-- And more...
+- **AI**: LLM, Vision, Audio, Embeddings, Router
+- **Logic**: Conditional, Switch, Loop, Wait
+- **Data**: Transform, Variable, Output
+- **Integrations**: HTTP, Code, Database, File, KB-Query, Integration
+- **Control**: Input (pause for human input)
 
 ### Activity Configuration
 
@@ -217,28 +247,101 @@ Activities are side-effecting functions executed by Temporal workers.
 - **Backoff Coefficient**: 2 (exponential)
 - **Maximum Interval**: 1 minute
 
-### Key Activity Executors
+### Key Node Handlers
 
-**LLM Executor** (`backend/src/temporal/activities/node-executors/llm-executor.ts`):
+**LLM Handler** (`backend/src/temporal/activities/execution/handlers/ai/llm.ts`):
 
+- Validates config with `LLMNodeConfigSchema`
 - Retrieves connection with decrypted credentials
-- Interpolates variables in prompt
-- Calls LLM API with configured parameters
-- Returns response in execution context
+- Interpolates variables in prompt using `{{variable}}` syntax
+- Calls LLM API with retry logic and circuit breakers
+- Returns response with token usage metrics via `this.success()`
 
-**HTTP Executor** (`backend/src/temporal/activities/node-executors/http-executor.ts`):
+**HTTP Handler** (`backend/src/temporal/activities/execution/handlers/integrations/http.ts`):
 
+- Validates config with `HTTPNodeConfigSchema`
 - Interpolates URL, headers, and body
-- Makes HTTP request with timeout
-- Handles various HTTP methods
-- Returns response data in context
+- Makes HTTP request with configurable timeout
+- Handles various HTTP methods (GET, POST, PUT, DELETE, PATCH)
+- Returns response data with status metrics
 
-**Integration Executor** (`backend/src/temporal/activities/node-executors/integration-executor.ts`):
+**Router Handler** (`backend/src/temporal/activities/execution/handlers/ai/router.ts`):
 
-- Retrieves OAuth token (auto-refreshes if expired)
-- Calls third-party API
-- Handles provider-specific formats
-- Returns normalized response
+- LLM-based classification into predefined routes
+- Returns `selectedRoute` signal for workflow branching
+- Uses `this.selectBranch()` for multi-output routing
+
+**Input Handler** (`backend/src/temporal/activities/execution/handlers/control/input.ts`):
+
+- Pauses workflow for human-in-the-loop input
+- Returns `pause` signal with `PauseContext`
+- Workflow resumes when user provides input via signal
+
+### Signal-Based Flow Control
+
+Handlers return structured signals for workflow control flow:
+
+```typescript
+interface ExecutionSignals {
+    pause?: boolean; // Pause for human input
+    pauseContext?: PauseContext;
+    selectedRoute?: string; // Router/Conditional branch selection
+    branchesToSkip?: string[]; // Skip false branches
+    loopMetadata?: LoopMetadata;
+    isTerminal?: boolean; // End workflow
+}
+```
+
+**Use Cases**:
+
+- **Conditional/Switch**: `selectedRoute` + `branchesToSkip` for branching
+- **Loop**: `loopMetadata` for iteration control
+- **Input**: `pause` + `pauseContext` for human-in-the-loop
+- **Output**: `isTerminal` to end workflow
+
+### 4-Stage Workflow Builder
+
+**Location**: `backend/src/temporal/activities/execution/builder.ts`
+
+The workflow builder transforms node definitions into an executable graph:
+
+```
+Stage 1: PathConstructor
+  → BFS reachability from trigger node
+  → Build execution dependency graph
+
+Stage 2: LoopConstructor
+  → Insert loop sentinel nodes (loop-start/loop-end)
+  → Track loop contexts for iteration
+
+Stage 3: NodeConstructor
+  → Expand parallel nodes into branches
+  → Track parallel execution metadata
+
+Stage 4: EdgeConstructor
+  → Wire edges with typed handles (default, true, false, loop-body, case-*)
+  → Determine conditional branching targets
+```
+
+**Advantages**:
+
+- Pure & deterministic (Temporal workflow compatible)
+- Explicit loop/parallel handling
+- Edge type information for proper routing
+- Validation at each stage
+
+### Core Services
+
+**Location**: `backend/src/temporal/core/services/`
+
+| Service               | Purpose                                    |
+| --------------------- | ------------------------------------------ |
+| `context.ts`          | Immutable context ops, variable resolution |
+| `snapshot.ts`         | Pause/resume state persistence             |
+| `streaming.ts`        | SSE event management                       |
+| `execution-logs.ts`   | Node-level execution logging               |
+| `circuit-breakers.ts` | LLM rate limiting                          |
+| `heartbeat.ts`        | Activity heartbeat management              |
 
 ---
 

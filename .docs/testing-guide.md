@@ -61,12 +61,17 @@ npm run test:coverage
 
 ## Test Structure
 
-The test suite is organized into three main categories:
+The test suite is organized into multiple categories covering unit tests, integration tests, and end-to-end workflow tests:
 
 ```
-tests/
-├── fixtures/          # Test data and workflow definitions
-│   └── workflows/     # Realistic workflow definitions
+backend/tests/
+├── __mocks__/              # Jest mocks for external modules
+│   └── ioredis.ts          # Redis mock for tests
+├── fixtures/               # Test data and fixtures
+│   ├── activities.ts       # Mock activity implementations
+│   ├── contexts.ts         # Pre-built context snapshots
+│   ├── workflows.ts        # Test workflow definitions (linear, diamond, etc.)
+│   └── workflows/          # Realistic workflow definitions for E2E tests
 │       ├── index.ts                      # Central exports
 │       ├── seed-workflows.ts             # Seed script
 │       ├── hello-world.fixture.ts        # Phase 1: Basic
@@ -74,16 +79,424 @@ tests/
 │       ├── text-analysis.fixture.ts      # Phase 3: LLM integration
 │       ├── smart-router.fixture.ts       # Phase 4: Conditional logic
 │       └── arxiv-researcher.fixture.ts   # Advanced workflow
-├── helpers/           # Test utilities
-│   ├── mock-apis.ts   # External API mocking (nock/msw)
-│   ├── test-server.ts # Fastify server setup
-│   ├── test-temporal.ts # Temporal test environment
-│   └── db-helpers.ts  # In-memory SQLite database
-└── integration/       # Integration tests
-    ├── workflows/     # End-to-end workflow tests
-    ├── node-executors/ # Node executor tests
-    └── api-endpoints/ # API endpoint tests
+├── helpers/                # Test utilities
+│   ├── mock-apis.ts        # External API mocking (nock/msw)
+│   ├── test-server.ts      # Fastify server setup
+│   ├── test-temporal.ts    # Temporal test environment
+│   └── db-helpers.ts       # In-memory SQLite database
+├── unit/                   # Unit tests
+│   ├── context/            # Context management tests
+│   │   ├── context-service.test.ts      # Context CRUD operations
+│   │   ├── variable-resolution.test.ts  # Variable interpolation
+│   │   └── queue-state.test.ts          # Execution queue management
+│   └── builder/            # Workflow builder tests
+│       └── workflow-builder.test.ts     # Graph validation & construction
+└── integration/            # Integration tests
+    ├── orchestrator/       # Workflow orchestrator tests
+    │   ├── parallel-execution.test.ts   # Parallel branch execution
+    │   ├── conditional-branching.test.ts # If/else branching
+    │   ├── loop-execution.test.ts       # Loop iteration handling
+    │   └── error-propagation.test.ts    # Error & retry behavior
+    ├── handlers/           # Node handler tests
+    │   ├── llm-handler.test.ts          # LLM node execution
+    │   └── http-handler.test.ts         # HTTP node execution
+    ├── workflows/          # End-to-end workflow tests
+    ├── node-executors/     # Node executor tests
+    └── api-endpoints/      # API endpoint tests
 ```
+
+---
+
+## Temporal Workflow Execution Engine Tests
+
+The Temporal workflow execution engine has comprehensive test coverage focusing on **context corruption prevention** and **state management**. These tests validate the core orchestration logic without requiring a running Temporal server.
+
+### Unit Tests
+
+#### Context Service Tests
+
+**File:** `tests/unit/context/context-service.test.ts`
+
+Tests the core context management functions:
+
+```typescript
+describe("Context Service", () => {
+    describe("storeNodeOutput", () => {
+        it("should not mutate original context snapshot");
+        it("should handle concurrent output storage from parallel nodes");
+        it("should enforce per-node output size limit (1MB)");
+        it("should enforce total context size limit (50MB)");
+        it("should handle empty/null/undefined outputs");
+        it("should deep clone complex object outputs");
+    });
+
+    describe("createContext", () => {
+        it("should initialize with workflow inputs");
+        it("should set metadata with creation timestamp");
+    });
+
+    describe("getExecutionContext", () => {
+        it("should merge nodeOutputs and workflowVariables");
+        it("should not allow variable name collisions to corrupt data");
+    });
+});
+```
+
+#### Variable Resolution Tests
+
+**File:** `tests/unit/context/variable-resolution.test.ts`
+
+Tests variable interpolation and path resolution:
+
+```typescript
+describe("Variable Resolution", () => {
+    describe("resolveVariable", () => {
+        it("should resolve simple variable {{varName}}");
+        it("should resolve node output {{nodeId.field}}");
+        it("should resolve nested paths {{nodeId.data.items[0].name}}");
+        it("should resolve loop context {{loop.index}}, {{loop.item}}, {{loop.results}}");
+        it("should resolve parallel context {{parallel.index}}, {{parallel.branchId}}");
+        it("should return null for missing variables");
+    });
+
+    describe("interpolateString", () => {
+        it("should replace multiple variables in string");
+        it("should JSON serialize object values");
+        it("should preserve original string if no matches");
+    });
+
+    describe("resolution priority", () => {
+        it("should prioritize: loop > parallel > variables > outputs > inputs");
+    });
+});
+```
+
+#### Queue State Tests
+
+**File:** `tests/unit/context/queue-state.test.ts`
+
+Tests execution queue management:
+
+```typescript
+describe("Queue State Management", () => {
+    describe("initializeQueue", () => {
+        it("should mark start nodes as ready");
+        it("should mark nodes with dependencies as pending");
+    });
+
+    describe("markCompleted", () => {
+        it("should update dependent nodes to ready when all deps met");
+        it("should handle nodes with multiple dependents");
+    });
+
+    describe("markFailed", () => {
+        it("should cascade skip to all downstream dependents");
+        it("should not affect parallel branches");
+    });
+
+    describe("getReadyNodes", () => {
+        it("should respect maxConcurrentNodes limit");
+        it("should not return already executing nodes");
+    });
+
+    describe("deadlock detection", () => {
+        it("should detect when no nodes ready and none executing");
+    });
+});
+```
+
+#### Workflow Builder Tests
+
+**File:** `tests/unit/builder/workflow-builder.test.ts`
+
+Tests workflow graph construction and validation:
+
+```typescript
+describe("Workflow Builder", () => {
+    describe("validation", () => {
+        it("should detect cycles in workflow graph");
+        it("should allow legitimate loops (loop-start/loop-end)");
+        it("should warn about unreachable nodes");
+    });
+
+    describe("path construction", () => {
+        it("should determine correct execution levels");
+        it("should identify parallel branches");
+        it("should calculate dependency graph correctly");
+    });
+});
+```
+
+### Integration Tests
+
+#### Parallel Execution Tests
+
+**File:** `tests/integration/orchestrator/parallel-execution.test.ts`
+
+Tests parallel branch execution and context isolation:
+
+```typescript
+describe("Parallel Execution", () => {
+    describe("context isolation", () => {
+        it("should isolate context between parallel branches");
+        it("should merge outputs correctly after parallel join");
+        it("should not corrupt shared parent context");
+    });
+
+    describe("failure handling", () => {
+        it("should allow other branches to complete when one fails");
+        it("should mark dependents of failed node as skipped");
+    });
+
+    describe("concurrency limits", () => {
+        it("should respect max concurrent nodes limit");
+    });
+});
+```
+
+#### Conditional Branching Tests
+
+**File:** `tests/integration/orchestrator/conditional-branching.test.ts`
+
+Tests if/else conditional logic:
+
+```typescript
+describe("Conditional Branching", () => {
+    describe("branch selection", () => {
+        it("should execute true branch when condition is true");
+        it("should execute false branch when condition is false");
+        it("should skip inactive branch nodes entirely");
+    });
+
+    describe("context in branches", () => {
+        it("should make parent context available in branches");
+        it("should not leak branch variables to other branches");
+    });
+});
+```
+
+#### Loop Execution Tests
+
+**File:** `tests/integration/orchestrator/loop-execution.test.ts`
+
+Tests loop iteration handling:
+
+```typescript
+describe("Loop Execution", () => {
+    describe("iteration state", () => {
+        it("should isolate loop.index per iteration");
+        it("should make loop.item available for foreach loops");
+        it("should accumulate results in loop.results");
+    });
+
+    describe("loop termination", () => {
+        it("should terminate when condition becomes false");
+        it("should respect maxIterations limit");
+    });
+
+    describe("nested loops", () => {
+        it("should maintain separate iteration state for nested loops");
+    });
+});
+```
+
+#### Error Propagation Tests
+
+**File:** `tests/integration/orchestrator/error-propagation.test.ts`
+
+Tests error handling and retry behavior:
+
+```typescript
+describe("Error Propagation", () => {
+    describe("node failure", () => {
+        it("should mark node as failed with error details");
+        it("should preserve context state at point of failure");
+    });
+
+    describe("retry behavior", () => {
+        it("should track retry count");
+        it("should preserve context across retries");
+    });
+
+    describe("cascade behavior", () => {
+        it("should skip all dependent nodes on failure");
+        it("should not affect independent parallel branches");
+    });
+});
+```
+
+### Handler Tests
+
+#### LLM Handler Tests
+
+**File:** `tests/integration/handlers/llm-handler.test.ts`
+
+Tests LLM node execution (mocked, no real API calls):
+
+```typescript
+describe("LLM Handler", () => {
+    describe("variable interpolation", () => {
+        it("should interpolate variables in prompt");
+        it("should interpolate nested object paths");
+        it("should handle missing variables gracefully");
+    });
+
+    describe("retry logic", () => {
+        it("should retry on rate limit (429)");
+        it("should retry on server error (500, 502, 503)");
+        it("should not retry on auth error (401)");
+        it("should not retry on bad request (400)");
+    });
+
+    describe("output formatting", () => {
+        it("should return structured response with tokens");
+        it("should handle response without token usage");
+    });
+});
+```
+
+#### HTTP Handler Tests
+
+**File:** `tests/integration/handlers/http-handler.test.ts`
+
+Tests HTTP node execution:
+
+```typescript
+describe("HTTP Handler", () => {
+    describe("request building", () => {
+        it("should interpolate URL variables");
+        it("should interpolate header variables");
+        it("should interpolate body variables");
+        it("should handle JSON body serialization");
+    });
+
+    describe("timeout handling", () => {
+        it("should abort on timeout");
+    });
+
+    describe("retry configuration", () => {
+        it("should retry on configured status codes");
+        it("should not retry when disabled");
+    });
+});
+```
+
+### Test Fixtures
+
+#### Workflow Fixtures
+
+**File:** `tests/fixtures/workflows.ts`
+
+Pre-built workflow definitions for testing:
+
+```typescript
+// Linear workflow: A → B → C
+createLinearWorkflow();
+
+// Diamond pattern: A → [B, C] → D (parallel testing)
+createDiamondWorkflow();
+
+// Conditional workflow: A → Cond → [T1/F1] → End
+createConditionalWorkflow();
+
+// Error cascade: A → B(fails) → C(skipped) with parallel D → E
+createErrorCascadeWorkflow();
+
+// Loop workflow: Start → Loop(items) → Process → End
+createLoopWorkflow();
+
+// Complex workflow: Multiple patterns combined
+createComplexWorkflow();
+```
+
+#### Context Fixtures
+
+**File:** `tests/fixtures/contexts.ts`
+
+Pre-built context snapshots:
+
+```typescript
+// Empty context with defaults
+createEmptyContext(inputs?)
+
+// Context with sample node outputs
+createContextWithOutputs()
+
+// Context approaching 50MB limit (for pruning tests)
+createLargeContext(targetSizeBytes?)
+
+// Context with parallel branch outputs
+createParallelMergeContext()
+
+// Loop iteration state
+createLoopState(index, total, item?)
+createLoopStateWithResults(index, total, item, results)
+
+// Parallel branch state
+createParallelState(index, branchId, currentItem?)
+```
+
+#### Activity Mocks
+
+**File:** `tests/fixtures/activities.ts`
+
+Mock implementations for Temporal activities:
+
+```typescript
+// Create mock activities for testing
+createMockActivities({
+    executeNodeResult: { success: true, output: {...} },
+    validateInputsResult: { valid: true }
+})
+
+// Create activities that fail on specific nodes
+createFailingActivities(failingNodeIds: string[])
+
+// Create activities with custom behavior
+createCustomActivities(handlers: Map<string, Function>)
+```
+
+### Running Tests
+
+```bash
+# Run all tests
+npm test
+
+# Run unit tests only
+npm test -- tests/unit
+
+# Run integration tests only
+npm test -- tests/integration
+
+# Run specific test file
+npm test -- tests/unit/context/context-service.test.ts
+
+# Run tests matching pattern
+npm test -- --testNamePattern="parallel"
+
+# Run with coverage
+npm test -- --coverage
+
+# Run in watch mode
+npm test -- --watch
+```
+
+### Test Coverage Summary
+
+| Test Suite            | Tests | Coverage Focus                           |
+| --------------------- | ----- | ---------------------------------------- |
+| context-service       | 17    | Context CRUD, size limits, immutability  |
+| variable-resolution   | 32    | Path resolution, interpolation, scopes   |
+| queue-state           | 51    | Queue operations, dependencies, deadlock |
+| workflow-builder      | 17    | Graph validation, cycle detection        |
+| parallel-execution    | 15    | Context isolation, merge, concurrency    |
+| conditional-branching | 13    | Branch selection, skip propagation       |
+| loop-execution        | 14    | Iteration state, termination, nesting    |
+| error-propagation     | 23    | Failure handling, retry, cascade         |
+| llm-handler           | 27    | Prompt interpolation, retry logic        |
+| http-handler          | 51    | Request building, timeout, retries       |
+
+**Total: 260 tests**
 
 ---
 

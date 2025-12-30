@@ -82,7 +82,13 @@ export {
     EmbeddingsNodeHandler,
     createEmbeddingsNodeHandler,
     type EmbeddingsNodeConfig,
-    type EmbeddingsNodeResult
+    type EmbeddingsNodeResult,
+    // Router
+    executeRouterNode,
+    RouterNodeHandler,
+    createRouterNodeHandler,
+    type RouterNodeConfig,
+    type RouterNodeResult
 } from "./handlers/ai";
 
 // ============================================================================
@@ -102,12 +108,6 @@ export {
     createVariableNodeHandler,
     type VariableNodeConfig,
     type VariableNodeResult,
-    // Echo
-    executeEchoNode,
-    EchoNodeHandler,
-    createEchoNodeHandler,
-    type EchoNodeConfig,
-    type EchoNodeResult,
     // Output
     executeOutputNode,
     OutputNodeHandler,
@@ -193,6 +193,19 @@ export {
 } from "./handlers/logic";
 
 // ============================================================================
+// CONTROL HANDLERS
+// ============================================================================
+
+export {
+    // Input
+    executeInputNode,
+    InputNodeHandler,
+    createInputNodeHandler,
+    type InputNodeConfig,
+    type InputNodeResult
+} from "./handlers/control";
+
+// ============================================================================
 // GENERIC HANDLERS
 // ============================================================================
 
@@ -221,13 +234,15 @@ import {
     createLLMNodeHandler,
     createVisionNodeHandler,
     createAudioNodeHandler,
-    createEmbeddingsNodeHandler
+    createEmbeddingsNodeHandler,
+    createRouterNodeHandler
 } from "./handlers/ai";
+// Control
+import { createInputNodeHandler } from "./handlers/control";
 // Data
 import {
     createTransformNodeHandler,
     createVariableNodeHandler,
-    createEchoNodeHandler,
     createOutputNodeHandler
 } from "./handlers/data";
 // Integrations
@@ -246,7 +261,6 @@ import {
     createLoopNodeHandler,
     createWaitNodeHandler
 } from "./handlers/logic";
-// Generic
 
 /**
  * Register all default handlers with the registry.
@@ -258,12 +272,12 @@ export function registerDefaultHandlers(): void {
     registerHandler(createVisionNodeHandler(), "ai", 11);
     registerHandler(createAudioNodeHandler(), "ai", 12);
     registerHandler(createEmbeddingsNodeHandler(), "ai", 13);
+    registerHandler(createRouterNodeHandler(), "ai", 14);
 
     // Data handlers (priority 20-29)
     registerHandler(createTransformNodeHandler(), "data", 20);
     registerHandler(createVariableNodeHandler(), "data", 21);
-    registerHandler(createEchoNodeHandler(), "data", 22);
-    registerHandler(createOutputNodeHandler(), "data", 23);
+    registerHandler(createOutputNodeHandler(), "data", 22);
 
     // Integration handlers (priority 30-39)
     registerHandler(createHTTPNodeHandler(), "integration", 30);
@@ -278,6 +292,7 @@ export function registerDefaultHandlers(): void {
     registerHandler(createSwitchNodeHandler(), "logic", 41);
     registerHandler(createLoopNodeHandler(), "logic", 42);
     registerHandler(createWaitNodeHandler(), "control", 43);
+    registerHandler(createInputNodeHandler(), "control", 44);
 
     // Pass-through handlers (priority 90)
     registerHandler(createPassThroughNodeHandler(), "generic", 90);

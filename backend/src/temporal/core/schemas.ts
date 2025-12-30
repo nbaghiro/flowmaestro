@@ -107,6 +107,35 @@ export const EmbeddingsNodeConfigSchema = z.object({
 
 export type EmbeddingsNodeConfig = z.infer<typeof EmbeddingsNodeConfigSchema>;
 
+/**
+ * Router Route Schema - defines a classification route.
+ */
+export const RouterRouteSchema = z.object({
+    value: z.string().min(1, "Route value is required"),
+    label: z.string().optional(),
+    description: z.string().optional()
+});
+
+/**
+ * Router Node Configuration.
+ * LLM-based classification into predefined routes.
+ */
+export const RouterNodeConfigSchema = z.object({
+    provider: z.enum(["openai", "anthropic", "google"], {
+        required_error: "LLM provider is required for routing"
+    }),
+    model: z.string().min(1, "Model is required"),
+    connectionId: z.string().optional(),
+    systemPrompt: z.string().optional(),
+    prompt: z.string().min(1, "Classification prompt is required"),
+    routes: z.array(RouterRouteSchema).min(2, "At least 2 routes are required"),
+    defaultRoute: z.string().optional(),
+    temperature: z.number().min(0).max(1).optional().default(0),
+    outputVariable: z.string().min(1, "Output variable is required")
+});
+
+export type RouterNodeConfig = z.infer<typeof RouterNodeConfigSchema>;
+
 // ============================================================================
 // INTEGRATION NODE SCHEMAS
 // ============================================================================
@@ -339,36 +368,6 @@ export const VariableNodeConfigSchema = z.object({
 export type VariableNodeConfig = z.infer<typeof VariableNodeConfigSchema>;
 
 /**
- * Echo Node Configuration (for debugging).
- */
-export const EchoNodeConfigSchema = z.object({
-    mode: z
-        .enum(["simple", "transform", "delay", "error"])
-        .default("simple")
-        .describe("Echo operation mode"),
-
-    // For simple mode
-    message: z.string().optional(),
-    includeContext: z.boolean().optional().default(false),
-    includeTimestamp: z.boolean().optional().default(false),
-
-    // For transform mode
-    transformation: z.enum(["uppercase", "lowercase", "reverse", "json", "base64"]).optional(),
-    inputVariable: z.string().optional(),
-
-    // For delay mode (testing async)
-    delayMs: z.number().int().positive().max(60000).optional().default(1000),
-
-    // For error mode (testing error handling)
-    errorMessage: z.string().optional(),
-    errorType: z.enum(["throw", "return"]).optional().default("throw"),
-
-    outputVariable: OutputVariableSchema
-});
-
-export type EchoNodeConfig = z.infer<typeof EchoNodeConfigSchema>;
-
-/**
  * Output Node Configuration.
  */
 export const OutputNodeConfigSchema = z.object({
@@ -379,6 +378,40 @@ export const OutputNodeConfigSchema = z.object({
 });
 
 export type OutputNodeConfig = z.infer<typeof OutputNodeConfigSchema>;
+
+// ============================================================================
+// CONTROL NODE SCHEMAS
+// ============================================================================
+
+/**
+ * Input Node Validation Configuration.
+ */
+export const InputValidationSchema = z.object({
+    pattern: z.string().optional(),
+    min: z.number().optional(),
+    max: z.number().optional(),
+    minLength: z.number().optional(),
+    maxLength: z.number().optional(),
+    jsonSchema: z.unknown().optional()
+});
+
+/**
+ * Input Node Configuration.
+ * For collecting user input during workflow execution (human-in-the-loop).
+ */
+export const InputNodeConfigSchema = z.object({
+    inputName: z.string().min(1, "Input name is required"),
+    inputType: z.enum(["text", "number", "boolean", "json", "file"]).default("text"),
+    label: z.string().optional(),
+    description: z.string().optional(),
+    placeholder: z.string().optional(),
+    required: z.boolean().default(true),
+    defaultValue: z.unknown().optional(),
+    validation: InputValidationSchema.optional(),
+    outputVariable: z.string().min(1, "Output variable is required")
+});
+
+export type InputNodeConfig = z.infer<typeof InputNodeConfigSchema>;
 
 // ============================================================================
 // VALIDATION UTILITIES
@@ -466,6 +499,7 @@ export const NodeSchemaRegistry: Record<string, z.ZodSchema> = {
     vision: VisionNodeConfigSchema,
     audio: AudioNodeConfigSchema,
     embeddings: EmbeddingsNodeConfigSchema,
+    router: RouterNodeConfigSchema,
     // Integrations
     http: HTTPNodeConfigSchema,
     code: CodeNodeConfigSchema,
@@ -481,8 +515,9 @@ export const NodeSchemaRegistry: Record<string, z.ZodSchema> = {
     // Data
     transform: TransformNodeConfigSchema,
     variable: VariableNodeConfigSchema,
-    echo: EchoNodeConfigSchema,
-    output: OutputNodeConfigSchema
+    output: OutputNodeConfigSchema,
+    // Control
+    input: InputNodeConfigSchema
 };
 
 /**

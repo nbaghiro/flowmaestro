@@ -1,7 +1,8 @@
 import { GitBranch, CheckCircle2, XCircle } from "lucide-react";
-import { memo } from "react";
-import { NodeProps, Handle, Position } from "reactflow";
-import { BaseNode } from "./BaseNode";
+import { memo, useEffect } from "react";
+import { NodeProps, Handle, Position, useNodeId, useUpdateNodeInternals } from "reactflow";
+import { useWorkflowStore } from "../../stores/workflowStore";
+import { BaseNode, ConnectorLayout } from "./BaseNode";
 
 interface ConditionalNodeData {
     label: string;
@@ -14,11 +15,30 @@ interface ConditionalNodeData {
 }
 
 function ConditionalNode({ data, selected }: NodeProps<ConditionalNodeData>) {
+    const nodeId = useNodeId();
+    const updateNodeInternals = useUpdateNodeInternals();
+
+    const connectorLayout = useWorkflowStore((s) => {
+        if (!nodeId) return "horizontal";
+        const node = s.nodes.find((item) => item.id === nodeId);
+        return (node?.data?.connectorLayout as ConnectorLayout) || "horizontal";
+    });
+
+    useEffect(() => {
+        if (nodeId) {
+            updateNodeInternals(nodeId);
+        }
+    }, [connectorLayout, nodeId, updateNodeInternals]);
+
     const conditionType = data.conditionType || "simple";
     const leftValue = data.leftValue || "";
     const operator = data.operator || "==";
     const rightValue = data.rightValue || "";
     const expression = data.expression || "";
+
+    const isHorizontal = connectorLayout === "horizontal";
+    const inputPosition = isHorizontal ? Position.Left : Position.Top;
+    const outputPosition = isHorizontal ? Position.Right : Position.Bottom;
 
     const renderCondition = () => {
         if (conditionType === "expression" && expression) {
@@ -57,26 +77,26 @@ function ConditionalNode({ data, selected }: NodeProps<ConditionalNodeData>) {
                     {/* Input Handle */}
                     <Handle
                         type="target"
-                        position={Position.Top}
-                        className="!w-2.5 !h-2.5 !bg-card !border-2 !border-primary !shadow-sm"
+                        position={inputPosition}
+                        className="!w-2.5 !h-2.5 !bg-white !border-2 !border-border !shadow-sm"
                     />
 
                     {/* True Output Handle */}
                     <Handle
                         type="source"
-                        position={Position.Bottom}
+                        position={outputPosition}
                         id="true"
-                        className="!w-2.5 !h-2.5 !bg-card !border-2 !border-green-500 !shadow-sm"
-                        style={{ left: "35%" }}
+                        className="!w-2.5 !h-2.5 !bg-white !border-2 !border-border !shadow-sm"
+                        style={isHorizontal ? { top: "35%" } : { left: "35%" }}
                     />
 
                     {/* False Output Handle */}
                     <Handle
                         type="source"
-                        position={Position.Bottom}
+                        position={outputPosition}
                         id="false"
-                        className="!w-2.5 !h-2.5 !bg-card !border-2 !border-red-500 !shadow-sm"
-                        style={{ left: "65%" }}
+                        className="!w-2.5 !h-2.5 !bg-white !border-2 !border-border !shadow-sm"
+                        style={isHorizontal ? { top: "65%" } : { left: "65%" }}
                     />
                 </>
             }

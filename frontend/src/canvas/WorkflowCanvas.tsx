@@ -13,6 +13,7 @@ import "reactflow/dist/style.css";
 import { generateId } from "../lib/utils";
 import { useThemeStore } from "../stores/themeStore";
 import { useWorkflowStore } from "../stores/workflowStore";
+import { CustomEdge } from "./edges/CustomEdge";
 // Import all node components
 import AudioNode from "./nodes/AudioNode";
 import CodeNode from "./nodes/CodeNode";
@@ -27,19 +28,28 @@ import KnowledgeBaseQueryNode from "./nodes/KnowledgeBaseQueryNode";
 import LLMNode from "./nodes/LLMNode";
 import LoopNode from "./nodes/LoopNode";
 import OutputNode from "./nodes/OutputNode";
+import RouterNode from "./nodes/RouterNode";
 import SwitchNode from "./nodes/SwitchNode";
 import TransformNode from "./nodes/TransformNode";
+import TriggerNode from "./nodes/TriggerNode";
 import VariableNode from "./nodes/VariableNode";
 import VisionNode from "./nodes/VisionNode";
 import WaitNode from "./nodes/WaitNode";
 
+// Register edge types
+const edgeTypes = {
+    default: CustomEdge
+};
+
 // Register node types
 const nodeTypes = {
     comment: CommentNode,
+    trigger: TriggerNode,
     llm: LLMNode,
     vision: VisionNode,
     audio: AudioNode,
     embeddings: EmbeddingsNode,
+    router: RouterNode,
     conditional: ConditionalNode,
     switch: SwitchNode,
     loop: LoopNode,
@@ -177,6 +187,7 @@ export function WorkflowCanvas({ onInit: onInitProp }: WorkflowCanvasProps) {
                 onDrop={onDrop}
                 onDragOver={onDragOver}
                 nodeTypes={nodeTypes}
+                edgeTypes={edgeTypes}
                 connectionMode={ConnectionMode.Loose}
                 fitView
                 proOptions={{ hideAttribution: true }}
@@ -212,10 +223,12 @@ export function WorkflowCanvas({ onInit: onInitProp }: WorkflowCanvasProps) {
 
 function getDefaultLabel(type: string): string {
     const labels: Record<string, string> = {
+        trigger: "Trigger",
         llm: "LLM",
         vision: "Vision",
         audio: "Audio",
         embeddings: "Embeddings",
+        router: "Router",
         conditional: "Conditional",
         switch: "Switch",
         loop: "Loop",
@@ -227,7 +240,8 @@ function getDefaultLabel(type: string): string {
         output: "Output",
         http: "HTTP",
         database: "Database",
-        integration: "Integration"
+        integration: "Integration",
+        knowledgeBaseQuery: "KB Query"
     };
     return labels[type] || "Node";
 }

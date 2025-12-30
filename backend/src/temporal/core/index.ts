@@ -257,6 +257,8 @@ export {
     VisionNodeConfigSchema,
     AudioNodeConfigSchema,
     EmbeddingsNodeConfigSchema,
+    RouterRouteSchema,
+    RouterNodeConfigSchema,
     // Integration schemas
     HTTPNodeConfigSchema,
     CodeNodeConfigSchema,
@@ -273,7 +275,6 @@ export {
     // Data schemas
     TransformNodeConfigSchema,
     VariableNodeConfigSchema,
-    EchoNodeConfigSchema,
     OutputNodeConfigSchema,
     // Validation functions
     validateConfig,
@@ -288,6 +289,7 @@ export type {
     VisionNodeConfig,
     AudioNodeConfig,
     EmbeddingsNodeConfig,
+    RouterNodeConfig,
     HTTPNodeConfig,
     CodeNodeConfig,
     DatabaseNodeConfig,
@@ -300,7 +302,6 @@ export type {
     WaitNodeConfig,
     TransformNodeConfig,
     VariableNodeConfig,
-    EchoNodeConfig,
     OutputNodeConfig,
     SchemaValidationResult
 } from "./schemas";

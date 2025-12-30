@@ -40,3 +40,12 @@ export {
     type EmbeddingsNodeConfig,
     type EmbeddingsNodeResult
 } from "./embeddings";
+
+// Router
+export {
+    executeRouterNode,
+    RouterNodeHandler,
+    createRouterNodeHandler,
+    type RouterNodeConfig,
+    type RouterNodeResult
+} from "./router";

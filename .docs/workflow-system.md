@@ -30,7 +30,7 @@ FlowMaestro workflows are visual, node-based automations that enable users to:
 
 ### Key Features
 
-- **20+ Node Types**: LLM, HTTP, Transform, Conditional, Loop, Vision, Audio, Database, and more
+- **20+ Node Types**: LLM, HTTP, Transform, Conditional, Loop, Vision, Audio, Database, Router, Trigger, and more
 - **Durable Execution**: Workflows survive system failures through Temporal's persistent execution model
 - **Trigger System**: Schedule (cron), webhook, event, and manual triggers
 - **AI Generation**: Create workflows from natural language descriptions
@@ -61,17 +61,23 @@ FlowMaestro uses [Temporal](https://temporal.io) as its workflow orchestration e
    ↓
 3. Temporal starts orchestratorWorkflow
    ↓
-4. Workflow builds execution graph from node definitions
+4. 4-Stage Builder constructs executable graph:
+   - PathConstructor: BFS reachability from trigger
+   - LoopConstructor: Insert loop sentinels
+   - NodeConstructor: Expand parallel branches
+   - EdgeConstructor: Wire typed edges
    ↓
-5. Nodes execute in topological order (respecting dependencies)
+5. Handler Registry finds handler for each node type
    ↓
-6. Independent nodes run in parallel
+6. Nodes execute via handlers, returning signals for flow control
    ↓
-7. Each node outputs update context for downstream nodes
+7. Signals control branching, loops, and pause/resume
    ↓
-8. Execution completes, results stored in database
+8. Context updated immutably after each node
    ↓
-9. WebSocket events notify frontend of progress
+9. Execution completes, results stored in database
+   ↓
+10. SSE/WebSocket events notify frontend of progress
 ```
 
 ### Orchestrator Workflow
@@ -80,101 +86,134 @@ FlowMaestro uses [Temporal](https://temporal.io) as its workflow orchestration e
 
 The orchestrator workflow is the core execution engine that:
 
-1. **Builds dependency graph** from nodes and edges
-2. **Performs topological sort** to determine execution order
-3. **Executes nodes in parallel** when dependencies are satisfied
-4. **Manages execution context** (all node outputs available to downstream nodes)
-5. **Handles errors and retries** through Temporal's built-in mechanisms
+1. **Builds executable graph** using the 4-stage builder
+2. **Manages execution queue** with priority-based node ordering
+3. **Executes nodes via handler registry** with signal-based flow control
+4. **Manages immutable context** (all node outputs available to downstream nodes)
+5. **Handles pause/resume** through snapshot persistence
+6. **Handles errors and retries** through Temporal's built-in mechanisms
 
 **Key Implementation**:
 
 ```typescript
 export async function orchestratorWorkflow(input: OrchestratorInput): Promise<OrchestratorResult> {
-    const { workflowDefinition, inputs = {} } = input;
-    const { nodes, edges } = workflowDefinition;
+    const { workflowDefinition, inputs = {}, executionId } = input;
 
-    // Build execution graph
-    const nodeMap = new Map<string, WorkflowNode>();
-    const outgoingEdges = new Map<string, string[]>();
-    const incomingEdges = new Map<string, string[]>();
+    // Build executable graph using 4-stage builder
+    const graph = buildWorkflow(workflowDefinition);
 
-    // Initialize dependency tracking
-    Object.entries(nodes).forEach(([nodeId, node]) => {
-        nodeMap.set(nodeId, node);
-        outgoingEdges.set(nodeId, []);
-        incomingEdges.set(nodeId, []);
-    });
+    // Initialize immutable context
+    let context = createContext(inputs);
 
-    edges.forEach((edge) => {
-        outgoingEdges.get(edge.source)?.push(edge.target);
-        incomingEdges.get(edge.target)?.push(edge.source);
-    });
+    // Process execution queue
+    while (!graph.queue.isEmpty()) {
+        const nodeId = graph.queue.dequeue();
+        const node = graph.nodes.get(nodeId);
 
-    // Execution context stores all node outputs
-    const context: Record<string, any> = { ...inputs };
-    const executed = new Set<string>();
-
-    // Topological execution - process nodes in dependency order
-    while (executed.size < nodeMap.size) {
-        const readyNodes = Object.entries(nodes).filter(([nodeId]) => {
-            if (executed.has(nodeId)) return false;
-            const deps = incomingEdges.get(nodeId) || [];
-            return deps.every((dep) => executed.has(dep));
+        // Execute node via handler registry
+        const output = await executeNodeActivity({
+            nodeId,
+            nodeType: node.type,
+            nodeConfig: node.config,
+            context: context.snapshot()
         });
 
-        if (readyNodes.length === 0) break; // Cycle detection
+        // Update context immutably
+        context = storeNodeOutput(context, nodeId, output.result);
 
-        // Execute all ready nodes in parallel
-        const results = await Promise.all(
-            readyNodes.map(([nodeId, node]) => executeNode(nodeId, node, context))
-        );
+        // Process handler signals
+        if (output.signals?.pause) {
+            // Save snapshot and pause workflow
+            await saveSnapshot(executionId, context, graph.queue);
+            await condition(() => resumeSignalReceived);
+            context = restoreContext(resumeData);
+        }
 
-        // Update context with results
-        readyNodes.forEach(([nodeId], idx) => {
-            context[nodeId] = results[idx];
-            executed.add(nodeId);
-        });
+        if (output.signals?.selectedRoute) {
+            // Skip branches not selected
+            graph.queue.skipBranches(output.signals.branchesToSkip);
+        }
+
+        if (output.signals?.isTerminal) {
+            break; // End workflow
+        }
     }
 
     return {
         success: true,
-        outputs: context
+        outputs: context.getAllOutputs()
     };
 }
 ```
 
-### Activity Pattern
+**Signal-Based Flow Control**:
 
-Each node type is implemented as a Temporal activity with:
-
-- **Timeout configuration**: `startToCloseTimeout` (default: 10 minutes)
-- **Retry policy**: 3 attempts with exponential backoff
-- **Context handling**: Receives and returns execution context
-
-**Example Activity**:
+Handlers return structured signals that control workflow execution:
 
 ```typescript
-export async function executeLLMNode(
-    context: ActivityContext,
-    config: LLMNodeConfig
-): Promise<ActivityContext> {
-    const { provider, model, prompt, credentialId } = config;
-
-    // Get credentials
-    const credential = await getCredential(credentialId);
-
-    // Call LLM
-    const result = await callLLM(provider, model, prompt, credential);
-
-    // Update context
-    return {
-        ...context,
-        variables: {
-            ...context.variables,
-            [config.outputVariable || "llmOutput"]: result
-        }
-    };
+interface ExecutionSignals {
+    pause?: boolean; // Pause for human input
+    pauseContext?: PauseContext;
+    selectedRoute?: string; // Branch selection (conditional/switch/router)
+    branchesToSkip?: string[]; // Skip unselected branches
+    loopMetadata?: LoopMetadata;
+    isTerminal?: boolean; // End workflow (output node)
 }
+```
+
+### Handler Pattern
+
+Each node type is implemented as a handler class that extends `BaseNodeHandler`:
+
+- **Zod Validation**: Config validated with type-safe schemas
+- **Timeout configuration**: `startToCloseTimeout` (default: 10 minutes)
+- **Retry policy**: 3 attempts with exponential backoff
+- **Signal returns**: Flow control via structured signals
+
+**Handler Structure**:
+
+```typescript
+// Location: backend/src/temporal/activities/execution/handlers/ai/llm.ts
+
+export class LLMNodeHandler extends BaseNodeHandler {
+    readonly name = "LLMNodeHandler";
+    readonly supportedNodeTypes = ["llm"] as const;
+
+    async execute(input: NodeHandlerInput): Promise<NodeHandlerOutput> {
+        // 1. Validate config with Zod schema
+        const config = validateOrThrow(LLMNodeConfigSchema, input.nodeConfig, "LLM");
+
+        // 2. Get credentials via connection service
+        const connection = await this.getConnection(config.connectionId);
+
+        // 3. Interpolate variables in prompt
+        const prompt = interpolateVariables(config.prompt, input.context);
+
+        // 4. Call LLM with retry logic
+        const result = await this.callLLM(config.provider, config.model, prompt, connection);
+
+        // 5. Return result with metrics via helper
+        return this.success(
+            { [config.outputVariable]: result.content },
+            { tokens: result.usage, durationMs: result.duration }
+        );
+    }
+}
+```
+
+**Handler Registry**:
+
+```typescript
+// Location: backend/src/temporal/activities/execution/registry.ts
+
+// Auto-registration on module load
+registerHandler(createLLMNodeHandler(), "ai", 10);
+registerHandler(createRouterNodeHandler(), "ai", 14);
+registerHandler(createConditionalNodeHandler(), "logic", 40);
+registerHandler(createGenericNodeHandler(), "generic", 999); // fallback
+
+// First-match lookup with caching
+const handler = findHandler("llm"); // Returns LLMNodeHandler
 ```
 
 ---
@@ -621,6 +660,77 @@ FlowMaestro supports 20+ node types for building comprehensive workflows.
   "value": "any (for set operation)"
 }
 ```
+
+---
+
+### 17. Router Node (type: "router")
+
+**Purpose**: LLM-based classification into predefined routes
+
+**Outputs**: Multiple named handles based on routes (like Switch, but AI-powered)
+
+**Configuration**:
+
+```json
+{
+  "provider": "openai" | "anthropic" | "google",
+  "model": "string",
+  "connectionId": "string (REQUIRED)",
+  "systemPrompt": "string (optional)",
+  "prompt": "string (classification prompt with {{variable}} interpolation)",
+  "routes": [
+    { "value": "route_id", "label": "Display Label", "description": "When to use" }
+  ],
+  "defaultRoute": "string (optional - fallback route)",
+  "temperature": "number (default: 0 for deterministic)",
+  "outputVariable": "string"
+}
+```
+
+**Example**:
+
+```json
+{
+    "type": "router",
+    "label": "Classify Intent",
+    "config": {
+        "provider": "openai",
+        "model": "gpt-4o",
+        "connectionId": "${openaiConnectionId}",
+        "prompt": "Classify the following user message: {{userMessage}}",
+        "routes": [
+            { "value": "support", "label": "Support", "description": "Customer support requests" },
+            { "value": "sales", "label": "Sales", "description": "Sales inquiries" },
+            { "value": "feedback", "label": "Feedback", "description": "Product feedback" }
+        ],
+        "defaultRoute": "support",
+        "outputVariable": "classification"
+    }
+}
+```
+
+---
+
+### 18. Trigger Node (type: "trigger")
+
+**Purpose**: Visual entry point for schedule/webhook/manual triggers
+
+**Outputs**: Single output handle (workflow entry point, no input)
+
+**Configuration**:
+
+```json
+{
+  "triggerType": "schedule" | "webhook" | "manual" | "event",
+  "enabled": "boolean",
+  "cronExpression": "string (for schedule)",
+  "timezone": "string (for schedule)",
+  "webhookMethod": "POST" | "GET" | "PUT" | "DELETE" | "ANY",
+  "authType": "none" | "api_key" | "hmac" | "bearer"
+}
+```
+
+**Note**: The Trigger node is metadata-only on the canvas. Actual trigger registration is handled by the backend via `/api/triggers` endpoints.
 
 ---
 
@@ -1214,11 +1324,25 @@ Authorization: Bearer <token>
 FlowMaestro's workflow system provides:
 
 1. **Powerful Execution Engine**: Temporal-based durable execution with automatic retries
-2. **Rich Node Library**: 20+ node types for comprehensive automation
-3. **Flexible Triggers**: Schedule, webhook, event, and manual execution
-4. **AI-Powered Generation**: Create workflows from natural language
-5. **Agent Integration**: Execute AI agents within structured workflows
-6. **Real-time Monitoring**: WebSocket-based live execution updates
-7. **Visual Builder**: Intuitive drag-and-drop interface with React Flow
+2. **Handler Registry Pattern**: Extensible node handlers with priority-based routing
+3. **Signal-Based Flow Control**: Rich signals for branching, loops, and pause/resume
+4. **4-Stage Workflow Builder**: Deterministic graph construction with loop/parallel support
+5. **Rich Node Library**: 20+ node types including Router (AI classification) and Trigger
+6. **Flexible Triggers**: Schedule, webhook, event, and manual execution
+7. **AI-Powered Generation**: Create workflows from natural language
+8. **Agent Integration**: Execute AI agents within structured workflows
+9. **Real-time Monitoring**: SSE/WebSocket-based live execution updates
+10. **Visual Builder**: Intuitive drag-and-drop interface with React Flow
 
 The system enables users to build sophisticated AI-powered automations without writing code, while providing the flexibility and power of a programmatic workflow engine.
+
+### Architecture Highlights
+
+| Component        | Location                                                | Purpose                             |
+| ---------------- | ------------------------------------------------------- | ----------------------------------- |
+| Core Module      | `backend/src/temporal/core/`                            | Types, schemas, services, utilities |
+| Handler Registry | `backend/src/temporal/activities/execution/registry.ts` | Priority-based handler lookup       |
+| Workflow Builder | `backend/src/temporal/activities/execution/builder.ts`  | 4-stage graph construction          |
+| Node Handlers    | `backend/src/temporal/activities/execution/handlers/`   | Per-node-type execution logic       |
+| Context Service  | `backend/src/temporal/core/services/context.ts`         | Immutable context operations        |
+| Snapshot Service | `backend/src/temporal/core/services/snapshot.ts`        | Pause/resume persistence            |

@@ -272,19 +272,24 @@ export async function saveThreadIncremental(
 }
 
 /**
- * Aggregate token usage for a thread from MODEL_GENERATION spans
- * and store it in thread.metadata.tokenUsage, then emit a streaming event.
+ * Accumulate token usage for a thread and store it in thread.metadata.tokenUsage,
+ * then emit a streaming event.
+ *
+ * Note: Previously this queried execution_spans table, but spans are now exported
+ * to GCP Cloud Trace via OpenTelemetry. Token tracking now uses direct accumulation
+ * from the usage parameter passed by the agent execution.
  */
 export async function updateThreadTokens(input: UpdateThreadTokensInput): Promise<void> {
     const { threadId, executionId, usage, provider, model } = input;
 
-    // Load existing token usage from thread metadata for accumulation when spans are missing
+    // Load existing token usage from thread metadata for accumulation
     const existingUsageResult = await db.query<{
         token_usage: {
             promptTokens?: number;
             completionTokens?: number;
             totalTokens?: number;
             totalCost?: number;
+            executionCount?: number;
         } | null;
     }>(
         `
@@ -300,6 +305,9 @@ export async function updateThreadTokens(input: UpdateThreadTokensInput): Promis
     const priorCompletionTokens = existingUsage.completionTokens || 0;
     const priorTotalTokens = existingUsage.totalTokens || 0;
     const priorTotalCost = existingUsage.totalCost || 0;
+    const priorExecutionCount = existingUsage.executionCount || 0;
+
+    // Get current execution's token usage
     const usagePrompt = usage?.promptTokens ?? 0;
     const usageCompletion = usage?.completionTokens ?? 0;
     const usageTotal =
@@ -308,91 +316,31 @@ export async function updateThreadTokens(input: UpdateThreadTokensInput): Promis
             ? usagePrompt + usageCompletion
             : 0);
 
-    const result = await db.query<{
-        prompt_tokens: string;
-        completion_tokens: string;
-        total_tokens: string;
-        total_cost: string;
-        execution_count: string;
-    }>(
-        `
-        SELECT
-            COALESCE(SUM((s.attributes->>'promptTokens')::int), 0) as prompt_tokens,
-            COALESCE(SUM((s.attributes->>'completionTokens')::int), 0) as completion_tokens,
-            COALESCE(SUM((s.attributes->>'totalTokens')::int), 0) as total_tokens,
-            COALESCE(SUM((s.attributes->>'totalCost')::numeric), 0) as total_cost,
-            COUNT(DISTINCT e.id) as execution_count
-        FROM flowmaestro.execution_spans s
-        INNER JOIN flowmaestro.agent_executions e ON s.trace_id = e.id
-        WHERE e.thread_id = $1
-          AND s.span_type = 'model_generation'
-          AND s.attributes ? 'totalTokens'
-        `,
-        [threadId]
-    );
+    // Accumulate tokens from this execution
+    const effectivePromptTokens = priorPromptTokens + usagePrompt;
+    const effectiveCompletionTokens = priorCompletionTokens + usageCompletion;
+    const effectiveTotalTokens = priorTotalTokens + usageTotal;
 
-    const aggregated = {
-        promptTokens: parseInt(result.rows[0].prompt_tokens, 10),
-        completionTokens: parseInt(result.rows[0].completion_tokens, 10),
-        totalTokens: parseInt(result.rows[0].total_tokens, 10),
-        totalCost: parseFloat(result.rows[0].total_cost),
-        executionCount: parseInt(result.rows[0].execution_count, 10)
-    };
-
-    // Fallback usage when spans are incomplete
-    const usageFallbackAvailable =
-        usage &&
-        typeof usage.promptTokens === "number" &&
-        typeof usage.completionTokens === "number";
-
-    // Start from the higher of aggregated vs existing totals
-    const basePromptTokens = Math.max(aggregated.promptTokens, priorPromptTokens);
-    const baseCompletionTokens = Math.max(aggregated.completionTokens, priorCompletionTokens);
-    const baseTotalTokens = Math.max(aggregated.totalTokens, priorTotalTokens);
-
-    // If spans missed this execution but usage is present, add the missing delta
-    const effectivePromptTokens =
-        usageFallbackAvailable && aggregated.promptTokens < priorPromptTokens + usagePrompt
-            ? priorPromptTokens + usagePrompt
-            : basePromptTokens;
-
-    const effectiveCompletionTokens =
-        usageFallbackAvailable &&
-        aggregated.completionTokens < priorCompletionTokens + usageCompletion
-            ? priorCompletionTokens + usageCompletion
-            : baseCompletionTokens;
-
-    const effectiveTotalTokens =
-        usageFallbackAvailable && aggregated.totalTokens < priorTotalTokens + usageTotal
-            ? priorTotalTokens + usageTotal
-            : baseTotalTokens;
-
-    // Compute cost if missing/zero
-    const shouldComputeCost =
-        provider &&
-        model &&
-        effectiveTotalTokens > 0 &&
-        (aggregated.totalCost === 0 ||
-            aggregated.totalCost === null ||
-            aggregated.totalCost === undefined);
-
+    // Compute cost for this execution's tokens
     const costResult =
-        shouldComputeCost && provider && model
+        provider && model && usageTotal > 0
             ? calculateCost({
                   provider,
                   model,
-                  promptTokens: effectivePromptTokens,
-                  completionTokens: effectiveCompletionTokens
+                  promptTokens: usagePrompt,
+                  completionTokens: usageCompletion
               })
             : null;
+
+    const executionCost = costResult?.totalCost ?? 0;
 
     const tokenUsage = {
         promptTokens: effectivePromptTokens,
         completionTokens: effectiveCompletionTokens,
         totalTokens: effectiveTotalTokens,
-        totalCost: costResult?.totalCost ?? aggregated.totalCost ?? priorTotalCost ?? 0,
+        totalCost: priorTotalCost + executionCost,
         lastUpdatedAt: new Date().toISOString(),
-        executionCount: aggregated.executionCount || 1
+        executionCount: priorExecutionCount + 1
     };
 
     await db.query(

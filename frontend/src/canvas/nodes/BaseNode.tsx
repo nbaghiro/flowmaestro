@@ -258,7 +258,7 @@ export function BaseNode({
     return (
         <div
             className={cn(
-                "h-full flex flex-col bg-card rounded-lg transition-all duration-200 min-w-[260px] overflow-hidden",
+                "group h-full flex flex-col bg-card rounded-lg transition-all duration-200 min-w-[260px] overflow-hidden",
                 "border-2 border-border",
                 categoryStyle.borderColor,
                 `node-${category}-category`,
@@ -325,7 +325,7 @@ export function BaseNode({
 
             {/* Connector Layout Toggle + Tooltip */}
             <div
-                className="nodrag absolute bottom-1 right-7 z-20"
+                className="nodrag absolute bottom-1 right-6 z-20 opacity-0 group-hover:opacity-100 transition-opacity"
                 onMouseEnter={() => setShowConnectorLayout(true)}
                 onMouseLeave={() => setShowConnectorLayout(false)}
             >
@@ -337,9 +337,7 @@ export function BaseNode({
                     className="
                         w-4 h-4
                         flex items-center justify-center
-                        rounded
-                        bg-muted/70 hover:bg-muted
-                        text-muted-foreground hover:text-foreground
+                        text-gray-400 hover:text-foreground
                         mb-[2px]
                     "
                 >
@@ -388,6 +386,7 @@ export function BaseNode({
                     cursor-se-resize z-20
                     rotate-45
                     text-gray-400
+                    opacity-0 group-hover:opacity-100 transition-opacity
                 "
             >
                 {/* Tooltip */}

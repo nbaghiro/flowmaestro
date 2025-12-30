@@ -3,6 +3,7 @@ import {
     Eye,
     Mic,
     Sparkles,
+    GitFork,
     GitBranch,
     GitMerge,
     Repeat,
@@ -16,6 +17,7 @@ import {
     Globe,
     Database,
     Plug,
+    Zap,
     ChevronDown,
     ChevronRight,
     Search,
@@ -64,6 +66,13 @@ const nodeLibrary: NodeDefinition[] = [
         category: "ai",
         description: "Generate vector embeddings for semantic search"
     },
+    {
+        type: "router",
+        label: "Router",
+        icon: GitFork,
+        category: "ai",
+        description: "AI-powered routing based on content classification"
+    },
 
     // Logic & Code (5 nodes)
     {
@@ -102,7 +111,14 @@ const nodeLibrary: NodeDefinition[] = [
         description: "Pause workflow execution for a duration"
     },
 
-    // Data Operations (5 nodes)
+    // Data Operations (6 nodes)
+    {
+        type: "trigger",
+        label: "Trigger",
+        icon: Zap,
+        category: "data",
+        description: "Schedule, webhook, or manual workflow trigger"
+    },
     {
         type: "input",
         label: "Input",

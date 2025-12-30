@@ -156,8 +156,22 @@ input:-webkit-autofill::first-line {
     @apply !border-orange-400;
 }
 
+.react-flow__edge-path {
+    stroke: #d1d5db; /* gray-300 */
+}
+
+.dark .react-flow__edge-path {
+    stroke: #4b5563; /* gray-600 */
+}
+
 .react-flow__edge.selected .react-flow__edge-path {
-    @apply stroke-primary stroke-[3px];
+    stroke: #9ca3af; /* gray-400 - slightly darker than non-selected */
+    stroke-width: 2px;
+}
+
+.dark .react-flow__edge.selected .react-flow__edge-path {
+    stroke: #6b7280; /* gray-500 */
+    stroke-width: 2px;
 }
 
 .react-flow__handle {

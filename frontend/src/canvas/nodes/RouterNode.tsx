@@ -1,17 +1,19 @@
-import { GitMerge } from "lucide-react";
+import { GitFork } from "lucide-react";
 import { memo, useEffect } from "react";
 import { NodeProps, Handle, Position, useNodeId, useUpdateNodeInternals } from "reactflow";
 import { useWorkflowStore } from "../../stores/workflowStore";
 import { BaseNode, ConnectorLayout } from "./BaseNode";
 
-interface SwitchNodeData {
+interface RouterNodeData {
     label: string;
     status?: "idle" | "pending" | "running" | "success" | "error";
-    variable?: string;
-    cases?: Array<{ value: string; label: string }>;
+    provider?: string;
+    model?: string;
+    prompt?: string;
+    routes?: Array<{ value: string; label?: string; description?: string }>;
 }
 
-function SwitchNode({ data, selected }: NodeProps<SwitchNodeData>) {
+function RouterNode({ data, selected }: NodeProps<RouterNodeData>) {
     const nodeId = useNodeId();
     const updateNodeInternals = useUpdateNodeInternals();
 
@@ -27,8 +29,12 @@ function SwitchNode({ data, selected }: NodeProps<SwitchNodeData>) {
         }
     }, [connectorLayout, nodeId, updateNodeInternals]);
 
-    const variable = data.variable || "${value}";
-    const caseCount = data.cases?.length || 3;
+    const provider = data.provider || "OpenAI";
+    const model = data.model || "gpt-4";
+    const routeCount = data.routes?.length || 2;
+    const promptPreview = data.prompt
+        ? data.prompt.substring(0, 40) + (data.prompt.length > 40 ? "..." : "")
+        : "No prompt configured";
 
     const isHorizontal = connectorLayout === "horizontal";
     const inputPosition = isHorizontal ? Position.Left : Position.Top;
@@ -36,10 +42,10 @@ function SwitchNode({ data, selected }: NodeProps<SwitchNodeData>) {
 
     return (
         <BaseNode
-            icon={GitMerge}
-            label={data.label || "Switch"}
+            icon={GitFork}
+            label={data.label || "Router"}
             status={data.status}
-            category="logic"
+            category="ai"
             selected={selected}
             hasOutputHandle={false}
             customHandles={
@@ -49,33 +55,44 @@ function SwitchNode({ data, selected }: NodeProps<SwitchNodeData>) {
                         position={inputPosition}
                         className="!w-2.5 !h-2.5 !bg-white !border-2 !border-border !shadow-sm"
                     />
-                    {Array.from({ length: Math.min(caseCount, 4) }).map((_, i) => (
+                    {Array.from({ length: Math.min(routeCount, 5) }).map((_, i) => (
                         <Handle
                             key={i}
                             type="source"
                             position={outputPosition}
-                            id={`case-${i}`}
+                            id={`route-${i}`}
                             className="!w-2.5 !h-2.5 !bg-white !border-2 !border-border !shadow-sm"
                             style={
                                 isHorizontal
-                                    ? { top: `${30 + i * 17}%` }
-                                    : { left: `${25 + i * 17}%` }
+                                    ? { top: `${30 + i * 14}%` }
+                                    : { left: `${25 + i * 14}%` }
                             }
                         />
                     ))}
                 </>
             }
         >
-            <div className="flex flex-col h-full justify-between">
-                <div className="text-xs font-mono bg-muted px-2.5 py-1.5 rounded border border-border truncate">
-                    {variable}
+            <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">Provider:</span>
+                    <span className="text-xs font-medium capitalize">{provider}</span>
                 </div>
-                <div className="text-xs text-muted-foreground">
-                    {caseCount} case{caseCount !== 1 ? "s" : ""}
+                <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">Model:</span>
+                    <span className="text-xs font-medium">{model}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">Routes:</span>
+                    <span className="text-xs font-medium">{routeCount}</span>
+                </div>
+                <div className="pt-1.5 mt-1 border-t border-border">
+                    <div className="text-xs text-muted-foreground italic line-clamp-1">
+                        {promptPreview}
+                    </div>
                 </div>
             </div>
         </BaseNode>
     );
 }
 
-export default memo(SwitchNode);
+export default memo(RouterNode);
