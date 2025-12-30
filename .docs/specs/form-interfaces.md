@@ -155,6 +155,11 @@ CREATE TABLE IF NOT EXISTS form_interfaces (
     name VARCHAR(255) NOT NULL,
     slug VARCHAR(100) NOT NULL,
 
+    -- Target (REQUIRED - must link to workflow OR agent)
+    target_type VARCHAR(20) NOT NULL,  -- 'workflow' | 'agent'
+    workflow_id UUID REFERENCES workflows(id) ON DELETE SET NULL,
+    agent_id UUID REFERENCES agents(id) ON DELETE SET NULL,
+
     -- Branding
     cover_type VARCHAR(20) DEFAULT 'color',  -- 'image' | 'color' | 'stock'
     cover_value TEXT DEFAULT '#6366f1',      -- URL, hex color, or Unsplash photo ID
@@ -195,16 +200,22 @@ CREATE TABLE IF NOT EXISTS form_interfaces (
     deleted_at TIMESTAMP NULL,
 
     -- Constraints
-    CONSTRAINT unique_user_slug UNIQUE (user_id, slug)
+    CONSTRAINT unique_user_slug UNIQUE (user_id, slug),
+    CONSTRAINT valid_target CHECK (
+        (target_type = 'workflow' AND workflow_id IS NOT NULL AND agent_id IS NULL) OR
+        (target_type = 'agent' AND agent_id IS NOT NULL AND workflow_id IS NULL)
+    )
 );
 
 -- Indexes for form_interfaces
 CREATE INDEX idx_form_interfaces_user_id ON form_interfaces(user_id) WHERE deleted_at IS NULL;
 CREATE INDEX idx_form_interfaces_slug ON form_interfaces(slug) WHERE status = 'published' AND deleted_at IS NULL;
 CREATE INDEX idx_form_interfaces_status ON form_interfaces(status) WHERE deleted_at IS NULL;
+CREATE INDEX idx_form_interfaces_workflow ON form_interfaces(workflow_id) WHERE deleted_at IS NULL;
+CREATE INDEX idx_form_interfaces_agent ON form_interfaces(agent_id) WHERE deleted_at IS NULL;
 
--- Interface submissions (stores all submissions regardless of target)
-CREATE TABLE IF NOT EXISTS interface_submissions (
+-- Form interface submissions
+CREATE TABLE IF NOT EXISTS form_interface_submissions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     interface_id UUID NOT NULL REFERENCES form_interfaces(id) ON DELETE CASCADE,
 
@@ -226,9 +237,9 @@ CREATE TABLE IF NOT EXISTS interface_submissions (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Indexes for interface_submissions
-CREATE INDEX idx_interface_submissions_interface_id ON interface_submissions(interface_id, created_at DESC);
-CREATE INDEX idx_interface_submissions_submitted_at ON interface_submissions(submitted_at DESC);
+-- Indexes for form_interface_submissions
+CREATE INDEX idx_form_interface_submissions_interface_id ON form_interface_submissions(interface_id, created_at DESC);
+CREATE INDEX idx_form_interface_submissions_submitted_at ON form_interface_submissions(submitted_at DESC);
 
 -- Function to update submission count
 CREATE OR REPLACE FUNCTION update_interface_submission_count()
@@ -244,7 +255,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER trigger_update_submission_count
-    AFTER INSERT ON interface_submissions
+    AFTER INSERT ON form_interface_submissions
     FOR EACH ROW
     EXECUTE FUNCTION update_interface_submission_count();
 ```
@@ -274,6 +285,9 @@ export interface InterfaceUrlAttachment {
     title?: string;
 }
 
+// Target type
+export type InterfaceTargetType = "workflow" | "agent";
+
 // Main interface configuration
 export interface FormInterface {
     id: string;
@@ -282,6 +296,11 @@ export interface FormInterface {
     // Identity
     name: string;
     slug: string;
+
+    // Target (REQUIRED)
+    targetType: InterfaceTargetType;
+    workflowId: string | null;
+    agentId: string | null;
 
     // Branding
     coverType: InterfaceCoverType;
@@ -347,6 +366,10 @@ export interface CreateFormInterfaceInput {
     name: string;
     slug: string;
     title: string;
+    // Target is REQUIRED - must provide exactly one
+    targetType: InterfaceTargetType;
+    workflowId?: string; // Required if targetType = 'workflow'
+    agentId?: string; // Required if targetType = 'agent'
     description?: string;
     coverType?: InterfaceCoverType;
     coverValue?: string;
@@ -371,6 +394,10 @@ export interface UpdateFormInterfaceInput {
     showCopyButton?: boolean;
     showDownloadButton?: boolean;
     allowOutputEdit?: boolean;
+    // Target can be changed (rare, but allowed)
+    targetType?: InterfaceTargetType;
+    workflowId?: string;
+    agentId?: string;
 }
 
 // Public form submission input
@@ -623,7 +650,7 @@ export interface CreateSubmissionInput {
 export class InterfaceSubmissionRepository {
     async create(input: CreateSubmissionInput): Promise<InterfaceSubmission> {
         const result = await pool.query(
-            `INSERT INTO interface_submissions
+            `INSERT INTO form_interface_submissions
              (interface_id, message, files, urls, ip_address, user_agent)
              VALUES ($1, $2, $3, $4, $5, $6)
              RETURNING *`,
@@ -640,7 +667,9 @@ export class InterfaceSubmissionRepository {
     }
 
     async findById(id: string): Promise<InterfaceSubmission | null> {
-        const result = await pool.query(`SELECT * FROM interface_submissions WHERE id = $1`, [id]);
+        const result = await pool.query(`SELECT * FROM form_interface_submissions WHERE id = $1`, [
+            id
+        ]);
         return result.rows[0] ? this.mapToSubmission(result.rows[0]) : null;
     }
 
@@ -650,7 +679,7 @@ export class InterfaceSubmissionRepository {
         offset: number = 0
     ): Promise<InterfaceSubmission[]> {
         const result = await pool.query(
-            `SELECT * FROM interface_submissions
+            `SELECT * FROM form_interface_submissions
              WHERE interface_id = $1
              ORDER BY submitted_at DESC
              LIMIT $2 OFFSET $3`,
@@ -661,7 +690,7 @@ export class InterfaceSubmissionRepository {
 
     async countByInterfaceId(interfaceId: string): Promise<number> {
         const result = await pool.query(
-            `SELECT COUNT(*) FROM interface_submissions WHERE interface_id = $1`,
+            `SELECT COUNT(*) FROM form_interface_submissions WHERE interface_id = $1`,
             [interfaceId]
         );
         return Number(result.rows[0].count);
@@ -669,7 +698,7 @@ export class InterfaceSubmissionRepository {
 
     async updateOutput(id: string, output: string): Promise<InterfaceSubmission | null> {
         const result = await pool.query(
-            `UPDATE interface_submissions
+            `UPDATE form_interface_submissions
              SET output = $2
              WHERE id = $1
              RETURNING *`,
@@ -680,7 +709,7 @@ export class InterfaceSubmissionRepository {
 
     async markOutputEdited(id: string): Promise<void> {
         await pool.query(
-            `UPDATE interface_submissions SET output_edited_at = CURRENT_TIMESTAMP WHERE id = $1`,
+            `UPDATE form_interface_submissions SET output_edited_at = CURRENT_TIMESTAMP WHERE id = $1`,
             [id]
         );
     }
@@ -722,8 +751,8 @@ GET    /api/form-interfaces?workflowId=x        # Get interfaces linked to workf
 GET    /api/form-interfaces?agentId=x           # Get interfaces linked to agent
 
 # Public Routes (No Auth, Rate Limited)
-GET    /api/public/interfaces/:slug           # Get interface for rendering
-POST   /api/public/interfaces/:slug/submit    # Submit interface (multipart)
+GET    /api/public/form-interfaces/:slug           # Get interface for rendering
+POST   /api/public/form-interfaces/:slug/submit    # Submit interface (multipart)
 ```
 
 ### Rate Limiting Middleware
@@ -767,10 +796,44 @@ Users can create Form Interfaces from three locations:
 #### 1. Interfaces List Page (Primary)
 
 ```
-/interfaces → [+ Create Interface] → /interfaces/new
+/interfaces → [+ Create Interface] → Target Selection Dialog → /interfaces/new?workflowId=x
+                                                             → /interfaces/new?agentId=x
 ```
 
-The main hub for managing all form interfaces.
+The main hub for managing all form interfaces. Since a form interface without a target is useless, clicking "Create Interface" opens a **Target Selection Dialog** first:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Create Form Interface                                      [X] │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  What should this interface connect to?                         │
+│                                                                 │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │  ⚡ Workflow                                             │    │
+│  │  Execute a workflow when user submits the form          │    │
+│  │                                                         │    │
+│  │  [Select Workflow            ▼]                         │    │
+│  │                                                         │    │
+│  │  Recent: Lead Capture, Email Processor, Data Pipeline   │    │
+│  └─────────────────────────────────────────────────────────┘    │
+│                                                                 │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │  🤖 Agent                                               │    │
+│  │  Start an agent conversation when user submits          │    │
+│  │                                                         │    │
+│  │  [Select Agent               ▼]                         │    │
+│  │                                                         │    │
+│  │  Recent: Support Bot, Research Assistant, Code Helper   │    │
+│  └─────────────────────────────────────────────────────────┘    │
+│                                                                 │
+│                                    [Cancel]  [Continue →]       │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+- User must select either a workflow OR an agent before proceeding
+- "Continue" button disabled until selection is made
+- Navigates to `/interfaces/new?workflowId={id}` or `/interfaces/new?agentId={id}`
 
 #### 2. Workflow Editor
 
@@ -889,8 +952,10 @@ frontend/src/
 │   └── PublicInterfacePage.tsx      # Public interface render
 │
 ├── components/interface-builder/
+│   ├── TargetSelectionDialog.tsx    # Workflow/Agent selection (shown on create)
 │   ├── InterfaceEditorLayout.tsx    # Main editor layout
 │   ├── InterfacePreview.tsx         # Live preview panel
+│   ├── TargetDisplay.tsx            # Shows linked workflow/agent in editor
 │   │
 │   ├── CoverEditor.tsx              # Cover photo options
 │   │   ├── ImageUploader.tsx        # Upload local image
@@ -1033,6 +1098,7 @@ export const useInterfaceBuilderStore = create<InterfaceBuilderStore>((set, get)
 
 ## 1.5 Phase 1 Deliverables
 
+- [ ] Target selection dialog (workflow/agent picker) - REQUIRED before creating
 - [ ] Create/edit/delete Form Interfaces
 - [ ] Cover photo options (upload, color, stock photos)
 - [ ] Icon upload
@@ -1040,6 +1106,7 @@ export const useInterfaceBuilderStore = create<InterfaceBuilderStore>((set, get)
 - [ ] Input configuration (placeholder, labels)
 - [ ] File/URL toggles
 - [ ] Output configuration
+- [ ] Target display in editor (shows linked workflow/agent)
 - [ ] Publish/unpublish interfaces
 - [ ] Public URL rendering (`/i/:slug`)
 - [ ] Collect submissions (message + files + URLs)
@@ -1056,28 +1123,14 @@ Connect interfaces to trigger workflows or agents on submission, with real-time 
 
 ## 2.1 Database Updates
 
-### Migration: `XXXXXX_add-interface-targets.sql`
+### Migration: `XXXXXX_add-execution-tracking.sql`
 
 ```sql
 SET search_path TO flowmaestro, public;
 
--- Add target columns to form_interfaces
-ALTER TABLE form_interfaces
-    ADD COLUMN target_type VARCHAR(20),  -- 'workflow' | 'agent' | NULL
-    ADD COLUMN workflow_id UUID REFERENCES workflows(id) ON DELETE SET NULL,
-    ADD COLUMN agent_id UUID REFERENCES agents(id) ON DELETE SET NULL;
-
--- Add constraint: either workflow OR agent, not both
-ALTER TABLE form_interfaces
-    ADD CONSTRAINT valid_target CHECK (
-        (target_type IS NULL AND workflow_id IS NULL AND agent_id IS NULL) OR
-        (target_type = 'workflow' AND workflow_id IS NOT NULL AND agent_id IS NULL) OR
-        (target_type = 'agent' AND agent_id IS NOT NULL AND workflow_id IS NULL)
-    );
-
--- Add execution tracking to submissions
-ALTER TABLE interface_submissions
-    ADD COLUMN target_type VARCHAR(20),
+-- Add execution tracking columns to submissions
+-- (Target columns already exist in form_interfaces from Phase 1)
+ALTER TABLE form_interface_submissions
     ADD COLUMN execution_id UUID REFERENCES executions(id) ON DELETE SET NULL,
     ADD COLUMN execution_status VARCHAR(50),  -- pending, running, completed, failed
     ADD COLUMN thread_id UUID REFERENCES threads(id) ON DELETE SET NULL,
@@ -1085,8 +1138,8 @@ ALTER TABLE interface_submissions
     ADD COLUMN error TEXT;
 
 -- Indexes for execution tracking
-CREATE INDEX idx_interface_submissions_execution ON interface_submissions(execution_id);
-CREATE INDEX idx_interface_submissions_thread ON interface_submissions(thread_id);
+CREATE INDEX idx_form_interface_submissions_execution ON form_interface_submissions(execution_id);
+CREATE INDEX idx_form_interface_submissions_thread ON form_interface_submissions(thread_id);
 ```
 
 ---
@@ -1096,18 +1149,8 @@ CREATE INDEX idx_interface_submissions_thread ON interface_submissions(thread_id
 ```typescript
 // Add to shared/src/types/form-interface.ts
 
-export type InterfaceTargetType = "workflow" | "agent";
-
-// Extended interface with target
-export interface FormInterfaceWithTarget extends FormInterface {
-    targetType: InterfaceTargetType | null;
-    workflowId: string | null;
-    agentId: string | null;
-}
-
-// Submission with execution tracking
+// Submission with execution tracking (extends base InterfaceSubmission)
 export interface InterfaceSubmissionWithExecution extends InterfaceSubmission {
-    targetType: InterfaceTargetType | null;
     executionId: string | null;
     executionStatus: "pending" | "running" | "completed" | "failed" | null;
     threadId: string | null;
@@ -1115,7 +1158,7 @@ export interface InterfaceSubmissionWithExecution extends InterfaceSubmission {
     error: string | null;
 }
 
-// Submission result (returned to public interface)
+// Submission result (returned to public interface after submit)
 export interface SubmissionResult {
     submissionId: string;
     status: "pending" | "running" | "completed" | "failed";
@@ -1345,7 +1388,7 @@ const handleRunAgain = () => {
 User fills interface → Submit
          │
          ▼
-POST /api/public/interfaces/:slug/submit
+POST /api/public/form-interfaces/:slug/submit
          │
          ├─► Upload files to GCS
          ├─► Create interface_submission record
@@ -1381,7 +1424,7 @@ Client receives output, displays in OutputDisplay
 User fills interface → Submit
          │
          ▼
-POST /api/public/interfaces/:slug/submit
+POST /api/public/form-interfaces/:slug/submit
          │
          ├─► Upload files to GCS
          ├─► Create interface_submission record
