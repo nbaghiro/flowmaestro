@@ -87,7 +87,7 @@ spec:
             pathType: ImplementationSpecific
             backend:
               service:
-                name: docs-service
+                name: documentation-service
                 port:
                   number: 80
 

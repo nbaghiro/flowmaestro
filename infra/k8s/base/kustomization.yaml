@@ -21,7 +21,7 @@ resources:
   - worker-deployment.yaml
   - frontend-deployment.yaml
   - marketing-deployment.yaml
-  - docs-deployment.yaml
+  - documentation-deployment.yaml
   - temporal-deployment.yaml
   # Services and Networking
   - services.yaml

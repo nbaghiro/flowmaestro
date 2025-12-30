@@ -1,27 +1,27 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: docs
+  name: documentation
   namespace: flowmaestro
   labels:
     app: flowmaestro
-    component: docs
+    component: documentation
 spec:
   replicas: 1
   selector:
     matchLabels:
       app: flowmaestro
-      component: docs
+      component: documentation
   template:
     metadata:
       labels:
         app: flowmaestro
-        component: docs
+        component: documentation
     spec:
       serviceAccountName: flowmaestro-sa
       containers:
-        - name: docs
-          image: us-central1-docker.pkg.dev/flowmaestro-prod/flowmaestro/docs:latest
+        - name: documentation
+          image: us-central1-docker.pkg.dev/flowmaestro-prod/flowmaestro/documentation:latest
           imagePullPolicy: Always
           ports:
             - name: http
@@ -66,16 +66,16 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: docs-service
+  name: documentation-service
   namespace: flowmaestro
   labels:
     app: flowmaestro
-    component: docs
+    component: documentation
 spec:
   type: ClusterIP
   selector:
     app: flowmaestro
-    component: docs
+    component: documentation
   ports:
     - name: http
       port: 80
@@ -87,16 +87,16 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: docs-hpa
+  name: documentation-hpa
   namespace: flowmaestro
   labels:
     app: flowmaestro
-    component: docs
+    component: documentation
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: docs
+    name: documentation
   minReplicas: 1
   maxReplicas: 5
   metrics:

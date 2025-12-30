@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Quick Documentation Site Update Script
-# Usage: ./infra/scripts/deploy-docs.sh [environment]
-# Example: ./infra/scripts/deploy-docs.sh prod
+# Usage: ./infra/scripts/deploy-documentation.sh [environment]
+# Example: ./infra/scripts/deploy-documentation.sh prod
 
 set -e
 
@@ -76,22 +76,22 @@ gcloud auth configure-docker "$GCP_REGION-docker.pkg.dev" --quiet
 print_success "Docker authenticated"
 
 # Build Docker image
-print_info "Building docs Docker image for linux/amd64..."
+print_info "Building documentation Docker image for linux/amd64..."
 docker build \
     --platform linux/amd64 \
-    -f infra/docker/docs/Dockerfile \
-    -t "$REGISTRY/docs:latest" \
-    -t "$REGISTRY/docs:$ENVIRONMENT" \
-    -t "$REGISTRY/docs:$(date +%Y%m%d-%H%M%S)" \
+    -f infra/docker/documentation/Dockerfile \
+    -t "$REGISTRY/documentation:latest" \
+    -t "$REGISTRY/documentation:$ENVIRONMENT" \
+    -t "$REGISTRY/documentation:$(date +%Y%m%d-%H%M%S)" \
     .
 
-print_success "Docs image built"
+print_success "Documentation image built"
 
 # Push Docker images
-print_info "Pushing docs image to Artifact Registry..."
-docker push "$REGISTRY/docs:latest"
-docker push "$REGISTRY/docs:$ENVIRONMENT"
-print_success "Docs image pushed"
+print_info "Pushing documentation image to Artifact Registry..."
+docker push "$REGISTRY/documentation:latest"
+docker push "$REGISTRY/documentation:$ENVIRONMENT"
+print_success "Documentation image pushed"
 
 # Get kubectl credentials
 print_info "Configuring kubectl..."
@@ -102,19 +102,19 @@ gcloud container clusters get-credentials \
     --quiet
 
 # Restart deployment to pull new image
-print_info "Restarting docs deployment..."
-kubectl rollout restart deployment/docs -n flowmaestro
+print_info "Restarting documentation deployment..."
+kubectl rollout restart deployment/documentation -n flowmaestro
 
 # Wait for rollout
 print_info "Waiting for rollout to complete..."
-kubectl rollout status deployment/docs -n flowmaestro --timeout=5m
+kubectl rollout status deployment/documentation -n flowmaestro --timeout=5m
 
 # Show pod status
 echo ""
 print_success "Documentation site updated successfully!"
 echo ""
-kubectl get pods -n flowmaestro -l component=docs
+kubectl get pods -n flowmaestro -l component=documentation
 
 echo ""
 print_info "View logs with:"
-echo "  kubectl logs -n flowmaestro -l component=docs --tail=50 -f"
+echo "  kubectl logs -n flowmaestro -l component=documentation --tail=50 -f"

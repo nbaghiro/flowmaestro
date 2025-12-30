@@ -22,7 +22,7 @@ RUN npm run build --workspace=docs
 FROM nginx:alpine
 
 # Copy custom nginx config
-COPY infra/docker/docs/nginx.conf /etc/nginx/conf.d/default.conf
+COPY infra/docker/documentation/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy built files from builder stage
 COPY --from=builder /app/docs/build /usr/share/nginx/html
