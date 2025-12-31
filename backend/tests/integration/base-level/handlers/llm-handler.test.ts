@@ -423,7 +423,7 @@ describe("LLM Handler", () => {
 
             const output = context.nodeOutputs.get("PartialLLM");
             expect(output?.partial).toBe(true);
-            expect(output?.text?.length).toBeGreaterThan(0);
+            expect((output?.text as string)?.length).toBeGreaterThan(0);
         });
     });
 });

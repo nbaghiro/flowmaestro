@@ -25,7 +25,7 @@ import type {
     ExecutableNode,
     TypedEdge
 } from "../../../src/temporal/activities/execution/types";
-import type { ContextSnapshot } from "../../../src/temporal/core/types";
+import type { ContextSnapshot, JsonObject } from "../../../src/temporal/core/types";
 
 // ============================================================================
 // HELPER FUNCTIONS
@@ -34,7 +34,7 @@ import type { ContextSnapshot } from "../../../src/temporal/core/types";
 /**
  * Create a conditional workflow with customizable condition config
  */
-function createTestConditionalWorkflow(conditionConfig: Record<string, unknown>): BuiltWorkflow {
+function createTestConditionalWorkflow(conditionConfig: JsonObject): BuiltWorkflow {
     const nodes = new Map<string, ExecutableNode>([
         [
             "Input",
@@ -207,7 +207,7 @@ function evaluateCondition(left: unknown, operator: string, right: unknown): boo
 async function simulateConditionalExecution(
     workflow: BuiltWorkflow,
     mockActivities: ReturnType<typeof createMockActivities>,
-    inputs: Record<string, unknown>,
+    inputs: JsonObject,
     conditionResult: boolean
 ) {
     let context = createContext(inputs);

@@ -99,7 +99,7 @@ describe("Parallel Execution", () => {
                 let branchContext = deepCloneContext(parentContext);
                 branchContext = storeNodeOutput(branchContext, `Child${i}`, {
                     childId: i,
-                    parentRef: parentContext.nodeOutputs.get("Parent")
+                    parentRef: parentContext.nodeOutputs.get("Parent")!
                 });
                 branches.push(branchContext);
             }
@@ -255,7 +255,7 @@ describe("Parallel Execution", () => {
             context = storeNodeOutput(context, "B", { value: "B" });
 
             // C fails
-            const _finalQueue = markFailed(queue, "C", "C failed", workflow);
+            markFailed(queue, "C", "C failed", workflow);
 
             // B's output should still be preserved
             expect(context.nodeOutputs.get("B")).toEqual({ value: "B" });

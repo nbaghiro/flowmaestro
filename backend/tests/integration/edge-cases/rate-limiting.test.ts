@@ -8,8 +8,8 @@
  * - Rate limit exhausts retries
  */
 
-import type { ContextSnapshot } from "@flowmaestro/shared";
 import { createContext, storeNodeOutput } from "../../../src/temporal/core/services/context";
+import type { ContextSnapshot } from "../../../src/temporal/core/types";
 
 // Types for rate limiting simulation
 interface RateLimitConfig {

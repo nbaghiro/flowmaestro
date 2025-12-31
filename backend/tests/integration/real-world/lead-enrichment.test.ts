@@ -7,8 +7,25 @@
  * Simulates a common sales/marketing automation workflow.
  */
 
-import { ContextSnapshot, ExecutableNode, TypedEdge, JsonObject } from "@flowmaestro/shared";
+import type { JsonObject, JsonValue } from "@flowmaestro/shared";
 import { createContext, storeNodeOutput } from "../../../src/temporal/core/services/context";
+import type { ContextSnapshot } from "../../../src/temporal/core/types";
+
+// Simplified types for test workflow building
+interface TestNode {
+    id: string;
+    type: string;
+    config: Record<string, unknown>;
+    dependencies: string[];
+}
+
+interface TestEdge {
+    id: string;
+    source: string;
+    target: string;
+    type: string;
+    handleType?: string;
+}
 
 // Types for lead enrichment workflow
 interface LeadInput {
@@ -53,11 +70,11 @@ interface NotificationResult {
 
 // Workflow builder for lead enrichment
 function buildLeadEnrichmentWorkflow(): {
-    nodes: Map<string, ExecutableNode>;
-    edges: TypedEdge[];
+    nodes: Map<string, TestNode>;
+    edges: TestEdge[];
     executionLevels: string[][];
 } {
-    const nodes = new Map<string, ExecutableNode>();
+    const nodes = new Map<string, TestNode>();
 
     nodes.set("Trigger", {
         id: "Trigger",
@@ -133,7 +150,7 @@ function buildLeadEnrichmentWorkflow(): {
         dependencies: ["UpdateCRM", "NotifySales"]
     });
 
-    const edges: TypedEdge[] = [
+    const edges: TestEdge[] = [
         { id: "e1", source: "Trigger", target: "EnrichLead", type: "default" },
         { id: "e2", source: "EnrichLead", target: "ScoreLead", type: "default" },
         { id: "e3", source: "ScoreLead", target: "CheckScore", type: "default" },
@@ -249,6 +266,11 @@ function createScoreResponse(enrichmentQuality: "complete" | "partial" | "minima
     };
 }
 
+// Helper to convert interface to JsonObject
+function toJsonObject<T extends object>(obj: T): JsonObject {
+    return JSON.parse(JSON.stringify(obj)) as JsonObject;
+}
+
 // Simulate the lead enrichment workflow
 async function simulateLeadEnrichment(
     lead: LeadInput,
@@ -264,13 +286,14 @@ async function simulateLeadEnrichment(
     completedNodes: string[];
     finalOutput: JsonObject;
 }> {
-    const _workflow = buildLeadEnrichmentWorkflow();
-    let context = createContext(lead as unknown as JsonObject);
+    // Build workflow for reference (not directly used in mock simulation)
+    void buildLeadEnrichmentWorkflow();
+    let context = createContext(toJsonObject(lead));
     const completedNodes: string[] = [];
     let path: "high-score" | "low-score" | "error" = "error";
 
     // Execute Trigger
-    context = storeNodeOutput(context, "Trigger", lead as unknown as JsonObject);
+    context = storeNodeOutput(context, "Trigger", toJsonObject(lead));
     completedNodes.push("Trigger");
 
     // Execute EnrichLead
@@ -289,13 +312,13 @@ async function simulateLeadEnrichment(
 
     context = storeNodeOutput(context, "EnrichLead", {
         success: true,
-        data: mockResponses.enrichment
+        data: toJsonObject(mockResponses.enrichment) as JsonValue
     });
     completedNodes.push("EnrichLead");
 
     // Execute ScoreLead
     const score = mockResponses.score || createScoreResponse("partial");
-    context = storeNodeOutput(context, "ScoreLead", score);
+    context = storeNodeOutput(context, "ScoreLead", toJsonObject(score));
     completedNodes.push("ScoreLead");
 
     // Execute CheckScore conditional
@@ -315,7 +338,7 @@ async function simulateLeadEnrichment(
             contactId: "contact_123",
             updatedFields: ["email", "name", "company", "score"]
         };
-        context = storeNodeOutput(context, "UpdateCRM", crmResult);
+        context = storeNodeOutput(context, "UpdateCRM", toJsonObject(crmResult));
         completedNodes.push("UpdateCRM");
     } else {
         path = "low-score";
@@ -324,19 +347,20 @@ async function simulateLeadEnrichment(
             channel: "slack",
             recipient: "#sales-leads"
         };
-        context = storeNodeOutput(context, "NotifySales", notifyResult);
+        context = storeNodeOutput(context, "NotifySales", toJsonObject(notifyResult));
         completedNodes.push("NotifySales");
     }
 
     // Execute Output
     const finalOutput: JsonObject = {
-        lead: lead as unknown as JsonObject,
-        enrichment: mockResponses.enrichment as unknown as JsonObject,
-        score: score as unknown as JsonObject,
+        lead: toJsonObject(lead),
+        enrichment: toJsonObject(mockResponses.enrichment),
+        score: toJsonObject(score),
         path,
-        result: isHighScore
-            ? context.nodeOutputs.get("UpdateCRM")
-            : context.nodeOutputs.get("NotifySales")
+        result:
+            (isHighScore
+                ? context.nodeOutputs.get("UpdateCRM")
+                : context.nodeOutputs.get("NotifySales")) ?? null
     };
     context = storeNodeOutput(context, "Output", finalOutput);
     completedNodes.push("Output");
@@ -380,7 +404,9 @@ describe("Lead Enrichment Workflow", () => {
                 }
             });
 
-            const crmOutput = result.context.nodeOutputs.get("UpdateCRM") as CRMUpdateResult;
+            const crmOutput = result.context.nodeOutputs.get(
+                "UpdateCRM"
+            ) as unknown as CRMUpdateResult;
             expect(crmOutput.success).toBe(true);
             expect(crmOutput.updatedFields).toContain("title");
             expect(crmOutput.updatedFields).toContain("industry");
@@ -393,7 +419,7 @@ describe("Lead Enrichment Workflow", () => {
 
             const result = await simulateLeadEnrichment(lead, { enrichment, score });
 
-            const scoreOutput = result.context.nodeOutputs.get("ScoreLead") as LeadScore;
+            const scoreOutput = result.context.nodeOutputs.get("ScoreLead") as unknown as LeadScore;
             expect(scoreOutput.score).toBe(85);
             expect(scoreOutput.tier).toBe("hot");
         });
@@ -405,7 +431,7 @@ describe("Lead Enrichment Workflow", () => {
 
             const result = await simulateLeadEnrichment(lead, { enrichment, score });
 
-            const scoreOutput = result.context.nodeOutputs.get("ScoreLead") as LeadScore;
+            const scoreOutput = result.context.nodeOutputs.get("ScoreLead") as unknown as LeadScore;
             expect(scoreOutput.reasons.length).toBeGreaterThan(0);
             expect(scoreOutput.recommendedAction).toContain("outreach");
         });
@@ -439,7 +465,7 @@ describe("Lead Enrichment Workflow", () => {
 
             const notifyOutput = result.context.nodeOutputs.get(
                 "NotifySales"
-            ) as NotificationResult;
+            ) as unknown as NotificationResult;
             expect(notifyOutput.sent).toBe(true);
             expect(notifyOutput.channel).toBe("slack");
         });
@@ -453,7 +479,7 @@ describe("Lead Enrichment Workflow", () => {
                 score
             });
 
-            const scoreOutput = result.context.nodeOutputs.get("ScoreLead") as LeadScore;
+            const scoreOutput = result.context.nodeOutputs.get("ScoreLead") as unknown as LeadScore;
             expect(scoreOutput.score).toBeGreaterThanOrEqual(40);
             expect(scoreOutput.score).toBeLessThan(70);
             expect(scoreOutput.tier).toBe("warm");
@@ -467,7 +493,7 @@ describe("Lead Enrichment Workflow", () => {
                 score: createScoreResponse("partial")
             });
 
-            const scoreOutput = result.context.nodeOutputs.get("ScoreLead") as LeadScore;
+            const scoreOutput = result.context.nodeOutputs.get("ScoreLead") as unknown as LeadScore;
             expect(scoreOutput.recommendedAction).toContain("nurture");
         });
     });
@@ -544,7 +570,7 @@ describe("Lead Enrichment Workflow", () => {
                 score: createScoreResponse("partial")
             });
 
-            const enrichOutput = result.context.nodeOutputs.get("EnrichLead") as {
+            const enrichOutput = result.context.nodeOutputs.get("EnrichLead") as unknown as {
                 data: EnrichmentData;
             };
             expect(enrichOutput.data.name).toBe("Jane Doe");
@@ -568,10 +594,12 @@ describe("Lead Enrichment Workflow", () => {
                 }
             );
 
-            const completeScore = (completeResult.context.nodeOutputs.get("ScoreLead") as LeadScore)
-                .score;
-            const partialScore = (partialResult.context.nodeOutputs.get("ScoreLead") as LeadScore)
-                .score;
+            const completeScore = (
+                completeResult.context.nodeOutputs.get("ScoreLead") as unknown as LeadScore
+            ).score;
+            const partialScore = (
+                partialResult.context.nodeOutputs.get("ScoreLead") as unknown as LeadScore
+            ).score;
 
             expect(completeScore).toBeGreaterThan(partialScore);
         });
@@ -584,7 +612,7 @@ describe("Lead Enrichment Workflow", () => {
                 score: createScoreResponse("minimal")
             });
 
-            const scoreOutput = result.context.nodeOutputs.get("ScoreLead") as LeadScore;
+            const scoreOutput = result.context.nodeOutputs.get("ScoreLead") as unknown as LeadScore;
             expect(scoreOutput.reasons).toContain("Insufficient data");
         });
     });
@@ -603,7 +631,9 @@ describe("Lead Enrichment Workflow", () => {
                 }
             });
 
-            const crmOutput = result.context.nodeOutputs.get("UpdateCRM") as CRMUpdateResult;
+            const crmOutput = result.context.nodeOutputs.get(
+                "UpdateCRM"
+            ) as unknown as CRMUpdateResult;
             expect(crmOutput.contactId).toMatch(/^new_contact_/);
         });
 
@@ -620,7 +650,9 @@ describe("Lead Enrichment Workflow", () => {
                 }
             });
 
-            const crmOutput = result.context.nodeOutputs.get("UpdateCRM") as CRMUpdateResult;
+            const crmOutput = result.context.nodeOutputs.get(
+                "UpdateCRM"
+            ) as unknown as CRMUpdateResult;
             expect(crmOutput.contactId).toMatch(/^existing_contact_/);
             expect(crmOutput.updatedFields).toContain("score");
         });
@@ -644,7 +676,9 @@ describe("Lead Enrichment Workflow", () => {
             });
 
             expect(result.path).toBe("high-score");
-            const crmOutput = result.context.nodeOutputs.get("UpdateCRM") as CRMUpdateResult;
+            const crmOutput = result.context.nodeOutputs.get(
+                "UpdateCRM"
+            ) as unknown as CRMUpdateResult;
             expect(crmOutput.updatedFields).toContain("score");
         });
     });
@@ -768,7 +802,7 @@ describe("Lead Enrichment Workflow", () => {
                 score: createScoreResponse("complete")
             });
 
-            expect((result.finalOutput.lead as LeadInput).source).toBe("linkedin-ad");
+            expect((result.finalOutput.lead as unknown as LeadInput).source).toBe("linkedin-ad");
         });
     });
 
@@ -817,8 +851,12 @@ describe("Lead Enrichment Workflow", () => {
             );
 
             // Each lead should have its own context
-            const score1 = (lead1Result.context.nodeOutputs.get("ScoreLead") as LeadScore).score;
-            const score2 = (lead2Result.context.nodeOutputs.get("ScoreLead") as LeadScore).score;
+            const score1 = (
+                lead1Result.context.nodeOutputs.get("ScoreLead") as unknown as LeadScore
+            ).score;
+            const score2 = (
+                lead2Result.context.nodeOutputs.get("ScoreLead") as unknown as LeadScore
+            ).score;
 
             expect(score1).toBe(95);
             expect(score2).toBe(15);

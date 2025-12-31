@@ -9,6 +9,7 @@
  * - Rate limiting and throttling
  */
 
+import type { WorkflowDefinition } from "@flowmaestro/shared";
 import {
     createContext,
     storeNodeOutput,
@@ -17,6 +18,12 @@ import {
     markExecuting,
     markCompleted
 } from "../../../src/temporal/core/services/context";
+import type {
+    BuiltWorkflow,
+    ExecutableNode,
+    TypedEdge
+} from "../../../src/temporal/activities/execution/types";
+import type { JsonObject, JsonValue } from "../../../src/temporal/core/types";
 
 // ============================================================================
 // HELPER TYPES
@@ -28,7 +35,7 @@ interface ApiCallResult {
     startTime: number;
     endTime: number;
     duration: number;
-    output: Record<string, unknown>;
+    output: JsonObject;
 }
 
 interface ConcurrentExecutionStats {
@@ -45,7 +52,7 @@ interface MockApiConfig {
     nodeId: string;
     nodeType: NodeType;
     delay: number;
-    response: Record<string, unknown>;
+    response: JsonObject;
     shouldFail?: boolean;
     errorMessage?: string;
 }
@@ -197,14 +204,14 @@ async function simulateConcurrentApiCalls(
 
             const endTime = Date.now();
 
-            let output: Record<string, unknown>;
+            let output: JsonObject;
             if (config.shouldFail) {
                 output = {
                     error: true,
                     message: config.errorMessage || "API call failed"
                 };
             } else {
-                output = config.response;
+                output = config.response as JsonObject;
             }
 
             return {
@@ -232,9 +239,9 @@ async function simulateConcurrentApiCalls(
     // Execute Merge
     if (getReadyNodes(queue, maxConcurrent).includes("Merge")) {
         queue = markExecuting(queue, ["Merge"]);
-        const mergedOutput = {
+        const mergedOutput: JsonObject = {
             merged: true,
-            results: callResults.map((r) => ({ nodeId: r.nodeId, output: r.output }))
+            results: callResults.map((r) => ({ nodeId: r.nodeId, output: r.output })) as JsonValue
         };
         context = storeNodeOutput(context, "Merge", mergedOutput);
         queue = markCompleted(queue, "Merge", mergedOutput, workflow);

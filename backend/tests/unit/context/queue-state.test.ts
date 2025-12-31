@@ -702,7 +702,7 @@ describe("Queue State Management", () => {
 
             // Perform operations
             const executing = markExecuting(original, ["A"]);
-            const _completed = markCompleted(executing, "A", {}, workflow);
+            markCompleted(executing, "A", {}, workflow);
 
             // Original should be unchanged
             expect(original.ready.size).toBe(originalReadySize);

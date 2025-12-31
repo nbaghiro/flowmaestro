@@ -21,7 +21,11 @@ import type {
     ExecutableNode,
     TypedEdge
 } from "../../../src/temporal/activities/execution/types";
-import type { ContextSnapshot, ExecutionQueueState } from "../../../src/temporal/core/types";
+import type {
+    ContextSnapshot,
+    ExecutionQueueState,
+    JsonObject
+} from "../../../src/temporal/core/types";
 
 // ============================================================================
 // HELPER TYPES
@@ -413,7 +417,7 @@ async function simulateWithErrorRecovery(
             context = storeNodeOutput(
                 context,
                 nodeId,
-                usedFallback ? behavior.fallbackOutput! : output
+                (usedFallback ? behavior.fallbackOutput : output) as JsonObject
             );
 
             if (node.type === "output") {
@@ -434,7 +438,7 @@ async function simulateWithErrorRecovery(
         completed: new Set(executions.filter((e) => e.success).map((e) => e.nodeId)),
         failed: failedNodes,
         skipped: skippedNodes,
-        nodeOutputs: new Map()
+        nodeStates: new Map()
     };
 
     return { context, queue, executions, recoveryPathsTaken, finalOutput };

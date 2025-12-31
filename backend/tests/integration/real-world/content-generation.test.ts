@@ -7,8 +7,25 @@
  * Simulates a common content automation workflow for blog posts, articles, etc.
  */
 
-import { ContextSnapshot, ExecutableNode, TypedEdge, JsonObject } from "@flowmaestro/shared";
+import type { JsonObject, JsonValue } from "@flowmaestro/shared";
 import { createContext, storeNodeOutput } from "../../../src/temporal/core/services/context";
+import type { ContextSnapshot } from "../../../src/temporal/core/types";
+
+// Simplified types for test workflow building
+interface TestNode {
+    id: string;
+    type: string;
+    config: Record<string, unknown>;
+    dependencies: string[];
+}
+
+interface TestEdge {
+    id: string;
+    source: string;
+    target: string;
+    type: string;
+    handleType?: string;
+}
 
 // Types for content generation workflow
 interface ContentRequest {
@@ -52,11 +69,11 @@ interface FinalContent {
 
 // Workflow builder for content generation
 function buildContentGenerationWorkflow(sectionCount: number): {
-    nodes: Map<string, ExecutableNode>;
-    edges: TypedEdge[];
+    nodes: Map<string, TestNode>;
+    edges: TestEdge[];
     executionLevels: string[][];
 } {
-    const nodes = new Map<string, ExecutableNode>();
+    const nodes = new Map<string, TestNode>();
 
     nodes.set("Trigger", {
         id: "Trigger",
@@ -115,7 +132,7 @@ function buildContentGenerationWorkflow(sectionCount: number): {
         dependencies: ["CombineContent"]
     });
 
-    const edges: TypedEdge[] = [
+    const edges: TestEdge[] = [
         { id: "e1", source: "Trigger", target: "GenerateOutline", type: "default" },
         { id: "e2", source: "GenerateOutline", target: "SectionLoop", type: "default" },
         { id: "e3", source: "SectionLoop", target: "GenerateSection", type: "loop-body" },
@@ -185,6 +202,11 @@ function createSection(
     };
 }
 
+// Helper to convert interface to JsonObject
+function toJsonObject<T extends object>(obj: T): JsonObject {
+    return JSON.parse(JSON.stringify(obj)) as JsonObject;
+}
+
 // Simulate the content generation workflow
 async function simulateContentGeneration(
     request: ContentRequest,
@@ -203,15 +225,16 @@ async function simulateContentGeneration(
     error?: string;
 }> {
     const outline = options.outlineOverride || createOutline(request);
-    const _workflow = buildContentGenerationWorkflow(outline.sections.length);
-    let context = createContext(request as unknown as JsonObject);
+    // Build workflow for reference (not directly used in mock simulation)
+    void buildContentGenerationWorkflow(outline.sections.length);
+    let context = createContext(toJsonObject(request));
     const generatedSections: GeneratedSection[] = [];
 
     // Execute Trigger
-    context = storeNodeOutput(context, "Trigger", request as unknown as JsonObject);
+    context = storeNodeOutput(context, "Trigger", toJsonObject(request));
 
     // Execute GenerateOutline
-    context = storeNodeOutput(context, "GenerateOutline", outline as unknown as JsonObject);
+    context = storeNodeOutput(context, "GenerateOutline", toJsonObject(outline));
 
     // Execute SectionLoop
     for (let i = 0; i < outline.sections.length; i++) {
@@ -246,17 +269,13 @@ async function simulateContentGeneration(
         generatedSections.push(section);
 
         // Store loop iteration context
-        context = storeNodeOutput(
-            context,
-            `GenerateSection_${i}`,
-            section as unknown as JsonObject
-        );
+        context = storeNodeOutput(context, `GenerateSection_${i}`, toJsonObject(section));
     }
 
     // Store loop results
     context = storeNodeOutput(context, "SectionLoop", {
         iterations: outline.sections.length,
-        results: generatedSections
+        results: generatedSections.map((s) => toJsonObject(s)) as JsonValue[]
     });
 
     // Execute CombineContent
@@ -284,10 +303,10 @@ async function simulateContentGeneration(
         }
     };
 
-    context = storeNodeOutput(context, "CombineContent", finalContent as unknown as JsonObject);
+    context = storeNodeOutput(context, "CombineContent", toJsonObject(finalContent));
 
     // Execute Output
-    context = storeNodeOutput(context, "Output", finalContent as unknown as JsonObject);
+    context = storeNodeOutput(context, "Output", toJsonObject(finalContent));
 
     return {
         context,
@@ -885,7 +904,7 @@ describe("Content Generation Workflow", () => {
 
             const result = await simulateContentGeneration(request);
 
-            const loopOutput = result.context.nodeOutputs.get("SectionLoop") as {
+            const loopOutput = result.context.nodeOutputs.get("SectionLoop") as unknown as {
                 iterations: number;
                 results: GeneratedSection[];
             };
@@ -904,8 +923,10 @@ describe("Content Generation Workflow", () => {
 
             const result = await simulateContentGeneration(request);
 
-            const outputNode = result.context.nodeOutputs.get("Output") as FinalContent;
-            const combineNode = result.context.nodeOutputs.get("CombineContent") as FinalContent;
+            const outputNode = result.context.nodeOutputs.get("Output") as unknown as FinalContent;
+            const combineNode = result.context.nodeOutputs.get(
+                "CombineContent"
+            ) as unknown as FinalContent;
 
             expect(outputNode).toEqual(combineNode);
         });

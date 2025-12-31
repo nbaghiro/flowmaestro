@@ -7,8 +7,25 @@
  * Simulates a common enterprise approval workflow with multiple approvers.
  */
 
-import { ContextSnapshot, ExecutableNode, TypedEdge, JsonObject } from "@flowmaestro/shared";
+import type { JsonObject } from "@flowmaestro/shared";
 import { createContext, storeNodeOutput } from "../../../src/temporal/core/services/context";
+import type { ContextSnapshot } from "../../../src/temporal/core/types";
+
+// Simplified types for test workflow building
+interface TestNode {
+    id: string;
+    type: string;
+    config: Record<string, unknown>;
+    dependencies: string[];
+}
+
+interface TestEdge {
+    id: string;
+    source: string;
+    target: string;
+    type: string;
+    handleType?: string;
+}
 
 // Types for approval workflow
 interface ApprovalRequest {
@@ -53,11 +70,11 @@ interface ApprovalResult {
 
 // Build approval workflow
 function buildApprovalWorkflow(approverCount: number): {
-    nodes: Map<string, ExecutableNode>;
-    edges: TypedEdge[];
+    nodes: Map<string, TestNode>;
+    edges: TestEdge[];
     executionLevels: string[][];
 } {
-    const nodes = new Map<string, ExecutableNode>();
+    const nodes = new Map<string, TestNode>();
 
     nodes.set("Trigger", {
         id: "Trigger",
@@ -160,7 +177,7 @@ function buildApprovalWorkflow(approverCount: number): {
         dependencies: ["ExecuteApproved", "NotifyRejection"]
     });
 
-    const edges: TypedEdge[] = [
+    const edges: TestEdge[] = [
         { id: "e1", source: "Trigger", target: "InitializeApproval", type: "default" },
         { id: "e2", source: "InitializeApproval", target: "ApprovalLoop", type: "default" },
         { id: "e3", source: "ApprovalLoop", target: "WaitForApproval", type: "loop-body" },
@@ -226,6 +243,11 @@ function createApprovers(count: number, roles?: Approver["role"][]): Approver[] 
     }));
 }
 
+// Helper to convert interface to JsonObject
+function toJsonObject<T extends object>(obj: T): JsonObject {
+    return JSON.parse(JSON.stringify(obj)) as JsonObject;
+}
+
 // Simulate approval workflow
 async function simulateApprovalWorkflow(
     request: ApprovalRequest,
@@ -240,15 +262,16 @@ async function simulateApprovalWorkflow(
     stepsCompleted: number;
     path: "approved" | "rejected" | "timeout" | "cancelled";
 }> {
-    const _workflow = buildApprovalWorkflow(request.approvers.length);
-    let context = createContext(request as unknown as JsonObject);
+    // Build workflow for reference (not directly used in mock simulation)
+    void buildApprovalWorkflow(request.approvers.length);
+    let context = createContext(toJsonObject(request));
     const startTime = Date.now();
     const recordedDecisions: ApprovalDecision[] = [];
     let stepsCompleted = 0;
     let path: "approved" | "rejected" | "timeout" | "cancelled" = "approved";
 
     // Execute Trigger
-    context = storeNodeOutput(context, "Trigger", request as unknown as JsonObject);
+    context = storeNodeOutput(context, "Trigger", toJsonObject(request));
 
     // Execute InitializeApproval
     context = storeNodeOutput(context, "InitializeApproval", {
@@ -290,7 +313,7 @@ async function simulateApprovalWorkflow(
         context = storeNodeOutput(context, `WaitForApproval_${i}`, {
             approverId: approver.id,
             decision: decision.decision,
-            comments: decision.comments,
+            comments: decision.comments ?? null,
             timestamp: decision.timestamp
         });
 
@@ -305,7 +328,7 @@ async function simulateApprovalWorkflow(
             // Execute RecordApproval
             recordedDecisions.push(decision);
             context = storeNodeOutput(context, `RecordApproval_${i}`, {
-                decision,
+                decision: toJsonObject(decision),
                 totalApprovals: recordedDecisions.length
             });
             stepsCompleted++;
@@ -313,7 +336,7 @@ async function simulateApprovalWorkflow(
             // Execute HandleRejection
             context = storeNodeOutput(context, `HandleRejection_${i}`, {
                 rejectedBy: approver.id,
-                reason: decision.comments
+                reason: decision.comments ?? null
             });
             path = "rejected";
             stepsCompleted++;
@@ -325,7 +348,7 @@ async function simulateApprovalWorkflow(
     context = storeNodeOutput(context, "ApprovalLoop", {
         iterations: stepsCompleted,
         completed: path === "approved",
-        decisions: recordedDecisions
+        decisions: recordedDecisions.map((d) => toJsonObject(d))
     });
 
     // Execute FinalAction
@@ -371,7 +394,7 @@ async function simulateApprovalWorkflow(
         duration
     };
 
-    context = storeNodeOutput(context, "Output", result as unknown as JsonObject);
+    context = storeNodeOutput(context, "Output", toJsonObject(result));
 
     return { context, result, stepsCompleted, path };
 }
@@ -1108,7 +1131,9 @@ describe("Multi-Step Approval Workflow", () => {
 
             const result = await simulateApprovalWorkflow(request, decisions);
 
-            const outputNode = result.context.nodeOutputs.get("Output") as ApprovalResult;
+            const outputNode = result.context.nodeOutputs.get(
+                "Output"
+            ) as unknown as ApprovalResult;
             expect(outputNode.requestId).toBe("req_021");
             expect(outputNode.finalStatus).toBe("approved");
         });

@@ -545,7 +545,7 @@ describe("Error Propagation", () => {
             });
 
             // Error handler node processes the error
-            const upstreamOutput = context.nodeOutputs.get("Upstream");
+            const upstreamOutput = context.nodeOutputs.get("Upstream")!;
 
             context = storeNodeOutput(context, "ErrorHandler", {
                 handled: true,
@@ -554,7 +554,9 @@ describe("Error Propagation", () => {
             });
 
             const handlerOutput = context.nodeOutputs.get("ErrorHandler");
-            expect(handlerOutput?.originalError?.errorType).toBe("ValidationError");
+            expect((handlerOutput?.originalError as Record<string, unknown>)?.errorType).toBe(
+                "ValidationError"
+            );
             expect(handlerOutput?.recovery).toBe("used default email");
         });
     });

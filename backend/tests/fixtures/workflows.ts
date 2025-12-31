@@ -5,7 +5,7 @@
  * These are simplified workflow structures for unit/integration testing.
  */
 
-import type { WorkflowDefinition } from "@flowmaestro/shared";
+import type { JsonObject, WorkflowDefinition } from "@flowmaestro/shared";
 import type {
     BuiltWorkflow,
     ExecutableNode,
@@ -19,7 +19,7 @@ import type {
 function createNode(
     id: string,
     type: string,
-    config: Record<string, unknown> = {},
+    config: JsonObject = {},
     dependencies: string[] = [],
     dependents: string[] = []
 ): ExecutableNode {

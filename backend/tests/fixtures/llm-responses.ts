@@ -435,7 +435,11 @@ export function toLLMNodeOutput(completion: ChatCompletion): JsonObject {
         text: completion.text,
         model: completion.model,
         provider: completion.provider,
-        usage: completion.usage,
+        usage: {
+            promptTokens: completion.usage.promptTokens,
+            completionTokens: completion.usage.completionTokens,
+            totalTokens: completion.usage.totalTokens
+        },
         finishReason: completion.finishReason
     };
 }

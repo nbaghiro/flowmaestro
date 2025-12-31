@@ -344,6 +344,7 @@ export type EdgeHandleType =
     | "false"
     | "loop-body"
     | "loop-exit"
+    | "error"
     | `case-${string}`;
 
 /**

@@ -16,7 +16,7 @@ import {
     setVariable,
     interpolateString
 } from "../../../../src/temporal/core/services/context";
-import type { ContextSnapshot } from "../../../../src/temporal/core/types";
+import type { ContextSnapshot, JsonObject } from "../../../../src/temporal/core/types";
 
 // Mock types matching the HTTP handler
 interface MockHTTPConfig {
@@ -486,7 +486,7 @@ describe("HTTP Handler", () => {
                 responseTime: 150
             };
 
-            context = storeNodeOutput(context, "FetchUsers", response);
+            context = storeNodeOutput(context, "FetchUsers", response as unknown as JsonObject);
 
             const output = context.nodeOutputs.get("FetchUsers");
             expect(output?.status).toBe(200);

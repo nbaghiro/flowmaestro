@@ -111,8 +111,7 @@ export function createMockHandler(name: string, config: MockHandlerConfig): Mock
                 },
                 signals: {},
                 metrics: {
-                    durationMs: config.delay || 0,
-                    retryCount: 0
+                    durationMs: config.delay || 0
                 }
             };
         }

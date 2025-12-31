@@ -9,6 +9,7 @@
  * - Break conditions
  */
 
+import type { JsonValue, JsonObject } from "@flowmaestro/shared";
 import {
     createContext,
     storeNodeOutput,
@@ -22,175 +23,27 @@ import type { ContextSnapshot } from "../../../src/temporal/core/types";
 // HELPER TYPES
 // ============================================================================
 
-type BuiltWorkflow = {
-    loopContexts: Map<string, LoopContext>;
-    maxConcurrentNodes: number;
-};
+// LoopContext is imported for type reference only
+void (0 as unknown as LoopContext); // suppress unused import warning
 
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
 
 /**
- * Create a while loop workflow
- */
-function _createWhileLoopWorkflow(
-    options: {
-        maxIterations?: number;
-        conditionPath?: string;
-    } = {}
-): BuiltWorkflow {
-    const { maxIterations = 100, conditionPath = "{{variables.continueLoop}}" } = options;
-
-    const loopContext: LoopContext = {
-        loopNodeId: "WhileLoop",
-        startSentinelId: "LoopStart",
-        endSentinelId: "LoopEnd",
-        bodyNodes: ["LoopBody"],
-        iterationVariable: "loop",
-        maxIterations
-    };
-
-    const nodes = new Map<string, ExecutableNode>([
-        [
-            "Input",
-            {
-                id: "Input",
-                type: "input",
-                name: "Input",
-                config: {},
-                depth: 0,
-                dependencies: [],
-                dependents: ["LoopStart"]
-            }
-        ],
-        [
-            "LoopStart",
-            {
-                id: "LoopStart",
-                type: "loop-start",
-                name: "LoopStart",
-                config: { loopType: "while", conditionPath },
-                depth: 1,
-                dependencies: ["Input"],
-                dependents: ["LoopBody"],
-                loopContext
-            }
-        ],
-        [
-            "LoopBody",
-            {
-                id: "LoopBody",
-                type: "transform",
-                name: "LoopBody",
-                config: { operation: "process" },
-                depth: 2,
-                dependencies: ["LoopStart"],
-                dependents: ["LoopEnd"],
-                loopContext
-            }
-        ],
-        [
-            "LoopEnd",
-            {
-                id: "LoopEnd",
-                type: "loop-end",
-                name: "LoopEnd",
-                config: { loopNodeId: "WhileLoop" },
-                depth: 3,
-                dependencies: ["LoopBody"],
-                dependents: ["Output"],
-                loopContext
-            }
-        ],
-        [
-            "Output",
-            {
-                id: "Output",
-                type: "output",
-                name: "Output",
-                config: {},
-                depth: 4,
-                dependencies: ["LoopEnd"],
-                dependents: []
-            }
-        ]
-    ]);
-
-    const edges = new Map<string, TypedEdge>([
-        [
-            "Input-LoopStart",
-            {
-                id: "Input-LoopStart",
-                source: "Input",
-                target: "LoopStart",
-                sourceHandle: "output",
-                targetHandle: "input",
-                handleType: "default"
-            }
-        ],
-        [
-            "LoopStart-LoopBody",
-            {
-                id: "LoopStart-LoopBody",
-                source: "LoopStart",
-                target: "LoopBody",
-                sourceHandle: "loop-body",
-                targetHandle: "input",
-                handleType: "loop-body"
-            }
-        ],
-        [
-            "LoopBody-LoopEnd",
-            {
-                id: "LoopBody-LoopEnd",
-                source: "LoopBody",
-                target: "LoopEnd",
-                sourceHandle: "output",
-                targetHandle: "input",
-                handleType: "default"
-            }
-        ],
-        [
-            "LoopEnd-Output",
-            {
-                id: "LoopEnd-Output",
-                source: "LoopEnd",
-                target: "Output",
-                sourceHandle: "loop-exit",
-                targetHandle: "input",
-                handleType: "loop-exit"
-            }
-        ]
-    ]);
-
-    return {
-        originalDefinition: {} as WorkflowDefinition,
-        buildTimestamp: Date.now(),
-        nodes,
-        edges,
-        executionLevels: [["Input"], ["LoopStart"], ["LoopBody"], ["LoopEnd"], ["Output"]],
-        triggerNodeId: "Input",
-        outputNodeIds: ["Output"],
-        loopContexts: new Map([["WhileLoop", loopContext]]),
-        maxConcurrentNodes: 10
-    };
-}
-
-/**
  * Simulate while loop execution
  */
 async function simulateWhileLoopExecution(
-    initialState: Record<string, unknown>,
+    initialState: Record<string, JsonValue>,
     shouldContinue: (iteration: number, context: ContextSnapshot) => boolean,
     processIteration: (
         iteration: number,
         context: ContextSnapshot
-    ) => { output: Record<string, unknown>; context: ContextSnapshot },
+    ) => { output: JsonObject; context: ContextSnapshot },
     maxIterations: number = 100
 ): Promise<{
     context: ContextSnapshot;
-    results: Array<Record<string, unknown>>;
+    results: Array<JsonObject>;
     iterationCount: number;
     terminationReason: "condition" | "max-iterations";
 }> {
@@ -198,10 +51,10 @@ async function simulateWhileLoopExecution(
 
     // Set initial state as workflow variables
     for (const [key, value] of Object.entries(initialState)) {
-        context = setVariable(context, key, value as JsonValue);
+        context = setVariable(context, key, value);
     }
 
-    const results: Array<Record<string, unknown>> = [];
+    const results: Array<JsonObject> = [];
     let iterationCount = 0;
     let terminationReason: "condition" | "max-iterations" = "condition";
 
@@ -215,7 +68,7 @@ async function simulateWhileLoopExecution(
         context = setVariable(context, "loop", {
             index: iterationCount,
             iteration: iterationCount + 1,
-            results: [...results],
+            results: results as JsonValue[],
             isFirst: iterationCount === 0
         });
 
@@ -230,7 +83,7 @@ async function simulateWhileLoopExecution(
     }
 
     // Store final results
-    context = setVariable(context, "loopResults", results);
+    context = setVariable(context, "loopResults", results as JsonValue[]);
 
     return { context, results, iterationCount, terminationReason };
 }
@@ -263,7 +116,7 @@ describe("While Loop", () => {
         it("should evaluate condition using context variables", async () => {
             const { results, iterationCount } = await simulateWhileLoopExecution(
                 { target: 100 },
-                (iteration, context) => {
+                (_iteration, context) => {
                     const sum = (getVariable(context, "sum") as number) || 0;
                     const target = (getVariable(context, "target") as number) || 100;
                     return sum < target;
@@ -299,9 +152,9 @@ describe("While Loop", () => {
         });
 
         it("should handle boolean variable conditions", async () => {
-            const { iterationCount, _context } = await simulateWhileLoopExecution(
+            const { iterationCount } = await simulateWhileLoopExecution(
                 { continueLoop: true },
-                (iteration, ctx) => {
+                (_iteration, ctx) => {
                     const continueLoop = getVariable(ctx, "continueLoop") as boolean;
                     return continueLoop;
                 },
@@ -336,8 +189,6 @@ describe("While Loop", () => {
         });
 
         it("should count down from initial value", async () => {
-            const _countdown = 5;
-
             const { results, iterationCount } = await simulateWhileLoopExecution(
                 { countdown: 5 },
                 (_iteration, context) => {
@@ -438,7 +289,7 @@ describe("While Loop", () => {
         it("should preserve results when hitting max iterations", async () => {
             const maxIterations = 5;
 
-            const { results, _iterationCount } = await simulateWhileLoopExecution(
+            const { results } = await simulateWhileLoopExecution(
                 {},
                 () => true,
                 (iteration, context) => ({
@@ -466,7 +317,7 @@ describe("While Loop", () => {
             await simulateWhileLoopExecution(
                 { value: 1 },
                 (iteration) => iteration < 5,
-                (iteration, context) => {
+                (_iteration, context) => {
                     const current = getVariable(context, "value") as number;
                     const previous = getVariable(context, "previousValue") as number | undefined;
 
@@ -493,7 +344,7 @@ describe("While Loop", () => {
         it("should track Fibonacci sequence", async () => {
             const { results } = await simulateWhileLoopExecution(
                 { a: 0, b: 1 },
-                (iteration, context) => {
+                (_iteration, context) => {
                     const a = getVariable(context, "a") as number;
                     return a < 100;
                 },
@@ -516,8 +367,8 @@ describe("While Loop", () => {
         });
 
         it("should accumulate values in an array", async () => {
-            const { context, _results } = await simulateWhileLoopExecution(
-                { collected: [] as number[] },
+            const { context } = await simulateWhileLoopExecution(
+                { collected: [] as unknown as JsonValue },
                 (iteration) => iteration < 5,
                 (iteration, ctx) => {
                     const collected = getVariable(ctx, "collected") as number[];
@@ -539,10 +390,9 @@ describe("While Loop", () => {
     describe("break conditions", () => {
         it("should break on specific value found", async () => {
             const data = [1, 5, 3, 7, 2, 8, 4];
-            const _foundIndex = -1;
 
             const { iterationCount, results } = await simulateWhileLoopExecution(
-                { data, foundIndex: -1, searchValue: 7 },
+                { data: data as unknown as JsonValue, foundIndex: -1, searchValue: 7 },
                 (iteration, context) => {
                     const idx = getVariable(context, "foundIndex") as number;
                     const len = (getVariable(context, "data") as number[]).length;
@@ -599,7 +449,7 @@ describe("While Loop", () => {
             await simulateWhileLoopExecution(
                 {},
                 (iteration) => iteration < 5,
-                (iteration, context) => {
+                (_iteration, context) => {
                     const loopState = getVariable(context, "loop") as {
                         index: number;
                         iteration: number;
@@ -627,7 +477,7 @@ describe("While Loop", () => {
             await simulateWhileLoopExecution(
                 {},
                 (iteration) => iteration < 4,
-                (iteration, context) => {
+                (_iteration, context) => {
                     const loopState = getVariable(context, "loop") as { isFirst: boolean };
                     firstFlags.push(loopState.isFirst);
                     return { output: {}, context };
@@ -643,10 +493,10 @@ describe("While Loop", () => {
             await simulateWhileLoopExecution(
                 {},
                 (iteration) => iteration < 4,
-                (iteration, context) => {
+                (_iteration, context) => {
                     const loopState = getVariable(context, "loop") as { results: unknown[] };
                     resultCounts.push(loopState.results.length);
-                    return { output: { iteration }, context };
+                    return { output: { iteration: _iteration }, context };
                 }
             );
 
@@ -658,7 +508,7 @@ describe("While Loop", () => {
         it("should evaluate compound conditions", async () => {
             const { iterationCount, context } = await simulateWhileLoopExecution(
                 { count: 0, enabled: true },
-                (iteration, ctx) => {
+                (_iteration, ctx) => {
                     const count = getVariable(ctx, "count") as number;
                     const enabled = getVariable(ctx, "enabled") as boolean;
                     return enabled && count < 10;

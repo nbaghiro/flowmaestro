@@ -4,8 +4,9 @@
         "outDir": "./dist",
         "rootDir": "..",
         "composite": true,
-        "jsx": "react"
+        "jsx": "react",
+        "types": ["node", "jest"]
     },
-    "include": ["src/**/*", "../shared/src/**/*"],
-    "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts"]
+    "include": ["src/**/*", "tests/**/*", "../shared/src/**/*"],
+    "exclude": ["node_modules", "dist"]
 }

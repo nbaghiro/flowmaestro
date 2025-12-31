@@ -7,8 +7,25 @@
  * Simulates a common ETL/data sync workflow between systems.
  */
 
-import { ContextSnapshot, ExecutableNode, TypedEdge, JsonObject } from "@flowmaestro/shared";
+import type { JsonObject, JsonValue } from "@flowmaestro/shared";
 import { createContext, storeNodeOutput } from "../../../src/temporal/core/services/context";
+import type { ContextSnapshot } from "../../../src/temporal/core/types";
+
+// Simplified types for test workflow building
+interface TestNode {
+    id: string;
+    type: string;
+    config: Record<string, unknown>;
+    dependencies: string[];
+}
+
+interface TestEdge {
+    id: string;
+    source: string;
+    target: string;
+    type: string;
+    handleType?: string;
+}
 
 // Types for data sync workflow
 interface SyncConfig {
@@ -52,11 +69,11 @@ interface SyncSummary {
 
 // Workflow builder for data sync
 function buildDataSyncWorkflow(): {
-    nodes: Map<string, ExecutableNode>;
-    edges: TypedEdge[];
+    nodes: Map<string, TestNode>;
+    edges: TestEdge[];
     executionLevels: string[][];
 } {
-    const nodes = new Map<string, ExecutableNode>();
+    const nodes = new Map<string, TestNode>();
 
     nodes.set("Trigger", {
         id: "Trigger",
@@ -113,7 +130,7 @@ function buildDataSyncWorkflow(): {
         dependencies: ["SyncLoop"]
     });
 
-    const edges: TypedEdge[] = [
+    const edges: TestEdge[] = [
         { id: "e1", source: "Trigger", target: "FetchRecords", type: "default" },
         { id: "e2", source: "FetchRecords", target: "SyncLoop", type: "default" },
         { id: "e3", source: "SyncLoop", target: "TransformRecord", type: "loop-body" },
@@ -186,6 +203,11 @@ function transformRecord(
     };
 }
 
+// Helper to convert interface to JsonObject
+function toJsonObject<T extends object>(obj: T): JsonObject {
+    return JSON.parse(JSON.stringify(obj)) as JsonObject;
+}
+
 // Simulate data sync workflow
 async function simulateDataSync(
     config: SyncConfig,
@@ -201,12 +223,13 @@ async function simulateDataSync(
     processedRecords: TransformedRecord[];
     syncResults: SyncResult[];
 }> {
-    const _workflow = buildDataSyncWorkflow();
-    let context = createContext(config as unknown as JsonObject);
+    // Build workflow for reference (not directly used in mock simulation)
+    void buildDataSyncWorkflow();
+    let context = createContext(toJsonObject(config));
     const startTime = Date.now();
 
     // Execute Trigger
-    context = storeNodeOutput(context, "Trigger", config as unknown as JsonObject);
+    context = storeNodeOutput(context, "Trigger", toJsonObject(config));
 
     // Execute FetchRecords
     const filteredRecords =
@@ -215,7 +238,7 @@ async function simulateDataSync(
             : mockData.records;
 
     context = storeNodeOutput(context, "FetchRecords", {
-        records: filteredRecords,
+        records: filteredRecords.map((r) => toJsonObject(r)) as JsonValue[],
         count: filteredRecords.length
     });
 
@@ -235,7 +258,7 @@ async function simulateDataSync(
         context = storeNodeOutput(
             context,
             `TransformRecord_${record.id}`,
-            transformed as unknown as JsonObject
+            toJsonObject(transformed)
         );
 
         // Check for failure condition
@@ -304,10 +327,10 @@ async function simulateDataSync(
 
     context = storeNodeOutput(context, "SyncLoop", {
         iterations: filteredRecords.length,
-        results: syncResults
+        results: syncResults.map((r) => toJsonObject(r)) as JsonValue[]
     });
 
-    context = storeNodeOutput(context, "Output", summary as unknown as JsonObject);
+    context = storeNodeOutput(context, "Output", toJsonObject(summary));
 
     return { context, summary, processedRecords, syncResults };
 }
@@ -823,7 +846,7 @@ describe("Data Sync Workflow", () => {
             const records = createMockRecords(5);
             const result = await simulateDataSync(config, { records });
 
-            const outputNode = result.context.nodeOutputs.get("Output") as SyncSummary;
+            const outputNode = result.context.nodeOutputs.get("Output") as unknown as SyncSummary;
             expect(outputNode.totalRecords).toBe(5);
             expect(outputNode.successful).toBe(5);
         });

@@ -9,7 +9,7 @@ import { Client, WorkflowExecutionAlreadyStartedError } from "@temporalio/client
 import { TestWorkflowEnvironment } from "@temporalio/testing";
 import { Worker, Runtime } from "@temporalio/worker";
 import { nanoid } from "nanoid";
-import type { WorkflowDefinition, JsonObject } from "@flowmaestro/shared";
+import type { WorkflowDefinition, WorkflowNode, JsonObject } from "@flowmaestro/shared";
 import { createMockActivities, type MockActivityConfig } from "../fixtures/activities";
 import type {
     OrchestratorInput,
@@ -387,22 +387,15 @@ export function createTestWorkflowDefinition(config: {
         sourceHandle?: string;
         targetHandle?: string;
     }>;
+    entryPoint?: string;
 }): WorkflowDefinition {
-    const nodes: Record<
-        string,
-        {
-            id: string;
-            type: string;
-            data: JsonObject;
-            position: { x: number; y: number };
-        }
-    > = {};
+    const nodes: Record<string, WorkflowNode> = {};
 
     for (const node of config.nodes) {
         nodes[node.id] = {
-            id: node.id,
             type: node.type,
-            data: node.config || {},
+            name: node.id,
+            config: node.config || {},
             position: node.position || { x: 0, y: 0 }
         };
     }
@@ -415,14 +408,16 @@ export function createTestWorkflowDefinition(config: {
         targetHandle: edge.targetHandle || "input"
     }));
 
+    // Determine entry point - first node if not specified
+    const entryPoint = config.entryPoint || (config.nodes.length > 0 ? config.nodes[0].id : "");
+
     return {
         id: `test-workflow-${nanoid()}`,
         name: config.name,
         nodes,
         edges,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-    } as WorkflowDefinition;
+        entryPoint
+    };
 }
 
 // ============================================================================

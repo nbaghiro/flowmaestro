@@ -9,6 +9,7 @@
  * - Single item arrays
  */
 
+import type { JsonObject, JsonValue } from "@flowmaestro/shared";
 import {
     createContext,
     storeNodeOutput,
@@ -16,189 +17,42 @@ import {
     getVariable
 } from "../../../src/temporal/core/services/context";
 import { createLoopStateWithResults } from "../../fixtures/contexts";
-import type { LoopContext } from "../../../src/temporal/activities/execution/types";
-import type { ContextSnapshot, JsonValue } from "../../../src/temporal/core/types";
+import type { ContextSnapshot } from "../../../src/temporal/core/types";
 
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
 
 /**
- * Create a forEach workflow that iterates over an array
- */
-function _createForEachWorkflow(
-    options: {
-        maxIterations?: number;
-        bodyNodeType?: string;
-    } = {}
-): BuiltWorkflow {
-    const { maxIterations = 10, bodyNodeType = "transform" } = options;
-
-    const loopContext: LoopContext = {
-        loopNodeId: "Loop",
-        startSentinelId: "LoopStart",
-        endSentinelId: "LoopEnd",
-        bodyNodes: ["LoopBody"],
-        iterationVariable: "loop",
-        maxIterations
-    };
-
-    const nodes = new Map<string, ExecutableNode>([
-        [
-            "Input",
-            {
-                id: "Input",
-                type: "input",
-                name: "Input",
-                config: {},
-                depth: 0,
-                dependencies: [],
-                dependents: ["LoopStart"]
-            }
-        ],
-        [
-            "LoopStart",
-            {
-                id: "LoopStart",
-                type: "loop-start",
-                name: "LoopStart",
-                config: { loopType: "forEach", itemsPath: "{{Input.items}}" },
-                depth: 1,
-                dependencies: ["Input"],
-                dependents: ["LoopBody"],
-                loopContext
-            }
-        ],
-        [
-            "LoopBody",
-            {
-                id: "LoopBody",
-                type: bodyNodeType,
-                name: "LoopBody",
-                config: { operation: "process" },
-                depth: 2,
-                dependencies: ["LoopStart"],
-                dependents: ["LoopEnd"],
-                loopContext
-            }
-        ],
-        [
-            "LoopEnd",
-            {
-                id: "LoopEnd",
-                type: "loop-end",
-                name: "LoopEnd",
-                config: { loopNodeId: "Loop" },
-                depth: 3,
-                dependencies: ["LoopBody"],
-                dependents: ["Output"],
-                loopContext
-            }
-        ],
-        [
-            "Output",
-            {
-                id: "Output",
-                type: "output",
-                name: "Output",
-                config: {},
-                depth: 4,
-                dependencies: ["LoopEnd"],
-                dependents: []
-            }
-        ]
-    ]);
-
-    const edges = new Map<string, TypedEdge>([
-        [
-            "Input-LoopStart",
-            {
-                id: "Input-LoopStart",
-                source: "Input",
-                target: "LoopStart",
-                sourceHandle: "output",
-                targetHandle: "input",
-                handleType: "default"
-            }
-        ],
-        [
-            "LoopStart-LoopBody",
-            {
-                id: "LoopStart-LoopBody",
-                source: "LoopStart",
-                target: "LoopBody",
-                sourceHandle: "loop-body",
-                targetHandle: "input",
-                handleType: "loop-body"
-            }
-        ],
-        [
-            "LoopBody-LoopEnd",
-            {
-                id: "LoopBody-LoopEnd",
-                source: "LoopBody",
-                target: "LoopEnd",
-                sourceHandle: "output",
-                targetHandle: "input",
-                handleType: "default"
-            }
-        ],
-        [
-            "LoopEnd-Output",
-            {
-                id: "LoopEnd-Output",
-                source: "LoopEnd",
-                target: "Output",
-                sourceHandle: "loop-exit",
-                targetHandle: "input",
-                handleType: "loop-exit"
-            }
-        ]
-    ]);
-
-    return {
-        originalDefinition: {} as WorkflowDefinition,
-        buildTimestamp: Date.now(),
-        nodes,
-        edges,
-        executionLevels: [["Input"], ["LoopStart"], ["LoopBody"], ["LoopEnd"], ["Output"]],
-        triggerNodeId: "Input",
-        outputNodeIds: ["Output"],
-        loopContexts: new Map([["Loop", loopContext]]),
-        maxConcurrentNodes: 10
-    };
-}
-
-/**
  * Simulate forEach loop execution
  */
-async function simulateForEachExecution<T>(
+async function simulateForEachExecution<T extends JsonValue>(
     items: T[],
     processItem: (
         item: T,
         index: number,
         context: ContextSnapshot
-    ) => { output: Record<string, unknown>; context: ContextSnapshot }
+    ) => { output: JsonObject; context: ContextSnapshot }
 ): Promise<{
     context: ContextSnapshot;
-    results: Array<Record<string, unknown>>;
+    results: JsonObject[];
     iterationCount: number;
 }> {
-    let context = createContext({ items });
-    const results: Array<Record<string, unknown>> = [];
+    let context = createContext({ items: items as JsonValue[] });
+    const results: JsonObject[] = [];
     let iterationCount = 0;
 
     for (let i = 0; i < items.length; i++) {
         const item = items[i];
-        const loopState = createLoopStateWithResults(i, items.length, item as JsonValue, [
+        const loopState = createLoopStateWithResults(i, items.length, item, [
             ...results
-        ]);
+        ] as JsonValue[]);
 
         // Store loop state for the iteration
         context = setVariable(context, "loop", {
             index: loopState.index,
-            item: loopState.item,
-            total: loopState.total,
+            item: loopState.item ?? null,
+            total: loopState.total ?? 0,
             results: loopState.results,
             isFirst: loopState.isFirst,
             isLast: loopState.isLast
@@ -215,7 +69,7 @@ async function simulateForEachExecution<T>(
     }
 
     // Store final results
-    context = setVariable(context, "loopResults", results);
+    context = setVariable(context, "loopResults", results as JsonValue[]);
 
     return { context, results, iterationCount };
 }
@@ -246,7 +100,7 @@ describe("ForEach Iteration", () => {
         it("should transform each string item", async () => {
             const items = ["hello", "world", "test"];
 
-            const { results } = await simulateForEachExecution(items, (item, index, context) => ({
+            const { results } = await simulateForEachExecution(items, (item, _index, context) => ({
                 output: {
                     original: item,
                     uppercase: item.toUpperCase(),
@@ -271,7 +125,7 @@ describe("ForEach Iteration", () => {
 
             const { results, iterationCount } = await simulateForEachExecution(
                 items,
-                (item, index, context) => ({
+                (item, _index, context) => ({
                     output: {
                         studentId: item.id,
                         studentName: item.name,
@@ -311,7 +165,7 @@ describe("ForEach Iteration", () => {
             const items = ["first", "second", "third"];
             const capturedItems: string[] = [];
 
-            await simulateForEachExecution(items, (item, index, context) => {
+            await simulateForEachExecution(items, (_item, _index, context) => {
                 const loopVar = getVariable(context, "loop") as { item: string };
                 capturedItems.push(loopVar.item);
                 return { output: { item: loopVar.item }, context };
@@ -392,7 +246,7 @@ describe("ForEach Iteration", () => {
             const items = [10, 20, 30];
             const capturedResultsPerIteration: Array<number[]> = [];
 
-            await simulateForEachExecution(items, (item, index, context) => {
+            await simulateForEachExecution(items, (item, _index, context) => {
                 const loopVar = getVariable(context, "loop") as {
                     results: Array<{ doubled: number }>;
                 };

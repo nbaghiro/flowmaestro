@@ -9,6 +9,7 @@
  * - Different merge strategies
  */
 
+import type { WorkflowDefinition } from "@flowmaestro/shared";
 import {
     createContext,
     storeNodeOutput,
@@ -17,7 +18,12 @@ import {
     markExecuting,
     markCompleted
 } from "../../../src/temporal/core/services/context";
-import type { ContextSnapshot } from "../../../src/temporal/core/types";
+import type {
+    BuiltWorkflow,
+    ExecutableNode,
+    TypedEdge
+} from "../../../src/temporal/activities/execution/types";
+import type { ContextSnapshot, JsonObject, JsonValue } from "../../../src/temporal/core/types";
 
 // ============================================================================
 // HELPER TYPES
@@ -99,7 +105,7 @@ function createParallelJoinWorkflow(
     const joinDependents = hasAggregation ? ["Aggregate"] : ["Output"];
     nodes.set("Join", {
         id: "Join",
-        type: "join",
+        type: "transform",
         name: "Join",
         config: { branchCount },
         depth: 2,
@@ -215,7 +221,7 @@ async function simulateParallelWithJoin(
 
     for (let i = 0; i < branchCount; i++) {
         const branchId = branchIds[i];
-        const output = processBranch(i, branchId);
+        const output = processBranch(i, branchId) as JsonObject;
         branchOutputs.push(output);
         context = storeNodeOutput(context, branchId, output);
         queue = markCompleted(queue, branchId, output, workflow);
@@ -224,49 +230,49 @@ async function simulateParallelWithJoin(
     // Execute Join with merge strategy
     queue = markExecuting(queue, ["Join"]);
 
-    let joinOutput: Record<string, unknown>;
+    let joinOutput: JsonObject;
     switch (joinConfig.strategy) {
         case "object":
             // Merge into keyed object
             joinOutput = {};
             for (let i = 0; i < branchCount; i++) {
                 const key = joinConfig.branchKeys?.[i] || `branch${i + 1}`;
-                (joinOutput as Record<string, unknown>)[key] = branchOutputs[i];
+                (joinOutput as JsonObject)[key] = branchOutputs[i] as JsonValue;
             }
             break;
 
         case "array":
             // Collect into array
-            joinOutput = { results: branchOutputs };
+            joinOutput = { results: branchOutputs as JsonValue };
             break;
 
         case "first":
             // Take first branch output
-            joinOutput = { result: branchOutputs[0] };
+            joinOutput = { result: branchOutputs[0] as JsonValue };
             break;
 
         case "last":
             // Take last branch output
-            joinOutput = { result: branchOutputs[branchCount - 1] };
+            joinOutput = { result: branchOutputs[branchCount - 1] as JsonValue };
             break;
 
         case "custom":
             // Use custom merge function
-            joinOutput = joinConfig.customMerge?.(branchOutputs) || {};
+            joinOutput = (joinConfig.customMerge?.(branchOutputs) || {}) as JsonObject;
             break;
 
         default:
-            joinOutput = { branches: branchOutputs };
+            joinOutput = { branches: branchOutputs as JsonValue };
     }
 
     context = storeNodeOutput(context, "Join", joinOutput);
     queue = markCompleted(queue, "Join", joinOutput, workflow);
 
     // Execute Aggregation if present
-    let aggregatedOutput: Record<string, unknown> | undefined;
+    let aggregatedOutput: JsonObject | undefined;
     if (aggregator) {
         queue = markExecuting(queue, ["Aggregate"]);
-        aggregatedOutput = aggregator(joinOutput, context);
+        aggregatedOutput = aggregator(joinOutput, context) as JsonObject;
         context = storeNodeOutput(context, "Aggregate", aggregatedOutput);
         queue = markCompleted(queue, "Aggregate", aggregatedOutput, workflow);
     }

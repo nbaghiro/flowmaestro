@@ -94,7 +94,7 @@ export function mockHttpEndpoint(config: HttpMockConfig): nock.Scope {
         interceptor = interceptor.delay(delay);
     }
 
-    return interceptor.reply(status, response, headers);
+    return interceptor.reply(status, response as nock.Body, headers);
 }
 
 /**
@@ -102,7 +102,7 @@ export function mockHttpEndpoint(config: HttpMockConfig): nock.Scope {
  */
 export function mockGet(
     baseUrl: string,
-    path: string,
+    path: string | RegExp,
     response: JsonValue,
     status: number = 200
 ): nock.Scope {
@@ -120,7 +120,7 @@ export function mockGet(
  */
 export function mockPost(
     baseUrl: string,
-    path: string,
+    path: string | RegExp,
     response: JsonValue,
     status: number = 200
 ): nock.Scope {
@@ -494,7 +494,7 @@ export function mockSequence(
         type MethodName = "get" | "post" | "put" | "patch" | "delete";
         scope = (scope[method as MethodName] as (uri: string) => nock.Interceptor)(path).reply(
             status,
-            response
+            response as nock.Body
         );
     }
 }

@@ -10,6 +10,7 @@
  * - Edge cases and security
  */
 
+import type { JsonObject } from "@flowmaestro/shared";
 import {
     resolveVariable,
     interpolateString,
@@ -416,7 +417,7 @@ describe("Variable Resolution", () => {
                 for (let i = 0; i < 100; i++) {
                     deepObj = { nested: deepObj };
                 }
-                context = storeNodeOutput(context, "deep", deepObj);
+                context = storeNodeOutput(context, "deep", deepObj as JsonObject);
 
                 // Should not hang or crash
                 const result = resolveVariable(

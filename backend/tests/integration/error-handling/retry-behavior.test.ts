@@ -37,7 +37,7 @@ interface RetryResult {
     attempts: RetryAttempt[];
     totalRetries: number;
     totalDelayMs: number;
-    finalError?: { type: string; message: string };
+    finalError?: { type: string; message: string; statusCode?: number };
     output?: Record<string, unknown>;
 }
 

@@ -7,8 +7,28 @@
  * Simulates a common multi-channel notification system.
  */
 
-import { ContextSnapshot, ExecutableNode, TypedEdge, JsonObject } from "@flowmaestro/shared";
+import type { JsonObject, JsonValue } from "@flowmaestro/shared";
 import { createContext, storeNodeOutput } from "../../../src/temporal/core/services/context";
+import type { ContextSnapshot } from "../../../src/temporal/core/types";
+
+// Channel type alias for the notification system
+type ChannelType = "email" | "slack" | "sms" | "push";
+
+// Simplified types for test workflow building
+interface TestNode {
+    id: string;
+    type: string;
+    config: Record<string, unknown>;
+    dependencies: string[];
+}
+
+interface TestEdge {
+    id: string;
+    source: string;
+    target: string;
+    type: string;
+    handleType?: string;
+}
 
 // Types for notification pipeline
 interface NotificationRequest {
@@ -49,11 +69,11 @@ interface NotificationSummary {
 
 // Build notification workflow
 function buildNotificationWorkflow(channels: string[]): {
-    nodes: Map<string, ExecutableNode>;
-    edges: TypedEdge[];
+    nodes: Map<string, TestNode>;
+    edges: TestEdge[];
     executionLevels: string[][];
 } {
-    const nodes = new Map<string, ExecutableNode>();
+    const nodes = new Map<string, TestNode>();
 
     nodes.set("Trigger", {
         id: "Trigger",
@@ -111,7 +131,7 @@ function buildNotificationWorkflow(channels: string[]): {
         dependencies: ["JoinResults"]
     });
 
-    const edges: TypedEdge[] = [
+    const edges: TestEdge[] = [
         { id: "e1", source: "Trigger", target: "RouteByPriority", type: "default" },
         { id: "e2", source: "RouteByPriority", target: "ParallelSend", type: "default" },
         ...channels.map((ch, i) => ({
@@ -181,6 +201,11 @@ function simulateChannelSend(
     };
 }
 
+// Helper to convert interface to JsonObject
+function toJsonObject<T extends object>(obj: T): JsonObject {
+    return JSON.parse(JSON.stringify(obj)) as JsonObject;
+}
+
 // Simulate the notification pipeline
 async function simulateNotificationPipeline(
     request: NotificationRequest,
@@ -198,14 +223,15 @@ async function simulateNotificationPipeline(
 }> {
     const channels = request.channels || ["email", "slack", "sms"];
     const activeChannels = channels.filter((ch) => !options.skipChannels?.includes(ch));
-    const _workflow = buildNotificationWorkflow(activeChannels);
+    // Build workflow for reference (not directly used in mock simulation)
+    void buildNotificationWorkflow(activeChannels);
 
-    let context = createContext(request as unknown as JsonObject);
+    let context = createContext(toJsonObject(request));
     const startTime = Date.now();
     const channelResults: ChannelResult[] = [];
 
     // Execute Trigger
-    context = storeNodeOutput(context, "Trigger", request as unknown as JsonObject);
+    context = storeNodeOutput(context, "Trigger", toJsonObject(request));
 
     // Execute RouteByPriority
     const channelsForPriority =
@@ -214,8 +240,8 @@ async function simulateNotificationPipeline(
             : request.priority === "high"
               ? activeChannels.filter((ch) => ch !== "push")
               : request.priority === "medium"
-                ? ["email", "slack"].filter((ch) => activeChannels.includes(ch))
-                : ["email"].filter((ch) => activeChannels.includes(ch));
+                ? (["email", "slack"] as ChannelType[]).filter((ch) => activeChannels.includes(ch))
+                : (["email"] as ChannelType[]).filter((ch) => activeChannels.includes(ch));
 
     context = storeNodeOutput(context, "RouteByPriority", {
         priority: request.priority,
@@ -240,7 +266,7 @@ async function simulateNotificationPipeline(
         channelResults.push(result);
 
         const nodeName = `Send${channel.charAt(0).toUpperCase() + channel.slice(1)}`;
-        context = storeNodeOutput(context, nodeName, result as unknown as JsonObject);
+        context = storeNodeOutput(context, nodeName, toJsonObject(result));
     }
 
     // Execute JoinResults
@@ -251,7 +277,7 @@ async function simulateNotificationPipeline(
         allCompleted: true,
         successCount: deliveredChannels.length,
         failureCount: failedChannels.length,
-        results: channelResults
+        results: channelResults.map((r) => toJsonObject(r)) as JsonValue[]
     });
 
     // Execute Output
@@ -267,7 +293,7 @@ async function simulateNotificationPipeline(
         results: channelResults
     };
 
-    context = storeNodeOutput(context, "Output", summary as unknown as JsonObject);
+    context = storeNodeOutput(context, "Output", toJsonObject(summary));
 
     return {
         context,
@@ -504,7 +530,9 @@ describe("Notification Pipeline Workflow", () => {
 
             const result = await simulateNotificationPipeline(request);
 
-            const triggerOutput = result.context.nodeOutputs.get("Trigger") as NotificationRequest;
+            const triggerOutput = result.context.nodeOutputs.get(
+                "Trigger"
+            ) as unknown as NotificationRequest;
             expect(triggerOutput.data?.orderId).toBe("12345");
         });
 
@@ -619,7 +647,7 @@ describe("Notification Pipeline Workflow", () => {
 
             const result = await simulateNotificationPipeline(request);
 
-            const joinOutput = result.context.nodeOutputs.get("JoinResults") as {
+            const joinOutput = result.context.nodeOutputs.get("JoinResults") as unknown as {
                 allCompleted: boolean;
                 results: ChannelResult[];
             };

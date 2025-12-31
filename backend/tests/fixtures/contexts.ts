@@ -4,7 +4,7 @@
  * Pre-built context snapshots for testing context management functions.
  */
 
-import type { JsonValue } from "@flowmaestro/shared";
+import type { JsonObject, JsonValue } from "@flowmaestro/shared";
 import type {
     ContextSnapshot,
     LoopIterationState,
@@ -31,7 +31,7 @@ export function createEmptyContext(inputs: Record<string, JsonValue> = {}): Cont
  * Create a context with sample node outputs
  */
 export function createContextWithOutputs(): ContextSnapshot {
-    const nodeOutputs = new Map([
+    const nodeOutputs = new Map<string, JsonObject>([
         ["node1", { result: "first output", value: 42 }],
         ["node2", { result: "second output", items: [1, 2, 3] }],
         ["node3", { result: "third output", nested: { deep: { value: "found" } } }]
@@ -98,7 +98,7 @@ export function createLargeContext(
  * Create context with parallel branch outputs (for merge testing)
  */
 export function createParallelMergeContext(): ContextSnapshot {
-    const nodeOutputs = new Map([
+    const nodeOutputs = new Map<string, JsonObject>([
         // Parent node
         ["parent", { data: "initial", shared: "parent-value" }],
         // Branch outputs (should be merged correctly)

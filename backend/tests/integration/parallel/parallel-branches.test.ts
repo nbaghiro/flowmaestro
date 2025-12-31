@@ -9,6 +9,7 @@
  * - All branches complete before downstream nodes
  */
 
+import type { WorkflowDefinition } from "@flowmaestro/shared";
 import {
     createContext,
     storeNodeOutput,
@@ -19,7 +20,17 @@ import {
     markExecuting,
     markCompleted
 } from "../../../src/temporal/core/services/context";
-import type { ContextSnapshot } from "../../../src/temporal/core/types";
+import type {
+    BuiltWorkflow,
+    ExecutableNode,
+    TypedEdge
+} from "../../../src/temporal/activities/execution/types";
+import type {
+    ContextSnapshot,
+    ExecutionQueueState,
+    JsonObject,
+    JsonValue
+} from "../../../src/temporal/core/types";
 
 // ============================================================================
 // HELPER TYPES
@@ -209,8 +220,8 @@ async function simulateParallelExecution(
 
     // Complete branches and track execution order
     for (const result of branchResults) {
-        context = storeNodeOutput(context, result.branchId, result.output);
-        queue = markCompleted(queue, result.branchId, result.output, workflow);
+        context = storeNodeOutput(context, result.branchId, result.output as JsonObject);
+        queue = markCompleted(queue, result.branchId, result.output as JsonObject, workflow);
         branchExecutions.push(result);
         executionOrder.push(result.branchId);
         currentlyExecuting--;
@@ -220,10 +231,10 @@ async function simulateParallelExecution(
     const joinReady = getReadyNodes(queue, maxConcurrent);
     if (joinReady.includes("Join")) {
         queue = markExecuting(queue, ["Join"]);
-        const joinOutput = {
+        const joinOutput: JsonObject = {
             merged: true,
             branchCount,
-            branchOutputs: branchResults.map((r) => r.output)
+            branchOutputs: branchResults.map((r) => r.output) as JsonValue
         };
         context = storeNodeOutput(context, "Join", joinOutput);
         queue = markCompleted(queue, "Join", joinOutput, workflow);
@@ -431,10 +442,10 @@ describe("Parallel Branches", () => {
         it("should provide parallel.index for each branch", async () => {
             const capturedIndices: number[] = [];
 
-            await simulateParallelExecution(4, async (index, branchId, ctx) => {
+            await simulateParallelExecution(4, async (_index, branchId, ctx) => {
                 const parallelState = getVariable(ctx, `parallel_${branchId}`) as { index: number };
-                capturedIndices.push(parallelState?.index ?? index);
-                return { output: { index: parallelState?.index ?? index } };
+                capturedIndices.push(parallelState?.index ?? _index);
+                return { output: { index: parallelState?.index ?? _index } };
             });
 
             expect(capturedIndices.sort()).toEqual([0, 1, 2, 3]);
@@ -443,7 +454,7 @@ describe("Parallel Branches", () => {
         it("should provide parallel.branchId for each branch", async () => {
             const capturedIds: string[] = [];
 
-            await simulateParallelExecution(3, async (index, branchId, ctx) => {
+            await simulateParallelExecution(3, async (_index, branchId, ctx) => {
                 const parallelState = getVariable(ctx, `parallel_${branchId}`) as {
                     branchId: string;
                 };
@@ -457,7 +468,7 @@ describe("Parallel Branches", () => {
         it("should provide parallel.total for branch count", async () => {
             const capturedTotals: number[] = [];
 
-            await simulateParallelExecution(5, async (index, branchId, ctx) => {
+            await simulateParallelExecution(5, async (_index, branchId, ctx) => {
                 const parallelState = getVariable(ctx, `parallel_${branchId}`) as { total: number };
                 capturedTotals.push(parallelState?.total ?? 0);
                 return { output: {} };

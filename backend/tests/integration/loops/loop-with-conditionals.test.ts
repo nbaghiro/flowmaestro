@@ -10,6 +10,7 @@
  * - Map-reduce patterns
  */
 
+import type { JsonValue, JsonObject } from "@flowmaestro/shared";
 import {
     createContext,
     storeNodeOutput,
@@ -40,26 +41,26 @@ interface ConditionalIterationResult {
 /**
  * Simulate forEach loop with conditional branch in body
  */
-async function simulateLoopWithConditional<T>(
+async function simulateLoopWithConditional<T extends object | string | number | boolean>(
     items: T[],
     evaluateCondition: (item: T, index: number, context: ContextSnapshot) => boolean,
     processTrueBranch: (
         item: T,
         index: number,
         context: ContextSnapshot
-    ) => { output: Record<string, unknown>; context: ContextSnapshot },
+    ) => { output: JsonObject; context: ContextSnapshot },
     processFalseBranch: (
         item: T,
         index: number,
         context: ContextSnapshot
-    ) => { output: Record<string, unknown>; context: ContextSnapshot }
+    ) => { output: JsonObject; context: ContextSnapshot }
 ): Promise<{
     context: ContextSnapshot;
     results: ConditionalIterationResult[];
     trueBranchCount: number;
     falseBranchCount: number;
 }> {
-    let context = createContext({ items });
+    let context = createContext({ items: items as unknown as JsonValue[] });
     const results: ConditionalIterationResult[] = [];
     let trueBranchCount = 0;
     let falseBranchCount = 0;
@@ -70,9 +71,15 @@ async function simulateLoopWithConditional<T>(
         // Store loop state
         context = setVariable(context, "loop", {
             index: i,
-            item,
+            item: item as unknown as JsonValue,
             total: items.length,
-            results: [...results],
+            results: results.map((r) => ({
+                iteration: r.iteration,
+                item: r.item as unknown as JsonValue,
+                condition: r.condition,
+                branch: r.branch,
+                output: r.output
+            })) as JsonValue[],
             isFirst: i === 0,
             isLast: i === items.length - 1
         });
@@ -81,7 +88,7 @@ async function simulateLoopWithConditional<T>(
         const conditionResult = evaluateCondition(item, i, context);
         context = storeNodeOutput(context, `Condition_${i}`, { result: conditionResult });
 
-        let output: Record<string, unknown>;
+        let output: JsonObject;
         let branch: BranchResult;
 
         if (conditionResult) {
@@ -108,7 +115,17 @@ async function simulateLoopWithConditional<T>(
         });
     }
 
-    context = setVariable(context, "loopResults", results);
+    context = setVariable(
+        context,
+        "loopResults",
+        results.map((r) => ({
+            iteration: r.iteration,
+            item: r.item as JsonValue,
+            condition: r.condition,
+            branch: r.branch,
+            output: r.output
+        })) as JsonValue[]
+    );
 
     return { context, results, trueBranchCount, falseBranchCount };
 }
@@ -116,23 +133,23 @@ async function simulateLoopWithConditional<T>(
 /**
  * Simulate forEach loop with early exit capability
  */
-async function simulateLoopWithEarlyExit<T>(
+async function simulateLoopWithEarlyExit<T extends JsonValue>(
     items: T[],
     shouldExit: (item: T, index: number, context: ContextSnapshot) => boolean,
     processItem: (
         item: T,
         index: number,
         context: ContextSnapshot
-    ) => { output: Record<string, unknown>; context: ContextSnapshot }
+    ) => { output: JsonObject; context: ContextSnapshot }
 ): Promise<{
     context: ContextSnapshot;
-    results: Array<Record<string, unknown>>;
+    results: Array<JsonObject>;
     iterationCount: number;
     exitedEarly: boolean;
     exitIndex: number | null;
 }> {
-    let context = createContext({ items });
-    const results: Array<Record<string, unknown>> = [];
+    let context = createContext({ items: items as JsonValue[] });
+    const results: Array<JsonObject> = [];
     let exitedEarly = false;
     let exitIndex: number | null = null;
 
@@ -141,7 +158,7 @@ async function simulateLoopWithEarlyExit<T>(
 
         context = setVariable(context, "loop", {
             index: i,
-            item,
+            item: item as JsonValue,
             total: items.length,
             isFirst: i === 0,
             isLast: i === items.length - 1
@@ -160,7 +177,7 @@ async function simulateLoopWithEarlyExit<T>(
         results.push(output);
     }
 
-    context = setVariable(context, "loopResults", results);
+    context = setVariable(context, "loopResults", results as JsonValue[]);
     context = setVariable(context, "exitedEarly", exitedEarly);
 
     return {
@@ -175,22 +192,22 @@ async function simulateLoopWithEarlyExit<T>(
 /**
  * Simulate filter pattern (forEach with conditional skip)
  */
-async function simulateFilterLoop<T>(
+async function simulateFilterLoop<T extends object | string | number | boolean>(
     items: T[],
     filterCondition: (item: T, index: number) => boolean,
     processItem: (
         item: T,
         index: number,
         context: ContextSnapshot
-    ) => { output: Record<string, unknown>; context: ContextSnapshot }
+    ) => { output: JsonObject; context: ContextSnapshot }
 ): Promise<{
     context: ContextSnapshot;
-    filteredResults: Array<Record<string, unknown>>;
+    filteredResults: Array<JsonObject>;
     skippedCount: number;
     processedIndices: number[];
 }> {
-    let context = createContext({ items });
-    const filteredResults: Array<Record<string, unknown>> = [];
+    let context = createContext({ items: items as unknown as JsonValue[] });
+    const filteredResults: Array<JsonObject> = [];
     const processedIndices: number[] = [];
     let skippedCount = 0;
 
@@ -199,7 +216,7 @@ async function simulateFilterLoop<T>(
 
         context = setVariable(context, "loop", {
             index: i,
-            item,
+            item: item as unknown as JsonValue,
             total: items.length,
             isFirst: i === 0,
             isLast: i === items.length - 1
@@ -217,7 +234,7 @@ async function simulateFilterLoop<T>(
         }
     }
 
-    context = setVariable(context, "loopResults", filteredResults);
+    context = setVariable(context, "loopResults", filteredResults as JsonValue[]);
 
     return { context, filteredResults, skippedCount, processedIndices };
 }
@@ -258,12 +275,12 @@ describe("Loop with Conditionals", () => {
             await simulateLoopWithConditional(
                 items,
                 (item) => item.length > 1,
-                (item, index, context) => {
+                (item, _index, context) => {
                     const loop = getVariable(context, "loop") as { index: number };
                     capturedContexts.push({ index: loop.index, itemLength: item.length });
                     return { output: { long: true }, context };
                 },
-                (item, index, context) => {
+                (item, _index, context) => {
                     const loop = getVariable(context, "loop") as { index: number };
                     capturedContexts.push({ index: loop.index, itemLength: item.length });
                     return { output: { long: false }, context };

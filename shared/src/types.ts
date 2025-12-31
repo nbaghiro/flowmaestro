@@ -99,6 +99,7 @@ export interface WorkflowEdge {
     source: string;
     target: string;
     sourceHandle?: string;
+    targetHandle?: string;
 }
 
 export interface WorkflowSettings {

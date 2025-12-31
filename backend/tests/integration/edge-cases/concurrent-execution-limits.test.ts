@@ -8,8 +8,8 @@
  * - Queue management with limits
  */
 
-import type { ContextSnapshot } from "@flowmaestro/shared";
 import { createContext, storeNodeOutput } from "../../../src/temporal/core/services/context";
+import type { ContextSnapshot } from "../../../src/temporal/core/types";
 
 // Types for concurrent execution simulation
 interface ExecutionConfig {

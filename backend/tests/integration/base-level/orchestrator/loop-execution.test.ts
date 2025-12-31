@@ -26,6 +26,7 @@ import {
     deepCloneContext
 } from "../../../fixtures/contexts";
 import { createLoopWorkflow, createLinearWorkflow } from "../../../fixtures/workflows";
+import type { ContextSnapshot } from "../../../../src/temporal/core/types";
 
 describe("Loop Execution", () => {
     describe("iteration state", () => {
@@ -42,7 +43,7 @@ describe("Loop Execution", () => {
                 // Store iteration-specific output
                 iterContext = storeNodeOutput(iterContext, `Iteration_${i}`, {
                     index: loopState.index,
-                    item: loopState.item,
+                    item: loopState.item!,
                     isFirst: loopState.isFirst,
                     isLast: loopState.isLast
                 });
@@ -51,9 +52,9 @@ describe("Loop Execution", () => {
             }
 
             // Each iteration should have its own index
-            expect(iterations[0].nodeOutputs.get("Iteration_0")?.index).toBe(0);
-            expect(iterations[1].nodeOutputs.get("Iteration_1")?.index).toBe(1);
-            expect(iterations[2].nodeOutputs.get("Iteration_2")?.index).toBe(2);
+            expect(iterations[0].nodeOutputs.get("Iteration_0")!.index).toBe(0);
+            expect(iterations[1].nodeOutputs.get("Iteration_1")!.index).toBe(1);
+            expect(iterations[2].nodeOutputs.get("Iteration_2")!.index).toBe(2);
 
             // First/last flags should be correct
             expect(iterations[0].nodeOutputs.get("Iteration_0")?.isFirst).toBe(true);
@@ -70,7 +71,7 @@ describe("Loop Execution", () => {
             context = storeNodeOutput(context, "Loop1_Iter0", {
                 loopId: "loop1",
                 index: loop1State.index,
-                item: loop1State.item
+                item: loop1State.item!
             });
 
             // Second loop (different loop)
@@ -78,17 +79,17 @@ describe("Loop Execution", () => {
             context = storeNodeOutput(context, "Loop2_Iter2", {
                 loopId: "loop2",
                 index: loop2State.index,
-                item: loop2State.item
+                item: loop2State.item!
             });
 
             // Both loop outputs should be independent
-            const loop1Output = context.nodeOutputs.get("Loop1_Iter0");
-            const loop2Output = context.nodeOutputs.get("Loop2_Iter2");
+            const loop1Output = context.nodeOutputs.get("Loop1_Iter0")!;
+            const loop2Output = context.nodeOutputs.get("Loop2_Iter2")!;
 
-            expect(loop1Output?.index).toBe(0);
-            expect(loop1Output?.item).toBe("loop1-item");
-            expect(loop2Output?.index).toBe(2);
-            expect(loop2Output?.item).toBe("loop2-item");
+            expect(loop1Output.index).toBe(0);
+            expect(loop1Output.item).toBe("loop1-item");
+            expect(loop2Output.index).toBe(2);
+            expect(loop2Output.item).toBe("loop2-item");
         });
 
         it("should make loop.item available for foreach loops", () => {
@@ -174,7 +175,7 @@ describe("Loop Execution", () => {
 
             // Simulate condition-based termination
             while (iterationCount < maxAllowed) {
-                const _loopState = createLoopState(iterationCount, maxAllowed);
+                createLoopState(iterationCount, maxAllowed);
 
                 context = storeNodeOutput(context, `Iter_${iterationCount}`, {
                     index: iterationCount,
@@ -258,8 +259,8 @@ describe("Loop Execution", () => {
                     context = storeNodeOutput(context, `Nested_${outer}_${inner}`, {
                         outerIndex: outerState.index,
                         innerIndex: innerState.index,
-                        outerItem: outerState.item,
-                        innerItem: innerState.item
+                        outerItem: outerState.item as string,
+                        innerItem: innerState.item as string
                     });
                 }
             }
@@ -282,7 +283,7 @@ describe("Loop Execution", () => {
             const innerItems = [1, 2, 3];
 
             for (let o = 0; o < outerItems.length; o++) {
-                const _outerState = createLoopState(o, outerItems.length, outerItems[o]);
+                createLoopState(o, outerItems.length, outerItems[o]);
 
                 // Store outer loop state in context
                 context = setVariable(context, "currentOuter", outerItems[o]);
@@ -294,8 +295,8 @@ describe("Loop Execution", () => {
                     const outerValue = getVariable(context, "currentOuter");
 
                     context = storeNodeOutput(context, `Combined_${o}_${i}`, {
-                        combined: `${outerValue}-${innerState.item}`,
-                        outerFromContext: outerValue
+                        combined: `${outerValue as string}-${innerState.item as number}`,
+                        outerFromContext: outerValue as string
                     });
                 }
             }
@@ -429,7 +430,7 @@ describe("Loop Execution", () => {
                 const item = items[i];
                 totalScore += item.score;
 
-                const _loopState = createLoopState(i, items.length, item);
+                createLoopState(i, items.length, item);
 
                 context = storeNodeOutput(context, `Student_${i}`, {
                     name: item.name,

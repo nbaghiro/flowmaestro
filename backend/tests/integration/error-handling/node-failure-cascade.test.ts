@@ -440,7 +440,7 @@ async function simulateWorkflowWithFailures(
                     message: failureConfig.message
                 });
 
-                queue = markFailed(queue, nodeId, new Error(failureConfig.message), workflow);
+                queue = markFailed(queue, nodeId, failureConfig.message, workflow);
                 failedNodes.push(nodeId);
 
                 // Cascade skip to dependents if enabled

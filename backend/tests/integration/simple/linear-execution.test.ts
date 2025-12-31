@@ -28,6 +28,7 @@ import type {
     ExecutableNode,
     TypedEdge
 } from "../../../src/temporal/activities/execution/types";
+import type { JsonObject } from "../../../src/temporal/core/types";
 
 // ============================================================================
 // HELPER FUNCTIONS
@@ -94,7 +95,7 @@ function createChainWorkflow(nodeCount: number): BuiltWorkflow {
 async function simulateWorkflowExecution(
     workflow: BuiltWorkflow,
     mockActivities: ReturnType<typeof createMockActivities>,
-    inputs: Record<string, unknown> = {}
+    inputs: JsonObject = {}
 ) {
     let context = createContext(inputs);
     let queue = initializeQueue(workflow);
@@ -287,7 +288,7 @@ describe("Linear Execution", () => {
 
             // Node1 should have seen Input's output
             expect(capturedContext).toBeDefined();
-            expect((capturedContext as Record<string, unknown>).Input).toEqual({
+            expect(capturedContext!.Input).toEqual({
                 message: "Hello"
             });
         });
@@ -313,8 +314,8 @@ describe("Linear Execution", () => {
 
             // Node2 should see both Input and Node1 outputs
             expect(capturedContextAtNode2).toBeDefined();
-            expect((capturedContextAtNode2 as Record<string, unknown>).Input).toEqual({ step: 0 });
-            expect((capturedContextAtNode2 as Record<string, unknown>).Node1).toEqual({ step: 1 });
+            expect(capturedContextAtNode2!.Input).toEqual({ step: 0 });
+            expect(capturedContextAtNode2!.Node1).toEqual({ step: 1 });
         });
     });
 

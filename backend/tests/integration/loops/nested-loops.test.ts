@@ -9,6 +9,7 @@
  * - Multiple levels of nesting
  */
 
+import type { JsonValue, JsonObject } from "@flowmaestro/shared";
 import {
     createContext,
     storeNodeOutput,
@@ -38,7 +39,7 @@ interface LoopState {
 /**
  * Simulate nested loop execution (outer forEach, inner forEach)
  */
-async function simulateNestedForEachExecution<TOuter, TInner>(
+async function simulateNestedForEachExecution<TOuter extends JsonValue, TInner extends JsonValue>(
     outerItems: TOuter[],
     getInnerItems: (outerItem: TOuter, outerIndex: number) => TInner[],
     processInnerItem: (
@@ -47,33 +48,36 @@ async function simulateNestedForEachExecution<TOuter, TInner>(
         outerIndex: number,
         innerIndex: number,
         context: ContextSnapshot
-    ) => { output: Record<string, unknown>; context: ContextSnapshot }
+    ) => { output: JsonObject; context: ContextSnapshot }
 ): Promise<{
     context: ContextSnapshot;
     outerResults: Array<{
         outerItem: TOuter;
-        innerResults: Array<Record<string, unknown>>;
+        innerResults: Array<JsonObject>;
     }>;
     totalInnerIterations: number;
 }> {
     let context = createContext({});
     const outerResults: Array<{
         outerItem: TOuter;
-        innerResults: Array<Record<string, unknown>>;
+        innerResults: Array<JsonObject>;
     }> = [];
     let totalInnerIterations = 0;
 
     for (let outerIndex = 0; outerIndex < outerItems.length; outerIndex++) {
         const outerItem = outerItems[outerIndex];
         const innerItems = getInnerItems(outerItem, outerIndex);
-        const innerResults: Array<Record<string, unknown>> = [];
+        const innerResults: Array<JsonObject> = [];
 
         // Store outer loop state
         context = setVariable(context, "outerLoop", {
             index: outerIndex,
-            item: outerItem,
+            item: outerItem as JsonValue,
             total: outerItems.length,
-            results: [...outerResults],
+            results: outerResults.map((r) => ({
+                outerItem: r.outerItem as JsonValue,
+                innerResults: r.innerResults as JsonValue[]
+            })) as JsonValue[],
             isFirst: outerIndex === 0,
             isLast: outerIndex === outerItems.length - 1
         });
@@ -84,9 +88,9 @@ async function simulateNestedForEachExecution<TOuter, TInner>(
             // Store inner loop state
             context = setVariable(context, "innerLoop", {
                 index: innerIndex,
-                item: innerItem,
+                item: innerItem as JsonValue,
                 total: innerItems.length,
-                results: [...innerResults],
+                results: innerResults as JsonValue[],
                 isFirst: innerIndex === 0,
                 isLast: innerIndex === innerItems.length - 1
             });
@@ -111,7 +115,14 @@ async function simulateNestedForEachExecution<TOuter, TInner>(
     }
 
     // Store final results
-    context = setVariable(context, "nestedResults", outerResults);
+    context = setVariable(
+        context,
+        "nestedResults",
+        outerResults.map((r) => ({
+            outerItem: r.outerItem as JsonValue,
+            innerResults: r.innerResults as JsonValue[]
+        })) as JsonValue[]
+    );
 
     return { context, outerResults, totalInnerIterations };
 }
@@ -119,7 +130,11 @@ async function simulateNestedForEachExecution<TOuter, TInner>(
 /**
  * Simulate three-level nested loops
  */
-async function simulateTripleNestedExecution<T1, T2, T3>(
+async function simulateTripleNestedExecution<
+    T1 extends JsonValue,
+    T2 extends JsonValue,
+    T3 extends JsonValue
+>(
     level1Items: T1[],
     getLevel2Items: (item: T1) => T2[],
     getLevel3Items: (item1: T1, item2: T2) => T3[],
@@ -129,14 +144,14 @@ async function simulateTripleNestedExecution<T1, T2, T3>(
         item3: T3,
         indices: [number, number, number],
         context: ContextSnapshot
-    ) => { output: Record<string, unknown>; context: ContextSnapshot }
+    ) => { output: JsonObject; context: ContextSnapshot }
 ): Promise<{
     context: ContextSnapshot;
-    results: Array<Record<string, unknown>>;
+    results: Array<JsonObject>;
     totalIterations: number;
 }> {
     let context = createContext({});
-    const results: Array<Record<string, unknown>> = [];
+    const results: Array<JsonObject> = [];
     let totalIterations = 0;
 
     for (let i1 = 0; i1 < level1Items.length; i1++) {
@@ -145,7 +160,7 @@ async function simulateTripleNestedExecution<T1, T2, T3>(
 
         context = setVariable(context, "loop1", {
             index: i1,
-            item: item1,
+            item: item1 as JsonValue,
             total: level1Items.length
         });
 
@@ -155,7 +170,7 @@ async function simulateTripleNestedExecution<T1, T2, T3>(
 
             context = setVariable(context, "loop2", {
                 index: i2,
-                item: item2,
+                item: item2 as JsonValue,
                 total: level2Items.length
             });
 
@@ -164,7 +179,7 @@ async function simulateTripleNestedExecution<T1, T2, T3>(
 
                 context = setVariable(context, "loop3", {
                     index: i3,
-                    item: item3,
+                    item: item3 as JsonValue,
                     total: level3Items.length
                 });
 
@@ -200,7 +215,7 @@ describe("Nested Loops", () => {
             const { outerResults, totalInnerIterations } = await simulateNestedForEachExecution(
                 outerItems,
                 getInnerItems,
-                (outerItem, innerItem, outerIndex, innerIndex, context) => ({
+                (outerItem, innerItem, _outerIndex, _innerIndex, context) => ({
                     output: { combo: `${outerItem}${innerItem}` },
                     context
                 })
@@ -261,8 +276,8 @@ describe("Nested Loops", () => {
                 [1, 2],
                 () => ["a", "b", "c"],
                 (_outerItem, _innerItem, _outerIndex, _innerIndex, context) => {
-                    const outerLoop = getVariable(context, "outerLoop") as LoopState;
-                    const innerLoop = getVariable(context, "innerLoop") as LoopState;
+                    const outerLoop = getVariable(context, "outerLoop") as unknown as LoopState;
+                    const innerLoop = getVariable(context, "innerLoop") as unknown as LoopState;
                     capturedStates.push({
                         outerIndex: outerLoop.index,
                         innerIndex: innerLoop.index
@@ -287,9 +302,9 @@ describe("Nested Loops", () => {
             await simulateNestedForEachExecution(
                 [1, 2, 3],
                 () => ["x", "y"],
-                (_outerItem, _innerItem, outerIndex, innerIndex, context) => {
+                (_outerItem, _innerItem, _outerIndex, innerIndex, context) => {
                     if (innerIndex === 0) {
-                        const innerLoop = getVariable(context, "innerLoop") as LoopState;
+                        const innerLoop = getVariable(context, "innerLoop") as unknown as LoopState;
                         innerStartIndices.push(innerLoop.index);
                     }
                     return { output: {}, context };
@@ -329,7 +344,7 @@ describe("Nested Loops", () => {
                 ["prefix1", "prefix2"],
                 () => ["A", "B"],
                 (_outerItem, innerItem, _outerIndex, _innerIndex, context) => {
-                    const outerLoop = getVariable(context, "outerLoop") as LoopState;
+                    const outerLoop = getVariable(context, "outerLoop") as unknown as LoopState;
                     const outerItem = outerLoop.item as string;
                     return {
                         output: { combined: `${outerItem}-${innerItem}` },
@@ -353,8 +368,8 @@ describe("Nested Loops", () => {
                 [100, 200, 300],
                 () => [1, 2],
                 (_outerItem, innerItem, _outerIndex, _innerIndex, context) => {
-                    const outerLoop = getVariable(context, "outerLoop") as LoopState;
-                    const innerLoop = getVariable(context, "innerLoop") as LoopState;
+                    const outerLoop = getVariable(context, "outerLoop") as unknown as LoopState;
+                    const innerLoop = getVariable(context, "innerLoop") as unknown as LoopState;
                     return {
                         output: {
                             globalIndex: outerLoop.index * 10 + innerLoop.index,
@@ -377,8 +392,8 @@ describe("Nested Loops", () => {
                 [1, 2, 3, 4],
                 () => ["a", "b", "c"],
                 (_outerItem, _innerItem, _outerIndex, _innerIndex, context) => {
-                    const outerLoop = getVariable(context, "outerLoop") as LoopState;
-                    const innerLoop = getVariable(context, "innerLoop") as LoopState;
+                    const outerLoop = getVariable(context, "outerLoop") as unknown as LoopState;
+                    const innerLoop = getVariable(context, "innerLoop") as unknown as LoopState;
                     capturedTotals.push({
                         outerTotal: outerLoop.total,
                         innerTotal: innerLoop.total
@@ -400,7 +415,7 @@ describe("Nested Loops", () => {
                 ["A", "B", "C"],
                 () => [1],
                 (_outerItem, _innerItem, _outerIndex, _innerIndex, context) => {
-                    const outerLoop = getVariable(context, "outerLoop") as LoopState;
+                    const outerLoop = getVariable(context, "outerLoop") as unknown as LoopState;
                     outerResultCounts.push(outerLoop.results.length);
                     return { output: {}, context };
                 }
@@ -463,7 +478,7 @@ describe("Nested Loops", () => {
                 await simulateNestedForEachExecution(
                     ["A", "B"],
                     () => [1, 2, 3],
-                    (outerItem, innerItem, outerIndex, innerIndex, ctx) => {
+                    (_outerItem, _innerItem, outerIndex, innerIndex, ctx) => {
                         const innerCount = (getVariable(ctx, "innerCount") as number) || 0;
                         return {
                             output: { outerIndex, innerIndex },
@@ -540,7 +555,7 @@ describe("Nested Loops", () => {
                 [1, 2],
                 (n) => Array.from({ length: n }, (_, i) => i),
                 (n1, n2) => Array.from({ length: n1 + n2 }, (_, i) => `item${i}`),
-                (item1, item2, item3, indices, context) => ({
+                (item1, item2, item3, _indices, context) => ({
                     output: {
                         level1: item1,
                         level2: item2,
@@ -571,7 +586,7 @@ describe("Nested Loops", () => {
             const { outerResults, totalInnerIterations } = await simulateNestedForEachExecution(
                 matrix,
                 (row) => row,
-                (row, cell, rowIndex, colIndex, context) => ({
+                (_row, cell, rowIndex, colIndex, context) => ({
                     output: {
                         position: `[${rowIndex}][${colIndex}]`,
                         value: cell
@@ -596,7 +611,7 @@ describe("Nested Loops", () => {
             const { outerResults } = await simulateNestedForEachExecution(
                 matrix,
                 (row) => row,
-                (row, cell, rowIndex, colIndex, context) => {
+                (_row, cell, rowIndex, _colIndex, context) => {
                     const rowSum = (getVariable(context, `rowSum_${rowIndex}`) as number) || 0;
                     const newSum = rowSum + (cell as number);
                     return {
@@ -621,7 +636,7 @@ describe("Nested Loops", () => {
                 [30, 40]
             ];
 
-            const _context = createContext({ matrixB });
+            createContext({ matrixB }); // Create context for consistent test setup
             const results: number[][] = [[], []];
 
             for (let i = 0; i < matrixA.length; i++) {
@@ -646,14 +661,14 @@ describe("Nested Loops", () => {
             await simulateNestedForEachExecution(
                 ["A", "B"],
                 () => [1, 2, 3, 4, 5],
-                (outerItem, innerItem, outerIndex, innerIndex, context) => {
+                (outerItem, innerItem, outerIndex, _innerIndex, context) => {
                     // Simulate break when inner value > 3
                     const shouldBreak = getVariable(
                         context,
                         `shouldBreak_${outerIndex}`
                     ) as boolean;
                     if (shouldBreak) {
-                        return { output: { skipped: true }, context };
+                        return { output: { skipped: true } as JsonObject, context };
                     }
 
                     processedCombos.push(`${outerItem}${innerItem}`);
@@ -664,7 +679,7 @@ describe("Nested Loops", () => {
                             : context;
 
                     return {
-                        output: { combo: `${outerItem}${innerItem}` },
+                        output: { combo: `${outerItem}${innerItem}` } as JsonObject,
                         context: newContext
                     };
                 }
@@ -681,7 +696,7 @@ describe("Nested Loops", () => {
             const { outerResults, totalInnerIterations } = await simulateNestedForEachExecution(
                 [] as string[],
                 () => [1, 2, 3],
-                (outerItem, innerItem, _outerIndex, _innerIndex, context) => ({
+                (_outerItem, _innerItem, _outerIndex, _innerIndex, context) => ({
                     output: {},
                     context
                 })
@@ -695,7 +710,7 @@ describe("Nested Loops", () => {
             const { outerResults, totalInnerIterations } = await simulateNestedForEachExecution(
                 ["A", "B", "C"],
                 () => [] as number[],
-                (outerItem, innerItem, _outerIndex, _innerIndex, context) => ({
+                (_outerItem, _innerItem, _outerIndex, _innerIndex, context) => ({
                     output: {},
                     context
                 })

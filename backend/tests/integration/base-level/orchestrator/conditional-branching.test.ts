@@ -346,7 +346,7 @@ describe("Conditional Branching", () => {
 
             for (const testCase of testCases) {
                 context = storeNodeOutput(context, `Test_${String(testCase.value)}`, {
-                    conditionValue: testCase.value,
+                    conditionValue: testCase.value ?? null,
                     booleanResult: Boolean(testCase.value)
                 });
 

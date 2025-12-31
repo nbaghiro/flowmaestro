@@ -8,8 +8,9 @@
  * - Metadata tracking
  */
 
-import { ContextSnapshot, JsonObject } from "@flowmaestro/shared";
+import type { JsonObject } from "@flowmaestro/shared";
 import { createContext, storeNodeOutput } from "../../../src/temporal/core/services/context";
+import type { ContextSnapshot } from "../../../src/temporal/core/types";
 
 // Constants
 const KB = 1024;
