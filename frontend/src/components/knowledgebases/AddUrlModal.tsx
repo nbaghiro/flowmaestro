@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { Button } from "../common/Button";
+import { Dialog } from "../common/Dialog";
 import { Input } from "../common/Input";
 
 interface AddUrlModalProps {
@@ -11,8 +13,6 @@ interface AddUrlModalProps {
 export function AddUrlModal({ isOpen, onClose, onSubmit, isLoading }: AddUrlModalProps) {
     const [urlInput, setUrlInput] = useState("");
     const [urlNameInput, setUrlNameInput] = useState("");
-
-    if (!isOpen) return null;
 
     const handleSubmit = async () => {
         if (!urlInput.trim()) return;
@@ -28,52 +28,54 @@ export function AddUrlModal({ isOpen, onClose, onSubmit, isLoading }: AddUrlModa
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-card rounded-lg p-6 w-full max-w-md">
-                <h2 className="text-lg font-semibold mb-4">Add from URL</h2>
-
-                <div className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium mb-1">URL *</label>
-                        <Input
-                            type="url"
-                            value={urlInput}
-                            onChange={(e) => setUrlInput(e.target.value)}
-                            placeholder="https://example.com/article"
-                            className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20"
-                            autoFocus
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium mb-1">Name (optional)</label>
-                        <Input
-                            type="text"
-                            value={urlNameInput}
-                            onChange={(e) => setUrlNameInput(e.target.value)}
-                            placeholder="Article Name"
-                            className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20"
-                        />
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-2 mt-6">
-                    <button
-                        onClick={handleClose}
-                        className="flex-1 px-4 py-2 border border-border rounded-lg hover:bg-muted transition-colors"
-                        disabled={isLoading}
-                    >
+        <Dialog
+            isOpen={isOpen}
+            onClose={handleClose}
+            title="Add from URL"
+            size="md"
+            closeOnBackdropClick={!isLoading}
+            footer={
+                <div className="flex items-center gap-3 justify-end">
+                    <Button variant="ghost" onClick={handleClose} disabled={isLoading}>
                         Cancel
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                        variant="primary"
                         onClick={handleSubmit}
                         disabled={!urlInput.trim() || isLoading}
-                        className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        loading={isLoading}
                     >
                         {isLoading ? "Adding..." : "Add URL"}
-                    </button>
+                    </Button>
+                </div>
+            }
+        >
+            <div className="space-y-4">
+                <div>
+                    <label className="block text-sm font-medium text-foreground mb-1.5">
+                        URL <span className="text-red-500">*</span>
+                    </label>
+                    <Input
+                        type="url"
+                        value={urlInput}
+                        onChange={(e) => setUrlInput(e.target.value)}
+                        placeholder="https://example.com/article"
+                        autoFocus
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-foreground mb-1.5">
+                        Name (optional)
+                    </label>
+                    <Input
+                        type="text"
+                        value={urlNameInput}
+                        onChange={(e) => setUrlNameInput(e.target.value)}
+                        placeholder="Article Name"
+                    />
                 </div>
             </div>
-        </div>
+        </Dialog>
     );
 }

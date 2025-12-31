@@ -33,25 +33,25 @@ export function ConfirmDialog({
     };
 
     return (
-        <Dialog isOpen={isOpen} onClose={onClose} title={title} maxWidth="sm">
+        <Dialog isOpen={isOpen} onClose={onClose} title={title} size="sm">
             <div className="space-y-4">
                 {/* Warning Icon for danger variant */}
                 {variant === "danger" && (
                     <div className="flex justify-center">
-                        <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
-                            <AlertTriangle className="w-6 h-6 text-red-600" />
+                        <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                            <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400" />
                         </div>
                     </div>
                 )}
 
                 {/* Message */}
-                <p className="text-sm text-gray-600 text-center">{message}</p>
+                <p className="text-sm text-muted-foreground text-center">{message}</p>
 
                 {/* Actions */}
                 <div className="flex gap-3 pt-2">
                     <button
                         onClick={onClose}
-                        className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-card border border-gray-300 rounded-lg hover:bg-muted/30 transition-colors"
+                        className="flex-1 px-4 py-2 text-sm font-medium text-foreground bg-card border border-border rounded-lg hover:bg-muted/30 transition-colors"
                     >
                         {cancelText}
                     </button>

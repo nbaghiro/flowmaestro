@@ -1,7 +1,7 @@
-import { X, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { useState } from "react";
 import { ALL_PROVIDERS, type Provider } from "@flowmaestro/shared";
-import { Button } from "../common/Button";
+import { Dialog } from "../common/Dialog";
 import { Input } from "../common/Input";
 import { NewConnectionDialog } from "./NewConnectionDialog";
 
@@ -79,77 +79,58 @@ export function AddProviderDialog({ isOpen, onClose, onProviderAdded }: AddProvi
         onClose();
     };
 
-    if (!isOpen) return null;
-
     return (
         <>
-            <div className="fixed inset-0 !m-0 z-50 flex items-center justify-center">
-                {/* Backdrop */}
-                <div
-                    className="absolute inset-0 !m-0 bg-black/50 backdrop-blur-sm"
-                    onClick={onClose}
-                />
-
-                {/* Dialog */}
-                <div className="relative bg-card border border-border rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col animate-in fade-in zoom-in-95 duration-200">
-                    {/* Header */}
-                    <div className="flex items-center justify-between p-6 pb-4 border-b border-gray-200">
-                        <div>
-                            <h2 className="text-lg font-semibold text-gray-900">
-                                Connect Integration
-                            </h2>
-                            <p className="text-sm text-gray-600 mt-1">
-                                Choose a provider to connect to your workflow
-                            </p>
-                        </div>
-                        <Button variant="icon" onClick={onClose}>
-                            <X className="w-5 h-5" />
-                        </Button>
-                    </div>
-
-                    {/* Search */}
-                    <div className="p-6 pb-4">
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none z-10" />
-                            <Input
-                                type="text"
-                                placeholder="Search providers..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-10"
-                            />
-                        </div>
-                    </div>
-
-                    {/* Content */}
-                    <div className="flex-1 overflow-y-auto p-6 pt-2">
-                        {filteredProviders.length === 0 ? (
-                            <div className="text-center py-12">
-                                <p className="text-sm text-gray-600">No providers found</p>
-                            </div>
-                        ) : (
-                            <div className="space-y-8">
-                                {providersByCategory.map((category) => (
-                                    <section key={category.name}>
-                                        <h3 className="text-sm font-semibold text-gray-900 mb-3">
-                                            {category.name}
-                                        </h3>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                            {category.providers.map((provider) => (
-                                                <ProviderCard
-                                                    key={provider.provider}
-                                                    provider={provider}
-                                                    onClick={() => handleProviderClick(provider)}
-                                                />
-                                            ))}
-                                        </div>
-                                    </section>
-                                ))}
-                            </div>
-                        )}
+            <Dialog
+                isOpen={isOpen}
+                onClose={onClose}
+                title="Connect Integration"
+                description="Choose a provider to connect to your workflow"
+                size="4xl"
+                maxHeight="90vh"
+            >
+                {/* Search */}
+                <div className="mb-4">
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none z-10" />
+                        <Input
+                            type="text"
+                            placeholder="Search providers..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-10"
+                        />
                     </div>
                 </div>
-            </div>
+
+                {/* Content */}
+                <div className="min-h-[300px]">
+                    {filteredProviders.length === 0 ? (
+                        <div className="text-center py-12">
+                            <p className="text-sm text-muted-foreground">No providers found</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-8">
+                            {providersByCategory.map((category) => (
+                                <section key={category.name}>
+                                    <h3 className="text-sm font-semibold text-foreground mb-3">
+                                        {category.name}
+                                    </h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        {category.providers.map((provider) => (
+                                            <ProviderCard
+                                                key={provider.provider}
+                                                provider={provider}
+                                                onClick={() => handleProviderClick(provider)}
+                                            />
+                                        ))}
+                                    </div>
+                                </section>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </Dialog>
 
             {/* New Connection Dialog */}
             {selectedProvider && (
@@ -187,7 +168,7 @@ function ProviderCard({ provider, onClick }: ProviderCardProps) {
     return (
         <button
             onClick={onClick}
-            className="flex items-start gap-3 p-4 text-left border border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all"
+            className="flex items-start gap-3 p-4 text-left border border-border rounded-lg hover:border-primary/50 hover:bg-accent transition-all bg-card"
             type="button"
         >
             {/* Logo */}
@@ -201,10 +182,10 @@ function ProviderCard({ provider, onClick }: ProviderCardProps) {
 
             {/* Content */}
             <div className="flex-1 min-w-0">
-                <h4 className="font-medium text-sm text-gray-900 mb-1 truncate">
+                <h4 className="font-medium text-sm text-foreground mb-1 truncate">
                     {provider.displayName}
                 </h4>
-                <p className="text-xs text-gray-600 line-clamp-2">{provider.description}</p>
+                <p className="text-xs text-muted-foreground line-clamp-2">{provider.description}</p>
             </div>
         </button>
     );

@@ -373,7 +373,7 @@ export function AIChatPanel({ workflowId }: AIChatPanelProps) {
     return (
         <div className="fixed top-0 right-0 bottom-0 z-50">
             <div
-                className="h-full bg-background border-l border-border shadow-2xl flex flex-col"
+                className="h-full bg-card border-l border-border shadow-2xl flex flex-col"
                 style={{ width: panelWidth }}
             >
                 {/* Resize Handle */}

@@ -1,7 +1,7 @@
-import { X } from "lucide-react";
 import { useState } from "react";
 import { Alert } from "../common/Alert";
 import { Button } from "../common/Button";
+import { Dialog } from "../common/Dialog";
 import { Input } from "../common/Input";
 
 interface CustomMCPServer {
@@ -76,95 +76,76 @@ export function AddCustomMCPDialog({ isOpen, onClose, onAdd }: AddCustomMCPDialo
         }
     };
 
-    if (!isOpen) return null;
-
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-            <div className="bg-card border border-border rounded-lg shadow-xl w-full max-w-md mx-4">
-                {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b border-border">
-                    <h3 className="text-lg font-semibold text-foreground">
-                        Connect Custom MCP Server
-                    </h3>
-                    <Button variant="icon" onClick={handleClose} disabled={isAdding}>
-                        <X className="w-5 h-5" />
-                    </Button>
+        <Dialog
+            isOpen={isOpen}
+            onClose={handleClose}
+            title="Connect Custom MCP Server"
+            size="md"
+            closeOnBackdropClick={!isAdding}
+        >
+            <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Error */}
+                {error && <Alert variant="error">{error}</Alert>}
+
+                {/* Server Name */}
+                <div>
+                    <label className="block text-sm font-medium text-foreground mb-2">
+                        Server Name
+                    </label>
+                    <Input
+                        type="text"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="My Custom MCP Server"
+                        disabled={isAdding}
+                    />
                 </div>
 
-                {/* Form */}
-                <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                    {/* Error */}
-                    {error && <Alert variant="error">{error}</Alert>}
+                {/* Server URL */}
+                <div>
+                    <label className="block text-sm font-medium text-foreground mb-2">
+                        Server URL
+                    </label>
+                    <Input
+                        type="url"
+                        value={url}
+                        onChange={(e) => setUrl(e.target.value)}
+                        placeholder="https://mcp.example.com"
+                        disabled={isAdding}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                        HTTP/HTTPS endpoint where your MCP server is hosted
+                    </p>
+                </div>
 
-                    {/* Server Name */}
-                    <div>
-                        <label className="block text-sm font-medium text-foreground mb-2">
-                            Server Name
-                        </label>
-                        <Input
-                            type="text"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            placeholder="My Custom MCP Server"
-                            disabled={isAdding}
-                        />
-                    </div>
+                {/* API Key (Optional) */}
+                <div>
+                    <label className="block text-sm font-medium text-foreground mb-2">
+                        API Key / Token (optional)
+                    </label>
+                    <Input
+                        type="password"
+                        value={apiKey}
+                        onChange={(e) => setApiKey(e.target.value)}
+                        placeholder="••••••••••••••••"
+                        disabled={isAdding}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                        Authentication credentials if required by your server
+                    </p>
+                </div>
 
-                    {/* Server URL */}
-                    <div>
-                        <label className="block text-sm font-medium text-foreground mb-2">
-                            Server URL
-                        </label>
-                        <Input
-                            type="url"
-                            value={url}
-                            onChange={(e) => setUrl(e.target.value)}
-                            placeholder="https://mcp.example.com"
-                            disabled={isAdding}
-                        />
-                        <p className="text-xs text-muted-foreground mt-1">
-                            HTTP/HTTPS endpoint where your MCP server is hosted
-                        </p>
-                    </div>
-
-                    {/* API Key (Optional) */}
-                    <div>
-                        <label className="block text-sm font-medium text-foreground mb-2">
-                            API Key / Token (optional)
-                        </label>
-                        <Input
-                            type="password"
-                            value={apiKey}
-                            onChange={(e) => setApiKey(e.target.value)}
-                            placeholder="••••••••••••••••"
-                            disabled={isAdding}
-                        />
-                        <p className="text-xs text-muted-foreground mt-1">
-                            Authentication credentials if required by your server
-                        </p>
-                    </div>
-
-                    {/* Footer */}
-                    <div className="flex items-center justify-end gap-3 pt-4">
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            onClick={handleClose}
-                            disabled={isAdding}
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            type="submit"
-                            variant="primary"
-                            disabled={isAdding}
-                            loading={isAdding}
-                        >
-                            {isAdding ? "Connecting..." : "Connect Server"}
-                        </Button>
-                    </div>
-                </form>
-            </div>
-        </div>
+                {/* Footer */}
+                <div className="flex items-center justify-end gap-3 pt-4">
+                    <Button type="button" variant="ghost" onClick={handleClose} disabled={isAdding}>
+                        Cancel
+                    </Button>
+                    <Button type="submit" variant="primary" disabled={isAdding} loading={isAdding}>
+                        {isAdding ? "Connecting..." : "Connect Server"}
+                    </Button>
+                </div>
+            </form>
+        </Dialog>
     );
 }

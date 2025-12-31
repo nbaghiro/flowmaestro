@@ -351,12 +351,12 @@ export function NewConnectionDialog({
         <div className="fixed inset-0 !m-0 z-50 flex items-center justify-center">
             {/* Backdrop */}
             <div
-                className="absolute inset-0 !m-0 bg-black/50 backdrop-blur-sm"
+                className="absolute inset-0 !m-0 bg-black/60 backdrop-blur-sm"
                 onClick={handleClose}
             />
 
             {/* Dialog */}
-            <div className="relative bg-card border border-border rounded-lg shadow-xl max-w-2xl w-full mx-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="relative bg-card border border-border/50 rounded-lg shadow-xl max-w-2xl w-full mx-4 animate-in fade-in zoom-in-95 duration-200">
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 pb-4 border-b border-border">
                     <div className="flex items-center gap-3">

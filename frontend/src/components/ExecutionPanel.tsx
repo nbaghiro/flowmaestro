@@ -196,7 +196,7 @@ export function ExecutionPanel({
                     "px-4 py-2 border rounded-lg shadow-lg transition-colors",
                     isDrawerOpen
                         ? "bg-primary text-primary-foreground border-primary hover:bg-primary/90"
-                        : "bg-background border-border hover:bg-muted"
+                        : "bg-card border-border hover:bg-muted"
                 )}
             >
                 <div className="flex items-center gap-2">
@@ -230,7 +230,7 @@ export function ExecutionPanel({
             <div className="fixed top-0 right-0 bottom-0 z-50">
                 <div
                     ref={drawerRef}
-                    className="h-full bg-background border-l border-border shadow-2xl flex flex-col"
+                    className="h-full bg-card border-l border-border shadow-2xl flex flex-col"
                     style={{ width: drawerWidth }}
                 >
                     {/* Resize Handle */}
@@ -325,7 +325,7 @@ export function ExecutionPanel({
                 <div className="fixed top-0 right-0 bottom-0 z-50">
                     <div
                         ref={drawerRef}
-                        className="h-full bg-background border-l border-border shadow-2xl flex flex-col"
+                        className="h-full bg-card border-l border-border shadow-2xl flex flex-col"
                         style={{ width: drawerWidth }}
                     >
                         {/* Resize Handle */}

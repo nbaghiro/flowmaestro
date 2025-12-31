@@ -148,7 +148,7 @@ export function AddConnectionDialog({
                       ? "Select a provider"
                       : `Configure ${providerLabels[provider] || "connection"}`
             }
-            maxWidth="lg"
+            size="lg"
         >
             {/* Step 1: Select Method */}
             {step === "method" && (

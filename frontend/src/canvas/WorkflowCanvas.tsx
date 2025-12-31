@@ -169,7 +169,7 @@ export function WorkflowCanvas({ onInit: onInitProp }: WorkflowCanvasProps) {
             style={{
                 width: "100%",
                 height: "100%",
-                backgroundColor: effectiveTheme === "dark" ? "#000000" : "#f9fafb"
+                backgroundColor: effectiveTheme === "dark" ? "#000000" : "#f2f2f2"
             }}
         >
             <Flow
@@ -196,7 +196,7 @@ export function WorkflowCanvas({ onInit: onInitProp }: WorkflowCanvasProps) {
                     variant={BackgroundVariant.Dots}
                     gap={12}
                     size={1}
-                    color={effectiveTheme === "dark" ? "#333" : "#aaa"}
+                    color={effectiveTheme === "dark" ? "#555" : "#aaa"}
                 />
                 <Controls />
                 <MiniMap
@@ -204,16 +204,16 @@ export function WorkflowCanvas({ onInit: onInitProp }: WorkflowCanvasProps) {
                     style={{
                         backgroundColor:
                             effectiveTheme === "dark"
-                                ? "rgba(0, 0, 0, 0.3)"
+                                ? "rgba(30, 30, 30, 0.8)"
                                 : "rgba(0, 0, 0, 0.05)",
                         border:
                             effectiveTheme === "dark"
-                                ? "1px solid rgba(255, 255, 255, 0.1)"
+                                ? "1px solid rgba(255, 255, 255, 0.15)"
                                 : "1px solid rgba(0, 0, 0, 0.1)"
                     }}
-                    nodeColor={effectiveTheme === "dark" ? "#555" : "#9ca3af"}
+                    nodeColor={effectiveTheme === "dark" ? "#666" : "#9ca3af"}
                     maskColor={
-                        effectiveTheme === "dark" ? "rgba(0, 0, 0, 0.6)" : "rgba(0, 0, 0, 0.1)"
+                        effectiveTheme === "dark" ? "rgba(0, 0, 0, 0.5)" : "rgba(0, 0, 0, 0.1)"
                     }
                 />
             </Flow>

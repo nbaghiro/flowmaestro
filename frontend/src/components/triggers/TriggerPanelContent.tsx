@@ -102,6 +102,7 @@ export function TriggerPanelContent({ workflowId }: TriggerPanelContentProps) {
             {/* Create Dialog */}
             {showCreateDialog && (
                 <CreateTriggerDialog
+                    isOpen={showCreateDialog}
                     workflowId={workflowId}
                     onClose={() => setShowCreateDialog(false)}
                     onSuccess={handleTriggerCreated}

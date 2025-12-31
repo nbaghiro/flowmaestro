@@ -1,4 +1,3 @@
-import { X } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import {
@@ -10,17 +9,27 @@ import {
     verifyTwoFactorCode,
     disableTwoFactor
 } from "../lib/api";
+import { Alert } from "./common/Alert";
+import { Button } from "./common/Button";
+import { Dialog } from "./common/Dialog";
 
 type User = NonNullable<ReturnType<typeof useAuth>["user"]>;
 
 interface AccountEditModalProps {
+    isOpen: boolean;
     mode: "profile" | "security";
     user: User;
     onClose: () => void;
     onUpdated?: () => void | Promise<void>;
 }
 
-export function AccountEditModal({ mode, user, onClose, onUpdated }: AccountEditModalProps) {
+export function AccountEditModal({
+    isOpen,
+    mode,
+    user,
+    onClose,
+    onUpdated
+}: AccountEditModalProps) {
     const [name, setName] = useState(user.name ?? "");
     const [email, setEmail] = useState(user.email ?? "");
     const [currentPassword, setCurrentPassword] = useState("");
@@ -278,29 +287,22 @@ export function AccountEditModal({ mode, user, onClose, onUpdated }: AccountEdit
     const isSecurity = mode === "security";
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-            <div className="w-full max-w-lg rounded-lg bg-card border border-border p-6 shadow-lg">
-                <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-semibold text-foreground">
-                        {isSecurity ? "Edit security" : "Edit profile"}
-                    </h2>
-                    <button
-                        onClick={onClose}
-                        className="p-1 rounded hover:bg-muted text-muted-foreground"
-                    >
-                        <X className="w-4 h-4" />
-                    </button>
-                </div>
-
+        <Dialog
+            isOpen={isOpen}
+            onClose={onClose}
+            title={isSecurity ? "Edit security" : "Edit profile"}
+            size="lg"
+        >
+            <div>
                 {error && (
-                    <div className="mb-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">
+                    <Alert variant="error" className="mb-3">
                         {error}
-                    </div>
+                    </Alert>
                 )}
                 {success && (
-                    <div className="mb-3 text-sm text-green-600 bg-green-50 border border-green-200 rounded px-3 py-2">
+                    <Alert variant="success" className="mb-3">
                         {success}
-                    </div>
+                    </Alert>
                 )}
 
                 {!isSecurity ? (
@@ -583,16 +585,13 @@ export function AccountEditModal({ mode, user, onClose, onUpdated }: AccountEdit
                         </div>
 
                         <div className="flex justify-end">
-                            <button
-                                onClick={onClose}
-                                className="px-3 py-2 text-sm rounded border border-border text-muted-foreground hover:bg-muted"
-                            >
+                            <Button variant="ghost" onClick={onClose}>
                                 Close
-                            </button>
+                            </Button>
                         </div>
                     </div>
                 )}
             </div>
-        </div>
+        </Dialog>
     );
 }

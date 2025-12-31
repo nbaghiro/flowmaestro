@@ -141,14 +141,14 @@ export function ProviderConnectionDialog({
             <div className="fixed inset-0 !m-0 z-50 flex items-center justify-center">
                 {/* Backdrop */}
                 <div
-                    className="absolute inset-0 !m-0 bg-black/50 backdrop-blur-sm"
+                    className="absolute inset-0 !m-0 bg-black/60 backdrop-blur-sm"
                     onClick={onClose}
                 />
 
                 {/* Dialog */}
                 <div
                     className={`
-                        relative bg-card border border-border rounded-lg shadow-xl w-full mx-4 max-h-[90vh] flex flex-col animate-in fade-in zoom-in-95 duration-200
+                        relative bg-card border border-border/50 rounded-lg shadow-xl w-full mx-4 max-h-[90vh] flex flex-col animate-in fade-in zoom-in-95 duration-200
                         ${view === "provider-list" ? "max-w-6xl" : "max-w-2xl"}
                     `}
                 >

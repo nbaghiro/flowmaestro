@@ -109,15 +109,15 @@ export function AgentTemplatePreviewDialog({
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
             {/* Dialog */}
-            <div className="relative bg-card dark:bg-card rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
+            <div className="relative bg-card rounded-2xl border border-border/50 shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
                 {/* Header */}
-                <div className="flex items-start justify-between p-6 border-b border-border dark:border-border">
+                <div className="flex items-start justify-between p-6 border-b border-border">
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-3 mb-2">
-                            <div className="w-10 h-10 rounded-lg bg-muted dark:bg-muted flex items-center justify-center">
-                                <Bot className="w-5 h-5 text-foreground dark:text-foreground" />
+                            <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
+                                <Bot className="w-5 h-5 text-foreground" />
                             </div>
-                            <h2 className="text-xl font-bold text-foreground dark:text-foreground truncate">
+                            <h2 className="text-xl font-bold text-foreground truncate">
                                 {template.name}
                             </h2>
                             <span
@@ -134,7 +134,7 @@ export function AgentTemplatePreviewDialog({
                                 </span>
                             )}
                         </div>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground dark:text-muted-foreground">
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
                             {template.author_name && (
                                 <span className="flex items-center gap-1.5">
                                     {template.author_avatar_url ? (
@@ -168,14 +168,14 @@ export function AgentTemplatePreviewDialog({
                 {/* Content - Split view */}
                 <div className="flex-1 flex overflow-hidden">
                     {/* Left - System Prompt Preview */}
-                    <div className="flex-1 border-r border-border dark:border-border overflow-y-auto">
+                    <div className="flex-1 border-r border-border overflow-y-auto">
                         <div className="p-6">
-                            <h3 className="text-sm font-semibold text-foreground dark:text-foreground mb-3 flex items-center gap-2">
-                                <Bot className="w-4 h-4 text-muted-foreground dark:text-muted-foreground" />
+                            <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                                <Bot className="w-4 h-4 text-muted-foreground" />
                                 System Prompt
                             </h3>
-                            <div className="bg-muted/30 dark:bg-muted rounded-xl p-4 border border-border dark:border-border">
-                                <pre className="text-sm text-foreground dark:text-foreground whitespace-pre-wrap font-mono leading-relaxed">
+                            <div className="bg-muted/30 rounded-xl p-4 border border-border">
+                                <pre className="text-sm text-foreground whitespace-pre-wrap font-mono leading-relaxed">
                                     {template.system_prompt}
                                 </pre>
                             </div>
@@ -187,10 +187,10 @@ export function AgentTemplatePreviewDialog({
                         {/* Description */}
                         {template.description && (
                             <div>
-                                <h3 className="text-sm font-semibold text-foreground dark:text-foreground mb-2">
+                                <h3 className="text-sm font-semibold text-foreground mb-2">
                                     Description
                                 </h3>
-                                <p className="text-sm text-muted-foreground dark:text-muted-foreground leading-relaxed">
+                                <p className="text-sm text-muted-foreground leading-relaxed">
                                     {template.description}
                                 </p>
                             </div>
@@ -198,42 +198,38 @@ export function AgentTemplatePreviewDialog({
 
                         {/* Model Configuration */}
                         <div>
-                            <h3 className="text-sm font-semibold text-foreground dark:text-foreground mb-3">
+                            <h3 className="text-sm font-semibold text-foreground mb-3">
                                 Model Configuration
                             </h3>
                             <div className="space-y-2">
-                                <div className="flex items-center justify-between p-3 bg-muted/30 dark:bg-muted rounded-lg">
-                                    <span className="text-sm text-muted-foreground dark:text-muted-foreground">
-                                        Provider
-                                    </span>
-                                    <span className="text-sm font-medium text-foreground dark:text-foreground">
+                                <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                                    <span className="text-sm text-muted-foreground">Provider</span>
+                                    <span className="text-sm font-medium text-foreground">
                                         {providerDisplayNames[template.provider] ||
                                             template.provider}
                                     </span>
                                 </div>
-                                <div className="flex items-center justify-between p-3 bg-muted/30 dark:bg-muted rounded-lg">
-                                    <span className="text-sm text-muted-foreground dark:text-muted-foreground">
-                                        Model
-                                    </span>
-                                    <span className="text-sm font-medium text-foreground dark:text-foreground text-right">
+                                <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                                    <span className="text-sm text-muted-foreground">Model</span>
+                                    <span className="text-sm font-medium text-foreground text-right">
                                         {findModelByValue(template.model)?.label || template.model}
                                     </span>
                                 </div>
-                                <div className="flex items-center justify-between p-3 bg-muted/30 dark:bg-muted rounded-lg">
-                                    <span className="text-sm text-muted-foreground dark:text-muted-foreground flex items-center gap-1">
+                                <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                                    <span className="text-sm text-muted-foreground flex items-center gap-1">
                                         <Thermometer className="w-3 h-3" />
                                         Temperature
                                     </span>
-                                    <span className="text-sm font-medium text-foreground dark:text-foreground">
+                                    <span className="text-sm font-medium text-foreground">
                                         {template.temperature}
                                     </span>
                                 </div>
-                                <div className="flex items-center justify-between p-3 bg-muted/30 dark:bg-muted rounded-lg">
-                                    <span className="text-sm text-muted-foreground dark:text-muted-foreground flex items-center gap-1">
+                                <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                                    <span className="text-sm text-muted-foreground flex items-center gap-1">
                                         <Hash className="w-3 h-3" />
                                         Max Tokens
                                     </span>
-                                    <span className="text-sm font-medium text-foreground dark:text-foreground">
+                                    <span className="text-sm font-medium text-foreground">
                                         {template.max_tokens.toLocaleString()}
                                     </span>
                                 </div>
@@ -243,16 +239,13 @@ export function AgentTemplatePreviewDialog({
                         {/* Available Tools */}
                         {template.available_tools.length > 0 && (
                             <div>
-                                <h3 className="text-sm font-semibold text-foreground dark:text-foreground mb-3 flex items-center gap-2">
+                                <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
                                     <Wrench className="w-4 h-4" />
                                     Recommended Tools ({template.available_tools.length})
                                 </h3>
                                 <div className="space-y-2">
                                     {template.available_tools.map((tool, index) => (
-                                        <div
-                                            key={index}
-                                            className="p-3 bg-muted/30 dark:bg-muted rounded-lg"
-                                        >
+                                        <div key={index} className="p-3 bg-muted/30 rounded-lg">
                                             <div className="flex items-center gap-2 mb-1">
                                                 {tool.provider ? (
                                                     <img
@@ -268,14 +261,14 @@ export function AgentTemplatePreviewDialog({
                                                 ) : (
                                                     <Wrench className="w-4 h-4 text-muted-foreground" />
                                                 )}
-                                                <span className="text-sm font-medium text-foreground dark:text-foreground">
+                                                <span className="text-sm font-medium text-foreground">
                                                     {tool.name}
                                                 </span>
-                                                <span className="text-xs px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 text-muted-foreground dark:text-muted-foreground rounded">
+                                                <span className="text-xs px-1.5 py-0.5 bg-muted text-muted-foreground rounded">
                                                     {tool.type}
                                                 </span>
                                             </div>
-                                            <p className="text-xs text-muted-foreground dark:text-muted-foreground line-clamp-2">
+                                            <p className="text-xs text-muted-foreground line-clamp-2">
                                                 {tool.description}
                                             </p>
                                         </div>
@@ -291,14 +284,14 @@ export function AgentTemplatePreviewDialog({
                         {/* Required Integrations */}
                         {template.required_integrations.length > 0 && (
                             <div>
-                                <h3 className="text-sm font-semibold text-foreground dark:text-foreground mb-3">
+                                <h3 className="text-sm font-semibold text-foreground mb-3">
                                     Required Integrations
                                 </h3>
                                 <div className="flex flex-wrap gap-2">
                                     {template.required_integrations.map((integration) => (
                                         <div
                                             key={integration}
-                                            className="inline-flex items-center gap-2 px-3 py-1.5 bg-muted dark:bg-muted rounded-lg"
+                                            className="inline-flex items-center gap-2 px-3 py-1.5 bg-muted rounded-lg"
                                         >
                                             <img
                                                 src={getIntegrationLogo(integration)}
@@ -309,7 +302,7 @@ export function AgentTemplatePreviewDialog({
                                                         "none";
                                                 }}
                                             />
-                                            <span className="text-sm text-foreground dark:text-foreground capitalize">
+                                            <span className="text-sm text-foreground capitalize">
                                                 {integration}
                                             </span>
                                         </div>
@@ -321,14 +314,12 @@ export function AgentTemplatePreviewDialog({
                         {/* Tags */}
                         {template.tags.length > 0 && (
                             <div>
-                                <h3 className="text-sm font-semibold text-foreground dark:text-foreground mb-3">
-                                    Tags
-                                </h3>
+                                <h3 className="text-sm font-semibold text-foreground mb-3">Tags</h3>
                                 <div className="flex flex-wrap gap-2">
                                     {template.tags.map((tag) => (
                                         <span
                                             key={tag}
-                                            className="px-2.5 py-1 bg-muted dark:bg-muted text-muted-foreground dark:text-muted-foreground rounded-full text-xs font-medium"
+                                            className="px-2.5 py-1 bg-muted text-muted-foreground rounded-full text-xs font-medium"
                                         >
                                             {tag}
                                         </span>
@@ -339,16 +330,16 @@ export function AgentTemplatePreviewDialog({
 
                         {/* Template ID */}
                         <div>
-                            <h3 className="text-sm font-semibold text-foreground dark:text-foreground mb-2">
+                            <h3 className="text-sm font-semibold text-foreground mb-2">
                                 Template ID
                             </h3>
                             <div className="flex items-center gap-2">
-                                <code className="flex-1 px-3 py-2 bg-muted dark:bg-muted text-muted-foreground dark:text-muted-foreground rounded-lg text-xs font-mono truncate">
+                                <code className="flex-1 px-3 py-2 bg-muted text-muted-foreground rounded-lg text-xs font-mono truncate">
                                     {template.id}
                                 </code>
                                 <button
                                     onClick={handleCopyId}
-                                    className="p-2 hover:bg-muted dark:hover:bg-muted rounded-lg transition-colors"
+                                    className="p-2 hover:bg-muted rounded-lg transition-colors"
                                     title="Copy template ID"
                                 >
                                     {copied ? (
@@ -363,8 +354,8 @@ export function AgentTemplatePreviewDialog({
                 </div>
 
                 {/* Footer */}
-                <div className="p-4 border-t border-border dark:border-border flex items-center justify-between gap-4 bg-muted/30 dark:bg-card">
-                    <div className="text-xs text-muted-foreground dark:text-muted-foreground">
+                <div className="p-4 border-t border-border flex items-center justify-between gap-4 bg-muted/30">
+                    <div className="text-xs text-muted-foreground">
                         Updated {new Date(template.updated_at).toLocaleDateString()}
                     </div>
                     <div className="flex items-center gap-3">

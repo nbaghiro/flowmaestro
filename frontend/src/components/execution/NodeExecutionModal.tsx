@@ -76,8 +76,8 @@ export function NodeExecutionModal({
             default:
                 return {
                     icon: <AlertCircle className="w-5 h-5" />,
-                    color: "text-gray-500",
-                    bg: "bg-muted/30 dark:bg-gray-900/20",
+                    color: "text-muted-foreground",
+                    bg: "bg-muted/30",
                     label: "Idle"
                 };
         }
@@ -102,7 +102,7 @@ export function NodeExecutionModal({
     return (
         <>
             {/* Backdrop */}
-            <div className="fixed inset-0 bg-black/50 z-50" onClick={onClose} />
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50" onClick={onClose} />
 
             {/* Modal */}
             <div
@@ -112,7 +112,7 @@ export function NodeExecutionModal({
                 )}
             >
                 <div
-                    className="bg-background border border-border rounded-lg shadow-2xl max-w-3xl w-full max-h-[80vh] overflow-hidden flex flex-col pointer-events-auto"
+                    className="bg-card border border-border/50 rounded-lg shadow-2xl max-w-3xl w-full max-h-[80vh] overflow-hidden flex flex-col pointer-events-auto"
                     style={getModalStyle()}
                     onClick={(e) => e.stopPropagation()}
                 >

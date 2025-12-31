@@ -259,6 +259,7 @@ export function Account() {
 
             {activeEditModal && user && (
                 <AccountEditModal
+                    isOpen={!!activeEditModal}
                     mode={activeEditModal}
                     user={user}
                     onClose={() => setActiveEditModal(null)}

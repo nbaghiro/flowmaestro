@@ -12,7 +12,7 @@ export function AIAskButton() {
                 "px-4 py-2 border rounded-lg shadow-lg transition-colors",
                 isPanelOpen
                     ? "bg-primary text-primary-foreground border-primary hover:bg-primary/90"
-                    : "bg-background border-border hover:bg-muted"
+                    : "bg-card border-border hover:bg-muted"
             )}
             title="AI Workflow Assistant (Cmd+K)"
         >

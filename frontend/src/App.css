@@ -43,7 +43,7 @@ input:-webkit-autofill::first-line {
 
 @layer base {
     :root {
-        --background: 0 0% 100%;
+        --background: 0 0% 95%;
         --foreground: 222.2 84% 4.9%;
         --card: 0 0% 100%;
         --card-foreground: 222.2 84% 4.9%;
@@ -51,26 +51,26 @@ input:-webkit-autofill::first-line {
         --popover-foreground: 222.2 84% 4.9%;
         --primary: 222.2 47.4% 11.2%;
         --primary-foreground: 210 40% 98%;
-        --secondary: 210 40% 96.1%;
+        --secondary: 0 0% 93%;
         --secondary-foreground: 222.2 47.4% 11.2%;
-        --muted: 210 40% 96.1%;
-        --muted-foreground: 215.4 16.3% 46.9%;
-        --accent: 210 40% 96.1%;
+        --muted: 0 0% 93%;
+        --muted-foreground: 0 0% 45%;
+        --accent: 0 0% 93%;
         --accent-foreground: 222.2 47.4% 11.2%;
         --destructive: 0 84.2% 60.2%;
         --destructive-foreground: 210 40% 98%;
-        --border: 214.3 31.8% 91.4%;
-        --input: 214.3 31.8% 91.4%;
+        --border: 0 0% 88%;
+        --input: 0 0% 88%;
         --ring: 222.2 84% 4.9%;
         --radius: 0.5rem;
     }
 
     .dark {
-        --background: 0 0% 6%;
+        --background: 0 0% 9%;
         --foreground: 0 0% 100%;
-        --card: 0 0% 4%;
+        --card: 0 0% 9%;
         --card-foreground: 0 0% 100%;
-        --popover: 0 0% 6%;
+        --popover: 0 0% 9%;
         --popover-foreground: 0 0% 100%;
         --primary: 0 0% 100%;
         --primary-foreground: 0 0% 4%;
@@ -78,7 +78,7 @@ input:-webkit-autofill::first-line {
         --secondary-foreground: 0 0% 100%;
         --muted: 0 0% 15%;
         --muted-foreground: 0 0% 65%;
-        --accent: 0 0% 20%;
+        --accent: 0 0% 18%;
         --accent-foreground: 0 0% 100%;
         --destructive: 0 84% 60%;
         --destructive-foreground: 0 0% 100%;
@@ -98,6 +98,14 @@ input:-webkit-autofill::first-line {
 }
 
 /* React Flow Custom Styles */
+.react-flow {
+    background-color: hsl(var(--background));
+}
+
+.dark .react-flow {
+    background-color: hsl(0 0% 12%);
+}
+
 .react-flow__node {
     @apply cursor-pointer;
 }
@@ -161,7 +169,7 @@ input:-webkit-autofill::first-line {
 }
 
 .dark .react-flow__edge-path {
-    stroke: #4b5563; /* gray-600 */
+    stroke: #6b7280; /* gray-500 */
 }
 
 .react-flow__edge.selected .react-flow__edge-path {

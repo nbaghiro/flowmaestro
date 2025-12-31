@@ -1,5 +1,7 @@
 import { Send, Loader2, Bot, User, Wrench, CheckCircle2, XCircle, Eye } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import * as api from "../../lib/api";
 import { streamAgentExecution } from "../../lib/api";
 import { logger } from "../../lib/logger";
@@ -464,12 +466,77 @@ export function AgentChat({ agent }: AgentChatProps) {
                                                 ? "bg-primary text-primary-foreground"
                                                 : message.role === "system"
                                                   ? "bg-muted/50 text-muted-foreground text-sm italic"
-                                                  : "bg-muted text-foreground"
+                                                  : "bg-card border border-border text-foreground"
                                         )}
                                     >
-                                        <div className="whitespace-pre-wrap break-words">
-                                            {message.content}
-                                        </div>
+                                        {message.role === "assistant" ? (
+                                            <div className="text-sm prose prose-sm max-w-none dark:prose-invert">
+                                                <ReactMarkdown
+                                                    remarkPlugins={[remarkGfm]}
+                                                    components={{
+                                                        h1: ({ children }) => (
+                                                            <h1 className="text-lg font-bold mt-4 mb-2 pb-2 border-b border-border">
+                                                                {children}
+                                                            </h1>
+                                                        ),
+                                                        h2: ({ children }) => (
+                                                            <h2 className="text-base font-bold mt-3 mb-2 pb-1 border-b border-border">
+                                                                {children}
+                                                            </h2>
+                                                        ),
+                                                        h3: ({ children }) => (
+                                                            <h3 className="text-sm font-bold mt-2 mb-1">
+                                                                {children}
+                                                            </h3>
+                                                        ),
+                                                        ul: ({ children }) => (
+                                                            <ul className="list-disc list-inside my-2 space-y-1">
+                                                                {children}
+                                                            </ul>
+                                                        ),
+                                                        ol: ({ children }) => (
+                                                            <ol className="list-decimal list-inside my-2 space-y-1">
+                                                                {children}
+                                                            </ol>
+                                                        ),
+                                                        li: ({ children }) => (
+                                                            <li className="ml-2">{children}</li>
+                                                        ),
+                                                        p: ({ children }) => (
+                                                            <p className="my-1.5">{children}</p>
+                                                        ),
+                                                        strong: ({ children }) => (
+                                                            <strong className="font-semibold">
+                                                                {children}
+                                                            </strong>
+                                                        ),
+                                                        code: ({ children, className }) => {
+                                                            const isInline = !className;
+                                                            return isInline ? (
+                                                                <code className="px-1.5 py-0.5 rounded bg-muted-foreground/10 text-foreground font-mono text-xs">
+                                                                    {children}
+                                                                </code>
+                                                            ) : (
+                                                                <code className="block px-3 py-2 rounded bg-muted-foreground/10 text-foreground font-mono text-xs overflow-x-auto">
+                                                                    {children}
+                                                                </code>
+                                                            );
+                                                        },
+                                                        blockquote: ({ children }) => (
+                                                            <blockquote className="border-l-2 border-primary pl-3 italic my-2">
+                                                                {children}
+                                                            </blockquote>
+                                                        )
+                                                    }}
+                                                >
+                                                    {message.content}
+                                                </ReactMarkdown>
+                                            </div>
+                                        ) : (
+                                            <div className="whitespace-pre-wrap break-words">
+                                                {message.content}
+                                            </div>
+                                        )}
                                     </div>
                                     {message.role === "user" && (
                                         <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
@@ -540,7 +607,7 @@ export function AgentChat({ agent }: AgentChatProps) {
                                 <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
                                     <Bot className="w-4 h-4 text-primary" />
                                 </div>
-                                <div className="bg-muted text-foreground rounded-lg px-4 py-3">
+                                <div className="bg-card border border-border text-foreground rounded-lg px-4 py-3">
                                     <Loader2 className="w-4 h-4 animate-spin" />
                                 </div>
                             </div>

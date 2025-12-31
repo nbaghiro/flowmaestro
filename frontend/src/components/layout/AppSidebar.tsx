@@ -56,7 +56,7 @@ export function AppSidebar() {
     return (
         <aside
             className={cn(
-                "h-screen bg-background border-r border-border flex flex-col transition-all duration-300 overflow-x-hidden",
+                "h-screen bg-card border-r border-border flex flex-col transition-all duration-300 overflow-x-hidden",
                 isCollapsed ? "w-16" : "w-60"
             )}
         >

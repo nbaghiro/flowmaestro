@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { Button } from "../common/Button";
+import { Dialog } from "../common/Dialog";
 import { Input } from "../common/Input";
 import { Textarea } from "../common/Textarea";
 
@@ -16,8 +18,6 @@ export function CreateKnowledgeBaseModal({
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
-
-    if (!isOpen) return null;
 
     const handleSubmit = async () => {
         if (!name.trim()) return;
@@ -39,52 +39,53 @@ export function CreateKnowledgeBaseModal({
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-card rounded-lg p-6 w-full max-w-md">
-                <h2 className="text-lg font-semibold mb-4">Create Knowledge Base</h2>
-
-                <div className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium mb-1">Name *</label>
-                        <Input
-                            type="text"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            placeholder="My Knowledge Base"
-                            className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20"
-                            autoFocus
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium mb-1">Description</label>
-                        <Textarea
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                            placeholder="What is this knowledge base for?"
-                            rows={3}
-                            className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
-                        />
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-2 mt-6">
-                    <button
-                        onClick={handleClose}
-                        className="flex-1 px-4 py-2 border border-border rounded-lg hover:bg-muted transition-colors"
-                        disabled={isSubmitting}
-                    >
+        <Dialog
+            isOpen={isOpen}
+            onClose={handleClose}
+            title="Create Knowledge Base"
+            size="md"
+            footer={
+                <div className="flex items-center gap-3 justify-end">
+                    <Button variant="ghost" onClick={handleClose} disabled={isSubmitting}>
                         Cancel
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                        variant="primary"
                         onClick={handleSubmit}
                         disabled={!name.trim() || isSubmitting}
-                        className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        loading={isSubmitting}
                     >
                         {isSubmitting ? "Creating..." : "Create"}
-                    </button>
+                    </Button>
+                </div>
+            }
+        >
+            <div className="space-y-4">
+                <div>
+                    <label className="block text-sm font-medium text-foreground mb-1.5">
+                        Name <span className="text-red-500">*</span>
+                    </label>
+                    <Input
+                        type="text"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="My Knowledge Base"
+                        autoFocus
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-foreground mb-1.5">
+                        Description
+                    </label>
+                    <Textarea
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        placeholder="What is this knowledge base for?"
+                        rows={3}
+                    />
                 </div>
             </div>
-        </div>
+        </Dialog>
     );
 }

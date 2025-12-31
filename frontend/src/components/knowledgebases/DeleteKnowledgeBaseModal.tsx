@@ -1,4 +1,5 @@
-import { Loader2 } from "lucide-react";
+import { Button } from "../common/Button";
+import { Dialog } from "../common/Dialog";
 
 interface DeleteKnowledgeBaseModalProps {
     isOpen: boolean;
@@ -15,41 +16,35 @@ export function DeleteKnowledgeBaseModal({
     isLoading,
     knowledgeBaseName
 }: DeleteKnowledgeBaseModalProps) {
-    if (!isOpen) return null;
-
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-card rounded-lg p-6 w-full max-w-md">
-                <h2 className="text-lg font-semibold mb-4">Delete Knowledge Base</h2>
-                <p className="text-muted-foreground mb-6">
-                    Are you sure you want to delete <strong>{knowledgeBaseName}</strong>? This
-                    action cannot be undone and will permanently delete all documents, chunks, and
-                    embeddings in this knowledge base.
-                </p>
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={onClose}
-                        className="flex-1 px-4 py-2 border border-border rounded-lg hover:bg-muted transition-colors"
-                        disabled={isLoading}
-                    >
+        <Dialog
+            isOpen={isOpen}
+            onClose={onClose}
+            title="Delete Knowledge Base"
+            size="md"
+            closeOnBackdropClick={!isLoading}
+            footer={
+                <div className="flex items-center gap-3 justify-end">
+                    <Button variant="ghost" onClick={onClose} disabled={isLoading}>
                         Cancel
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                        variant="destructive"
                         onClick={onConfirm}
                         disabled={isLoading}
-                        className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        loading={isLoading}
                     >
-                        {isLoading ? (
-                            <>
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                                Deleting...
-                            </>
-                        ) : (
-                            "Delete Knowledge Base"
-                        )}
-                    </button>
+                        {isLoading ? "Deleting..." : "Delete Knowledge Base"}
+                    </Button>
                 </div>
-            </div>
-        </div>
+            }
+        >
+            <p className="text-muted-foreground">
+                Are you sure you want to delete{" "}
+                <strong className="text-foreground">{knowledgeBaseName}</strong>? This action cannot
+                be undone and will permanently delete all documents, chunks, and embeddings in this
+                knowledge base.
+            </p>
+        </Dialog>
     );
 }

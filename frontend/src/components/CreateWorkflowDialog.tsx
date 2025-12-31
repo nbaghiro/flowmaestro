@@ -1,7 +1,8 @@
-import { X, Upload, FileJson, ChevronRight } from "lucide-react";
+import { Upload, FileJson, ChevronRight } from "lucide-react";
 import { useState, FormEvent } from "react";
 import { Alert } from "./common/Alert";
 import { Button } from "./common/Button";
+import { Dialog } from "./common/Dialog";
 import { Input } from "./common/Input";
 import { Textarea } from "./common/Textarea";
 import type { WorkflowDefinition } from "../lib/api";
@@ -194,208 +195,195 @@ export function CreateWorkflowDialog({ isOpen, onClose, onCreate }: CreateWorkfl
         }
     };
 
-    if (!isOpen) return null;
-
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div className="bg-card border border-border rounded-lg shadow-xl w-full max-w-md mx-4">
-                {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-                    <h2 className="text-lg font-semibold text-foreground">
-                        {showJsonImport ? "Import Workflow from JSON" : "Create New Workflow"}
-                    </h2>
-                    <Button variant="icon" onClick={handleClose} disabled={isCreating}>
-                        <X className="w-5 h-5" />
-                    </Button>
-                </div>
+        <Dialog
+            isOpen={isOpen}
+            onClose={handleClose}
+            title={showJsonImport ? "Import Workflow from JSON" : "Create New Workflow"}
+            size="md"
+            closeOnBackdropClick={!isCreating}
+        >
+            <form onSubmit={handleSubmit} className="space-y-4">
+                {error && <Alert variant="error">{error}</Alert>}
 
-                {/* Form */}
-                <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4">
-                    {error && <Alert variant="error">{error}</Alert>}
-
-                    {/* Show name/description fields only when NOT in import mode */}
-                    {!showJsonImport && (
-                        <>
-                            <div>
-                                <label
-                                    htmlFor="workflow-name"
-                                    className="block text-sm font-medium text-foreground mb-1.5"
-                                >
-                                    Workflow Name <span className="text-red-500">*</span>
-                                </label>
-                                <Input
-                                    id="workflow-name"
-                                    type="text"
-                                    value={name}
-                                    onChange={(e) => setName(e.target.value)}
-                                    placeholder="e.g., Customer Onboarding Flow"
-                                    required
-                                    maxLength={255}
-                                    disabled={isCreating}
-                                />
-                            </div>
-
-                            <div>
-                                <label
-                                    htmlFor="workflow-description"
-                                    className="block text-sm font-medium text-foreground mb-1.5"
-                                >
-                                    Description (optional)
-                                </label>
-                                <Textarea
-                                    id="workflow-description"
-                                    value={description}
-                                    onChange={(e) => setDescription(e.target.value)}
-                                    placeholder="Describe what this workflow does..."
-                                    rows={3}
-                                    maxLength={1000}
-                                    disabled={isCreating}
-                                />
-                                <p className="mt-1 text-xs text-muted-foreground">
-                                    {description.length}/1000 characters
-                                </p>
-                            </div>
-
-                            <div className="border-t border-border pt-4">
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    onClick={() => setShowJsonImport(true)}
-                                    disabled={isCreating}
-                                    className="gap-2"
-                                >
-                                    <FileJson className="w-4 h-4" />
-                                    <span>Or import from JSON</span>
-                                    <ChevronRight className="w-4 h-4 ml-auto" />
-                                </Button>
-                            </div>
-                        </>
-                    )}
-
-                    {/* JSON Import Section */}
-                    {showJsonImport && (
+                {/* Show name/description fields only when NOT in import mode */}
+                {!showJsonImport && (
+                    <>
                         <div>
+                            <label
+                                htmlFor="workflow-name"
+                                className="block text-sm font-medium text-foreground mb-1.5"
+                            >
+                                Workflow Name <span className="text-red-500">*</span>
+                            </label>
+                            <Input
+                                id="workflow-name"
+                                type="text"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                placeholder="e.g., Customer Onboarding Flow"
+                                required
+                                maxLength={255}
+                                disabled={isCreating}
+                            />
+                        </div>
+
+                        <div>
+                            <label
+                                htmlFor="workflow-description"
+                                className="block text-sm font-medium text-foreground mb-1.5"
+                            >
+                                Description (optional)
+                            </label>
+                            <Textarea
+                                id="workflow-description"
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                                placeholder="Describe what this workflow does..."
+                                rows={3}
+                                maxLength={1000}
+                                disabled={isCreating}
+                            />
+                            <p className="mt-1 text-xs text-muted-foreground">
+                                {description.length}/1000 characters
+                            </p>
+                        </div>
+
+                        <div className="border-t border-border pt-4">
                             <Button
                                 type="button"
                                 variant="ghost"
-                                onClick={() => {
-                                    setShowJsonImport(false);
-                                    setJsonInput("");
-                                    setParsedWorkflow(null);
-                                    setError("");
-                                }}
+                                onClick={() => setShowJsonImport(true)}
                                 disabled={isCreating}
-                                className="gap-2 mb-4"
+                                className="gap-2"
                             >
-                                <ChevronRight className="w-4 h-4 rotate-180" />
-                                <span>Back to manual creation</span>
+                                <FileJson className="w-4 h-4" />
+                                <span>Or import from JSON</span>
+                                <ChevronRight className="w-4 h-4 ml-auto" />
                             </Button>
-                            <div className="mt-3 space-y-3">
-                                {/* File Upload */}
-                                <div>
-                                    <label className="flex items-center justify-center gap-2 px-4 py-2 border border-dashed border-border rounded-lg hover:border-primary hover:bg-primary/5 transition-colors cursor-pointer">
-                                        <Upload className="w-4 h-4 text-muted-foreground" />
-                                        <span className="text-sm text-muted-foreground">
-                                            Upload JSON file
-                                        </span>
-                                        <Input
-                                            type="file"
-                                            accept=".json"
-                                            onChange={handleFileUpload}
-                                            disabled={isCreating}
-                                            className="hidden"
-                                        />
-                                    </label>
-                                </div>
-
-                                <div className="flex items-center gap-2">
-                                    <div className="flex-1 border-t border-border"></div>
-                                    <span className="text-xs text-muted-foreground">OR</span>
-                                    <div className="flex-1 border-t border-border"></div>
-                                </div>
-
-                                {/* JSON Input */}
-                                <div>
-                                    <label
-                                        htmlFor="json-input"
-                                        className="block text-xs font-medium text-muted-foreground mb-1.5"
-                                    >
-                                        Paste JSON Definition
-                                    </label>
-                                    <Textarea
-                                        id="json-input"
-                                        value={jsonInput}
-                                        onChange={(e) => handleJsonChange(e.target.value)}
-                                        placeholder={
-                                            '{\n  "name": "My Workflow",\n  "nodes": {...},\n  "edges": [...],\n  "entryPoint": "..."\n}'
-                                        }
-                                        rows={6}
-                                        disabled={isCreating}
-                                        className="font-mono text-xs"
-                                    />
-                                    {parsedWorkflow && (
-                                        <div className="mt-2 space-y-2">
-                                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                                                <span className="flex items-center gap-1">
-                                                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                                    Valid
-                                                </span>
-                                                <span>
-                                                    {Object.keys(parsedWorkflow.nodes || {}).length}{" "}
-                                                    nodes
-                                                </span>
-                                                <span>
-                                                    {(parsedWorkflow.edges || []).length} edges
-                                                </span>
-                                            </div>
-                                            {parsedWorkflow.name && (
-                                                <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
-                                                    <p className="text-sm font-medium text-foreground mb-1">
-                                                        {parsedWorkflow.name}
-                                                    </p>
-                                                    {parsedWorkflow.description && (
-                                                        <p className="text-xs text-muted-foreground">
-                                                            {parsedWorkflow.description}
-                                                        </p>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
                         </div>
-                    )}
+                    </>
+                )}
 
-                    {/* Actions */}
-                    <div className="flex items-center justify-end gap-3 pt-2">
+                {/* JSON Import Section */}
+                {showJsonImport && (
+                    <div>
                         <Button
                             type="button"
                             variant="ghost"
-                            onClick={handleClose}
+                            onClick={() => {
+                                setShowJsonImport(false);
+                                setJsonInput("");
+                                setParsedWorkflow(null);
+                                setError("");
+                            }}
                             disabled={isCreating}
+                            className="gap-2 mb-4"
                         >
-                            Cancel
+                            <ChevronRight className="w-4 h-4 rotate-180" />
+                            <span>Back to manual creation</span>
                         </Button>
-                        <Button
-                            type="submit"
-                            variant="primary"
-                            disabled={
-                                isCreating || (showJsonImport ? !parsedWorkflow : !name.trim())
-                            }
-                            loading={isCreating}
-                        >
-                            {isCreating
-                                ? showJsonImport
-                                    ? "Importing..."
-                                    : "Creating..."
-                                : showJsonImport
-                                  ? "Import Workflow"
-                                  : "Create Workflow"}
-                        </Button>
+                        <div className="mt-3 space-y-3">
+                            {/* File Upload */}
+                            <div>
+                                <label className="flex items-center justify-center gap-2 px-4 py-2 border border-dashed border-border rounded-lg hover:border-primary hover:bg-primary/5 transition-colors cursor-pointer">
+                                    <Upload className="w-4 h-4 text-muted-foreground" />
+                                    <span className="text-sm text-muted-foreground">
+                                        Upload JSON file
+                                    </span>
+                                    <Input
+                                        type="file"
+                                        accept=".json"
+                                        onChange={handleFileUpload}
+                                        disabled={isCreating}
+                                        className="hidden"
+                                    />
+                                </label>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                                <div className="flex-1 border-t border-border"></div>
+                                <span className="text-xs text-muted-foreground">OR</span>
+                                <div className="flex-1 border-t border-border"></div>
+                            </div>
+
+                            {/* JSON Input */}
+                            <div>
+                                <label
+                                    htmlFor="json-input"
+                                    className="block text-xs font-medium text-muted-foreground mb-1.5"
+                                >
+                                    Paste JSON Definition
+                                </label>
+                                <Textarea
+                                    id="json-input"
+                                    value={jsonInput}
+                                    onChange={(e) => handleJsonChange(e.target.value)}
+                                    placeholder={
+                                        '{\n  "name": "My Workflow",\n  "nodes": {...},\n  "edges": [...],\n  "entryPoint": "..."\n}'
+                                    }
+                                    rows={6}
+                                    disabled={isCreating}
+                                    className="font-mono text-xs"
+                                />
+                                {parsedWorkflow && (
+                                    <div className="mt-2 space-y-2">
+                                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                            <span className="flex items-center gap-1">
+                                                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                                Valid
+                                            </span>
+                                            <span>
+                                                {Object.keys(parsedWorkflow.nodes || {}).length}{" "}
+                                                nodes
+                                            </span>
+                                            <span>{(parsedWorkflow.edges || []).length} edges</span>
+                                        </div>
+                                        {parsedWorkflow.name && (
+                                            <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
+                                                <p className="text-sm font-medium text-foreground mb-1">
+                                                    {parsedWorkflow.name}
+                                                </p>
+                                                {parsedWorkflow.description && (
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {parsedWorkflow.description}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     </div>
-                </form>
-            </div>
-        </div>
+                )}
+
+                {/* Actions */}
+                <div className="flex items-center justify-end gap-3 pt-2">
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={handleClose}
+                        disabled={isCreating}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        type="submit"
+                        variant="primary"
+                        disabled={isCreating || (showJsonImport ? !parsedWorkflow : !name.trim())}
+                        loading={isCreating}
+                    >
+                        {isCreating
+                            ? showJsonImport
+                                ? "Importing..."
+                                : "Creating..."
+                            : showJsonImport
+                              ? "Import Workflow"
+                              : "Create Workflow"}
+                    </Button>
+                </div>
+            </form>
+        </Dialog>
     );
 }
