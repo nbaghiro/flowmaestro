@@ -20,9 +20,9 @@ import {
     markSkipped,
     isExecutionComplete,
     getExecutionSummary
-} from "../../../src/temporal/core/services/context";
-import { deepCloneContext } from "../../fixtures/contexts";
-import { createConditionalWorkflow, createComplexWorkflow } from "../../fixtures/workflows";
+} from "../../../../src/temporal/core/services/context";
+import { deepCloneContext } from "../../../fixtures/contexts";
+import { createConditionalWorkflow, createComplexWorkflow } from "../../../fixtures/workflows";
 
 describe("Conditional Branching", () => {
     describe("branch selection", () => {

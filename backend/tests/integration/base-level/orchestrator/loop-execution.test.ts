@@ -19,13 +19,13 @@ import {
     markCompleted,
     resetNodeForIteration,
     resetNodesForIteration
-} from "../../../src/temporal/core/services/context";
+} from "../../../../src/temporal/core/services/context";
 import {
     createLoopState,
     createLoopStateWithResults,
     deepCloneContext
-} from "../../fixtures/contexts";
-import { createLoopWorkflow, createLinearWorkflow } from "../../fixtures/workflows";
+} from "../../../fixtures/contexts";
+import { createLoopWorkflow, createLinearWorkflow } from "../../../fixtures/workflows";
 
 describe("Loop Execution", () => {
     describe("iteration state", () => {

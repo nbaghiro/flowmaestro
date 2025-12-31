@@ -24,14 +24,14 @@ import {
     canContinue,
     getExecutionSummary,
     getNodeState
-} from "../../../src/temporal/core/services/context";
-import { deepCloneContext } from "../../fixtures/contexts";
+} from "../../../../src/temporal/core/services/context";
+import { deepCloneContext } from "../../../fixtures/contexts";
 import {
     createLinearWorkflow,
     createDiamondWorkflow,
     createErrorCascadeWorkflow,
     createComplexWorkflow
-} from "../../fixtures/workflows";
+} from "../../../fixtures/workflows";
 
 describe("Error Propagation", () => {
     describe("node failure", () => {

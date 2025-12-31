@@ -15,8 +15,8 @@ import {
     storeNodeOutput,
     setVariable,
     interpolateString
-} from "../../../src/temporal/core/services/context";
-import type { ContextSnapshot } from "../../../src/temporal/core/types";
+} from "../../../../src/temporal/core/services/context";
+import type { ContextSnapshot } from "../../../../src/temporal/core/types";
 
 // Mock types matching the HTTP handler
 interface MockHTTPConfig {

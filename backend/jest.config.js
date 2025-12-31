@@ -1,24 +1,15 @@
 /**
  * Jest configuration for Temporal workflow tests
- * Unit tests run without infrastructure dependencies
- * Integration tests require Temporal, PostgreSQL, and Redis
+ *
+ * Uses projects to separate unit and integration tests:
+ * - Unit tests: Fast, no infrastructure dependencies
+ * - Integration tests: Full workflow testing with mocked activities
  */
-module.exports = {
+
+const baseConfig = {
     preset: "ts-jest",
     testEnvironment: "node",
-    roots: ["<rootDir>/tests"],
-    testMatch: ["**/tests/**/*.test.ts"],
     moduleFileExtensions: ["ts", "js", "json"],
-    collectCoverageFrom: [
-        "src/temporal/**/*.ts",
-        "!src/**/*.d.ts",
-        "!src/**/index.ts"
-    ],
-    coverageDirectory: "coverage",
-    coverageReporters: ["text", "lcov", "html"],
-    testTimeout: 10000,
-    maxWorkers: 4,
-    verbose: true,
     transform: {
         "^.+\\.ts$": [
             "ts-jest",
@@ -31,8 +22,35 @@ module.exports = {
         ]
     },
     transformIgnorePatterns: ["node_modules/(?!(nanoid)/)"],
-    // Mock nanoid to avoid ES module issues
     moduleNameMapper: {
         "^nanoid$": "<rootDir>/tests/__mocks__/nanoid.ts"
-    }
+    },
+    verbose: true
+};
+
+module.exports = {
+    ...baseConfig,
+    projects: [
+        {
+            ...baseConfig,
+            displayName: "unit",
+            testMatch: ["<rootDir>/tests/unit/**/*.test.ts"],
+            testTimeout: 10000
+        },
+        {
+            ...baseConfig,
+            displayName: "integration",
+            testMatch: ["<rootDir>/tests/integration/**/*.test.ts"],
+            setupFilesAfterEnv: ["<rootDir>/tests/integration/setup.ts"],
+            testTimeout: 30000
+        }
+    ],
+    collectCoverageFrom: [
+        "src/temporal/**/*.ts",
+        "!src/**/*.d.ts",
+        "!src/**/index.ts"
+    ],
+    coverageDirectory: "coverage",
+    coverageReporters: ["text", "lcov", "html"],
+    maxWorkers: 4
 };

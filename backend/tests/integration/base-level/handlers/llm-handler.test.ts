@@ -15,7 +15,7 @@ import {
     setVariable,
     interpolateString,
     getExecutionContext
-} from "../../../src/temporal/core/services/context";
+} from "../../../../src/temporal/core/services/context";
 
 interface MockLLMResponse {
     text: string;

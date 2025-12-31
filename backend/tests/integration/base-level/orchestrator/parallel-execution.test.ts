@@ -20,14 +20,14 @@ import {
     markFailed,
     isExecutionComplete,
     getExecutionSummary
-} from "../../../src/temporal/core/services/context";
-import { deepCloneContext, contextsAreEqual } from "../../fixtures/contexts";
+} from "../../../../src/temporal/core/services/context";
+import { deepCloneContext, contextsAreEqual } from "../../../fixtures/contexts";
 import {
     createDiamondWorkflow,
     createErrorCascadeWorkflow,
     createComplexWorkflow
-} from "../../fixtures/workflows";
-import type { ContextSnapshot } from "../../../src/temporal/core/types";
+} from "../../../fixtures/workflows";
+import type { ContextSnapshot } from "../../../../src/temporal/core/types";
 
 describe("Parallel Execution", () => {
     describe("context isolation", () => {

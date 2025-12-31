@@ -1,417 +1,540 @@
-# FlowMaestro Testing Strategy
+# FlowMaestro Integration Test Suite
 
 ## Overview
 
-FlowMaestro employs a comprehensive testing strategy that combines developer-focused integration tests with user-focused workflow execution tests. Tests use mocked external APIs, an in-memory database, and run entirely in CI without external dependencies, ensuring fast execution while validating realistic user scenarios.
+FlowMaestro has a comprehensive integration test suite with **746 tests across 28 test files**, organized into 8 logical phases. The tests use **mocked activities** rather than real Temporal execution to enable fast, deterministic testing while validating the core workflow engine logic.
 
----
+**Key Characteristics:**
 
-## Testing Philosophy
-
-### Focus on Real-World Scenarios
-
-FlowMaestro's testing approach prioritizes real-world usage patterns over code coverage metrics. Each test represents an actual workflow that users might build, ensuring that:
-
-- **Node types are validated** through practical use cases rather than isolated unit tests
-- **Tests serve as documentation** showing developers and users how workflows should be structured
-- **Execution speed remains high** since no external services are involved
-- **CI runs are reliable** without flaky network calls or rate limits
-
-### Progressive Complexity Approach
-
-Tests are designed in progressive phases that increase in complexity:
-
-```
-Phase 1 (Basic)
-  ↓ Learn: Basic execution, transforms, outputs
-Phase 2 (Intermediate)
-  ↓ Add: HTTP requests, parallel execution, error handling
-Phase 3 (Intermediate)
-  ↓ Add: LLM integration, AI workflows, chat triggers
-Phase 4 (Advanced)
-  ↓ Add: Conditional logic, branching, route isolation
-```
-
-This allows developers and users to:
-
-1. Build confidence with simple workflows first
-2. Understand each new concept before adding complexity
-3. Debug issues in isolation
-4. Progressively test more advanced features
+- No external API calls during tests (fully mocked)
+- No running Temporal server required
+- Test execution time < 5 seconds for full suite
+- Tests serve as documentation for workflow patterns
 
 ---
 
 ## Running Tests
 
 ```bash
-# Run all tests
-npm test
+# Run all integration tests
+npm run test:integration
+
+# Run specific test category
+npm run test:integration:simple      # Simple workflow tests
+npm run test:integration:real-world  # Real-world scenario tests
 
 # Run specific test file
-npm test -- arxiv-researcher.test.ts
-
-# Run tests in watch mode
-npm run test:watch
+npm test -- --testPathPattern="rate-limiting" --no-coverage
 
 # Run with coverage
-npm run test:coverage
+npm test -- --coverage
+
+# Run in watch mode
+npm test -- --watch
 ```
 
 ---
 
-## Test Structure
-
-The test suite is organized into multiple categories covering unit tests, integration tests, and end-to-end workflow tests:
+## Test Directory Structure
 
 ```
 backend/tests/
-├── __mocks__/              # Jest mocks for external modules
-│   └── ioredis.ts          # Redis mock for tests
-├── fixtures/               # Test data and fixtures
-│   ├── activities.ts       # Mock activity implementations
-│   ├── contexts.ts         # Pre-built context snapshots
-│   ├── workflows.ts        # Test workflow definitions (linear, diamond, etc.)
-│   └── workflows/          # Realistic workflow definitions for E2E tests
-│       ├── index.ts                      # Central exports
-│       ├── seed-workflows.ts             # Seed script
-│       ├── hello-world.fixture.ts        # Phase 1: Basic
-│       ├── data-enrichment.fixture.ts    # Phase 2: HTTP & parallel
-│       ├── text-analysis.fixture.ts      # Phase 3: LLM integration
-│       ├── smart-router.fixture.ts       # Phase 4: Conditional logic
-│       └── arxiv-researcher.fixture.ts   # Advanced workflow
-├── helpers/                # Test utilities
-│   ├── mock-apis.ts        # External API mocking (nock/msw)
-│   ├── test-server.ts      # Fastify server setup
-│   ├── test-temporal.ts    # Temporal test environment
-│   └── db-helpers.ts       # In-memory SQLite database
-├── unit/                   # Unit tests
-│   ├── context/            # Context management tests
-│   │   ├── context-service.test.ts      # Context CRUD operations
-│   │   ├── variable-resolution.test.ts  # Variable interpolation
-│   │   └── queue-state.test.ts          # Execution queue management
-│   └── builder/            # Workflow builder tests
-│       └── workflow-builder.test.ts     # Graph validation & construction
-└── integration/            # Integration tests
-    ├── orchestrator/       # Workflow orchestrator tests
-    │   ├── parallel-execution.test.ts   # Parallel branch execution
-    │   ├── conditional-branching.test.ts # If/else branching
-    │   ├── loop-execution.test.ts       # Loop iteration handling
-    │   └── error-propagation.test.ts    # Error & retry behavior
-    ├── handlers/           # Node handler tests
-    │   ├── llm-handler.test.ts          # LLM node execution
-    │   └── http-handler.test.ts         # HTTP node execution
-    ├── workflows/          # End-to-end workflow tests
-    ├── node-executors/     # Node executor tests
-    └── api-endpoints/      # API endpoint tests
+├── __mocks__/                    # Jest mocks for external modules
+│   └── nanoid.ts
+├── fixtures/                     # Test data and fixtures
+│   ├── activities.ts             # Mock activity implementations
+│   ├── contexts.ts               # Pre-built context snapshots
+│   └── workflows.ts              # Test workflow definitions
+├── helpers/                      # Test utilities
+│   └── ...
+├── unit/                         # Unit tests
+│   └── context/                  # Context management tests
+└── integration/                  # Integration tests (746 tests)
+    ├── base-level/               # Phase 1: Handler & orchestrator tests
+    │   ├── handlers/
+    │   │   ├── http-handler.test.ts
+    │   │   └── llm-handler.test.ts
+    │   └── orchestrator/
+    │       ├── conditional-branching.test.ts
+    │       ├── error-propagation.test.ts
+    │       ├── loop-execution.test.ts
+    │       └── parallel-execution.test.ts
+    ├── simple/                   # Phase 2: Simple workflows
+    │   └── linear-execution.test.ts
+    ├── branching/                # Phase 3: Branching tests
+    │   └── conditional-if-else.test.ts
+    ├── loops/                    # Phase 4: Loop tests
+    │   ├── for-each-iteration.test.ts
+    │   ├── while-loop.test.ts
+    │   ├── nested-loops.test.ts
+    │   └── loop-with-conditionals.test.ts
+    ├── parallel/                 # Phase 5: Parallel execution tests
+    │   ├── parallel-branches.test.ts
+    │   ├── parallel-with-join.test.ts
+    │   └── concurrent-api-calls.test.ts
+    ├── error-handling/           # Phase 6: Error handling tests
+    │   ├── node-failure-cascade.test.ts
+    │   ├── retry-behavior.test.ts
+    │   ├── timeout-handling.test.ts
+    │   └── error-recovery.test.ts
+    ├── real-world/               # Phase 7: Real-world scenario tests
+    │   ├── lead-enrichment.test.ts
+    │   ├── content-generation.test.ts
+    │   ├── data-sync.test.ts
+    │   ├── notification-pipeline.test.ts
+    │   └── multi-step-approval.test.ts
+    └── edge-cases/               # Phase 8: Edge case tests
+        ├── large-payloads.test.ts
+        ├── rate-limiting.test.ts
+        ├── context-size-limits.test.ts
+        └── concurrent-execution-limits.test.ts
 ```
 
 ---
 
-## Temporal Workflow Execution Engine Tests
-
-The Temporal workflow execution engine has comprehensive test coverage focusing on **context corruption prevention** and **state management**. These tests validate the core orchestration logic without requiring a running Temporal server.
-
-### Unit Tests
-
-#### Context Service Tests
-
-**File:** `tests/unit/context/context-service.test.ts`
-
-Tests the core context management functions:
-
-```typescript
-describe("Context Service", () => {
-    describe("storeNodeOutput", () => {
-        it("should not mutate original context snapshot");
-        it("should handle concurrent output storage from parallel nodes");
-        it("should enforce per-node output size limit (1MB)");
-        it("should enforce total context size limit (50MB)");
-        it("should handle empty/null/undefined outputs");
-        it("should deep clone complex object outputs");
-    });
-
-    describe("createContext", () => {
-        it("should initialize with workflow inputs");
-        it("should set metadata with creation timestamp");
-    });
-
-    describe("getExecutionContext", () => {
-        it("should merge nodeOutputs and workflowVariables");
-        it("should not allow variable name collisions to corrupt data");
-    });
-});
-```
-
-#### Variable Resolution Tests
-
-**File:** `tests/unit/context/variable-resolution.test.ts`
-
-Tests variable interpolation and path resolution:
-
-```typescript
-describe("Variable Resolution", () => {
-    describe("resolveVariable", () => {
-        it("should resolve simple variable {{varName}}");
-        it("should resolve node output {{nodeId.field}}");
-        it("should resolve nested paths {{nodeId.data.items[0].name}}");
-        it("should resolve loop context {{loop.index}}, {{loop.item}}, {{loop.results}}");
-        it("should resolve parallel context {{parallel.index}}, {{parallel.branchId}}");
-        it("should return null for missing variables");
-    });
-
-    describe("interpolateString", () => {
-        it("should replace multiple variables in string");
-        it("should JSON serialize object values");
-        it("should preserve original string if no matches");
-    });
-
-    describe("resolution priority", () => {
-        it("should prioritize: loop > parallel > variables > outputs > inputs");
-    });
-});
-```
-
-#### Queue State Tests
-
-**File:** `tests/unit/context/queue-state.test.ts`
-
-Tests execution queue management:
-
-```typescript
-describe("Queue State Management", () => {
-    describe("initializeQueue", () => {
-        it("should mark start nodes as ready");
-        it("should mark nodes with dependencies as pending");
-    });
-
-    describe("markCompleted", () => {
-        it("should update dependent nodes to ready when all deps met");
-        it("should handle nodes with multiple dependents");
-    });
-
-    describe("markFailed", () => {
-        it("should cascade skip to all downstream dependents");
-        it("should not affect parallel branches");
-    });
-
-    describe("getReadyNodes", () => {
-        it("should respect maxConcurrentNodes limit");
-        it("should not return already executing nodes");
-    });
-
-    describe("deadlock detection", () => {
-        it("should detect when no nodes ready and none executing");
-    });
-});
-```
-
-#### Workflow Builder Tests
-
-**File:** `tests/unit/builder/workflow-builder.test.ts`
-
-Tests workflow graph construction and validation:
-
-```typescript
-describe("Workflow Builder", () => {
-    describe("validation", () => {
-        it("should detect cycles in workflow graph");
-        it("should allow legitimate loops (loop-start/loop-end)");
-        it("should warn about unreachable nodes");
-    });
-
-    describe("path construction", () => {
-        it("should determine correct execution levels");
-        it("should identify parallel branches");
-        it("should calculate dependency graph correctly");
-    });
-});
-```
-
-### Integration Tests
-
-#### Parallel Execution Tests
-
-**File:** `tests/integration/orchestrator/parallel-execution.test.ts`
-
-Tests parallel branch execution and context isolation:
+## Phase 1: Base-Level Handler & Orchestrator Tests
 
-```typescript
-describe("Parallel Execution", () => {
-    describe("context isolation", () => {
-        it("should isolate context between parallel branches");
-        it("should merge outputs correctly after parallel join");
-        it("should not corrupt shared parent context");
-    });
-
-    describe("failure handling", () => {
-        it("should allow other branches to complete when one fails");
-        it("should mark dependents of failed node as skipped");
-    });
-
-    describe("concurrency limits", () => {
-        it("should respect max concurrent nodes limit");
-    });
-});
-```
-
-#### Conditional Branching Tests
-
-**File:** `tests/integration/orchestrator/conditional-branching.test.ts`
-
-Tests if/else conditional logic:
-
-```typescript
-describe("Conditional Branching", () => {
-    describe("branch selection", () => {
-        it("should execute true branch when condition is true");
-        it("should execute false branch when condition is false");
-        it("should skip inactive branch nodes entirely");
-    });
-
-    describe("context in branches", () => {
-        it("should make parent context available in branches");
-        it("should not leak branch variables to other branches");
-    });
-});
-```
-
-#### Loop Execution Tests
-
-**File:** `tests/integration/orchestrator/loop-execution.test.ts`
-
-Tests loop iteration handling:
-
-```typescript
-describe("Loop Execution", () => {
-    describe("iteration state", () => {
-        it("should isolate loop.index per iteration");
-        it("should make loop.item available for foreach loops");
-        it("should accumulate results in loop.results");
-    });
-
-    describe("loop termination", () => {
-        it("should terminate when condition becomes false");
-        it("should respect maxIterations limit");
-    });
-
-    describe("nested loops", () => {
-        it("should maintain separate iteration state for nested loops");
-    });
-});
-```
-
-#### Error Propagation Tests
-
-**File:** `tests/integration/orchestrator/error-propagation.test.ts`
-
-Tests error handling and retry behavior:
-
-```typescript
-describe("Error Propagation", () => {
-    describe("node failure", () => {
-        it("should mark node as failed with error details");
-        it("should preserve context state at point of failure");
-    });
-
-    describe("retry behavior", () => {
-        it("should track retry count");
-        it("should preserve context across retries");
-    });
-
-    describe("cascade behavior", () => {
-        it("should skip all dependent nodes on failure");
-        it("should not affect independent parallel branches");
-    });
-});
-```
-
-### Handler Tests
-
-#### LLM Handler Tests
-
-**File:** `tests/integration/handlers/llm-handler.test.ts`
-
-Tests LLM node execution (mocked, no real API calls):
-
-```typescript
-describe("LLM Handler", () => {
-    describe("variable interpolation", () => {
-        it("should interpolate variables in prompt");
-        it("should interpolate nested object paths");
-        it("should handle missing variables gracefully");
-    });
-
-    describe("retry logic", () => {
-        it("should retry on rate limit (429)");
-        it("should retry on server error (500, 502, 503)");
-        it("should not retry on auth error (401)");
-        it("should not retry on bad request (400)");
-    });
-
-    describe("output formatting", () => {
-        it("should return structured response with tokens");
-        it("should handle response without token usage");
-    });
-});
-```
-
-#### HTTP Handler Tests
-
-**File:** `tests/integration/handlers/http-handler.test.ts`
-
-Tests HTTP node execution:
-
-```typescript
-describe("HTTP Handler", () => {
-    describe("request building", () => {
-        it("should interpolate URL variables");
-        it("should interpolate header variables");
-        it("should interpolate body variables");
-        it("should handle JSON body serialization");
-    });
-
-    describe("timeout handling", () => {
-        it("should abort on timeout");
-    });
-
-    describe("retry configuration", () => {
-        it("should retry on configured status codes");
-        it("should not retry when disabled");
-    });
-});
-```
-
-### Test Fixtures
-
-#### Workflow Fixtures
-
-**File:** `tests/fixtures/workflows.ts`
+### `base-level/handlers/http-handler.test.ts`
+
+**Critical System Component:** HTTP node execution engine
+
+| Coverage Area       | What It Tests                                           | Why It's Critical                                         |
+| ------------------- | ------------------------------------------------------- | --------------------------------------------------------- |
+| URL Building        | Variable interpolation in URLs (`{{nodeId.field}}`)     | Users build dynamic API calls using previous node outputs |
+| Query Parameters    | Dynamic query string construction                       | API integrations often require parameterized queries      |
+| Header Construction | Auth headers, custom headers with interpolation         | OAuth/API key authentication must work correctly          |
+| Body Interpolation  | JSON body with embedded variables                       | POST/PUT requests need dynamic payloads                   |
+| Timeout Handling    | Request timeout configuration                           | Prevents workflows from hanging on slow APIs              |
+| Retry Logic         | Which status codes trigger retries (429, 500, 502, 503) | Rate limiting and transient failures are common           |
+| Auth Types          | Bearer, Basic, API Key authentication                   | Different APIs require different auth mechanisms          |
+
+### `base-level/handlers/llm-handler.test.ts`
+
+**Critical System Component:** LLM node execution (OpenAI, Anthropic, etc.)
+
+| Coverage Area        | What It Tests                                                 | Why It's Critical                                |
+| -------------------- | ------------------------------------------------------------- | ------------------------------------------------ |
+| Prompt Interpolation | Variables in prompts: `{{userData.name}}`                     | Users build prompts from workflow data           |
+| Nested Path Access   | Deep property access: `{{node.profile.preferences.language}}` | Complex data structures are common               |
+| Retry Classification | Rate limits (429), overloaded errors, server errors           | LLM APIs frequently rate-limit                   |
+| Non-Retryable Errors | Auth errors (401), content policy violations                  | These should fail fast, not retry forever        |
+| Output Formatting    | Token usage, model info, response text                        | Consistent output structure for downstream nodes |
+| Context Integration  | Storing LLM output for subsequent nodes                       | Chaining multiple LLM calls is a key pattern     |
+
+### `base-level/orchestrator/conditional-branching.test.ts`
+
+**Critical System Component:** Conditional node evaluation
+
+| Coverage Area        | What It Tests                                              | Why It's Critical                          |
+| -------------------- | ---------------------------------------------------------- | ------------------------------------------ |
+| Branch Selection     | True/false path activation                                 | Core routing logic for if/else workflows   |
+| Comparison Operators | `==`, `!=`, `>`, `<`, `>=`, `<=`, `contains`, `startsWith` | Users need flexible condition expressions  |
+| Type Coercion        | String vs number comparisons                               | Loose typing in user-configured conditions |
+| Edge Activation      | Only correct outgoing edge fires                           | Prevents duplicate execution               |
+
+### `base-level/orchestrator/error-propagation.test.ts`
+
+**Critical System Component:** Error handling during execution
+
+| Coverage Area     | What It Tests                       | Why It's Critical                                 |
+| ----------------- | ----------------------------------- | ------------------------------------------------- |
+| Error Capture     | Error details stored in context     | Debugging requires error visibility               |
+| Cascade Behavior  | Dependent nodes marked as skipped   | Prevents executing nodes with missing inputs      |
+| Partial Execution | Completed work preserved on failure | Recovery and debugging require state preservation |
+
+### `base-level/orchestrator/loop-execution.test.ts`
+
+**Critical System Component:** Loop node orchestration
+
+| Coverage Area        | What It Tests                                       | Why It's Critical                      |
+| -------------------- | --------------------------------------------------- | -------------------------------------- |
+| Iteration Variables  | `{{loop.item}}`, `{{loop.index}}`, `{{loop.total}}` | Core loop functionality                |
+| Results Accumulation | `{{loop.results}}` array building                   | Collecting outputs from each iteration |
+| Empty Array Handling | Zero iterations gracefully                          | Edge case that shouldn't crash         |
+| Context Isolation    | Loop-local variables don't leak                     | Prevents variable pollution            |
+
+### `base-level/orchestrator/parallel-execution.test.ts`
+
+**Critical System Component:** Parallel branch execution
+
+| Coverage Area        | What It Tests                     | Why It's Critical        |
+| -------------------- | --------------------------------- | ------------------------ |
+| Concurrent Execution | Multiple nodes run simultaneously | Performance optimization |
+| Branch Isolation     | No cross-contamination of state   | Correctness guarantee    |
+| Join Behavior        | All branches complete before join | Synchronization point    |
+
+---
+
+## Phase 2: Simple Workflow Tests
+
+### `simple/linear-execution.test.ts` (15 tests)
+
+**Critical System Component:** Basic execution engine, context management
+
+| Coverage Area        | What It Tests                         | Why It's Critical                                |
+| -------------------- | ------------------------------------- | ------------------------------------------------ |
+| Single Node          | Trigger -> Output execution           | Simplest workflow must work                      |
+| Three-Node Chain     | A -> B -> C execution order           | Sequential dependency resolution                 |
+| Five-Node Chain      | Longer chains with timing             | Verifies order even with varying execution times |
+| Variable Passing     | `{{nodeId.field}}` access             | Core data flow mechanism                         |
+| Context Accumulation | `context.nodeOutputs` grows correctly | Debugging and downstream access                  |
+| Metadata Tracking    | Node count, total size                | Observability and limits enforcement             |
+| Final Outputs        | Output node collection                | Workflow result building                         |
+
+---
+
+## Phase 3: Branching Tests
+
+### `branching/conditional-if-else.test.ts` (52 tests)
+
+**Critical System Component:** Conditional routing logic
+
+| Coverage Area         | What It Tests                                                          | Why It's Critical          |
+| --------------------- | ---------------------------------------------------------------------- | -------------------------- |
+| True/False Paths      | Correct branch activation                                              | Core if/else functionality |
+| All Operators         | `==`, `!=`, `>`, `<`, `>=`, `<=`, `contains`, `startsWith`, `endsWith` | Full expression language   |
+| Type Handling         | String, number, boolean, null comparisons                              | Type coercion rules        |
+| Nested Conditionals   | 2-3 levels deep                                                        | Complex business logic     |
+| LLM-Based Routing     | Router node with AI classification                                     | Advanced routing pattern   |
+| Expression Evaluation | Compound conditions with AND/OR                                        | Complex condition logic    |
+
+---
+
+## Phase 4: Loop Tests
+
+### `loops/for-each-iteration.test.ts` (27 tests)
+
+**Critical System Component:** ForEach loop execution
+
+| Coverage Area      | What It Tests                                       | Why It's Critical        |
+| ------------------ | --------------------------------------------------- | ------------------------ |
+| Array Iteration    | String arrays, object arrays                        | Core loop pattern        |
+| Loop Variables     | `{{loop.item}}`, `{{loop.index}}`, `{{loop.total}}` | Iteration context access |
+| Results Collection | `{{loop.results}}` accumulation                     | Output aggregation       |
+| Empty/Single Item  | Edge cases                                          | Robustness               |
+| Large Arrays       | 100+ items                                          | Performance verification |
+
+### `loops/while-loop.test.ts` (24 tests)
+
+**Critical System Component:** Condition-based loops
+
+| Coverage Area         | What It Tests                    | Why It's Critical        |
+| --------------------- | -------------------------------- | ------------------------ |
+| Condition Termination | Loop until condition false       | Core while-loop behavior |
+| Counter Patterns      | Count up/down with step          | Common use case          |
+| Max Iterations        | Safety limit enforcement         | Infinite loop prevention |
+| Variable Mutation     | State changes between iterations | Accumulator patterns     |
+| Break Conditions      | Early exit on specific value     | Optimization             |
+
+### `loops/nested-loops.test.ts` (22 tests)
+
+**Critical System Component:** Multi-level loop nesting
+
+| Coverage Area            | What It Tests                          | Why It's Critical        |
+| ------------------------ | -------------------------------------- | ------------------------ |
+| Inner/Outer Coordination | Inner completes per outer iteration    | Correct nesting behavior |
+| Parent Context Access    | Inner loop reads outer `{{loop.item}}` | Cross-level data access  |
+| Results Structure        | Nested array building                  | Complex data aggregation |
+
+### `loops/loop-with-conditionals.test.ts` (18 tests)
+
+**Critical System Component:** Mixed control flow
+
+| Coverage Area           | What It Tests                    | Why It's Critical |
+| ----------------------- | -------------------------------- | ----------------- |
+| Conditional Inside Loop | Different branches per iteration | Common pattern    |
+| Early Exit              | Break on condition               | Optimization      |
+| Skipped Iterations      | Continue-like behavior           | Filtering pattern |
+
+---
+
+## Phase 5: Parallel Execution Tests
+
+### `parallel/parallel-branches.test.ts` (26 tests)
+
+**Critical System Component:** Parallel split/fan-out
+
+| Coverage Area       | What It Tests                                 | Why It's Critical     |
+| ------------------- | --------------------------------------------- | --------------------- |
+| 2/3/10 Branches     | Varying parallelism                           | Scalability           |
+| Context Isolation   | No state sharing                              | Correctness           |
+| Parallel Variables  | `{{parallel.index}}`, `{{parallel.branchId}}` | Branch identification |
+| Timing Verification | Concurrent not sequential                     | Performance guarantee |
+| Input Access        | All branches read trigger data                | Data availability     |
+
+### `parallel/parallel-with-join.test.ts` (26 tests)
+
+**Critical System Component:** Parallel join/fan-in
+
+| Coverage Area        | What It Tests                            | Why It's Critical         |
+| -------------------- | ---------------------------------------- | ------------------------- |
+| Wait for All         | Join blocks until all complete           | Synchronization           |
+| Merge Strategies     | Object merge, array, first, last, custom | Flexible output handling  |
+| Branch Output Access | Individual branch results after join     | Post-join processing      |
+| Aggregation          | Sum, filter, combine                     | Common join operations    |
+| Error Handling       | Branches with errors                     | Partial failure scenarios |
+
+### `parallel/concurrent-api-calls.test.ts` (25 tests)
+
+**Critical System Component:** Real-world parallel patterns
+
+| Coverage Area       | What It Tests                   | Why It's Critical                |
+| ------------------- | ------------------------------- | -------------------------------- |
+| Multiple HTTP Calls | Parallel API requests           | Common integration pattern       |
+| Multiple LLM Calls  | Parallel AI processing          | Multi-model comparison           |
+| Mixed Node Types    | HTTP + LLM + Transform          | Realistic heterogeneous parallel |
+| maxConcurrentNodes  | 1, 2, 5, 10 limits              | Resource management              |
+| Timing Verification | Parallel faster than sequential | Performance validation           |
+| Partial Failures    | Some calls fail, others succeed | Resilience                       |
+
+---
+
+## Phase 6: Error Handling Tests
+
+### `error-handling/node-failure-cascade.test.ts` (32 tests)
+
+**Critical System Component:** Failure propagation
+
+| Coverage Area        | What It Tests                               | Why It's Critical         |
+| -------------------- | ------------------------------------------- | ------------------------- |
+| Linear Cascade       | A fails -> B, C, D skipped                  | Dependency chain handling |
+| Diamond Cascade      | Converging dependencies                     | Complex graph failure     |
+| Independent Branches | Sibling failure doesn't affect other branch | Isolation                 |
+| Error Details        | Type, message, stack preserved              | Debugging                 |
+| Context Snapshot     | State at failure point                      | Recovery/debugging        |
+| Multiple Failures    | Several nodes fail                          | Compound error scenarios  |
+
+### `error-handling/retry-behavior.test.ts` (41 tests)
+
+**Critical System Component:** Automatic retry logic
+
+| Coverage Area       | What It Tests                                    | Why It's Critical                |
+| ------------------- | ------------------------------------------------ | -------------------------------- |
+| Retryable Errors    | 429, 500, 502, 503, RateLimitError, NetworkError | Transient failure recovery       |
+| Non-Retryable       | 400, 401, 403, 404, ValidationError              | Fast failure on permanent errors |
+| Exponential Backoff | Delay increases: 1s -> 2s -> 4s                  | Rate limit respect               |
+| Max Retries         | Stop after N attempts                            | Prevent infinite retry           |
+| Success After Retry | 2nd, 3rd, last attempt success                   | Happy path verification          |
+| Custom Config       | Custom retryable codes/errors                    | Flexibility                      |
+
+### `error-handling/timeout-handling.test.ts` (36 tests)
+
+**Critical System Component:** Timeout enforcement
+
+| Coverage Area     | What It Tests                | Why It's Critical      |
+| ----------------- | ---------------------------- | ---------------------- |
+| Activity Timeout  | Generic timeout failure      | Core timeout mechanism |
+| HTTP Timeout      | Slow API calls               | Network timeout        |
+| LLM Timeout       | Slow AI generation           | Model timeout          |
+| Database Timeout  | Slow queries                 | DB timeout             |
+| Error Messages    | Clear, actionable messages   | Debugging              |
+| Parallel Timeouts | Independent timeout handling | Isolation              |
+| Very Short/Long   | Edge cases (10ms, 300s)      | Boundary conditions    |
+
+### `error-handling/error-recovery.test.ts` (27 tests)
+
+**Critical System Component:** Recovery patterns
+
+| Coverage Area               | What It Tests                          | Why It's Critical             |
+| --------------------------- | -------------------------------------- | ----------------------------- |
+| Error Edge Activation       | Error handler node triggers            | Workflow-level error handling |
+| Fallback Nodes              | Primary -> Fallback pattern            | Graceful degradation          |
+| Graceful Degradation        | Partial success with optional services | Resilience pattern            |
+| Error Output                | Error details to output node           | Error reporting               |
+| Circuit Breaker             | Failure count, open circuit, cooldown  | Advanced resilience           |
+| Retry with Different Params | Recovery strategy                      | Self-healing                  |
+
+---
+
+## Phase 7: Real-World Scenario Tests
+
+### `real-world/lead-enrichment.test.ts` (30 tests)
+
+**Workflow:** `Trigger -> HTTP (Clearbit) -> LLM (Score) -> Conditional -> CRM/Notification`
+
+| Coverage Area          | What It Tests              | Why It's Critical               |
+| ---------------------- | -------------------------- | ------------------------------- |
+| Complete Pipeline      | End-to-end lead enrichment | Validates full workflow pattern |
+| High/Warm/Cold Scoring | LLM classification paths   | Business logic branching        |
+| API Failure Handling   | Enrichment API down        | Resilience                      |
+| Missing Data           | Incomplete lead info       | Edge case handling              |
+| CRM Integration        | Update simulation          | Integration pattern             |
+| Notification Routing   | Email/Slack based on score | Multi-channel output            |
+
+### `real-world/content-generation.test.ts` (36 tests)
+
+**Workflow:** `Trigger -> LLM (Outline) -> Loop[LLM (Section)] -> Transform (Combine) -> Output`
+
+| Coverage Area            | What It Tests                      | Why It's Critical       |
+| ------------------------ | ---------------------------------- | ----------------------- |
+| Multi-Section Generation | 2-10 sections                      | Variable loop iteration |
+| Style Consistency        | Professional/casual/technical tone | LLM configuration       |
+| Token Limits             | Stop on limit, mark incomplete     | Resource management     |
+| Content Combination      | Section aggregation                | Transform pattern       |
+| Keyword Tracking         | Density calculation                | Metadata extraction     |
+| Error Recovery           | Section generation failure         | Partial completion      |
+
+### `real-world/data-sync.test.ts` (33 tests)
+
+**Workflow:** `Trigger -> Database (Fetch) -> Loop[Transform -> HTTP (Sync)] -> Output`
+
+| Coverage Area     | What It Tests                   | Why It's Critical |
+| ----------------- | ------------------------------- | ----------------- |
+| Batch Processing  | 10, 100+ records                | Scalability       |
+| Incremental Sync  | Filter by lastSyncTimestamp     | Efficiency        |
+| Conflict Handling | 409 status, conflict details    | Data integrity    |
+| Field Mapping     | Transform to target schema      | ETL pattern       |
+| CRUD Detection    | Create/Update/Delete operations | Change detection  |
+| Partial Failure   | Continue after record failure   | Resilience        |
+| Error Aggregation | Collect all sync errors         | Reporting         |
+
+### `real-world/notification-pipeline.test.ts` (32 tests)
+
+**Workflow:** `Trigger -> Conditional (Priority) -> Parallel[Email, Slack, SMS, Push] -> Join -> Output`
+
+| Coverage Area          | What It Tests                               | Why It's Critical |
+| ---------------------- | ------------------------------------------- | ----------------- |
+| Multi-Channel Delivery | 1-4 channels                                | Fan-out pattern   |
+| Priority Routing       | Urgent/High/Medium/Low -> channel selection | Business rules    |
+| Partial Success        | Some channels fail                          | Resilience        |
+| Template Variables     | User data in messages                       | Personalization   |
+| Join Aggregation       | Success count, results collection           | Summary building  |
+| Channel Skipping       | Exclude specific channels                   | Opt-out           |
+
+### `real-world/multi-step-approval.test.ts` (26 tests)
+
+**Workflow:** `Trigger -> Loop[Wait (Approval) -> Conditional] -> Final Action`
+
+| Coverage Area    | What It Tests             | Why It's Critical       |
+| ---------------- | ------------------------- | ----------------------- |
+| Approval Granted | Happy path                | Core approval flow      |
+| Approval Denied  | Rejection handling        | Business logic          |
+| Multi-Approver   | Sequential approvals      | Complex approval chains |
+| Timeout          | No response handling      | Time-bound processes    |
+| Escalation       | Auto-escalate on timeout  | Business rules          |
+| Audit Trail      | Approval history tracking | Compliance              |
+
+---
+
+## Phase 8: Edge Case Tests
+
+### `edge-cases/large-payloads.test.ts` (34 tests)
+
+**Critical System Component:** Memory and size limits
+
+| Coverage Area         | What It Tests                      | Why It's Critical         |
+| --------------------- | ---------------------------------- | ------------------------- |
+| 1MB Node Output       | Just under, exactly at, over limit | Per-node size enforcement |
+| 50MB Total Context    | Context size limits                | Memory protection         |
+| Context Pruning       | FIFO removal of old outputs        | Memory management         |
+| Large Array Iteration | 1000, 5000, 10000 items            | Performance at scale      |
+| Unicode/Base64        | Special encoding handling          | Data integrity            |
+| Nested Structures     | Deep object hierarchies            | Complex data              |
+
+### `edge-cases/rate-limiting.test.ts` (30 tests)
+
+**Critical System Component:** Rate limit handling
+
+| Coverage Area         | What It Tests                    | Why It's Critical        |
+| --------------------- | -------------------------------- | ------------------------ |
+| Single 429            | One rate limit, retry success    | Basic rate limiting      |
+| Multiple 429s         | 2-3 consecutive rate limits      | Persistent rate limiting |
+| Retry-After Header    | Respect server-specified delay   | Protocol compliance      |
+| Exponential Backoff   | Increasing delays without header | Fallback behavior        |
+| Max Retries Exhausted | Eventually fail                  | Prevent infinite retry   |
+| Workflow-Level        | Multiple nodes rate limited      | Aggregate handling       |
+
+### `edge-cases/context-size-limits.test.ts` (29 tests)
+
+**Critical System Component:** Context management
+
+| Coverage Area     | What It Tests            | Why It's Critical      |
+| ----------------- | ------------------------ | ---------------------- |
+| Size Rejection    | Output exceeds limit     | Enforcement            |
+| Pruning Strategy  | Oldest removed first     | FIFO guarantee         |
+| Size Calculation  | JSON.stringify accuracy  | Correct measurement    |
+| Node Count Limits | Max nodes in context     | Memory protection      |
+| Combined Limits   | Size AND count limits    | Multi-constraint       |
+| Performance       | Fast metrics calculation | Observability overhead |
+
+### `edge-cases/concurrent-execution-limits.test.ts` (36 tests)
+
+**Critical System Component:** Concurrency control
+
+| Coverage Area       | What It Tests             | Why It's Critical                 |
+| ------------------- | ------------------------- | --------------------------------- |
+| maxConcurrent = 1   | Sequential execution      | Resource-constrained environments |
+| maxConcurrent = 5   | Limited parallelism       | Balanced execution                |
+| maxConcurrent = 10  | High parallelism          | Performance mode                  |
+| Queue Management    | Wait times, ordering      | Fairness                          |
+| 0 or Negative Limit | Defaults to 1             | Edge case safety                  |
+| 500 Nodes           | Large workflow            | Scalability                       |
+| Execution Order     | Start order matches queue | Determinism                       |
+
+---
+
+## Coverage Summary by System Component
+
+| System Component        | Test Files | Tests | Key Guarantees                                      |
+| ----------------------- | ---------- | ----- | --------------------------------------------------- |
+| **Context Service**     | 25+ files  | ~600  | Immutable state, variable resolution, size limits   |
+| **Queue Management**    | 15+ files  | ~300  | Execution order, dependency resolution, concurrency |
+| **Node Execution**      | 10+ files  | ~200  | Handler logic, retry, timeout, error handling       |
+| **Control Flow**        | 8 files    | ~200  | Conditionals, loops, parallel, join                 |
+| **Error Handling**      | 4 files    | 136   | Cascade, retry, timeout, recovery patterns          |
+| **Real-World Patterns** | 5 files    | 157   | End-to-end workflow validation                      |
+| **Edge Cases**          | 4 files    | 129   | Limits, rate limiting, large data                   |
+
+---
+
+## Why This Coverage Matters
+
+### 1. Immutable Context
+
+Tests verify that `storeNodeOutput`, `setVariable`, etc. return new snapshots without mutating originals. This is critical for Temporal's replay semantics where the same workflow code may run multiple times.
+
+### 2. Variable Resolution
+
+Extensive testing of `{{nodeId.path.to.field}}` interpolation ensures user-configured templates work correctly. This is the primary way users connect nodes together.
+
+### 3. Error Boundaries
+
+Tests verify that errors are contained, cascaded appropriately, and don't corrupt workflow state. Users need predictable failure behavior.
+
+### 4. Resource Protection
+
+Size limits, concurrency limits, and timeout tests prevent runaway workflows from consuming unbounded resources. This protects both the platform and other users.
+
+### 5. Real-World Validation
+
+The 5 real-world scenario tests validate that common workflow patterns (lead enrichment, content generation, data sync, notifications, approvals) work end-to-end with realistic data flows.
+
+---
+
+## Test Fixtures
+
+### Workflow Fixtures (`tests/fixtures/workflows.ts`)
 
 Pre-built workflow definitions for testing:
 
 ```typescript
-// Linear workflow: A → B → C
+// Linear workflow: A -> B -> C
 createLinearWorkflow();
 
-// Diamond pattern: A → [B, C] → D (parallel testing)
+// Diamond pattern: A -> [B, C] -> D (parallel testing)
 createDiamondWorkflow();
 
-// Conditional workflow: A → Cond → [T1/F1] → End
+// Conditional workflow: A -> Cond -> [T1/F1] -> End
 createConditionalWorkflow();
 
-// Error cascade: A → B(fails) → C(skipped) with parallel D → E
+// Error cascade: A -> B(fails) -> C(skipped) with parallel D -> E
 createErrorCascadeWorkflow();
 
-// Loop workflow: Start → Loop(items) → Process → End
+// Loop workflow: Start -> Loop(items) -> Process -> End
 createLoopWorkflow();
-
-// Complex workflow: Multiple patterns combined
-createComplexWorkflow();
 ```
 
-#### Context Fixtures
-
-**File:** `tests/fixtures/contexts.ts`
+### Context Fixtures (`tests/fixtures/contexts.ts`)
 
 Pre-built context snapshots:
 
@@ -425,9 +548,6 @@ createContextWithOutputs()
 // Context approaching 50MB limit (for pruning tests)
 createLargeContext(targetSizeBytes?)
 
-// Context with parallel branch outputs
-createParallelMergeContext()
-
 // Loop iteration state
 createLoopState(index, total, item?)
 createLoopStateWithResults(index, total, item, results)
@@ -436,9 +556,7 @@ createLoopStateWithResults(index, total, item, results)
 createParallelState(index, branchId, currentItem?)
 ```
 
-#### Activity Mocks
-
-**File:** `tests/fixtures/activities.ts`
+### Activity Mocks (`tests/fixtures/activities.ts`)
 
 Mock implementations for Temporal activities:
 
@@ -452,489 +570,67 @@ createMockActivities({
 // Create activities that fail on specific nodes
 createFailingActivities(failingNodeIds: string[])
 
-// Create activities with custom behavior
-createCustomActivities(handlers: Map<string, Function>)
+// Create activities with predefined outputs
+withOutputs(nodeId, output)
 ```
-
-### Running Tests
-
-```bash
-# Run all tests
-npm test
-
-# Run unit tests only
-npm test -- tests/unit
-
-# Run integration tests only
-npm test -- tests/integration
-
-# Run specific test file
-npm test -- tests/unit/context/context-service.test.ts
-
-# Run tests matching pattern
-npm test -- --testNamePattern="parallel"
-
-# Run with coverage
-npm test -- --coverage
-
-# Run in watch mode
-npm test -- --watch
-```
-
-### Test Coverage Summary
-
-| Test Suite            | Tests | Coverage Focus                           |
-| --------------------- | ----- | ---------------------------------------- |
-| context-service       | 17    | Context CRUD, size limits, immutability  |
-| variable-resolution   | 32    | Path resolution, interpolation, scopes   |
-| queue-state           | 51    | Queue operations, dependencies, deadlock |
-| workflow-builder      | 17    | Graph validation, cycle detection        |
-| parallel-execution    | 15    | Context isolation, merge, concurrency    |
-| conditional-branching | 13    | Branch selection, skip propagation       |
-| loop-execution        | 14    | Iteration state, termination, nesting    |
-| error-propagation     | 23    | Failure handling, retry, cascade         |
-| llm-handler           | 27    | Prompt interpolation, retry logic        |
-| http-handler          | 51    | Request building, timeout, retries       |
-
-**Total: 260 tests**
-
----
-
-## Test Workflows
-
-### Phase 1: Hello World ⭐
-
-**File:** `backend/tests/fixtures/workflows/hello-world.fixture.ts`
-
-**Purpose:** Basic linear execution testing
-
-**Nodes:** Input → Transform → Output
-
-**Test Scenarios:**
-
-- Happy path with valid name
-- Empty name handling
-- Special characters in name
-- Long name handling
-
-**Validates:**
-
-- Basic workflow execution flow
-- Input node functionality
-- Transform node operations
-- Output node formatting
-- Variable interpolation `${variable}`
-- String manipulation
-- Execution logs generation
-- Timeline visualization
-- Results panel display
-
-**Duration:** < 1 second
-**Credentials:** None required
-
----
-
-### Phase 2: Data Enrichment ⭐⭐
-
-**File:** `backend/tests/fixtures/workflows/data-enrichment.fixture.ts`
-
-**Purpose:** HTTP requests and parallel execution
-
-**Nodes:** Input → 2x HTTP (parallel) → Transform → Merge → Output
-
-**Test Scenarios:**
-
-- Valid user data fetch
-- Webhook trigger execution
-- Invalid user ID (404 error)
-- Parallel execution verification
-
-**Validates:**
-
-- HTTP node execution
-- External API integration
-- Parallel node execution (2 simultaneous HTTP calls)
-- Data transformation and merging
-- JSON response handling
-- Network requests tracking
-- Webhook trigger functionality
-- Error handling (404 responses)
-- Retry logic
-- Performance (parallel vs sequential)
-
-**Duration:** 2-3 seconds
-**Credentials:** None (uses JSONPlaceholder API)
-
----
-
-### Phase 3: Text Analysis ⭐⭐
-
-**File:** `backend/tests/fixtures/workflows/text-analysis.fixture.ts`
-
-**Purpose:** LLM integration and AI workflows
-
-**Nodes:** Input → 2x LLM (parallel) → Transform → Output
-
-**Test Scenarios:**
-
-- Positive sentiment analysis
-- Negative sentiment analysis
-- Neutral sentiment analysis
-- Chat trigger with conversation context
-- Long text handling
-- Empty text handling
-
-**Validates:**
-
-- LLM node execution (Anthropic Claude)
-- AI credential management
-- Parallel LLM calls
-- JSON response format from LLM
-- Sentiment analysis accuracy
-- Topic extraction
-- Data merging from multiple LLM calls
-- Chat trigger functionality
-- Long text handling
-- Token usage tracking
-
-**Duration:** 5-8 seconds
-**Credentials:** Anthropic API key required
-
----
-
-### Phase 4: Smart Router ⭐⭐⭐
-
-**File:** `backend/tests/fixtures/workflows/smart-router.fixture.ts`
-
-**Purpose:** Conditional logic and branching
-
-**Nodes:** Input → Conditional → Branch A (HTTP) OR Branch B (LLM) → Output
-
-**Test Scenarios:**
-
-- Data route (Branch A) execution
-- Analysis route (Branch B) execution
-- Webhook with data route
-- Webhook with analysis route
-- Branch isolation verification (only one executes)
-- Performance check (confirms single branch)
-
-**Validates:**
-
-- Conditional node logic
-- Branch execution (only one branch runs)
-- Route isolation (Branch A doesn't execute if Branch B chosen)
-- Variable coalescing (`${var1 || var2}`)
-- HTTP branch path
-- LLM branch path
-- Performance verification
-- Multiple execution paths
-- Complex control flow
-
-**Duration:** 3-8 seconds (varies by branch)
-**Credentials:** Anthropic API key (for analysis branch)
-
----
-
-### Advanced: ArXiv Researcher ⭐⭐⭐
-
-**File:** `backend/tests/fixtures/workflows/arxiv-researcher.fixture.ts`
-
-**Purpose:** Complex multi-step workflow
-
-**Nodes:** 8 nodes including API, XML parsing, file operations, LLM
-
-**Test Scenarios:**
-
-- Complete research workflow
-- Search query with results
-- PDF download and parsing
-- LLM analysis
-- Error handling
-
-**Validates:**
-
-- HTTP node with ArXiv API
-- Transform node (XML parsing, JSONata)
-- Variable node for state management
-- File operations node (PDF parsing)
-- LLM node (Claude integration)
-- Output node formatting
-- Multi-step orchestration
-- Complex data transformations
-
-**Duration:** 10-15 seconds
-**Credentials:** Anthropic API key
-
----
-
-## Test Infrastructure
-
-### Test Helpers
-
-#### MockAPIs
-
-**File:** `backend/tests/helpers/mock-apis.ts`
-
-Provides pre-configured mocks for common external services, eliminating the need for real API keys or network calls:
-
-```typescript
-// Mock ArXiv API
-MockAPIs.mockArxivSearch("machine learning", [
-    /* papers */
-]);
-
-// Mock PDF download
-MockAPIs.mockPDFDownload("http://arxiv.org/pdf/123.pdf", "PDF content");
-
-// Mock LLM providers
-MockAPIs.mockAnthropic("prompt", "response");
-MockAPIs.mockOpenAI("prompt", "response");
-MockAPIs.mockGoogleAI("prompt", "response");
-MockAPIs.mockCohere("prompt", "response");
-
-// Mock generic HTTP
-MockAPIs.mockHTTP("https://api.example.com/data", "GET", { data: "value" });
-```
-
-#### Database Helpers
-
-**File:** `backend/tests/helpers/db-helpers.ts`
-
-Tests use an in-memory SQLite database for fast, isolated execution. The database is automatically cleaned between tests:
-
-```typescript
-// Seed test data
-const user = seedTestUser({ email: "test@example.com" });
-const workflow = seedTestWorkflow({ user_id: user.id });
-
-// Clean between tests (automatic)
-clearTestData();
-```
-
-#### Test Server
-
-**File:** `backend/tests/helpers/test-server.ts`
-
-Provides a fully-functional Fastify instance with in-memory database:
-
-```typescript
-const server = await setupTestServer();
-const token = generateTestToken(server, { id: "user-1" });
-
-// Make requests
-const response = await server.inject({
-    method: "POST",
-    url: "/api/workflows/execute",
-    headers: { authorization: `Bearer ${token}` },
-    payload: { workflowDefinition, inputs }
-});
-```
-
-#### Temporal Test Environment
-
-**File:** `backend/tests/helpers/test-temporal.ts`
-
-In-memory Temporal environment for testing:
-
-- No external Temporal server required
-- Uses `@temporalio/testing` package
-- Supports worker creation with test activities
-
----
-
-### Seeding Test Workflows
-
-#### Seed Script
-
-**File:** `backend/tests/fixtures/workflows/seed-workflows.ts`
-
-**Features:**
-
-- Converts fixture format to database format
-- Inserts all test workflows into database
-- CLI with user ID parameter
-- Beautiful console output with progress
-- Error handling and validation
-
-**Usage:**
-
-```bash
-npm run seed:test-workflows -- --user-id=<uuid>
-```
-
-#### Fixtures Index
-
-**File:** `backend/tests/fixtures/workflows/index.ts`
-
-**Features:**
-
-- Central export of all test workflows
-- Utility functions for filtering by complexity
-- Testing order management
-- Metadata about each workflow
 
 ---
 
 ## Writing New Tests
 
-### Creating Workflow Fixtures
+When adding new node types or features:
 
-Start by defining the workflow structure and any mock data needed:
+1. **Add handler tests** in `base-level/handlers/` for the node executor logic
+2. **Add orchestrator tests** if the node affects control flow (loops, conditionals, parallel)
+3. **Add a real-world scenario** that demonstrates the feature in a practical workflow
+4. **Add edge case tests** for limits, errors, and boundary conditions
 
-```typescript
-// tests/fixtures/workflows/my-workflow.fixture.ts
-export const myWorkflowDefinition = {
-    nodes: [
-        /* ... */
-    ],
-    edges: [
-        /* ... */
-    ]
-};
-
-export const myWorkflowMockData = {
-    // Mock responses for external APIs
-};
-
-export const myWorkflowTestScenarios = [
-    {
-        name: "Happy path test",
-        triggerType: "manual",
-        inputs: {
-            /* ... */
-        },
-        expectedOutput: {
-            /* ... */
-        }
-    }
-];
-```
-
-### Writing Integration Tests
-
-Integration tests execute nodes step-by-step, building context as they go:
+### Example Test Structure
 
 ```typescript
-// tests/integration/workflows/my-workflow.test.ts
-import { executeNode } from "../../../src/temporal/activities/node-executors";
-import { MockAPIs } from "../../helpers/mock-apis";
 import {
-    myWorkflowDefinition,
-    myWorkflowMockData
-} from "../../fixtures/workflows/my-workflow.fixture";
+    createContext,
+    storeNodeOutput,
+    initializeQueue,
+    getReadyNodes,
+    markCompleted
+} from "../../../src/temporal/core/services/context";
 
-describe("My Workflow", () => {
-    beforeAll(() => {
-        process.env.REQUIRED_API_KEY = "test-key";
-    });
+describe("My Feature", () => {
+    describe("happy path", () => {
+        it("should do the expected thing", async () => {
+            let context = createContext({ input: "value" });
 
-    beforeEach(() => {
-        // Setup mocks
-        MockAPIs.mockHTTP(/* ... */);
-    });
+            // Simulate node execution
+            context = storeNodeOutput(context, "MyNode", {
+                result: "success"
+            });
 
-    test("should complete successfully", async () => {
-        const context = { input: "value" };
-
-        // Execute nodes step by step
-        const result1 = await executeNode({
-            nodeType: "http",
-            nodeConfig: myWorkflowDefinition.nodes[0].data,
-            context
+            expect(context.nodeOutputs.get("MyNode")).toEqual({
+                result: "success"
+            });
         });
+    });
 
-        Object.assign(context, result1);
+    describe("error handling", () => {
+        it("should handle failures gracefully", async () => {
+            // Test error scenarios
+        });
+    });
 
-        // Continue with other nodes...
-
-        // Assert final output
-        expect(context).toHaveProperty("expectedOutput");
+    describe("edge cases", () => {
+        it("should handle empty input", async () => {
+            // Test boundary conditions
+        });
     });
 });
 ```
 
 ---
 
-## Node Type Coverage
-
-### Currently Tested
-
-**AI/ML Nodes:**
-
-- `llm` - Anthropic Claude integration with prompt handling
-- `vision` - In development
-- `audio` - In development
-- `embeddings` - In development
-
-**HTTP Nodes:**
-
-- `http` - External API calls with various methods and authentication
-
-**Data Nodes:**
-
-- `transform` - XML parsing, JSONata expressions, and custom transformations
-- `variable` - Workflow-level state management
-- `input` - Workflow input handling
-- `output` - Result display and formatting
-- `fileOperations` - PDF parsing and file handling
-
-**Logic Nodes:**
-
-- `conditional` - Branching logic tested
-- `switch` - In development
-- `loop` - In development
-- `code` - In development
-- `wait` - In development
-
-**Integration Nodes:**
-
-- `database` - In development
-- `integration` - In development
-
-**User Interaction:**
-
-- `user-input` - Human-in-the-loop (in development)
-
----
-
-## Test Scenario Format
-
-Each workflow includes test scenarios with comprehensive metadata:
-
-```typescript
-{
-  name: string,                    // Scenario name
-  triggerType: 'manual' | 'webhook' | 'chat' | ...,
-  inputs?: Record<string, any>,    // For manual trigger
-  config?: {...},                  // For webhook/chat trigger
-  expectedOutput?: any,            // Expected results
-  expectedError?: boolean,         // Should it fail?
-  performanceCheck?: {...},        // Duration expectations
-  executionChecks?: {...}          // Node execution verification
-}
-```
-
----
-
-## Trigger Type Coverage
-
-The test scenarios cover multiple trigger types:
-
-- ✅ **Manual Trigger:** All phases (primary testing method)
-- ✅ **Webhook Trigger:** Phases 2, 4 (HTTP simulation)
-- ✅ **Chat Trigger:** Phase 3 (conversational workflows)
-- ⏳ **API Trigger:** Not yet implemented in UI
-- ⏳ **Form Trigger:** Not yet implemented in UI
-- ⏳ **Scheduled Trigger:** Not yet implemented in UI
-- ⏳ **File Upload Trigger:** Not yet implemented in UI
-- ⏳ **Event Trigger:** Not yet implemented in UI
-
----
-
 ## CI Integration
 
-Tests run automatically in GitHub Actions without requiring any secrets or external service access:
+Tests run automatically in GitHub Actions:
 
 ```yaml
 - name: Run Integration Tests
@@ -943,147 +639,4 @@ Tests run automatically in GitHub Actions without requiring any secrets or exter
       NODE_ENV: test
 ```
 
----
-
-## User-Facing Workflow Testing
-
-### Testing Checklist
-
-Users should progressively test workflows in the UI:
-
-**Phase 1: Basic Execution**
-
-- [ ] Test with valid name
-- [ ] Test with special characters
-- [ ] Test with empty string
-- [ ] Verify execution logs
-- [ ] Verify timeline visualization
-
-**Phase 2: HTTP & Parallel**
-
-- [ ] Test with valid user ID
-- [ ] Test webhook trigger
-- [ ] Test error handling (invalid ID)
-- [ ] Verify parallel execution performance
-
-**Phase 3: LLM Integration**
-
-- [ ] Test positive sentiment (requires Anthropic key)
-- [ ] Test negative sentiment
-- [ ] Test chat trigger
-- [ ] Verify token tracking
-
-**Phase 4: Conditional Logic**
-
-- [ ] Test data route (Branch A)
-- [ ] Test analysis route (Branch B)
-- [ ] Verify branch isolation
-- [ ] Check performance (only one branch runs)
-
-### Monitoring & Debugging Features
-
-When testing workflows in the UI, users can leverage:
-
-**Real-time Monitoring:**
-
-- Live execution progress
-- Node-by-node status updates
-- Timeline visualization
-- Output preview
-
-**Debugging Tools:**
-
-- Execution logs with timestamps
-- Variable values at each step
-- Error messages and stack traces
-- Network request inspection
-- Token usage tracking (LLM nodes)
-
-**Results Inspection:**
-
-- Structured output display
-- JSON/object exploration
-- Success/failure indicators
-- Performance metrics
-
----
-
-## Known Issues and Limitations
-
-The test suite has a few known limitations being addressed:
-
-- Variable interpolation in nested object paths needs additional debugging
-- HTTP node returns data directly rather than using the `outputVariable` config
-- LLM executor shows deprecated model warnings (cosmetic issue only)
-
----
-
-## Contributing New Tests
-
-When adding new node types or features, follow these guidelines:
-
-1. **Create realistic workflows** that demonstrate the new functionality in a practical context
-2. **Add comprehensive mocks** for any external APIs the node might call
-3. **Follow established patterns** from existing tests for consistency
-4. **Ensure tests are self-documenting** so they serve as examples for users
-5. **Add test scenarios** covering happy path, error cases, and edge cases
-6. **Update this document** with new coverage information
-
----
-
-## Future Enhancements
-
-### Test Fixtures
-
-- [ ] Add more advanced patterns (loops, switches)
-- [ ] Add database integration workflow
-- [ ] Add file upload workflow
-- [ ] Add error recovery workflow
-- [ ] Add long-running workflow example
-
-### Tooling
-
-- [ ] Automated test runner (run all scenarios)
-- [ ] Test result comparison (expected vs actual)
-- [ ] Performance benchmarking tools
-- [ ] Test coverage reporting
-- [ ] CI/CD integration for regression testing
-
-### UI Improvements
-
-- [ ] Implement remaining trigger types (API, Form, Scheduled, etc.)
-- [ ] Add test scenario templates
-- [ ] Add test scenario import/export
-- [ ] Add visual regression testing
-- [ ] Add test scenario sharing
-
----
-
-## Resources
-
-- [Jest Documentation](https://jestjs.io/) - Test framework
-- [Nock HTTP Mocking](https://github.com/nock/nock) - HTTP request interception
-- [Supertest API Testing](https://github.com/visionmedia/supertest) - HTTP assertions
-- [Temporal Testing](https://docs.temporal.io/typescript/testing) - Workflow testing patterns
-
----
-
-## Summary
-
-FlowMaestro's testing strategy combines:
-
-**Developer-Focused Testing:**
-
-- Integration tests with mocked dependencies
-- In-memory database and Temporal environment
-- Fast, reliable CI execution
-- Comprehensive test helpers and utilities
-
-**User-Focused Testing:**
-
-- Progressive complexity workflow fixtures
-- Real-world scenario validation
-- UI-based execution testing
-- Comprehensive monitoring and debugging tools
-
-This dual approach ensures both code quality and user experience are thoroughly validated before deployment.
+No external services or secrets are required since all APIs are mocked.
