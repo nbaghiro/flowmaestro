@@ -10,3 +10,4 @@ export * from "./template";
 export * from "./agent-template";
 export * from "./streaming-events";
 export * from "./discord";
+export * from "./form-interface";

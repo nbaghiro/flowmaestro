@@ -9,6 +9,8 @@ import { Analytics } from "./pages/Analytics";
 import { Connections } from "./pages/Connections";
 import { FlowBuilder } from "./pages/FlowBuilder";
 import { ForgotPassword } from "./pages/ForgotPassword";
+import { InterfaceEditorPage } from "./pages/InterfaceEditorPage";
+import { InterfacesPage } from "./pages/InterfacesPage";
 import { KnowledgeBaseDetail } from "./pages/KnowledgeBaseDetail";
 import { KnowledgeBases } from "./pages/KnowledgeBases";
 import { Login } from "./pages/Login";
@@ -49,6 +51,11 @@ function App() {
                     <Route path="settings" element={<Settings />} />
                     <Route path="account" element={<Account />} />
                     <Route path="workspace" element={<Workspace />} />
+
+                    {/* Form Interfaces */}
+                    <Route path="interfaces" element={<InterfacesPage />} />
+                    <Route path="interfaces/new" element={<InterfaceEditorPage />} />
+                    <Route path="interfaces/:id" element={<InterfaceEditorPage />} />
                 </Route>
 
                 {/* Full-screen knowledge base detail without sidebar */}

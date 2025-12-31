@@ -20,7 +20,8 @@ import type {
     AgentTemplate,
     AgentTemplateListParams,
     AgentTemplateListResponse,
-    CopyAgentTemplateResponse
+    CopyAgentTemplateResponse,
+    FormInterface
 } from "@flowmaestro/shared";
 import { logger } from "./logger";
 
@@ -405,6 +406,97 @@ export async function getCurrentUser(): Promise<UserResponse> {
     }
 
     const response = await apiFetch(`${API_BASE_URL}/auth/me`, {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+// ===== Form Interfaces API =====
+
+export async function getFormInterface(): Promise<{
+    success: boolean;
+    data: FormInterface[];
+    error?: string;
+}> {
+    const token = getAuthToken();
+
+    if (!token) {
+        throw new Error("No authentication token found");
+    }
+
+    const response = await apiFetch(`${API_BASE_URL}/form-interfaces`, {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+export async function createFormInterface(input: {
+    name: string;
+    slug: string;
+    title: string;
+    targetType: "workflow" | "agent";
+    workflowId?: string;
+    agentId?: string;
+}): Promise<{
+    success: boolean;
+    data: FormInterface;
+    error?: string;
+}> {
+    const token = getAuthToken();
+
+    if (!token) {
+        throw new Error("No authentication token found");
+    }
+
+    const response = await apiFetch(`${API_BASE_URL}/form-interfaces`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(input)
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+export async function getFormInterfaceById(id: string): Promise<{
+    success: boolean;
+    data: FormInterface;
+    error?: string;
+}> {
+    const token = getAuthToken();
+
+    if (!token) {
+        throw new Error("No authentication token found");
+    }
+
+    const response = await apiFetch(`${API_BASE_URL}/form-interfaces/${id}`, {
         method: "GET",
         headers: {
             "Content-Type": "application/json",

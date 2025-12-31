@@ -1,17 +1,20 @@
 import { FastifyInstance } from "fastify";
-import type { CreateFormInterfaceInput } from "@flowmaestro/shared/src/types/form-interface";
 import { FormInterfaceRepository } from "../../../storage/repositories/FormInterfaceRepository";
-import { authMiddleware } from "../../middleware";
+import { authMiddleware, validateRequest } from "../../middleware";
+import {
+    createFormInterfaceSchema,
+    type CreateFormInterfaceRequest
+} from "../../schemas/form-interface-schemas";
 
 export async function createFormInterfaceRoute(fastify: FastifyInstance) {
     fastify.post(
         "/",
         {
-            preHandler: [authMiddleware]
+            preHandler: [authMiddleware, validateRequest(createFormInterfaceSchema)]
         },
         async (request, reply) => {
             const repo = new FormInterfaceRepository();
-            const body = request.body as CreateFormInterfaceInput;
+            const body = request.body as CreateFormInterfaceRequest;
             const id = request.user.id;
 
             const iface = await repo.create(id, body);

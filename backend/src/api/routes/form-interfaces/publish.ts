@@ -1,6 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { FormInterfaceRepository } from "../../../storage/repositories/FormInterfaceRepository";
-import { authMiddleware } from "../../middleware";
+import { authMiddleware, NotFoundError } from "../../middleware";
 
 export async function publishFormInterfaceRoute(fastify: FastifyInstance) {
     fastify.post(
@@ -16,7 +16,7 @@ export async function publishFormInterfaceRoute(fastify: FastifyInstance) {
             const iface = await repo.publish(id, userId);
 
             if (!iface) {
-                return reply.code(404).send({ error: "Not found" });
+                throw new NotFoundError("Form interface not found");
             }
 
             return reply.send({

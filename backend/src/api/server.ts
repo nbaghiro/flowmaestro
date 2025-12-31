@@ -19,6 +19,7 @@ import { authRoutes } from "./routes/auth";
 import { checkpointRoutes } from "./routes/checkpoints";
 import { connectionRoutes } from "./routes/connections";
 import { executionRoutes } from "./routes/executions";
+import { formInterfacesRoutes } from "./routes/form-interfaces";
 import { integrationRoutes } from "./routes/integrations";
 import { knowledgeBaseRoutes } from "./routes/knowledge-bases";
 import { logRoutes } from "./routes/logs";
@@ -138,6 +139,7 @@ export async function buildServer() {
     await fastify.register(triggerRoutes);
     await fastify.register(webhookRoutes, { prefix: "/webhooks" });
     await fastify.register(websocketRoutes);
+    await fastify.register(formInterfacesRoutes, { prefix: "/form-interfaces" });
 
     // Error handler (must be last)
     fastify.setErrorHandler(errorHandler);

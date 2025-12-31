@@ -10,9 +10,9 @@ export async function listFormInterfacesRoute(fastify: FastifyInstance) {
         },
         async (request, reply) => {
             const repo = new FormInterfaceRepository();
-            const id = request.user!.id;
+            const userId = request.user!.id;
 
-            const interfaces = await repo.listByUser(id);
+            const interfaces = await repo.listByUser(userId);
 
             return reply.send({
                 success: true,

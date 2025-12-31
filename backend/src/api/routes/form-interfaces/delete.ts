@@ -1,6 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { FormInterfaceRepository } from "../../../storage/repositories/FormInterfaceRepository";
-import { authMiddleware } from "../../middleware";
+import { authMiddleware, NotFoundError } from "../../middleware";
 
 export async function deleteFormInterfaceRoute(fastify: FastifyInstance) {
     fastify.delete(
@@ -15,7 +15,13 @@ export async function deleteFormInterfaceRoute(fastify: FastifyInstance) {
             const repo = new FormInterfaceRepository();
             const success = await repo.softDelete(id, userId);
 
-            return reply.send({ success });
+            if (!success) {
+                throw new NotFoundError("Form interface not found");
+            }
+
+            return reply.send({
+                success: true
+            });
         }
     );
 }

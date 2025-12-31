@@ -2,7 +2,7 @@ import type {
     InterfaceSubmission,
     InterfaceFileAttachment,
     InterfaceUrlAttachment
-} from "@flowmaestro/shared/src/types/form-interface";
+} from "@flowmaestro/shared";
 import { db } from "../database";
 
 interface InterfaceSubmissionRow {

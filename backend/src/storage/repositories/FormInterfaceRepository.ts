@@ -2,7 +2,7 @@ import type {
     FormInterface,
     CreateFormInterfaceInput,
     UpdateFormInterfaceInput
-} from "@flowmaestro/shared/src/types/form-interface";
+} from "@flowmaestro/shared/src/form-interface";
 import { db } from "../database";
 
 interface FormInterfaceRow {
