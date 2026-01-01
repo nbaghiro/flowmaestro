@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { FormInterface } from "@flowmaestro/shared";
-import { getFormInterface } from "@/lib/api";
+import { getFormInterface, deleteFormInterface, duplicateFormInterface } from "@/lib/api";
 
 type State =
     | { status: "loading" }
@@ -47,6 +47,32 @@ export function InterfacesPage() {
 
     if (state.status === "error") {
         return <div>{state.message}</div>;
+    }
+
+    async function handleDelete(id: string) {
+        if (!window.confirm("Delete this interface? This cannot be undone.")) return;
+
+        await deleteFormInterface(id);
+        setState((prev) =>
+            prev.status === "ready"
+                ? {
+                      status: "ready",
+                      interfaces: prev.interfaces.filter((iface) => iface.id !== id)
+                  }
+                : prev
+        );
+    }
+
+    async function handleDuplicate(id: string) {
+        const duplicated = await duplicateFormInterface(id);
+        setState((prev) =>
+            prev.status === "ready"
+                ? {
+                      status: "ready",
+                      interfaces: [duplicated, ...prev.interfaces]
+                  }
+                : prev
+        );
     }
 
     return (
@@ -99,6 +125,18 @@ export function InterfacesPage() {
                                             className="mr-2 rounded-md px-3 py-1.5 text-sm font-medium hover:bg-muted"
                                         >
                                             Edit
+                                        </button>
+                                        <button
+                                            onClick={() => handleDuplicate(iface.id)}
+                                            className="mr-2 rounded-md px-3 py-1.5 text-sm font-medium hover:bg-muted"
+                                        >
+                                            Duplicate
+                                        </button>
+                                        <button
+                                            onClick={() => handleDelete(iface.id)}
+                                            className="mr-2 rounded-md px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-muted"
+                                        >
+                                            Delete
                                         </button>
                                         <button
                                             onClick={() => navigate(`/i/${iface.slug}`)}

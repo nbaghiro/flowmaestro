@@ -80,7 +80,7 @@ export const updateFormInterfaceSchema = z
         showDownloadButton: z.boolean().optional(),
         allowOutputEdit: z.boolean().optional(),
 
-        submitBottonText: z.string().optional(),
+        submitButtonText: z.string().optional(),
         submitLoadingText: z.string().optional(),
 
         // Allow changing target later, but enforce rule if they do
@@ -135,3 +135,20 @@ export const updateFormInterfaceSchema = z
     });
 
 export type UpdateFormInterfaceRequest = z.infer<typeof updateFormInterfaceSchema>;
+
+export const listFormInterfacesQuerySchema = z
+    .object({
+        workflowId: z.string().uuid().optional(),
+        agentId: z.string().uuid().optional()
+    })
+    .superRefine((val, ctx) => {
+        if (val.workflowId && val.agentId) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Provide either workflowId or agentId, not both.",
+                path: ["workflowId"]
+            });
+        }
+    });
+
+export type ListFormInterfacesQuery = z.infer<typeof listFormInterfacesQuerySchema>;

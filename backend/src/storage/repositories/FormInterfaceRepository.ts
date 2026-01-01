@@ -130,6 +130,38 @@ export class FormInterfaceRepository {
         return result.rows.map((row) => this.map(row as FormInterfaceRow));
     }
 
+    async listByWorkflowId(userId: string, workflowId: string): Promise<FormInterface[]> {
+        const result = await db.query(
+            `
+            SELECT *
+            FROM form_interfaces
+            WHERE user_id = $1
+              AND workflow_id = $2
+              AND deleted_at IS NULL
+            ORDER BY updated_at DESC
+            `,
+            [userId, workflowId]
+        );
+
+        return result.rows.map((row) => this.map(row as FormInterfaceRow));
+    }
+
+    async listByAgentId(userId: string, agentId: string): Promise<FormInterface[]> {
+        const result = await db.query(
+            `
+            SELECT *
+            FROM form_interfaces
+            WHERE user_id = $1
+              AND agent_id = $2
+              AND deleted_at IS NULL
+            ORDER BY updated_at DESC
+            `,
+            [userId, agentId]
+        );
+
+        return result.rows.map((row) => this.map(row as FormInterfaceRow));
+    }
+
     async update(
         id: string,
         userId: string,
@@ -159,6 +191,85 @@ export class FormInterfaceRepository {
             RETURNING *
             `,
             [id, userId, ...values]
+        );
+
+        return result.rows[0] ? this.map(result.rows[0] as FormInterfaceRow) : null;
+    }
+
+    async duplicate(
+        id: string,
+        userId: string,
+        name: string,
+        slug: string
+    ): Promise<FormInterface | null> {
+        const result = await db.query(
+            `
+            INSERT INTO form_interfaces (
+                user_id,
+                name,
+                slug,
+                target_type,
+                workflow_id,
+                agent_id,
+                cover_type,
+                cover_value,
+                icon_url,
+                title,
+                description,
+                input_placeholder,
+                input_label,
+                allow_file_upload,
+                allow_url_input,
+                max_files,
+                max_file_size_mb,
+                allowed_file_types,
+                output_label,
+                show_copy_button,
+                show_download_button,
+                allow_output_edit,
+                submit_button_text,
+                submit_loading_text,
+                status,
+                published_at,
+                submission_count,
+                last_submission_at
+            )
+            SELECT
+                user_id,
+                $3,
+                $4,
+                target_type,
+                workflow_id,
+                agent_id,
+                cover_type,
+                cover_value,
+                icon_url,
+                title,
+                description,
+                input_placeholder,
+                input_label,
+                allow_file_upload,
+                allow_url_input,
+                max_files,
+                max_file_size_mb,
+                allowed_file_types,
+                output_label,
+                show_copy_button,
+                show_download_button,
+                allow_output_edit,
+                submit_button_text,
+                submit_loading_text,
+                'draft',
+                NULL,
+                0,
+                NULL
+            FROM form_interfaces
+            WHERE id = $1
+              AND user_id = $2
+              AND deleted_at IS NULL
+            RETURNING *
+            `,
+            [id, userId, name, slug]
         );
 
         return result.rows[0] ? this.map(result.rows[0] as FormInterfaceRow) : null;

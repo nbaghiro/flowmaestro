@@ -7,6 +7,9 @@ interface Props {
 
     title: string;
     onTitleChange: (value: string) => void;
+
+    description: string;
+    onDescriptionChange: (value: string) => void;
 }
 
 export function TitleDescriptionEditor({
@@ -15,7 +18,9 @@ export function TitleDescriptionEditor({
     slug,
     onSlugChange,
     title,
-    onTitleChange
+    onTitleChange,
+    description,
+    onDescriptionChange
 }: Props) {
     return (
         <div className="space-y-4">
@@ -29,12 +34,15 @@ export function TitleDescriptionEditor({
             </div>
 
             <div>
-                <label className="text-sm font-medium">Slug</label>
+                <label className="text-sm font-medium">Public URL</label>
                 <input
                     value={slug}
                     onChange={(e) => onSlugChange(e.target.value)}
                     className="mt-1 w-full rounded-md border px-3 py-2"
                 />
+                <p className={`mt-1 text-xs ${slug.trim() ? "text-green-600" : "text-red-600"}`}>
+                    https://flowmaestro.ai/i/{slug.trim() ? slug.trim() : "your-url"}
+                </p>
             </div>
 
             <div>
@@ -43,6 +51,16 @@ export function TitleDescriptionEditor({
                     value={title}
                     onChange={(e) => onTitleChange(e.target.value)}
                     className="mt-1 w-full rounded-md border px-3 py-2"
+                />
+            </div>
+
+            <div>
+                <label className="text-sm font-medium">Description</label>
+                <textarea
+                    value={description}
+                    onChange={(e) => onDescriptionChange(e.target.value)}
+                    rows={3}
+                    className="mt-1 w-full resize-none rounded-md border px-3 py-2"
                 />
             </div>
         </div>

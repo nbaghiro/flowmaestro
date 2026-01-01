@@ -45,7 +45,7 @@ export class GCSStorageService {
      */
     public generateGCSPath(userId: string, knowledgeBaseId: string, filename: string): string {
         const timestamp = Date.now();
-        const sanitizedFilename = this.sanitizeFilename(filename);
+        const sanitizedFilename = this.sanitizeFilenameInternal(filename);
         return `${userId}/${knowledgeBaseId}/${timestamp}_${sanitizedFilename}`;
     }
 
@@ -78,6 +78,31 @@ export class GCSStorageService {
 
         // Return GCS URI
         return `gs://${this.bucketName}/${gcsPath}`;
+    }
+
+    /**
+     * Upload a file stream to a specific GCS path.
+     */
+    public async uploadToPath(
+        fileStream: Readable,
+        options: {
+            path: string;
+            contentType?: string;
+            metadata?: Record<string, string>;
+        }
+    ): Promise<string> {
+        const file = this.bucket.file(options.path);
+        const writeStream = file.createWriteStream({
+            resumable: false,
+            metadata: {
+                contentType: options.contentType || "application/octet-stream",
+                metadata: options.metadata
+            }
+        });
+
+        await pipeline(fileStream, writeStream);
+
+        return `gs://${this.bucketName}/${options.path}`;
     }
 
     /**
@@ -214,7 +239,11 @@ export class GCSStorageService {
     /**
      * Sanitize filename to remove invalid characters
      */
-    private sanitizeFilename(filename: string): string {
+    public sanitizeFilename(filename: string): string {
+        return this.sanitizeFilenameInternal(filename);
+    }
+
+    private sanitizeFilenameInternal(filename: string): string {
         // Remove or replace characters that are problematic in GCS object names
         return filename
             .replace(/[^\w\s.-]/g, "") // Keep alphanumeric, spaces, dots, hyphens
@@ -229,6 +258,11 @@ export class GCSStorageService {
     private getContentType(filename: string): string {
         const ext = path.extname(filename).toLowerCase();
         const contentTypeMap: Record<string, string> = {
+            ".png": "image/png",
+            ".jpg": "image/jpeg",
+            ".jpeg": "image/jpeg",
+            ".webp": "image/webp",
+            ".gif": "image/gif",
             ".pdf": "application/pdf",
             ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             ".doc": "application/msword",

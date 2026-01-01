@@ -14,7 +14,7 @@ export function InterfaceEditorLayout({ children, preview }: Props) {
             </div>
 
             {/* Right panel — preview (placeholder for now) */}
-            <div className="hidden w-[420px] shrink-0 bg-muted lg:block">
+            <div className="hidden w-[520px] shrink-0 bg-muted lg:block">
                 <div className="h-full p-4">
                     {preview ?? (
                         <div className="flex h-full items-center justify-center text-sm text-muted-foreground">

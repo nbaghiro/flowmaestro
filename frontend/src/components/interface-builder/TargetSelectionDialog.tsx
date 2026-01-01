@@ -43,7 +43,7 @@ export function TargetSelectionDialog({
                     const res = await getWorkflows();
                     if (!cancelled) {
                         setWorkflows(
-                            (res.data ?? []).map((wf: WorkflowListItem) => ({
+                            (res.data?.items ?? []).map((wf: WorkflowListItem) => ({
                                 id: wf.id,
                                 name: wf.name
                             }))
@@ -68,61 +68,63 @@ export function TargetSelectionDialog({
         };
     }, [target]);
 
-    if (!target) {
-        return (
-            <div className="mx-auto max-w-xl p-6">
-                <div className="space-y-4">
-                    <TargetCard
-                        label="Workflow"
-                        description="Trigger a workflow via a public form"
-                        onClick={() => onTargetChange("workflow")}
-                    />
-                    <TargetCard
-                        label="Agent"
-                        description="Send user input directly to an agent"
-                        onClick={() => onTargetChange("agent")}
-                    />
-                </div>
-            </div>
-        );
-    }
-
     return (
-        <div className="mb-6">
-            <label className="mb-2 block text-sm font-medium">
-                Select {target === "workflow" ? "Workflow" : "Agent"}
-            </label>
+        <div className="mx-auto max-w-xl space-y-4 p-6">
+            <div className="space-y-4">
+                <TargetCard
+                    label="Workflow"
+                    description="Trigger a workflow via a public form"
+                    selected={target === "workflow"}
+                    onClick={() => onTargetChange("workflow")}
+                />
+                <TargetCard
+                    label="Agent"
+                    description="Send user input directly to an agent"
+                    selected={target === "agent"}
+                    onClick={() => onTargetChange("agent")}
+                />
+            </div>
 
-            {loading ? (
-                <div className="text-sm text-muted-foreground">Loading…</div>
-            ) : (
-                <select
-                    value={
-                        target === "workflow" ? (selectedWorkflowId ?? "") : (selectedAgentId ?? "")
-                    }
-                    onChange={(e) =>
-                        target === "workflow"
-                            ? onWorkflowSelect(e.target.value)
-                            : onAgentSelect(e.target.value)
-                    }
-                    className="w-full rounded-md border px-3 py-2"
-                >
-                    <option value="">Select one</option>
+            {target && (
+                <div>
+                    <label className="mb-2 block text-sm font-medium">
+                        Select {target === "workflow" ? "Workflow" : "Agent"}
+                    </label>
 
-                    {target === "workflow" &&
-                        workflows.map((wf) => (
-                            <option key={wf.id} value={wf.id}>
-                                {wf.name}
-                            </option>
-                        ))}
+                    {loading ? (
+                        <div className="text-sm text-muted-foreground">Loading…</div>
+                    ) : (
+                        <select
+                            value={
+                                target === "workflow"
+                                    ? (selectedWorkflowId ?? "")
+                                    : (selectedAgentId ?? "")
+                            }
+                            onChange={(e) =>
+                                target === "workflow"
+                                    ? onWorkflowSelect(e.target.value)
+                                    : onAgentSelect(e.target.value)
+                            }
+                            className="w-full rounded-md border px-3 py-2"
+                        >
+                            <option value="">Select one</option>
 
-                    {target === "agent" &&
-                        agents.map((agent) => (
-                            <option key={agent.id} value={agent.id}>
-                                {agent.name}
-                            </option>
-                        ))}
-                </select>
+                            {target === "workflow" &&
+                                workflows.map((wf) => (
+                                    <option key={wf.id} value={wf.id}>
+                                        {wf.name}
+                                    </option>
+                                ))}
+
+                            {target === "agent" &&
+                                agents.map((agent) => (
+                                    <option key={agent.id} value={agent.id}>
+                                        {agent.name}
+                                    </option>
+                                ))}
+                        </select>
+                    )}
+                </div>
             )}
         </div>
     );
@@ -131,16 +133,20 @@ export function TargetSelectionDialog({
 function TargetCard({
     label,
     description,
+    selected = false,
     onClick
 }: {
     label: string;
     description: string;
+    selected?: boolean;
     onClick: () => void;
 }) {
     return (
         <button
             onClick={onClick}
-            className="w-full rounded-lg border p-4 text-left transition hover:bg-muted"
+            className={`w-full rounded-lg border p-4 text-left transition hover:bg-muted ${
+                selected ? "border-primary bg-muted/30" : ""
+            }`}
         >
             <div className="font-medium">{label}</div>
             <div className="text-sm text-muted-foreground">{description}</div>

@@ -11,9 +11,11 @@ import { FlowBuilder } from "./pages/FlowBuilder";
 import { ForgotPassword } from "./pages/ForgotPassword";
 import { InterfaceEditorPage } from "./pages/InterfaceEditorPage";
 import { InterfacesPage } from "./pages/InterfacesPage";
+import { InterfaceSubmissionsPage } from "./pages/InterfaceSubmissionsPage";
 import { KnowledgeBaseDetail } from "./pages/KnowledgeBaseDetail";
 import { KnowledgeBases } from "./pages/KnowledgeBases";
 import { Login } from "./pages/Login";
+import { PublicInterfacePage } from "./pages/PublicInterfacePage";
 import { Register } from "./pages/Register";
 import { ResetPassword } from "./pages/ResetPassword";
 import { Settings } from "./pages/Settings";
@@ -56,7 +58,13 @@ function App() {
                     <Route path="interfaces" element={<InterfacesPage />} />
                     <Route path="interfaces/new" element={<InterfaceEditorPage />} />
                     <Route path="interfaces/:id" element={<InterfaceEditorPage />} />
+                    <Route
+                        path="interfaces/:id/submissions"
+                        element={<InterfaceSubmissionsPage />}
+                    />
                 </Route>
+
+                <Route path="/i/:slug" element={<PublicInterfacePage />} />
 
                 {/* Full-screen knowledge base detail without sidebar */}
                 <Route

@@ -21,7 +21,9 @@ import type {
     AgentTemplateListParams,
     AgentTemplateListResponse,
     CopyAgentTemplateResponse,
-    FormInterface
+    FormInterface,
+    PublicFormInterface,
+    UpdateFormInterfaceInput
 } from "@flowmaestro/shared";
 import { logger } from "./logger";
 
@@ -454,6 +456,9 @@ export async function createFormInterface(input: {
     name: string;
     slug: string;
     title: string;
+    description?: string;
+    coverType?: "image" | "color" | "stock";
+    coverValue?: string;
     targetType: "workflow" | "agent";
     workflowId?: string;
     agentId?: string;
@@ -512,6 +517,259 @@ export async function getFormInterfaceById(id: string): Promise<{
     return response.json();
 }
 
+export async function updateFormInterface(
+    id: string,
+    input: UpdateFormInterfaceInput
+): Promise<FormInterface> {
+    const token = getAuthToken();
+
+    if (!token) {
+        throw new Error("No authentication token found");
+    }
+
+    const response = await apiFetch(`${API_BASE_URL}/form-interfaces/${id}`, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(input)
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const result = (await response.json()) as { data: FormInterface };
+    return result.data;
+}
+
+export async function publishFormInterface(id: string): Promise<FormInterface> {
+    const token = getAuthToken();
+
+    if (!token) {
+        throw new Error("No authentication token found");
+    }
+
+    const response = await apiFetch(`${API_BASE_URL}/form-interfaces/${id}/publish`, {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${token}`
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const result = (await response.json()) as { data: FormInterface };
+    return result.data;
+}
+
+export async function unpublishFormInterface(id: string): Promise<FormInterface> {
+    const token = getAuthToken();
+
+    if (!token) {
+        throw new Error("No authentication token found");
+    }
+
+    const response = await apiFetch(`${API_BASE_URL}/form-interfaces/${id}/unpublish`, {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${token}`
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const result = (await response.json()) as { data: FormInterface };
+    return result.data;
+}
+
+export async function duplicateFormInterface(id: string): Promise<FormInterface> {
+    const token = getAuthToken();
+
+    if (!token) {
+        throw new Error("No authentication token found");
+    }
+
+    const response = await apiFetch(`${API_BASE_URL}/form-interfaces/${id}/duplicate`, {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${token}`
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const result = (await response.json()) as { data: FormInterface };
+    return result.data;
+}
+
+export async function deleteFormInterface(id: string): Promise<void> {
+    const token = getAuthToken();
+
+    if (!token) {
+        throw new Error("No authentication token found");
+    }
+
+    const response = await apiFetch(`${API_BASE_URL}/form-interfaces/${id}`, {
+        method: "DELETE",
+        headers: {
+            Authorization: `Bearer ${token}`
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+}
+
+export async function uploadFormInterfaceAsset(
+    interfaceId: string,
+    input: { file: File; type: "cover" | "icon" }
+): Promise<{ interface?: FormInterface; asset: { type: "cover" | "icon"; gcsUri: string } }> {
+    const token = getAuthToken();
+
+    if (!token) {
+        throw new Error("No authentication token found");
+    }
+
+    const formData = new FormData();
+    formData.append("type", input.type);
+    formData.append("file", input.file);
+
+    const response = await apiFetch(`${API_BASE_URL}/form-interfaces/${interfaceId}/assets`, {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${token}`
+        },
+        body: formData
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const result = (await response.json()) as {
+        data: { interface?: FormInterface; asset: { type: "cover" | "icon"; gcsUri: string } };
+    };
+    return result.data;
+}
+
+export async function getInterfaceSubmissions(interfaceId: string): Promise<{
+    success: boolean;
+    data: Array<{
+        id: string;
+        createdAt: string;
+        inputText?: string;
+        files?: Array<{
+            fileName: string;
+            fileSize: number;
+            mimeType: string;
+            gcsUri: string;
+        }>;
+        urls?: Array<{
+            url: string;
+            title?: string;
+        }>;
+    }>;
+    error?: string;
+}> {
+    const token = getAuthToken();
+
+    if (!token) {
+        throw new Error("No authentication token found");
+    }
+
+    const response = await apiFetch(`${API_BASE_URL}/form-interfaces/${interfaceId}/submissions`, {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+export async function getPublicFormInterface(slug: string): Promise<{
+    success: boolean;
+    data: PublicFormInterface;
+    error?: string;
+}> {
+    const response = await apiFetch(`${API_BASE_URL}/public/form-interfaces/${slug}`, {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json"
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+export async function submitPublicFormInterface(
+    slug: string,
+    input: { message?: string; urls?: string[]; files?: File[] }
+): Promise<{
+    success: boolean;
+    data: unknown;
+    error?: string;
+}> {
+    const hasFiles = (input.files?.length ?? 0) > 0;
+
+    let response: Response;
+
+    if (hasFiles) {
+        const formData = new FormData();
+        if (input.message) formData.append("message", input.message);
+        input.urls?.forEach((url) => formData.append("urls", url));
+        input.files?.forEach((file) => formData.append("files", file));
+
+        response = await apiFetch(`${API_BASE_URL}/public/form-interfaces/${slug}/submit`, {
+            method: "POST",
+            body: formData
+        });
+    } else {
+        response = await apiFetch(`${API_BASE_URL}/public/form-interfaces/${slug}/submit`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                message: input.message ?? "",
+                urls: input.urls ?? []
+            })
+        });
+    }
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
 // ===== Profile & Account API Functions =====
 
 /**
