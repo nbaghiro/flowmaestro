@@ -10,14 +10,14 @@ Form Interfaces allow users to create public-facing, branded interfaces that exp
 
 ## User Decisions
 
-| Decision        | Choice                                       |
-| --------------- | -------------------------------------------- |
-| Interface URLs  | Path-based (`/i/{slug}`)                     |
-| File Storage    | GCS (existing infrastructure)                |
-| Output Format   | Rich text (markdown rendering)               |
-| Agent Display   | Final response only (no conversation thread) |
-| Re-run          | Yes, "Run Again" button enabled              |
-| Spam Prevention | Rate limiting (10/min/IP)                    |
+| Decision            | Choice                                       |
+| ------------------- | -------------------------------------------- |
+| Form Interface URLs | Path-based (`/i/{slug}`)                     |
+| File Storage        | GCS (existing infrastructure)                |
+| Output Format       | Rich text (markdown rendering)               |
+| Agent Display       | Final response only (no conversation thread) |
+| Re-run              | Yes, "Run Again" button enabled              |
+| Spam Prevention     | Rate limiting (10/min/IP)                    |
 
 ---
 
@@ -34,7 +34,7 @@ Form Interfaces allow users to create public-facing, branded interfaces that exp
 │                                                                          │
 │  ┌──────────┐                                                            │
 │  │   ICON   │  Title                                                     │
-│  │          │  Description text explaining what this interface does      │
+│  │          │  Description text explaining what this form interface does │
 │  └──────────┘                                                            │
 │                                                                          │
 │  ┌────────────────────────────────────────────────────────────────────┐  │
@@ -64,11 +64,11 @@ Form Interfaces allow users to create public-facing, branded interfaces that exp
 
 ---
 
-## Interface Sections
+## Form Interface Sections
 
 ### 1. Cover Photo (Branding)
 
-Options for interface creator:
+Options for form interface creator:
 
 | Option           | Description                              |
 | ---------------- | ---------------------------------------- |
@@ -77,14 +77,14 @@ Options for interface creator:
 | Custom Color     | Pick any color via color picker          |
 | Stock Photo      | Search and select from Unsplash library  |
 
-**Storage**: Cover images uploaded to GCS at `users/{userId}/interfaces/{interfaceId}/cover.*`
+**Storage**: Cover images uploaded to GCS at `users/{userId}/form-interfaces/{formInterfaceId}/cover.*`
 
 ### 2. Profile Icon
 
 - Upload custom icon from computer
 - Displayed as avatar overlapping cover photo (like Notion page icons)
 - Supports image files and potentially emoji selection
-- Storage: `users/{userId}/interfaces/{interfaceId}/icon.*`
+- Storage: `users/{userId}/form-interfaces/{formInterfaceId}/icon.*`
 
 ### 3. Title & Description
 
@@ -133,9 +133,9 @@ Allow form user to provide additional context alongside their message.
 
 ---
 
-# Phase 1: Interface Builder & Public URLs
+# Phase 1: Form Interface Builder & Public URLs
 
-Build the complete interface editor and public rendering infrastructure **without** workflow/agent execution. Interfaces collect submissions but don't process them.
+Build the complete form interface editor and public rendering infrastructure **without** workflow/agent execution. Form interfaces collect submissions but don't process them.
 
 ---
 
@@ -242,7 +242,7 @@ CREATE INDEX idx_form_interface_submissions_interface_id ON form_interface_submi
 CREATE INDEX idx_form_interface_submissions_submitted_at ON form_interface_submissions(submitted_at DESC);
 
 -- Function to update submission count
-CREATE OR REPLACE FUNCTION update_interface_submission_count()
+CREATE OR REPLACE FUNCTION update_form_interface_submission_count()
 RETURNS TRIGGER AS $$
 BEGIN
     UPDATE form_interfaces
@@ -254,10 +254,10 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER trigger_update_submission_count
+CREATE TRIGGER trigger_update_form_interface_submission_count
     AFTER INSERT ON form_interface_submissions
     FOR EACH ROW
-    EXECUTE FUNCTION update_interface_submission_count();
+    EXECUTE FUNCTION update_form_interface_submission_count();
 ```
 
 ---
@@ -268,10 +268,10 @@ CREATE TRIGGER trigger_update_submission_count
 
 ```typescript
 // Cover photo types
-export type InterfaceCoverType = "image" | "color" | "stock";
+export type FormInterfaceCoverType = "image" | "color" | "stock";
 
 // File attachment
-export interface InterfaceFileAttachment {
+export interface FormInterfaceFileAttachment {
     fileName: string;
     fileSize: number;
     mimeType: string;
@@ -280,15 +280,15 @@ export interface InterfaceFileAttachment {
 }
 
 // URL attachment
-export interface InterfaceUrlAttachment {
+export interface FormInterfaceUrlAttachment {
     url: string;
     title?: string;
 }
 
 // Target type
-export type InterfaceTargetType = "workflow" | "agent";
+export type FormInterfaceTargetType = "workflow" | "agent";
 
-// Main interface configuration
+// Main form interface configuration
 export interface FormInterface {
     id: string;
     userId: string;
@@ -298,12 +298,12 @@ export interface FormInterface {
     slug: string;
 
     // Target (REQUIRED)
-    targetType: InterfaceTargetType;
+    targetType: FormInterfaceTargetType;
     workflowId: string | null;
     agentId: string | null;
 
     // Branding
-    coverType: InterfaceCoverType;
+    coverType: FormInterfaceCoverType;
     coverValue: string;
     iconUrl: string | null;
     title: string;
@@ -341,15 +341,15 @@ export interface FormInterface {
     updatedAt: Date;
 }
 
-// Interface submission
-export interface InterfaceSubmission {
+// Form interface submission
+export interface FormInterfaceSubmission {
     id: string;
     interfaceId: string;
 
     // User Input
     message: string | null;
-    files: InterfaceFileAttachment[];
-    urls: InterfaceUrlAttachment[];
+    files: FormInterfaceFileAttachment[];
+    urls: FormInterfaceUrlAttachment[];
 
     // Output
     output: string | null;
@@ -367,11 +367,11 @@ export interface CreateFormInterfaceInput {
     slug: string;
     title: string;
     // Target is REQUIRED - must provide exactly one
-    targetType: InterfaceTargetType;
+    targetType: FormInterfaceTargetType;
     workflowId?: string; // Required if targetType = 'workflow'
     agentId?: string; // Required if targetType = 'agent'
     description?: string;
-    coverType?: InterfaceCoverType;
+    coverType?: FormInterfaceCoverType;
     coverValue?: string;
 }
 
@@ -380,7 +380,7 @@ export interface UpdateFormInterfaceInput {
     slug?: string;
     title?: string;
     description?: string;
-    coverType?: InterfaceCoverType;
+    coverType?: FormInterfaceCoverType;
     coverValue?: string;
     iconUrl?: string;
     inputPlaceholder?: string;
@@ -395,23 +395,23 @@ export interface UpdateFormInterfaceInput {
     showDownloadButton?: boolean;
     allowOutputEdit?: boolean;
     // Target can be changed (rare, but allowed)
-    targetType?: InterfaceTargetType;
+    targetType?: FormInterfaceTargetType;
     workflowId?: string;
     agentId?: string;
 }
 
 // Public form submission input
-export interface SubmitInterfaceInput {
+export interface SubmitFormInterfaceInput {
     message: string;
     files?: File[];
     urls?: string[];
 }
 
-// Public interface response (for rendering)
+// Public form interface response (for rendering)
 export interface PublicFormInterface {
     id: string;
     slug: string;
-    coverType: InterfaceCoverType;
+    coverType: FormInterfaceCoverType;
     coverValue: string;
     iconUrl: string | null;
     title: string;
@@ -627,28 +627,28 @@ export class FormInterfaceRepository {
 }
 ```
 
-### Repository: `InterfaceSubmissionRepository.ts`
+### Repository: `FormInterfaceSubmissionRepository.ts`
 
 ```typescript
-// backend/src/storage/repositories/InterfaceSubmissionRepository.ts
+// backend/src/storage/repositories/FormInterfaceSubmissionRepository.ts
 import { pool } from "../database";
 import type {
-    InterfaceSubmission,
-    InterfaceFileAttachment,
-    InterfaceUrlAttachment
+    FormInterfaceSubmission,
+    FormInterfaceFileAttachment,
+    FormInterfaceUrlAttachment
 } from "@flowmaestro/shared";
 
-export interface CreateSubmissionInput {
+export interface CreateFormInterfaceSubmissionInput {
     interfaceId: string;
     message: string | null;
-    files: InterfaceFileAttachment[];
-    urls: InterfaceUrlAttachment[];
+    files: FormInterfaceFileAttachment[];
+    urls: FormInterfaceUrlAttachment[];
     ipAddress: string | null;
     userAgent: string | null;
 }
 
-export class InterfaceSubmissionRepository {
-    async create(input: CreateSubmissionInput): Promise<InterfaceSubmission> {
+export class FormInterfaceSubmissionRepository {
+    async create(input: CreateFormInterfaceSubmissionInput): Promise<FormInterfaceSubmission> {
         const result = await pool.query(
             `INSERT INTO form_interface_submissions
              (interface_id, message, files, urls, ip_address, user_agent)
@@ -666,7 +666,7 @@ export class InterfaceSubmissionRepository {
         return this.mapToSubmission(result.rows[0]);
     }
 
-    async findById(id: string): Promise<InterfaceSubmission | null> {
+    async findById(id: string): Promise<FormInterfaceSubmission | null> {
         const result = await pool.query(`SELECT * FROM form_interface_submissions WHERE id = $1`, [
             id
         ]);
@@ -677,7 +677,7 @@ export class InterfaceSubmissionRepository {
         interfaceId: string,
         limit: number = 50,
         offset: number = 0
-    ): Promise<InterfaceSubmission[]> {
+    ): Promise<FormInterfaceSubmission[]> {
         const result = await pool.query(
             `SELECT * FROM form_interface_submissions
              WHERE interface_id = $1
@@ -696,7 +696,7 @@ export class InterfaceSubmissionRepository {
         return Number(result.rows[0].count);
     }
 
-    async updateOutput(id: string, output: string): Promise<InterfaceSubmission | null> {
+    async updateOutput(id: string, output: string): Promise<FormInterfaceSubmission | null> {
         const result = await pool.query(
             `UPDATE form_interface_submissions
              SET output = $2
@@ -714,13 +714,13 @@ export class InterfaceSubmissionRepository {
         );
     }
 
-    private mapToSubmission(row: Record<string, unknown>): InterfaceSubmission {
+    private mapToSubmission(row: Record<string, unknown>): FormInterfaceSubmission {
         return {
             id: row.id as string,
             interfaceId: row.interface_id as string,
             message: row.message as string | null,
-            files: (row.files as InterfaceFileAttachment[]) || [],
-            urls: (row.urls as InterfaceUrlAttachment[]) || [],
+            files: (row.files as FormInterfaceFileAttachment[]) || [],
+            urls: (row.urls as FormInterfaceUrlAttachment[]) || [],
             output: row.output as string | null,
             outputEditedAt: row.output_edited_at ? new Date(row.output_edited_at as string) : null,
             ipAddress: row.ip_address as string | null,
@@ -735,33 +735,33 @@ export class InterfaceSubmissionRepository {
 
 ```
 # Authenticated Routes
-POST   /api/form-interfaces                     # Create interface
-GET    /api/form-interfaces                     # List user's interfaces
-GET    /api/form-interfaces/:id                 # Get interface details
-PUT    /api/form-interfaces/:id                 # Update interface
-DELETE /api/form-interfaces/:id                 # Delete interface
-POST   /api/form-interfaces/:id/publish         # Publish interface
-POST   /api/form-interfaces/:id/unpublish       # Unpublish interface
-POST   /api/form-interfaces/:id/duplicate       # Duplicate interface
+POST   /api/form-interfaces                     # Create form interface
+GET    /api/form-interfaces                     # List user's form interfaces
+GET    /api/form-interfaces/:id                 # Get form interface details
+PUT    /api/form-interfaces/:id                 # Update form interface
+DELETE /api/form-interfaces/:id                 # Delete form interface
+POST   /api/form-interfaces/:id/publish         # Publish form interface
+POST   /api/form-interfaces/:id/unpublish       # Unpublish form interface
+POST   /api/form-interfaces/:id/duplicate       # Duplicate form interface
 POST   /api/form-interfaces/:id/assets          # Upload cover/icon
 GET    /api/form-interfaces/:id/submissions     # List submissions
 
 # Lookup by Target (for workflow/agent editors)
-GET    /api/form-interfaces?workflowId=x        # Get interfaces linked to workflow
-GET    /api/form-interfaces?agentId=x           # Get interfaces linked to agent
+GET    /api/form-interfaces?workflowId=x        # Get form interfaces linked to workflow
+GET    /api/form-interfaces?agentId=x           # Get form interfaces linked to agent
 
 # Public Routes (No Auth, Rate Limited)
-GET    /api/public/form-interfaces/:slug           # Get interface for rendering
-POST   /api/public/form-interfaces/:slug/submit    # Submit interface (multipart)
+GET    /api/public/form-interfaces/:slug           # Get form interface for rendering
+POST   /api/public/form-interfaces/:slug/submit    # Submit form interface (multipart)
 ```
 
 ### Rate Limiting Middleware
 
 ```typescript
-// backend/src/api/middleware/interfaceRateLimiter.ts
+// backend/src/api/middleware/formInterfaceRateLimiter.ts
 const submissionLimits = new Map<string, { count: number; resetAt: number }>();
 
-export function createInterfaceRateLimiter(limitPerMinute: number = 10) {
+export function createFormInterfaceRateLimiter(limitPerMinute: number = 10) {
     return async (request: FastifyRequest, reply: FastifyReply) => {
         const ip = request.ip;
         const now = Date.now();
@@ -793,21 +793,21 @@ export function createInterfaceRateLimiter(limitPerMinute: number = 10) {
 
 Users can create Form Interfaces from three locations:
 
-#### 1. Interfaces List Page (Primary)
+#### 1. Form Interfaces List Page (Primary)
 
 ```
-/interfaces → [+ Create Interface] → Target Selection Dialog → /interfaces/new?workflowId=x
-                                                             → /interfaces/new?agentId=x
+/form-interfaces → [+ Create Form Interface] → Target Selection Dialog → /form-interfaces/new?workflowId=x
+                                                                       → /form-interfaces/new?agentId=x
 ```
 
-The main hub for managing all form interfaces. Since a form interface without a target is useless, clicking "Create Interface" opens a **Target Selection Dialog** first:
+The main hub for managing all form interfaces. Since a form interface without a target is useless, clicking "Create Form Interface" opens a **Target Selection Dialog** first:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │  Create Form Interface                                      [X] │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                 │
-│  What should this interface connect to?                         │
+│  What should this form interface connect to?                    │
 │                                                                 │
 │  ┌─────────────────────────────────────────────────────────┐    │
 │  │  ⚡ Workflow                                             │    │
@@ -833,7 +833,7 @@ The main hub for managing all form interfaces. Since a form interface without a 
 
 - User must select either a workflow OR an agent before proceeding
 - "Continue" button disabled until selection is made
-- Navigates to `/interfaces/new?workflowId={id}` or `/interfaces/new?agentId={id}`
+- Navigates to `/form-interfaces/new?workflowId={id}` or `/form-interfaces/new?agentId={id}`
 
 #### 2. Workflow Editor
 
@@ -847,17 +847,17 @@ The main hub for managing all form interfaces. Since a form interface without a 
 │  └─────────┘     └─────────┘     └─────────┘                    │
 │                                                                 │
 ├─────────────────────────────────────────────────────────────────┤
-│  Interfaces                                                     │
+│  Form Interfaces                                                │
 │  ┌──────────────────────────────────────────────────────────┐   │
-│  │  No interfaces linked to this workflow                   │   │
+│  │  No form interfaces linked to this workflow              │   │
 │  │  [+ Create Form Interface]                               │   │
 │  └──────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
 - Button in workflow editor sidebar/footer
-- Creates interface with workflow pre-linked (`targetType: 'workflow'`, `workflowId` set)
-- Navigates to: `/interfaces/new?workflowId={id}`
+- Creates form interface with workflow pre-linked (`targetType: 'workflow'`, `workflowId` set)
+- Navigates to: `/form-interfaces/new?workflowId={id}`
 
 #### 3. Agent Builder
 
@@ -871,22 +871,22 @@ The main hub for managing all form interfaces. Since a form interface without a 
 │  Tools: [Knowledge Base] [Create Ticket] [Send Email]           │
 │                                                                 │
 ├─────────────────────────────────────────────────────────────────┤
-│  Interfaces                                                     │
+│  Form Interfaces                                                │
 │  ┌──────────────────────────────────────────────────────────┐   │
-│  │  No interfaces linked to this agent                      │   │
+│  │  No form interfaces linked to this agent                 │   │
 │  │  [+ Create Form Interface]                               │   │
 │  └──────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
 - Button in agent builder sidebar/footer
-- Creates interface with agent pre-linked (`targetType: 'agent'`, `agentId` set)
-- Navigates to: `/interfaces/new?agentId={id}`
+- Creates form interface with agent pre-linked (`targetType: 'agent'`, `agentId` set)
+- Navigates to: `/form-interfaces/new?agentId={id}`
 
 #### Query Parameter Handling
 
 ```typescript
-// In InterfaceEditorPage.tsx
+// In FormInterfaceEditorPage.tsx
 const [searchParams] = useSearchParams();
 const workflowId = searchParams.get("workflowId");
 const agentId = searchParams.get("agentId");
@@ -894,28 +894,28 @@ const agentId = searchParams.get("agentId");
 // Pre-populate target when creating from workflow/agent editor
 useEffect(() => {
     if (workflowId) {
-        updateInterface({
+        updateFormInterface({
             targetType: "workflow",
             workflowId,
-            name: `Interface for ${workflowName}`
+            name: `Form Interface for ${workflowName}`
         });
     } else if (agentId) {
-        updateInterface({
+        updateFormInterface({
             targetType: "agent",
             agentId,
-            name: `Interface for ${agentName}`
+            name: `Form Interface for ${agentName}`
         });
     }
 }, [workflowId, agentId]);
 ```
 
-#### Linked Interfaces Display
+#### Linked Form Interfaces Display
 
-When a workflow/agent has linked interfaces, show them:
+When a workflow/agent has linked form interfaces, show them:
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  Interfaces                                                  │
+│  Form Interfaces                                             │
 │  ┌────────────────────────────────────────────────────────┐  │
 │  │ 📝 Lead Capture Form          Published   89 subs      │  │
 │  │    /i/lead-capture            [Edit] [View] [Unlink]   │  │
@@ -923,7 +923,7 @@ When a workflow/agent has linked interfaces, show them:
 │  │ 📝 Contact Us                 Draft       0 subs       │  │
 │  │    /i/contact-us              [Edit] [View] [Unlink]   │  │
 │  └────────────────────────────────────────────────────────┘  │
-│  [+ Create Another Interface]                                │
+│  [+ Create Another Form Interface]                           │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -931,68 +931,68 @@ When a workflow/agent has linked interfaces, show them:
 
 ### Pages
 
-| Route                          | Component                 | Description                     |
-| ------------------------------ | ------------------------- | ------------------------------- |
-| `/interfaces`                  | `InterfacesPage.tsx`      | List of user's interfaces       |
-| `/interfaces/new`              | `InterfaceEditorPage.tsx` | Create new interface            |
-| `/interfaces/new?workflowId=x` | `InterfaceEditorPage.tsx` | Create with workflow pre-linked |
-| `/interfaces/new?agentId=x`    | `InterfaceEditorPage.tsx` | Create with agent pre-linked    |
-| `/interfaces/:id/edit`         | `InterfaceEditorPage.tsx` | Edit existing interface         |
-| `/interfaces/:id/submissions`  | `SubmissionsPage.tsx`     | View interface submissions      |
-| `/i/:slug`                     | `PublicInterfacePage.tsx` | Public interface (no auth)      |
+| Route                               | Component                          | Description                     |
+| ----------------------------------- | ---------------------------------- | ------------------------------- |
+| `/form-interfaces`                  | `FormInterfacesPage.tsx`           | List of user's form interfaces  |
+| `/form-interfaces/new`              | `FormInterfaceEditorPage.tsx`      | Create new form interface       |
+| `/form-interfaces/new?workflowId=x` | `FormInterfaceEditorPage.tsx`      | Create with workflow pre-linked |
+| `/form-interfaces/new?agentId=x`    | `FormInterfaceEditorPage.tsx`      | Create with agent pre-linked    |
+| `/form-interfaces/:id/edit`         | `FormInterfaceEditorPage.tsx`      | Edit existing form interface    |
+| `/form-interfaces/:id/submissions`  | `FormInterfaceSubmissionsPage.tsx` | View form interface submissions |
+| `/i/:slug`                          | `PublicFormInterfacePage.tsx`      | Public form interface (no auth) |
 
 ### Component Tree
 
 ```
 frontend/src/
 ├── pages/
-│   ├── InterfacesPage.tsx           # List all interfaces
-│   ├── InterfaceEditorPage.tsx      # Create/edit interface
-│   ├── InterfaceSubmissionsPage.tsx # View submissions
-│   └── PublicInterfacePage.tsx      # Public interface render
+│   ├── FormInterfacesPage.tsx              # List all form interfaces
+│   ├── FormInterfaceEditorPage.tsx         # Create/edit form interface
+│   ├── FormInterfaceSubmissionsPage.tsx    # View submissions
+│   └── PublicFormInterfacePage.tsx         # Public form interface render
 │
-├── components/interface-builder/
-│   ├── TargetSelectionDialog.tsx    # Workflow/Agent selection (shown on create)
-│   ├── InterfaceEditorLayout.tsx    # Main editor layout
-│   ├── InterfacePreview.tsx         # Live preview panel
-│   ├── TargetDisplay.tsx            # Shows linked workflow/agent in editor
+├── components/form-interface-builder/
+│   ├── TargetSelectionDialog.tsx           # Workflow/Agent selection (shown on create)
+│   ├── FormInterfaceEditorLayout.tsx       # Main editor layout
+│   ├── FormInterfacePreview.tsx            # Live preview panel
+│   ├── TargetDisplay.tsx                   # Shows linked workflow/agent in editor
 │   │
-│   ├── CoverEditor.tsx              # Cover photo options
-│   │   ├── ImageUploader.tsx        # Upload local image
-│   │   ├── ColorPicker.tsx          # Solid color picker
-│   │   ├── ColorPalette.tsx         # Predefined colors
-│   │   └── StockPhotoSearch.tsx     # Unsplash integration
+│   ├── CoverEditor.tsx                     # Cover photo options
+│   │   ├── ImageUploader.tsx               # Upload local image
+│   │   ├── ColorPicker.tsx                 # Solid color picker
+│   │   ├── ColorPalette.tsx                # Predefined colors
+│   │   └── StockPhotoSearch.tsx            # Unsplash integration
 │   │
-│   ├── IconUploader.tsx             # Profile icon upload
-│   ├── TitleDescriptionEditor.tsx   # Title & description inputs
-│   ├── InputConfigEditor.tsx        # Message input settings
-│   ├── ContextConfigEditor.tsx      # Files/URLs toggles
-│   ├── OutputConfigEditor.tsx       # Output area settings
-│   └── SubmitButtonEditor.tsx       # Button text settings
+│   ├── IconUploader.tsx                    # Profile icon upload
+│   ├── TitleDescriptionEditor.tsx          # Title & description inputs
+│   ├── InputConfigEditor.tsx               # Message input settings
+│   ├── ContextConfigEditor.tsx             # Files/URLs toggles
+│   ├── OutputConfigEditor.tsx              # Output area settings
+│   └── SubmitButtonEditor.tsx              # Button text settings
 │
-├── components/public-interface/
-│   ├── InterfaceHeader.tsx          # Cover + icon + title
-│   ├── MessageInput.tsx             # Textarea input
-│   ├── FileUploader.tsx             # File attachment area
-│   ├── UrlInput.tsx                 # URL input area
-│   ├── SubmitButton.tsx             # Submit button
-│   └── OutputDisplay.tsx            # Rich text output area
-│       ├── LoadingState.tsx         # Loading spinner
-│       ├── MarkdownRenderer.tsx     # Render markdown output
-│       └── OutputActions.tsx        # Copy/download/edit buttons
+├── components/public-form-interface/
+│   ├── FormInterfaceHeader.tsx             # Cover + icon + title
+│   ├── MessageInput.tsx                    # Textarea input
+│   ├── FileUploader.tsx                    # File attachment area
+│   ├── UrlInput.tsx                        # URL input area
+│   ├── SubmitButton.tsx                    # Submit button
+│   └── OutputDisplay.tsx                   # Rich text output area
+│       ├── LoadingState.tsx                # Loading spinner
+│       ├── MarkdownRenderer.tsx            # Render markdown output
+│       └── OutputActions.tsx               # Copy/download/edit buttons
 │
 └── stores/
-    └── interfaceBuilderStore.ts     # Zustand store
+    └── formInterfaceBuilderStore.ts        # Zustand store
 ```
 
 ### Zustand Store
 
 ```typescript
-// frontend/src/stores/interfaceBuilderStore.ts
+// frontend/src/stores/formInterfaceBuilderStore.ts
 import { create } from "zustand";
 import type { FormInterface, UpdateFormInterfaceInput } from "@flowmaestro/shared";
 
-interface InterfaceBuilderStore {
+interface FormInterfaceBuilderStore {
     // State
     interface: FormInterface | null;
     isDirty: boolean;
@@ -1003,14 +1003,14 @@ interface InterfaceBuilderStore {
     // Actions
     setInterface: (iface: FormInterface) => void;
     updateInterface: (updates: UpdateFormInterfaceInput) => void;
-    setActiveTab: (tab: InterfaceBuilderStore["activeTab"]) => void;
+    setActiveTab: (tab: FormInterfaceBuilderStore["activeTab"]) => void;
     save: () => Promise<void>;
     publish: () => Promise<void>;
     unpublish: () => Promise<void>;
     reset: () => void;
 }
 
-export const useInterfaceBuilderStore = create<InterfaceBuilderStore>((set, get) => ({
+export const useFormInterfaceBuilderStore = create<FormInterfaceBuilderStore>((set, get) => ({
     interface: null,
     isDirty: false,
     isSaving: false,
@@ -1107,7 +1107,7 @@ export const useInterfaceBuilderStore = create<InterfaceBuilderStore>((set, get)
 - [ ] File/URL toggles
 - [ ] Output configuration
 - [ ] Target display in editor (shows linked workflow/agent)
-- [ ] Publish/unpublish interfaces
+- [ ] Publish/unpublish form interfaces
 - [ ] Public URL rendering (`/i/:slug`)
 - [ ] Collect submissions (message + files + URLs)
 - [ ] View submissions list with data
@@ -1117,7 +1117,7 @@ export const useInterfaceBuilderStore = create<InterfaceBuilderStore>((set, get)
 
 # Phase 2: Workflow & Agent Execution
 
-Connect interfaces to trigger workflows or agents on submission, with real-time output streaming.
+Connect form interfaces to trigger workflows or agents on submission, with real-time output streaming.
 
 ---
 
@@ -1149,8 +1149,8 @@ CREATE INDEX idx_form_interface_submissions_thread ON form_interface_submissions
 ```typescript
 // Add to shared/src/types/form-interface.ts
 
-// Submission with execution tracking (extends base InterfaceSubmission)
-export interface InterfaceSubmissionWithExecution extends InterfaceSubmission {
+// Submission with execution tracking (extends base FormInterfaceSubmission)
+export interface FormInterfaceSubmissionWithExecution extends FormInterfaceSubmission {
     executionId: string | null;
     executionStatus: "pending" | "running" | "completed" | "failed" | null;
     threadId: string | null;
@@ -1158,8 +1158,8 @@ export interface InterfaceSubmissionWithExecution extends InterfaceSubmission {
     error: string | null;
 }
 
-// Submission result (returned to public interface after submit)
-export interface SubmissionResult {
+// Form interface submission result (returned to public form interface after submit)
+export interface FormInterfaceSubmissionResult {
     submissionId: string;
     status: "pending" | "running" | "completed" | "failed";
     output: string | null;
@@ -1171,22 +1171,22 @@ export interface SubmissionResult {
 
 ## 2.3 Backend Services
 
-### InterfaceWorkflowTrigger Service
+### FormInterfaceWorkflowTrigger Service
 
 ```typescript
-// backend/src/services/InterfaceWorkflowTriggerService.ts
+// backend/src/services/FormInterfaceWorkflowTriggerService.ts
 import { Client as TemporalClient } from "@temporalio/client";
-import type { FormInterface, InterfaceSubmission } from "@flowmaestro/shared";
+import type { FormInterface, FormInterfaceSubmission } from "@flowmaestro/shared";
 
-export class InterfaceWorkflowTriggerService {
+export class FormInterfaceWorkflowTriggerService {
     constructor(
         private temporalClient: TemporalClient,
-        private submissionRepo: InterfaceSubmissionRepository
+        private submissionRepo: FormInterfaceSubmissionRepository
     ) {}
 
     async triggerWorkflow(
         formInterface: FormInterface,
-        submission: InterfaceSubmission
+        submission: FormInterfaceSubmission
     ): Promise<{ executionId: string }> {
         // Build workflow inputs from submission
         const inputs = {
@@ -1204,7 +1204,7 @@ export class InterfaceWorkflowTriggerService {
         };
 
         // Start Temporal workflow
-        const workflowId = `interface-${formInterface.id}-${submission.id}`;
+        const workflowId = `form-interface-${formInterface.id}-${submission.id}`;
         const handle = await this.temporalClient.workflow.start("orchestratorWorkflow", {
             taskQueue: "flowmaestro-orchestrator",
             workflowId,
@@ -1225,22 +1225,22 @@ export class InterfaceWorkflowTriggerService {
 }
 ```
 
-### InterfaceAgentTrigger Service
+### FormInterfaceAgentTrigger Service
 
 ```typescript
-// backend/src/services/InterfaceAgentTriggerService.ts
-import type { FormInterface, InterfaceSubmission } from "@flowmaestro/shared";
+// backend/src/services/FormInterfaceAgentTriggerService.ts
+import type { FormInterface, FormInterfaceSubmission } from "@flowmaestro/shared";
 
-export class InterfaceAgentTriggerService {
+export class FormInterfaceAgentTriggerService {
     constructor(
         private threadRepo: ThreadRepository,
         private agentService: AgentService,
-        private submissionRepo: InterfaceSubmissionRepository
+        private submissionRepo: FormInterfaceSubmissionRepository
     ) {}
 
     async triggerAgent(
         formInterface: FormInterface,
-        submission: InterfaceSubmission
+        submission: FormInterfaceSubmission
     ): Promise<{ threadId: string; executionId: string }> {
         // Create new thread for this submission
         const thread = await this.threadRepo.create({
@@ -1278,7 +1278,7 @@ export class InterfaceAgentTriggerService {
         };
     }
 
-    private buildContextMessage(submission: InterfaceSubmission): string {
+    private buildContextMessage(submission: FormInterfaceSubmission): string {
         let message = submission.message || "";
 
         // Append file context
@@ -1306,7 +1306,7 @@ export class InterfaceAgentTriggerService {
 
 ```typescript
 // Emit events during execution for real-time updates
-interface InterfaceExecutionEvent {
+interface FormInterfaceExecutionEvent {
     type: "status" | "output" | "error" | "complete";
     submissionId: string;
     data: {
@@ -1317,7 +1317,7 @@ interface InterfaceExecutionEvent {
     };
 }
 
-// Client subscribes to: `interface:${submissionId}`
+// Client subscribes to: `form-interface:${submissionId}`
 ```
 
 ---
@@ -1327,12 +1327,12 @@ interface InterfaceExecutionEvent {
 ### Target Selector Component
 
 ```typescript
-// frontend/src/components/interface-builder/TargetSelector.tsx
+// frontend/src/components/form-interface-builder/TargetSelector.tsx
 interface TargetSelectorProps {
-    targetType: InterfaceTargetType | null;
+    targetType: FormInterfaceTargetType | null;
     workflowId: string | null;
     agentId: string | null;
-    onTargetChange: (type: InterfaceTargetType | null, id: string | null) => void;
+    onTargetChange: (type: FormInterfaceTargetType | null, id: string | null) => void;
 }
 
 // UI: Radio buttons for None/Workflow/Agent
@@ -1343,7 +1343,7 @@ interface TargetSelectorProps {
 ### Output Display Component (Enhanced)
 
 ```typescript
-// frontend/src/components/public-interface/OutputDisplay.tsx
+// frontend/src/components/public-form-interface/OutputDisplay.tsx
 interface OutputDisplayProps {
     submissionId: string | null;
     status: "idle" | "pending" | "running" | "completed" | "failed";
@@ -1366,7 +1366,7 @@ interface OutputDisplayProps {
 ### Run Again Flow
 
 ```typescript
-// In PublicInterfacePage.tsx
+// In PublicFormInterfacePage.tsx
 const handleRunAgain = () => {
     // Keep current input values
     // Clear output
@@ -1385,17 +1385,17 @@ const handleRunAgain = () => {
 ### Workflow Execution Flow
 
 ```
-User fills interface → Submit
+User fills form interface → Submit
          │
          ▼
 POST /api/public/form-interfaces/:slug/submit
          │
          ├─► Upload files to GCS
-         ├─► Create interface_submission record
+         ├─► Create form_interface_submission record
          ├─► Return submissionId to client
          │
          ▼
-InterfaceWorkflowTriggerService.triggerWorkflow()
+FormInterfaceWorkflowTriggerService.triggerWorkflow()
          │
          ├─► Build inputs from submission
          ├─► Start orchestratorWorkflow
@@ -1421,17 +1421,17 @@ Client receives output, displays in OutputDisplay
 ### Agent Execution Flow
 
 ```
-User fills interface → Submit
+User fills form interface → Submit
          │
          ▼
 POST /api/public/form-interfaces/:slug/submit
          │
          ├─► Upload files to GCS
-         ├─► Create interface_submission record
+         ├─► Create form_interface_submission record
          ├─► Return submissionId to client
          │
          ▼
-InterfaceAgentTriggerService.triggerAgent()
+FormInterfaceAgentTriggerService.triggerAgent()
          │
          ├─► Create new thread
          ├─► Build context message from submission
@@ -1477,7 +1477,7 @@ Client displays final response in OutputDisplay
 ### Rate Limiting
 
 - 10 submissions per minute per IP address
-- Configurable per interface (future)
+- Configurable per form interface (future)
 
 ### File Upload Security
 
@@ -1518,10 +1518,10 @@ function validateSlug(slug: string): boolean {
 
 ```
 backend/migrations/XXXXXX_create-form-interfaces.sql
-backend/migrations/XXXXXX_add-interface-targets.sql
+backend/migrations/XXXXXX_add-form-interface-execution-tracking.sql
 backend/src/storage/models/FormInterface.ts
 backend/src/storage/repositories/FormInterfaceRepository.ts
-backend/src/storage/repositories/InterfaceSubmissionRepository.ts
+backend/src/storage/repositories/FormInterfaceSubmissionRepository.ts
 backend/src/api/routes/form-interfaces/index.ts
 backend/src/api/routes/form-interfaces/create.ts
 backend/src/api/routes/form-interfaces/list.ts
@@ -1530,11 +1530,11 @@ backend/src/api/routes/form-interfaces/update.ts
 backend/src/api/routes/form-interfaces/delete.ts
 backend/src/api/routes/form-interfaces/publish.ts
 backend/src/api/routes/form-interfaces/submissions.ts
-backend/src/api/routes/public/interfaces.ts
-backend/src/api/middleware/interfaceRateLimiter.ts
-backend/src/services/InterfaceWorkflowTriggerService.ts
-backend/src/services/InterfaceAgentTriggerService.ts
-backend/src/services/InterfaceStorageService.ts
+backend/src/api/routes/public/form-interfaces.ts
+backend/src/api/middleware/formInterfaceRateLimiter.ts
+backend/src/services/FormInterfaceWorkflowTriggerService.ts
+backend/src/services/FormInterfaceAgentTriggerService.ts
+backend/src/services/FormInterfaceStorageService.ts
 ```
 
 ### Shared
@@ -1546,14 +1546,14 @@ shared/src/types/form-interface.ts
 ### Frontend
 
 ```
-frontend/src/pages/InterfacesPage.tsx
-frontend/src/pages/InterfaceEditorPage.tsx
-frontend/src/pages/InterfaceSubmissionsPage.tsx
-frontend/src/pages/PublicInterfacePage.tsx
-frontend/src/stores/interfaceBuilderStore.ts
-frontend/src/components/interface-builder/*.tsx
-frontend/src/components/public-interface/*.tsx
-frontend/src/lib/interfaceApi.ts
+frontend/src/pages/FormInterfacesPage.tsx
+frontend/src/pages/FormInterfaceEditorPage.tsx
+frontend/src/pages/FormInterfaceSubmissionsPage.tsx
+frontend/src/pages/PublicFormInterfacePage.tsx
+frontend/src/stores/formInterfaceBuilderStore.ts
+frontend/src/components/form-interface-builder/*.tsx
+frontend/src/components/public-form-interface/*.tsx
+frontend/src/lib/formInterfaceApi.ts
 ```
 
 ---
