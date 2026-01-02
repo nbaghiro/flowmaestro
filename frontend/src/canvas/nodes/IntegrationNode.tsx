@@ -8,6 +8,7 @@ interface IntegrationNodeData {
     status?: "idle" | "pending" | "running" | "success" | "error";
     provider?: string;
     operation?: string;
+    logoUrl?: string;
 }
 
 function IntegrationNode({ data, selected }: NodeProps<IntegrationNodeData>) {
@@ -27,6 +28,7 @@ function IntegrationNode({ data, selected }: NodeProps<IntegrationNodeData>) {
     return (
         <BaseNode
             icon={Plug}
+            logoUrl={data.logoUrl}
             label={data.label || "Integration"}
             status={data.status}
             category="integrations"

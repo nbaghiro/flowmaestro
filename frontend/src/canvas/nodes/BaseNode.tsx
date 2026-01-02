@@ -15,6 +15,7 @@ export type ConnectorLayout = "vertical" | "horizontal";
 
 interface BaseNodeProps {
     icon: LucideIcon;
+    logoUrl?: string;
     label: string;
     status?: NodeStatus;
     category?:
@@ -109,6 +110,7 @@ const categoryConfig: Record<
 
 export function BaseNode({
     icon: Icon,
+    logoUrl,
     label,
     status: providedStatus,
     category = "data",
@@ -120,6 +122,7 @@ export function BaseNode({
     onStatusClick,
     connectorLayout: connectorLayoutProp = "horizontal"
 }: BaseNodeProps) {
+    const [logoError, setLogoError] = useState(false);
     const nodeId = useNodeId();
     const { currentExecution, selectedNode } = useWorkflowStore();
     const categoryStyle = categoryConfig[category];
@@ -307,8 +310,26 @@ export function BaseNode({
             {/* Header */}
             <div className="flex items-center justify-between px-3 py-2.5 border-b border-border bg-muted/30">
                 <div className="flex items-center gap-2.5">
-                    <div className={cn("p-1.5 rounded-md", categoryStyle.iconBg)}>
-                        <Icon className={cn("w-3.5 h-3.5", categoryStyle.iconColor)} />
+                    <div
+                        className={cn(
+                            "p-1.5 rounded-md flex items-center justify-center",
+                            logoUrl && !logoError
+                                ? "bg-zinc-700 dark:bg-zinc-700"
+                                : categoryStyle.iconBg
+                        )}
+                    >
+                        {logoUrl && !logoError ? (
+                            <>
+                                <img
+                                    src={logoUrl}
+                                    alt={label}
+                                    className="w-4 h-4 object-contain"
+                                    onError={() => setLogoError(true)}
+                                />
+                            </>
+                        ) : (
+                            <Icon className={cn("w-3.5 h-3.5", categoryStyle.iconColor)} />
+                        )}
                     </div>
                     <span className="font-medium text-sm text-foreground">{label}</span>
                 </div>

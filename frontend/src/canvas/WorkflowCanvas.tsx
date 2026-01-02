@@ -255,9 +255,14 @@ function getDefaultData(type: string): Record<string, unknown> {
         case "audioOutput":
             return { ...baseData, outputType: "audio" };
         default:
-            // For provider nodes, preset the provider field
+            // For provider nodes, preset the provider field and logoUrl
             if (isProviderNodeType(type)) {
-                return { ...baseData, provider: type };
+                const providerInfo = getProviderInfo(type);
+                return {
+                    ...baseData,
+                    provider: type,
+                    logoUrl: providerInfo?.logoUrl
+                };
             }
             return baseData;
     }
