@@ -91,8 +91,8 @@ const LogoRow: React.FC<LogoRowProps> = ({ integrations, direction, speed = 30 }
     return (
         <div className="relative flex overflow-hidden py-4">
             {/* Gradient masks for fade effect */}
-            <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
-            <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
+            <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-background-surface to-transparent z-10 pointer-events-none" />
+            <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-background-surface to-transparent z-10 pointer-events-none" />
 
             <div
                 className={`flex items-center gap-12 ${
@@ -132,9 +132,9 @@ export const Integrations: React.FC = () => {
     return (
         <section
             ref={ref}
-            className="relative py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-background to-background-surface overflow-hidden"
+            className="relative py-24 px-4 sm:px-6 lg:px-8 bg-background-surface overflow-hidden"
         >
-            {/* Background Decoration */}
+            {/* Background Grid Pattern */}
             <div className="absolute inset-0 grid-pattern opacity-30"></div>
 
             <div className="relative z-10 max-w-7xl mx-auto">

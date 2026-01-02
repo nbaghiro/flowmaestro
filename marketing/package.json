@@ -4,7 +4,7 @@
     "description": "FlowMaestro Marketing Website",
     "type": "module",
     "scripts": {
-        "dev": "vite --port 4444",
+        "dev": "vite --port 5174",
         "build": "tsc && vite build",
         "preview": "vite preview",
         "typecheck": "tsc --noEmit"

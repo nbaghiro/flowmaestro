@@ -20,7 +20,7 @@ function InputNode({ data, selected }: NodeProps<InputNodeData>) {
             icon={Hand}
             label={data.label || "Input"}
             status={data.status}
-            category="data"
+            category="inputs"
             selected={selected}
         >
             <div className="space-y-2">

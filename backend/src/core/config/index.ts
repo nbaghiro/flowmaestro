@@ -305,6 +305,13 @@ export const config = {
         reddit: {
             clientId: process.env.REDDIT_CLIENT_ID || "",
             clientSecret: process.env.REDDIT_CLIENT_SECRET || ""
+        },
+
+        // Discord
+        discord: {
+            clientId: process.env.DISCORD_CLIENT_ID || "",
+            clientSecret: process.env.DISCORD_CLIENT_SECRET || "",
+            botToken: process.env.DISCORD_BOT_TOKEN || ""
         }
     }
 };
@@ -359,7 +366,8 @@ export function getOAuthRedirectUri(provider: string): string {
         box: "/oauth/box/callback",
         twitter: "/oauth/twitter/callback",
         linkedin: "/oauth/linkedin/callback",
-        reddit: "/oauth/reddit/callback"
+        reddit: "/oauth/reddit/callback",
+        discord: "/oauth/discord/callback"
     };
 
     const callbackPath = callbackPaths[provider] || `/oauth/${provider}/callback`;
@@ -412,7 +420,8 @@ export function getOAuthCredentials(provider: string): { clientId: string; clien
         box: "box",
         twitter: "twitter",
         linkedin: "linkedin",
-        reddit: "reddit"
+        reddit: "reddit",
+        discord: "discord"
     };
 
     const configKey = providerMap[provider];

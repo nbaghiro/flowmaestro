@@ -2290,6 +2290,76 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
             }
         },
         refreshable: true
+    },
+
+    // ==========================================================================
+    // Discord - Communication & Gaming Platform
+    // Uses OAuth 2.0 for user authentication, Bot token for actions
+    // ==========================================================================
+
+    discord: {
+        name: "discord",
+        displayName: "Discord",
+        authUrl: "https://discord.com/oauth2/authorize",
+        tokenUrl: "https://discord.com/api/oauth2/token",
+        scopes: [
+            "identify", // Access user's ID, username, avatar
+            "email", // Access user's email
+            "guilds" // Access list of guilds user is in
+        ],
+        clientId: config.oauth.discord.clientId,
+        clientSecret: config.oauth.discord.clientSecret,
+        redirectUri: getOAuthRedirectUri("discord"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://discord.com/api/v10/users/@me", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    id?: string;
+                    username?: string;
+                    discriminator?: string;
+                    global_name?: string | null;
+                    avatar?: string | null;
+                    email?: string | null;
+                    verified?: boolean;
+                };
+
+                // Generate avatar URL if avatar hash exists
+                const avatarUrl = data.avatar
+                    ? `https://cdn.discordapp.com/avatars/${data.id}/${data.avatar}.${data.avatar.startsWith("a_") ? "gif" : "png"}`
+                    : null;
+
+                return {
+                    userId: data.id || "unknown",
+                    username: data.username || "Discord User",
+                    globalName: data.global_name,
+                    discriminator: data.discriminator,
+                    email: data.email || `${data.username}@discord`,
+                    avatar: avatarUrl,
+                    verified: data.verified,
+                    user: data.global_name || data.username || "Discord User"
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get Discord user info");
+                return {
+                    userId: "unknown",
+                    username: "Discord User",
+                    email: "unknown@discord",
+                    user: "Discord User"
+                };
+            }
+        },
+        revokeUrl: "https://discord.com/api/oauth2/token/revoke",
+        refreshable: true,
+        pkceEnabled: false
     }
 };
 

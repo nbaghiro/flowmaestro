@@ -94,8 +94,11 @@ export const Features: React.FC = () => {
     const isInView = useInView(ref, { once: true, margin: "-100px" });
 
     return (
-        <section ref={ref} className="relative py-24 px-4 sm:px-6 lg:px-8 bg-background">
-            <div className="max-w-7xl mx-auto">
+        <section ref={ref} className="relative py-24 px-4 sm:px-6 lg:px-8 bg-background-surface">
+            {/* Background Grid Pattern */}
+            <div className="absolute inset-0 grid-pattern opacity-30"></div>
+
+            <div className="relative z-10 max-w-7xl mx-auto">
                 {/* Section Header */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}

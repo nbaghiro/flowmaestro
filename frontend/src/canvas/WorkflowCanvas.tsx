@@ -2,7 +2,6 @@ import { useCallback, useRef } from "react";
 import Flow, {
     Background,
     Controls,
-    MiniMap,
     ConnectionMode,
     addEdge,
     Connection,
@@ -10,6 +9,7 @@ import Flow, {
     ReactFlowInstance
 } from "reactflow";
 import "reactflow/dist/style.css";
+import { ALL_PROVIDERS } from "@flowmaestro/shared";
 import { generateId } from "../lib/utils";
 import { useThemeStore } from "../stores/themeStore";
 import { useWorkflowStore } from "../stores/workflowStore";
@@ -41,7 +41,22 @@ const edgeTypes = {
     default: CustomEdge
 };
 
+// AI provider IDs (these use the LLM node, not Integration node)
+const AI_PROVIDER_IDS = ["openai", "anthropic", "google", "huggingface", "cohere"];
+
+// Generate integration provider node types dynamically
+// Each provider type maps to the IntegrationNode component
+const integrationProviderNodeTypes: Record<string, typeof IntegrationNode> = {};
+ALL_PROVIDERS.filter((p) => !p.comingSoon && !AI_PROVIDER_IDS.includes(p.provider)).forEach(
+    (provider) => {
+        integrationProviderNodeTypes[provider.provider] = IntegrationNode;
+    }
+);
+
 // Register node types
+// Note: Visual variant nodes (files, url, audioInput, action, audioOutput) use the same
+// base component as their parent type (InputNode, OutputNode). The variant-specific
+// config is set when the node is dropped via getDefaultData().
 const nodeTypes = {
     comment: CommentNode,
     trigger: TriggerNode,
@@ -62,7 +77,15 @@ const nodeTypes = {
     http: HTTPNode,
     database: DatabaseNode,
     integration: IntegrationNode,
-    knowledgeBaseQuery: KnowledgeBaseQueryNode
+    knowledgeBaseQuery: KnowledgeBaseQueryNode,
+    // Visual variant nodes use base components
+    files: InputNode,
+    url: InputNode,
+    audioInput: InputNode,
+    action: OutputNode,
+    audioOutput: OutputNode,
+    // Integration provider nodes (dynamically generated)
+    ...integrationProviderNodeTypes
 };
 
 interface WorkflowCanvasProps {
@@ -152,10 +175,7 @@ export function WorkflowCanvas({ onInit: onInitProp }: WorkflowCanvasProps) {
                 id: generateId(),
                 type,
                 position,
-                data: {
-                    label: getDefaultLabel(type),
-                    status: "idle" as const
-                }
+                data: getDefaultData(type)
             };
 
             addNode(newNode);
@@ -190,6 +210,7 @@ export function WorkflowCanvas({ onInit: onInitProp }: WorkflowCanvasProps) {
                 edgeTypes={edgeTypes}
                 connectionMode={ConnectionMode.Loose}
                 fitView
+                fitViewOptions={{ padding: 0.05, maxZoom: 1 }}
                 proOptions={{ hideAttribution: true }}
             >
                 <Background
@@ -199,26 +220,47 @@ export function WorkflowCanvas({ onInit: onInitProp }: WorkflowCanvasProps) {
                     color={effectiveTheme === "dark" ? "#555" : "#aaa"}
                 />
                 <Controls />
-                <MiniMap
-                    className="!absolute !bottom-4 !right-4"
-                    style={{
-                        backgroundColor:
-                            effectiveTheme === "dark"
-                                ? "rgba(30, 30, 30, 0.8)"
-                                : "rgba(0, 0, 0, 0.05)",
-                        border:
-                            effectiveTheme === "dark"
-                                ? "1px solid rgba(255, 255, 255, 0.15)"
-                                : "1px solid rgba(0, 0, 0, 0.1)"
-                    }}
-                    nodeColor={effectiveTheme === "dark" ? "#666" : "#9ca3af"}
-                    maskColor={
-                        effectiveTheme === "dark" ? "rgba(0, 0, 0, 0.5)" : "rgba(0, 0, 0, 0.1)"
-                    }
-                />
             </Flow>
         </div>
     );
+}
+
+// Check if a type is an integration provider node
+function isProviderNodeType(type: string): boolean {
+    return integrationProviderNodeTypes[type] !== undefined;
+}
+
+// Get provider info by type
+function getProviderInfo(type: string) {
+    return ALL_PROVIDERS.find((p) => p.provider === type);
+}
+
+// Default data for each node type, including preset configs for visual variants
+function getDefaultData(type: string): Record<string, unknown> {
+    const baseData = {
+        label: getDefaultLabel(type),
+        status: "idle" as const
+    };
+
+    // Add preset configs for visual variant nodes
+    switch (type) {
+        case "files":
+            return { ...baseData, inputType: "file" };
+        case "url":
+            return { ...baseData, inputType: "url" };
+        case "audioInput":
+            return { ...baseData, inputType: "audio" };
+        case "action":
+            return { ...baseData, outputType: "action" };
+        case "audioOutput":
+            return { ...baseData, outputType: "audio" };
+        default:
+            // For provider nodes, preset the provider field
+            if (isProviderNodeType(type)) {
+                return { ...baseData, provider: type };
+            }
+            return baseData;
+    }
 }
 
 function getDefaultLabel(type: string): string {
@@ -241,7 +283,21 @@ function getDefaultLabel(type: string): string {
         http: "HTTP",
         database: "Database",
         integration: "Integration",
-        knowledgeBaseQuery: "KB Query"
+        knowledgeBaseQuery: "KB Query",
+        comment: "Comment",
+        // Visual variant nodes
+        files: "Files",
+        url: "URL",
+        audioInput: "Audio Input",
+        action: "Action",
+        audioOutput: "Audio Output"
     };
+
+    // Check if it's a provider node first
+    if (isProviderNodeType(type)) {
+        const provider = getProviderInfo(type);
+        return provider?.displayName || type;
+    }
+
     return labels[type] || "Node";
 }

@@ -7,12 +7,13 @@
 # Options:
 #   --backend      Deploy only backend
 #   --frontend     Deploy only frontend
-#   --marketing    Deploy only marketing
 #   --worker       Deploy only temporal-worker
 #   --all          Deploy all services (default)
 #   --skip-build   Skip Docker build, only restart deployments
 #   --tag TAG      Use specific image tag (default: latest)
 #   --env ENV      Environment: prod, staging, dev (default: prod)
+#
+# Note: Marketing site deployment is handled by deploy-marketing.sh
 
 set -e
 
@@ -35,7 +36,6 @@ print_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 # Default values
 DEPLOY_BACKEND=false
 DEPLOY_FRONTEND=false
-DEPLOY_MARKETING=false
 DEPLOY_WORKER=false
 SKIP_BUILD=false
 IMAGE_TAG="latest"
@@ -52,10 +52,6 @@ while [[ $# -gt 0 ]]; do
             DEPLOY_FRONTEND=true
             shift
             ;;
-        --marketing)
-            DEPLOY_MARKETING=true
-            shift
-            ;;
         --worker)
             DEPLOY_WORKER=true
             shift
@@ -63,7 +59,6 @@ while [[ $# -gt 0 ]]; do
         --all)
             DEPLOY_BACKEND=true
             DEPLOY_FRONTEND=true
-            DEPLOY_MARKETING=true
             DEPLOY_WORKER=true
             shift
             ;;
@@ -85,12 +80,13 @@ while [[ $# -gt 0 ]]; do
             echo "Options:"
             echo "  --backend      Deploy only backend"
             echo "  --frontend     Deploy only frontend"
-            echo "  --marketing    Deploy only marketing"
             echo "  --worker       Deploy only temporal-worker"
             echo "  --all          Deploy all services (default)"
             echo "  --skip-build   Skip Docker build, only restart deployments"
             echo "  --tag TAG      Use specific image tag (default: latest)"
             echo "  --env ENV      Environment: prod, staging, dev (default: prod)"
+            echo ""
+            echo "Note: Marketing site deployment is handled by deploy-marketing.sh"
             exit 0
             ;;
         *)
@@ -101,10 +97,9 @@ while [[ $# -gt 0 ]]; do
 done
 
 # If no service specified, deploy all
-if ! $DEPLOY_BACKEND && ! $DEPLOY_FRONTEND && ! $DEPLOY_MARKETING && ! $DEPLOY_WORKER; then
+if ! $DEPLOY_BACKEND && ! $DEPLOY_FRONTEND && ! $DEPLOY_WORKER; then
     DEPLOY_BACKEND=true
     DEPLOY_FRONTEND=true
-    DEPLOY_MARKETING=true
     DEPLOY_WORKER=true
 fi
 
@@ -180,18 +175,6 @@ if ! $SKIP_BUILD; then
         docker push "$REGISTRY/frontend:$IMAGE_TAG"
         print_success "Frontend image pushed"
     fi
-
-    if $DEPLOY_MARKETING; then
-        print_info "Building marketing image..."
-        docker build --platform linux/amd64 \
-            -f infra/docker/marketing/Dockerfile \
-            -t "$REGISTRY/marketing:$IMAGE_TAG" \
-            .
-
-        print_info "Pushing marketing image..."
-        docker push "$REGISTRY/marketing:$IMAGE_TAG"
-        print_success "Marketing image pushed"
-    fi
 fi
 
 # Restart deployments
@@ -205,11 +188,6 @@ fi
 if $DEPLOY_FRONTEND; then
     print_info "Restarting frontend..."
     kubectl rollout restart deployment/frontend -n flowmaestro
-fi
-
-if $DEPLOY_MARKETING; then
-    print_info "Restarting marketing..."
-    kubectl rollout restart deployment/marketing -n flowmaestro
 fi
 
 if $DEPLOY_WORKER; then
@@ -230,11 +208,6 @@ if $DEPLOY_FRONTEND; then
     print_success "frontend rolled out"
 fi
 
-if $DEPLOY_MARKETING; then
-    kubectl rollout status deployment/marketing -n flowmaestro --timeout=5m
-    print_success "marketing rolled out"
-fi
-
 if $DEPLOY_WORKER; then
     kubectl rollout status deployment/temporal-worker -n flowmaestro --timeout=5m
     print_success "temporal-worker rolled out"
@@ -243,4 +216,4 @@ fi
 print_success "Deployment complete!"
 echo ""
 print_info "Deployed services:"
-kubectl get pods -n flowmaestro -o wide | grep -E "api-server|frontend|marketing|temporal-worker"
+kubectl get pods -n flowmaestro -o wide | grep -E "api-server|frontend|temporal-worker"

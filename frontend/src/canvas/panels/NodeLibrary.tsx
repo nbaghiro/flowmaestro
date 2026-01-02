@@ -16,28 +16,104 @@ import {
     BookOpen,
     Globe,
     Database,
-    Plug,
     Zap,
     ChevronDown,
     ChevronRight,
     Search,
-    PanelLeftClose,
-    PanelLeft
+    Pin,
+    PinOff,
+    // Category icons
+    Download,
+    Upload,
+    Cpu,
+    Wrench,
+    MessageSquare,
+    // Visual variant icons
+    FileUp,
+    Link,
+    Volume2,
+    Play,
+    // Integration fallback icon
+    Plug,
+    type LucideIcon
 } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect } from "react";
+import { ALL_PROVIDERS } from "@flowmaestro/shared";
 import { Button } from "../../components/common/Button";
 import { Input } from "../../components/common/Input";
+import { useThemeStore } from "../../stores/themeStore";
 
 interface NodeDefinition {
     type: string;
     label: string;
-    icon: React.ComponentType<{ className?: string }>;
+    icon?: React.ComponentType<{ className?: string }>;
+    logoUrl?: string;
     category: string;
     description: string;
 }
 
 const nodeLibrary: NodeDefinition[] = [
-    // AI & ML (4 nodes)
+    // Inputs - workflow entry points and data collection
+    {
+        type: "input",
+        label: "Input",
+        icon: Hand,
+        category: "inputs",
+        description: "Collect user input, file upload, or choices"
+    },
+    {
+        type: "trigger",
+        label: "Trigger",
+        icon: Zap,
+        category: "inputs",
+        description: "Schedule, webhook, or manual workflow trigger"
+    },
+    {
+        type: "files",
+        label: "Files",
+        icon: FileUp,
+        category: "inputs",
+        description: "Upload and process files (PDF, images, docs)"
+    },
+    {
+        type: "url",
+        label: "URL",
+        icon: Link,
+        category: "inputs",
+        description: "Fetch and scrape content from web URLs"
+    },
+    {
+        type: "audioInput",
+        label: "Audio Input",
+        icon: Mic,
+        category: "inputs",
+        description: "Record or upload audio for processing"
+    },
+
+    // Outputs - workflow results and actions
+    {
+        type: "output",
+        label: "Output",
+        icon: Send,
+        category: "outputs",
+        description: "Display final workflow results"
+    },
+    {
+        type: "action",
+        label: "Action",
+        icon: Play,
+        category: "outputs",
+        description: "Execute external actions (send email, post message)"
+    },
+    {
+        type: "audioOutput",
+        label: "Audio Output",
+        icon: Volume2,
+        category: "outputs",
+        description: "Generate speech output (text-to-speech)"
+    },
+
+    // AI & ML - AI-powered processing
     {
         type: "llm",
         label: "LLM",
@@ -67,6 +143,13 @@ const nodeLibrary: NodeDefinition[] = [
         description: "Generate vector embeddings for semantic search"
     },
     {
+        type: "knowledgeBaseQuery",
+        label: "KB Query",
+        icon: BookOpen,
+        category: "ai",
+        description: "Search knowledge base using semantic similarity (RAG)"
+    },
+    {
         type: "router",
         label: "Router",
         icon: GitFork,
@@ -74,7 +157,10 @@ const nodeLibrary: NodeDefinition[] = [
         description: "AI-powered routing based on content classification"
     },
 
-    // Logic & Code (5 nodes)
+    // Integrations - third-party service connections (individual nodes added in Phase 4)
+    // Note: Individual integration nodes (slack, gmail, etc.) will be added dynamically
+
+    // Logic & Code - control flow and data processing
     {
         type: "conditional",
         label: "Conditional",
@@ -110,112 +196,153 @@ const nodeLibrary: NodeDefinition[] = [
         category: "logic",
         description: "Pause workflow execution for a duration"
     },
-
-    // Data Operations (6 nodes)
-    {
-        type: "trigger",
-        label: "Trigger",
-        icon: Zap,
-        category: "data",
-        description: "Schedule, webhook, or manual workflow trigger"
-    },
-    {
-        type: "input",
-        label: "Input",
-        icon: Hand,
-        category: "data",
-        description: "Collect user input, file upload, or choices"
-    },
     {
         type: "transform",
         label: "Transform",
         icon: Shuffle,
-        category: "data",
+        category: "logic",
         description: "Transform data with JSONPath, templates, filters"
     },
     {
         type: "variable",
         label: "Variable",
         icon: Variable,
-        category: "data",
+        category: "logic",
         description: "Set or get workflow variables"
     },
-    {
-        type: "knowledgeBaseQuery",
-        label: "KB Query",
-        icon: BookOpen,
-        category: "data",
-        description: "Search knowledge base using semantic similarity (RAG)"
-    },
-    {
-        type: "output",
-        label: "Output",
-        icon: Send,
-        category: "data",
-        description: "Display final workflow results"
-    },
 
-    // Connect (3 nodes)
+    // Utils - generic tools
     {
         type: "http",
         label: "HTTP",
         icon: Globe,
-        category: "connect",
+        category: "utils",
         description: "Make HTTP requests to external APIs"
     },
     {
         type: "database",
         label: "Database",
         icon: Database,
-        category: "connect",
+        category: "utils",
         description: "Query SQL or NoSQL databases"
     },
     {
-        type: "integration",
-        label: "Integration",
-        icon: Plug,
-        category: "connect",
-        description: "Connect to Slack, Email, Google Sheets, etc."
+        type: "comment",
+        label: "Comment",
+        icon: MessageSquare,
+        category: "utils",
+        description: "Add notes and documentation to your workflow"
     }
 ];
 
-const categories = [
+interface CategoryDefinition {
+    id: string;
+    label: string;
+    icon: LucideIcon;
+    color: string;
+    bgColor: string;
+}
+
+const categories: CategoryDefinition[] = [
+    // Colors defined via CSS variables in App.css - update colors there only
+    {
+        id: "inputs",
+        label: "Inputs",
+        icon: Download,
+        color: "category-inputs-icon-text",
+        bgColor: "category-inputs-icon-bg"
+    },
+    {
+        id: "outputs",
+        label: "Outputs",
+        icon: Upload,
+        color: "category-outputs-icon-text",
+        bgColor: "category-outputs-icon-bg"
+    },
     {
         id: "ai",
         label: "AI & ML",
-        color: "text-blue-600 dark:text-blue-400",
-        bgColor: "bg-blue-500/10 dark:bg-blue-400/20"
+        icon: Cpu,
+        color: "category-ai-icon-text",
+        bgColor: "category-ai-icon-bg"
+    },
+    {
+        id: "integrations",
+        label: "Integrations",
+        icon: Zap,
+        color: "category-integrations-icon-text",
+        bgColor: "category-integrations-icon-bg"
     },
     {
         id: "logic",
         label: "Logic & Code",
-        color: "text-purple-600 dark:text-purple-400",
-        bgColor: "bg-purple-500/10 dark:bg-purple-400/20"
+        icon: Code2,
+        color: "category-logic-icon-text",
+        bgColor: "category-logic-icon-bg"
     },
     {
-        id: "data",
-        label: "Data Operations",
-        color: "text-green-600 dark:text-green-400",
-        bgColor: "bg-green-500/10 dark:bg-green-400/20"
-    },
-    {
-        id: "connect",
-        label: "Connect",
-        color: "text-orange-600 dark:text-orange-400",
-        bgColor: "bg-orange-500/10 dark:bg-orange-400/20"
+        id: "utils",
+        label: "Utils",
+        icon: Wrench,
+        color: "category-utils-icon-text",
+        bgColor: "category-utils-icon-bg"
     }
 ];
 
+// Generate integration node entries from implemented providers
+// Filter out AI providers (they use LLM node) and comingSoon providers
+const AI_PROVIDER_IDS = ["openai", "anthropic", "google", "huggingface", "cohere"];
+
+const integrationNodes: NodeDefinition[] = ALL_PROVIDERS.filter(
+    (provider) => !provider.comingSoon && !AI_PROVIDER_IDS.includes(provider.provider)
+).map((provider) => ({
+    type: provider.provider,
+    label: provider.displayName,
+    logoUrl: provider.logoUrl,
+    category: "integrations",
+    description: provider.description
+}));
+
+// Combine static nodes with dynamic integration nodes
+const allNodes: NodeDefinition[] = [...nodeLibrary, ...integrationNodes];
+
+// LocalStorage key for persisting expanded categories
+const EXPANDED_CATEGORIES_KEY = "flowmaestro:nodeLibrary:expandedCategories";
+
 interface NodeLibraryProps {
     isCollapsed?: boolean;
-    onToggleCollapse?: () => void;
+    onExpand?: () => void;
+    onCollapse?: () => void;
+    isPinned?: boolean;
+    onPinToggle?: () => void;
 }
 
-export function NodeLibrary({ isCollapsed = false, onToggleCollapse }: NodeLibraryProps) {
-    const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
-        new Set(["ai", "logic", "data", "connect"])
-    );
+export function NodeLibrary({
+    isCollapsed = false,
+    onExpand,
+    onCollapse,
+    isPinned = false,
+    onPinToggle
+}: NodeLibraryProps) {
+    // Load expanded categories from localStorage, default to empty (all collapsed)
+    const [expandedCategories, setExpandedCategories] = useState<Set<string>>(() => {
+        try {
+            const saved = localStorage.getItem(EXPANDED_CATEGORIES_KEY);
+            if (saved) {
+                return new Set(JSON.parse(saved));
+            }
+        } catch {
+            // Ignore parse errors
+        }
+        return new Set<string>();
+    });
     const [searchQuery, setSearchQuery] = useState("");
+    const effectiveTheme = useThemeStore((state) => state.effectiveTheme);
+
+    // Persist expanded categories to localStorage
+    useEffect(() => {
+        localStorage.setItem(EXPANDED_CATEGORIES_KEY, JSON.stringify([...expandedCategories]));
+    }, [expandedCategories]);
 
     const toggleCategory = (categoryId: string) => {
         setExpandedCategories((prev) => {
@@ -232,105 +359,185 @@ export function NodeLibrary({ isCollapsed = false, onToggleCollapse }: NodeLibra
     const onDragStart = useCallback((event: React.DragEvent, nodeType: string) => {
         event.dataTransfer.setData("application/reactflow", nodeType);
         event.dataTransfer.effectAllowed = "move";
+        // Don't collapse here - let onMouseLeave handle it naturally during drag
     }, []);
 
-    const filteredLibrary = nodeLibrary.filter((node) =>
+    // Auto expand/collapse on hover (unless pinned)
+    const handleMouseEnter = useCallback(() => {
+        if (!isPinned && isCollapsed) {
+            onExpand?.();
+        }
+    }, [isPinned, isCollapsed, onExpand]);
+
+    const handleMouseLeave = useCallback(() => {
+        if (!isPinned && !isCollapsed) {
+            onCollapse?.();
+        }
+    }, [isPinned, isCollapsed, onCollapse]);
+
+    const filteredLibrary = allNodes.filter((node) =>
         node.label.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    if (isCollapsed) {
-        return (
-            <div className="w-12 bg-card border-r border-border flex flex-col items-center py-4">
-                <Button variant="icon" onClick={onToggleCollapse} title="Expand sidebar">
-                    <PanelLeft className="w-5 h-5 text-muted-foreground" />
-                </Button>
-            </div>
-        );
-    }
-
+    // Wrapper div to maintain layout space when sidebar is collapsed
     return (
-        <div className="w-64 bg-card border-r border-border flex flex-col h-full shadow-panel">
-            {/* Header */}
-            <div className="px-3 py-3 border-b border-border">
-                <div className="flex items-center justify-between mb-3">
-                    <h2 className="text-sm font-semibold">Nodes</h2>
-                    <Button
-                        variant="icon"
-                        onClick={onToggleCollapse}
-                        title="Collapse sidebar"
-                        className="p-1"
-                    >
-                        <PanelLeftClose className="w-3.5 h-3.5 text-muted-foreground" />
-                    </Button>
-                </div>
+        <div className="relative flex-shrink-0" onMouseEnter={handleMouseEnter}>
+            {/* Collapsed sidebar - always takes up space in layout */}
+            <div
+                className={`w-12 bg-card border-r border-border flex flex-col items-center py-3 gap-1 h-full transition-opacity duration-200 ${
+                    isCollapsed ? "opacity-100" : "opacity-0"
+                }`}
+            >
+                {/* Search icon */}
+                <button
+                    className="p-2 rounded-md hover:bg-muted/50 transition-colors"
+                    title="Search nodes"
+                >
+                    <Search className="w-4 h-4 text-muted-foreground" />
+                </button>
 
-                {/* Search */}
-                <div className="relative">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none z-10" />
-                    <Input
-                        type="text"
-                        placeholder="Search nodes..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-8 text-xs"
-                    />
-                </div>
-            </div>
+                {/* Divider */}
+                <div className="w-6 h-px bg-border my-1" />
 
-            {/* Categories */}
-            <div className="flex-1 overflow-y-auto py-2">
+                {/* Category icons */}
                 {categories.map((category) => {
-                    const nodes = filteredLibrary.filter((node) => node.category === category.id);
-                    if (nodes.length === 0 && searchQuery) return null;
-
-                    const isExpanded = expandedCategories.has(category.id);
-
+                    const CategoryIcon = category.icon;
                     return (
-                        <div key={category.id} className="mb-1">
-                            <button
-                                onClick={() => toggleCategory(category.id)}
-                                className="w-full flex items-center gap-1.5 px-3 py-1.5 hover:bg-muted/50 transition-colors group"
-                            >
-                                {isExpanded ? (
-                                    <ChevronDown className="w-3 h-3 text-muted-foreground" />
-                                ) : (
-                                    <ChevronRight className="w-3 h-3 text-muted-foreground" />
-                                )}
-                                <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                                    {category.label}
-                                </h3>
-                            </button>
-
-                            {isExpanded && (
-                                <div className="py-0.5">
-                                    {nodes.map((node) => {
-                                        const IconComponent = node.icon;
-                                        return (
-                                            <div
-                                                key={node.type}
-                                                draggable
-                                                onDragStart={(e) => onDragStart(e, node.type)}
-                                                className="group px-3 py-1.5 cursor-move hover:bg-muted/70 transition-colors active:bg-muted flex items-center gap-2"
-                                                title={node.description}
-                                            >
-                                                <div
-                                                    className={`p-1 rounded ${category.bgColor} flex-shrink-0`}
-                                                >
-                                                    <IconComponent
-                                                        className={`w-3.5 h-3.5 ${category.color}`}
-                                                    />
-                                                </div>
-                                                <span className="text-xs font-medium text-foreground">
-                                                    {node.label}
-                                                </span>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                        </div>
+                        <button
+                            key={category.id}
+                            className="p-2 rounded-md hover:bg-muted/50 transition-colors"
+                            title={category.label}
+                        >
+                            <CategoryIcon className={`w-4 h-4 ${category.color}`} />
+                        </button>
                     );
                 })}
+            </div>
+
+            {/* Expanded sidebar - hovers over canvas with smooth animation */}
+            <div
+                className={`absolute top-0 left-0 w-64 bg-card border-r border-border flex flex-col h-full shadow-lg z-50 transition-all duration-200 ease-out ${
+                    isCollapsed
+                        ? "opacity-0 -translate-x-2 pointer-events-none"
+                        : "opacity-100 translate-x-0"
+                }`}
+                onMouseLeave={handleMouseLeave}
+            >
+                {/* Header */}
+                <div className="px-3 py-3 border-b border-border">
+                    <div className="flex items-center gap-2">
+                        {/* Search */}
+                        <div className="relative flex-1">
+                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none z-10" />
+                            <Input
+                                type="text"
+                                placeholder="Search nodes..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="pl-8 text-xs"
+                            />
+                        </div>
+                        <Button
+                            variant="icon"
+                            onClick={onPinToggle}
+                            title={isPinned ? "Unpin sidebar" : "Pin sidebar"}
+                            className="p-1.5 flex-shrink-0"
+                        >
+                            {isPinned ? (
+                                <Pin className="w-3.5 h-3.5 text-primary" />
+                            ) : (
+                                <PinOff className="w-3.5 h-3.5 text-muted-foreground" />
+                            )}
+                        </Button>
+                    </div>
+                </div>
+
+                {/* Categories */}
+                <div className="flex-1 overflow-y-auto py-2">
+                    {categories.map((category) => {
+                        const nodes = filteredLibrary.filter(
+                            (node) => node.category === category.id
+                        );
+                        if (nodes.length === 0 && searchQuery) return null;
+
+                        const isExpanded = expandedCategories.has(category.id);
+
+                        const CategoryIcon = category.icon;
+                        return (
+                            <div key={category.id} className="mb-1">
+                                <button
+                                    onClick={() => toggleCategory(category.id)}
+                                    className="w-full flex items-center gap-1.5 px-3 py-1.5 hover:bg-muted/50 transition-colors group"
+                                >
+                                    {isExpanded ? (
+                                        <ChevronDown className="w-3 h-3 text-muted-foreground" />
+                                    ) : (
+                                        <ChevronRight className="w-3 h-3 text-muted-foreground" />
+                                    )}
+                                    <CategoryIcon className={`w-3.5 h-3.5 ${category.color}`} />
+                                    <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                                        {category.label}
+                                    </h3>
+                                </button>
+
+                                {isExpanded && (
+                                    <div className="py-0.5">
+                                        {nodes.map((node) => {
+                                            const IconComponent = node.icon;
+                                            const hasLogo = !!node.logoUrl;
+
+                                            return (
+                                                <div
+                                                    key={node.type}
+                                                    draggable
+                                                    onDragStart={(e) => onDragStart(e, node.type)}
+                                                    className="group pl-7 pr-3 py-1.5 cursor-move hover:bg-muted/70 transition-colors active:bg-muted flex items-center gap-2"
+                                                    title={node.description}
+                                                >
+                                                    <div
+                                                        className={`p-1 rounded ${hasLogo ? (effectiveTheme === "dark" ? "bg-zinc-700" : "bg-white") : category.bgColor} flex-shrink-0 flex items-center justify-center`}
+                                                    >
+                                                        {hasLogo ? (
+                                                            <img
+                                                                src={node.logoUrl}
+                                                                alt={node.label}
+                                                                className="w-4 h-4 object-contain"
+                                                                onError={(e) => {
+                                                                    // Fallback to Plug icon on error
+                                                                    e.currentTarget.style.display =
+                                                                        "none";
+                                                                    e.currentTarget.nextElementSibling?.classList.remove(
+                                                                        "hidden"
+                                                                    );
+                                                                }}
+                                                            />
+                                                        ) : IconComponent ? (
+                                                            <IconComponent
+                                                                className={`w-3.5 h-3.5 ${category.color}`}
+                                                            />
+                                                        ) : (
+                                                            <Plug
+                                                                className={`w-3.5 h-3.5 ${category.color}`}
+                                                            />
+                                                        )}
+                                                        {hasLogo && (
+                                                            <Plug
+                                                                className={`w-4 h-4 ${category.color} hidden`}
+                                                            />
+                                                        )}
+                                                    </div>
+                                                    <span className="text-xs font-medium text-foreground">
+                                                        {node.label}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
             </div>
         </div>
     );

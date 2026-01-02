@@ -17,7 +17,17 @@ interface BaseNodeProps {
     icon: LucideIcon;
     label: string;
     status?: NodeStatus;
-    category?: "ai" | "logic" | "interaction" | "data" | "connect" | "voice";
+    category?:
+        | "ai"
+        | "logic"
+        | "interaction"
+        | "data"
+        | "connect"
+        | "voice"
+        | "inputs"
+        | "outputs"
+        | "integrations"
+        | "utils";
     children?: ReactNode;
     selected?: boolean;
     hasInputHandle?: boolean;
@@ -35,39 +45,65 @@ const statusConfig: Record<NodeStatus, { color: string; label: string }> = {
     error: { color: "bg-red-500", label: "Error" }
 };
 
+// Category styles reference CSS classes defined in App.css (single source of truth for colors)
 const categoryConfig: Record<
     string,
     { borderColor: string; iconBg: string; iconColor: string; ringColor: string }
 > = {
+    inputs: {
+        borderColor: "category-inputs-border",
+        iconBg: "category-inputs-icon-bg",
+        iconColor: "category-inputs-icon-text",
+        ringColor: "category-inputs-ring"
+    },
+    outputs: {
+        borderColor: "category-outputs-border",
+        iconBg: "category-outputs-icon-bg",
+        iconColor: "category-outputs-icon-text",
+        ringColor: "category-outputs-ring"
+    },
     ai: {
-        borderColor: "border-l-blue-500",
-        iconBg: "bg-blue-500/10 dark:bg-blue-400/20",
-        iconColor: "text-blue-600 dark:text-blue-400",
-        ringColor: "ring-blue-500"
+        borderColor: "category-ai-border",
+        iconBg: "category-ai-icon-bg",
+        iconColor: "category-ai-icon-text",
+        ringColor: "category-ai-ring"
+    },
+    integrations: {
+        borderColor: "category-integrations-border",
+        iconBg: "category-integrations-icon-bg",
+        iconColor: "category-integrations-icon-text",
+        ringColor: "category-integrations-ring"
     },
     logic: {
-        borderColor: "border-l-purple-500",
-        iconBg: "bg-purple-500/10 dark:bg-purple-400/20",
-        iconColor: "text-purple-600 dark:text-purple-400",
-        ringColor: "ring-purple-500"
+        borderColor: "category-logic-border",
+        iconBg: "category-logic-icon-bg",
+        iconColor: "category-logic-icon-text",
+        ringColor: "category-logic-ring"
     },
+    utils: {
+        borderColor: "category-utils-border",
+        iconBg: "category-utils-icon-bg",
+        iconColor: "category-utils-icon-text",
+        ringColor: "category-utils-ring"
+    },
+    // Legacy categories (for backwards compatibility)
     interaction: {
-        borderColor: "border-l-green-500",
-        iconBg: "bg-green-500/10 dark:bg-green-400/20",
-        iconColor: "text-green-600 dark:text-green-400",
-        ringColor: "ring-green-500"
+        borderColor: "category-interaction-border",
+        iconBg: "category-interaction-icon-bg",
+        iconColor: "category-interaction-icon-text",
+        ringColor: "category-interaction-ring"
     },
     data: {
-        borderColor: "border-l-teal-500",
-        iconBg: "bg-teal-500/10 dark:bg-teal-400/20",
-        iconColor: "text-teal-600 dark:text-teal-400",
-        ringColor: "ring-teal-500"
+        borderColor: "category-data-border",
+        iconBg: "category-data-icon-bg",
+        iconColor: "category-data-icon-text",
+        ringColor: "category-data-ring"
     },
     connect: {
-        borderColor: "border-l-orange-500",
-        iconBg: "bg-orange-500/10 dark:bg-orange-400/20",
-        iconColor: "text-orange-600 dark:text-orange-400",
-        ringColor: "ring-orange-500"
+        borderColor: "category-connect-border",
+        iconBg: "category-connect-icon-bg",
+        iconColor: "category-connect-icon-text",
+        ringColor: "category-connect-ring"
     }
 };
 

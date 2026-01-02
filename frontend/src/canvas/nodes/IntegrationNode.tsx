@@ -29,7 +29,7 @@ function IntegrationNode({ data, selected }: NodeProps<IntegrationNodeData>) {
             icon={Plug}
             label={data.label || "Integration"}
             status={data.status}
-            category="connect"
+            category="integrations"
             selected={selected}
         >
             <div className="space-y-2">

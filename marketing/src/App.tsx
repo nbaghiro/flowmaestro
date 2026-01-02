@@ -1,5 +1,7 @@
 import React from "react";
 import { Routes, Route, useLocation } from "react-router-dom";
+import { CaseStudiesPage } from "./pages/CaseStudiesPage";
+import { CaseStudyDetailPage } from "./pages/CaseStudyDetailPage";
 import { Home } from "./pages/Home";
 import { IntegrationsPage } from "./pages/IntegrationsPage";
 import { PricingPage } from "./pages/PricingPage";
@@ -24,6 +26,8 @@ const App: React.FC = () => {
                 <Route path="/solutions/:category" element={<SolutionPage />} />
                 <Route path="/integrations" element={<IntegrationsPage />} />
                 <Route path="/pricing" element={<PricingPage />} />
+                <Route path="/case-studies" element={<CaseStudiesPage />} />
+                <Route path="/case-studies/:slug" element={<CaseStudyDetailPage />} />
             </Routes>
         </>
     );

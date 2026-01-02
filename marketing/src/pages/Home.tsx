@@ -5,6 +5,7 @@ import { Footer } from "../components/Footer";
 import { Hero } from "../components/Hero";
 import { Integrations } from "../components/Integrations";
 import { Navigation } from "../components/Navigation";
+import { SocialProof } from "../components/SocialProof";
 
 export const Home: React.FC = () => {
     return (
@@ -12,6 +13,7 @@ export const Home: React.FC = () => {
             <Navigation />
             <Hero />
             <Integrations />
+            <SocialProof />
             <Features />
             <CTA />
             <Footer />

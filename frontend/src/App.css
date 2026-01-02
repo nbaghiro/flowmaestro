@@ -124,45 +124,121 @@ input:-webkit-autofill::first-line {
     background: transparent !important;
 }
 
-.react-flow__node.selected .node-ai-category {
-    @apply !border-blue-500;
+/* =============================================================================
+   NODE CATEGORY COLORS - Single source of truth
+   To change a category color, update ONLY the CSS variables below.
+   Everything else references these variables.
+   ============================================================================= */
+
+/* Light mode colors - original base Tailwind colors */
+:root {
+    /* INPUTS - emerald */
+    --category-inputs: theme(colors.emerald.600);
+    --category-inputs-text: theme(colors.emerald.600);
+    /* OUTPUTS - red */
+    --category-outputs: theme(colors.red.500);
+    --category-outputs-text: theme(colors.red.500);
+    /* AI - blue */
+    --category-ai: theme(colors.blue.500);
+    --category-ai-text: theme(colors.blue.500);
+    /* INTEGRATIONS - orange */
+    --category-integrations: theme(colors.orange.500);
+    --category-integrations-text: theme(colors.orange.500);
+    /* LOGIC - purple */
+    --category-logic: theme(colors.purple.500);
+    --category-logic-text: theme(colors.purple.500);
+    /* UTILS - stone */
+    --category-utils: theme(colors.stone.500);
+    --category-utils-text: theme(colors.stone.500);
+    /* Legacy: INTERACTION - green */
+    --category-interaction: theme(colors.green.500);
+    --category-interaction-text: theme(colors.green.500);
+    /* Legacy: DATA - teal */
+    --category-data: theme(colors.teal.500);
+    --category-data-text: theme(colors.teal.500);
+    /* Legacy: CONNECT - orange */
+    --category-connect: theme(colors.orange.500);
+    --category-connect-text: theme(colors.orange.500);
 }
 
-.dark .react-flow__node.selected .node-ai-category {
-    @apply !border-blue-400;
+/* Dark mode colors */
+.dark {
+    --category-inputs: theme(colors.emerald.500);
+    --category-inputs-text: theme(colors.emerald.500);
+    --category-outputs: theme(colors.red.400);
+    --category-outputs-text: theme(colors.red.400);
+    --category-ai: theme(colors.blue.400);
+    --category-ai-text: theme(colors.blue.400);
+    --category-integrations: theme(colors.orange.400);
+    --category-integrations-text: theme(colors.orange.400);
+    --category-logic: theme(colors.purple.400);
+    --category-logic-text: theme(colors.purple.400);
+    --category-utils: theme(colors.stone.400);
+    --category-utils-text: theme(colors.stone.400);
+    --category-interaction: theme(colors.green.400);
+    --category-interaction-text: theme(colors.green.400);
+    --category-data: theme(colors.teal.400);
+    --category-data-text: theme(colors.teal.400);
+    --category-connect: theme(colors.orange.400);
+    --category-connect-text: theme(colors.orange.400);
 }
 
-.react-flow__node.selected .node-logic-category {
-    @apply !border-purple-500;
-}
+/* Category utility classes - reference the CSS variables */
+.category-inputs-border { border-left-color: var(--category-inputs); }
+.category-inputs-icon-bg { background-color: color-mix(in srgb, var(--category-inputs) 15%, transparent); }
+.category-inputs-icon-text { color: var(--category-inputs-text); }
+.category-inputs-ring { --tw-ring-color: var(--category-inputs); }
 
-.dark .react-flow__node.selected .node-logic-category {
-    @apply !border-purple-400;
-}
+.category-outputs-border { border-left-color: var(--category-outputs); }
+.category-outputs-icon-bg { background-color: color-mix(in srgb, var(--category-outputs) 15%, transparent); }
+.category-outputs-icon-text { color: var(--category-outputs-text); }
+.category-outputs-ring { --tw-ring-color: var(--category-outputs); }
 
-.react-flow__node.selected .node-interaction-category {
-    @apply !border-green-500;
-}
+.category-ai-border { border-left-color: var(--category-ai); }
+.category-ai-icon-bg { background-color: color-mix(in srgb, var(--category-ai) 15%, transparent); }
+.category-ai-icon-text { color: var(--category-ai-text); }
+.category-ai-ring { --tw-ring-color: var(--category-ai); }
 
-.dark .react-flow__node.selected .node-interaction-category {
-    @apply !border-green-400;
-}
+.category-integrations-border { border-left-color: var(--category-integrations); }
+.category-integrations-icon-bg { background-color: color-mix(in srgb, var(--category-integrations) 15%, transparent); }
+.category-integrations-icon-text { color: var(--category-integrations-text); }
+.category-integrations-ring { --tw-ring-color: var(--category-integrations); }
 
-.react-flow__node.selected .node-data-category {
-    @apply !border-teal-500;
-}
+.category-logic-border { border-left-color: var(--category-logic); }
+.category-logic-icon-bg { background-color: color-mix(in srgb, var(--category-logic) 15%, transparent); }
+.category-logic-icon-text { color: var(--category-logic-text); }
+.category-logic-ring { --tw-ring-color: var(--category-logic); }
 
-.dark .react-flow__node.selected .node-data-category {
-    @apply !border-teal-400;
-}
+.category-utils-border { border-left-color: var(--category-utils); }
+.category-utils-icon-bg { background-color: color-mix(in srgb, var(--category-utils) 15%, transparent); }
+.category-utils-icon-text { color: var(--category-utils-text); }
+.category-utils-ring { --tw-ring-color: var(--category-utils); }
 
-.react-flow__node.selected .node-connect-category {
-    @apply !border-orange-500;
-}
+.category-interaction-border { border-left-color: var(--category-interaction); }
+.category-interaction-icon-bg { background-color: color-mix(in srgb, var(--category-interaction) 15%, transparent); }
+.category-interaction-icon-text { color: var(--category-interaction-text); }
+.category-interaction-ring { --tw-ring-color: var(--category-interaction); }
 
-.dark .react-flow__node.selected .node-connect-category {
-    @apply !border-orange-400;
-}
+.category-data-border { border-left-color: var(--category-data); }
+.category-data-icon-bg { background-color: color-mix(in srgb, var(--category-data) 15%, transparent); }
+.category-data-icon-text { color: var(--category-data-text); }
+.category-data-ring { --tw-ring-color: var(--category-data); }
+
+.category-connect-border { border-left-color: var(--category-connect); }
+.category-connect-icon-bg { background-color: color-mix(in srgb, var(--category-connect) 15%, transparent); }
+.category-connect-icon-text { color: var(--category-connect-text); }
+.category-connect-ring { --tw-ring-color: var(--category-connect); }
+
+/* Node selection styles - reference the same CSS variables */
+.react-flow__node.selected .node-inputs-category { border-color: var(--category-inputs) !important; }
+.react-flow__node.selected .node-outputs-category { border-color: var(--category-outputs) !important; }
+.react-flow__node.selected .node-ai-category { border-color: var(--category-ai) !important; }
+.react-flow__node.selected .node-integrations-category { border-color: var(--category-integrations) !important; }
+.react-flow__node.selected .node-logic-category { border-color: var(--category-logic) !important; }
+.react-flow__node.selected .node-utils-category { border-color: var(--category-utils) !important; }
+.react-flow__node.selected .node-interaction-category { border-color: var(--category-interaction) !important; }
+.react-flow__node.selected .node-data-category { border-color: var(--category-data) !important; }
+.react-flow__node.selected .node-connect-category { border-color: var(--category-connect) !important; }
 
 .react-flow__edge-path {
     stroke: #d1d5db; /* gray-300 */

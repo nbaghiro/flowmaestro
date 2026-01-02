@@ -19,7 +19,7 @@ function HTTPNode({ data, selected }: NodeProps<HTTPNodeData>) {
             icon={Globe}
             label={data.label || "HTTP"}
             status={data.status}
-            category="connect"
+            category="utils"
             selected={selected}
         >
             <div className="space-y-2">

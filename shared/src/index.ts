@@ -9,3 +9,4 @@ export * from "./triggers";
 export * from "./template";
 export * from "./agent-template";
 export * from "./streaming-events";
+export * from "./discord";

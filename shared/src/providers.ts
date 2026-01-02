@@ -42,7 +42,7 @@ export interface Provider {
     oauthSettings?: OAuthField[];
 }
 
-// Brandfetch Logo API client ID
+// Brandfetch Logo API client ID (used for connection modal, not node icons)
 const BRANDFETCH_CLIENT_ID = "1idCpJZqz6etuVweFEJ";
 const getBrandLogo = (domain: string): string =>
     `https://cdn.brandfetch.io/${domain}?c=${BRANDFETCH_CLIENT_ID}`;
@@ -98,11 +98,11 @@ export const ALL_PROVIDERS: Provider[] = [
     {
         provider: "discord",
         displayName: "Discord",
-        description: "Send messages and manage Discord servers",
+        description:
+            "Send messages to channels, manage webhooks, and automate Discord interactions",
         logoUrl: getBrandLogo("discord.com"),
         category: "Communication",
-        methods: ["api_key"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "telegram",

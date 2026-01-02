@@ -1,8 +1,19 @@
 import { X } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
+import { ALL_PROVIDERS } from "@flowmaestro/shared";
 import { Button } from "../../components/common/Button";
 import { Input } from "../../components/common/Input";
 import { useWorkflowStore } from "../../stores/workflowStore";
+
+// AI provider IDs (these use the LLM node, not Integration node)
+const AI_PROVIDER_IDS = ["openai", "anthropic", "google", "huggingface", "cohere"];
+
+// Check if a node type is an integration provider
+const isProviderNodeType = (type: string): boolean => {
+    return ALL_PROVIDERS.some(
+        (p) => p.provider === type && !p.comingSoon && !AI_PROVIDER_IDS.includes(p.provider)
+    );
+};
 // AI & ML
 import { AudioNodeConfig } from "./configs/AudioNodeConfig";
 // Logic & Code
@@ -92,19 +103,28 @@ export function NodeInspector() {
             case "wait":
                 return <WaitNodeConfig data={node.data} onUpdate={handleUpdate} />;
 
-            // Data Operations
+            // Inputs
             case "trigger":
                 return <TriggerNodeConfig data={node.data} onUpdate={handleUpdate} />;
             case "input":
+            case "files":
+            case "url":
+            case "audioInput":
                 return <InputNodeConfig data={node.data} onUpdate={handleUpdate} />;
+
+            // Outputs
+            case "output":
+            case "action":
+            case "audioOutput":
+                return <OutputNodeConfig data={node.data} onUpdate={handleUpdate} />;
+
+            // Logic & Code
             case "transform":
                 return <TransformNodeConfig data={node.data} onUpdate={handleUpdate} />;
             case "variable":
                 return <VariableNodeConfig data={node.data} onUpdate={handleUpdate} />;
-            case "output":
-                return <OutputNodeConfig data={node.data} onUpdate={handleUpdate} />;
 
-            // Connect
+            // Utils
             case "http":
                 return <HTTPNodeConfig data={node.data} onUpdate={handleUpdate} />;
             case "database":
@@ -115,6 +135,10 @@ export function NodeInspector() {
                 return <KnowledgeBaseQueryNodeConfig data={node.data} onUpdate={handleUpdate} />;
 
             default:
+                // Check if it's a provider node (e.g., slack, gmail, etc.)
+                if (node.type && isProviderNodeType(node.type)) {
+                    return <IntegrationNodeConfig data={node.data} onUpdate={handleUpdate} />;
+                }
                 return (
                     <div className="p-4 text-sm text-muted-foreground">
                         Configuration for {node.type} node coming soon...

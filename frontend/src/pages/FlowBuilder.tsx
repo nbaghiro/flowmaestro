@@ -58,7 +58,8 @@ interface Checkpoint {
 
 export function FlowBuilder() {
     const { workflowId } = useParams<{ workflowId: string }>();
-    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
+    const [isSidebarPinned, setIsSidebarPinned] = useState(false);
     const [workflowName, setWorkflowName] = useState("Untitled Workflow");
     const [workflowDescription, setWorkflowDescription] = useState("");
     const [isLoading, setIsLoading] = useState(true);
@@ -512,7 +513,10 @@ export function FlowBuilder() {
                 <div className="flex-1 flex overflow-hidden relative">
                     <NodeLibrary
                         isCollapsed={isSidebarCollapsed}
-                        onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                        onExpand={() => setIsSidebarCollapsed(false)}
+                        onCollapse={() => setIsSidebarCollapsed(true)}
+                        isPinned={isSidebarPinned}
+                        onPinToggle={() => setIsSidebarPinned(!isSidebarPinned)}
                     />
                     <div className="flex-1">
                         <WorkflowCanvas

@@ -473,5 +473,19 @@ const redditEntry: ProviderRegistryEntry = {
 
 providerRegistry.register(redditEntry);
 
+// Register Discord provider
+const discordEntry: ProviderRegistryEntry = {
+    name: "discord",
+    displayName: "Discord",
+    authMethod: "oauth2",
+    category: "communication",
+    loader: async () => {
+        const { DiscordProvider } = await import("./providers/discord/DiscordProvider");
+        return new DiscordProvider();
+    }
+};
+
+providerRegistry.register(discordEntry);
+
 // Export for use in application
 export { providerRegistry };

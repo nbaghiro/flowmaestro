@@ -1,6 +1,7 @@
 import { motion, useInView } from "framer-motion";
-import { Star, Quote } from "lucide-react";
+import { Star, Quote, ArrowRight } from "lucide-react";
 import React from "react";
+import { Link } from "react-router-dom";
 
 interface Testimonial {
     quote: string;
@@ -36,7 +37,10 @@ export const SocialProof: React.FC = () => {
 
     return (
         <section ref={ref} className="relative py-24 px-4 sm:px-6 lg:px-8 bg-background">
-            <div className="max-w-7xl mx-auto">
+            {/* Background Grid Pattern */}
+            <div className="absolute inset-0 grid-pattern opacity-30"></div>
+
+            <div className="relative z-10 max-w-7xl mx-auto">
                 {/* Section Header */}
                 <motion.div
                     initial={{ opacity: 0, y: 30 }}
@@ -102,6 +106,22 @@ export const SocialProof: React.FC = () => {
                             )
                         )}
                     </div>
+                </motion.div>
+
+                {/* View Case Studies CTA */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={isInView ? { opacity: 1, y: 0 } : {}}
+                    transition={{ duration: 0.6, delay: 0.5 }}
+                    className="mt-16 text-center"
+                >
+                    <Link
+                        to="/case-studies"
+                        className="inline-flex items-center gap-2 px-6 py-3 rounded-lg border border-stroke hover:border-primary-500 text-gray-200 hover:text-white transition-all duration-200 group"
+                    >
+                        <span>View Customer Case Studies</span>
+                        <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                    </Link>
                 </motion.div>
             </div>
         </section>

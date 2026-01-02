@@ -20,7 +20,7 @@ function OutputNode({ data, selected }: NodeProps<OutputNodeData>) {
             icon={Send}
             label={data.label || "Output"}
             status={data.status}
-            category="data"
+            category="outputs"
             selected={selected}
             hasOutputHandle={true}
         >
@@ -29,7 +29,9 @@ function OutputNode({ data, selected }: NodeProps<OutputNodeData>) {
                     <span className="text-xs text-muted-foreground">Format:</span>
                     <div className="flex items-center gap-1">
                         <FileText className="w-3 h-3 text-muted-foreground" />
-                        <span className="text-xs font-medium uppercase">{format}</span>
+                        <span className="text-xs font-medium uppercase text-foreground">
+                            {format}
+                        </span>
                     </div>
                 </div>
                 <div className="pt-1.5 mt-1.5 border-t border-border">

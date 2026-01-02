@@ -7,11 +7,11 @@ export const CTA: React.FC = () => {
     const isInView = useInView(ref, { once: true, margin: "-100px" });
 
     return (
-        <section
-            ref={ref}
-            className="relative py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-background-surface to-background"
-        >
-            <div className="max-w-5xl mx-auto">
+        <section ref={ref} className="relative py-24 px-4 sm:px-6 lg:px-8 bg-background">
+            {/* Background Grid Pattern */}
+            <div className="absolute inset-0 grid-pattern opacity-30"></div>
+
+            <div className="relative z-10 max-w-5xl mx-auto">
                 <motion.div
                     initial={{ opacity: 0, y: 30 }}
                     animate={isInView ? { opacity: 1, y: 0 } : {}}

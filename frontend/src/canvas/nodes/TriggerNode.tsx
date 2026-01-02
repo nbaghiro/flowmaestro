@@ -53,7 +53,7 @@ function TriggerNode({ data, selected }: NodeProps<TriggerNodeData>) {
             icon={Zap}
             label={data.label || "Trigger"}
             status={data.status}
-            category="data"
+            category="inputs"
             selected={selected}
             hasInputHandle={false}
         >
