@@ -84,7 +84,7 @@ export function PublicInterfacePage() {
     }
 
     return (
-        <div className="min-h-screen bg-background">
+        <div className="min-h-screen bg-muted/20">
             <InterfaceHeader
                 title={iface.title}
                 description={iface.description}
@@ -93,38 +93,52 @@ export function PublicInterfacePage() {
                 coverValue={iface.coverValue}
             />
 
-            <div className="mx-auto max-w-2xl space-y-4 px-4 py-6">
-                <MessageInput
-                    label={iface.inputLabel}
-                    placeholder={iface.inputPlaceholder}
-                    value={message}
-                    onChange={setMessage}
-                    disabled={!canSubmit}
-                />
+            <div className="mx-auto max-w-3xl px-6 py-8">
+                <div className="rounded-xl border bg-card shadow-sm">
+                    <div className="space-y-6 p-8">
+                        <MessageInput
+                            label={iface.inputLabel}
+                            placeholder={iface.inputPlaceholder}
+                            value={message}
+                            onChange={setMessage}
+                            disabled={!canSubmit}
+                        />
 
-                {iface.allowFileUpload && (
-                    <FileUploader
-                        files={files}
-                        onChange={setFiles}
-                        maxFiles={iface.maxFiles}
-                        accept={iface.allowedFileTypes?.join(",")}
-                        disabled={!canSubmit}
-                    />
-                )}
+                        {iface.allowFileUpload && (
+                            <FileUploader
+                                files={files}
+                                onChange={setFiles}
+                                maxFiles={iface.maxFiles}
+                                accept={iface.allowedFileTypes?.join(",")}
+                                disabled={!canSubmit}
+                            />
+                        )}
 
-                {iface.allowUrlInput && (
-                    <UrlInput value={urls} onChange={setUrls} disabled={!canSubmit} />
-                )}
+                        {iface.allowUrlInput && (
+                            <UrlInput value={urls} onChange={setUrls} disabled={!canSubmit} />
+                        )}
 
-                <SubmitButton
-                    text={iface.submitButtonText}
-                    onClick={handleSubmit}
-                    loading={isSubmitting}
-                    disabled={!canSubmit}
-                />
+                        <div className="pt-2">
+                            <SubmitButton
+                                text={iface.submitButtonText}
+                                onClick={handleSubmit}
+                                loading={isSubmitting}
+                                disabled={!canSubmit}
+                            />
+                        </div>
 
-                {statusMessage && <div className="text-sm text-green-600">{statusMessage}</div>}
-                {submitError && <div className="text-sm text-red-600">{submitError}</div>}
+                        {statusMessage && (
+                            <div className="rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-800">
+                                {statusMessage}
+                            </div>
+                        )}
+                        {submitError && (
+                            <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-800">
+                                {submitError}
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
         </div>
     );

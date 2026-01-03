@@ -23,7 +23,7 @@ export function ImageUploader({ value, onChange, onFileSelect, disabled = false 
             <label className="text-sm font-medium">Upload image</label>
 
             <div className="flex items-center gap-4">
-                <div className="h-16 w-24 overflow-hidden rounded-md border bg-muted flex items-center justify-center">
+                <div className="h-16 w-24 overflow-hidden rounded-md border border-border bg-muted flex items-center justify-center">
                     {value ? (
                         <img
                             src={value}
@@ -49,7 +49,7 @@ export function ImageUploader({ value, onChange, onFileSelect, disabled = false 
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
                         disabled={disabled}
-                        className="rounded-md border px-3 py-1.5 text-sm disabled:opacity-50"
+                        className="rounded-md border border-border bg-card px-3 py-1.5 text-sm text-foreground disabled:opacity-50"
                     >
                         Choose image
                     </button>

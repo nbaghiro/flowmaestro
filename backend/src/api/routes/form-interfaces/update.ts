@@ -1,6 +1,7 @@
 import { FastifyInstance } from "fastify";
+import { slugify } from "@flowmaestro/shared";
 import { FormInterfaceRepository } from "../../../storage/repositories/FormInterfaceRepository";
-import { authMiddleware, validateRequest } from "../../middleware";
+import { authMiddleware, BadRequestError, validateRequest } from "../../middleware";
 import {
     updateFormInterfaceSchema,
     type UpdateFormInterfaceRequest
@@ -18,7 +19,16 @@ export async function updateFormInterfaceRoute(fastify: FastifyInstance) {
             const body = request.body as UpdateFormInterfaceRequest;
 
             const repo = new FormInterfaceRepository();
-            const iface = await repo.update(id, userId, body);
+            const updatePayload = { ...body };
+            if (body.slug !== undefined) {
+                const slug = slugify(body.slug);
+                if (!slug) {
+                    throw new BadRequestError("Slug is invalid");
+                }
+                updatePayload.slug = slug;
+            }
+
+            const iface = await repo.update(id, userId, updatePayload);
 
             return reply.send({
                 success: true,

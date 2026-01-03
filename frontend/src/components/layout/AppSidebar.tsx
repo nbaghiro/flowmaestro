@@ -8,7 +8,8 @@ import {
     User,
     Building,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
+    ClipboardList
 } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
@@ -31,6 +32,7 @@ const navItems: NavItem[] = [
     { icon: Bot, label: "Agents", path: "/agents", section: "primary" },
     { icon: Plug, label: "Connections", path: "/connections", section: "primary" },
     { icon: BookOpen, label: "Knowledge Bases", path: "/knowledge-bases", section: "primary" },
+    { icon: ClipboardList, label: "Form Interface", path: "/interfaces", section: "primary" },
     { icon: FileText, label: "Templates", path: "/templates", section: "primary" },
 
     // Settings navigation

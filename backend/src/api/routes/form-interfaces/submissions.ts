@@ -30,7 +30,8 @@ export async function listFormInterfaceSubmissionsRoute(fastify: FastifyInstance
                     createdAt: submission.submittedAt,
                     inputText: submission.message ?? undefined,
                     files: submission.files ?? [],
-                    urls: submission.urls ?? []
+                    urls: submission.urls ?? [],
+                    output: submission.output ?? undefined
                 }))
             });
         }

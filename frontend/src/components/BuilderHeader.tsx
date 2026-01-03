@@ -1,4 +1,13 @@
-import { Save, Play, Loader2, CheckCircle, XCircle, Settings, Layers } from "lucide-react";
+import {
+    Save,
+    Play,
+    Loader2,
+    CheckCircle,
+    XCircle,
+    Settings,
+    Layers,
+    FilePlus
+} from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { WorkflowTrigger } from "@flowmaestro/shared";
@@ -114,6 +123,11 @@ export function BuilderHeader({
         }
     };
 
+    const handleCreateInterface = () => {
+        if (!workflowId) return;
+        navigate(`/interfaces/new?workflowId=${workflowId}`);
+    };
+
     const handleBack = () => {
         navigate("/");
     };
@@ -184,6 +198,15 @@ export function BuilderHeader({
 
                 {/* Right: Action Buttons */}
                 <div className="flex items-center gap-2">
+                    <Tooltip content="Create form interface" position="bottom">
+                        <button
+                            onClick={handleCreateInterface}
+                            disabled={!workflowId}
+                            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted border border-border rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <FilePlus className="w-4 h-4" />
+                        </button>
+                    </Tooltip>
                     <Tooltip content="Checkpoints (⌘.)" position="bottom">
                         <button
                             onClick={onOpenCheckpoints}

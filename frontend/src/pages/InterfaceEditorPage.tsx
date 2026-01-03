@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
+import { slugify } from "@flowmaestro/shared";
 import { ContextConfigEditor } from "@/components/interface-builder/ContextConfigEditor";
 import { CoverEditor, type CoverType } from "@/components/interface-builder/CoverEditor";
 import { IconUploader } from "@/components/interface-builder/IconUploader";
@@ -13,6 +14,7 @@ import { TargetSelectionDialog } from "@/components/interface-builder/TargetSele
 import { TitleDescriptionEditor } from "@/components/interface-builder/TitleDescriptionEditor";
 import {
     createFormInterface,
+    checkFormInterfaceSlugAvailability,
     getFormInterfaceById,
     getWorkflow,
     getAgent,
@@ -28,19 +30,29 @@ export function InterfaceEditorPage() {
     const location = useLocation();
     const navigate = useNavigate();
     const { id } = useParams<{ id: string }>();
+    const preselectApplied = useRef(false);
 
     const isCreateMode = location.pathname.endsWith("/new");
     const isEditMode = !isCreateMode;
     const editId = isEditMode ? id : undefined;
+    const workflowIdFromQuery = new URLSearchParams(location.search).get("workflowId");
+    const agentIdFromQuery = new URLSearchParams(location.search).get("agentId");
 
     const [target, setTarget] = useState<TargetType | null>(null);
     const [targetName, setTargetName] = useState<string | null>(null);
     const [name, setName] = useState("");
+    const [nameTouched, setNameTouched] = useState(false);
     const [slug, setSlug] = useState("");
+    const [slugTouched, setSlugTouched] = useState(false);
+    const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "available" | "unavailable">(
+        "idle"
+    );
+    const [slugMessage, setSlugMessage] = useState<string | null>(null);
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
     const [submitButton, setSubmitButton] = useState("Submit");
     const [isSaving, setIsSaving] = useState(false);
+    const [isCreatePublishing, setIsCreatePublishing] = useState(false);
     const [isPublishing, setIsPublishing] = useState(false);
     const [status, setStatus] = useState<"draft" | "published">("draft");
     const [createError, setCreateError] = useState<string | null>(null);
@@ -58,8 +70,28 @@ export function InterfaceEditorPage() {
     const [pendingIconFile, setPendingIconFile] = useState<File | null>(null);
     const [coverType, setCoverType] = useState<"color" | "image" | "stock">("color");
     const [coverValue, setCoverValue] = useState("#000000");
+    const [lastColorValue, setLastColorValue] = useState("#000000");
     const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(null);
     const [pendingCoverFile, setPendingCoverFile] = useState<File | null>(null);
+
+    const REQUEST_TIMEOUT_MS = 45000;
+
+    async function withTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
+        let timer: number | undefined;
+        const timeoutPromise = new Promise<T>((_, reject) => {
+            timer = window.setTimeout(() => {
+                reject(new Error(`${label} timed out`));
+            }, REQUEST_TIMEOUT_MS);
+        });
+
+        try {
+            return await Promise.race([promise, timeoutPromise]);
+        } finally {
+            if (timer) {
+                window.clearTimeout(timer);
+            }
+        }
+    }
 
     const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(null);
     const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
@@ -76,7 +108,11 @@ export function InterfaceEditorPage() {
         setSelectedWorkflowId(null);
         setSelectedAgentId(null);
         setName("");
+        setNameTouched(false);
         setSlug("");
+        setSlugTouched(false);
+        setSlugStatus("idle");
+        setSlugMessage(null);
         setTitle("");
         setDescription("");
         setSubmitButton("Submit");
@@ -94,6 +130,7 @@ export function InterfaceEditorPage() {
         setPendingIconFile(null);
         setCoverType("color");
         setCoverValue("#000000");
+        setLastColorValue("#000000");
         setCoverPreviewUrl(null);
         setPendingCoverFile(null);
     }
@@ -110,7 +147,9 @@ export function InterfaceEditorPage() {
             const iface = res.data;
 
             setName(iface.name);
+            setNameTouched(true);
             setSlug(iface.slug);
+            setSlugTouched(true);
             setTitle(iface.title);
             setDescription(iface.description ?? "");
             setTarget(iface.targetType);
@@ -121,6 +160,9 @@ export function InterfaceEditorPage() {
             );
             setCoverType(iface.coverType);
             setCoverValue(iface.coverValue);
+            if (iface.coverType === "color") {
+                setLastColorValue(iface.coverValue);
+            }
             setCoverPreviewUrl(
                 iface.coverValue && iface.coverValue.startsWith("http") ? iface.coverValue : null
             );
@@ -158,6 +200,54 @@ export function InterfaceEditorPage() {
     }, [editId]);
 
     useEffect(() => {
+        if (!isCreateMode || preselectApplied.current) return;
+
+        if (agentIdFromQuery) {
+            setTarget("agent");
+            setSelectedAgentId(agentIdFromQuery);
+            preselectApplied.current = true;
+            return;
+        }
+
+        if (workflowIdFromQuery) {
+            setTarget("workflow");
+            setSelectedWorkflowId(workflowIdFromQuery);
+            preselectApplied.current = true;
+        }
+    }, [isCreateMode, agentIdFromQuery, workflowIdFromQuery]);
+
+    const handleNameChange = (value: string) => {
+        setName(value);
+        setNameTouched(true);
+    };
+
+    const handleSlugChange = (value: string) => {
+        const hasTrailingSpace = /\s$/.test(value);
+        const normalized = value
+            .toLowerCase()
+            .replace(/[^a-z0-9\s-]+/g, "")
+            .replace(/\s+/g, "-")
+            .replace(/-+/g, "-")
+            .replace(/^-+/, "");
+        const nextSlug =
+            hasTrailingSpace && normalized && !normalized.endsWith("-")
+                ? `${normalized}-`
+                : normalized;
+
+        setSlug(nextSlug);
+        setSlugTouched(true);
+    };
+
+    useEffect(() => {
+        if (!isCreateMode || slugTouched) return;
+
+        const nextSlug = slugify(name);
+        if (nextSlug !== slug) {
+            setSlug(nextSlug);
+        }
+    }, [isCreateMode, name, slug, slugTouched]);
+
+    useEffect(() => {
         if (!isCreateMode) return;
         if (!target) return;
 
@@ -182,32 +272,83 @@ export function InterfaceEditorPage() {
         };
     }, [isCreateMode, target, selectedWorkflowId, selectedAgentId]);
 
-    async function handleCreate() {
-        setCreateError(null);
-        if (!target) {
-            setCreateError("Select a target type first.");
-            return;
-        }
-        if (target === "workflow" && !selectedWorkflowId) {
-            setCreateError("Select a workflow to continue.");
-            return;
-        }
-        if (target === "agent" && !selectedAgentId) {
-            setCreateError("Select an agent to continue.");
-            return;
-        }
-        if (!name.trim() || !slug.trim() || !title.trim()) {
-            setCreateError("Name, slug, and title are required.");
+    useEffect(() => {
+        if (!isCreateMode) return;
+        if (!targetName) return;
+        if (nameTouched || slugTouched || name.trim()) return;
+
+        setName(targetName);
+        setSlug(slugify(targetName));
+    }, [isCreateMode, targetName, name, nameTouched, slugTouched]);
+
+    useEffect(() => {
+        if (!slug.trim()) {
+            setSlugStatus("idle");
+            setSlugMessage(null);
             return;
         }
 
-        setIsSaving(true);
-        try {
-            const shouldSendCover =
-                coverType !== "image" || (coverValue && !coverValue.startsWith("blob:"));
-            const res = await createFormInterface({
+        let cancelled = false;
+        setSlugStatus("checking");
+        setSlugMessage(null);
+
+        const timer = window.setTimeout(async () => {
+            try {
+                const res = await checkFormInterfaceSlugAvailability(
+                    slug,
+                    isEditMode ? editId : undefined
+                );
+                if (cancelled) return;
+                setSlugStatus(res.data.available ? "available" : "unavailable");
+                setSlugMessage(res.data.available ? null : "Taken");
+            } catch {
+                if (!cancelled) {
+                    setSlugStatus("idle");
+                    setSlugMessage(null);
+                }
+            }
+        }, 300);
+
+        return () => {
+            cancelled = true;
+            window.clearTimeout(timer);
+        };
+    }, [slug, isEditMode, editId]);
+
+    async function createInterface(): Promise<string | null> {
+        setCreateError(null);
+        if (!target) {
+            setCreateError("Select a target type first.");
+            return null;
+        }
+        if (target === "workflow" && !selectedWorkflowId) {
+            setCreateError("Select a workflow to continue.");
+            return null;
+        }
+        if (target === "agent" && !selectedAgentId) {
+            setCreateError("Select an agent to continue.");
+            return null;
+        }
+        if (!name.trim() || !slug.trim() || !title.trim()) {
+            setCreateError("Name, slug, and title are required.");
+            return null;
+        }
+
+        const availability = await withTimeout(
+            checkFormInterfaceSlugAvailability(slug),
+            "Slug check"
+        );
+        if (!availability.data.available) {
+            setCreateError("Slug already in use.");
+            return null;
+        }
+
+        const shouldSendCover =
+            coverType !== "image" || (coverValue && !coverValue.startsWith("blob:"));
+        const res = await withTimeout(
+            createFormInterface({
                 name,
-                slug,
+                slug: slugify(slug),
                 title,
                 description: description || undefined,
                 targetType: target,
@@ -221,32 +362,102 @@ export function InterfaceEditorPage() {
                           coverValue
                       }
                     : {})
-            });
+            }),
+            "Create interface"
+        );
 
-            const createdId = res.data.id;
+        const createdId = res.data.id;
 
-            if (pendingCoverFile) {
-                const coverRes = await uploadFormInterfaceAsset(createdId, {
-                    type: "cover",
-                    file: pendingCoverFile
-                });
+        if (pendingCoverFile) {
+            try {
+                const coverRes = await withTimeout(
+                    uploadFormInterfaceAsset(createdId, {
+                        type: "cover",
+                        file: pendingCoverFile
+                    }),
+                    "Cover upload"
+                );
                 setCoverType("image");
                 setCoverValue(coverRes.asset.gcsUri);
                 setPendingCoverFile(null);
+                await withTimeout(
+                    updateFormInterface(createdId, {
+                        coverType: "image",
+                        coverValue: coverRes.asset.gcsUri
+                    }),
+                    "Cover update"
+                );
+            } catch (error) {
+                setCreateError(error instanceof Error ? error.message : "Cover upload failed.");
+                throw error;
             }
+        }
 
-            if (pendingIconFile) {
-                const iconRes = await uploadFormInterfaceAsset(createdId, {
-                    type: "icon",
-                    file: pendingIconFile
-                });
+        if (pendingIconFile) {
+            try {
+                const iconRes = await withTimeout(
+                    uploadFormInterfaceAsset(createdId, {
+                        type: "icon",
+                        file: pendingIconFile
+                    }),
+                    "Icon upload"
+                );
                 setIconUrl(iconRes.asset.gcsUri);
                 setPendingIconFile(null);
+                await withTimeout(
+                    updateFormInterface(createdId, {
+                        iconUrl: iconRes.asset.gcsUri
+                    }),
+                    "Icon update"
+                );
+            } catch (error) {
+                setCreateError(error instanceof Error ? error.message : "Icon upload failed.");
+                throw error;
             }
+        } else if (iconUrl) {
+            try {
+                await withTimeout(
+                    updateFormInterface(createdId, {
+                        iconUrl
+                    }),
+                    "Icon update"
+                );
+            } catch (error) {
+                setCreateError(error instanceof Error ? error.message : "Icon update failed.");
+                throw error;
+            }
+        }
 
-            navigate("/interfaces");
+        return createdId;
+    }
+
+    async function handleCreate() {
+        setIsSaving(true);
+        try {
+            const createdId = await createInterface();
+            if (createdId) {
+                navigate("/interfaces");
+            }
+        } catch (error) {
+            setCreateError(error instanceof Error ? error.message : "Failed to create interface.");
         } finally {
             setIsSaving(false);
+        }
+    }
+
+    async function handleCreateAndPublish() {
+        setIsCreatePublishing(true);
+        try {
+            const createdId = await createInterface();
+            if (!createdId) return;
+            await withTimeout(publishFormInterface(createdId), "Publish interface");
+            navigate("/interfaces");
+        } catch (error) {
+            setCreateError(
+                error instanceof Error ? error.message : "Failed to create and publish interface."
+            );
+        } finally {
+            setIsCreatePublishing(false);
         }
     }
 
@@ -259,7 +470,7 @@ export function InterfaceEditorPage() {
                 coverType === "image" && !coverValue ? {} : { coverType, coverValue };
             const updated = await updateFormInterface(editId, {
                 name,
-                slug,
+                slug: slugify(slug),
                 title,
                 description: description || undefined,
                 iconUrl,
@@ -304,7 +515,9 @@ export function InterfaceEditorPage() {
     }) {
         if (next.coverType === "color" || next.coverType === "palette") {
             setCoverType("color");
-            setCoverValue(next.coverColor || "#6366f1");
+            const nextColor = next.coverColor || lastColorValue || "#6366f1";
+            setCoverValue(nextColor);
+            setLastColorValue(nextColor);
             setCoverPreviewUrl(null);
             setPendingCoverFile(null);
             return;
@@ -414,16 +627,25 @@ export function InterfaceEditorPage() {
                 <div className="mb-6 text-sm text-muted-foreground">Editing existing interface</div>
             )}
 
-            <div className="space-y-4 max-w-xl">
+            <div className="mx-auto space-y-4 max-w-xl">
                 {isCreateMode && !isTargetReady && (
-                    <TargetSelectionDialog
-                        target={target}
-                        onTargetChange={setTarget}
-                        selectedWorkflowId={selectedWorkflowId}
-                        onWorkflowSelect={setSelectedWorkflowId}
-                        selectedAgentId={selectedAgentId}
-                        onAgentSelect={setSelectedAgentId}
-                    />
+                    <div className="space-y-3">
+                        <button
+                            type="button"
+                            onClick={() => navigate("/interfaces")}
+                            className="text-sm font-medium text-muted-foreground hover:text-foreground"
+                        >
+                            ← Back to interfaces
+                        </button>
+                        <TargetSelectionDialog
+                            target={target}
+                            onTargetChange={setTarget}
+                            selectedWorkflowId={selectedWorkflowId}
+                            onWorkflowSelect={setSelectedWorkflowId}
+                            selectedAgentId={selectedAgentId}
+                            onAgentSelect={setSelectedAgentId}
+                        />
+                    </div>
                 )}
 
                 {target && isTargetReady && (
@@ -460,9 +682,11 @@ export function InterfaceEditorPage() {
 
                         <TitleDescriptionEditor
                             name={name}
-                            onNameChange={setName}
+                            onNameChange={handleNameChange}
                             slug={slug}
-                            onSlugChange={setSlug}
+                            onSlugChange={handleSlugChange}
+                            slugStatus={slugStatus}
+                            slugMessage={slugMessage}
                             title={title}
                             onTitleChange={setTitle}
                             description={description}
@@ -500,13 +724,22 @@ export function InterfaceEditorPage() {
 
                         <div className="flex flex-wrap gap-3">
                             {isCreateMode ? (
-                                <button
-                                    onClick={handleCreate}
-                                    disabled={isSaving}
-                                    className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
-                                >
-                                    {isSaving ? "Creating…" : "Create interface"}
-                                </button>
+                                <>
+                                    <button
+                                        onClick={handleCreate}
+                                        disabled={isSaving || isCreatePublishing}
+                                        className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+                                    >
+                                        {isSaving ? "Creating…" : "Create interface"}
+                                    </button>
+                                    <button
+                                        onClick={handleCreateAndPublish}
+                                        disabled={isSaving || isCreatePublishing}
+                                        className="rounded-md border px-4 py-2 text-sm font-medium disabled:opacity-50"
+                                    >
+                                        {isCreatePublishing ? "Publishing…" : "Create & publish"}
+                                    </button>
+                                </>
                             ) : (
                                 <>
                                     <button
@@ -515,6 +748,12 @@ export function InterfaceEditorPage() {
                                         className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
                                     >
                                         {isSaving ? "Saving…" : "Save changes"}
+                                    </button>
+                                    <button
+                                        onClick={() => navigate("/interfaces")}
+                                        className="rounded-md border px-4 py-2 text-sm font-medium"
+                                    >
+                                        Cancel
                                     </button>
                                     <button
                                         onClick={handlePublishToggle}

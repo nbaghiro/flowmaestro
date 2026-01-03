@@ -13,14 +13,14 @@ export function ColorPicker({ value = "#000000", onChange }: Props) {
                     type="color"
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
-                    className="h-10 w-14 cursor-pointer rounded border p-1"
+                    className="h-10 w-14 cursor-pointer rounded border border-border bg-card p-1"
                 />
 
                 <input
                     type="text"
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
-                    className="w-28 rounded-md border px-2 py-1 text-sm"
+                    className="w-28 rounded-md border border-border bg-card px-2 py-1 text-sm text-foreground"
                 />
             </div>
         </div>

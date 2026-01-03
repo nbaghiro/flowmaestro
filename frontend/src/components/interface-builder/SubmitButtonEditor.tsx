@@ -13,7 +13,7 @@ export function SubmitButtonEditor({ value, onChange }: Props) {
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 placeholder="Submit"
-                className="w-full rounded-md border px-3 py-2 text-sm"
+                className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground"
             />
 
             <p className="text-xs text-muted-foreground">

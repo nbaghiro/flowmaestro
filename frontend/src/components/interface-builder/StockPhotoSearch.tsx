@@ -50,12 +50,12 @@ export function StockPhotoSearch({ value, onSelect }: Props) {
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     placeholder="Search Unsplash…"
-                    className="flex-1 rounded-md border px-3 py-2 text-sm"
+                    className="flex-1 rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground"
                 />
                 <button
                     type="button"
                     onClick={search}
-                    className="rounded-md border px-3 py-2 text-sm"
+                    className="rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground hover:bg-muted"
                 >
                     Search
                 </button>
@@ -69,8 +69,10 @@ export function StockPhotoSearch({ value, onSelect }: Props) {
                         key={photo.id}
                         type="button"
                         onClick={() => onSelect(photo.urls.regular)}
-                        className={`overflow-hidden rounded-md border ${
-                            value === photo.urls.regular ? "ring-2 ring-primary ring-offset-1" : ""
+                        className={`overflow-hidden rounded-md border border-border ${
+                            value === photo.urls.regular
+                                ? "ring-2 ring-primary ring-offset-1 ring-offset-background"
+                                : ""
                         }`}
                     >
                         <img

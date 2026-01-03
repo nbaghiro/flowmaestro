@@ -61,8 +61,10 @@ export function CoverEditor({
                         key={t}
                         type="button"
                         onClick={() => changeMode(t)}
-                        className={`rounded-md border px-3 py-1.5 text-sm ${
-                            mode === t ? "bg-muted font-medium" : "text-muted-foreground"
+                        className={`rounded-md border border-border px-3 py-1.5 text-sm ${
+                            mode === t
+                                ? "bg-muted font-medium text-foreground"
+                                : "bg-card text-muted-foreground"
                         }`}
                     >
                         {t.charAt(0).toUpperCase() + t.slice(1)}

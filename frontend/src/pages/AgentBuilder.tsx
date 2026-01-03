@@ -6,7 +6,8 @@ import {
     MessageSquare,
     Slack,
     Wrench,
-    Pencil
+    Pencil,
+    FilePlus
 } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
@@ -24,6 +25,7 @@ import { ConfirmDialog } from "../components/common/ConfirmDialog";
 import { Input } from "../components/common/Input";
 import { Select } from "../components/common/Select";
 import { Textarea } from "../components/common/Textarea";
+import { Tooltip } from "../components/common/Tooltip";
 import { logger } from "../lib/logger";
 import { cn } from "../lib/utils";
 import { useAgentStore } from "../stores/agentStore";
@@ -111,6 +113,11 @@ export function AgentBuilder() {
         id: string;
         title: string;
     } | null>(null);
+
+    const handleCreateInterface = () => {
+        if (!agentId || isNewAgent) return;
+        navigate(`/interfaces/new?agentId=${agentId}`);
+    };
 
     // Load agent if editing - reset state first when switching agents
     useEffect(() => {
@@ -662,28 +669,46 @@ export function AgentBuilder() {
                         )}
                     </div>
                 </div>
-                <button
-                    onClick={handleSave}
-                    disabled={isSaving}
-                    className={cn(
-                        "flex items-center gap-2 px-4 py-2 rounded-lg",
-                        "bg-primary text-primary-foreground",
-                        "hover:bg-primary/90 transition-colors",
-                        "text-sm font-medium disabled:opacity-50"
-                    )}
-                >
-                    {isSaving ? (
-                        <>
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                            Saving...
-                        </>
-                    ) : (
-                        <>
-                            <Save className="w-4 h-4" />
-                            Save
-                        </>
-                    )}
-                </button>
+                <div className="flex items-center gap-2">
+                    <Tooltip
+                        content={isNewAgent ? "Save agent first" : "Create form interface"}
+                        position="bottom"
+                    >
+                        <button
+                            onClick={handleCreateInterface}
+                            disabled={isNewAgent}
+                            className={cn(
+                                "flex items-center gap-2 px-3 py-2 rounded-lg",
+                                "text-foreground hover:bg-muted border border-border",
+                                "transition-colors text-sm font-medium disabled:opacity-50"
+                            )}
+                        >
+                            <FilePlus className="w-4 h-4" />
+                        </button>
+                    </Tooltip>
+                    <button
+                        onClick={handleSave}
+                        disabled={isSaving}
+                        className={cn(
+                            "flex items-center gap-2 px-4 py-2 rounded-lg",
+                            "bg-primary text-primary-foreground",
+                            "hover:bg-primary/90 transition-colors",
+                            "text-sm font-medium disabled:opacity-50"
+                        )}
+                    >
+                        {isSaving ? (
+                            <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Saving...
+                            </>
+                        ) : (
+                            <>
+                                <Save className="w-4 h-4" />
+                                Save
+                            </>
+                        )}
+                    </button>
+                </div>
             </div>
 
             {/* Error message */}

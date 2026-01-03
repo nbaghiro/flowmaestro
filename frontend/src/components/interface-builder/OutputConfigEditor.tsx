@@ -31,7 +31,7 @@ export function OutputConfigEditor({
                 <input
                     value={outputLabel}
                     onChange={(e) => onOutputLabelChange(e.target.value)}
-                    className="w-full rounded-md border px-3 py-2 text-sm"
+                    className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground"
                 />
             </div>
 
@@ -42,6 +42,7 @@ export function OutputConfigEditor({
                         type="checkbox"
                         checked={showCopyButton}
                         onChange={(e) => onShowCopyButtonChange(e.target.checked)}
+                        className="h-4 w-4 rounded border border-border bg-card text-primary"
                     />
                     <span className="leading-none">Show copy button</span>
                 </div>
@@ -52,6 +53,7 @@ export function OutputConfigEditor({
                         type="checkbox"
                         checked={showDownloadButton}
                         onChange={(e) => onShowDownloadButtonChange(e.target.checked)}
+                        className="h-4 w-4 rounded border border-border bg-card text-primary"
                     />
                     <span className="leading-none">Show download button</span>
                 </div>
@@ -62,6 +64,7 @@ export function OutputConfigEditor({
                         type="checkbox"
                         checked={allowOutputEdit}
                         onChange={(e) => onAllowOutputEditChange(e.target.checked)}
+                        className="h-4 w-4 rounded border border-border bg-card text-primary"
                     />
                     <span className="leading-none">Allow output editing</span>
                 </div>

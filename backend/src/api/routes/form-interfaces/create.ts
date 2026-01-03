@@ -1,6 +1,7 @@
 import { FastifyInstance } from "fastify";
+import { slugify } from "@flowmaestro/shared";
 import { FormInterfaceRepository } from "../../../storage/repositories/FormInterfaceRepository";
-import { authMiddleware, validateRequest } from "../../middleware";
+import { authMiddleware, BadRequestError, validateRequest } from "../../middleware";
 import {
     createFormInterfaceSchema,
     type CreateFormInterfaceRequest
@@ -17,12 +18,33 @@ export async function createFormInterfaceRoute(fastify: FastifyInstance) {
             const body = request.body as CreateFormInterfaceRequest;
             const id = request.user.id;
 
-            const iface = await repo.create(id, body);
+            const slug = slugify(body.slug);
+            if (!slug) {
+                throw new BadRequestError("Slug is invalid");
+            }
 
-            return reply.status(201).send({
-                success: true,
-                data: iface
-            });
+            try {
+                const available = await repo.isSlugAvailable(id, slug);
+                if (!available) {
+                    throw new BadRequestError("Slug already in use.");
+                }
+
+                const iface = await repo.create(id, { ...body, slug });
+                return reply.status(201).send({
+                    success: true,
+                    data: iface
+                });
+            } catch (error) {
+                if (
+                    typeof error === "object" &&
+                    error !== null &&
+                    "code" in error &&
+                    (error as { code?: string }).code === "23505"
+                ) {
+                    throw new BadRequestError("Slug already in use.");
+                }
+                throw error;
+            }
         }
     );
 }

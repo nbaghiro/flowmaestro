@@ -683,6 +683,7 @@ export async function getInterfaceSubmissions(interfaceId: string): Promise<{
             url: string;
             title?: string;
         }>;
+        output?: string;
     }>;
     error?: string;
 }> {
@@ -699,6 +700,46 @@ export async function getInterfaceSubmissions(interfaceId: string): Promise<{
             Authorization: `Bearer ${token}`
         }
     });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+export async function checkFormInterfaceSlugAvailability(
+    slug: string,
+    excludeId?: string
+): Promise<{
+    success: boolean;
+    data: {
+        available: boolean;
+        slug: string;
+    };
+}> {
+    const token = getAuthToken();
+
+    if (!token) {
+        throw new Error("No authentication token found");
+    }
+
+    const search = new URLSearchParams({ slug });
+    if (excludeId) {
+        search.set("excludeId", excludeId);
+    }
+
+    const response = await apiFetch(
+        `${API_BASE_URL}/form-interfaces/slug-availability?${search.toString()}`,
+        {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`
+            }
+        }
+    );
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));

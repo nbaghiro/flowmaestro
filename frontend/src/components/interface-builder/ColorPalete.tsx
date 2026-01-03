@@ -41,8 +41,10 @@ export function ColorPalette({ value, onChange }: Props) {
                         key={color}
                         type="button"
                         onClick={() => onChange(color)}
-                        className={`h-8 w-8 rounded border ${
-                            value === color ? "ring-2 ring-primary ring-offset-1" : ""
+                        className={`h-8 w-8 rounded border border-border ${
+                            value === color
+                                ? "ring-2 ring-primary ring-offset-1 ring-offset-background"
+                                : ""
                         }`}
                         style={{ backgroundColor: color }}
                     />

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Select } from "@/components/common/Select";
 import { getWorkflows, getAgents, type Agent } from "@/lib/api";
 
 type TargetType = "workflow" | "agent";
@@ -69,7 +70,7 @@ export function TargetSelectionDialog({
     }, [target]);
 
     return (
-        <div className="mx-auto max-w-xl space-y-4 p-6">
+        <div className="mx-auto w-full max-w-xl space-y-4 p-6">
             <div className="space-y-4">
                 <TargetCard
                     label="Workflow"
@@ -94,35 +95,30 @@ export function TargetSelectionDialog({
                     {loading ? (
                         <div className="text-sm text-muted-foreground">Loading…</div>
                     ) : (
-                        <select
+                        <Select
                             value={
                                 target === "workflow"
                                     ? (selectedWorkflowId ?? "")
                                     : (selectedAgentId ?? "")
                             }
-                            onChange={(e) =>
+                            onChange={(value) =>
                                 target === "workflow"
-                                    ? onWorkflowSelect(e.target.value)
-                                    : onAgentSelect(e.target.value)
+                                    ? onWorkflowSelect(value)
+                                    : onAgentSelect(value)
                             }
-                            className="w-full rounded-md border px-3 py-2"
-                        >
-                            <option value="">Select one</option>
-
-                            {target === "workflow" &&
-                                workflows.map((wf) => (
-                                    <option key={wf.id} value={wf.id}>
-                                        {wf.name}
-                                    </option>
-                                ))}
-
-                            {target === "agent" &&
-                                agents.map((agent) => (
-                                    <option key={agent.id} value={agent.id}>
-                                        {agent.name}
-                                    </option>
-                                ))}
-                        </select>
+                            placeholder="Select one"
+                            options={
+                                target === "workflow"
+                                    ? workflows.map((wf) => ({
+                                          value: wf.id,
+                                          label: wf.name
+                                      }))
+                                    : agents.map((agent) => ({
+                                          value: agent.id,
+                                          label: agent.name
+                                      }))
+                            }
+                        />
                     )}
                 </div>
             )}
@@ -144,8 +140,8 @@ function TargetCard({
     return (
         <button
             onClick={onClick}
-            className={`w-full rounded-lg border p-4 text-left transition hover:bg-muted ${
-                selected ? "border-primary bg-muted/30" : ""
+            className={`w-full rounded-lg border p-4 text-left bg-card text-foreground transition-all hover:border-primary hover:shadow-md ${
+                selected ? "border-primary shadow-sm" : ""
             }`}
         >
             <div className="font-medium">{label}</div>

@@ -1,5 +1,7 @@
 import { ChevronRight, Home } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { getFormInterfaceById } from "@/lib/api";
 
 const routeLabels: Record<string, string> = {
     "/": "Workflows",
@@ -14,6 +16,33 @@ const routeLabels: Record<string, string> = {
 export function Breadcrumbs() {
     const location = useLocation();
     const pathSegments = location.pathname.split("/").filter(Boolean);
+    const [interfaceNames, setInterfaceNames] = useState<Record<string, string>>({});
+
+    useEffect(() => {
+        const interfacesIndex = pathSegments.indexOf("interfaces");
+        if (interfacesIndex === -1) return;
+
+        const candidateId = pathSegments[interfacesIndex + 1];
+        if (!candidateId || candidateId === "new" || interfaceNames[candidateId]) return;
+
+        let cancelled = false;
+
+        async function loadName() {
+            try {
+                const res = await getFormInterfaceById(candidateId);
+                if (!cancelled) {
+                    setInterfaceNames((prev) => ({ ...prev, [candidateId]: res.data.name }));
+                }
+            } catch {
+                // Keep fallback label if the fetch fails
+            }
+        }
+
+        loadName();
+        return () => {
+            cancelled = true;
+        };
+    }, [pathSegments, interfaceNames]);
 
     // Build breadcrumb items
     const breadcrumbs: Array<{ label: string; path: string; isLast: boolean }> = [];
@@ -28,8 +57,13 @@ export function Breadcrumbs() {
         let currentPath = "";
         pathSegments.forEach((segment, index) => {
             currentPath += `/${segment}`;
+            const previousSegment = pathSegments[index - 1];
+            const interfaceLabel =
+                previousSegment === "interfaces" ? interfaceNames[segment] : undefined;
             const label =
-                routeLabels[currentPath] || segment.charAt(0).toUpperCase() + segment.slice(1);
+                routeLabels[currentPath] ||
+                interfaceLabel ||
+                segment.charAt(0).toUpperCase() + segment.slice(1);
             const isLast = index === pathSegments.length - 1;
             breadcrumbs.push({ label, path: currentPath, isLast });
         });

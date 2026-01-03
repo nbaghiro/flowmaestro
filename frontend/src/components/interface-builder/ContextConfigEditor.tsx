@@ -32,6 +32,7 @@ export function ContextConfigEditor({
                         type="checkbox"
                         checked={allowFileUpload}
                         onChange={(e) => onAllowFileUploadChange(e.target.checked)}
+                        className="h-4 w-4 rounded border border-border bg-card text-primary"
                     />
                     <span className="leading-none">Allow file upload</span>
                 </div>
@@ -42,6 +43,7 @@ export function ContextConfigEditor({
                         type="checkbox"
                         checked={allowUrlInput}
                         onChange={(e) => onAllowUrlInputChange(e.target.checked)}
+                        className="h-4 w-4 rounded border border-border bg-card text-primary"
                     />
                     <span className="leading-none">Allow URL input</span>
                 </div>
@@ -55,7 +57,7 @@ export function ContextConfigEditor({
                         min={1}
                         value={maxFiles}
                         onChange={(e) => onMaxFilesChange(Number(e.target.value))}
-                        className="w-24 rounded-md border px-3 py-2 text-sm"
+                        className="w-24 rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground"
                     />
                 </div>
             )}

@@ -22,7 +22,7 @@ export function InputConfigEditor({
                 <input
                     value={inputLabel}
                     onChange={(e) => onInputLabelChange(e.target.value)}
-                    className="w-full rounded-md border px-3 py-2 text-sm"
+                    className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground"
                 />
             </div>
 
@@ -32,7 +32,7 @@ export function InputConfigEditor({
                 <input
                     value={inputPlaceholder}
                     onChange={(e) => onInputPlaceholderChange(e.target.value)}
-                    className="w-full rounded-md border px-3 py-2 text-sm"
+                    className="w-full rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground"
                 />
             </div>
         </div>

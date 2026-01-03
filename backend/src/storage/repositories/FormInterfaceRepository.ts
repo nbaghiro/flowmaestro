@@ -100,6 +100,31 @@ export class FormInterfaceRepository {
         return result.rows[0] ? this.map(result.rows[0] as FormInterfaceRow) : null;
     }
 
+    async isSlugAvailable(userId: string, slug: string, excludeId?: string): Promise<boolean> {
+        const params: Array<string> = [userId, slug];
+        let excludeClause = "";
+
+        if (excludeId) {
+            params.push(excludeId);
+            excludeClause = "AND id <> $3";
+        }
+
+        const result = await db.query(
+            `
+            SELECT 1
+            FROM form_interfaces
+            WHERE user_id = $1
+              AND slug = $2
+              AND deleted_at IS NULL
+              ${excludeClause}
+            LIMIT 1
+            `,
+            params
+        );
+
+        return result.rows.length === 0;
+    }
+
     async findById(id: string, userId: string): Promise<FormInterface | null> {
         const result = await db.query(
             `
@@ -312,15 +337,37 @@ export class FormInterfaceRepository {
     }
 
     async softDelete(id: string, userId: string): Promise<boolean> {
-        const result = await db.query(
+        // First, get the current slug to modify it
+        const current = await db.query(
             `
-            UPDATE form_interfaces
-            SET deleted_at = CURRENT_TIMESTAMP
+            SELECT slug
+            FROM form_interfaces
             WHERE id = $1
               AND user_id = $2
               AND deleted_at IS NULL
             `,
             [id, userId]
+        );
+
+        if (current.rows.length === 0) {
+            return false;
+        }
+
+        const originalSlug = current.rows[0].slug as string;
+        // Modify slug to make it unique (freeing up the original slug for reuse)
+        // Append _deleted_{id} to ensure uniqueness while staying within VARCHAR(100) limit
+        const deletedSlug = `${originalSlug}_deleted_${id}`.substring(0, 100);
+
+        const result = await db.query(
+            `
+            UPDATE form_interfaces
+            SET deleted_at = CURRENT_TIMESTAMP,
+                slug = $3
+            WHERE id = $1
+              AND user_id = $2
+              AND deleted_at IS NULL
+            `,
+            [id, userId, deletedSlug]
         );
 
         return (result.rowCount ?? 0) > 0;
