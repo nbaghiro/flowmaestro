@@ -18,6 +18,11 @@ export interface DownloadToTempOptions {
     tempDir?: string;
 }
 
+export interface UploadBufferOptions {
+    fileName: string;
+    contentType: string;
+}
+
 export class GCSStorageService {
     private storage: Storage;
     private bucket: Bucket;
@@ -78,6 +83,29 @@ export class GCSStorageService {
 
         // Return GCS URI
         return `gs://${this.bucketName}/${gcsPath}`;
+    }
+
+    /**
+     * Upload a buffer to GCS at a specified path
+     * @param buffer - Buffer data to upload
+     * @param options - Upload options including fileName and contentType
+     * @returns GCS URI (gs://bucket/path/to/file)
+     */
+    public async uploadBuffer(buffer: Buffer, options: UploadBufferOptions): Promise<string> {
+        const { fileName, contentType } = options;
+        const file = this.bucket.file(fileName);
+
+        await file.save(buffer, {
+            resumable: false,
+            metadata: {
+                contentType,
+                metadata: {
+                    uploadedAt: new Date().toISOString()
+                }
+            }
+        });
+
+        return `gs://${this.bucketName}/${fileName}`;
     }
 
     /**

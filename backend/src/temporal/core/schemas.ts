@@ -92,6 +92,59 @@ export const AudioNodeConfigSchema = z.object({
 export type AudioNodeConfig = z.infer<typeof AudioNodeConfigSchema>;
 
 /**
+ * Audio Input Node Configuration (STT - Speech-to-Text).
+ * Transcribes audio from file uploads or recordings.
+ */
+export const AudioInputNodeConfigSchema = z.object({
+    provider: z.enum(["openai", "deepgram"], {
+        required_error: "STT provider is required"
+    }),
+    model: z.string().min(1, "Model is required"),
+    // Audio source - input parameter name from workflow trigger
+    inputName: z.string().min(1, "Input parameter name is required").default("audio"),
+    // Optional language hint for better accuracy
+    language: z.string().optional(),
+    // Deepgram-specific options
+    punctuate: z.boolean().optional().default(true),
+    diarize: z.boolean().optional().default(false),
+    // Output configuration
+    outputVariable: z.string().min(1, "Output variable is required"),
+    // Description for UI
+    label: z.string().optional(),
+    description: z.string().optional()
+});
+
+export type AudioInputNodeConfig = z.infer<typeof AudioInputNodeConfigSchema>;
+
+/**
+ * Audio Output Node Configuration (TTS - Text-to-Speech).
+ * Generates speech from text using various TTS providers.
+ */
+export const AudioOutputNodeConfigSchema = z.object({
+    provider: z.enum(["openai", "elevenlabs", "deepgram"], {
+        required_error: "TTS provider is required"
+    }),
+    model: z.string().min(1, "Model/voice is required"),
+    // Text to synthesize - supports variable interpolation
+    textInput: z.string().min(1, "Text input is required"),
+    // Voice settings
+    voice: z.string().optional(),
+    speed: z.number().min(0.25).max(4.0).optional().default(1.0),
+    // ElevenLabs-specific settings
+    stability: z.number().min(0).max(1).optional().default(0.5),
+    similarityBoost: z.number().min(0).max(1).optional().default(0.75),
+    // Output settings
+    outputFormat: z.enum(["mp3", "wav", "opus"]).default("mp3"),
+    returnAsUrl: z.boolean().optional().default(false),
+    outputVariable: z.string().min(1, "Output variable is required"),
+    // Description for UI
+    label: z.string().optional(),
+    description: z.string().optional()
+});
+
+export type AudioOutputNodeConfig = z.infer<typeof AudioOutputNodeConfigSchema>;
+
+/**
  * Embeddings Node Configuration.
  */
 export const EmbeddingsNodeConfigSchema = z.object({
@@ -220,6 +273,21 @@ export const IntegrationNodeConfigSchema = z.object({
 });
 
 export type IntegrationNodeConfig = z.infer<typeof IntegrationNodeConfigSchema>;
+
+/**
+ * Action Node Configuration.
+ * Performs actions in external applications (send, create, update, delete operations).
+ * Uses the same provider/connection infrastructure as Integration nodes.
+ */
+export const ActionNodeConfigSchema = z.object({
+    provider: z.string().min(1, "Provider is required"),
+    operation: z.string().min(1, "Operation is required"),
+    connectionId: z.string().uuid("Invalid connection ID format"),
+    parameters: z.record(z.unknown()).optional().default({}),
+    outputVariable: OutputVariableSchema
+});
+
+export type ActionNodeConfig = z.infer<typeof ActionNodeConfigSchema>;
 
 /**
  * Knowledge Base Query Node Configuration.
@@ -397,13 +465,25 @@ export const InputValidationSchema = z.object({
 
 /**
  * Input Node Configuration.
- * For collecting user input during workflow execution (human-in-the-loop).
+ * Simple input node for providing text or JSON data at workflow start.
  */
 export const InputNodeConfigSchema = z.object({
-    inputName: z.string().min(1, "Input name is required"),
-    inputType: z.enum(["text", "number", "boolean", "json", "file"]).default("text"),
-    label: z.string().optional(),
+    inputType: z.enum(["text", "json"]).default("text"),
+    value: z.string().default("")
+});
+
+export type InputNodeConfig = z.infer<typeof InputNodeConfigSchema>;
+
+/**
+ * Wait For User Node Configuration.
+ * For collecting user input during workflow execution (human-in-the-loop).
+ * Pauses workflow until user provides input.
+ */
+export const WaitForUserNodeConfigSchema = z.object({
+    prompt: z.string().min(1, "Prompt is required"),
     description: z.string().optional(),
+    variableName: z.string().min(1, "Variable name is required"),
+    inputType: z.enum(["text", "number", "boolean", "json"]).default("text"),
     placeholder: z.string().optional(),
     required: z.boolean().default(true),
     defaultValue: z.unknown().optional(),
@@ -411,7 +491,84 @@ export const InputNodeConfigSchema = z.object({
     outputVariable: z.string().min(1, "Output variable is required")
 });
 
-export type InputNodeConfig = z.infer<typeof InputNodeConfigSchema>;
+export type WaitForUserNodeConfig = z.infer<typeof WaitForUserNodeConfigSchema>;
+
+/**
+ * Supported file types for the Files node.
+ */
+export const SupportedFileTypes = [
+    "pdf",
+    "docx",
+    "doc",
+    "txt",
+    "md",
+    "html",
+    "json",
+    "csv"
+] as const;
+
+export type SupportedFileType = (typeof SupportedFileTypes)[number];
+
+/**
+ * Files Node Configuration.
+ * For processing uploaded files at workflow trigger time.
+ * Extracts text and chunks content for downstream processing.
+ */
+export const FilesNodeConfigSchema = z.object({
+    // Input configuration
+    inputName: z.string().min(1, "Input name is required"),
+    required: z.boolean().default(true),
+
+    // Chunking configuration (reuses KB pattern)
+    chunkSize: z.number().int().positive().max(10000).optional().default(1000),
+    chunkOverlap: z.number().int().min(0).max(500).optional().default(200),
+
+    // File type restrictions (optional - if empty, all types allowed)
+    allowedFileTypes: z.array(z.enum(SupportedFileTypes)).optional(),
+
+    // Output configuration
+    outputVariable: z.string().min(1, "Output variable is required"),
+
+    // Description for UI
+    label: z.string().optional(),
+    description: z.string().optional()
+});
+
+export type FilesNodeConfig = z.infer<typeof FilesNodeConfigSchema>;
+
+/**
+ * URL Node Configuration.
+ * For fetching webpage content at workflow trigger time.
+ */
+export const URLNodeConfigSchema = z.object({
+    // URLs to fetch
+    urls: z.array(z.string().url()).default([]),
+
+    // Scraping options
+    scrapingMode: z.enum(["html", "text", "markdown"]).default("html"),
+    scrapeSubpages: z.boolean().default(false),
+    timeout: z.number().int().min(5).max(60).default(30),
+    followRedirects: z.boolean().default(true),
+    includeMetadata: z.boolean().default(true),
+
+    // Chunking settings
+    chunkingAlgorithm: z.enum(["sentence", "paragraph", "fixed", "semantic"]).default("sentence"),
+    chunkOverlap: z.number().int().min(0).max(2000).default(1000),
+    chunkSize: z.number().int().min(500).max(5000).default(2500),
+    advancedExtraction: z.boolean().default(false),
+    ocrEnabled: z.boolean().default(false),
+
+    // Input/Output configuration
+    inputName: z.string().default("urls"),
+    outputVariable: z.string().default("fetchedContent"),
+    required: z.boolean().default(true),
+
+    // Description for UI
+    label: z.string().optional(),
+    description: z.string().optional()
+});
+
+export type URLNodeConfig = z.infer<typeof URLNodeConfigSchema>;
 
 // ============================================================================
 // VALIDATION UTILITIES
@@ -497,27 +654,34 @@ export const NodeSchemaRegistry: Record<string, z.ZodSchema> = {
     // AI
     llm: LLMNodeConfigSchema,
     vision: VisionNodeConfigSchema,
-    audio: AudioNodeConfigSchema,
+    audio: AudioNodeConfigSchema, // Legacy - will be removed
     embeddings: EmbeddingsNodeConfigSchema,
     router: RouterNodeConfigSchema,
+    // Audio (separate input/output nodes)
+    audioInput: AudioInputNodeConfigSchema,
+    audioOutput: AudioOutputNodeConfigSchema,
     // Integrations
     http: HTTPNodeConfigSchema,
     code: CodeNodeConfigSchema,
     database: DatabaseNodeConfigSchema,
     fileOperations: FileOperationsNodeConfigSchema,
     integration: IntegrationNodeConfigSchema,
+    action: ActionNodeConfigSchema,
     knowledgeBaseQuery: KnowledgeBaseQueryNodeConfigSchema,
     // Logic
     conditional: ConditionalNodeConfigSchema,
     loop: LoopNodeConfigSchema,
     switch: SwitchNodeConfigSchema,
     wait: WaitNodeConfigSchema,
+    waitForUser: WaitForUserNodeConfigSchema,
     // Data
     transform: TransformNodeConfigSchema,
     variable: VariableNodeConfigSchema,
     output: OutputNodeConfigSchema,
     // Control
-    input: InputNodeConfigSchema
+    input: InputNodeConfigSchema,
+    files: FilesNodeConfigSchema,
+    url: URLNodeConfigSchema
 };
 
 /**

@@ -1,9 +1,15 @@
 import { X } from "lucide-react";
-import { useState, useEffect, useCallback } from "react";
-import { ALL_PROVIDERS } from "@flowmaestro/shared";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { ALL_PROVIDERS, type ValidationError } from "@flowmaestro/shared";
 import { Button } from "../../components/common/Button";
 import { Input } from "../../components/common/Input";
+import { cn } from "../../lib/utils";
 import { useWorkflowStore } from "../../stores/workflowStore";
+
+// Panel resize constants
+const MIN_WIDTH = 320;
+const MAX_WIDTH = 700;
+const DEFAULT_WIDTH = 384; // 24rem = 384px (w-96)
 
 // AI provider IDs (these use the LLM node, not Integration node)
 const AI_PROVIDER_IDS = ["openai", "anthropic", "google", "huggingface", "cohere"];
@@ -15,7 +21,9 @@ const isProviderNodeType = (type: string): boolean => {
     );
 };
 // AI & ML
-import { AudioNodeConfig } from "./configs/AudioNodeConfig";
+import { ActionNodeConfig } from "./configs/ActionNodeConfig";
+import { AudioInputNodeConfig } from "./configs/AudioInputNodeConfig";
+import { AudioOutputNodeConfig } from "./configs/AudioOutputNodeConfig";
 // Logic & Code
 import { CodeNodeConfig } from "./configs/CodeNodeConfig";
 import { ConditionalNodeConfig } from "./configs/ConditionalNodeConfig";
@@ -23,6 +31,7 @@ import { ConditionalNodeConfig } from "./configs/ConditionalNodeConfig";
 // Connect
 import { DatabaseNodeConfig } from "./configs/DatabaseNodeConfig";
 import { EmbeddingsNodeConfig } from "./configs/EmbeddingsNodeConfig";
+import { FilesNodeConfig } from "./configs/FilesNodeConfig";
 import { HTTPNodeConfig } from "./configs/HTTPNodeConfig";
 import { InputNodeConfig } from "./configs/InputNodeConfig";
 import { IntegrationNodeConfig } from "./configs/IntegrationNodeConfig";
@@ -34,15 +43,30 @@ import { RouterNodeConfig } from "./configs/RouterNodeConfig";
 import { SwitchNodeConfig } from "./configs/SwitchNodeConfig";
 import { TransformNodeConfig } from "./configs/TransformNodeConfig";
 import { TriggerNodeConfig } from "./configs/TriggerNodeConfig";
+import { URLNodeConfig } from "./configs/URLNodeConfig";
 import { VariableNodeConfig } from "./configs/VariableNodeConfig";
 import { VisionNodeConfig } from "./configs/VisionNodeConfig";
+import { WaitForUserNodeConfig } from "./configs/WaitForUserNodeConfig";
 import { WaitNodeConfig } from "./configs/WaitNodeConfig";
 
 export function NodeInspector() {
-    const { nodes, selectedNode, selectNode, updateNode } = useWorkflowStore();
+    const { nodes, selectedNode, selectNode, updateNode, nodeValidation } = useWorkflowStore();
 
     const node = nodes.find((n) => n.id === selectedNode);
     const [nodeName, setNodeName] = useState(node?.data.label || "");
+
+    // Panel resize state
+    const [panelWidth, setPanelWidth] = useState(() => {
+        const saved = localStorage.getItem("flowmaestro:nodeInspector:width");
+        return saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
+    });
+    const [isResizing, setIsResizing] = useState(false);
+    const resizeStartX = useRef(0);
+    const resizeStartWidth = useRef(DEFAULT_WIDTH);
+
+    // Get validation errors for the selected node
+    const validationErrors: ValidationError[] =
+        selectedNode && nodeValidation[selectedNode] ? nodeValidation[selectedNode].errors : [];
 
     // Sync node name when node changes
     useEffect(() => {
@@ -72,6 +96,52 @@ export function NodeInspector() {
         [node, updateNode]
     );
 
+    // Handle resize start
+    const handleResizeStart = useCallback(
+        (e: React.MouseEvent) => {
+            e.preventDefault();
+            setIsResizing(true);
+            resizeStartX.current = e.clientX;
+            resizeStartWidth.current = panelWidth;
+        },
+        [panelWidth]
+    );
+
+    // Handle resize
+    useEffect(() => {
+        const handleResize = (e: MouseEvent) => {
+            if (!isResizing) return;
+
+            const deltaX = resizeStartX.current - e.clientX;
+            const newWidth = Math.max(
+                MIN_WIDTH,
+                Math.min(MAX_WIDTH, resizeStartWidth.current + deltaX)
+            );
+
+            setPanelWidth(newWidth);
+        };
+
+        const handleResizeEnd = () => {
+            if (isResizing) {
+                setIsResizing(false);
+                // Save to localStorage
+                localStorage.setItem("flowmaestro:nodeInspector:width", panelWidth.toString());
+            }
+        };
+
+        if (isResizing) {
+            document.addEventListener("mousemove", handleResize);
+            document.addEventListener("mouseup", handleResizeEnd);
+
+            return () => {
+                document.removeEventListener("mousemove", handleResize);
+                document.removeEventListener("mouseup", handleResizeEnd);
+            };
+        }
+
+        return undefined;
+    }, [isResizing, panelWidth]);
+
     // Early return AFTER all hooks have been called
     if (!node) {
         return null;
@@ -81,63 +151,213 @@ export function NodeInspector() {
         switch (node.type) {
             // AI & ML
             case "llm":
-                return <LLMNodeConfig data={node.data} onUpdate={handleUpdate} />;
+                return (
+                    <LLMNodeConfig
+                        data={node.data}
+                        onUpdate={handleUpdate}
+                        errors={validationErrors}
+                    />
+                );
             case "vision":
-                return <VisionNodeConfig data={node.data} onUpdate={handleUpdate} />;
-            case "audio":
-                return <AudioNodeConfig data={node.data} onUpdate={handleUpdate} />;
+                return (
+                    <VisionNodeConfig
+                        data={node.data}
+                        onUpdate={handleUpdate}
+                        errors={validationErrors}
+                    />
+                );
+            case "audioInput":
+                return (
+                    <AudioInputNodeConfig
+                        data={node.data}
+                        onUpdate={handleUpdate}
+                        errors={validationErrors}
+                    />
+                );
             case "embeddings":
-                return <EmbeddingsNodeConfig data={node.data} onUpdate={handleUpdate} />;
+                return (
+                    <EmbeddingsNodeConfig
+                        data={node.data}
+                        onUpdate={handleUpdate}
+                        errors={validationErrors}
+                    />
+                );
             case "router":
-                return <RouterNodeConfig data={node.data} onUpdate={handleUpdate} />;
+                return (
+                    <RouterNodeConfig
+                        data={node.data}
+                        onUpdate={handleUpdate}
+                        errors={validationErrors}
+                    />
+                );
 
             // Logic & Code
             case "conditional":
-                return <ConditionalNodeConfig data={node.data} onUpdate={handleUpdate} />;
+                return (
+                    <ConditionalNodeConfig
+                        data={node.data}
+                        onUpdate={handleUpdate}
+                        errors={validationErrors}
+                    />
+                );
             case "switch":
-                return <SwitchNodeConfig data={node.data} onUpdate={handleUpdate} />;
+                return (
+                    <SwitchNodeConfig
+                        data={node.data}
+                        onUpdate={handleUpdate}
+                        errors={validationErrors}
+                    />
+                );
             case "loop":
-                return <LoopNodeConfig data={node.data} onUpdate={handleUpdate} />;
+                return (
+                    <LoopNodeConfig
+                        data={node.data}
+                        onUpdate={handleUpdate}
+                        errors={validationErrors}
+                    />
+                );
             case "code":
-                return <CodeNodeConfig data={node.data} onUpdate={handleUpdate} />;
+                return (
+                    <CodeNodeConfig
+                        data={node.data}
+                        onUpdate={handleUpdate}
+                        errors={validationErrors}
+                    />
+                );
             case "wait":
-                return <WaitNodeConfig data={node.data} onUpdate={handleUpdate} />;
+                return (
+                    <WaitNodeConfig
+                        data={node.data}
+                        onUpdate={handleUpdate}
+                        errors={validationErrors}
+                    />
+                );
+            case "waitForUser":
+                return (
+                    <WaitForUserNodeConfig
+                        data={node.data}
+                        onUpdate={handleUpdate}
+                        errors={validationErrors}
+                    />
+                );
 
             // Inputs
             case "trigger":
-                return <TriggerNodeConfig data={node.data} onUpdate={handleUpdate} />;
-            case "input":
+                return (
+                    <TriggerNodeConfig
+                        data={node.data}
+                        onUpdate={handleUpdate}
+                        errors={validationErrors}
+                    />
+                );
             case "files":
+                return (
+                    <FilesNodeConfig
+                        data={node.data}
+                        onUpdate={handleUpdate}
+                        errors={validationErrors}
+                    />
+                );
             case "url":
-            case "audioInput":
-                return <InputNodeConfig data={node.data} onUpdate={handleUpdate} />;
+                return <URLNodeConfig data={node.data} onUpdate={handleUpdate} />;
+            case "input":
+                return (
+                    <InputNodeConfig
+                        data={node.data}
+                        onUpdate={handleUpdate}
+                        errors={validationErrors}
+                    />
+                );
 
             // Outputs
             case "output":
-            case "action":
+                return (
+                    <OutputNodeConfig
+                        data={node.data}
+                        onUpdate={handleUpdate}
+                        errors={validationErrors}
+                    />
+                );
             case "audioOutput":
-                return <OutputNodeConfig data={node.data} onUpdate={handleUpdate} />;
+                return (
+                    <AudioOutputNodeConfig
+                        data={node.data}
+                        onUpdate={handleUpdate}
+                        errors={validationErrors}
+                    />
+                );
+
+            case "action":
+                return (
+                    <ActionNodeConfig
+                        data={node.data}
+                        onUpdate={handleUpdate}
+                        errors={validationErrors}
+                    />
+                );
 
             // Logic & Code
             case "transform":
-                return <TransformNodeConfig data={node.data} onUpdate={handleUpdate} />;
+                return (
+                    <TransformNodeConfig
+                        data={node.data}
+                        onUpdate={handleUpdate}
+                        errors={validationErrors}
+                    />
+                );
             case "variable":
-                return <VariableNodeConfig data={node.data} onUpdate={handleUpdate} />;
+                return (
+                    <VariableNodeConfig
+                        data={node.data}
+                        onUpdate={handleUpdate}
+                        errors={validationErrors}
+                    />
+                );
 
             // Utils
             case "http":
-                return <HTTPNodeConfig data={node.data} onUpdate={handleUpdate} />;
+                return (
+                    <HTTPNodeConfig
+                        data={node.data}
+                        onUpdate={handleUpdate}
+                        errors={validationErrors}
+                    />
+                );
             case "database":
-                return <DatabaseNodeConfig data={node.data} onUpdate={handleUpdate} />;
+                return (
+                    <DatabaseNodeConfig
+                        data={node.data}
+                        onUpdate={handleUpdate}
+                        errors={validationErrors}
+                    />
+                );
             case "integration":
-                return <IntegrationNodeConfig data={node.data} onUpdate={handleUpdate} />;
+                return (
+                    <IntegrationNodeConfig
+                        data={node.data}
+                        onUpdate={handleUpdate}
+                        errors={validationErrors}
+                    />
+                );
             case "knowledgeBaseQuery":
-                return <KnowledgeBaseQueryNodeConfig data={node.data} onUpdate={handleUpdate} />;
+                return (
+                    <KnowledgeBaseQueryNodeConfig
+                        data={node.data}
+                        onUpdate={handleUpdate}
+                        errors={validationErrors}
+                    />
+                );
 
             default:
                 // Check if it's a provider node (e.g., slack, gmail, etc.)
                 if (node.type && isProviderNodeType(node.type)) {
-                    return <IntegrationNodeConfig data={node.data} onUpdate={handleUpdate} />;
+                    return (
+                        <IntegrationNodeConfig
+                            data={node.data}
+                            onUpdate={handleUpdate}
+                            errors={validationErrors}
+                        />
+                    );
                 }
                 return (
                     <div className="p-4 text-sm text-muted-foreground">
@@ -148,7 +368,22 @@ export function NodeInspector() {
     };
 
     return (
-        <div className="w-96 bg-card border-l border-border flex flex-col h-full shadow-panel">
+        <div
+            className="bg-card border-l border-border flex flex-col h-full shadow-panel relative"
+            style={{ width: panelWidth }}
+        >
+            {/* Resize Handle */}
+            <div
+                className={cn(
+                    "absolute top-0 left-0 bottom-0 w-1 cursor-ew-resize hover:bg-primary/20 transition-colors z-10",
+                    isResizing && "bg-primary/30"
+                )}
+                onMouseDown={handleResizeStart}
+            >
+                {/* Wider invisible hit area */}
+                <div className="absolute top-0 left-0 bottom-0 w-3 -translate-x-1/2" />
+            </div>
+
             {/* Header */}
             <div className="px-4 py-3 border-b border-border flex items-center justify-between">
                 <div className="flex items-center gap-2">

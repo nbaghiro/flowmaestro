@@ -42,7 +42,8 @@ import type {
     MCPTool,
     OperationResult,
     OAuthConfig,
-    ProviderCapabilities
+    ProviderCapabilities,
+    WebhookRequestData
 } from "../../core/types";
 
 /**
@@ -114,6 +115,7 @@ export class GoogleDriveProvider extends BaseProvider {
     readonly displayName = "Google Drive";
     readonly authMethod = "oauth2" as const;
     readonly capabilities: ProviderCapabilities = {
+        supportsWebhooks: true, // Push notifications via channel subscriptions
         rateLimit: {
             tokensPerMinute: 600 // Conservative limit (actual is 20,000 per 100 seconds)
         }
@@ -145,6 +147,136 @@ export class GoogleDriveProvider extends BaseProvider {
 
         // Register export operations
         this.registerOperation(exportDocumentOperation);
+
+        // Configure webhook settings (push notifications)
+        this.setWebhookConfig({
+            setupType: "automatic", // Channel subscriptions via API
+            signatureType: "none", // Google uses channel tokens instead of signatures
+            eventHeader: "X-Goog-Resource-State"
+        });
+
+        // Register trigger events
+        this.registerTrigger({
+            id: "file_created",
+            name: "File Created",
+            description: "Triggered when a new file is added to Drive",
+            requiredScopes: ["https://www.googleapis.com/auth/drive"],
+            configFields: [
+                {
+                    name: "folderId",
+                    label: "Folder",
+                    type: "text",
+                    required: false,
+                    description: "Folder ID to monitor (leave empty for entire Drive)",
+                    placeholder: "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs"
+                },
+                {
+                    name: "mimeType",
+                    label: "File Type",
+                    type: "select",
+                    required: false,
+                    description: "Filter by file type",
+                    options: [
+                        { value: "application/vnd.google-apps.document", label: "Google Docs" },
+                        {
+                            value: "application/vnd.google-apps.spreadsheet",
+                            label: "Google Sheets"
+                        },
+                        {
+                            value: "application/vnd.google-apps.presentation",
+                            label: "Google Slides"
+                        },
+                        { value: "application/pdf", label: "PDF" },
+                        { value: "image/*", label: "Images" }
+                    ]
+                }
+            ],
+            tags: ["files", "storage"]
+        });
+
+        this.registerTrigger({
+            id: "file_updated",
+            name: "File Updated",
+            description: "Triggered when a file is modified",
+            requiredScopes: ["https://www.googleapis.com/auth/drive"],
+            configFields: [
+                {
+                    name: "fileId",
+                    label: "Specific File",
+                    type: "text",
+                    required: false,
+                    description: "File ID to monitor (leave empty for any file)",
+                    placeholder: "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs"
+                },
+                {
+                    name: "folderId",
+                    label: "Folder",
+                    type: "text",
+                    required: false,
+                    description: "Folder ID to monitor (leave empty for entire Drive)",
+                    placeholder: "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs"
+                }
+            ],
+            tags: ["files", "storage"]
+        });
+
+        this.registerTrigger({
+            id: "file_deleted",
+            name: "File Deleted",
+            description: "Triggered when a file is deleted or trashed",
+            requiredScopes: ["https://www.googleapis.com/auth/drive"],
+            configFields: [
+                {
+                    name: "folderId",
+                    label: "Folder",
+                    type: "text",
+                    required: false,
+                    description: "Folder ID to monitor (leave empty for entire Drive)",
+                    placeholder: "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs"
+                }
+            ],
+            tags: ["files", "storage"]
+        });
+
+        this.registerTrigger({
+            id: "file_shared",
+            name: "File Shared",
+            description: "Triggered when a file's sharing permissions change",
+            requiredScopes: ["https://www.googleapis.com/auth/drive"],
+            configFields: [
+                {
+                    name: "folderId",
+                    label: "Folder",
+                    type: "text",
+                    required: false,
+                    description: "Folder ID to monitor (leave empty for entire Drive)",
+                    placeholder: "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs"
+                }
+            ],
+            tags: ["files", "sharing"]
+        });
+    }
+
+    /**
+     * Extract event type from Google Drive push notification
+     */
+    override extractEventType(request: WebhookRequestData): string | undefined {
+        // Google Drive uses X-Goog-Resource-State header
+        const resourceState = this.getHeader(request.headers, "X-Goog-Resource-State");
+
+        switch (resourceState) {
+            case "change":
+                return "file_updated";
+            case "add":
+                return "file_created";
+            case "remove":
+            case "trash":
+                return "file_deleted";
+            case "sync":
+                return "sync"; // Initial sync notification
+            default:
+                return undefined;
+        }
     }
 
     /**

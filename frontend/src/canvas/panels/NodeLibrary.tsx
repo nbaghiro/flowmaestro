@@ -17,11 +17,13 @@ import {
     Globe,
     Database,
     Zap,
+    Play,
     ChevronDown,
     ChevronRight,
     Search,
     Pin,
     PinOff,
+    UserCircle,
     // Category icons
     Download,
     Upload,
@@ -32,7 +34,6 @@ import {
     FileUp,
     Link,
     Volume2,
-    Play,
     // Integration fallback icon
     Plug,
     type LucideIcon
@@ -59,7 +60,7 @@ const nodeLibrary: NodeDefinition[] = [
         label: "Input",
         icon: Hand,
         category: "inputs",
-        description: "Collect user input, file upload, or choices"
+        description: "Provide text or JSON data to the workflow"
     },
     {
         type: "trigger",
@@ -103,7 +104,7 @@ const nodeLibrary: NodeDefinition[] = [
         label: "Action",
         icon: Play,
         category: "outputs",
-        description: "Execute external actions (send email, post message)"
+        description: "Perform tasks in external apps (send email, post message)"
     },
     {
         type: "audioOutput",
@@ -127,13 +128,6 @@ const nodeLibrary: NodeDefinition[] = [
         icon: Eye,
         category: "ai",
         description: "Image generation and analysis with AI models"
-    },
-    {
-        type: "audio",
-        label: "Audio",
-        icon: Mic,
-        category: "ai",
-        description: "Speech-to-text and text-to-speech processing"
     },
     {
         type: "embeddings",
@@ -195,6 +189,13 @@ const nodeLibrary: NodeDefinition[] = [
         icon: Clock,
         category: "logic",
         description: "Pause workflow execution for a duration"
+    },
+    {
+        type: "waitForUser",
+        label: "Wait for User",
+        icon: UserCircle,
+        category: "logic",
+        description: "Pause workflow and wait for user input"
     },
     {
         type: "transform",

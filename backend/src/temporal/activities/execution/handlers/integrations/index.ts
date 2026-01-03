@@ -1,38 +1,11 @@
 /**
  * Integrations Execution Module
  *
- * Barrel exports for all integration node executors and handlers.
+ * Barrel exports for integration node handlers.
+ * Includes third-party service integrations and file storage.
  */
 
-// HTTP
-export {
-    executeHTTPNode,
-    HTTPNodeHandler,
-    createHTTPNodeHandler,
-    type HTTPNodeConfig,
-    type HTTPNodeResult
-} from "./http";
-
-// Code
-export {
-    executeCodeNode,
-    CodeNodeHandler,
-    createCodeNodeHandler,
-    type CodeNodeConfig,
-    type CodeNodeResult
-} from "./code";
-
-// Database
-export {
-    executeDatabaseNode,
-    closeDatabaseConnections,
-    DatabaseNodeHandler,
-    createDatabaseNodeHandler,
-    type DatabaseNodeConfig,
-    type DatabaseNodeResult
-} from "./database";
-
-// File Operations
+// File Operations (GCS, S3, etc.)
 export {
     executeFileOperationsNode,
     FileOperationsNodeHandler,
@@ -41,7 +14,7 @@ export {
     type FileOperationsNodeResult
 } from "./file";
 
-// Integration
+// Integration (third-party provider nodes)
 export {
     executeIntegrationNode,
     IntegrationNodeHandler,
@@ -49,12 +22,3 @@ export {
     type IntegrationNodeConfig,
     type IntegrationNodeResult
 } from "./integration";
-
-// Knowledge Base Query
-export {
-    executeKnowledgeBaseQueryNode,
-    KnowledgeBaseQueryNodeHandler,
-    createKnowledgeBaseQueryNodeHandler,
-    type KnowledgeBaseQueryNodeConfig,
-    type KnowledgeBaseQueryNodeResult
-} from "./kb-query";

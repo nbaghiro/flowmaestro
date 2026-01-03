@@ -759,7 +759,7 @@ function createDefaultWorkflowDefinition(name: string): WorkflowDefinition {
                     defaultValue: "",
                     validation: ""
                 },
-                position: { x: 100, y: 200 }
+                position: { x: 100, y: 100 }
             },
             [llmNodeId]: {
                 type: "llm",
@@ -774,7 +774,7 @@ function createDefaultWorkflowDefinition(name: string): WorkflowDefinition {
                     topP: 1,
                     outputVariable: "llmResponse"
                 },
-                position: { x: 400, y: 200 }
+                position: { x: 400, y: 220 }
             },
             [outputNodeId]: {
                 type: "output",
@@ -785,7 +785,7 @@ function createDefaultWorkflowDefinition(name: string): WorkflowDefinition {
                     format: "string",
                     description: ""
                 },
-                position: { x: 700, y: 200 }
+                position: { x: 700, y: 340 }
             }
         },
         edges: [
@@ -892,6 +892,54 @@ export async function deleteWorkflow(workflowId: string) {
 
     // 204 No Content means successful deletion
     return { success: true };
+}
+
+// ===== Workflow Files API Functions =====
+
+/**
+ * Uploaded file info returned from the upload endpoint
+ */
+export interface WorkflowFileUpload {
+    fileName: string;
+    fileType: string;
+    gcsUri: string;
+    fileSize: number;
+}
+
+/**
+ * Upload files for workflow execution.
+ * Returns GCS URIs that can be passed as workflow inputs to Files nodes.
+ */
+export async function uploadWorkflowFiles(files: File[]): Promise<{
+    success: boolean;
+    data?: { files: WorkflowFileUpload[]; uploadBatchId: string };
+    error?: string;
+}> {
+    const token = getAuthToken();
+    const formData = new FormData();
+
+    for (const file of files) {
+        formData.append("files", file);
+    }
+
+    const response = await apiFetch(`${API_BASE_URL}/workflows/files/upload`, {
+        method: "POST",
+        headers: {
+            ...(token && { Authorization: `Bearer ${token}` })
+            // Note: Don't set Content-Type for FormData - browser sets it with boundary
+        },
+        body: formData
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        return {
+            success: false,
+            error: errorData.error || `HTTP ${response.status}: ${response.statusText}`
+        };
+    }
+
+    return response.json();
 }
 
 // ===== Trigger API Functions =====
@@ -1059,6 +1107,152 @@ export async function executeTrigger(
  */
 export function getWebhookUrl(triggerId: string): string {
     return `${API_BASE_URL}/webhooks/${triggerId}`;
+}
+
+/**
+ * Get webhook URL for a provider-based trigger
+ */
+export function getProviderWebhookUrl(providerId: string, triggerId: string): string {
+    return `${API_BASE_URL}/webhooks/provider/${providerId}/${triggerId}`;
+}
+
+// ===== Trigger Provider API Functions =====
+
+export interface TriggerProviderSummary {
+    providerId: string;
+    name: string;
+    description: string;
+    icon: string;
+    category: string;
+    eventCount: number;
+    requiresConnection: boolean;
+    webhookSetupType: "automatic" | "manual" | "polling";
+}
+
+export interface ListTriggerProvidersResponse {
+    success: boolean;
+    data: {
+        providers: TriggerProviderSummary[];
+    };
+    error?: string;
+}
+
+/**
+ * Get list of trigger providers
+ */
+export async function getTriggerProviders(
+    category?: string
+): Promise<ListTriggerProvidersResponse> {
+    let url = `${API_BASE_URL}/triggers/providers`;
+    if (category) {
+        url += `?category=${encodeURIComponent(category)}`;
+    }
+
+    const response = await apiFetch(url, {
+        method: "GET"
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+export interface TriggerConfigField {
+    name: string;
+    label: string;
+    type: "text" | "select" | "multiselect" | "boolean" | "number" | "json";
+    required: boolean;
+    description?: string;
+    placeholder?: string;
+    options?: Array<{ value: string; label: string }>;
+    defaultValue?: string | boolean | number;
+    dynamicOptions?: {
+        operation: string;
+        labelField: string;
+        valueField: string;
+    };
+}
+
+export interface TriggerEvent {
+    id: string;
+    name: string;
+    description: string;
+    payloadSchema?: JsonObject;
+    requiredScopes?: string[];
+    configFields?: TriggerConfigField[];
+    tags?: string[];
+}
+
+export interface WebhookConfig {
+    setupType: "automatic" | "manual" | "polling";
+    signatureType: "hmac-sha256" | "hmac-sha1" | "ed25519" | "timestamp" | "custom" | "none";
+    signatureHeader?: string;
+    eventHeader?: string;
+    timestampHeader?: string;
+}
+
+export interface TriggerProvider {
+    providerId: string;
+    name: string;
+    description?: string;
+    icon?: string;
+    category: string;
+    triggers: TriggerEvent[];
+    webhookConfig: WebhookConfig;
+    requiresConnection: boolean;
+    enabled: boolean;
+}
+
+export interface GetTriggerProviderResponse {
+    success: boolean;
+    data: {
+        provider: TriggerProvider;
+    };
+    error?: string;
+}
+
+/**
+ * Get trigger provider details with events
+ */
+export async function getTriggerProvider(providerId: string): Promise<GetTriggerProviderResponse> {
+    const response = await apiFetch(`${API_BASE_URL}/triggers/providers/${providerId}`, {
+        method: "GET"
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+export interface GetTriggerEventsResponse {
+    success: boolean;
+    data: {
+        providerId: string;
+        events: TriggerEvent[];
+    };
+    error?: string;
+}
+
+/**
+ * Get trigger events for a provider
+ */
+export async function getTriggerEvents(providerId: string): Promise<GetTriggerEventsResponse> {
+    const response = await apiFetch(`${API_BASE_URL}/triggers/providers/${providerId}/events`, {
+        method: "GET"
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
 }
 
 // ===== Execution API Functions =====
@@ -2823,6 +3017,7 @@ export interface OperationSummary {
     name: string;
     description: string;
     category?: string;
+    actionType: "read" | "write";
     parameters: OperationParameter[];
     inputSchemaJSON: JsonObject;
 }
@@ -2855,24 +3050,32 @@ export async function getIntegrationProviders(): Promise<{
 
 /**
  * Get operations for a specific provider
+ * @param provider - Provider name (e.g., "slack", "gmail")
+ * @param nodeType - Optional filter: "action" for write operations, "integration" for read operations
  */
-export async function getProviderOperations(provider: string): Promise<{
+export async function getProviderOperations(
+    provider: string,
+    nodeType?: "action" | "integration"
+): Promise<{
     success: boolean;
     data: { provider: string; operations: OperationSummary[] };
     error?: string;
 }> {
     const token = getAuthToken();
 
-    const response = await apiFetch(
-        `${API_BASE_URL}/integrations/providers/${provider}/operations`,
-        {
-            method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                ...(token && { Authorization: `Bearer ${token}` })
-            }
+    // Build URL with optional nodeType query param
+    const url = new URL(`${API_BASE_URL}/integrations/providers/${provider}/operations`);
+    if (nodeType) {
+        url.searchParams.set("nodeType", nodeType);
+    }
+
+    const response = await apiFetch(url.toString(), {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` })
         }
-    );
+    });
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import type { ValidationError } from "@flowmaestro/shared";
 import { CodeInput } from "../../../components/CodeInput";
 import { FormField, FormSection } from "../../../components/common/FormField";
 import { Input } from "../../../components/common/Input";
@@ -9,6 +10,7 @@ import { VariableDialog } from "../../../components/VariableDialog";
 interface LoopNodeConfigProps {
     data: Record<string, unknown>;
     onUpdate: (config: unknown) => void;
+    errors?: ValidationError[];
 }
 
 const loopTypes = [
@@ -17,7 +19,7 @@ const loopTypes = [
     { value: "times", label: "Times (fixed count)" }
 ];
 
-export function LoopNodeConfig({ data, onUpdate }: LoopNodeConfigProps) {
+export function LoopNodeConfig({ data, onUpdate, errors: _errors = [] }: LoopNodeConfigProps) {
     const [loopType, setLoopType] = useState((data.loopType as string) || "forEach");
     const [arrayVariable, setArrayVariable] = useState((data.arrayVariable as string) || "");
     const [itemVariable, setItemVariable] = useState((data.itemVariable as string) || "item");

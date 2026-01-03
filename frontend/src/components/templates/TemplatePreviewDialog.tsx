@@ -2,8 +2,14 @@ import { Check, Copy, ExternalLink, Eye, User, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import Flow, { Background, BackgroundVariant, Controls, Edge, Node } from "reactflow";
 import "reactflow/dist/style.css";
-import { ALL_PROVIDERS, TEMPLATE_CATEGORY_META, type Template } from "@flowmaestro/shared";
-import AudioNode from "../../canvas/nodes/AudioNode";
+import {
+    ALL_PROVIDERS,
+    getProviderLogo,
+    TEMPLATE_CATEGORY_META,
+    type Template
+} from "@flowmaestro/shared";
+import AudioInputNode from "../../canvas/nodes/AudioInputNode";
+import AudioOutputNode from "../../canvas/nodes/AudioOutputNode";
 import CodeNode from "../../canvas/nodes/CodeNode";
 import ConditionalNode from "../../canvas/nodes/ConditionalNode";
 import DatabaseNode from "../../canvas/nodes/DatabaseNode";
@@ -27,7 +33,8 @@ import { Button } from "../common/Button";
 const nodeTypes = {
     llm: LLMNode,
     vision: VisionNode,
-    audio: AudioNode,
+    audioInput: AudioInputNode,
+    audioOutput: AudioOutputNode,
     embeddings: EmbeddingsNode,
     conditional: ConditionalNode,
     switch: SwitchNode,
@@ -44,28 +51,13 @@ const nodeTypes = {
     knowledgeBaseQuery: KnowledgeBaseQueryNode
 };
 
-// Brandfetch Logo API - same as shared/providers.ts
-const BRANDFETCH_CLIENT_ID = "1idCpJZqz6etuVweFEJ";
-const getBrandLogo = (domain: string): string =>
-    `https://cdn.brandfetch.io/${domain}?c=${BRANDFETCH_CLIENT_ID}`;
-
-// Domain mapping for providers not in ALL_PROVIDERS or with different naming
-const providerDomains: Record<string, string> = {
-    google_sheets: "google.com",
-    google_calendar: "google.com",
-    gmail: "gmail.com"
-};
-
 // Get logo URL for an integration - uses shared providers or Brandfetch fallback
 const getIntegrationLogo = (integration: string): string => {
     const provider = ALL_PROVIDERS.find((p) => p.provider === integration);
     if (provider) {
         return provider.logoUrl;
     }
-    if (providerDomains[integration]) {
-        return getBrandLogo(providerDomains[integration]);
-    }
-    return getBrandLogo(`${integration}.com`);
+    return getProviderLogo(integration);
 };
 
 interface TemplatePreviewDialogProps {

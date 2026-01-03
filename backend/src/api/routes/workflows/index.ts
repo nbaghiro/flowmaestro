@@ -9,6 +9,7 @@ import { generateWorkflowRoute } from "./generate";
 import { getWorkflowRoute } from "./get";
 import { listWorkflowsRoute } from "./list";
 import { updateWorkflowRoute } from "./update";
+import { uploadWorkflowFilesRoute } from "./upload-files";
 
 export async function workflowRoutes(fastify: FastifyInstance) {
     // Register all workflow routes
@@ -20,6 +21,7 @@ export async function workflowRoutes(fastify: FastifyInstance) {
     await executeWorkflowRoute(fastify);
     await generateWorkflowRoute(fastify);
     await chatRoute(fastify);
+    await uploadWorkflowFilesRoute(fastify);
 
     // Register SSE streaming endpoint for chat
     // Note: authMiddleware supports token from query param for EventSource compatibility

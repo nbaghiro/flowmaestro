@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { config as appConfig, getOAuthRedirectUri } from "../../../core/config";
 import { BaseProvider } from "../../core/BaseProvider";
 import { DiscordClient } from "./client/DiscordClient";
@@ -20,7 +21,9 @@ import type {
     MCPTool,
     OperationResult,
     OAuthConfig,
-    ProviderCapabilities
+    ProviderCapabilities,
+    WebhookRequestData,
+    WebhookVerificationResult
 } from "../../core/types";
 
 /**
@@ -53,6 +56,202 @@ export class DiscordProvider extends BaseProvider {
         this.registerOperation(listChannelsOperation);
         this.registerOperation(createWebhookOperation);
         this.registerOperation(executeWebhookOperation);
+
+        // Configure webhook settings
+        this.setWebhookConfig({
+            setupType: "manual", // Discord interactions endpoint configured in developer portal
+            signatureType: "ed25519",
+            signatureHeader: "X-Signature-Ed25519",
+            timestampHeader: "X-Signature-Timestamp"
+        });
+
+        // Register trigger events
+        this.registerTrigger({
+            id: "message_create",
+            name: "Message Received",
+            description: "Triggered when a message is sent in a channel",
+            requiredScopes: ["identify", "guilds"],
+            configFields: [
+                {
+                    name: "guildId",
+                    label: "Server",
+                    type: "select",
+                    required: true,
+                    description: "Select the Discord server to monitor",
+                    dynamicOptions: {
+                        operation: "listGuilds",
+                        labelField: "name",
+                        valueField: "id"
+                    }
+                },
+                {
+                    name: "channelId",
+                    label: "Channel",
+                    type: "select",
+                    required: false,
+                    description: "Filter by specific channel (leave empty for all channels)",
+                    dynamicOptions: {
+                        operation: "listChannels",
+                        labelField: "name",
+                        valueField: "id"
+                    }
+                }
+            ],
+            tags: ["messages", "chat"]
+        });
+
+        this.registerTrigger({
+            id: "interaction_create",
+            name: "Slash Command",
+            description: "Triggered when a slash command is invoked",
+            requiredScopes: ["identify", "guilds"],
+            configFields: [
+                {
+                    name: "commandName",
+                    label: "Command Name",
+                    type: "text",
+                    required: true,
+                    description: "The slash command name to listen for",
+                    placeholder: "/mycommand"
+                }
+            ],
+            tags: ["commands", "interactive"]
+        });
+
+        this.registerTrigger({
+            id: "member_join",
+            name: "Member Joined",
+            description: "Triggered when a new member joins the server",
+            requiredScopes: ["identify", "guilds"],
+            configFields: [
+                {
+                    name: "guildId",
+                    label: "Server",
+                    type: "select",
+                    required: true,
+                    description: "Select the Discord server to monitor",
+                    dynamicOptions: {
+                        operation: "listGuilds",
+                        labelField: "name",
+                        valueField: "id"
+                    }
+                }
+            ],
+            tags: ["members", "join"]
+        });
+
+        this.registerTrigger({
+            id: "member_leave",
+            name: "Member Left",
+            description: "Triggered when a member leaves the server",
+            requiredScopes: ["identify", "guilds"],
+            configFields: [
+                {
+                    name: "guildId",
+                    label: "Server",
+                    type: "select",
+                    required: true,
+                    description: "Select the Discord server to monitor",
+                    dynamicOptions: {
+                        operation: "listGuilds",
+                        labelField: "name",
+                        valueField: "id"
+                    }
+                }
+            ],
+            tags: ["members", "leave"]
+        });
+
+        this.registerTrigger({
+            id: "reaction_add",
+            name: "Reaction Added",
+            description: "Triggered when a reaction is added to a message",
+            requiredScopes: ["identify", "guilds"],
+            configFields: [
+                {
+                    name: "guildId",
+                    label: "Server",
+                    type: "select",
+                    required: true,
+                    description: "Select the Discord server to monitor",
+                    dynamicOptions: {
+                        operation: "listGuilds",
+                        labelField: "name",
+                        valueField: "id"
+                    }
+                },
+                {
+                    name: "emoji",
+                    label: "Emoji",
+                    type: "text",
+                    required: false,
+                    description: "Filter by specific emoji (leave empty for all)",
+                    placeholder: "👍"
+                }
+            ],
+            tags: ["reactions", "engagement"]
+        });
+    }
+
+    /**
+     * Discord Ed25519 signature verification
+     */
+    override verifyWebhookSignature(
+        secret: string,
+        request: WebhookRequestData
+    ): WebhookVerificationResult {
+        const signature = this.getHeader(request.headers, "X-Signature-Ed25519");
+        const timestamp = this.getHeader(request.headers, "X-Signature-Timestamp");
+
+        if (!signature || !timestamp) {
+            return { valid: false, error: "Missing Discord signature headers" };
+        }
+
+        const body = this.getBodyString(request);
+        const message = timestamp + body;
+
+        try {
+            // Discord uses Ed25519 signatures
+            const isValid = crypto.verify(
+                null,
+                Buffer.from(message),
+                {
+                    key: Buffer.from(secret, "hex"),
+                    format: "der",
+                    type: "spki"
+                },
+                Buffer.from(signature, "hex")
+            );
+
+            return { valid: isValid };
+        } catch {
+            return { valid: false, error: "Ed25519 verification failed" };
+        }
+    }
+
+    /**
+     * Extract event type from Discord webhook
+     */
+    override extractEventType(request: WebhookRequestData): string | undefined {
+        try {
+            const body = typeof request.body === "string" ? JSON.parse(request.body) : request.body;
+
+            // Discord sends type field: 1 = PING, 2 = APPLICATION_COMMAND, etc.
+            if (body.type === 1) {
+                return "ping";
+            }
+            if (body.type === 2) {
+                return "interaction_create";
+            }
+            if (body.t) {
+                // Gateway event type
+                return body.t.toLowerCase();
+            }
+
+            return undefined;
+        } catch {
+            return undefined;
+        }
     }
 
     /**

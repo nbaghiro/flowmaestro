@@ -1,6 +1,7 @@
-import { LucideIcon, GripHorizontal, ArrowLeftRight } from "lucide-react";
+import { LucideIcon, GripHorizontal, ArrowLeftRight, AlertTriangle } from "lucide-react";
 import { ReactNode, useState, useEffect } from "react";
 import { Handle, Position, useNodeId, useStore, useUpdateNodeInternals } from "reactflow";
+import { Tooltip } from "../../components/common/Tooltip";
 import { NodeExecutionPopover } from "../../components/execution/NodeExecutionPopover";
 import { cn } from "../../lib/utils";
 import {
@@ -124,9 +125,13 @@ export function BaseNode({
 }: BaseNodeProps) {
     const [logoError, setLogoError] = useState(false);
     const nodeId = useNodeId();
-    const { currentExecution, selectedNode } = useWorkflowStore();
+    const { currentExecution, selectedNode, nodeValidation } = useWorkflowStore();
     const categoryStyle = categoryConfig[category];
     const [showPopover, setShowPopover] = useState(false);
+
+    // Get validation state for this node
+    const validation = nodeId ? nodeValidation[nodeId] : undefined;
+    const hasValidationErrors = validation && !validation.isValid;
 
     const connectorLayout =
         useWorkflowStore((s) => {
@@ -299,12 +304,15 @@ export function BaseNode({
             className={cn(
                 "group h-full flex flex-col bg-card rounded-lg transition-all duration-200 min-w-[260px] overflow-hidden",
                 "border-2 border-border",
-                categoryStyle.borderColor,
+                hasValidationErrors
+                    ? "border-amber-500/70 dark:border-amber-400/70"
+                    : categoryStyle.borderColor,
                 `node-${category}-category`,
                 selected ? "shadow-node-hover" : "shadow-node hover:shadow-node-hover"
             )}
             style={{
-                borderLeftWidth: "4px"
+                borderLeftWidth: "4px",
+                borderLeftColor: hasValidationErrors ? "rgb(245 158 11 / 0.7)" : undefined
             }}
         >
             {/* Header */}
@@ -332,6 +340,17 @@ export function BaseNode({
                         )}
                     </div>
                     <span className="font-medium text-sm text-foreground">{label}</span>
+                    {hasValidationErrors && (
+                        <Tooltip
+                            content={validation.errors.map((e) => `• ${e.message}`).join("\n")}
+                            position="bottom"
+                            delay={100}
+                        >
+                            <div className="flex items-center gap-1 text-amber-500 dark:text-amber-400 cursor-help">
+                                <AlertTriangle className="w-3.5 h-3.5" />
+                            </div>
+                        </Tooltip>
+                    )}
                 </div>
                 {executionState && nodeId ? (
                     <NodeExecutionPopover

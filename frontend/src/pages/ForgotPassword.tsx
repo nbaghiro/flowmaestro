@@ -32,7 +32,7 @@ export function ForgotPassword() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-background px-4">
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#222222] px-4">
             <div className="w-full max-w-md">
                 <div className="bg-card rounded-lg shadow-lg p-8">
                     {/* Logo and Title */}

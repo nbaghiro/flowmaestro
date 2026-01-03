@@ -252,10 +252,11 @@ export function getRegistryStats(): {
 } {
     const categoryCounts: Record<NodeHandlerCategory, number> = {
         ai: 0,
-        data: 0,
+        inputs: 0,
+        outputs: 0,
         logic: 0,
-        integration: 0,
-        control: 0,
+        utils: 0,
+        integrations: 0,
         generic: 0
     };
 

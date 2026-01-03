@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import {
     LLM_PROVIDERS,
     LLM_MODELS_BY_PROVIDER,
-    getDefaultModelForProvider
+    getDefaultModelForProvider,
+    type ValidationError
 } from "@flowmaestro/shared";
 import { FormField, FormSection } from "../../../components/common/FormField";
 import { Input } from "../../../components/common/Input";
@@ -13,6 +14,7 @@ import { OutputSettingsSection } from "../../../components/OutputSettingsSection
 interface EmbeddingsNodeConfigProps {
     data: Record<string, unknown>;
     onUpdate: (config: unknown) => void;
+    errors?: ValidationError[];
 }
 
 const dimensionsByModel: Record<string, number> = {
@@ -27,7 +29,11 @@ const dimensionsByModel: Record<string, number> = {
     "sentence-transformers/all-mpnet-base-v2": 768
 };
 
-export function EmbeddingsNodeConfig({ data, onUpdate }: EmbeddingsNodeConfigProps) {
+export function EmbeddingsNodeConfig({
+    data,
+    onUpdate,
+    errors: _errors = []
+}: EmbeddingsNodeConfigProps) {
     const [provider, setProvider] = useState((data.provider as string) || "openai");
     const [model, setModel] = useState(
         (data.model as string) || getDefaultModelForProvider((data.provider as string) || "openai")

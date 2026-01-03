@@ -16,23 +16,45 @@ const getOperationsParamsSchema = z.object({
     provider: z.string()
 });
 
+/**
+ * Request query schema
+ */
+const getOperationsQuerySchema = z.object({
+    nodeType: z.enum(["action", "integration"]).optional()
+});
+
 interface GetOperationsParams {
     provider: string;
 }
 
+interface GetOperationsQuery {
+    nodeType?: "action" | "integration";
+}
+
 /**
  * Get all operations for a provider
+ * Optionally filter by nodeType:
+ * - "action": Returns only write operations (send, create, update, delete)
+ * - "integration": Returns only read operations (list, get, search, query)
+ * - undefined: Returns all operations
  */
 export async function getOperationsHandler(
-    request: FastifyRequest<{ Params: GetOperationsParams }>,
+    request: FastifyRequest<{ Params: GetOperationsParams; Querystring: GetOperationsQuery }>,
     reply: FastifyReply
 ): Promise<void> {
     try {
-        // Validate params
+        // Validate params and query
         const params = getOperationsParamsSchema.parse(request.params);
+        const query = getOperationsQuerySchema.parse(request.query);
 
-        // Get operations
-        const operations = await executionRouter.discoverOperations(params.provider);
+        // Get all operations
+        let operations = await executionRouter.discoverOperations(params.provider);
+
+        // Filter by nodeType if specified
+        if (query.nodeType) {
+            const targetActionType = query.nodeType === "action" ? "write" : "read";
+            operations = operations.filter((op) => op.actionType === targetActionType);
+        }
 
         reply.code(200).send({
             success: true,

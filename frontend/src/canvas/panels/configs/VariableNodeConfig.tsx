@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import type { ValidationError } from "@flowmaestro/shared";
 import { FormField, FormSection } from "../../../components/common/FormField";
 import { Input } from "../../../components/common/Input";
 import { Select } from "../../../components/common/Select";
@@ -7,6 +8,7 @@ import { Textarea } from "../../../components/common/Textarea";
 interface VariableNodeConfigProps {
     data: Record<string, unknown>;
     onUpdate: (config: unknown) => void;
+    errors?: ValidationError[];
 }
 
 const operations = [
@@ -29,7 +31,11 @@ const valueTypes = [
     { value: "json", label: "JSON" }
 ];
 
-export function VariableNodeConfig({ data, onUpdate }: VariableNodeConfigProps) {
+export function VariableNodeConfig({
+    data,
+    onUpdate,
+    errors: _errors = []
+}: VariableNodeConfigProps) {
     const [operation, setOperation] = useState((data.operation as string) || "set");
     const [variableName, setVariableName] = useState((data.variableName as string) || "");
     const [value, setValue] = useState((data.value as string) || "");

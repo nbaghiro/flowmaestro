@@ -1,13 +1,22 @@
-import * as crypto from "crypto";
+/**
+ * Shopify Webhook Handler
+ *
+ * Handles incoming webhooks from Shopify for:
+ * - Order events (created, updated, paid, fulfilled, cancelled)
+ * - Product events (created, updated, deleted)
+ * - Customer events (created, updated)
+ * - Inventory events
+ * - App lifecycle events
+ *
+ * Signature verification uses X-Shopify-Hmac-Sha256 header with HMAC-SHA256
+ */
+
 import { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
-import { config } from "../../../core/config";
 import { createServiceLogger } from "../../../core/logging";
+import { providerWebhookService } from "../../../temporal/core/services/provider-webhook";
 
 const logger = createServiceLogger("ShopifyWebhook");
 
-/**
- * Shopify Webhook Payload Header Types
- */
 interface ShopifyWebhookHeaders {
     "x-shopify-hmac-sha256"?: string;
     "x-shopify-topic"?: string;
@@ -16,216 +25,167 @@ interface ShopifyWebhookHeaders {
     "x-shopify-webhook-id"?: string;
 }
 
-/**
- * Shopify Webhook Payload (generic structure)
- */
-interface ShopifyWebhookPayload {
-    id?: number;
-    [key: string]: unknown;
-}
-
-/**
- * Shopify Webhook Routes
- *
- * Handles incoming webhooks from Shopify stores.
- * All webhook events are validated using HMAC-SHA256 signature.
- */
 export async function shopifyWebhookRoutes(fastify: FastifyInstance) {
     /**
-     * Webhook Events (POST)
+     * Shopify Webhook Receiver
+     * Route: POST /shopify/:triggerId
      *
-     * Receives webhook events from Shopify.
-     * Events are validated via HMAC and then processed.
+     * Receives and processes Shopify webhook events.
+     * HMAC signature verification is handled by the provider webhook service.
      */
     fastify.post(
-        "/shopify",
+        "/shopify/:triggerId",
         {
             config: {
                 rawBody: true // Need raw body for HMAC signature verification
             }
         },
-        async (request: FastifyRequest, reply: FastifyReply) => {
+        async (request: FastifyRequest<{ Params: { triggerId: string } }>, reply: FastifyReply) => {
+            const { triggerId } = request.params;
             const headers = request.headers as ShopifyWebhookHeaders;
 
-            // Get required headers
-            const hmacHeader = headers["x-shopify-hmac-sha256"];
             const topic = headers["x-shopify-topic"];
             const shopDomain = headers["x-shopify-shop-domain"];
             const webhookId = headers["x-shopify-webhook-id"];
 
-            fastify.log.info(
-                `[ShopifyWebhook] Received webhook: topic=${topic}, shop=${shopDomain}, id=${webhookId}`
+            logger.info({ triggerId, topic, shopDomain, webhookId }, "Received Shopify webhook");
+
+            // Get raw body for signature verification
+            const rawBody = (request as FastifyRequest & { rawBody?: Buffer }).rawBody;
+
+            // Process through provider webhook service
+            const response = await providerWebhookService.processProviderWebhook({
+                providerId: "shopify",
+                triggerId,
+                headers: request.headers as Record<string, string | string[] | undefined>,
+                body: {
+                    ...(request.body as Record<string, unknown>),
+                    // Add Shopify-specific metadata from headers
+                    _shopify: {
+                        topic,
+                        shopDomain,
+                        webhookId,
+                        apiVersion: headers["x-shopify-api-version"]
+                    }
+                },
+                rawBody,
+                query: request.query as Record<string, unknown>,
+                method: request.method,
+                path: request.url,
+                ip: request.ip,
+                userAgent: request.headers["user-agent"] as string
+            });
+
+            // Return 200 to acknowledge receipt (Shopify expects this)
+            // Even for errors, return 200 to prevent excessive retries
+            return reply.status(response.statusCode === 202 ? 200 : response.statusCode).send({
+                received: response.success,
+                executionId: response.executionId,
+                error: response.error
+            });
+        }
+    );
+
+    /**
+     * Legacy Shopify Webhook Route (without triggerId)
+     * Route: POST /shopify
+     *
+     * Kept for backwards compatibility with existing Shopify webhook registrations.
+     * New integrations should use /shopify/:triggerId
+     */
+    fastify.post(
+        "/shopify",
+        {
+            config: {
+                rawBody: true
+            }
+        },
+        async (request: FastifyRequest, reply: FastifyReply) => {
+            const headers = request.headers as ShopifyWebhookHeaders;
+
+            const topic = headers["x-shopify-topic"];
+            const shopDomain = headers["x-shopify-shop-domain"];
+
+            logger.info({ topic, shopDomain }, "Received Shopify webhook (legacy route)");
+
+            // For legacy webhooks without triggerId, we need to look up triggers
+            // by shop domain and topic. For now, log and acknowledge.
+            logger.warn(
+                { topic, shopDomain },
+                "Legacy Shopify webhook received - no triggerId specified"
             );
 
-            // Verify HMAC signature
-            if (!verifyShopifyHmac(request, hmacHeader)) {
-                fastify.log.warn("[ShopifyWebhook] Invalid HMAC signature");
-                return reply.status(401).send({ error: "Invalid signature" });
-            }
+            return reply.status(200).send({
+                received: true,
+                message: "Legacy webhook acknowledged. Please update to use /shopify/:triggerId"
+            });
+        }
+    );
 
-            const payload = request.body as ShopifyWebhookPayload;
+    /**
+     * Shopify Webhook Ping Handler
+     * Route: GET /shopify/:triggerId
+     */
+    fastify.get(
+        "/shopify/:triggerId",
+        async (request: FastifyRequest<{ Params: { triggerId: string } }>, reply: FastifyReply) => {
+            const { triggerId } = request.params;
 
-            try {
-                // Process webhook based on topic
-                await processShopifyWebhook({
-                    topic: topic || "unknown",
-                    shop: shopDomain || "unknown",
-                    webhookId: webhookId || "unknown",
-                    payload,
-                    logger: fastify.log
-                });
+            logger.info({ triggerId }, "Shopify webhook verification ping");
 
-                // Return 200 to acknowledge receipt
-                return reply.status(200).send({ received: true });
-            } catch (error) {
-                fastify.log.error(`[ShopifyWebhook] Error processing webhook: ${error}`);
-                // Still return 200 to prevent Shopify from retrying
-                // Errors are logged and can be handled asynchronously
-                return reply.status(200).send({ received: true });
-            }
+            return reply.status(200).send({
+                success: true,
+                message: "Shopify webhook endpoint is active",
+                triggerId
+            });
         }
     );
 }
 
 /**
- * Verify Shopify webhook HMAC signature
+ * Common Shopify webhook topics:
  *
- * Shopify signs webhooks using HMAC-SHA256 with the app's client secret.
- * The signature is base64 encoded and sent in the X-Shopify-Hmac-Sha256 header.
- */
-function verifyShopifyHmac(request: FastifyRequest, hmacHeader: string | undefined): boolean {
-    if (!hmacHeader) {
-        logger.error("Missing HMAC header");
-        return false;
-    }
-
-    const clientSecret = config.oauth.shopify.clientSecret;
-    if (!clientSecret) {
-        logger.error("SHOPIFY_CLIENT_SECRET not configured");
-        return false;
-    }
-
-    try {
-        // Get raw body from request
-        const rawBody = (request as FastifyRequest & { rawBody?: Buffer }).rawBody;
-        if (!rawBody) {
-            // Fall back to stringified body if rawBody not available
-            const bodyString = JSON.stringify(request.body);
-            const calculatedHmac = crypto
-                .createHmac("sha256", clientSecret)
-                .update(bodyString, "utf8")
-                .digest("base64");
-
-            return crypto.timingSafeEqual(Buffer.from(hmacHeader), Buffer.from(calculatedHmac));
-        }
-
-        // Calculate HMAC from raw body
-        const calculatedHmac = crypto
-            .createHmac("sha256", clientSecret)
-            .update(rawBody)
-            .digest("base64");
-
-        return crypto.timingSafeEqual(Buffer.from(hmacHeader), Buffer.from(calculatedHmac));
-    } catch (error) {
-        logger.error({ error }, "HMAC verification error");
-        return false;
-    }
-}
-
-/**
- * Process Shopify webhook event
+ * Orders:
+ * - orders/create
+ * - orders/updated
+ * - orders/paid
+ * - orders/fulfilled
+ * - orders/partially_fulfilled
+ * - orders/cancelled
+ * - orders/delete
  *
- * This is where you would integrate with the workflow engine
- * to trigger workflows based on webhook events.
+ * Products:
+ * - products/create
+ * - products/update
+ * - products/delete
+ *
+ * Customers:
+ * - customers/create
+ * - customers/update
+ * - customers/delete
+ * - customers/enable
+ * - customers/disable
+ *
+ * Inventory:
+ * - inventory_levels/connect
+ * - inventory_levels/update
+ * - inventory_levels/disconnect
+ *
+ * Checkouts:
+ * - checkouts/create
+ * - checkouts/update
+ * - checkouts/delete
+ *
+ * Carts:
+ * - carts/create
+ * - carts/update
+ *
+ * Collections:
+ * - collections/create
+ * - collections/update
+ * - collections/delete
+ *
+ * App:
+ * - app/uninstalled
+ * - shop/update
  */
-async function processShopifyWebhook(event: {
-    topic: string;
-    shop: string;
-    webhookId: string;
-    payload: ShopifyWebhookPayload;
-    logger: FastifyInstance["log"];
-}): Promise<void> {
-    const { topic, shop, webhookId, payload, logger } = event;
-
-    logger.info(`[ShopifyWebhook] Processing event: topic=${topic}, shop=${shop}, id=${webhookId}`);
-
-    // Route to specific handlers based on topic
-    switch (topic) {
-        // Order events
-        case "orders/create":
-            logger.info(`[ShopifyWebhook] New order created: ${payload.id}`);
-            // TODO: Trigger order creation workflow
-            break;
-
-        case "orders/updated":
-            logger.info(`[ShopifyWebhook] Order updated: ${payload.id}`);
-            // TODO: Trigger order update workflow
-            break;
-
-        case "orders/paid":
-            logger.info(`[ShopifyWebhook] Order paid: ${payload.id}`);
-            // TODO: Trigger order payment workflow
-            break;
-
-        case "orders/fulfilled":
-            logger.info(`[ShopifyWebhook] Order fulfilled: ${payload.id}`);
-            // TODO: Trigger order fulfillment workflow
-            break;
-
-        case "orders/cancelled":
-            logger.info(`[ShopifyWebhook] Order cancelled: ${payload.id}`);
-            // TODO: Trigger order cancellation workflow
-            break;
-
-        // Product events
-        case "products/create":
-            logger.info(`[ShopifyWebhook] Product created: ${payload.id}`);
-            // TODO: Trigger product creation workflow
-            break;
-
-        case "products/update":
-            logger.info(`[ShopifyWebhook] Product updated: ${payload.id}`);
-            // TODO: Trigger product update workflow
-            break;
-
-        case "products/delete":
-            logger.info(`[ShopifyWebhook] Product deleted: ${payload.id}`);
-            // TODO: Trigger product deletion workflow
-            break;
-
-        // Inventory events
-        case "inventory_levels/update":
-            logger.info("[ShopifyWebhook] Inventory updated");
-            // TODO: Trigger inventory update workflow (e.g., low stock alerts)
-            break;
-
-        // Customer events
-        case "customers/create":
-            logger.info(`[ShopifyWebhook] Customer created: ${payload.id}`);
-            // TODO: Trigger customer creation workflow
-            break;
-
-        case "customers/update":
-            logger.info(`[ShopifyWebhook] Customer updated: ${payload.id}`);
-            // TODO: Trigger customer update workflow
-            break;
-
-        // App events
-        case "app/uninstalled":
-            logger.warn(`[ShopifyWebhook] App uninstalled from shop: ${shop}`);
-            // TODO: Clean up connections and data for this shop
-            break;
-
-        case "shop/update":
-            logger.info(`[ShopifyWebhook] Shop settings updated: ${shop}`);
-            break;
-
-        default:
-            logger.info(`[ShopifyWebhook] Unhandled topic: ${topic}`);
-    }
-
-    // In a full implementation, you would:
-    // 1. Look up connections for this shop
-    // 2. Find workflows triggered by this event type
-    // 3. Queue workflow executions with the webhook payload
-}

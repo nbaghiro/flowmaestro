@@ -153,6 +153,9 @@ export const config = {
         },
         elevenlabs: {
             apiKey: process.env.ELEVENLABS_API_KEY || ""
+        },
+        deepgram: {
+            apiKey: process.env.DEEPGRAM_API_KEY || ""
         }
     },
 
@@ -450,7 +453,14 @@ export function getOAuthCredentials(provider: string): { clientId: string; clien
  * Get AI provider API key
  */
 export function getAIProviderApiKey(
-    provider: "openai" | "anthropic" | "google" | "cohere" | "huggingface" | "elevenlabs"
+    provider:
+        | "openai"
+        | "anthropic"
+        | "google"
+        | "cohere"
+        | "huggingface"
+        | "elevenlabs"
+        | "deepgram"
 ): string {
     return config.ai[provider]?.apiKey || "";
 }

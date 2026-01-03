@@ -3,7 +3,8 @@ import { useState, useEffect } from "react";
 import {
     LLM_MODELS_BY_PROVIDER,
     getDefaultModelForProvider,
-    ALL_PROVIDERS
+    ALL_PROVIDERS,
+    type ValidationError
 } from "@flowmaestro/shared";
 import { FormField, FormSection } from "../../../components/common/FormField";
 import { Input } from "../../../components/common/Input";
@@ -17,9 +18,11 @@ import { useConnectionStore } from "../../../stores/connectionStore";
 interface LLMNodeConfigProps {
     data: Record<string, unknown>;
     onUpdate: (config: unknown) => void;
+    errors?: ValidationError[];
 }
 
-export function LLMNodeConfig({ data, onUpdate }: LLMNodeConfigProps) {
+export function LLMNodeConfig({ data, onUpdate, errors = [] }: LLMNodeConfigProps) {
+    const getError = (field: string) => errors.find((e) => e.field === field)?.message;
     const [provider, setProvider] = useState((data.provider as string) || "");
     const [model, setModel] = useState(
         (data.model as string) || getDefaultModelForProvider((data.provider as string) || "openai")
@@ -84,7 +87,7 @@ export function LLMNodeConfig({ data, onUpdate }: LLMNodeConfigProps) {
     return (
         <>
             <FormSection title="Model Configuration">
-                <FormField label="LLM Provider Connection">
+                <FormField label="LLM Provider Connection" error={getError("connectionId")}>
                     {provider && selectedConnection ? (
                         <button
                             type="button"
@@ -134,7 +137,7 @@ export function LLMNodeConfig({ data, onUpdate }: LLMNodeConfigProps) {
                 </FormField>
 
                 {provider && (
-                    <FormField label="Model">
+                    <FormField label="Model" error={getError("model")}>
                         <Select
                             value={model}
                             onChange={setModel}
@@ -164,6 +167,7 @@ export function LLMNodeConfig({ data, onUpdate }: LLMNodeConfigProps) {
                 <FormField
                     label="User Prompt"
                     description="Use {{variableName}} to reference other node outputs"
+                    error={getError("prompt")}
                 >
                     <Textarea
                         value={prompt}

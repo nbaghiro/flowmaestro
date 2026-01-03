@@ -127,6 +127,185 @@ export class GitHubProvider extends BaseProvider {
 
         // Initialize MCP adapter
         this.mcpAdapter = new GitHubMCPAdapter(this.operations);
+
+        // Configure webhook settings
+        this.setWebhookConfig({
+            setupType: "manual",
+            signatureType: "hmac_sha256",
+            signatureHeader: "X-Hub-Signature-256",
+            eventHeader: "X-GitHub-Event"
+        });
+
+        // Register trigger events
+        this.registerTrigger({
+            id: "push",
+            name: "Push",
+            description: "Triggered when commits are pushed to a repository branch",
+            requiredScopes: ["repo"],
+            configFields: [
+                {
+                    name: "repository",
+                    label: "Repository",
+                    type: "select",
+                    required: true,
+                    description: "Select the repository to monitor",
+                    dynamicOptions: {
+                        operation: "listRepositories",
+                        labelField: "full_name",
+                        valueField: "full_name"
+                    }
+                },
+                {
+                    name: "branch",
+                    label: "Branch",
+                    type: "text",
+                    required: false,
+                    description: "Filter by branch name (leave empty for all branches)",
+                    placeholder: "main"
+                }
+            ],
+            tags: ["code", "commits"]
+        });
+
+        this.registerTrigger({
+            id: "pull_request",
+            name: "Pull Request",
+            description: "Triggered when a pull request is opened, closed, or updated",
+            requiredScopes: ["repo"],
+            configFields: [
+                {
+                    name: "repository",
+                    label: "Repository",
+                    type: "select",
+                    required: true,
+                    description: "Select the repository to monitor",
+                    dynamicOptions: {
+                        operation: "listRepositories",
+                        labelField: "full_name",
+                        valueField: "full_name"
+                    }
+                },
+                {
+                    name: "action",
+                    label: "Action",
+                    type: "select",
+                    required: false,
+                    description: "Filter by PR action",
+                    options: [
+                        { value: "opened", label: "Opened" },
+                        { value: "closed", label: "Closed" },
+                        { value: "merged", label: "Merged" },
+                        { value: "synchronize", label: "Updated" },
+                        { value: "review_requested", label: "Review Requested" }
+                    ]
+                }
+            ],
+            tags: ["code", "review"]
+        });
+
+        this.registerTrigger({
+            id: "issues",
+            name: "Issue",
+            description: "Triggered when an issue is opened, closed, or updated",
+            requiredScopes: ["repo"],
+            configFields: [
+                {
+                    name: "repository",
+                    label: "Repository",
+                    type: "select",
+                    required: true,
+                    description: "Select the repository to monitor",
+                    dynamicOptions: {
+                        operation: "listRepositories",
+                        labelField: "full_name",
+                        valueField: "full_name"
+                    }
+                },
+                {
+                    name: "action",
+                    label: "Action",
+                    type: "select",
+                    required: false,
+                    description: "Filter by issue action",
+                    options: [
+                        { value: "opened", label: "Opened" },
+                        { value: "closed", label: "Closed" },
+                        { value: "reopened", label: "Reopened" },
+                        { value: "assigned", label: "Assigned" },
+                        { value: "labeled", label: "Labeled" }
+                    ]
+                }
+            ],
+            tags: ["issues", "tracking"]
+        });
+
+        this.registerTrigger({
+            id: "release",
+            name: "Release",
+            description: "Triggered when a release is published",
+            requiredScopes: ["repo"],
+            configFields: [
+                {
+                    name: "repository",
+                    label: "Repository",
+                    type: "select",
+                    required: true,
+                    description: "Select the repository to monitor",
+                    dynamicOptions: {
+                        operation: "listRepositories",
+                        labelField: "full_name",
+                        valueField: "full_name"
+                    }
+                }
+            ],
+            tags: ["releases", "deployment"]
+        });
+
+        this.registerTrigger({
+            id: "workflow_run",
+            name: "Workflow Run",
+            description: "Triggered when a GitHub Actions workflow run completes",
+            requiredScopes: ["repo", "workflow"],
+            configFields: [
+                {
+                    name: "repository",
+                    label: "Repository",
+                    type: "select",
+                    required: true,
+                    description: "Select the repository to monitor",
+                    dynamicOptions: {
+                        operation: "listRepositories",
+                        labelField: "full_name",
+                        valueField: "full_name"
+                    }
+                },
+                {
+                    name: "workflow",
+                    label: "Workflow",
+                    type: "select",
+                    required: false,
+                    description: "Filter by specific workflow",
+                    dynamicOptions: {
+                        operation: "listWorkflows",
+                        labelField: "name",
+                        valueField: "id"
+                    }
+                },
+                {
+                    name: "conclusion",
+                    label: "Conclusion",
+                    type: "select",
+                    required: false,
+                    description: "Filter by workflow conclusion",
+                    options: [
+                        { value: "success", label: "Success" },
+                        { value: "failure", label: "Failure" },
+                        { value: "cancelled", label: "Cancelled" }
+                    ]
+                }
+            ],
+            tags: ["ci", "automation"]
+        });
     }
 
     /**

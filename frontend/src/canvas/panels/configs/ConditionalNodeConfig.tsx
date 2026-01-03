@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import type { ValidationError } from "@flowmaestro/shared";
 import { CodeInput } from "../../../components/CodeInput";
 import { FormField, FormSection } from "../../../components/common/FormField";
 import { Input } from "../../../components/common/Input";
@@ -8,6 +9,7 @@ import { OutputSettingsSection } from "../../../components/OutputSettingsSection
 interface ConditionalNodeConfigProps {
     data: Record<string, unknown>;
     onUpdate: (config: unknown) => void;
+    errors?: ValidationError[];
 }
 
 const conditionTypes = [
@@ -28,7 +30,11 @@ const operators = [
     { value: "matches", label: "Regex Match" }
 ];
 
-export function ConditionalNodeConfig({ data, onUpdate }: ConditionalNodeConfigProps) {
+export function ConditionalNodeConfig({
+    data,
+    onUpdate,
+    errors: _errors = []
+}: ConditionalNodeConfigProps) {
     const [conditionType, setConditionType] = useState((data.conditionType as string) || "simple");
     const [leftValue, setLeftValue] = useState((data.leftValue as string) || "");
     const [operator, setOperator] = useState((data.operator as string) || "==");

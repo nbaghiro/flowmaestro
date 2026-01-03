@@ -23,7 +23,9 @@ export {
     type VisionNodeResult
 } from "./vision";
 
-// Audio
+// Audio (Legacy - use audioInput/audioOutput handlers instead)
+// This handler is kept for backwards compatibility with existing workflows.
+// New workflows should use AudioInputNodeHandler (STT) and AudioOutputNodeHandler (TTS).
 export {
     executeAudioNode,
     AudioNodeHandler,
@@ -49,3 +51,12 @@ export {
     type RouterNodeConfig,
     type RouterNodeResult
 } from "./router";
+
+// Knowledge Base Query
+export {
+    executeKnowledgeBaseQueryNode,
+    KnowledgeBaseQueryNodeHandler,
+    createKnowledgeBaseQueryNodeHandler,
+    type KnowledgeBaseQueryNodeConfig,
+    type KnowledgeBaseQueryNodeResult
+} from "./kb-query";

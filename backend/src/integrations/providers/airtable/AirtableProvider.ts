@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { config as appConfig, getOAuthRedirectUri } from "../../../core/config";
 import { getLogger } from "../../../core/logging";
 import { BaseProvider } from "../../core/BaseProvider";
@@ -43,7 +44,9 @@ import type {
     OAuthConfig,
     ProviderCapabilities,
     OperationResult,
-    MCPTool
+    MCPTool,
+    WebhookRequestData,
+    WebhookVerificationResult
 } from "../../core/types";
 
 const logger = getLogger();
@@ -104,10 +107,178 @@ export class AirtableProvider extends BaseProvider {
         // Initialize MCP adapter
         this.mcpAdapter = new AirtableMCPAdapter(this.operations);
 
+        // Configure webhook settings
+        this.setWebhookConfig({
+            setupType: "automatic", // Airtable webhooks are registered via API
+            signatureType: "hmac_sha256",
+            signatureHeader: "X-Airtable-Content-MAC"
+        });
+
+        // Register trigger events
+        this.registerTrigger({
+            id: "record_created",
+            name: "Record Created",
+            description: "Triggered when a new record is created in a table",
+            requiredScopes: ["data.records:read", "webhook:manage"],
+            configFields: [
+                {
+                    name: "baseId",
+                    label: "Base",
+                    type: "select",
+                    required: true,
+                    description: "Select the base to monitor",
+                    dynamicOptions: {
+                        operation: "listBases",
+                        labelField: "name",
+                        valueField: "id"
+                    }
+                },
+                {
+                    name: "tableId",
+                    label: "Table",
+                    type: "select",
+                    required: true,
+                    description: "Select the table to monitor",
+                    dynamicOptions: {
+                        operation: "listTables",
+                        labelField: "name",
+                        valueField: "id"
+                    }
+                }
+            ],
+            tags: ["records", "data"]
+        });
+
+        this.registerTrigger({
+            id: "record_updated",
+            name: "Record Updated",
+            description: "Triggered when an existing record is updated",
+            requiredScopes: ["data.records:read", "webhook:manage"],
+            configFields: [
+                {
+                    name: "baseId",
+                    label: "Base",
+                    type: "select",
+                    required: true,
+                    description: "Select the base to monitor",
+                    dynamicOptions: {
+                        operation: "listBases",
+                        labelField: "name",
+                        valueField: "id"
+                    }
+                },
+                {
+                    name: "tableId",
+                    label: "Table",
+                    type: "select",
+                    required: true,
+                    description: "Select the table to monitor",
+                    dynamicOptions: {
+                        operation: "listTables",
+                        labelField: "name",
+                        valueField: "id"
+                    }
+                },
+                {
+                    name: "fields",
+                    label: "Fields to Watch",
+                    type: "multiselect",
+                    required: false,
+                    description: "Specific fields to monitor (leave empty for all)"
+                }
+            ],
+            tags: ["records", "data"]
+        });
+
+        this.registerTrigger({
+            id: "record_deleted",
+            name: "Record Deleted",
+            description: "Triggered when a record is deleted from a table",
+            requiredScopes: ["data.records:read", "webhook:manage"],
+            configFields: [
+                {
+                    name: "baseId",
+                    label: "Base",
+                    type: "select",
+                    required: true,
+                    description: "Select the base to monitor",
+                    dynamicOptions: {
+                        operation: "listBases",
+                        labelField: "name",
+                        valueField: "id"
+                    }
+                },
+                {
+                    name: "tableId",
+                    label: "Table",
+                    type: "select",
+                    required: true,
+                    description: "Select the table to monitor",
+                    dynamicOptions: {
+                        operation: "listTables",
+                        labelField: "name",
+                        valueField: "id"
+                    }
+                }
+            ],
+            tags: ["records", "data"]
+        });
+
         logger.info(
             { component: "AirtableProvider", operationCount: this.operations.size },
             "Registered operations"
         );
+    }
+
+    /**
+     * Airtable-specific HMAC-SHA256 verification
+     * Uses base64 encoding instead of hex
+     */
+    protected override verifyHmacSha256(
+        signature: string,
+        body: string,
+        secret: string
+    ): WebhookVerificationResult {
+        const hmac = crypto.createHmac("sha256", secret);
+        hmac.update(body, "utf-8");
+        const computed = hmac.digest("base64");
+
+        return {
+            valid: this.timingSafeEqual(signature, computed)
+        };
+    }
+
+    /**
+     * Extract event type from Airtable webhook
+     */
+    override extractEventType(request: WebhookRequestData): string | undefined {
+        try {
+            const body = typeof request.body === "string" ? JSON.parse(request.body) : request.body;
+
+            // Airtable includes actionMetadata with event type
+            if (body.webhook?.changedTablesById) {
+                // Determine event type from payload structure
+                const tableChanges = Object.values(body.webhook.changedTablesById)[0] as {
+                    createdRecordsById?: Record<string, unknown>;
+                    changedRecordsById?: Record<string, unknown>;
+                    destroyedRecordIds?: string[];
+                };
+
+                if (tableChanges?.createdRecordsById) {
+                    return "record_created";
+                }
+                if (tableChanges?.changedRecordsById) {
+                    return "record_updated";
+                }
+                if (tableChanges?.destroyedRecordIds) {
+                    return "record_deleted";
+                }
+            }
+
+            return undefined;
+        } catch {
+            return undefined;
+        }
     }
 
     /**

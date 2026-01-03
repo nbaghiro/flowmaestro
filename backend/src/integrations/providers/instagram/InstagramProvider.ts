@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { config as appConfig, getOAuthRedirectUri } from "../../../core/config";
 import { BaseProvider } from "../../core/BaseProvider";
 import { InstagramClient } from "./client/InstagramClient";
@@ -39,7 +40,9 @@ import type {
     MCPTool,
     OperationResult,
     OAuthConfig,
-    ProviderCapabilities
+    ProviderCapabilities,
+    WebhookRequestData,
+    WebhookVerificationResult
 } from "../../core/types";
 
 /**
@@ -88,6 +91,122 @@ export class InstagramProvider extends BaseProvider {
 
         // Initialize MCP adapter
         this.mcpAdapter = new InstagramMCPAdapter(this.operations);
+
+        // Configure webhook settings (Meta Webhooks)
+        this.setWebhookConfig({
+            setupType: "manual", // Configured in Meta Developer Console
+            signatureType: "hmac_sha256",
+            signatureHeader: "X-Hub-Signature-256"
+        });
+
+        // Register trigger events
+        this.registerTrigger({
+            id: "message_received",
+            name: "Message Received",
+            description: "Triggered when a new Instagram Direct message is received",
+            requiredScopes: ["instagram_manage_messages"],
+            configFields: [],
+            tags: ["messages", "incoming"]
+        });
+
+        this.registerTrigger({
+            id: "comment_received",
+            name: "Comment Received",
+            description: "Triggered when someone comments on your posts",
+            requiredScopes: ["instagram_basic", "pages_read_engagement"],
+            configFields: [],
+            tags: ["comments", "engagement"]
+        });
+
+        this.registerTrigger({
+            id: "mention",
+            name: "Mentioned",
+            description: "Triggered when your account is mentioned in a post or story",
+            requiredScopes: ["instagram_basic"],
+            configFields: [],
+            tags: ["mentions", "engagement"]
+        });
+
+        this.registerTrigger({
+            id: "story_reply",
+            name: "Story Reply",
+            description: "Triggered when someone replies to your story",
+            requiredScopes: ["instagram_manage_messages"],
+            configFields: [],
+            tags: ["stories", "messages"]
+        });
+
+        this.registerTrigger({
+            id: "story_mention",
+            name: "Story Mention",
+            description: "Triggered when your account is mentioned in someone's story",
+            requiredScopes: ["instagram_basic"],
+            configFields: [],
+            tags: ["stories", "mentions"]
+        });
+    }
+
+    /**
+     * Meta/Instagram HMAC-SHA256 verification
+     */
+    override verifyWebhookSignature(
+        secret: string,
+        request: WebhookRequestData
+    ): WebhookVerificationResult {
+        const signature = this.getHeader(request.headers, "X-Hub-Signature-256");
+
+        if (!signature) {
+            return { valid: false, error: "Missing X-Hub-Signature-256 header" };
+        }
+
+        const body = this.getBodyString(request);
+
+        // Meta uses sha256=<signature> format
+        let actualSignature = signature;
+        if (actualSignature.startsWith("sha256=")) {
+            actualSignature = actualSignature.substring(7);
+        }
+
+        const hmac = crypto.createHmac("sha256", secret);
+        hmac.update(body, "utf-8");
+        const computed = hmac.digest("hex");
+
+        return {
+            valid: this.timingSafeEqual(actualSignature.toLowerCase(), computed.toLowerCase())
+        };
+    }
+
+    /**
+     * Extract event type from Instagram webhook
+     */
+    override extractEventType(request: WebhookRequestData): string | undefined {
+        try {
+            const body = typeof request.body === "string" ? JSON.parse(request.body) : request.body;
+
+            // Instagram webhook payload structure
+            const entry = body.entry?.[0];
+            const changes = entry?.changes?.[0];
+            const field = changes?.field;
+
+            // Map Meta field names to our trigger IDs
+            switch (field) {
+                case "messages":
+                    return "message_received";
+                case "comments":
+                    return "comment_received";
+                case "mentions":
+                    return "mention";
+                case "story_insights":
+                case "story_replies":
+                    return "story_reply";
+                case "story_mentions":
+                    return "story_mention";
+                default:
+                    return field || undefined;
+            }
+        } catch {
+            return undefined;
+        }
     }
 
     /**

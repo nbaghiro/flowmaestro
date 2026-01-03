@@ -180,6 +180,69 @@ export interface NodeConfigField {
 }
 
 // ============================================================================
+// FILES NODE TYPES
+// ============================================================================
+
+/**
+ * Represents a chunk of text extracted from a file.
+ * Used by the Files node for chunked output.
+ */
+export interface FileChunk {
+    content: string;
+    index: number;
+    metadata: {
+        fileName: string;
+        fileType: string;
+        start_char?: number;
+        end_char?: number;
+        sentence_count?: number;
+    };
+}
+
+/**
+ * Represents a processed file with extracted text and chunks.
+ */
+export interface ProcessedFile {
+    fileName: string;
+    fileType: string;
+    gcsUri: string;
+    chunks: FileChunk[];
+    extractedText: string;
+    metadata: {
+        wordCount?: number;
+        pages?: number;
+        [key: string]: JsonValue | undefined;
+    };
+}
+
+/**
+ * Output structure from the Files node.
+ * Provides multiple ways to access the extracted content.
+ */
+export interface FilesNodeOutput {
+    /** Array of processed files with individual chunks */
+    files: ProcessedFile[];
+    /** Flattened array of all chunks from all files */
+    allChunks: FileChunk[];
+    /** All extracted text concatenated */
+    combinedText: string;
+    /** Number of files processed */
+    fileCount: number;
+    /** Total number of chunks across all files */
+    totalChunkCount: number;
+}
+
+/**
+ * Input data for a single file in workflow inputs.
+ * Files are uploaded before workflow execution and passed as GCS URIs.
+ */
+export interface FileInputData {
+    fileName: string;
+    fileType: string;
+    gcsUri: string;
+}
+
+// ============================================================================
 // INTEGRATION TYPES
 // ============================================================================
 

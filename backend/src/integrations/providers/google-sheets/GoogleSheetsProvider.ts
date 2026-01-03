@@ -51,7 +51,8 @@ import type {
     MCPTool,
     OperationResult,
     OAuthConfig,
-    ProviderCapabilities
+    ProviderCapabilities,
+    WebhookRequestData
 } from "../../core/types";
 
 /**
@@ -118,6 +119,8 @@ export class GoogleSheetsProvider extends BaseProvider {
     readonly displayName = "Google Sheets";
     readonly authMethod = "oauth2" as const;
     readonly capabilities: ProviderCapabilities = {
+        supportsWebhooks: true, // Polling-based triggers
+        supportsPolling: true,
         rateLimit: {
             tokensPerMinute: 60 // 60 requests per minute per user
         }
@@ -155,6 +158,107 @@ export class GoogleSheetsProvider extends BaseProvider {
         this.registerOperation(mergeCellsOperation);
         this.registerOperation(unmergeCellsOperation);
         this.registerOperation(autoResizeOperation);
+
+        // Configure webhook settings (polling-based)
+        this.setWebhookConfig({
+            setupType: "polling", // Google Sheets doesn't have real webhooks
+            signatureType: "none"
+        });
+
+        // Register trigger events (polling-based)
+        this.registerTrigger({
+            id: "row_added",
+            name: "Row Added",
+            description: "Triggered when a new row is added to a spreadsheet",
+            requiredScopes: ["https://www.googleapis.com/auth/spreadsheets"],
+            configFields: [
+                {
+                    name: "spreadsheetId",
+                    label: "Spreadsheet",
+                    type: "text",
+                    required: true,
+                    description: "The ID of the spreadsheet to monitor",
+                    placeholder: "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms"
+                },
+                {
+                    name: "sheetName",
+                    label: "Sheet Name",
+                    type: "text",
+                    required: false,
+                    description: "Specific sheet to monitor (leave empty for first sheet)",
+                    placeholder: "Sheet1"
+                }
+            ],
+            tags: ["rows", "data"]
+        });
+
+        this.registerTrigger({
+            id: "row_updated",
+            name: "Row Updated",
+            description: "Triggered when a row is modified in a spreadsheet",
+            requiredScopes: ["https://www.googleapis.com/auth/spreadsheets"],
+            configFields: [
+                {
+                    name: "spreadsheetId",
+                    label: "Spreadsheet",
+                    type: "text",
+                    required: true,
+                    description: "The ID of the spreadsheet to monitor",
+                    placeholder: "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms"
+                },
+                {
+                    name: "sheetName",
+                    label: "Sheet Name",
+                    type: "text",
+                    required: false,
+                    description: "Specific sheet to monitor (leave empty for first sheet)",
+                    placeholder: "Sheet1"
+                },
+                {
+                    name: "columns",
+                    label: "Columns to Watch",
+                    type: "text",
+                    required: false,
+                    description: "Specific columns to monitor (comma-separated, e.g., A,B,C)",
+                    placeholder: "A,B,C"
+                }
+            ],
+            tags: ["rows", "data"]
+        });
+
+        this.registerTrigger({
+            id: "cell_changed",
+            name: "Cell Changed",
+            description: "Triggered when a specific cell or range changes",
+            requiredScopes: ["https://www.googleapis.com/auth/spreadsheets"],
+            configFields: [
+                {
+                    name: "spreadsheetId",
+                    label: "Spreadsheet",
+                    type: "text",
+                    required: true,
+                    description: "The ID of the spreadsheet to monitor",
+                    placeholder: "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms"
+                },
+                {
+                    name: "range",
+                    label: "Cell Range",
+                    type: "text",
+                    required: true,
+                    description: "The cell or range to monitor (A1 notation)",
+                    placeholder: "Sheet1!A1:B10"
+                }
+            ],
+            tags: ["cells", "data"]
+        });
+    }
+
+    /**
+     * Extract event type from polling result
+     * (Not used for actual webhooks since Google Sheets uses polling)
+     */
+    override extractEventType(_request: WebhookRequestData): string | undefined {
+        return undefined;
     }
 
     /**

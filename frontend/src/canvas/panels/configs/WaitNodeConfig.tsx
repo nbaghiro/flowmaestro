@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import type { ValidationError } from "@flowmaestro/shared";
 import { CodeInput } from "../../../components/CodeInput";
 import { FormField, FormSection } from "../../../components/common/FormField";
 import { Input } from "../../../components/common/Input";
@@ -8,6 +9,7 @@ import { OutputSettingsSection } from "../../../components/OutputSettingsSection
 interface WaitNodeConfigProps {
     data: Record<string, unknown>;
     onUpdate: (config: unknown) => void;
+    errors?: ValidationError[];
 }
 
 const waitTypes = [
@@ -23,7 +25,7 @@ const timeUnits = [
     { value: "days", label: "Days" }
 ];
 
-export function WaitNodeConfig({ data, onUpdate }: WaitNodeConfigProps) {
+export function WaitNodeConfig({ data, onUpdate, errors: _errors = [] }: WaitNodeConfigProps) {
     const [waitType, setWaitType] = useState((data.waitType as string) || "duration");
     const [duration, setDuration] = useState((data.duration as number) || 5);
     const [unit, setUnit] = useState((data.unit as string) || "seconds");

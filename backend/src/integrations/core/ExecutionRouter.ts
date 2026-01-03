@@ -1,11 +1,12 @@
 import { getLogger } from "../../core/logging";
 import { ProviderRegistry } from "./ProviderRegistry";
-import type {
-    IProvider,
-    OperationResult,
-    MCPTool,
-    ExecutionContext,
-    OperationSummary
+import {
+    inferActionType,
+    type IProvider,
+    type OperationResult,
+    type MCPTool,
+    type ExecutionContext,
+    type OperationSummary
 } from "./types";
 import type { ConnectionWithData } from "../../storage/models/Connection";
 
@@ -139,6 +140,7 @@ export class ExecutionRouter {
                     name: op.name,
                     description: op.description,
                     category: op.category,
+                    actionType: op.actionType ?? inferActionType(op.id),
                     inputSchema: op.inputSchemaJSON,
                     inputSchemaJSON: op.inputSchemaJSON,
                     parameters,

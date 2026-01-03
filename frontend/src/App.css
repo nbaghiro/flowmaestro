@@ -29,11 +29,20 @@
 /* Autofill styling override */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
-input:-webkit-autofill:focus,
 input:-webkit-autofill:active {
-    -webkit-box-shadow: 0 0 0 30px hsl(var(--background)) inset !important;
+    -webkit-box-shadow: 0 0 0 30px hsl(var(--card)) inset !important;
     -webkit-text-fill-color: hsl(var(--foreground)) !important;
     caret-color: hsl(var(--foreground)) !important;
+    background-clip: padding-box !important;
+    transition: background-color 5000s ease-in-out 0s !important;
+}
+
+input:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0 30px hsl(var(--card)) inset, 0 0 0 2px hsl(var(--primary)) !important;
+    -webkit-text-fill-color: hsl(var(--foreground)) !important;
+    caret-color: hsl(var(--foreground)) !important;
+    border-color: transparent !important;
+    outline: none !important;
 }
 
 input:-webkit-autofill::first-line {

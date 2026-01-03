@@ -1,11 +1,10 @@
 import { motion, useInView } from "framer-motion";
 import React from "react";
 import { Link } from "react-router-dom";
+import { getProviderLogoUrl } from "@flowmaestro/shared";
 
-// Brandfetch Logo API
-const BRANDFETCH_CLIENT_ID = "1idCpJZqz6etuVweFEJ";
-const getBrandLogo = (domain: string): string =>
-    `https://cdn.brandfetch.io/${domain}?c=${BRANDFETCH_CLIENT_ID}`;
+// Alias for cleaner code
+const getBrandLogo = getProviderLogoUrl;
 
 interface Integration {
     name: string;

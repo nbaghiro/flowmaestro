@@ -1,5 +1,5 @@
 import { Eye, Copy, Bot, Wrench } from "lucide-react";
-import { ALL_PROVIDERS, TEMPLATE_CATEGORY_META } from "@flowmaestro/shared";
+import { ALL_PROVIDERS, getProviderLogo, TEMPLATE_CATEGORY_META } from "@flowmaestro/shared";
 import type { AgentTemplate } from "@flowmaestro/shared";
 import { cn } from "../../lib/utils";
 
@@ -8,38 +8,13 @@ interface AgentTemplateCardProps {
     onClick: (template: AgentTemplate) => void;
 }
 
-// Brandfetch Logo API
-const BRANDFETCH_CLIENT_ID = "1idCpJZqz6etuVweFEJ";
-const getBrandLogo = (domain: string): string =>
-    `https://cdn.brandfetch.io/${domain}?c=${BRANDFETCH_CLIENT_ID}`;
-
-// Domain mapping for providers
-const providerDomains: Record<string, string> = {
-    google_sheets: "google.com",
-    google_calendar: "google.com",
-    gmail: "gmail.com",
-    microsoft_teams: "microsoft.com",
-    hubspot: "hubspot.com"
-};
-
-// Get logo URL for an integration
+// Get logo URL for an integration - uses shared providers or Brandfetch fallback
 const getIntegrationLogo = (integration: string): string => {
     const provider = ALL_PROVIDERS.find((p) => p.provider === integration);
     if (provider) {
         return provider.logoUrl;
     }
-    if (providerDomains[integration]) {
-        return getBrandLogo(providerDomains[integration]);
-    }
-    return getBrandLogo(`${integration}.com`);
-};
-
-// Provider logos for the AI provider
-const providerLogos: Record<string, string> = {
-    openai: "https://cdn.brandfetch.io/openai.com?c=" + BRANDFETCH_CLIENT_ID,
-    anthropic: "https://cdn.brandfetch.io/anthropic.com?c=" + BRANDFETCH_CLIENT_ID,
-    google: "https://cdn.brandfetch.io/google.com?c=" + BRANDFETCH_CLIENT_ID,
-    cohere: "https://cdn.brandfetch.io/cohere.com?c=" + BRANDFETCH_CLIENT_ID
+    return getProviderLogo(integration);
 };
 
 export function AgentTemplateCard({ template, onClick }: AgentTemplateCardProps) {
@@ -97,9 +72,9 @@ export function AgentTemplateCard({ template, onClick }: AgentTemplateCardProps)
                 {/* AI Bot icon */}
                 <div className="absolute bottom-3 right-3 z-10">
                     <div className="w-10 h-10 rounded-full bg-card dark:bg-card shadow-lg flex items-center justify-center">
-                        {template.provider && providerLogos[template.provider] ? (
+                        {template.provider ? (
                             <img
-                                src={providerLogos[template.provider]}
+                                src={getProviderLogo(template.provider)}
                                 alt={template.provider}
                                 className="w-6 h-6 object-contain"
                                 onError={(e) => {

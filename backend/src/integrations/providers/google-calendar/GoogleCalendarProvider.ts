@@ -33,7 +33,8 @@ import type {
     MCPTool,
     OperationResult,
     OAuthConfig,
-    ProviderCapabilities
+    ProviderCapabilities,
+    WebhookRequestData
 } from "../../core/types";
 
 /**
@@ -105,6 +106,7 @@ export class GoogleCalendarProvider extends BaseProvider {
     readonly displayName = "Google Calendar";
     readonly authMethod = "oauth2" as const;
     readonly capabilities: ProviderCapabilities = {
+        supportsWebhooks: true, // Push notifications via channel subscriptions
         rateLimit: {
             tokensPerMinute: 60 // 60 requests per minute per user
         }
@@ -130,6 +132,129 @@ export class GoogleCalendarProvider extends BaseProvider {
 
         // Register availability operations
         this.registerOperation(getFreeBusyOperation);
+
+        // Configure webhook settings (push notifications)
+        this.setWebhookConfig({
+            setupType: "automatic", // Channel subscriptions via API
+            signatureType: "none", // Google uses channel tokens instead of signatures
+            eventHeader: "X-Goog-Resource-State"
+        });
+
+        // Register trigger events
+        this.registerTrigger({
+            id: "event_created",
+            name: "Event Created",
+            description: "Triggered when a new event is added to a calendar",
+            requiredScopes: ["https://www.googleapis.com/auth/calendar.events"],
+            configFields: [
+                {
+                    name: "calendarId",
+                    label: "Calendar",
+                    type: "select",
+                    required: true,
+                    description: "Select the calendar to monitor",
+                    dynamicOptions: {
+                        operation: "listCalendars",
+                        labelField: "summary",
+                        valueField: "id"
+                    }
+                }
+            ],
+            tags: ["events", "calendar"]
+        });
+
+        this.registerTrigger({
+            id: "event_updated",
+            name: "Event Updated",
+            description: "Triggered when an event is modified",
+            requiredScopes: ["https://www.googleapis.com/auth/calendar.events"],
+            configFields: [
+                {
+                    name: "calendarId",
+                    label: "Calendar",
+                    type: "select",
+                    required: true,
+                    description: "Select the calendar to monitor",
+                    dynamicOptions: {
+                        operation: "listCalendars",
+                        labelField: "summary",
+                        valueField: "id"
+                    }
+                }
+            ],
+            tags: ["events", "calendar"]
+        });
+
+        this.registerTrigger({
+            id: "event_deleted",
+            name: "Event Deleted",
+            description: "Triggered when an event is deleted from a calendar",
+            requiredScopes: ["https://www.googleapis.com/auth/calendar.events"],
+            configFields: [
+                {
+                    name: "calendarId",
+                    label: "Calendar",
+                    type: "select",
+                    required: true,
+                    description: "Select the calendar to monitor",
+                    dynamicOptions: {
+                        operation: "listCalendars",
+                        labelField: "summary",
+                        valueField: "id"
+                    }
+                }
+            ],
+            tags: ["events", "calendar"]
+        });
+
+        this.registerTrigger({
+            id: "event_starting",
+            name: "Event Starting Soon",
+            description: "Triggered before an event starts (requires polling)",
+            requiredScopes: ["https://www.googleapis.com/auth/calendar.events"],
+            configFields: [
+                {
+                    name: "calendarId",
+                    label: "Calendar",
+                    type: "select",
+                    required: true,
+                    description: "Select the calendar to monitor",
+                    dynamicOptions: {
+                        operation: "listCalendars",
+                        labelField: "summary",
+                        valueField: "id"
+                    }
+                },
+                {
+                    name: "minutesBefore",
+                    label: "Minutes Before",
+                    type: "number",
+                    required: true,
+                    description: "How many minutes before the event to trigger",
+                    defaultValue: 15
+                }
+            ],
+            tags: ["events", "reminders"]
+        });
+    }
+
+    /**
+     * Extract event type from Google Calendar push notification
+     */
+    override extractEventType(request: WebhookRequestData): string | undefined {
+        // Google Calendar uses X-Goog-Resource-State header
+        const resourceState = this.getHeader(request.headers, "X-Goog-Resource-State");
+
+        switch (resourceState) {
+            case "exists":
+                return "event_updated"; // Could be created or updated
+            case "not_exists":
+                return "event_deleted";
+            case "sync":
+                return "sync"; // Initial sync notification
+            default:
+                return undefined;
+        }
     }
 
     /**

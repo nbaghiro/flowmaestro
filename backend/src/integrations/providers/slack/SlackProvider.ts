@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { config as appConfig, getOAuthRedirectUri } from "../../../core/config";
 import { BaseProvider } from "../../core/BaseProvider";
 import { SlackClient } from "./client/SlackClient";
@@ -15,7 +16,9 @@ import type {
     MCPTool,
     OperationResult,
     OAuthConfig,
-    ProviderCapabilities
+    ProviderCapabilities,
+    WebhookRequestData,
+    WebhookVerificationResult
 } from "../../core/types";
 
 /**
@@ -45,6 +48,182 @@ export class SlackProvider extends BaseProvider {
 
         // Initialize MCP adapter
         this.mcpAdapter = new SlackMCPAdapter(this.operations);
+
+        // Configure webhook settings
+        this.setWebhookConfig({
+            setupType: "manual",
+            signatureType: "timestamp_signature",
+            signatureHeader: "X-Slack-Signature",
+            timestampHeader: "X-Slack-Request-Timestamp",
+            timestampMaxAge: 300 // 5 minutes
+        });
+
+        // Register trigger events
+        this.registerTrigger({
+            id: "message",
+            name: "Message",
+            description: "Triggered when a new message is posted in a channel",
+            requiredScopes: ["channels:history", "channels:read"],
+            configFields: [
+                {
+                    name: "channel",
+                    label: "Channel",
+                    type: "select",
+                    required: false,
+                    description: "Filter by specific channel (leave empty for all channels)",
+                    dynamicOptions: {
+                        operation: "listChannels",
+                        labelField: "name",
+                        valueField: "id"
+                    }
+                },
+                {
+                    name: "includeBot",
+                    label: "Include Bot Messages",
+                    type: "boolean",
+                    required: false,
+                    defaultValue: false,
+                    description: "Include messages from bots"
+                }
+            ],
+            tags: ["messages", "chat"]
+        });
+
+        this.registerTrigger({
+            id: "reaction_added",
+            name: "Reaction Added",
+            description: "Triggered when a reaction is added to a message",
+            requiredScopes: ["reactions:read"],
+            configFields: [
+                {
+                    name: "emoji",
+                    label: "Emoji",
+                    type: "text",
+                    required: false,
+                    description: "Filter by specific emoji (e.g., thumbsup)",
+                    placeholder: "thumbsup"
+                }
+            ],
+            tags: ["reactions", "engagement"]
+        });
+
+        this.registerTrigger({
+            id: "app_mention",
+            name: "App Mention",
+            description: "Triggered when your app is mentioned in a message",
+            requiredScopes: ["app_mentions:read"],
+            configFields: [],
+            tags: ["mentions", "bot"]
+        });
+
+        this.registerTrigger({
+            id: "slash_command",
+            name: "Slash Command",
+            description: "Triggered when a custom slash command is invoked",
+            requiredScopes: ["commands"],
+            configFields: [
+                {
+                    name: "command",
+                    label: "Command",
+                    type: "text",
+                    required: true,
+                    description: "The slash command (e.g., /mycommand)",
+                    placeholder: "/mycommand"
+                }
+            ],
+            tags: ["commands", "interactive"]
+        });
+
+        this.registerTrigger({
+            id: "channel_created",
+            name: "Channel Created",
+            description: "Triggered when a new channel is created",
+            requiredScopes: ["channels:read"],
+            configFields: [],
+            tags: ["channels", "admin"]
+        });
+
+        this.registerTrigger({
+            id: "member_joined_channel",
+            name: "Member Joined Channel",
+            description: "Triggered when a user joins a channel",
+            requiredScopes: ["channels:read"],
+            configFields: [
+                {
+                    name: "channel",
+                    label: "Channel",
+                    type: "select",
+                    required: false,
+                    description: "Filter by specific channel",
+                    dynamicOptions: {
+                        operation: "listChannels",
+                        labelField: "name",
+                        valueField: "id"
+                    }
+                }
+            ],
+            tags: ["members", "channels"]
+        });
+    }
+
+    /**
+     * Slack-specific timestamp signature verification
+     */
+    protected verifyTimestampSignature(
+        request: WebhookRequestData,
+        body: string,
+        secret: string
+    ): WebhookVerificationResult {
+        const timestamp = this.getHeader(request.headers, "X-Slack-Request-Timestamp");
+        const signature = this.getHeader(request.headers, "X-Slack-Signature");
+
+        if (!timestamp || !signature) {
+            return { valid: false, error: "Missing Slack timestamp or signature" };
+        }
+
+        // Check timestamp is not too old (5 minutes)
+        const now = Math.floor(Date.now() / 1000);
+        if (Math.abs(now - parseInt(timestamp)) > 300) {
+            return { valid: false, error: "Slack timestamp too old" };
+        }
+
+        // Compute expected signature
+        const baseString = `v0:${timestamp}:${body}`;
+        const hmac = crypto.createHmac("sha256", secret);
+        hmac.update(baseString, "utf-8");
+        const computed = `v0=${hmac.digest("hex")}`;
+
+        return {
+            valid: this.timingSafeEqual(signature, computed)
+        };
+    }
+
+    /**
+     * Extract event type from Slack webhook
+     */
+    extractEventType(request: WebhookRequestData): string | undefined {
+        try {
+            const body = typeof request.body === "string" ? JSON.parse(request.body) : request.body;
+
+            // Events API callback
+            if (body.type === "event_callback" && body.event) {
+                return body.event.type;
+            }
+
+            // Slash command
+            if (body.command) {
+                return "slash_command";
+            }
+
+            // Interactive component
+            if (body.type === "block_actions" || body.type === "view_submission") {
+                return body.type;
+            }
+
+            return body.type;
+        } catch {
+            return undefined;
+        }
     }
 
     /**

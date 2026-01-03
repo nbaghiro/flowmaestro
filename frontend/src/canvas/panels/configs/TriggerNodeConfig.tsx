@@ -1,280 +1,442 @@
-import { Copy, ExternalLink } from "lucide-react";
-import { useState, useEffect } from "react";
+/**
+ * Trigger Node Configuration Panel
+ * Shows integration providers with webhook triggers
+ */
+
+import { ChevronLeft, Zap } from "lucide-react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { getProviderLogo, type ValidationError } from "@flowmaestro/shared";
 import { FormField, FormSection } from "../../../components/common/FormField";
 import { Input } from "../../../components/common/Input";
 import { Select } from "../../../components/common/Select";
 import { Textarea } from "../../../components/common/Textarea";
+import { TriggerEventList } from "../../../components/triggers/TriggerEventList";
+import { TriggerProviderList } from "../../../components/triggers/TriggerProviderList";
+import { cn } from "../../../lib/utils";
+import type { TriggerProviderSummary, TriggerEvent, TriggerConfigField } from "../../../lib/api";
 
-interface TriggerNodeConfigProps {
+export interface TriggerNodeConfigProps {
     data: Record<string, unknown>;
     onUpdate: (config: unknown) => void;
+    errors?: ValidationError[];
 }
 
-const triggerTypes = [
-    { value: "manual", label: "Manual" },
-    { value: "schedule", label: "Schedule (Cron)" },
-    { value: "webhook", label: "Webhook" },
-    { value: "event", label: "Event" }
-];
+// View states for the multi-step flow
+type ViewState = "provider-list" | "event-list" | "event-config";
 
-const cronPresets = [
-    { value: "custom", label: "Custom" },
-    { value: "0 * * * *", label: "Every hour" },
-    { value: "0 0 * * *", label: "Every day at midnight" },
-    { value: "0 9 * * 1-5", label: "Weekdays at 9am" },
-    { value: "0 0 * * 0", label: "Every Sunday at midnight" },
-    { value: "0 0 1 * *", label: "First day of month" }
-];
+export function TriggerNodeConfig({ data, onUpdate, errors: _errors }: TriggerNodeConfigProps) {
+    // Use ref to avoid infinite update loops when onUpdate changes
+    const onUpdateRef = useRef(onUpdate);
+    onUpdateRef.current = onUpdate;
 
-const webhookMethods = [
-    { value: "POST", label: "POST" },
-    { value: "GET", label: "GET" },
-    { value: "PUT", label: "PUT" },
-    { value: "DELETE", label: "DELETE" },
-    { value: "ANY", label: "ANY" }
-];
+    // Provider trigger state
+    const [selectedProvider, setSelectedProvider] = useState<TriggerProviderSummary | null>(
+        data.providerId
+            ? ({
+                  providerId: data.providerId as string,
+                  name: (data.providerName as string) || (data.providerId as string),
+                  description: "",
+                  icon: "",
+                  category: "",
+                  eventCount: 0,
+                  requiresConnection: true,
+                  webhookSetupType: "automatic" as const
+              } as TriggerProviderSummary)
+            : null
+    );
+    const [selectedEvent, setSelectedEvent] = useState<TriggerEvent | null>(
+        data.eventId
+            ? ({
+                  id: data.eventId as string,
+                  name: (data.eventName as string) || (data.eventId as string),
+                  description: "",
+                  configFields: (data.eventConfigFields as TriggerConfigField[]) || []
+              } as TriggerEvent)
+            : null
+    );
+    const [eventConfig, setEventConfig] = useState<Record<string, unknown>>(
+        (data.eventConfig as Record<string, unknown>) || {}
+    );
 
-const authTypes = [
-    { value: "none", label: "None" },
-    { value: "api_key", label: "API Key" },
-    { value: "hmac", label: "HMAC Signature" },
-    { value: "bearer", label: "Bearer Token" }
-];
+    // Multi-step view state
+    const [viewState, setViewState] = useState<ViewState>(() => {
+        if (selectedEvent) return "event-config";
+        if (selectedProvider) return "event-list";
+        return "provider-list";
+    });
 
-const timezones = [
-    { value: "UTC", label: "UTC" },
-    { value: "America/New_York", label: "Eastern Time (US)" },
-    { value: "America/Chicago", label: "Central Time (US)" },
-    { value: "America/Denver", label: "Mountain Time (US)" },
-    { value: "America/Los_Angeles", label: "Pacific Time (US)" },
-    { value: "Europe/London", label: "London" },
-    { value: "Europe/Paris", label: "Paris" },
-    { value: "Asia/Tokyo", label: "Tokyo" },
-    { value: "Asia/Shanghai", label: "Shanghai" },
-    { value: "Australia/Sydney", label: "Sydney" }
-];
-
-export function TriggerNodeConfig({ data, onUpdate }: TriggerNodeConfigProps) {
-    const [triggerType, setTriggerType] = useState((data.triggerType as string) || "manual");
-    const [enabled, setEnabled] = useState((data.enabled as boolean) ?? true);
-
-    // Schedule config
-    const [cronExpression, setCronExpression] = useState((data.cronExpression as string) || "");
-    const [timezone, setTimezone] = useState((data.timezone as string) || "UTC");
-    const [cronPreset, setCronPreset] = useState("custom");
-
-    // Webhook config
-    const [webhookMethod, setWebhookMethod] = useState((data.webhookMethod as string) || "POST");
-    const [authType, setAuthType] = useState((data.authType as string) || "none");
-    // webhookUrl is read-only, generated by backend when workflow is saved
-    const webhookUrl = (data.webhookUrl as string) || "";
-
-    // Manual config
-    const [description, setDescription] = useState((data.description as string) || "");
-    const [inputSchema, setInputSchema] = useState((data.inputSchema as string) || "");
-
-    useEffect(() => {
+    // Build and send config to parent
+    const updateConfig = useCallback(() => {
         const config: Record<string, unknown> = {
-            triggerType,
-            enabled
+            triggerType: "provider"
         };
 
-        if (triggerType === "schedule") {
-            config.cronExpression = cronExpression;
-            config.timezone = timezone;
-        } else if (triggerType === "webhook") {
-            config.webhookMethod = webhookMethod;
-            config.authType = authType;
-            if (webhookUrl) config.webhookUrl = webhookUrl;
-        } else if (triggerType === "manual") {
-            if (description) config.description = description;
-            if (inputSchema) {
-                try {
-                    config.inputSchema = JSON.parse(inputSchema);
-                } catch {
-                    // Keep as string if invalid JSON
-                    config.inputSchema = inputSchema;
+        if (selectedProvider && selectedEvent) {
+            config.providerId = selectedProvider.providerId;
+            config.providerName = selectedProvider.name;
+            config.eventId = selectedEvent.id;
+            config.eventName = selectedEvent.name;
+            config.eventConfig = eventConfig;
+            config.eventConfigFields = selectedEvent.configFields;
+            // For display purposes - include provider name in label
+            config.label = `${selectedProvider.name} ${selectedEvent.name}`;
+        }
+
+        onUpdateRef.current(config);
+    }, [selectedProvider, selectedEvent, eventConfig]);
+
+    useEffect(() => {
+        updateConfig();
+    }, [updateConfig]);
+
+    const handleSelectProvider = (provider: TriggerProviderSummary) => {
+        setSelectedProvider(provider);
+        setSelectedEvent(null);
+        setEventConfig({});
+        setViewState("event-list");
+    };
+
+    const handleSelectEvent = (event: TriggerEvent) => {
+        setSelectedEvent(event);
+        // Initialize event config with default values
+        const initialConfig: Record<string, unknown> = {};
+        if (event.configFields) {
+            for (const field of event.configFields) {
+                if (field.defaultValue !== undefined) {
+                    initialConfig[field.name] = field.defaultValue;
                 }
             }
         }
-
-        onUpdate(config);
-    }, [
-        triggerType,
-        enabled,
-        cronExpression,
-        timezone,
-        webhookMethod,
-        authType,
-        description,
-        inputSchema
-    ]);
-
-    const handleCronPresetChange = (value: string) => {
-        setCronPreset(value);
-        if (value !== "custom") {
-            setCronExpression(value);
-        }
+        setEventConfig(initialConfig);
+        setViewState("event-config");
     };
 
-    const copyWebhookUrl = () => {
-        if (webhookUrl) {
-            navigator.clipboard.writeText(webhookUrl);
-        }
+    const handleBackToProviders = () => {
+        setSelectedProvider(null);
+        setSelectedEvent(null);
+        setEventConfig({});
+        setViewState("provider-list");
     };
+
+    const handleBackToEvents = () => {
+        setSelectedEvent(null);
+        setEventConfig({});
+        setViewState("event-list");
+    };
+
+    const handleEventConfigChange = (fieldName: string, value: unknown) => {
+        setEventConfig((prev) => ({ ...prev, [fieldName]: value }));
+    };
+
+    // Render provider selection
+    if (viewState === "provider-list") {
+        return (
+            <FormSection title="Select Integration">
+                <p className="text-sm text-muted-foreground mb-3">
+                    Please select an integration for your trigger.
+                </p>
+                <TriggerProviderList onSelectProvider={handleSelectProvider} />
+            </FormSection>
+        );
+    }
+
+    // Render event selection
+    if (viewState === "event-list" && selectedProvider) {
+        return (
+            <FormSection title="Select Trigger">
+                <TriggerEventList
+                    provider={selectedProvider}
+                    onSelectEvent={handleSelectEvent}
+                    onBack={handleBackToProviders}
+                />
+            </FormSection>
+        );
+    }
+
+    // Render event configuration
+    if (viewState === "event-config" && selectedProvider && selectedEvent) {
+        return (
+            <ProviderEventConfig
+                provider={selectedProvider}
+                event={selectedEvent}
+                eventConfig={eventConfig}
+                onEventConfigChange={handleEventConfigChange}
+                onBackToEvents={handleBackToEvents}
+                onBackToProviders={handleBackToProviders}
+            />
+        );
+    }
+
+    // Fallback - should not reach here
+    return (
+        <FormSection title="Select Integration">
+            <p className="text-sm text-muted-foreground mb-3">
+                Please select an integration for your trigger.
+            </p>
+            <TriggerProviderList onSelectProvider={handleSelectProvider} />
+        </FormSection>
+    );
+}
+
+// Provider Event Configuration Component
+interface ProviderEventConfigProps {
+    provider: TriggerProviderSummary;
+    event: TriggerEvent;
+    eventConfig: Record<string, unknown>;
+    onEventConfigChange: (fieldName: string, value: unknown) => void;
+    onBackToEvents: () => void;
+    onBackToProviders: () => void;
+}
+
+function ProviderEventConfig({
+    provider,
+    event,
+    eventConfig,
+    onEventConfigChange,
+    onBackToEvents,
+    onBackToProviders
+}: ProviderEventConfigProps) {
+    const [imageError, setImageError] = useState(false);
 
     return (
-        <div>
-            <FormSection title="Trigger Configuration">
-                <FormField label="Trigger Type" description="How this workflow is started">
-                    <Select value={triggerType} onChange={setTriggerType} options={triggerTypes} />
-                </FormField>
+        <FormSection title="Trigger Configuration">
+            {/* Header with provider/event info */}
+            <div className="p-3 bg-muted/30 rounded-lg border border-border">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center overflow-hidden">
+                        {imageError ? (
+                            <Zap className="w-5 h-5 text-muted-foreground" />
+                        ) : (
+                            <img
+                                src={getProviderLogo(provider.providerId)}
+                                alt={provider.name}
+                                className="w-6 h-6 object-contain"
+                                onError={() => setImageError(true)}
+                            />
+                        )}
+                    </div>
+                    <div className="flex-1">
+                        <h3 className="font-medium text-sm">{event.name}</h3>
+                        <p className="text-xs text-muted-foreground">{provider.name}</p>
+                    </div>
+                </div>
+                {event.description && (
+                    <p className="text-xs text-muted-foreground mt-2">{event.description}</p>
+                )}
 
-                <FormField label="Enable Trigger">
+                {/* Navigation */}
+                <div className="flex gap-2 mt-3">
+                    <button
+                        onClick={onBackToEvents}
+                        className={cn(
+                            "text-xs px-2 py-1 rounded",
+                            "bg-muted hover:bg-muted/80 transition-colors",
+                            "flex items-center gap-1"
+                        )}
+                    >
+                        <ChevronLeft className="w-3 h-3" />
+                        Change trigger
+                    </button>
+                    <button
+                        onClick={onBackToProviders}
+                        className={cn(
+                            "text-xs px-2 py-1 rounded",
+                            "bg-muted hover:bg-muted/80 transition-colors",
+                            "flex items-center gap-1"
+                        )}
+                    >
+                        <ChevronLeft className="w-3 h-3" />
+                        Change provider
+                    </button>
+                </div>
+            </div>
+
+            {/* Event-specific Configuration Fields */}
+            {event.configFields && event.configFields.length > 0 && (
+                <div className="space-y-3 pt-3 border-t border-border">
+                    <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        Configuration
+                    </h4>
+                    {event.configFields.map((field) => (
+                        <EventConfigField
+                            key={field.name}
+                            field={field}
+                            value={eventConfig[field.name]}
+                            onChange={(value) => onEventConfigChange(field.name, value)}
+                        />
+                    ))}
+                </div>
+            )}
+
+            {/* Connection requirement notice */}
+            {provider.requiresConnection && (
+                <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                    <p className="text-xs text-amber-600 dark:text-amber-400">
+                        This trigger requires a connection to {provider.name}. You&apos;ll need to
+                        connect your account in the Connections page.
+                    </p>
+                </div>
+            )}
+
+            {/* Webhook setup info */}
+            {provider.webhookSetupType === "manual" && (
+                <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                    <p className="text-xs text-blue-600 dark:text-blue-400">
+                        After saving, you&apos;ll receive a webhook URL to configure in{" "}
+                        {provider.name}.
+                    </p>
+                </div>
+            )}
+
+            {provider.webhookSetupType === "polling" && (
+                <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                    <p className="text-xs text-blue-600 dark:text-blue-400">
+                        This trigger uses polling to check for changes every few minutes.
+                    </p>
+                </div>
+            )}
+        </FormSection>
+    );
+}
+
+// Event Config Field Component
+interface EventConfigFieldProps {
+    field: TriggerConfigField;
+    value: unknown;
+    onChange: (value: unknown) => void;
+}
+
+function EventConfigField({ field, value, onChange }: EventConfigFieldProps) {
+    const renderField = () => {
+        switch (field.type) {
+            case "text":
+                return (
+                    <Input
+                        type="text"
+                        value={(value as string) || ""}
+                        onChange={(e) => onChange(e.target.value)}
+                        placeholder={field.placeholder}
+                    />
+                );
+
+            case "number":
+                return (
+                    <Input
+                        type="number"
+                        value={(value as number) || ""}
+                        onChange={(e) => onChange(Number(e.target.value))}
+                        placeholder={field.placeholder}
+                    />
+                );
+
+            case "boolean":
+                return (
                     <label className="flex items-center gap-2 cursor-pointer">
                         <Input
                             type="checkbox"
-                            checked={enabled}
-                            onChange={(e) => setEnabled(e.target.checked)}
+                            checked={(value as boolean) || false}
+                            onChange={(e) => onChange(e.target.checked)}
                             className="w-4 h-4 rounded border-border text-primary focus:ring-2 focus:ring-primary/20"
                         />
-                        <span className="text-sm">
-                            {enabled ? "Trigger is active" : "Trigger is disabled"}
-                        </span>
+                        <span className="text-sm">{field.description || "Enabled"}</span>
                     </label>
-                </FormField>
-            </FormSection>
+                );
 
-            {triggerType === "schedule" && (
-                <FormSection title="Schedule Settings">
-                    <FormField label="Preset">
-                        <Select
-                            value={cronPreset}
-                            onChange={handleCronPresetChange}
-                            options={cronPresets}
-                        />
-                    </FormField>
-
-                    <FormField
-                        label="Cron Expression"
-                        description="Standard cron format: minute hour day month weekday"
-                    >
+            case "select":
+                if (field.dynamicOptions) {
+                    return (
                         <Input
                             type="text"
-                            value={cronExpression}
-                            onChange={(e) => {
-                                setCronExpression(e.target.value);
-                                setCronPreset("custom");
-                            }}
-                            placeholder="0 9 * * 1-5"
-                            className="font-mono"
+                            value={(value as string) || ""}
+                            onChange={(e) => onChange(e.target.value)}
+                            placeholder={`Enter ${field.label.toLowerCase()}`}
                         />
-                    </FormField>
+                    );
+                }
+                return (
+                    <Select
+                        value={(value as string) || ""}
+                        onChange={onChange}
+                        options={
+                            field.options?.map((opt) => ({
+                                value: opt.value,
+                                label: opt.label
+                            })) || []
+                        }
+                    />
+                );
 
-                    <FormField label="Timezone">
-                        <Select value={timezone} onChange={setTimezone} options={timezones} />
-                    </FormField>
-
-                    {cronExpression && (
-                        <div className="p-3 bg-muted/50 rounded-lg border border-border">
-                            <p className="text-xs text-muted-foreground">
-                                Preview: Next runs will be calculated when saved
-                            </p>
-                        </div>
-                    )}
-                </FormSection>
-            )}
-
-            {triggerType === "webhook" && (
-                <FormSection title="Webhook Settings">
-                    <FormField label="HTTP Method">
-                        <Select
-                            value={webhookMethod}
-                            onChange={setWebhookMethod}
-                            options={webhookMethods}
-                        />
-                    </FormField>
-
-                    <FormField label="Authentication">
-                        <Select value={authType} onChange={setAuthType} options={authTypes} />
-                    </FormField>
-
-                    {webhookUrl ? (
-                        <FormField label="Webhook URL">
-                            <div className="flex gap-2">
-                                <Input
-                                    type="text"
-                                    value={webhookUrl}
-                                    readOnly
-                                    className="font-mono text-xs flex-1"
-                                />
-                                <button
-                                    onClick={copyWebhookUrl}
-                                    className="p-2 hover:bg-muted rounded transition-colors"
-                                    title="Copy URL"
+            case "multiselect":
+                return (
+                    <div className="space-y-2">
+                        {field.options?.map((opt) => {
+                            const selectedValues = (value as string[]) || [];
+                            const isChecked = selectedValues.includes(opt.value);
+                            return (
+                                <label
+                                    key={opt.value}
+                                    className="flex items-center gap-2 cursor-pointer"
                                 >
-                                    <Copy className="w-4 h-4" />
-                                </button>
-                                <a
-                                    href={webhookUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="p-2 hover:bg-muted rounded transition-colors"
-                                    title="Open URL"
-                                >
-                                    <ExternalLink className="w-4 h-4" />
-                                </a>
-                            </div>
-                        </FormField>
-                    ) : (
-                        <div className="p-3 bg-muted/50 rounded-lg border border-border">
-                            <p className="text-xs text-muted-foreground">
-                                Webhook URL will be generated when the workflow is saved
-                            </p>
-                        </div>
-                    )}
-                </FormSection>
-            )}
-
-            {triggerType === "manual" && (
-                <FormSection title="Manual Trigger Settings">
-                    <FormField
-                        label="Description"
-                        description="Help text shown when triggering manually"
-                    >
-                        <Textarea
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                            placeholder="Describe what this workflow does..."
-                            rows={2}
-                        />
-                    </FormField>
-
-                    <FormField
-                        label="Input Schema (JSON)"
-                        description="Optional JSON schema for required inputs"
-                    >
-                        <Textarea
-                            value={inputSchema}
-                            onChange={(e) => setInputSchema(e.target.value)}
-                            placeholder='{ "type": "object", "properties": { ... } }'
-                            rows={4}
-                            className="font-mono text-xs"
-                        />
-                    </FormField>
-                </FormSection>
-            )}
-
-            {triggerType === "event" && (
-                <FormSection title="Event Settings">
-                    <div className="p-3 bg-muted/50 rounded-lg border border-border">
-                        <p className="text-xs text-muted-foreground">
-                            Event triggers are configured through external integrations. Select
-                            integration webhooks to trigger this workflow.
-                        </p>
+                                    <Input
+                                        type="checkbox"
+                                        checked={isChecked}
+                                        onChange={(e) => {
+                                            if (e.target.checked) {
+                                                onChange([...selectedValues, opt.value]);
+                                            } else {
+                                                onChange(
+                                                    selectedValues.filter((v) => v !== opt.value)
+                                                );
+                                            }
+                                        }}
+                                        className="w-4 h-4 rounded border-border text-primary focus:ring-2 focus:ring-primary/20"
+                                    />
+                                    <span className="text-sm">{opt.label}</span>
+                                </label>
+                            );
+                        })}
                     </div>
-                </FormSection>
-            )}
-        </div>
+                );
+
+            case "json":
+                return (
+                    <Textarea
+                        value={
+                            typeof value === "string" ? value : JSON.stringify(value || {}, null, 2)
+                        }
+                        onChange={(e) => {
+                            try {
+                                onChange(JSON.parse(e.target.value));
+                            } catch {
+                                onChange(e.target.value);
+                            }
+                        }}
+                        placeholder={field.placeholder || "{}"}
+                        rows={4}
+                        className="font-mono text-xs"
+                    />
+                );
+
+            default:
+                return (
+                    <Input
+                        type="text"
+                        value={(value as string) || ""}
+                        onChange={(e) => onChange(e.target.value)}
+                        placeholder={field.placeholder}
+                    />
+                );
+        }
+    };
+
+    const labelWithRequired = field.required ? `${field.label} *` : field.label;
+
+    return (
+        <FormField
+            label={labelWithRequired}
+            description={field.type !== "boolean" ? field.description : undefined}
+        >
+            {renderField()}
+        </FormField>
     );
 }

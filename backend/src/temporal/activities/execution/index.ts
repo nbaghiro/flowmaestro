@@ -88,77 +88,66 @@ export {
     RouterNodeHandler,
     createRouterNodeHandler,
     type RouterNodeConfig,
-    type RouterNodeResult
-} from "./handlers/ai";
-
-// ============================================================================
-// DATA HANDLERS
-// ============================================================================
-
-export {
-    // Transform
-    executeTransformNode,
-    TransformNodeHandler,
-    createTransformNodeHandler,
-    type TransformNodeConfig,
-    type TransformNodeResult,
-    // Variable
-    executeVariableNode,
-    VariableNodeHandler,
-    createVariableNodeHandler,
-    type VariableNodeConfig,
-    type VariableNodeResult,
-    // Output
-    executeOutputNode,
-    OutputNodeHandler,
-    createOutputNodeHandler,
-    type OutputNodeConfig,
-    type OutputNodeResult
-} from "./handlers/data";
-
-// ============================================================================
-// INTEGRATION HANDLERS
-// ============================================================================
-
-export {
-    // HTTP
-    executeHTTPNode,
-    HTTPNodeHandler,
-    createHTTPNodeHandler,
-    type HTTPNodeConfig,
-    type HTTPNodeResult,
-    // Code
-    executeCodeNode,
-    CodeNodeHandler,
-    createCodeNodeHandler,
-    type CodeNodeConfig,
-    type CodeNodeResult,
-    // Database
-    executeDatabaseNode,
-    closeDatabaseConnections,
-    DatabaseNodeHandler,
-    createDatabaseNodeHandler,
-    type DatabaseNodeConfig,
-    type DatabaseNodeResult,
-    // File Operations
-    executeFileOperationsNode,
-    FileOperationsNodeHandler,
-    createFileOperationsNodeHandler,
-    type FileOperationsNodeConfig,
-    type FileOperationsNodeResult,
-    // Integration
-    executeIntegrationNode,
-    IntegrationNodeHandler,
-    createIntegrationNodeHandler,
-    type IntegrationNodeConfig,
-    type IntegrationNodeResult,
+    type RouterNodeResult,
     // Knowledge Base Query
     executeKnowledgeBaseQueryNode,
     KnowledgeBaseQueryNodeHandler,
     createKnowledgeBaseQueryNodeHandler,
     type KnowledgeBaseQueryNodeConfig,
     type KnowledgeBaseQueryNodeResult
-} from "./handlers/integrations";
+} from "./handlers/ai";
+
+// ============================================================================
+// INPUTS HANDLERS
+// ============================================================================
+
+export {
+    // Input
+    InputNodeHandler,
+    createInputNodeHandler,
+    type InputNodeConfig,
+    type InputNodeResult,
+    // Files
+    FilesNodeHandler,
+    createFilesNodeHandler,
+    type FilesNodeConfig,
+    // URL
+    URLNodeHandler,
+    createURLNodeHandler,
+    type URLNodeConfig,
+    type URLNodeResult,
+    type FetchedURL,
+    // Audio Input (STT)
+    AudioInputNodeHandler,
+    createAudioInputNodeHandler,
+    type AudioInputNodeConfig,
+    type AudioInputNodeResult,
+    type AudioInputData
+} from "./handlers/inputs";
+
+// ============================================================================
+// OUTPUTS HANDLERS
+// ============================================================================
+
+export {
+    // Output
+    executeOutputNode,
+    OutputNodeHandler,
+    createOutputNodeHandler,
+    type OutputNodeConfig,
+    type OutputNodeResult,
+    // Action
+    executeActionNode,
+    ActionNodeHandler,
+    createActionNodeHandler,
+    type ActionNodeConfig,
+    type ActionNodeResult,
+    // Audio Output (TTS)
+    AudioOutputNodeHandler,
+    createAudioOutputNodeHandler,
+    type AudioOutputNodeConfig,
+    type AudioOutputNodeResult
+} from "./handlers/outputs";
 
 // ============================================================================
 // LOGIC HANDLERS
@@ -189,21 +178,70 @@ export {
     WaitNodeHandler,
     createWaitNodeHandler,
     type WaitNodeConfig,
-    type WaitNodeResult
+    type WaitNodeResult,
+    // Wait for User
+    WaitForUserNodeHandler,
+    createWaitForUserNodeHandler,
+    type WaitForUserNodeConfig,
+    type WaitForUserNodeResult,
+    // Transform
+    executeTransformNode,
+    TransformNodeHandler,
+    createTransformNodeHandler,
+    type TransformNodeConfig,
+    type TransformNodeResult,
+    // Variable
+    executeVariableNode,
+    VariableNodeHandler,
+    createVariableNodeHandler,
+    type VariableNodeConfig,
+    type VariableNodeResult,
+    // Code
+    executeCodeNode,
+    CodeNodeHandler,
+    createCodeNodeHandler,
+    type CodeNodeConfig,
+    type CodeNodeResult
 } from "./handlers/logic";
 
 // ============================================================================
-// CONTROL HANDLERS
+// UTILS HANDLERS
 // ============================================================================
 
 export {
-    // Input
-    executeInputNode,
-    InputNodeHandler,
-    createInputNodeHandler,
-    type InputNodeConfig,
-    type InputNodeResult
-} from "./handlers/control";
+    // HTTP
+    executeHTTPNode,
+    HTTPNodeHandler,
+    createHTTPNodeHandler,
+    type HTTPNodeConfig,
+    type HTTPNodeResult,
+    // Database
+    executeDatabaseNode,
+    closeDatabaseConnections,
+    DatabaseNodeHandler,
+    createDatabaseNodeHandler,
+    type DatabaseNodeConfig,
+    type DatabaseNodeResult
+} from "./handlers/utils";
+
+// ============================================================================
+// INTEGRATION HANDLERS
+// ============================================================================
+
+export {
+    // File Operations
+    executeFileOperationsNode,
+    FileOperationsNodeHandler,
+    createFileOperationsNodeHandler,
+    type FileOperationsNodeConfig,
+    type FileOperationsNodeResult,
+    // Integration
+    executeIntegrationNode,
+    IntegrationNodeHandler,
+    createIntegrationNodeHandler,
+    type IntegrationNodeConfig,
+    type IntegrationNodeResult
+} from "./handlers/integrations";
 
 // ============================================================================
 // GENERIC HANDLERS
@@ -222,7 +260,6 @@ export {
 // HANDLER REGISTRATION HELPER
 // ============================================================================
 
-// AI
 import type { JsonObject, JsonValue } from "@flowmaestro/shared";
 import { createContext, type ContextSnapshot } from "../../core";
 import {
@@ -230,37 +267,46 @@ import {
     createPassThroughNodeHandler,
     createNoOpNodeHandler
 } from "./generic";
+// AI
 import {
     createLLMNodeHandler,
     createVisionNodeHandler,
     createAudioNodeHandler,
     createEmbeddingsNodeHandler,
-    createRouterNodeHandler
-} from "./handlers/ai";
-// Control
-import { createInputNodeHandler } from "./handlers/control";
-// Data
-import {
-    createTransformNodeHandler,
-    createVariableNodeHandler,
-    createOutputNodeHandler
-} from "./handlers/data";
-// Integrations
-import {
-    createHTTPNodeHandler,
-    createCodeNodeHandler,
-    createDatabaseNodeHandler,
-    createFileOperationsNodeHandler,
-    createIntegrationNodeHandler,
+    createRouterNodeHandler,
     createKnowledgeBaseQueryNodeHandler
+} from "./handlers/ai";
+// Inputs
+import {
+    createInputNodeHandler,
+    createFilesNodeHandler,
+    createURLNodeHandler,
+    createAudioInputNodeHandler
+} from "./handlers/inputs";
+// Outputs
+import {
+    createFileOperationsNodeHandler,
+    createIntegrationNodeHandler
 } from "./handlers/integrations";
-// Logic
 import {
     createConditionalNodeHandler,
     createSwitchNodeHandler,
     createLoopNodeHandler,
-    createWaitNodeHandler
+    createWaitNodeHandler,
+    createWaitForUserNodeHandler,
+    createTransformNodeHandler,
+    createVariableNodeHandler,
+    createCodeNodeHandler
 } from "./handlers/logic";
+import {
+    createOutputNodeHandler,
+    createActionNodeHandler,
+    createAudioOutputNodeHandler
+} from "./handlers/outputs";
+// Logic
+// Utils
+import { createHTTPNodeHandler, createDatabaseNodeHandler } from "./handlers/utils";
+// Integrations
 
 /**
  * Register all default handlers with the registry.
@@ -273,26 +319,36 @@ export function registerDefaultHandlers(): void {
     registerHandler(createAudioNodeHandler(), "ai", 12);
     registerHandler(createEmbeddingsNodeHandler(), "ai", 13);
     registerHandler(createRouterNodeHandler(), "ai", 14);
+    registerHandler(createKnowledgeBaseQueryNodeHandler(), "ai", 15);
 
-    // Data handlers (priority 20-29)
-    registerHandler(createTransformNodeHandler(), "data", 20);
-    registerHandler(createVariableNodeHandler(), "data", 21);
-    registerHandler(createOutputNodeHandler(), "data", 22);
+    // Inputs handlers (priority 20-29)
+    registerHandler(createInputNodeHandler(), "inputs", 20);
+    registerHandler(createFilesNodeHandler(), "inputs", 21);
+    registerHandler(createURLNodeHandler(), "inputs", 22);
+    registerHandler(createAudioInputNodeHandler(), "inputs", 23);
 
-    // Integration handlers (priority 30-39)
-    registerHandler(createHTTPNodeHandler(), "integration", 30);
-    registerHandler(createCodeNodeHandler(), "integration", 31);
-    registerHandler(createDatabaseNodeHandler(), "integration", 32);
-    registerHandler(createFileOperationsNodeHandler(), "integration", 33);
-    registerHandler(createIntegrationNodeHandler(), "integration", 34);
-    registerHandler(createKnowledgeBaseQueryNodeHandler(), "integration", 35);
+    // Outputs handlers (priority 30-39)
+    registerHandler(createOutputNodeHandler(), "outputs", 30);
+    registerHandler(createActionNodeHandler(), "outputs", 31);
+    registerHandler(createAudioOutputNodeHandler(), "outputs", 32);
 
     // Logic handlers (priority 40-49)
     registerHandler(createConditionalNodeHandler(), "logic", 40);
     registerHandler(createSwitchNodeHandler(), "logic", 41);
     registerHandler(createLoopNodeHandler(), "logic", 42);
-    registerHandler(createWaitNodeHandler(), "control", 43);
-    registerHandler(createInputNodeHandler(), "control", 44);
+    registerHandler(createWaitNodeHandler(), "logic", 43);
+    registerHandler(createWaitForUserNodeHandler(), "logic", 44);
+    registerHandler(createTransformNodeHandler(), "logic", 45);
+    registerHandler(createVariableNodeHandler(), "logic", 46);
+    registerHandler(createCodeNodeHandler(), "logic", 47);
+
+    // Utils handlers (priority 50-59)
+    registerHandler(createHTTPNodeHandler(), "utils", 50);
+    registerHandler(createDatabaseNodeHandler(), "utils", 51);
+
+    // Integration handlers (priority 60-69)
+    registerHandler(createFileOperationsNodeHandler(), "integrations", 60);
+    registerHandler(createIntegrationNodeHandler(), "integrations", 61);
 
     // Pass-through handlers (priority 90)
     registerHandler(createPassThroughNodeHandler(), "generic", 90);

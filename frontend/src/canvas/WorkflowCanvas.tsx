@@ -15,12 +15,15 @@ import { useThemeStore } from "../stores/themeStore";
 import { useWorkflowStore } from "../stores/workflowStore";
 import { CustomEdge } from "./edges/CustomEdge";
 // Import all node components
-import AudioNode from "./nodes/AudioNode";
+import ActionNode from "./nodes/ActionNode";
+import AudioInputNode from "./nodes/AudioInputNode";
+import AudioOutputNode from "./nodes/AudioOutputNode";
 import CodeNode from "./nodes/CodeNode";
 import CommentNode from "./nodes/CommentNode";
 import ConditionalNode from "./nodes/ConditionalNode";
 import DatabaseNode from "./nodes/DatabaseNode";
 import EmbeddingsNode from "./nodes/EmbeddingsNode";
+import FilesNode from "./nodes/FilesNode";
 import HTTPNode from "./nodes/HTTPNode";
 import InputNode from "./nodes/InputNode";
 import IntegrationNode from "./nodes/IntegrationNode";
@@ -32,8 +35,10 @@ import RouterNode from "./nodes/RouterNode";
 import SwitchNode from "./nodes/SwitchNode";
 import TransformNode from "./nodes/TransformNode";
 import TriggerNode from "./nodes/TriggerNode";
+import URLNode from "./nodes/URLNode";
 import VariableNode from "./nodes/VariableNode";
 import VisionNode from "./nodes/VisionNode";
+import WaitForUserNode from "./nodes/WaitForUserNode";
 import WaitNode from "./nodes/WaitNode";
 
 // Register edge types
@@ -54,15 +59,11 @@ ALL_PROVIDERS.filter((p) => !p.comingSoon && !AI_PROVIDER_IDS.includes(p.provide
 );
 
 // Register node types
-// Note: Visual variant nodes (files, url, audioInput, action, audioOutput) use the same
-// base component as their parent type (InputNode, OutputNode). The variant-specific
-// config is set when the node is dropped via getDefaultData().
 const nodeTypes = {
     comment: CommentNode,
     trigger: TriggerNode,
     llm: LLMNode,
     vision: VisionNode,
-    audio: AudioNode,
     embeddings: EmbeddingsNode,
     router: RouterNode,
     conditional: ConditionalNode,
@@ -70,6 +71,7 @@ const nodeTypes = {
     loop: LoopNode,
     code: CodeNode,
     wait: WaitNode,
+    waitForUser: WaitForUserNode,
     input: InputNode,
     transform: TransformNode,
     variable: VariableNode,
@@ -78,12 +80,12 @@ const nodeTypes = {
     database: DatabaseNode,
     integration: IntegrationNode,
     knowledgeBaseQuery: KnowledgeBaseQueryNode,
-    // Visual variant nodes use base components
-    files: InputNode,
-    url: InputNode,
-    audioInput: InputNode,
-    action: OutputNode,
-    audioOutput: OutputNode,
+    // Dedicated input/output nodes
+    files: FilesNode,
+    url: URLNode,
+    audioInput: AudioInputNode,
+    audioOutput: AudioOutputNode,
+    action: ActionNode,
     // Integration provider nodes (dynamically generated)
     ...integrationProviderNodeTypes
 };
@@ -245,13 +247,51 @@ function getDefaultData(type: string): Record<string, unknown> {
     // Add preset configs for visual variant nodes
     switch (type) {
         case "files":
-            return { ...baseData, inputType: "file" };
+            return {
+                ...baseData,
+                exposeAsInput: true,
+                enableParsing: true,
+                chunkingAlgorithm: "sentence",
+                chunkOverlap: 1000,
+                chunkSize: 2500,
+                advancedExtraction: false,
+                ocrEnabled: false,
+                // Backend compatibility fields
+                inputName: "files",
+                outputVariable: "processedFiles",
+                required: true
+            };
         case "url":
-            return { ...baseData, inputType: "url" };
+            return {
+                ...baseData,
+                urls: [],
+                // Scraping options
+                scrapingMode: "html",
+                scrapeSubpages: false,
+                timeout: 30,
+                followRedirects: true,
+                // Chunking settings
+                chunkingAlgorithm: "sentence",
+                chunkOverlap: 1000,
+                chunkSize: 2500,
+                advancedExtraction: false,
+                ocrEnabled: false,
+                // Input/Output
+                inputName: "urls",
+                outputVariable: "fetchedContent",
+                required: true
+            };
         case "audioInput":
             return { ...baseData, inputType: "audio" };
         case "action":
-            return { ...baseData, outputType: "action" };
+            return {
+                ...baseData,
+                provider: "",
+                operation: "",
+                connectionId: "",
+                parameters: {},
+                outputVariable: ""
+            };
         case "audioOutput":
             return { ...baseData, outputType: "audio" };
         default:

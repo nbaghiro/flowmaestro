@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import type { ValidationError } from "@flowmaestro/shared";
 import { FormField, FormSection } from "../../../components/common/FormField";
 import { Input } from "../../../components/common/Input";
 import { Select } from "../../../components/common/Select";
@@ -7,6 +8,7 @@ import { Textarea } from "../../../components/common/Textarea";
 interface OutputNodeConfigProps {
     data: Record<string, unknown>;
     onUpdate: (config: unknown) => void;
+    errors?: ValidationError[];
 }
 
 const formats = [
@@ -16,7 +18,8 @@ const formats = [
     { value: "boolean", label: "Boolean" }
 ];
 
-export function OutputNodeConfig({ data, onUpdate }: OutputNodeConfigProps) {
+export function OutputNodeConfig({ data, onUpdate, errors = [] }: OutputNodeConfigProps) {
+    const getError = (field: string) => errors.find((e) => e.field === field)?.message;
     const [outputName, setOutputName] = useState((data.outputName as string) || "result");
     const [value, setValue] = useState((data.value as string) || "");
     const [format, setFormat] = useState((data.format as string) || "json");
@@ -37,6 +40,7 @@ export function OutputNodeConfig({ data, onUpdate }: OutputNodeConfigProps) {
                 <FormField
                     label="Output Name"
                     description="Name for this output in workflow results"
+                    error={getError("outputName")}
                 >
                     <Input
                         type="text"
@@ -65,6 +69,7 @@ export function OutputNodeConfig({ data, onUpdate }: OutputNodeConfigProps) {
                 <FormField
                     label="Output Value"
                     description="Value to output (supports {{variableName}} references)"
+                    error={getError("value")}
                 >
                     <Textarea
                         value={value}

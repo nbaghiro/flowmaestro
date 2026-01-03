@@ -1,5 +1,6 @@
 import { Plus, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
+import type { ValidationError } from "@flowmaestro/shared";
 import { Button } from "../../../components/common/Button";
 import { FormField, FormSection } from "../../../components/common/FormField";
 import { Input } from "../../../components/common/Input";
@@ -10,6 +11,7 @@ import { OutputSettingsSection } from "../../../components/OutputSettingsSection
 interface HTTPNodeConfigProps {
     data: Record<string, unknown>;
     onUpdate: (config: unknown) => void;
+    errors?: ValidationError[];
 }
 
 const methods = [
@@ -38,7 +40,8 @@ interface KeyValue {
     value: string;
 }
 
-export function HTTPNodeConfig({ data, onUpdate }: HTTPNodeConfigProps) {
+export function HTTPNodeConfig({ data, onUpdate, errors = [] }: HTTPNodeConfigProps) {
+    const getError = (field: string) => errors.find((e) => e.field === field)?.message;
     // Helper function to convert object to KeyValue array
     const toKeyValueArray = (obj: unknown): KeyValue[] => {
         if (Array.isArray(obj)) return obj;
@@ -118,7 +121,11 @@ export function HTTPNodeConfig({ data, onUpdate }: HTTPNodeConfigProps) {
                     <Select value={method} onChange={setMethod} options={methods} />
                 </FormField>
 
-                <FormField label="URL" description="Supports {{variableName}} interpolation">
+                <FormField
+                    label="URL"
+                    description="Supports {{variableName}} interpolation"
+                    error={getError("url")}
+                >
                     <Input
                         type="text"
                         value={url}

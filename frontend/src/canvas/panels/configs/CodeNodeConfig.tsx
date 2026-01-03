@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import type { ValidationError } from "@flowmaestro/shared";
 import { CodeInput } from "../../../components/CodeInput";
 import { FormField, FormSection } from "../../../components/common/FormField";
 import { Input } from "../../../components/common/Input";
@@ -8,6 +9,7 @@ import { OutputSettingsSection } from "../../../components/OutputSettingsSection
 interface CodeNodeConfigProps {
     data: Record<string, unknown>;
     onUpdate: (config: unknown) => void;
+    errors?: ValidationError[];
 }
 
 const languages = [
@@ -16,7 +18,7 @@ const languages = [
     { value: "python", label: "Python" }
 ];
 
-export function CodeNodeConfig({ data, onUpdate }: CodeNodeConfigProps) {
+export function CodeNodeConfig({ data, onUpdate, errors: _errors = [] }: CodeNodeConfigProps) {
     const [language, setLanguage] = useState((data.language as string) || "javascript");
     const [code, setCode] = useState((data.code as string) || "");
     const [timeout, setTimeout] = useState((data.timeout as number) || 30);

@@ -42,10 +42,71 @@ export interface Provider {
     oauthSettings?: OAuthField[];
 }
 
-// Brandfetch Logo API client ID (used for connection modal, not node icons)
+// Brandfetch Logo API client ID
 const BRANDFETCH_CLIENT_ID = "1idCpJZqz6etuVweFEJ";
-const getBrandLogo = (domain: string): string =>
+
+/**
+ * Get a provider logo URL from Brandfetch CDN.
+ * Used for provider icons in connection modals, node configs, etc.
+ */
+export const getProviderLogoUrl = (domain: string): string =>
     `https://cdn.brandfetch.io/${domain}?c=${BRANDFETCH_CLIENT_ID}`;
+
+// Alias for internal use
+const getBrandLogo = getProviderLogoUrl;
+
+/**
+ * Domain mapping for provider IDs to their logo domains.
+ * Used when you have a provider ID and need to get its logo.
+ */
+export const PROVIDER_LOGO_DOMAINS: Record<string, string> = {
+    github: "github.com",
+    slack: "slack.com",
+    discord: "discord.com",
+    whatsapp: "whatsapp.com",
+    airtable: "airtable.com",
+    "google-sheets": "google.com",
+    "google-calendar": "google.com",
+    "google-drive": "google.com",
+    "google-docs": "google.com",
+    gmail: "google.com",
+    shopify: "shopify.com",
+    stripe: "stripe.com",
+    hubspot: "hubspot.com",
+    typeform: "typeform.com",
+    linear: "linear.app",
+    jira: "atlassian.com",
+    zendesk: "zendesk.com",
+    notion: "notion.so",
+    figma: "figma.com",
+    salesforce: "salesforce.com",
+    twitter: "x.com",
+    linkedin: "linkedin.com",
+    facebook: "facebook.com",
+    instagram: "instagram.com",
+    youtube: "youtube.com",
+    reddit: "reddit.com",
+    dropbox: "dropbox.com",
+    box: "box.com",
+    "microsoft-onedrive": "onedrive.live.com",
+    "microsoft-teams": "teams.microsoft.com",
+    "microsoft-excel": "microsoft.com",
+    "microsoft-word": "microsoft.com",
+    openai: "openai.com",
+    anthropic: "anthropic.com",
+    google: "google.com",
+    cohere: "cohere.com",
+    apollo: "apollo.io"
+};
+
+/**
+ * Get logo URL for a provider by its ID.
+ * Falls back to {providerId}.com if not in the domain map.
+ */
+export function getProviderLogo(providerId: string): string {
+    const domain = PROVIDER_LOGO_DOMAINS[providerId] || `${providerId}.com`;
+    return getProviderLogoUrl(domain);
+}
 
 /**
  * All Providers - Available and Coming Soon

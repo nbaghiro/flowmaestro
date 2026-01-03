@@ -22,7 +22,7 @@ function OutputNode({ data, selected }: NodeProps<OutputNodeData>) {
             status={data.status}
             category="outputs"
             selected={selected}
-            hasOutputHandle={true}
+            hasOutputHandle={false}
         >
             <div className="space-y-2">
                 <div className="flex items-center justify-between">

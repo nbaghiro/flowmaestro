@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { config as appConfig, getOAuthRedirectUri } from "../../../core/config";
 import { BaseProvider } from "../../core/BaseProvider";
 import { ShopifyClient } from "./client/ShopifyClient";
@@ -45,7 +46,8 @@ import type {
     MCPTool,
     OperationResult,
     OAuthConfig,
-    ProviderCapabilities
+    ProviderCapabilities,
+    WebhookRequestData
 } from "../../core/types";
 
 /**
@@ -100,6 +102,179 @@ export class ShopifyProvider extends BaseProvider {
 
         // Initialize MCP adapter
         this.mcpAdapter = new ShopifyMCPAdapter(this.operations);
+
+        // Configure webhook settings
+        this.setWebhookConfig({
+            setupType: "automatic", // Shopify webhooks registered via API
+            signatureType: "hmac_sha256",
+            signatureHeader: "X-Shopify-Hmac-SHA256",
+            eventHeader: "X-Shopify-Topic"
+        });
+
+        // Register order triggers
+        this.registerTrigger({
+            id: "orders/create",
+            name: "Order Created",
+            description: "Triggered when a new order is placed",
+            requiredScopes: ["read_orders"],
+            configFields: [],
+            tags: ["orders", "sales"]
+        });
+
+        this.registerTrigger({
+            id: "orders/updated",
+            name: "Order Updated",
+            description: "Triggered when an order is modified",
+            requiredScopes: ["read_orders"],
+            configFields: [],
+            tags: ["orders", "sales"]
+        });
+
+        this.registerTrigger({
+            id: "orders/paid",
+            name: "Order Paid",
+            description: "Triggered when an order payment is completed",
+            requiredScopes: ["read_orders"],
+            configFields: [],
+            tags: ["orders", "payments"]
+        });
+
+        this.registerTrigger({
+            id: "orders/fulfilled",
+            name: "Order Fulfilled",
+            description: "Triggered when an order is fulfilled",
+            requiredScopes: ["read_orders"],
+            configFields: [],
+            tags: ["orders", "fulfillment"]
+        });
+
+        this.registerTrigger({
+            id: "orders/cancelled",
+            name: "Order Cancelled",
+            description: "Triggered when an order is cancelled",
+            requiredScopes: ["read_orders"],
+            configFields: [],
+            tags: ["orders", "cancellation"]
+        });
+
+        // Register product triggers
+        this.registerTrigger({
+            id: "products/create",
+            name: "Product Created",
+            description: "Triggered when a new product is created",
+            requiredScopes: ["read_products"],
+            configFields: [],
+            tags: ["products", "catalog"]
+        });
+
+        this.registerTrigger({
+            id: "products/update",
+            name: "Product Updated",
+            description: "Triggered when a product is updated",
+            requiredScopes: ["read_products"],
+            configFields: [],
+            tags: ["products", "catalog"]
+        });
+
+        this.registerTrigger({
+            id: "products/delete",
+            name: "Product Deleted",
+            description: "Triggered when a product is deleted",
+            requiredScopes: ["read_products"],
+            configFields: [],
+            tags: ["products", "catalog"]
+        });
+
+        // Register inventory triggers
+        this.registerTrigger({
+            id: "inventory_levels/update",
+            name: "Inventory Updated",
+            description: "Triggered when inventory levels change",
+            requiredScopes: ["read_inventory"],
+            configFields: [],
+            tags: ["inventory", "stock"]
+        });
+
+        // Register customer triggers
+        this.registerTrigger({
+            id: "customers/create",
+            name: "Customer Created",
+            description: "Triggered when a new customer is created",
+            requiredScopes: ["read_customers"],
+            configFields: [],
+            tags: ["customers", "crm"]
+        });
+
+        this.registerTrigger({
+            id: "customers/update",
+            name: "Customer Updated",
+            description: "Triggered when a customer is updated",
+            requiredScopes: ["read_customers"],
+            configFields: [],
+            tags: ["customers", "crm"]
+        });
+
+        // Register checkout triggers
+        this.registerTrigger({
+            id: "checkouts/create",
+            name: "Checkout Created",
+            description: "Triggered when a checkout is initiated",
+            requiredScopes: ["read_orders"],
+            configFields: [],
+            tags: ["checkout", "cart"]
+        });
+
+        this.registerTrigger({
+            id: "carts/create",
+            name: "Cart Created",
+            description: "Triggered when a cart is created",
+            requiredScopes: ["read_orders"],
+            configFields: [],
+            tags: ["cart", "shopping"]
+        });
+
+        this.registerTrigger({
+            id: "carts/update",
+            name: "Cart Updated",
+            description: "Triggered when items are added or removed from a cart",
+            requiredScopes: ["read_orders"],
+            configFields: [],
+            tags: ["cart", "shopping"]
+        });
+    }
+
+    /**
+     * Shopify-specific HMAC-SHA256 verification
+     * Uses base64 encoding
+     */
+    override verifyWebhookSignature(
+        secret: string,
+        request: WebhookRequestData
+    ): { valid: boolean; error?: string } {
+        const signatureHeader = this.getHeader(request.headers, "X-Shopify-Hmac-SHA256");
+
+        if (!signatureHeader) {
+            return { valid: false, error: "Missing X-Shopify-Hmac-SHA256 header" };
+        }
+
+        const body = this.getBodyString(request);
+
+        // Shopify uses HMAC-SHA256 with base64 encoding
+        const hmac = crypto.createHmac("sha256", secret);
+        hmac.update(body, "utf-8");
+        const computed = hmac.digest("base64");
+
+        return {
+            valid: this.timingSafeEqual(signatureHeader, computed)
+        };
+    }
+
+    /**
+     * Extract event type from Shopify webhook
+     */
+    override extractEventType(request: WebhookRequestData): string | undefined {
+        // Shopify sends event type in X-Shopify-Topic header
+        return this.getHeader(request.headers, "X-Shopify-Topic");
     }
 
     /**

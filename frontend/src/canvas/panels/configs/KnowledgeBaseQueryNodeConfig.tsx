@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
+import type { ValidationError } from "@flowmaestro/shared";
 import { FormField, FormSection } from "../../../components/common/FormField";
 import { Select } from "../../../components/common/Select";
 import { Textarea } from "../../../components/common/Textarea";
@@ -9,11 +10,13 @@ import { getKnowledgeBases, type KnowledgeBase } from "../../../lib/api";
 interface KnowledgeBaseQueryNodeConfigProps {
     data: Record<string, unknown>;
     onUpdate: (config: unknown) => void;
+    errors?: ValidationError[];
 }
 
 export function KnowledgeBaseQueryNodeConfig({
     data,
-    onUpdate
+    onUpdate,
+    errors: _errors = []
 }: KnowledgeBaseQueryNodeConfigProps) {
     const [knowledgeBaseId, setKnowledgeBaseId] = useState((data.knowledgeBaseId as string) || "");
     const [queryText, setQueryText] = useState((data.queryText as string) || "");

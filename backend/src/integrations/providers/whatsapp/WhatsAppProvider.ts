@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { config as appConfig, getOAuthRedirectUri } from "../../../core/config";
 import { BaseProvider } from "../../core/BaseProvider";
 import { WhatsAppClient } from "./client/WhatsAppClient";
@@ -27,7 +28,9 @@ import type {
     MCPTool,
     OperationResult,
     OAuthConfig,
-    ProviderCapabilities
+    ProviderCapabilities,
+    WebhookRequestData,
+    WebhookVerificationResult
 } from "../../core/types";
 
 /**
@@ -38,7 +41,7 @@ import type {
  */
 export class WhatsAppProvider extends BaseProvider {
     readonly name = "whatsapp";
-    readonly displayName = "WhatsApp Business";
+    readonly displayName = "WhatsApp";
     readonly authMethod = "oauth2" as const;
     readonly capabilities: ProviderCapabilities = {
         supportsWebhooks: true,
@@ -69,6 +72,167 @@ export class WhatsAppProvider extends BaseProvider {
 
         // Initialize MCP adapter
         this.mcpAdapter = new WhatsAppMCPAdapter(this.operations);
+
+        // Configure webhook settings (Meta Webhooks)
+        this.setWebhookConfig({
+            setupType: "manual", // Configured in Meta Developer Console
+            signatureType: "hmac_sha256",
+            signatureHeader: "X-Hub-Signature-256"
+        });
+
+        // Register trigger events
+        this.registerTrigger({
+            id: "message_received",
+            name: "Message Received",
+            description: "Triggered when a WhatsApp message is received",
+            requiredScopes: ["whatsapp_business_messaging"],
+            configFields: [
+                {
+                    name: "phoneNumberId",
+                    label: "Phone Number",
+                    type: "select",
+                    required: true,
+                    description: "Select the phone number to monitor",
+                    dynamicOptions: {
+                        operation: "getPhoneNumbers",
+                        labelField: "display_phone_number",
+                        valueField: "id"
+                    }
+                },
+                {
+                    name: "messageType",
+                    label: "Message Type",
+                    type: "select",
+                    required: false,
+                    description: "Filter by message type",
+                    options: [
+                        { value: "text", label: "Text" },
+                        { value: "image", label: "Image" },
+                        { value: "audio", label: "Audio" },
+                        { value: "video", label: "Video" },
+                        { value: "document", label: "Document" },
+                        { value: "location", label: "Location" },
+                        { value: "contacts", label: "Contacts" }
+                    ]
+                }
+            ],
+            tags: ["messages", "incoming"]
+        });
+
+        this.registerTrigger({
+            id: "message_status",
+            name: "Message Status Update",
+            description: "Triggered when a sent message status changes (delivered, read, etc.)",
+            requiredScopes: ["whatsapp_business_messaging"],
+            configFields: [
+                {
+                    name: "phoneNumberId",
+                    label: "Phone Number",
+                    type: "select",
+                    required: true,
+                    description: "Select the phone number to monitor",
+                    dynamicOptions: {
+                        operation: "getPhoneNumbers",
+                        labelField: "display_phone_number",
+                        valueField: "id"
+                    }
+                },
+                {
+                    name: "status",
+                    label: "Status",
+                    type: "select",
+                    required: false,
+                    description: "Filter by specific status",
+                    options: [
+                        { value: "sent", label: "Sent" },
+                        { value: "delivered", label: "Delivered" },
+                        { value: "read", label: "Read" },
+                        { value: "failed", label: "Failed" }
+                    ]
+                }
+            ],
+            tags: ["messages", "status"]
+        });
+
+        this.registerTrigger({
+            id: "button_clicked",
+            name: "Button Clicked",
+            description: "Triggered when a user clicks a button in an interactive message",
+            requiredScopes: ["whatsapp_business_messaging"],
+            configFields: [
+                {
+                    name: "phoneNumberId",
+                    label: "Phone Number",
+                    type: "select",
+                    required: true,
+                    description: "Select the phone number to monitor",
+                    dynamicOptions: {
+                        operation: "getPhoneNumbers",
+                        labelField: "display_phone_number",
+                        valueField: "id"
+                    }
+                }
+            ],
+            tags: ["interactive", "buttons"]
+        });
+    }
+
+    /**
+     * Meta/WhatsApp HMAC-SHA256 verification
+     */
+    override verifyWebhookSignature(
+        secret: string,
+        request: WebhookRequestData
+    ): WebhookVerificationResult {
+        const signature = this.getHeader(request.headers, "X-Hub-Signature-256");
+
+        if (!signature) {
+            return { valid: false, error: "Missing X-Hub-Signature-256 header" };
+        }
+
+        const body = this.getBodyString(request);
+
+        // Meta uses sha256=<signature> format
+        let actualSignature = signature;
+        if (actualSignature.startsWith("sha256=")) {
+            actualSignature = actualSignature.substring(7);
+        }
+
+        const hmac = crypto.createHmac("sha256", secret);
+        hmac.update(body, "utf-8");
+        const computed = hmac.digest("hex");
+
+        return {
+            valid: this.timingSafeEqual(actualSignature.toLowerCase(), computed.toLowerCase())
+        };
+    }
+
+    /**
+     * Extract event type from WhatsApp webhook
+     */
+    override extractEventType(request: WebhookRequestData): string | undefined {
+        try {
+            const body = typeof request.body === "string" ? JSON.parse(request.body) : request.body;
+
+            // WhatsApp webhook payload structure
+            const entry = body.entry?.[0];
+            const changes = entry?.changes?.[0];
+            const value = changes?.value;
+
+            if (value?.messages?.[0]) {
+                return "message_received";
+            }
+            if (value?.statuses?.[0]) {
+                return "message_status";
+            }
+            if (value?.messages?.[0]?.interactive) {
+                return "button_clicked";
+            }
+
+            return changes?.field || undefined;
+        } catch {
+            return undefined;
+        }
     }
 
     /**

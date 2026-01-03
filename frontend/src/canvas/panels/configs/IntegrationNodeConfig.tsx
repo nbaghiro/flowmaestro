@@ -1,11 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
-import { Plus } from "lucide-react";
+import { Plus, AlertTriangle } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
-import { ALL_PROVIDERS } from "@flowmaestro/shared";
+import { ALL_PROVIDERS, type ValidationError } from "@flowmaestro/shared";
 import { FormField, FormSection } from "../../../components/common/FormField";
 import { Input } from "../../../components/common/Input";
 import { Select } from "../../../components/common/Select";
 import { Textarea } from "../../../components/common/Textarea";
+import { NewConnectionDialog } from "../../../components/connections/NewConnectionDialog";
 import { ProviderConnectionDialog } from "../../../components/connections/ProviderConnectionDialog";
 import { OutputSettingsSection } from "../../../components/OutputSettingsSection";
 import {
@@ -18,13 +19,15 @@ import { useConnectionStore } from "../../../stores/connectionStore";
 interface IntegrationNodeConfigProps {
     data: Record<string, unknown>;
     onUpdate: (config: unknown) => void;
+    errors?: ValidationError[];
 }
 
 /**
  * Dynamic Integration Node Config
  * Loads providers and operations dynamically from the backend
  */
-export function IntegrationNodeConfig({ data, onUpdate }: IntegrationNodeConfigProps) {
+export function IntegrationNodeConfig({ data, onUpdate, errors = [] }: IntegrationNodeConfigProps) {
+    const getError = (field: string) => errors.find((e) => e.field === field)?.message;
     const [provider, setProvider] = useState((data.provider as string) || "");
     const [operation, setOperation] = useState((data.operation as string) || "");
     const [connectionId, setConnectionId] = useState((data.connectionId as string) || "");
@@ -33,6 +36,7 @@ export function IntegrationNodeConfig({ data, onUpdate }: IntegrationNodeConfigP
     );
     const [outputVariable, setOutputVariable] = useState((data.outputVariable as string) || "");
     const [isProviderDialogOpen, setIsProviderDialogOpen] = useState(false);
+    const [isNewConnectionDialogOpen, setIsNewConnectionDialogOpen] = useState(false);
 
     const { connections, fetchConnections } = useConnectionStore();
 
@@ -45,10 +49,10 @@ export function IntegrationNodeConfig({ data, onUpdate }: IntegrationNodeConfigP
         }
     }, [provider, fetchConnections]);
 
-    // Load operations for selected provider
+    // Load operations for selected provider (filtered for "integration" type - read operations)
     const { data: operationsData, isLoading: operationsLoading } = useQuery({
-        queryKey: ["provider-operations", provider],
-        queryFn: () => getProviderOperations(provider),
+        queryKey: ["provider-operations", provider, "integration"],
+        queryFn: () => getProviderOperations(provider, "integration"),
         enabled: !!provider
     });
 
@@ -59,12 +63,17 @@ export function IntegrationNodeConfig({ data, onUpdate }: IntegrationNodeConfigP
     const selectedConnection = connections.find((conn) => conn.id === connectionId);
     const providerInfo = ALL_PROVIDERS.find((p) => p.provider === provider);
 
-    // Set default operation when provider changes
+    // Auto-select first available connection when provider is set but no connection selected
     useEffect(() => {
-        if (operations.length > 0 && !operation) {
-            setOperation(operations[0].id);
+        if (provider && !connectionId) {
+            const availableConnections = connections.filter(
+                (conn) => conn.provider === provider && conn.status === "active"
+            );
+            if (availableConnections.length > 0) {
+                setConnectionId(availableConnections[0].id);
+            }
         }
-    }, [operations, operation]);
+    }, [provider, connectionId, connections]);
 
     // Update parent component whenever config changes
     // Use useRef to track previous values and avoid infinite loops
@@ -174,12 +183,13 @@ export function IntegrationNodeConfig({ data, onUpdate }: IntegrationNodeConfigP
     return (
         <>
             <FormSection title="Provider">
-                <FormField label="Integration Provider">
+                <FormField label="Integration Provider" error={getError("connectionId")}>
                     {provider && selectedConnection ? (
+                        // State 1: Provider selected with active connection
                         <button
                             type="button"
                             onClick={() => setIsProviderDialogOpen(true)}
-                            className="w-full flex items-start gap-3 p-3 text-left border-2 border-gray-200 rounded-lg hover:border-gray-300 hover:bg-gray-50 transition-all"
+                            className="w-full flex items-start gap-3 p-3 text-left border-2 border-border rounded-lg hover:border-border/60 hover:bg-muted transition-all"
                         >
                             {/* Provider Icon */}
                             <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center">
@@ -190,28 +200,62 @@ export function IntegrationNodeConfig({ data, onUpdate }: IntegrationNodeConfigP
                                         className="w-10 h-10 object-contain"
                                     />
                                 ) : (
-                                    <div className="w-10 h-10 bg-gray-200 rounded" />
+                                    <div className="w-10 h-10 bg-muted rounded" />
                                 )}
                             </div>
 
                             {/* Connection Info */}
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-1">
-                                    <h3 className="font-medium text-sm text-gray-900">
+                                    <h3 className="font-medium text-sm text-foreground">
                                         {providerInfo?.displayName || provider}
                                     </h3>
                                 </div>
-                                <p className="text-xs text-gray-600 truncate">
+                                <p className="text-xs text-muted-foreground truncate">
                                     {selectedConnection.name}
                                 </p>
                                 {selectedConnection.metadata?.account_info?.email && (
-                                    <p className="text-xs text-gray-500 truncate">
+                                    <p className="text-xs text-muted-foreground/80 truncate">
                                         {selectedConnection.metadata.account_info.email}
                                     </p>
                                 )}
                             </div>
                         </button>
+                    ) : provider && providerInfo ? (
+                        // State 2: Provider pre-selected but no connection - show warning
+                        <button
+                            type="button"
+                            onClick={() => setIsNewConnectionDialogOpen(true)}
+                            className="w-full flex items-start gap-3 p-3 text-left border-2 border-amber-500/50 rounded-lg hover:border-amber-500 hover:bg-amber-500/5 transition-all"
+                        >
+                            {/* Provider Icon */}
+                            <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center">
+                                {providerInfo.logoUrl ? (
+                                    <img
+                                        src={providerInfo.logoUrl}
+                                        alt={providerInfo.displayName}
+                                        className="w-10 h-10 object-contain"
+                                    />
+                                ) : (
+                                    <div className="w-10 h-10 bg-muted rounded" />
+                                )}
+                            </div>
+
+                            {/* Provider Info with Warning */}
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                    <h3 className="font-medium text-sm text-foreground">
+                                        {providerInfo.displayName}
+                                    </h3>
+                                    <AlertTriangle className="w-4 h-4 text-amber-500" />
+                                </div>
+                                <p className="text-xs text-amber-600 dark:text-amber-400">
+                                    No connection - click to connect
+                                </p>
+                            </div>
+                        </button>
                     ) : (
+                        // State 3: No provider selected
                         <button
                             type="button"
                             onClick={() => setIsProviderDialogOpen(true)}
@@ -228,7 +272,7 @@ export function IntegrationNodeConfig({ data, onUpdate }: IntegrationNodeConfigP
                 {operationsLoading ? (
                     <p className="text-sm text-muted-foreground">Loading operations...</p>
                 ) : (
-                    <FormField label="Action Type">
+                    <FormField label="Action Type" error={getError("action")}>
                         <Select
                             value={operation}
                             onChange={(val) => {
@@ -283,6 +327,33 @@ export function IntegrationNodeConfig({ data, onUpdate }: IntegrationNodeConfigP
                     setIsProviderDialogOpen(false);
                 }}
             />
+
+            {/* Direct New Connection Dialog for pre-selected providers */}
+            {providerInfo && (
+                <NewConnectionDialog
+                    isOpen={isNewConnectionDialogOpen}
+                    onClose={() => setIsNewConnectionDialogOpen(false)}
+                    provider={provider}
+                    providerDisplayName={providerInfo.displayName}
+                    providerIcon={
+                        providerInfo.logoUrl ? (
+                            <img
+                                src={providerInfo.logoUrl}
+                                alt={providerInfo.displayName}
+                                className="w-10 h-10 object-contain"
+                            />
+                        ) : undefined
+                    }
+                    onSuccess={() => {
+                        setIsNewConnectionDialogOpen(false);
+                        // Refresh connections to get the new one
+                        fetchConnections({ provider });
+                    }}
+                    supportsOAuth={providerInfo.methods.includes("oauth2")}
+                    supportsApiKey={providerInfo.methods.includes("api_key")}
+                    oauthSettings={providerInfo.oauthSettings}
+                />
+            )}
         </>
     );
 }

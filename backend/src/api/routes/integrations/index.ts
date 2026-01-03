@@ -11,9 +11,9 @@ export async function integrationRoutes(fastify: FastifyInstance) {
     fastify.get("/providers", { preHandler: [authMiddleware] }, getProvidersHandler);
 
     // Get operations for a provider
-    fastify.get<{ Params: { provider: string } }>(
-        "/providers/:provider/operations",
-        { preHandler: [authMiddleware] },
-        getOperationsHandler
-    );
+    // Query param: nodeType ("action" | "integration") for filtering by operation type
+    fastify.get<{
+        Params: { provider: string };
+        Querystring: { nodeType?: "action" | "integration" };
+    }>("/providers/:provider/operations", { preHandler: [authMiddleware] }, getOperationsHandler);
 }

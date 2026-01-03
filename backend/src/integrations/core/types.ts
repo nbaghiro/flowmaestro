@@ -29,6 +29,90 @@ export interface OperationError {
 }
 
 /**
+ * Action type for filtering operations by node type
+ * - "read": Fetch/list/get data (shown in Integration nodes)
+ * - "write": Send/create/update/delete data (shown in Action nodes)
+ */
+export type OperationActionType = "read" | "write";
+
+/**
+ * Infer the action type from an operation ID.
+ * Used when actionType is not explicitly set in the operation definition.
+ */
+export function inferActionType(operationId: string): OperationActionType {
+    const id = operationId.toLowerCase();
+
+    // Write operations: send, create, post, update, delete, add, remove, insert, reply, upload, etc.
+    const writePatterns = [
+        "send",
+        "create",
+        "post",
+        "update",
+        "delete",
+        "add",
+        "remove",
+        "insert",
+        "write",
+        "reply",
+        "upload",
+        "append",
+        "move",
+        "copy",
+        "rename",
+        "set",
+        "put",
+        "patch",
+        "edit",
+        "modify",
+        "assign",
+        "unassign",
+        "close",
+        "reopen",
+        "merge",
+        "archive",
+        "unarchive",
+        "publish",
+        "unpublish",
+        "invite",
+        "kick",
+        "ban",
+        "unban",
+        "mute",
+        "unmute",
+        "pin",
+        "unpin",
+        "star",
+        "unstar",
+        "like",
+        "unlike",
+        "follow",
+        "unfollow",
+        "subscribe",
+        "unsubscribe",
+        "trigger",
+        "execute",
+        "run",
+        "start",
+        "stop",
+        "cancel",
+        "approve",
+        "reject",
+        "dismiss",
+        "acknowledge"
+    ];
+
+    // Check if any write pattern matches
+    for (const pattern of writePatterns) {
+        if (id.includes(pattern)) {
+            return "write";
+        }
+    }
+
+    // Default to "read" for list, get, search, query, fetch, find, etc.
+    return "read";
+}
+
+/**
  * Operation definition with metadata and schemas
  */
 export interface OperationDefinition {
@@ -36,6 +120,7 @@ export interface OperationDefinition {
     name: string; // "Send Message"
     description: string;
     category: string; // "messaging", "files", "channels"
+    actionType?: OperationActionType; // Optional - will be inferred from id if not provided
     inputSchema: z.ZodSchema; // Zod for TypeScript
     inputSchemaJSON: JSONSchema; // JSON Schema for MCP
     outputSchema?: z.ZodSchema;
@@ -95,6 +180,118 @@ export interface ProviderCapabilities {
     maxRequestSize?: number;
     rateLimit?: RateLimitConfig;
     prefersMCP?: boolean;
+}
+
+// ============================================================================
+// TRIGGER TYPES
+// ============================================================================
+
+/**
+ * Categories for organizing trigger providers
+ */
+export type TriggerProviderCategory =
+    | "communication"
+    | "productivity"
+    | "crm"
+    | "developer_tools"
+    | "ecommerce"
+    | "file_storage"
+    | "marketing"
+    | "social_media"
+    | "project_management"
+    | "support"
+    | "database"
+    | "payments";
+
+/**
+ * How the webhook is set up with the external provider
+ */
+export type WebhookSetupType =
+    | "automatic" // We register webhooks via provider APIs
+    | "manual" // User must configure webhook URL in provider
+    | "polling"; // No webhooks, we poll for changes
+
+/**
+ * Signature verification method for incoming webhooks
+ */
+export type WebhookSignatureType =
+    | "hmac_sha256"
+    | "hmac_sha1"
+    | "timestamp_signature"
+    | "bearer_token"
+    | "ed25519"
+    | "none";
+
+/**
+ * Configuration field for trigger event configuration UI
+ */
+export interface TriggerConfigField {
+    name: string;
+    label: string;
+    type: "text" | "select" | "multiselect" | "boolean" | "number" | "json";
+    required: boolean;
+    description?: string;
+    placeholder?: string;
+    options?: Array<{ value: string; label: string }>;
+    defaultValue?: string | boolean | number;
+    /** For dynamic options loaded from provider API */
+    dynamicOptions?: {
+        operation: string;
+        labelField: string;
+        valueField: string;
+    };
+}
+
+/**
+ * A specific event that can trigger a workflow from a provider
+ */
+export interface TriggerDefinition {
+    id: string;
+    name: string;
+    description: string;
+    /** JSON schema for the payload this event produces */
+    payloadSchema?: JSONSchema;
+    /** OAuth scopes required to receive this event */
+    requiredScopes?: string[];
+    /** Configuration fields specific to this event */
+    configFields?: TriggerConfigField[];
+    /** Tags for filtering/searching events */
+    tags?: string[];
+}
+
+/**
+ * Webhook configuration for a provider
+ */
+export interface WebhookConfig {
+    /** How webhooks are set up */
+    setupType: WebhookSetupType;
+    /** Signature verification method */
+    signatureType: WebhookSignatureType;
+    /** Header containing the signature */
+    signatureHeader?: string;
+    /** Header containing the event type (if applicable) */
+    eventHeader?: string;
+    /** Header containing timestamp (for replay protection) */
+    timestampHeader?: string;
+    /** Maximum age of timestamp before rejecting (in seconds) */
+    timestampMaxAge?: number;
+}
+
+/**
+ * Incoming webhook request data for verification
+ */
+export interface WebhookRequestData {
+    headers: Record<string, string | string[] | undefined>;
+    body: string | Buffer;
+    rawBody?: Buffer;
+}
+
+/**
+ * Result of webhook signature verification
+ */
+export interface WebhookVerificationResult {
+    valid: boolean;
+    error?: string;
 }
 
 /**
@@ -179,6 +376,14 @@ export interface IProvider {
     // Discovery
     getOperations(): OperationDefinition[];
     getOperationSchema(operation: string): z.ZodSchema | null;
+
+    // Triggers (optional - only for providers that support webhooks)
+    getTriggers?(): TriggerDefinition[];
+    getWebhookConfig?(): WebhookConfig | null;
+
+    // Webhook verification (optional - only for providers that support webhooks)
+    verifyWebhookSignature?(secret: string, request: WebhookRequestData): WebhookVerificationResult;
+    extractEventType?(request: WebhookRequestData): string | undefined;
 }
 
 /**
@@ -200,6 +405,7 @@ export interface OperationSummary {
     name: string;
     description: string;
     category: string;
+    actionType: OperationActionType; // "read" or "write" - for filtering by node type
     inputSchema: JSONSchema;
     inputSchemaJSON?: JSONSchema;
     parameters?: Array<{
@@ -222,4 +428,33 @@ export interface ProviderSummary {
     category?: string;
     operationCount: number;
     capabilities: ProviderCapabilities;
+    /** Trigger information (if provider supports webhooks) */
+    triggers?: TriggerDefinition[];
+    webhookConfig?: WebhookConfig;
+}
+
+/**
+ * Trigger summary for API responses
+ */
+export interface TriggerSummary {
+    id: string;
+    name: string;
+    description: string;
+    configFields?: TriggerConfigField[];
+    tags?: string[];
+}
+
+/**
+ * Provider with trigger capabilities (for trigger selection UI)
+ */
+export interface TriggerProviderSummary {
+    providerId: string;
+    name: string;
+    description?: string;
+    icon?: string;
+    category: TriggerProviderCategory;
+    triggers: TriggerSummary[];
+    webhookConfig: WebhookConfig;
+    requiresConnection: boolean;
+    enabled: boolean;
 }

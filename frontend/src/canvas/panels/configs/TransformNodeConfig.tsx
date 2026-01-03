@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import type { ValidationError } from "@flowmaestro/shared";
 import { CodeInput } from "../../../components/CodeInput";
 import { FormField, FormSection } from "../../../components/common/FormField";
 import { Input } from "../../../components/common/Input";
@@ -8,6 +9,7 @@ import { OutputSettingsSection } from "../../../components/OutputSettingsSection
 interface TransformNodeConfigProps {
     data: Record<string, unknown>;
     onUpdate: (config: unknown) => void;
+    errors?: ValidationError[];
 }
 
 const operations = [
@@ -20,7 +22,11 @@ const operations = [
     { value: "custom", label: "Custom JSONata" }
 ];
 
-export function TransformNodeConfig({ data, onUpdate }: TransformNodeConfigProps) {
+export function TransformNodeConfig({
+    data,
+    onUpdate,
+    errors: _errors = []
+}: TransformNodeConfigProps) {
     const [operation, setOperation] = useState((data.operation as string) || "map");
     const [inputData, setInputData] = useState((data.inputData as string) || "");
     const [expression, setExpression] = useState((data.expression as string) || "");

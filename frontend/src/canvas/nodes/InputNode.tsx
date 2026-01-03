@@ -7,13 +7,12 @@ interface InputNodeData {
     label: string;
     status?: "idle" | "pending" | "running" | "success" | "error";
     inputType?: string;
-    inputName?: string;
-    required?: boolean;
+    variableName?: string;
 }
 
 function InputNode({ data, selected }: NodeProps<InputNodeData>) {
     const inputType = data.inputType || "text";
-    const inputName = data.inputName || "input";
+    const variableName = data.variableName || "userInput";
 
     return (
         <BaseNode
@@ -22,18 +21,19 @@ function InputNode({ data, selected }: NodeProps<InputNodeData>) {
             status={data.status}
             category="inputs"
             selected={selected}
+            hasInputHandle={false}
         >
-            <div className="space-y-2">
+            <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                     <span className="text-xs text-muted-foreground">Type:</span>
-                    <span className="text-xs font-medium capitalize text-foreground">
+                    <span className="text-xs font-medium text-foreground capitalize">
                         {inputType}
                     </span>
                 </div>
                 <div className="flex items-center justify-between">
                     <span className="text-xs text-muted-foreground">Variable:</span>
                     <span className="text-xs font-mono bg-muted px-1.5 py-0.5 rounded text-foreground">
-                        ${inputName}
+                        ${variableName}
                     </span>
                 </div>
             </div>

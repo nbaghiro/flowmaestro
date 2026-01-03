@@ -234,13 +234,15 @@ export type NodeHandlerFactory = () => NodeHandler;
 
 /**
  * Node handler categories for organization.
+ * Aligned with frontend node groups in NodeLibrary.
  */
 export type NodeHandlerCategory =
-    | "ai" // LLM, vision, audio, embeddings
-    | "data" // transform, variable, echo, output, input
-    | "logic" // conditional, switch, loop
-    | "integration" // http, code, database, file, kb-query
-    | "control" // wait, pause, userInput
+    | "ai" // LLM, vision, audio, embeddings, kb-query, router
+    | "inputs" // input, files, url
+    | "outputs" // output
+    | "logic" // conditional, switch, loop, wait, wait-for-user, transform, variable, code
+    | "utils" // http, database
+    | "integrations" // file operations, third-party providers
     | "generic"; // Fallback handler
 
 /**
@@ -362,7 +364,10 @@ export interface TypedEdge extends WorkflowEdge {
  */
 export type ExecutableNodeType =
     | "input"
+    | "files"
+    | "url"
     | "output"
+    | "action"
     | "llm"
     | "http"
     | "transform"

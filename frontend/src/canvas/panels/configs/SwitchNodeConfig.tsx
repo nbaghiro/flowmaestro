@@ -1,5 +1,6 @@
 import { Plus, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
+import type { ValidationError } from "@flowmaestro/shared";
 import { FormField, FormSection } from "../../../components/common/FormField";
 import { Input } from "../../../components/common/Input";
 import { Select } from "../../../components/common/Select";
@@ -8,6 +9,7 @@ import { OutputSettingsSection } from "../../../components/OutputSettingsSection
 interface SwitchNodeConfigProps {
     data: Record<string, unknown>;
     onUpdate: (config: unknown) => void;
+    errors?: ValidationError[];
 }
 
 const matchTypes = [
@@ -21,7 +23,7 @@ interface SwitchCase {
     label: string;
 }
 
-export function SwitchNodeConfig({ data, onUpdate }: SwitchNodeConfigProps) {
+export function SwitchNodeConfig({ data, onUpdate, errors: _errors = [] }: SwitchNodeConfigProps) {
     const [inputVariable, setInputVariable] = useState((data.inputVariable as string) || "");
     const [matchType, setMatchType] = useState((data.matchType as string) || "exact");
     const [cases, setCases] = useState<SwitchCase[]>(

@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { config as appConfig, getOAuthRedirectUri } from "../../../core/config";
 import { BaseProvider } from "../../core/BaseProvider";
 import { FacebookClient } from "./client/FacebookClient";
@@ -33,7 +34,9 @@ import type {
     MCPTool,
     OperationResult,
     OAuthConfig,
-    ProviderCapabilities
+    ProviderCapabilities,
+    WebhookRequestData,
+    WebhookVerificationResult
 } from "../../core/types";
 
 /**
@@ -76,6 +79,159 @@ export class FacebookProvider extends BaseProvider {
 
         // Initialize MCP adapter
         this.mcpAdapter = new FacebookMCPAdapter(this.operations);
+
+        // Configure webhook settings (Meta Webhooks)
+        this.setWebhookConfig({
+            setupType: "manual", // Configured in Meta Developer Console
+            signatureType: "hmac_sha256",
+            signatureHeader: "X-Hub-Signature-256"
+        });
+
+        // Register trigger events
+        this.registerTrigger({
+            id: "message_received",
+            name: "Message Received",
+            description: "Triggered when a new Facebook Messenger message is received",
+            requiredScopes: ["pages_messaging"],
+            configFields: [],
+            tags: ["messages", "incoming"]
+        });
+
+        this.registerTrigger({
+            id: "message_delivered",
+            name: "Message Delivered",
+            description: "Triggered when a sent message is delivered",
+            requiredScopes: ["pages_messaging"],
+            configFields: [],
+            tags: ["messages", "status"]
+        });
+
+        this.registerTrigger({
+            id: "message_read",
+            name: "Message Read",
+            description: "Triggered when a sent message is read",
+            requiredScopes: ["pages_messaging"],
+            configFields: [],
+            tags: ["messages", "status"]
+        });
+
+        this.registerTrigger({
+            id: "page_post",
+            name: "Page Post",
+            description: "Triggered when a post is made to your page",
+            requiredScopes: ["pages_read_user_content"],
+            configFields: [],
+            tags: ["posts", "page"]
+        });
+
+        this.registerTrigger({
+            id: "page_comment",
+            name: "Comment on Post",
+            description: "Triggered when someone comments on a page post",
+            requiredScopes: ["pages_read_engagement"],
+            configFields: [],
+            tags: ["comments", "engagement"]
+        });
+
+        this.registerTrigger({
+            id: "page_mention",
+            name: "Page Mentioned",
+            description: "Triggered when your page is mentioned in a post",
+            requiredScopes: ["pages_read_engagement"],
+            configFields: [],
+            tags: ["mentions", "engagement"]
+        });
+
+        this.registerTrigger({
+            id: "postback",
+            name: "Postback",
+            description: "Triggered when a user clicks a postback button in Messenger",
+            requiredScopes: ["pages_messaging"],
+            configFields: [],
+            tags: ["buttons", "interactive"]
+        });
+    }
+
+    /**
+     * Meta/Facebook HMAC-SHA256 verification
+     */
+    override verifyWebhookSignature(
+        secret: string,
+        request: WebhookRequestData
+    ): WebhookVerificationResult {
+        const signature = this.getHeader(request.headers, "X-Hub-Signature-256");
+
+        if (!signature) {
+            return { valid: false, error: "Missing X-Hub-Signature-256 header" };
+        }
+
+        const body = this.getBodyString(request);
+
+        // Meta uses sha256=<signature> format
+        let actualSignature = signature;
+        if (actualSignature.startsWith("sha256=")) {
+            actualSignature = actualSignature.substring(7);
+        }
+
+        const hmac = crypto.createHmac("sha256", secret);
+        hmac.update(body, "utf-8");
+        const computed = hmac.digest("hex");
+
+        return {
+            valid: this.timingSafeEqual(actualSignature.toLowerCase(), computed.toLowerCase())
+        };
+    }
+
+    /**
+     * Extract event type from Facebook webhook
+     */
+    override extractEventType(request: WebhookRequestData): string | undefined {
+        try {
+            const body = typeof request.body === "string" ? JSON.parse(request.body) : request.body;
+
+            // Facebook webhook payload structure
+            const entry = body.entry?.[0];
+
+            // Messaging events
+            if (entry?.messaging?.[0]) {
+                const messaging = entry.messaging[0];
+
+                if (messaging.message) {
+                    return "message_received";
+                }
+                if (messaging.delivery) {
+                    return "message_delivered";
+                }
+                if (messaging.read) {
+                    return "message_read";
+                }
+                if (messaging.postback) {
+                    return "postback";
+                }
+            }
+
+            // Page events
+            const changes = entry?.changes?.[0];
+            if (changes) {
+                const field = changes.field;
+                if (field === "feed") {
+                    const value = changes.value;
+                    if (value?.item === "post") {
+                        return "page_post";
+                    }
+                    if (value?.item === "comment") {
+                        return "page_comment";
+                    }
+                }
+                if (field === "mention") {
+                    return "page_mention";
+                }
+            }
+
+            return undefined;
+        } catch {
+            return undefined;
+        }
     }
 
     /**

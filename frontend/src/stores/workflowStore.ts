@@ -1,7 +1,35 @@
 import { Node, Edge, NodeChange, EdgeChange, applyNodeChanges, applyEdgeChanges } from "reactflow";
 import { create } from "zustand";
-import type { JsonValue, JsonObject } from "@flowmaestro/shared";
-import { getErrorMessage } from "@flowmaestro/shared";
+import type { JsonValue, JsonObject, ValidationResult } from "@flowmaestro/shared";
+import {
+    getErrorMessage,
+    validateNodeConfig,
+    nodeValidationRules,
+    ALL_PROVIDERS
+} from "@flowmaestro/shared";
+
+// Set of provider IDs that should use "integration" validation rules
+const INTEGRATION_PROVIDER_IDS = new Set(
+    ALL_PROVIDERS.filter((p) => !p.comingSoon).map((p) => p.provider)
+);
+
+/**
+ * Get the validation rule key for a node type.
+ * Maps provider-specific types (like "slack", "discord") to "integration".
+ */
+function getValidationRuleKey(nodeType: string): string {
+    // If we have explicit rules for this type, use them
+    if (nodeValidationRules[nodeType]) {
+        return nodeType;
+    }
+    // If it's a known integration provider, use "integration" rules
+    if (INTEGRATION_PROVIDER_IDS.has(nodeType)) {
+        return "integration";
+    }
+    // Otherwise return as-is (will use empty rules if not found)
+    return nodeType;
+}
+
 import { executeWorkflow as executeWorkflowAPI, generateWorkflow } from "../lib/api";
 import { logger } from "../lib/logger";
 import { convertToReactFlowFormat } from "../lib/workflowLayout";
@@ -61,6 +89,9 @@ interface WorkflowStore {
     // Current execution (new real-time state)
     currentExecution: CurrentExecution | null;
 
+    // Node validation state
+    nodeValidation: Record<string, ValidationResult>;
+
     // Actions
     setNodes: (nodes: Node[]) => void;
     setEdges: (edges: Edge[]) => void;
@@ -83,6 +114,10 @@ interface WorkflowStore {
     updateVariable: (key: string, value: JsonValue) => void;
     clearExecution: () => void;
     resetWorkflow: () => void;
+
+    // Validation actions
+    validateNode: (nodeId: string) => void;
+    validateAllNodes: () => void;
 }
 
 export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
@@ -95,18 +130,21 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
     executionResult: null,
     executionError: null,
     currentExecution: null,
+    nodeValidation: {},
 
-    setNodes: (nodes) =>
-        set({
-            nodes: nodes.map((node) => ({
-                ...node,
-                style: {
-                    width: node?.style?.width ?? INITIAL_NODE_WIDTH,
-                    height: node?.style?.height ?? INITIAL_NODE_HEIGHT,
-                    ...(node.style || {})
-                }
-            }))
-        }),
+    setNodes: (nodes) => {
+        const sizedNodes = nodes.map((node) => ({
+            ...node,
+            style: {
+                width: node?.style?.width ?? INITIAL_NODE_WIDTH,
+                height: node?.style?.height ?? INITIAL_NODE_HEIGHT,
+                ...(node.style || {})
+            }
+        }));
+        set({ nodes: sizedNodes });
+        // Validate all nodes after setting them
+        setTimeout(() => get().validateAllNodes(), 0);
+    },
     setEdges: (edges) => set({ edges }),
 
     setAIMetadata: (aiGenerated, aiPrompt) => set({ aiGenerated, aiPrompt }),
@@ -134,6 +172,8 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
         };
 
         set({ nodes: [...get().nodes, sizedNode] });
+        // Validate the node immediately after adding
+        get().validateNode(node.id);
     },
 
     updateNode: (nodeId, data) => {
@@ -142,6 +182,8 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
                 node.id === nodeId ? { ...node, data: { ...node.data, ...data } } : node
             )
         });
+        // Validate the node after updating
+        get().validateNode(nodeId);
     },
 
     updateNodeStyle: (nodeId, style) => {
@@ -394,7 +436,58 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
             isExecuting: false,
             executionResult: null,
             executionError: null,
-            currentExecution: null
+            currentExecution: null,
+            nodeValidation: {}
         });
+    },
+
+    // Validation actions
+    validateNode: (nodeId: string) => {
+        const { nodes, nodeValidation } = get();
+        const node = nodes.find((n) => n.id === nodeId);
+
+        if (!node) {
+            return;
+        }
+
+        const nodeType = node.type || "default";
+        const validationRuleKey = getValidationRuleKey(nodeType);
+        const config = (node.data || {}) as Record<string, unknown>;
+
+        const result = validateNodeConfig(validationRuleKey, config, nodeValidationRules);
+
+        // Only update if validation result changed
+        const existingResult = nodeValidation[nodeId];
+        const hasChanged =
+            !existingResult ||
+            existingResult.isValid !== result.isValid ||
+            existingResult.errors.length !== result.errors.length;
+
+        if (hasChanged) {
+            set({
+                nodeValidation: {
+                    ...nodeValidation,
+                    [nodeId]: result
+                }
+            });
+        }
+    },
+
+    validateAllNodes: () => {
+        const { nodes } = get();
+        const newValidation: Record<string, ValidationResult> = {};
+
+        for (const node of nodes) {
+            const nodeType = node.type || "default";
+            const validationRuleKey = getValidationRuleKey(nodeType);
+            const config = (node.data || {}) as Record<string, unknown>;
+            newValidation[node.id] = validateNodeConfig(
+                validationRuleKey,
+                config,
+                nodeValidationRules
+            );
+        }
+
+        set({ nodeValidation: newValidation });
     }
 }));

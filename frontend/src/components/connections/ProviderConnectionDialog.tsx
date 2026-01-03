@@ -14,6 +14,8 @@ interface ProviderConnectionDialogProps {
     selectedConnectionId?: string;
     defaultCategory?: string;
     excludeCategories?: string[];
+    /** Only include these provider IDs (if provided) */
+    includeProviders?: string[];
     onSelect: (provider: string, connectionId: string) => void;
 }
 
@@ -29,6 +31,7 @@ export function ProviderConnectionDialog({
     selectedConnectionId,
     defaultCategory,
     excludeCategories = [],
+    includeProviders,
     onSelect
 }: ProviderConnectionDialogProps) {
     const [view, setView] = useState<DialogView>("provider-list");
@@ -59,7 +62,10 @@ export function ProviderConnectionDialog({
 
         const notExcluded = !excludeCategories.includes(provider.category);
 
-        return matchesSearch && matchesCategory && notExcluded;
+        // If includeProviders is specified, only show those providers
+        const isIncluded = !includeProviders || includeProviders.includes(provider.provider);
+
+        return matchesSearch && matchesCategory && notExcluded && isIncluded;
     });
 
     // Group providers by category

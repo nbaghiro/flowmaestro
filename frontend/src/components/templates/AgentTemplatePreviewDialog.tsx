@@ -11,35 +11,23 @@ import {
     Hash
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { ALL_PROVIDERS, TEMPLATE_CATEGORY_META, findModelByValue } from "@flowmaestro/shared";
+import {
+    ALL_PROVIDERS,
+    getProviderLogo,
+    TEMPLATE_CATEGORY_META,
+    findModelByValue
+} from "@flowmaestro/shared";
 import type { AgentTemplate } from "@flowmaestro/shared";
 import { cn } from "../../lib/utils";
 import { Button } from "../common/Button";
 
-// Brandfetch Logo API
-const BRANDFETCH_CLIENT_ID = "1idCpJZqz6etuVweFEJ";
-const getBrandLogo = (domain: string): string =>
-    `https://cdn.brandfetch.io/${domain}?c=${BRANDFETCH_CLIENT_ID}`;
-
-// Domain mapping for providers
-const providerDomains: Record<string, string> = {
-    google_sheets: "google.com",
-    google_calendar: "google.com",
-    gmail: "gmail.com",
-    microsoft_teams: "microsoft.com",
-    hubspot: "hubspot.com"
-};
-
-// Get logo URL for an integration
+// Get logo URL for an integration - uses shared providers or Brandfetch fallback
 const getIntegrationLogo = (integration: string): string => {
     const provider = ALL_PROVIDERS.find((p) => p.provider === integration);
     if (provider) {
         return provider.logoUrl;
     }
-    if (providerDomains[integration]) {
-        return getBrandLogo(providerDomains[integration]);
-    }
-    return getBrandLogo(`${integration}.com`);
+    return getProviderLogo(integration);
 };
 
 // Provider display names

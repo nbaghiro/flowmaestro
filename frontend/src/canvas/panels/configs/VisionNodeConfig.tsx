@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import {
     LLM_PROVIDERS,
     LLM_MODELS_BY_PROVIDER,
-    getDefaultModelForProvider
+    getDefaultModelForProvider,
+    type ValidationError
 } from "@flowmaestro/shared";
 import { FormField, FormSection } from "../../../components/common/FormField";
 import { Input } from "../../../components/common/Input";
@@ -14,6 +15,7 @@ import { OutputSettingsSection } from "../../../components/OutputSettingsSection
 interface VisionNodeConfigProps {
     data: Record<string, unknown>;
     onUpdate: (config: unknown) => void;
+    errors?: ValidationError[];
 }
 
 const operations = [
@@ -21,7 +23,7 @@ const operations = [
     { value: "generate", label: "Generate Image" }
 ];
 
-export function VisionNodeConfig({ data, onUpdate }: VisionNodeConfigProps) {
+export function VisionNodeConfig({ data, onUpdate, errors: _errors = [] }: VisionNodeConfigProps) {
     const [operation, setOperation] = useState((data.operation as string) || "analyze");
     const [provider, setProvider] = useState((data.provider as string) || "openai");
     const [model, setModel] = useState(

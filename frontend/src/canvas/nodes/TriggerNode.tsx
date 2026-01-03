@@ -1,95 +1,69 @@
 import { Zap } from "lucide-react";
-import { memo } from "react";
+import { memo, useState } from "react";
 import { NodeProps } from "reactflow";
+import { getProviderLogo } from "@flowmaestro/shared";
 import { BaseNode } from "./BaseNode";
 
 interface TriggerNodeData {
     label: string;
     status?: "idle" | "pending" | "running" | "success" | "error";
-    triggerType?: "schedule" | "webhook" | "manual" | "event";
-    enabled?: boolean;
-    cronExpression?: string;
-    nextScheduledAt?: string;
-    webhookUrl?: string;
+    providerId?: string;
+    providerName?: string;
+    eventId?: string;
+    eventName?: string;
 }
 
 function TriggerNode({ data, selected }: NodeProps<TriggerNodeData>) {
-    const triggerType = data.triggerType || "manual";
-    const enabled = data.enabled ?? true;
+    const [imageError, setImageError] = useState(false);
 
-    const getTypeLabel = () => {
-        switch (triggerType) {
-            case "schedule":
-                return "Schedule";
-            case "webhook":
-                return "Webhook";
-            case "event":
-                return "Event";
-            default:
-                return "Manual";
-        }
-    };
+    const hasProvider = data.providerId && data.providerName;
+    const hasEvent = data.eventId && data.eventName;
 
-    const formatNextRun = (dateString?: string) => {
-        if (!dateString) return null;
-        const date = new Date(dateString);
-        return date.toLocaleString(undefined, {
-            month: "short",
-            day: "numeric",
-            hour: "2-digit",
-            minute: "2-digit"
-        });
-    };
-
-    const formatWebhookUrl = (url?: string) => {
-        if (!url) return null;
-        // Show just the last part of the URL
-        const parts = url.split("/");
-        return `.../${parts.slice(-2).join("/")}`;
-    };
+    // Generate node label: "Provider Event" or just "Trigger"
+    const nodeLabel =
+        hasProvider && hasEvent
+            ? `${data.providerName} ${data.eventName}`
+            : data.label || "Trigger";
 
     return (
         <BaseNode
             icon={Zap}
-            label={data.label || "Trigger"}
+            label={nodeLabel}
             status={data.status}
             category="inputs"
             selected={selected}
             hasInputHandle={false}
         >
             <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">Type:</span>
-                    <span className="text-xs font-medium">{getTypeLabel()}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">Status:</span>
-                    <span
-                        className={`text-xs font-medium ${enabled ? "text-green-600" : "text-muted-foreground"}`}
-                    >
-                        {enabled ? "Enabled" : "Disabled"}
-                    </span>
-                </div>
-
-                {triggerType === "schedule" && data.cronExpression && (
-                    <div className="pt-1.5 mt-1 border-t border-border">
-                        <div className="text-xs text-muted-foreground">
-                            <span className="font-mono">{data.cronExpression}</span>
+                {hasProvider ? (
+                    <>
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs text-muted-foreground">Provider:</span>
+                            <div className="flex items-center gap-1.5">
+                                <div className="w-4 h-4 rounded bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
+                                    {imageError ? (
+                                        <Zap className="w-2.5 h-2.5 text-muted-foreground" />
+                                    ) : (
+                                        <img
+                                            src={getProviderLogo(data.providerId!)}
+                                            alt={data.providerName}
+                                            className="w-3 h-3 object-contain"
+                                            onError={() => setImageError(true)}
+                                        />
+                                    )}
+                                </div>
+                                <span className="text-xs font-medium">{data.providerName}</span>
+                            </div>
                         </div>
-                        {data.nextScheduledAt && (
-                            <div className="text-xs text-muted-foreground mt-1">
-                                Next: {formatNextRun(data.nextScheduledAt)}
+                        {hasEvent && (
+                            <div className="flex items-center justify-between">
+                                <span className="text-xs text-muted-foreground">Event:</span>
+                                <span className="text-xs font-medium">{data.eventName}</span>
                             </div>
                         )}
-                    </div>
-                )}
-
-                {triggerType === "webhook" && data.webhookUrl && (
-                    <div className="pt-1.5 mt-1 border-t border-border">
-                        <div className="text-xs text-muted-foreground font-mono truncate">
-                            {formatWebhookUrl(data.webhookUrl)}
-                        </div>
-                    </div>
+                    </>
+                ) : (
+                    <div className="text-xs text-muted-foreground">Select an integration...</div>
                 )}
             </div>
         </BaseNode>

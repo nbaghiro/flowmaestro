@@ -3,7 +3,8 @@ import { useState, useEffect } from "react";
 import {
     LLM_MODELS_BY_PROVIDER,
     getDefaultModelForProvider,
-    ALL_PROVIDERS
+    ALL_PROVIDERS,
+    type ValidationError
 } from "@flowmaestro/shared";
 import { FormField, FormSection } from "../../../components/common/FormField";
 import { Input } from "../../../components/common/Input";
@@ -17,6 +18,7 @@ import { useConnectionStore } from "../../../stores/connectionStore";
 interface RouterNodeConfigProps {
     data: Record<string, unknown>;
     onUpdate: (config: unknown) => void;
+    errors?: ValidationError[];
 }
 
 interface RouterRoute {
@@ -25,7 +27,7 @@ interface RouterRoute {
     description?: string;
 }
 
-export function RouterNodeConfig({ data, onUpdate }: RouterNodeConfigProps) {
+export function RouterNodeConfig({ data, onUpdate, errors: _errors = [] }: RouterNodeConfigProps) {
     const [provider, setProvider] = useState((data.provider as string) || "");
     const [model, setModel] = useState(
         (data.model as string) || getDefaultModelForProvider((data.provider as string) || "openai")

@@ -10,7 +10,7 @@ interface TooltipProps {
     position?: TooltipPosition;
 }
 
-export function Tooltip({ content, children, delay = 300, position = "right" }: TooltipProps) {
+export function Tooltip({ content, children, delay = 300, position = "bottom" }: TooltipProps) {
     const [isVisible, setIsVisible] = useState(false);
     const [coords, setCoords] = useState({ top: 0, left: 0 });
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -83,26 +83,26 @@ export function Tooltip({ content, children, delay = 300, position = "right" }: 
                 return {
                     transform: "translate(-50%, -100%)",
                     arrowClass:
-                        "absolute left-1/2 -translate-x-1/2 top-full border-4 border-transparent border-t-gray-900"
+                        "absolute left-1/2 -translate-x-1/2 top-full border-4 border-transparent border-t-[hsl(var(--card))]"
                 };
             case "bottom":
                 return {
                     transform: "translate(-50%, 0)",
                     arrowClass:
-                        "absolute left-1/2 -translate-x-1/2 bottom-full border-4 border-transparent border-b-gray-900"
+                        "absolute left-1/2 -translate-x-1/2 bottom-full border-4 border-transparent border-b-[hsl(var(--card))]"
                 };
             case "left":
                 return {
                     transform: "translate(-100%, -50%)",
                     arrowClass:
-                        "absolute left-full top-1/2 -translate-y-1/2 border-4 border-transparent border-l-gray-900"
+                        "absolute left-full top-1/2 -translate-y-1/2 border-4 border-transparent border-l-[hsl(var(--card))]"
                 };
             case "right":
             default:
                 return {
                     transform: "translateY(-50%)",
                     arrowClass:
-                        "absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900"
+                        "absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-[hsl(var(--card))]"
                 };
         }
     };
@@ -124,7 +124,7 @@ export function Tooltip({ content, children, delay = 300, position = "right" }: 
                             transform
                         }}
                     >
-                        <div className="bg-gray-900 text-white text-xs px-3 py-2 rounded-lg shadow-lg max-w-xs whitespace-nowrap">
+                        <div className="bg-card text-foreground text-xs px-3 py-2 rounded-lg shadow-lg border border-border max-w-xs whitespace-pre-wrap">
                             {content}
                             <div className={arrowClass} />
                         </div>

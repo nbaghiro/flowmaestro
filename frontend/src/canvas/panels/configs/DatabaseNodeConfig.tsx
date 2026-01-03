@@ -1,6 +1,6 @@
 import { Plus } from "lucide-react";
 import { useState, useEffect } from "react";
-import { ALL_PROVIDERS } from "@flowmaestro/shared";
+import { ALL_PROVIDERS, type ValidationError } from "@flowmaestro/shared";
 import { CodeInput } from "../../../components/CodeInput";
 import { FormField, FormSection } from "../../../components/common/FormField";
 import { Input } from "../../../components/common/Input";
@@ -13,6 +13,7 @@ import { useConnectionStore } from "../../../stores/connectionStore";
 interface DatabaseNodeConfigProps {
     data: Record<string, unknown>;
     onUpdate: (config: unknown) => void;
+    errors?: ValidationError[];
 }
 
 // SQL operations (PostgreSQL, MySQL)
@@ -54,7 +55,11 @@ const getOperationsForProvider = (provider: string) => {
 // Helper to check if provider is MongoDB
 const isMongoProvider = (provider: string) => provider === "mongodb";
 
-export function DatabaseNodeConfig({ data, onUpdate }: DatabaseNodeConfigProps) {
+export function DatabaseNodeConfig({
+    data,
+    onUpdate,
+    errors: _errors = []
+}: DatabaseNodeConfigProps) {
     const [connectionId, setConnectionId] = useState((data.connectionId as string) || "");
     const [provider, setProvider] = useState((data.provider as string) || "");
     const [operation, setOperation] = useState((data.operation as string) || "");

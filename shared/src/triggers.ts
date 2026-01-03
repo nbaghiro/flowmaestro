@@ -4,7 +4,7 @@
 
 import type { JsonObject, JsonValue } from "./types";
 
-export type TriggerType = "schedule" | "webhook" | "event" | "manual";
+export type TriggerType = "schedule" | "webhook" | "event" | "manual" | "provider";
 
 export interface ScheduleTriggerConfig {
     cronExpression: string;
@@ -28,6 +28,21 @@ export interface EventTriggerConfig {
     source?: string;
 }
 
+/**
+ * Provider-based trigger configuration
+ * Used when a trigger is associated with an integration provider (e.g., GitHub, Slack)
+ */
+export interface ProviderTriggerConfig {
+    /** Provider ID (e.g., "github", "slack", "airtable") */
+    providerId: string;
+    /** Event ID from the provider (e.g., "push", "message", "record_created") */
+    eventId: string;
+    /** Connection ID for OAuth providers */
+    connectionId?: string;
+    /** Event-specific configuration */
+    eventConfig?: JsonObject;
+}
+
 export interface ManualTriggerConfig {
     requireInputs?: boolean;
     inputSchema?: JsonObject;
@@ -39,7 +54,8 @@ export type TriggerConfig =
     | ScheduleTriggerConfig
     | WebhookTriggerConfig
     | EventTriggerConfig
-    | ManualTriggerConfig;
+    | ManualTriggerConfig
+    | ProviderTriggerConfig;
 
 export interface WorkflowTrigger {
     id: string;
