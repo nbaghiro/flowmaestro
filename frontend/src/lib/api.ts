@@ -20,7 +20,12 @@ import type {
     AgentTemplate,
     AgentTemplateListParams,
     AgentTemplateListResponse,
-    CopyAgentTemplateResponse
+    CopyAgentTemplateResponse,
+    FormInterface,
+    FormInterfaceSubmission,
+    CreateFormInterfaceInput,
+    UpdateFormInterfaceInput,
+    PublicFormInterface
 } from "@flowmaestro/shared";
 import { logger } from "./logger";
 
@@ -3547,6 +3552,387 @@ export async function copyAgentTemplate(
             Authorization: `Bearer ${token}`
         },
         body: JSON.stringify({ name })
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+// ===== Form Interface API =====
+
+/**
+ * List form interface response
+ */
+export interface FormInterfaceListResponse {
+    success: boolean;
+    data: {
+        items: FormInterface[];
+        total: number;
+        page: number;
+        pageSize: number;
+        hasMore: boolean;
+    };
+    error?: string;
+}
+
+/**
+ * Get all form interfaces for the current user
+ */
+export async function getFormInterfaces(params?: {
+    limit?: number;
+    offset?: number;
+    workflowId?: string;
+    agentId?: string;
+}): Promise<FormInterfaceListResponse> {
+    const token = getAuthToken();
+
+    const queryParams = new URLSearchParams();
+    if (params?.limit) queryParams.set("limit", params.limit.toString());
+    if (params?.offset) queryParams.set("offset", params.offset.toString());
+    if (params?.workflowId) queryParams.set("workflowId", params.workflowId);
+    if (params?.agentId) queryParams.set("agentId", params.agentId);
+
+    const queryString = queryParams.toString();
+    const url = `${API_BASE_URL}/form-interfaces${queryString ? `?${queryString}` : ""}`;
+
+    const response = await apiFetch(url, {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Get a specific form interface by ID
+ */
+export async function getFormInterface(
+    id: string
+): Promise<{ success: boolean; data: FormInterface; error?: string }> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/form-interfaces/${id}`, {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Create a new form interface
+ */
+export async function createFormInterface(
+    input: CreateFormInterfaceInput
+): Promise<{ success: boolean; data: FormInterface; error?: string }> {
+    const token = getAuthToken();
+
+    if (!token) {
+        throw new Error("Authentication required");
+    }
+
+    const response = await apiFetch(`${API_BASE_URL}/form-interfaces`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(input)
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Update a form interface
+ */
+export async function updateFormInterface(
+    id: string,
+    input: UpdateFormInterfaceInput
+): Promise<{ success: boolean; data: FormInterface; error?: string }> {
+    const token = getAuthToken();
+
+    if (!token) {
+        throw new Error("Authentication required");
+    }
+
+    const response = await apiFetch(`${API_BASE_URL}/form-interfaces/${id}`, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(input)
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Delete a form interface
+ */
+export async function deleteFormInterface(
+    id: string
+): Promise<{ success: boolean; message?: string; error?: string }> {
+    const token = getAuthToken();
+
+    if (!token) {
+        throw new Error("Authentication required");
+    }
+
+    const response = await apiFetch(`${API_BASE_URL}/form-interfaces/${id}`, {
+        method: "DELETE",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Publish a form interface
+ */
+export async function publishFormInterface(
+    id: string
+): Promise<{ success: boolean; data: FormInterface; error?: string }> {
+    const token = getAuthToken();
+
+    if (!token) {
+        throw new Error("Authentication required");
+    }
+
+    const response = await apiFetch(`${API_BASE_URL}/form-interfaces/${id}/publish`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Unpublish a form interface
+ */
+export async function unpublishFormInterface(
+    id: string
+): Promise<{ success: boolean; data: FormInterface; error?: string }> {
+    const token = getAuthToken();
+
+    if (!token) {
+        throw new Error("Authentication required");
+    }
+
+    const response = await apiFetch(`${API_BASE_URL}/form-interfaces/${id}/unpublish`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Duplicate a form interface
+ */
+export async function duplicateFormInterface(
+    id: string
+): Promise<{ success: boolean; data: FormInterface; error?: string }> {
+    const token = getAuthToken();
+
+    if (!token) {
+        throw new Error("Authentication required");
+    }
+
+    const response = await apiFetch(`${API_BASE_URL}/form-interfaces/${id}/duplicate`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Upload a form interface asset (cover or icon)
+ */
+export async function uploadFormInterfaceAsset(
+    id: string,
+    file: File,
+    assetType: "cover" | "icon"
+): Promise<{
+    success: boolean;
+    data: { url: string; formInterface: FormInterface };
+    error?: string;
+}> {
+    const token = getAuthToken();
+
+    if (!token) {
+        throw new Error("Authentication required");
+    }
+
+    const formData = new FormData();
+    formData.append(assetType, file);
+
+    const response = await apiFetch(`${API_BASE_URL}/form-interfaces/${id}/assets`, {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${token}`
+        },
+        body: formData
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Get submissions for a form interface
+ */
+export async function getFormInterfaceSubmissions(
+    id: string,
+    params?: { limit?: number; offset?: number }
+): Promise<{
+    success: boolean;
+    data: {
+        items: FormInterfaceSubmission[];
+        total: number;
+        page: number;
+        pageSize: number;
+        hasMore: boolean;
+    };
+    error?: string;
+}> {
+    const token = getAuthToken();
+
+    const queryParams = new URLSearchParams();
+    if (params?.limit) queryParams.set("limit", params.limit.toString());
+    if (params?.offset) queryParams.set("offset", params.offset.toString());
+
+    const queryString = queryParams.toString();
+    const url = `${API_BASE_URL}/form-interfaces/${id}/submissions${queryString ? `?${queryString}` : ""}`;
+
+    const response = await apiFetch(url, {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+// ===== Public Form Interface API (No Auth Required) =====
+
+/**
+ * Get a public form interface by slug
+ */
+export async function getPublicFormInterface(
+    slug: string
+): Promise<{ success: boolean; data: PublicFormInterface; error?: string }> {
+    const response = await apiFetch(`${API_BASE_URL}/public/form-interfaces/${slug}`, {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json"
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Submit to a public form interface
+ */
+export async function submitPublicFormInterface(
+    slug: string,
+    data: {
+        message: string;
+        files?: Array<{ fileName: string; fileSize: number; mimeType: string; gcsUri: string }>;
+        urls?: string[];
+    }
+): Promise<{
+    success: boolean;
+    data: { submissionId: string; message: string };
+    error?: string;
+}> {
+    const response = await apiFetch(`${API_BASE_URL}/public/form-interfaces/${slug}/submit`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(data)
     });
 
     if (!response.ok) {

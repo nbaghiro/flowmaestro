@@ -367,6 +367,7 @@ export type ExecutableNodeType =
     | "files"
     | "url"
     | "output"
+    | "templateOutput"
     | "action"
     | "llm"
     | "http"

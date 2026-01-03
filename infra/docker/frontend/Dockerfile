@@ -19,13 +19,15 @@ COPY shared/ ./shared/
 COPY frontend/ ./frontend/
 COPY tsconfig.base.json ./
 
-# Build arguments for API URL
+# Build arguments for frontend configuration
 ARG VITE_API_URL
 ARG VITE_WS_URL
+ARG VITE_UNSPLASH_ACCESS_KEY
 
 # Set environment variables for build
 ENV VITE_API_URL=$VITE_API_URL
 ENV VITE_WS_URL=$VITE_WS_URL
+ENV VITE_UNSPLASH_ACCESS_KEY=$VITE_UNSPLASH_ACCESS_KEY
 
 # Build shared package first
 RUN npm run build --workspace=shared

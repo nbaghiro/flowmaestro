@@ -1,0 +1,91 @@
+import { FastifyInstance } from "fastify";
+import { createServiceLogger } from "../../../core/logging";
+import { FormInterfaceRepository } from "../../../storage/repositories/FormInterfaceRepository";
+import { authMiddleware } from "../../middleware";
+
+const logger = createServiceLogger("FormInterfaceRoutes");
+
+export async function listFormInterfacesRoute(fastify: FastifyInstance) {
+    fastify.get(
+        "/",
+        {
+            preHandler: [authMiddleware]
+        },
+        async (request, reply) => {
+            const formInterfaceRepo = new FormInterfaceRepository();
+            const userId = request.user!.id;
+            const query = request.query as {
+                limit?: string;
+                offset?: string;
+                workflowId?: string;
+                agentId?: string;
+            };
+
+            try {
+                // If filtering by workflow or agent, use specific method
+                if (query.workflowId) {
+                    const formInterfaces = await formInterfaceRepo.findByWorkflowId(
+                        query.workflowId,
+                        userId
+                    );
+                    return reply.send({
+                        success: true,
+                        data: {
+                            items: formInterfaces,
+                            total: formInterfaces.length,
+                            page: 1,
+                            pageSize: formInterfaces.length,
+                            hasMore: false
+                        }
+                    });
+                }
+
+                if (query.agentId) {
+                    const formInterfaces = await formInterfaceRepo.findByAgentId(
+                        query.agentId,
+                        userId
+                    );
+                    return reply.send({
+                        success: true,
+                        data: {
+                            items: formInterfaces,
+                            total: formInterfaces.length,
+                            page: 1,
+                            pageSize: formInterfaces.length,
+                            hasMore: false
+                        }
+                    });
+                }
+
+                // Standard pagination
+                const limit = query.limit ? parseInt(query.limit) : 50;
+                const offset = query.offset ? parseInt(query.offset) : 0;
+
+                const { formInterfaces, total } = await formInterfaceRepo.findByUserId(userId, {
+                    limit,
+                    offset
+                });
+
+                const page = Math.floor(offset / limit) + 1;
+                const hasMore = offset + formInterfaces.length < total;
+
+                return reply.send({
+                    success: true,
+                    data: {
+                        items: formInterfaces,
+                        total,
+                        page,
+                        pageSize: limit,
+                        hasMore
+                    }
+                });
+            } catch (error) {
+                logger.error({ userId, error }, "Error listing form interfaces");
+                return reply.status(500).send({
+                    success: false,
+                    error: error instanceof Error ? error.message : String(error)
+                });
+            }
+        }
+    );
+}

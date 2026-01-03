@@ -20,6 +20,7 @@ interface BuilderHeaderProps {
     onNameChange?: (name: string) => void;
     onOpenSettings?: () => void;
     onOpenCheckpoints?: () => void;
+    onBack?: () => void;
 }
 
 export function BuilderHeader({
@@ -30,7 +31,8 @@ export function BuilderHeader({
     onSave,
     onNameChange,
     onOpenSettings,
-    onOpenCheckpoints
+    onOpenCheckpoints,
+    onBack
 }: BuilderHeaderProps) {
     const { startExecution, currentExecution, selectNode } = useWorkflowStore();
     const { setDrawerOpen } = useTriggerStore();
@@ -115,7 +117,11 @@ export function BuilderHeader({
     };
 
     const handleBack = () => {
-        navigate("/");
+        if (onBack) {
+            onBack();
+        } else {
+            navigate("/");
+        }
     };
 
     return (

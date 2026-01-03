@@ -447,6 +447,19 @@ export const OutputNodeConfigSchema = z.object({
 
 export type OutputNodeConfig = z.infer<typeof OutputNodeConfigSchema>;
 
+/**
+ * Template Output Node Configuration.
+ * Renders markdown templates with variable interpolation.
+ */
+export const TemplateOutputNodeConfigSchema = z.object({
+    outputName: z.string().min(1, "Output name is required"),
+    template: z.string().min(1, "Template content is required"),
+    outputFormat: z.enum(["markdown", "html"]).default("markdown"),
+    description: z.string().optional()
+});
+
+export type TemplateOutputNodeConfig = z.infer<typeof TemplateOutputNodeConfigSchema>;
+
 // ============================================================================
 // CONTROL NODE SCHEMAS
 // ============================================================================
@@ -678,6 +691,7 @@ export const NodeSchemaRegistry: Record<string, z.ZodSchema> = {
     transform: TransformNodeConfigSchema,
     variable: VariableNodeConfigSchema,
     output: OutputNodeConfigSchema,
+    templateOutput: TemplateOutputNodeConfigSchema,
     // Control
     input: InputNodeConfigSchema,
     files: FilesNodeConfigSchema,

@@ -30,3 +30,12 @@ export {
     type AudioOutputNodeConfig,
     type AudioOutputNodeResult
 } from "./audio-output";
+
+// Template Output
+export {
+    executeTemplateOutputNode,
+    TemplateOutputNodeHandler,
+    createTemplateOutputNodeHandler,
+    type TemplateOutputNodeConfig,
+    type TemplateOutputNodeResult
+} from "./template-output";

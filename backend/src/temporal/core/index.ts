@@ -276,6 +276,7 @@ export {
     TransformNodeConfigSchema,
     VariableNodeConfigSchema,
     OutputNodeConfigSchema,
+    TemplateOutputNodeConfigSchema,
     // Validation functions
     validateConfig,
     validateOrThrow,
@@ -303,6 +304,7 @@ export type {
     TransformNodeConfig,
     VariableNodeConfig,
     OutputNodeConfig,
+    TemplateOutputNodeConfig,
     SchemaValidationResult
 } from "./schemas";
 

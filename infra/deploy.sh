@@ -499,6 +499,7 @@ build_and_push_images() {
                 -f "infra/docker/$image/Dockerfile" \
                 --build-arg VITE_API_URL="https://api.$DOMAIN" \
                 --build-arg VITE_WS_URL="https://api.$DOMAIN" \
+                --build-arg VITE_UNSPLASH_ACCESS_KEY="${VITE_UNSPLASH_ACCESS_KEY:-}" \
                 -t "$REGISTRY/$image:latest" \
                 -t "$REGISTRY/$image:$ENVIRONMENT" \
                 .

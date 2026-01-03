@@ -196,8 +196,8 @@ export interface ReactFlowNode {
     position: { x: number; y: number };
     data: {
         label: string;
-        config: Record<string, unknown>;
         status?: string;
+        [key: string]: unknown; // Config fields are spread directly into data
     };
 }
 
@@ -229,13 +229,14 @@ export function convertToReactFlowFormat(
     const positions = autoLayoutNodes(layoutNodes, layoutEdges, entryNodeId);
 
     // Convert to React Flow format
+    // Spread config directly into data (not nested) to match how nodes are saved
     const nodes: ReactFlowNode[] = generatedNodes.map((node) => ({
         id: node.id,
         type: node.type,
         position: positions.get(node.id) || { x: 0, y: 0 },
         data: {
             label: node.label,
-            config: node.config,
+            ...node.config,
             status: "idle"
         }
     }));

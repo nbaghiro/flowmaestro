@@ -8,7 +8,7 @@ import {
     Wrench,
     Pencil
 } from "lucide-react";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { getDefaultModelForProvider } from "@flowmaestro/shared";
 import { AddCustomMCPDialog } from "../components/agents/AddCustomMCPDialog";
@@ -20,7 +20,9 @@ import { AgentChat } from "../components/agents/AgentChat";
 import { ThreadChat } from "../components/agents/ThreadChat";
 import { ThreadList } from "../components/agents/ThreadList";
 import { ToolsList } from "../components/agents/ToolsList";
+import { Button } from "../components/common/Button";
 import { ConfirmDialog } from "../components/common/ConfirmDialog";
+import { Dialog } from "../components/common/Dialog";
 import { Input } from "../components/common/Input";
 import { Select } from "../components/common/Select";
 import { Textarea } from "../components/common/Textarea";
@@ -89,6 +91,19 @@ export function AgentBuilder() {
     const [maxTokens, setMaxTokens] = useState(4096);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
+
+    // Track original values to detect changes
+    const [originalValues, setOriginalValues] = useState<{
+        name: string;
+        description: string;
+        provider: string;
+        model: string;
+        connectionId: string;
+        systemPrompt: string;
+        temperature: number;
+        maxTokens: number;
+    } | null>(null);
 
     // Inline editing state
     const [isEditingName, setIsEditingName] = useState(false);
@@ -141,6 +156,18 @@ export function AgentBuilder() {
             setMaxTokens(currentAgent.max_tokens);
             // Parse tools from available_tools array
             setTools(currentAgent.available_tools || []);
+
+            // Store original values for change detection
+            setOriginalValues({
+                name: currentAgent.name,
+                description: currentAgent.description || "",
+                provider: currentAgent.provider,
+                model: currentAgent.model,
+                connectionId: currentAgent.connection_id || "",
+                systemPrompt: currentAgent.system_prompt,
+                temperature: currentAgent.temperature,
+                maxTokens: currentAgent.max_tokens
+            });
         }
     }, [currentAgent]);
 
@@ -304,6 +331,91 @@ export function AgentBuilder() {
             setIsSaving(false);
         }
     };
+
+    // Detect unsaved changes
+    const hasUnsavedChanges =
+        isNewAgent ||
+        (originalValues !== null &&
+            (name !== originalValues.name ||
+                description !== originalValues.description ||
+                provider !== originalValues.provider ||
+                model !== originalValues.model ||
+                connectionId !== originalValues.connectionId ||
+                systemPrompt !== originalValues.systemPrompt ||
+                temperature !== originalValues.temperature ||
+                maxTokens !== originalValues.maxTokens));
+
+    // Warn user about unsaved changes when closing/refreshing browser
+    useEffect(() => {
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            if (hasUnsavedChanges) {
+                e.preventDefault();
+                e.returnValue = "";
+            }
+        };
+
+        window.addEventListener("beforeunload", handleBeforeUnload);
+        return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+    }, [hasUnsavedChanges]);
+
+    const handleBack = useCallback(() => {
+        if (hasUnsavedChanges) {
+            setShowUnsavedDialog(true);
+        } else {
+            navigate("/agents");
+        }
+    }, [hasUnsavedChanges, navigate]);
+
+    const handleDiscardChanges = useCallback(() => {
+        setShowUnsavedDialog(false);
+        resetAgentState();
+        navigate("/agents");
+    }, [navigate, resetAgentState]);
+
+    const handleSaveAndLeave = useCallback(async () => {
+        if (!name.trim() || !model) return;
+
+        setIsSaving(true);
+
+        try {
+            const agentData: CreateAgentRequest | UpdateAgentRequest = {
+                name: name.trim(),
+                description: description.trim() || undefined,
+                model,
+                provider,
+                connection_id: connectionId || null,
+                system_prompt: systemPrompt,
+                temperature,
+                max_tokens: maxTokens
+            };
+
+            if (isNewAgent) {
+                await createAgent(agentData as CreateAgentRequest);
+            } else if (agentId) {
+                await updateAgent(agentId, agentData);
+            }
+
+            setShowUnsavedDialog(false);
+            navigate("/agents");
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Failed to save agent");
+            setIsSaving(false);
+        }
+    }, [
+        name,
+        description,
+        model,
+        provider,
+        connectionId,
+        systemPrompt,
+        temperature,
+        maxTokens,
+        isNewAgent,
+        agentId,
+        createAgent,
+        updateAgent,
+        navigate
+    ]);
 
     // Inline name editing handlers
     const handleStartEditingName = () => {
@@ -622,7 +734,7 @@ export function AgentBuilder() {
             <div className="h-16 border-b border-border bg-card flex items-center justify-between px-6 flex-shrink-0">
                 <div className="flex items-center gap-4">
                     <button
-                        onClick={() => navigate("/agents")}
+                        onClick={handleBack}
                         className="p-2 hover:bg-muted rounded-lg transition-colors"
                     >
                         <ArrowLeft className="w-5 h-5" />
@@ -1097,6 +1209,38 @@ export function AgentBuilder() {
                 cancelText="Cancel"
                 variant="danger"
             />
+
+            {/* Unsaved Changes Dialog */}
+            <Dialog
+                isOpen={showUnsavedDialog}
+                onClose={() => setShowUnsavedDialog(false)}
+                title="Unsaved Changes"
+            >
+                <p className="text-muted-foreground mb-6">
+                    You have unsaved changes. Would you like to save them before leaving?
+                </p>
+                <div className="flex justify-end gap-3">
+                    <Button variant="ghost" onClick={() => setShowUnsavedDialog(false)}>
+                        Cancel
+                    </Button>
+                    <Button variant="destructive" onClick={handleDiscardChanges}>
+                        Discard Changes
+                    </Button>
+                    <Button variant="primary" onClick={handleSaveAndLeave} disabled={isSaving}>
+                        {isSaving ? (
+                            <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Saving...
+                            </>
+                        ) : (
+                            <>
+                                <Save className="w-4 h-4 mr-2" />
+                                Save & Leave
+                            </>
+                        )}
+                    </Button>
+                </div>
+            </Dialog>
         </div>
     );
 }

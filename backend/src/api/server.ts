@@ -19,10 +19,12 @@ import { authRoutes } from "./routes/auth";
 import { checkpointRoutes } from "./routes/checkpoints";
 import { connectionRoutes } from "./routes/connections";
 import { executionRoutes } from "./routes/executions";
+import { formInterfaceRoutes } from "./routes/form-interfaces";
 import { integrationRoutes } from "./routes/integrations";
 import { knowledgeBaseRoutes } from "./routes/knowledge-bases";
 import { logRoutes } from "./routes/logs";
 import { oauthRoutes } from "./routes/oauth";
+import { publicFormInterfaceRoutes } from "./routes/public/form-interfaces";
 import { templateRoutes } from "./routes/templates";
 import { threadRoutes } from "./routes/threads";
 import { triggerRoutes } from "./routes/triggers";
@@ -136,6 +138,8 @@ export async function buildServer() {
     await fastify.register(agentRoutes, { prefix: "/agents" });
     await fastify.register(threadRoutes, { prefix: "/threads" });
     await fastify.register(triggerRoutes);
+    await fastify.register(formInterfaceRoutes);
+    await fastify.register(publicFormInterfaceRoutes, { prefix: "/public/form-interfaces" });
     await fastify.register(webhookRoutes, { prefix: "/webhooks" });
     await fastify.register(websocketRoutes);
 

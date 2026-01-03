@@ -4,6 +4,7 @@ import {
     BookOpen,
     FileText,
     Bot,
+    ClipboardList,
     Settings,
     User,
     Building,
@@ -29,6 +30,7 @@ const navItems: NavItem[] = [
     // Primary navigation
     { icon: LayoutGrid, label: "Workflows", path: "/", section: "primary" },
     { icon: Bot, label: "Agents", path: "/agents", section: "primary" },
+    { icon: ClipboardList, label: "Form Interfaces", path: "/form-interfaces", section: "primary" },
     { icon: Plug, label: "Connections", path: "/connections", section: "primary" },
     { icon: BookOpen, label: "Knowledge Bases", path: "/knowledge-bases", section: "primary" },
     { icon: FileText, label: "Templates", path: "/templates", section: "primary" },

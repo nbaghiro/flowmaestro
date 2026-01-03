@@ -1,12 +1,14 @@
 import { Plus, FileText, Calendar, Sparkles, Trash2, MoreVertical, Copy } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import type { WorkflowNode } from "@flowmaestro/shared";
 import { AIGenerateDialog } from "../components/AIGenerateDialog";
 import { Badge } from "../components/common/Badge";
 import { Button } from "../components/common/Button";
+import { ContextMenu, type ContextMenuItem } from "../components/common/ContextMenu";
 import { ErrorDialog } from "../components/common/ErrorDialog";
 import { PageHeader } from "../components/common/PageHeader";
+import { ProviderIconList } from "../components/common/ProviderIconList";
 import { LoadingState } from "../components/common/Spinner";
 import { CreateWorkflowDialog } from "../components/CreateWorkflowDialog";
 import {
@@ -20,11 +22,18 @@ import {
 } from "../lib/api";
 import { logger } from "../lib/logger";
 import { convertToReactFlowFormat } from "../lib/workflowLayout";
+import { extractProvidersFromNodes } from "../lib/workflowUtils";
 
 interface Workflow {
     id: string;
     name: string;
     description?: string;
+    definition?: {
+        nodes?: Record<
+            string,
+            { type: string; config?: { provider?: string; providerId?: string } }
+        >;
+    };
     created_at: string;
     updated_at: string;
 }
@@ -38,6 +47,12 @@ export function Workflows() {
     const [isDeleting, setIsDeleting] = useState(false);
     const [openMenuId, setOpenMenuId] = useState<string | null>(null);
     const [error, setError] = useState<{ title: string; message: string } | null>(null);
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+    const [contextMenu, setContextMenu] = useState<{
+        isOpen: boolean;
+        position: { x: number; y: number };
+    }>({ isOpen: false, position: { x: 0, y: 0 } });
+    const [isBatchDeleting, setIsBatchDeleting] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
     const navigate = useNavigate();
 
@@ -224,6 +239,84 @@ export function Workflows() {
         }
     };
 
+    // Selection handlers for batch operations
+    const handleCardClick = useCallback(
+        (e: React.MouseEvent, workflow: Workflow) => {
+            if (e.shiftKey) {
+                e.preventDefault();
+                setSelectedIds((prev) => {
+                    const newSet = new Set(prev);
+                    if (newSet.has(workflow.id)) {
+                        newSet.delete(workflow.id);
+                    } else {
+                        newSet.add(workflow.id);
+                    }
+                    return newSet;
+                });
+            } else if (selectedIds.size === 0) {
+                navigate(`/builder/${workflow.id}`);
+            } else {
+                // Clear selection on normal click when items are selected
+                setSelectedIds(new Set());
+            }
+        },
+        [navigate, selectedIds.size]
+    );
+
+    const handleContextMenu = useCallback(
+        (e: React.MouseEvent, workflow: Workflow) => {
+            e.preventDefault();
+            // If right-clicking on an unselected item, select only that item
+            if (!selectedIds.has(workflow.id)) {
+                setSelectedIds(new Set([workflow.id]));
+            }
+            setContextMenu({
+                isOpen: true,
+                position: { x: e.clientX, y: e.clientY }
+            });
+        },
+        [selectedIds]
+    );
+
+    const handleBatchDelete = async () => {
+        if (selectedIds.size === 0) return;
+
+        setIsBatchDeleting(true);
+        try {
+            // Delete all selected workflows
+            const deletePromises = Array.from(selectedIds).map((id) => deleteWorkflow(id));
+            await Promise.all(deletePromises);
+
+            // Refresh the workflow list and clear selection
+            await loadWorkflows();
+            setSelectedIds(new Set());
+            setContextMenu({ isOpen: false, position: { x: 0, y: 0 } });
+        } catch (error: unknown) {
+            logger.error("Failed to delete workflows", error);
+            const err = error as { message?: string };
+            setError({
+                title: "Delete Failed",
+                message: err.message || "Failed to delete some workflows. Please try again."
+            });
+        } finally {
+            setIsBatchDeleting(false);
+        }
+    };
+
+    const closeContextMenu = useCallback(() => {
+        setContextMenu({ isOpen: false, position: { x: 0, y: 0 } });
+    }, []);
+
+    const contextMenuItems: ContextMenuItem[] = [
+        {
+            label: `Delete ${selectedIds.size} workflow${selectedIds.size !== 1 ? "s" : ""}`,
+            icon: <Trash2 className="w-4 h-4" />,
+            onClick: handleBatchDelete,
+            variant: "danger",
+            disabled: isBatchDeleting
+        }
+    ];
+
     const formatDate = (dateString: string) => {
         const date = new Date(dateString);
         return date.toLocaleDateString("en-US", {
@@ -237,22 +330,43 @@ export function Workflows() {
         <div className="max-w-7xl mx-auto px-6 py-8">
             <PageHeader
                 title="Workflows"
-                description={`${workflows.length} ${workflows.length === 1 ? "workflow" : "workflows"}`}
+                description={
+                    selectedIds.size > 0
+                        ? `${selectedIds.size} selected`
+                        : `${workflows.length} ${workflows.length === 1 ? "workflow" : "workflows"}`
+                }
                 action={
-                    <div className="flex items-center gap-2">
-                        <Button
-                            variant="secondary"
-                            onClick={() => setIsAIDialogOpen(true)}
-                            title="Generate workflow with AI"
-                        >
-                            <Sparkles className="w-4 h-4" />
-                            Generate with AI
-                        </Button>
-                        <Button variant="primary" onClick={() => setIsDialogOpen(true)}>
-                            <Plus className="w-4 h-4" />
-                            New Workflow
-                        </Button>
-                    </div>
+                    selectedIds.size > 0 ? (
+                        <div className="flex items-center gap-2">
+                            <Button variant="ghost" onClick={() => setSelectedIds(new Set())}>
+                                Clear selection
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                onClick={handleBatchDelete}
+                                disabled={isBatchDeleting}
+                                loading={isBatchDeleting}
+                            >
+                                {!isBatchDeleting && <Trash2 className="w-4 h-4" />}
+                                Delete selected
+                            </Button>
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-2">
+                            <Button
+                                variant="secondary"
+                                onClick={() => setIsAIDialogOpen(true)}
+                                title="Generate workflow with AI"
+                            >
+                                <Sparkles className="w-4 h-4" />
+                                Generate with AI
+                            </Button>
+                            <Button variant="primary" onClick={() => setIsDialogOpen(true)}>
+                                <Plus className="w-4 h-4" />
+                                New Workflow
+                            </Button>
+                        </div>
+                    )
                 }
             />
 
@@ -277,12 +391,15 @@ export function Workflows() {
                     {workflows.map((workflow) => (
                         <div
                             key={workflow.id}
-                            className="bg-card border border-border rounded-lg p-5 hover:border-primary hover:shadow-md transition-all group relative"
+                            className={`bg-card border rounded-lg p-5 hover:shadow-md transition-all group relative cursor-pointer select-none flex flex-col h-full ${
+                                selectedIds.has(workflow.id)
+                                    ? "border-primary ring-2 ring-primary/30 bg-primary/5"
+                                    : "border-border hover:border-primary"
+                            }`}
+                            onClick={(e) => handleCardClick(e, workflow)}
+                            onContextMenu={(e) => handleContextMenu(e, workflow)}
                         >
-                            <div
-                                onClick={() => navigate(`/builder/${workflow.id}`)}
-                                className="cursor-pointer"
-                            >
+                            <div className="flex-1">
                                 <div className="flex items-center justify-between mb-3">
                                     <FileText className="w-5 h-5 text-primary" />
                                     <div className="flex items-center gap-1">
@@ -345,10 +462,22 @@ export function Workflows() {
                                 </h3>
 
                                 {workflow.description && (
-                                    <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+                                    <p className="text-sm text-muted-foreground line-clamp-2">
                                         {workflow.description}
                                     </p>
                                 )}
+                            </div>
+
+                            {/* Footer - always at bottom */}
+                            <div className="mt-auto pt-4">
+                                <ProviderIconList
+                                    providers={extractProvidersFromNodes(
+                                        workflow.definition?.nodes
+                                    )}
+                                    maxVisible={5}
+                                    iconSize="sm"
+                                    className="mb-3"
+                                />
 
                                 <div className="flex items-center gap-4 text-xs text-muted-foreground pt-3 border-t border-border">
                                     <div className="flex items-center gap-1">
@@ -415,6 +544,14 @@ export function Workflows() {
                 title={error?.title || "Error"}
                 message={error?.message || "An error occurred"}
                 onClose={() => setError(null)}
+            />
+
+            {/* Context Menu for batch operations */}
+            <ContextMenu
+                isOpen={contextMenu.isOpen}
+                position={contextMenu.position}
+                items={contextMenuItems}
+                onClose={closeContextMenu}
             />
         </div>
     );

@@ -1,13 +1,23 @@
 import { Plus, Bot, Trash2, MoreVertical, Calendar, Edit2 } from "lucide-react";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Alert } from "../components/common/Alert";
 import { Badge } from "../components/common/Badge";
 import { Button } from "../components/common/Button";
+import { ContextMenu, type ContextMenuItem } from "../components/common/ContextMenu";
 import { PageHeader } from "../components/common/PageHeader";
 import { LoadingState } from "../components/common/Spinner";
 import { logger } from "../lib/logger";
 import { useAgentStore } from "../stores/agentStore";
+
+interface Agent {
+    id: string;
+    name: string;
+    description?: string;
+    provider: string;
+    model: string;
+    created_at: string;
+}
 
 export function Agents() {
     const navigate = useNavigate();
@@ -15,6 +25,12 @@ export function Agents() {
     const [agentToDelete, setAgentToDelete] = useState<{ id: string; name: string } | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+    const [contextMenu, setContextMenu] = useState<{
+        isOpen: boolean;
+        position: { x: number; y: number };
+    }>({ isOpen: false, position: { x: 0, y: 0 } });
+    const [isBatchDeleting, setIsBatchDeleting] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -60,16 +76,110 @@ export function Agents() {
         });
     };
 
+    // Selection handlers for batch operations
+    const handleCardClick = useCallback(
+        (e: React.MouseEvent, agent: Agent) => {
+            if (e.shiftKey) {
+                e.preventDefault();
+                setSelectedIds((prev) => {
+                    const newSet = new Set(prev);
+                    if (newSet.has(agent.id)) {
+                        newSet.delete(agent.id);
+                    } else {
+                        newSet.add(agent.id);
+                    }
+                    return newSet;
+                });
+            } else if (selectedIds.size === 0) {
+                navigate(`/agents/${agent.id}`);
+            } else {
+                // Clear selection on normal click when items are selected
+                setSelectedIds(new Set());
+            }
+        },
+        [navigate, selectedIds.size]
+    );
+
+    const handleContextMenu = useCallback(
+        (e: React.MouseEvent, agent: Agent) => {
+            e.preventDefault();
+            // If right-clicking on an unselected item, select only that item
+            if (!selectedIds.has(agent.id)) {
+                setSelectedIds(new Set([agent.id]));
+            }
+            setContextMenu({
+                isOpen: true,
+                position: { x: e.clientX, y: e.clientY }
+            });
+        },
+        [selectedIds]
+    );
+
+    const handleBatchDelete = async () => {
+        if (selectedIds.size === 0) return;
+
+        setIsBatchDeleting(true);
+        try {
+            // Delete all selected agents
+            const deletePromises = Array.from(selectedIds).map((id) => deleteAgent(id));
+            await Promise.all(deletePromises);
+
+            // Refresh the agent list and clear selection
+            await fetchAgents();
+            setSelectedIds(new Set());
+            setContextMenu({ isOpen: false, position: { x: 0, y: 0 } });
+        } catch (error: unknown) {
+            logger.error("Failed to delete agents", error);
+        } finally {
+            setIsBatchDeleting(false);
+        }
+    };
+
+    const closeContextMenu = useCallback(() => {
+        setContextMenu({ isOpen: false, position: { x: 0, y: 0 } });
+    }, []);
+
+    const contextMenuItems: ContextMenuItem[] = [
+        {
+            label: `Delete ${selectedIds.size} agent${selectedIds.size !== 1 ? "s" : ""}`,
+            icon: <Trash2 className="w-4 h-4" />,
+            onClick: handleBatchDelete,
+            variant: "danger",
+            disabled: isBatchDeleting
+        }
+    ];
+
     return (
         <div className="max-w-7xl mx-auto px-6 py-8">
             <PageHeader
                 title="Agents"
-                description={"Create and manage AI agents that can use tools and workflows"}
+                description={
+                    selectedIds.size > 0
+                        ? `${selectedIds.size} selected`
+                        : "Create and manage AI agents that can use tools and workflows"
+                }
                 action={
-                    <Button variant="primary" onClick={() => navigate("/agents/new")}>
-                        <Plus className="w-4 h-4" />
-                        New Agent
-                    </Button>
+                    selectedIds.size > 0 ? (
+                        <div className="flex items-center gap-2">
+                            <Button variant="ghost" onClick={() => setSelectedIds(new Set())}>
+                                Clear selection
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                onClick={handleBatchDelete}
+                                disabled={isBatchDeleting}
+                                loading={isBatchDeleting}
+                            >
+                                {!isBatchDeleting && <Trash2 className="w-4 h-4" />}
+                                Delete selected
+                            </Button>
+                        </div>
+                    ) : (
+                        <Button variant="primary" onClick={() => navigate("/agents/new")}>
+                            <Plus className="w-4 h-4" />
+                            New Agent
+                        </Button>
+                    )
                 }
             />
 
@@ -101,12 +211,15 @@ export function Agents() {
                     {agents.map((agent) => (
                         <div
                             key={agent.id}
-                            className="bg-card border border-border rounded-lg p-5 hover:border-primary hover:shadow-md transition-all group relative"
+                            className={`bg-card border rounded-lg p-5 hover:shadow-md transition-all group relative cursor-pointer select-none ${
+                                selectedIds.has(agent.id)
+                                    ? "border-primary ring-2 ring-primary/30 bg-primary/5"
+                                    : "border-border hover:border-primary"
+                            }`}
+                            onClick={(e) => handleCardClick(e, agent)}
+                            onContextMenu={(e) => handleContextMenu(e, agent)}
                         >
-                            <div
-                                onClick={() => navigate(`/agents/${agent.id}`)}
-                                className="cursor-pointer"
-                            >
+                            <div>
                                 <div className="flex items-center justify-between mb-3">
                                     <Bot className="w-5 h-5 text-primary" />
                                     <div className="flex items-center gap-1">
@@ -217,6 +330,14 @@ export function Agents() {
                     </div>
                 </div>
             )}
+
+            {/* Context Menu for batch operations */}
+            <ContextMenu
+                isOpen={contextMenu.isOpen}
+                position={contextMenu.position}
+                items={contextMenuItems}
+                onClose={closeContextMenu}
+            />
         </div>
     );
 }

@@ -115,6 +115,7 @@ jobs:
           build-args: |
             VITE_API_URL=${{ vars.VITE_API_URL }}
             VITE_WS_URL=${{ vars.VITE_WS_URL }}
+            VITE_UNSPLASH_ACCESS_KEY=${{ vars.VITE_UNSPLASH_ACCESS_KEY }}
           tags: |
             ${{ env.ARTIFACT_REGISTRY }}/frontend:${{ env.IMAGE_TAG }}
             ${{ env.ARTIFACT_REGISTRY }}/frontend:latest

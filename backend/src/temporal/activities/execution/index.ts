@@ -146,7 +146,12 @@ export {
     AudioOutputNodeHandler,
     createAudioOutputNodeHandler,
     type AudioOutputNodeConfig,
-    type AudioOutputNodeResult
+    type AudioOutputNodeResult,
+    // Template Output
+    TemplateOutputNodeHandler,
+    createTemplateOutputNodeHandler,
+    type TemplateOutputNodeConfig,
+    type TemplateOutputNodeResult
 } from "./handlers/outputs";
 
 // ============================================================================
@@ -301,7 +306,8 @@ import {
 import {
     createOutputNodeHandler,
     createActionNodeHandler,
-    createAudioOutputNodeHandler
+    createAudioOutputNodeHandler,
+    createTemplateOutputNodeHandler
 } from "./handlers/outputs";
 // Logic
 // Utils
@@ -331,6 +337,7 @@ export function registerDefaultHandlers(): void {
     registerHandler(createOutputNodeHandler(), "outputs", 30);
     registerHandler(createActionNodeHandler(), "outputs", 31);
     registerHandler(createAudioOutputNodeHandler(), "outputs", 32);
+    registerHandler(createTemplateOutputNodeHandler(), "outputs", 33);
 
     // Logic handlers (priority 40-49)
     registerHandler(createConditionalNodeHandler(), "logic", 40);

@@ -1,6 +1,6 @@
-import { Loader2 } from "lucide-react";
+import { Loader2, Save } from "lucide-react";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { ReactFlowProvider, useReactFlow, Node } from "reactflow";
 import { NodeInspector } from "../canvas/panels/NodeInspector";
 import { NodeLibrary } from "../canvas/panels/NodeLibrary";
@@ -9,6 +9,8 @@ import { AIAskButton } from "../components/AIAskButton";
 import { AIChatPanel } from "../components/AIChatPanel";
 import { BuilderHeader } from "../components/BuilderHeader";
 import { CheckpointPanel } from "../components/CheckpointPanel";
+import { Button } from "../components/common/Button";
+import { Dialog } from "../components/common/Dialog";
 import { ExecutionPanel } from "../components/ExecutionPanel";
 import { WorkflowSettingsDialog } from "../components/WorkflowSettingsDialog";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
@@ -58,7 +60,9 @@ interface Checkpoint {
 
 export function FlowBuilder() {
     const { workflowId } = useParams<{ workflowId: string }>();
+    const navigate = useNavigate();
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
+    const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
     const [isSidebarPinned, setIsSidebarPinned] = useState(false);
     const [workflowName, setWorkflowName] = useState("Untitled Workflow");
     const [workflowDescription, setWorkflowDescription] = useState("");
@@ -224,6 +228,33 @@ export function FlowBuilder() {
         }
     };
 
+    // Warn user about unsaved changes when closing/refreshing browser
+    useEffect(() => {
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            if (hasUnsavedChanges) {
+                e.preventDefault();
+                e.returnValue = "";
+            }
+        };
+
+        window.addEventListener("beforeunload", handleBeforeUnload);
+        return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+    }, [hasUnsavedChanges]);
+
+    const handleBack = useCallback(() => {
+        if (hasUnsavedChanges) {
+            setShowUnsavedDialog(true);
+        } else {
+            navigate("/");
+        }
+    }, [hasUnsavedChanges, navigate]);
+
+    const handleDiscardChanges = useCallback(() => {
+        setShowUnsavedDialog(false);
+        resetWorkflow();
+        navigate("/");
+    }, [navigate, resetWorkflow]);
+
     const handleSave = useCallback(async () => {
         if (!workflowId) return;
 
@@ -274,6 +305,42 @@ export function FlowBuilder() {
             setTimeout(() => setSaveStatus("idle"), SAVE_ERROR_TIMEOUT);
         }
     }, [workflowId, nodes, edges, workflowName, workflowDescription, aiGenerated, aiPrompt]);
+
+    const handleSaveAndLeave = useCallback(async () => {
+        if (!workflowId) return;
+
+        setSaveStatus("saving");
+
+        try {
+            const nodesMap = transformNodesToBackendMap(nodes);
+            const backendEdges = transformEdgesToBackend(edges);
+            const entryPoint = findEntryPoint(nodes);
+
+            const workflowDefinition = {
+                name: workflowName,
+                nodes: nodesMap,
+                edges: backendEdges,
+                ...(entryPoint && { entryPoint })
+            };
+
+            const updatePayload: {
+                name: string;
+                definition: unknown;
+            } = {
+                name: workflowName,
+                definition: workflowDefinition
+            };
+
+            await updateWorkflow(workflowId, updatePayload as Parameters<typeof updateWorkflow>[1]);
+
+            setShowUnsavedDialog(false);
+            navigate("/");
+        } catch (error: unknown) {
+            logger.error("Failed to save workflow", error);
+            setSaveStatus("error");
+            setTimeout(() => setSaveStatus("idle"), SAVE_ERROR_TIMEOUT);
+        }
+    }, [workflowId, nodes, edges, workflowName, navigate]);
 
     const handleDuplicateNode = useCallback(() => {
         if (!selectedNode) return;
@@ -498,6 +565,7 @@ export function FlowBuilder() {
                     onNameChange={handleNameChange}
                     onOpenSettings={() => setIsSettingsOpen(true)}
                     onOpenCheckpoints={() => setIsCheckpointOpen((prev) => !prev)}
+                    onBack={handleBack}
                 />
 
                 <WorkflowSettingsDialog
@@ -550,6 +618,42 @@ export function FlowBuilder() {
                         onCloseMinorChangesDialog={() => setShowMinorChangesDialog(false)}
                     />
                 </div>
+
+                {/* Unsaved Changes Dialog */}
+                <Dialog
+                    isOpen={showUnsavedDialog}
+                    onClose={() => setShowUnsavedDialog(false)}
+                    title="Unsaved Changes"
+                >
+                    <p className="text-muted-foreground mb-6">
+                        You have unsaved changes. Would you like to save them before leaving?
+                    </p>
+                    <div className="flex justify-end gap-3">
+                        <Button variant="ghost" onClick={() => setShowUnsavedDialog(false)}>
+                            Cancel
+                        </Button>
+                        <Button variant="destructive" onClick={handleDiscardChanges}>
+                            Discard Changes
+                        </Button>
+                        <Button
+                            variant="primary"
+                            onClick={handleSaveAndLeave}
+                            disabled={saveStatus === "saving"}
+                        >
+                            {saveStatus === "saving" ? (
+                                <>
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    Saving...
+                                </>
+                            ) : (
+                                <>
+                                    <Save className="w-4 h-4 mr-2" />
+                                    Save & Leave
+                                </>
+                            )}
+                        </Button>
+                    </div>
+                </Dialog>
             </div>
         </ReactFlowProvider>
     );

@@ -66,6 +66,7 @@
         "jsonata": "^2.1.0",
         "jsonwebtoken": "^9.0.2",
         "mammoth": "^1.8.0",
+        "marked": "^15.0.0",
         "mathjs": "^15.1.0",
         "mongodb": "^6.20.0",
         "nanoid": "^5.1.6",

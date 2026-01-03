@@ -9,9 +9,13 @@ import { Analytics } from "./pages/Analytics";
 import { Connections } from "./pages/Connections";
 import { FlowBuilder } from "./pages/FlowBuilder";
 import { ForgotPassword } from "./pages/ForgotPassword";
+import { FormInterfaceEditor } from "./pages/FormInterfaceEditor";
+import { FormInterfaces } from "./pages/FormInterfaces";
+import { FormInterfaceSubmissions } from "./pages/FormInterfaceSubmissions";
 import { KnowledgeBaseDetail } from "./pages/KnowledgeBaseDetail";
 import { KnowledgeBases } from "./pages/KnowledgeBases";
 import { Login } from "./pages/Login";
+import { PublicFormInterfacePage } from "./pages/PublicFormInterface";
 import { Register } from "./pages/Register";
 import { ResetPassword } from "./pages/ResetPassword";
 import { Settings } from "./pages/Settings";
@@ -42,6 +46,11 @@ function App() {
                 >
                     <Route index element={<Workflows />} />
                     <Route path="agents" element={<Agents />} />
+                    <Route path="form-interfaces" element={<FormInterfaces />} />
+                    <Route
+                        path="form-interfaces/:id/submissions"
+                        element={<FormInterfaceSubmissions />}
+                    />
                     <Route path="analytics" element={<Analytics />} />
                     <Route path="connections" element={<Connections />} />
                     <Route path="knowledge-bases" element={<KnowledgeBases />} />
@@ -116,6 +125,19 @@ function App() {
                         </ProtectedRoute>
                     }
                 />
+
+                {/* Full-screen form interface editor without sidebar */}
+                <Route
+                    path="/form-interfaces/:id/edit"
+                    element={
+                        <ProtectedRoute>
+                            <FormInterfaceEditor />
+                        </ProtectedRoute>
+                    }
+                />
+
+                {/* Public form interface (no auth required) */}
+                <Route path="/i/:slug" element={<PublicFormInterfacePage />} />
 
                 {/* Catch all - redirect to root */}
                 <Route path="*" element={<Navigate to="/" replace />} />

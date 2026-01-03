@@ -311,6 +311,7 @@ MARKETING_URL=http://localhost:5173
 # ==============================================================================
 VITE_API_URL=http://localhost:3001
 VITE_WS_URL=http://localhost:3001
+VITE_UNSPLASH_ACCESS_KEY=cNlNDO6FH0tAfqBa8wZJypg2aAhr9-3ZPud0omQzplo
 
 # ==============================================================================
 # Google Cloud Storage (for Knowledge Base documents)

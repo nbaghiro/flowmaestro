@@ -32,13 +32,14 @@ import {
     MessageSquare,
     // Visual variant icons
     FileUp,
+    FileText,
     Link,
     Volume2,
     // Integration fallback icon
     Plug,
     type LucideIcon
 } from "lucide-react";
-import { useCallback, useState, useEffect } from "react";
+import { useCallback, useState } from "react";
 import { ALL_PROVIDERS } from "@flowmaestro/shared";
 import { Button } from "../../components/common/Button";
 import { Input } from "../../components/common/Input";
@@ -112,6 +113,13 @@ const nodeLibrary: NodeDefinition[] = [
         icon: Volume2,
         category: "outputs",
         description: "Generate speech output (text-to-speech)"
+    },
+    {
+        type: "templateOutput",
+        label: "Template Output",
+        icon: FileText,
+        category: "outputs",
+        description: "Render markdown templates with variable interpolation"
     },
 
     // AI & ML - AI-powered processing
@@ -307,9 +315,6 @@ const integrationNodes: NodeDefinition[] = ALL_PROVIDERS.filter(
 // Combine static nodes with dynamic integration nodes
 const allNodes: NodeDefinition[] = [...nodeLibrary, ...integrationNodes];
 
-// LocalStorage key for persisting expanded categories
-const EXPANDED_CATEGORIES_KEY = "flowmaestro:nodeLibrary:expandedCategories";
-
 interface NodeLibraryProps {
     isCollapsed?: boolean;
     onExpand?: () => void;
@@ -325,25 +330,10 @@ export function NodeLibrary({
     isPinned = false,
     onPinToggle
 }: NodeLibraryProps) {
-    // Load expanded categories from localStorage, default to empty (all collapsed)
-    const [expandedCategories, setExpandedCategories] = useState<Set<string>>(() => {
-        try {
-            const saved = localStorage.getItem(EXPANDED_CATEGORIES_KEY);
-            if (saved) {
-                return new Set(JSON.parse(saved));
-            }
-        } catch {
-            // Ignore parse errors
-        }
-        return new Set<string>();
-    });
+    // Start with all categories collapsed (state resets on page refresh)
+    const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
     const [searchQuery, setSearchQuery] = useState("");
     const effectiveTheme = useThemeStore((state) => state.effectiveTheme);
-
-    // Persist expanded categories to localStorage
-    useEffect(() => {
-        localStorage.setItem(EXPANDED_CATEGORIES_KEY, JSON.stringify([...expandedCategories]));
-    }, [expandedCategories]);
 
     const toggleCategory = (categoryId: string) => {
         setExpandedCategories((prev) => {

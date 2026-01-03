@@ -41,6 +41,7 @@ import { LoopNodeConfig } from "./configs/LoopNodeConfig";
 import { OutputNodeConfig } from "./configs/OutputNodeConfig";
 import { RouterNodeConfig } from "./configs/RouterNodeConfig";
 import { SwitchNodeConfig } from "./configs/SwitchNodeConfig";
+import { TemplateOutputNodeConfig } from "./configs/TemplateOutputNodeConfig";
 import { TransformNodeConfig } from "./configs/TransformNodeConfig";
 import { TriggerNodeConfig } from "./configs/TriggerNodeConfig";
 import { URLNodeConfig } from "./configs/URLNodeConfig";
@@ -281,6 +282,15 @@ export function NodeInspector() {
             case "audioOutput":
                 return (
                     <AudioOutputNodeConfig
+                        data={node.data}
+                        onUpdate={handleUpdate}
+                        errors={validationErrors}
+                    />
+                );
+
+            case "templateOutput":
+                return (
+                    <TemplateOutputNodeConfig
                         data={node.data}
                         onUpdate={handleUpdate}
                         errors={validationErrors}

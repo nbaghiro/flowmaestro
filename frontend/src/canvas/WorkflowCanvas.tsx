@@ -33,6 +33,7 @@ import LoopNode from "./nodes/LoopNode";
 import OutputNode from "./nodes/OutputNode";
 import RouterNode from "./nodes/RouterNode";
 import SwitchNode from "./nodes/SwitchNode";
+import TemplateOutputNode from "./nodes/TemplateOutputNode";
 import TransformNode from "./nodes/TransformNode";
 import TriggerNode from "./nodes/TriggerNode";
 import URLNode from "./nodes/URLNode";
@@ -76,6 +77,7 @@ const nodeTypes = {
     transform: TransformNode,
     variable: VariableNode,
     output: OutputNode,
+    templateOutput: TemplateOutputNode,
     http: HTTPNode,
     database: DatabaseNode,
     integration: IntegrationNode,
@@ -335,7 +337,8 @@ function getDefaultLabel(type: string): string {
         url: "URL",
         audioInput: "Audio Input",
         action: "Action",
-        audioOutput: "Audio Output"
+        audioOutput: "Audio Output",
+        templateOutput: "Template Output"
     };
 
     // Check if it's a provider node first
