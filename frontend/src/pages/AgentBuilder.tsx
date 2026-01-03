@@ -66,6 +66,7 @@ export function AgentBuilder() {
         updateAgent,
         resetAgentState,
         addTool,
+        addToolsBatch,
         removeTool,
         threads,
         currentThread,
@@ -558,53 +559,30 @@ export function AgentBuilder() {
     const handleAddMCPTools = async (toolsToAdd: AddToolRequest[]) => {
         if (!currentAgent) return;
 
-        const results = {
-            added: [] as string[],
-            skipped: [] as string[],
-            failed: [] as string[]
-        };
+        try {
+            // Use batch endpoint to add all tools atomically
+            const response = await addToolsBatch(currentAgent.id, toolsToAdd);
 
-        // Try to add each MCP tool individually
-        for (const tool of toolsToAdd) {
-            try {
-                await addTool(currentAgent.id, tool);
-                results.added.push(tool.name);
-            } catch (error) {
-                const errorMessage = error instanceof Error ? error.message : String(error);
-                // If tool already exists, skip it silently
-                if (errorMessage.includes("already exists")) {
-                    results.skipped.push(tool.name);
-                    logger.debug("Skipped tool (already exists)", { toolName: tool.name });
-                } else {
-                    // Other errors are actual failures
-                    results.failed.push(tool.name);
-                    logger.error("Failed to add tool", error, { toolName: tool.name });
-                }
+            // Update local state from the store's updated agent
+            const updatedAgent = useAgentStore.getState().currentAgent;
+            if (updatedAgent) {
+                setTools(updatedAgent.available_tools || []);
             }
-        }
 
-        // Update local state from the store's updated agent
-        const updatedAgent = useAgentStore.getState().currentAgent;
-        if (updatedAgent) {
-            setTools(updatedAgent.available_tools || []);
-        }
-
-        // Show appropriate message based on results
-        if (results.added.length > 0) {
-            logger.info("Successfully added tools", { count: results.added.length });
-            if (results.skipped.length > 0) {
-                logger.debug("Skipped tools (already exist)", { count: results.skipped.length });
+            // Log results
+            if (response.data.added.length > 0) {
+                logger.info("Successfully added tools", { count: response.data.added.length });
             }
-        } else if (results.skipped.length > 0) {
-            // All tools were skipped
-            logger.debug("All selected tools already exist");
-        }
-
-        // Only throw error if some tools actually failed (not just duplicates)
-        if (results.failed.length > 0) {
-            const errorMsg = `Failed to add ${results.failed.length} tool(s): ${results.failed.join(", ")}`;
+            if (response.data.skipped.length > 0) {
+                logger.debug("Skipped tools", {
+                    count: response.data.skipped.length,
+                    tools: response.data.skipped
+                });
+            }
+        } catch (error) {
+            const errorMsg = error instanceof Error ? error.message : "Failed to add tools";
             setError(errorMsg);
-            throw new Error(errorMsg);
+            throw error;
         }
     };
 

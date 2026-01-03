@@ -2423,6 +2423,46 @@ export async function addAgentTool(
 }
 
 /**
+ * Response type for batch add tools
+ */
+export interface AddToolsBatchResponse {
+    success: boolean;
+    data: {
+        added: Tool[];
+        skipped: { name: string; reason: string }[];
+        agent: Agent;
+    };
+    error?: string;
+}
+
+/**
+ * Add multiple tools to an agent in a single atomic operation.
+ * This avoids race conditions when adding multiple tools simultaneously.
+ */
+export async function addAgentToolsBatch(
+    agentId: string,
+    tools: AddToolRequest[]
+): Promise<AddToolsBatchResponse> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/agents/${agentId}/tools/batch`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` })
+        },
+        body: JSON.stringify({ tools })
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
  * Remove a tool from an agent
  */
 export async function removeAgentTool(

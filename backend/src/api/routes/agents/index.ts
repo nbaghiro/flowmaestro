@@ -1,6 +1,7 @@
 import { FastifyInstance } from "fastify";
 import { authMiddleware } from "../../middleware/auth";
 import { addToolHandler } from "./add-tool";
+import { addToolsBatchHandler } from "./add-tools-batch";
 import { createAgentHandler } from "./create";
 import { deleteAgentHandler } from "./delete";
 import { executeAgentHandler } from "./execute";
@@ -26,6 +27,7 @@ export async function agentRoutes(fastify: FastifyInstance) {
 
     // Tool management
     fastify.post("/:id/tools", addToolHandler);
+    fastify.post("/:id/tools/batch", addToolsBatchHandler);
     fastify.delete("/:id/tools/:toolId", removeToolHandler);
 
     // Agent execution

@@ -8,6 +8,7 @@ import type {
     AgentExecution,
     ThreadMessage,
     AddToolRequest,
+    AddToolsBatchResponse,
     Thread
 } from "../lib/api";
 
@@ -43,6 +44,7 @@ interface AgentStore {
 
     // Tool management actions
     addTool: (agentId: string, data: AddToolRequest) => Promise<void>;
+    addToolsBatch: (agentId: string, tools: AddToolRequest[]) => Promise<AddToolsBatchResponse>;
     removeTool: (agentId: string, toolId: string) => Promise<void>;
 
     // Thread actions
@@ -231,6 +233,30 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
         } catch (error) {
             set({
                 error: error instanceof Error ? error.message : "Failed to add tool",
+                isLoading: false
+            });
+            throw error;
+        }
+    },
+
+    // Add multiple tools to an agent in a single atomic operation
+    addToolsBatch: async (agentId: string, tools: AddToolRequest[]) => {
+        set({ isLoading: true, error: null });
+        try {
+            const response = await api.addAgentToolsBatch(agentId, tools);
+            const updatedAgent = response.data.agent;
+
+            set((state) => ({
+                agents: state.agents.map((a) => (a.id === agentId ? updatedAgent : a)),
+                currentAgent:
+                    state.currentAgent?.id === agentId ? updatedAgent : state.currentAgent,
+                isLoading: false
+            }));
+
+            return response;
+        } catch (error) {
+            set({
+                error: error instanceof Error ? error.message : "Failed to add tools",
                 isLoading: false
             });
             throw error;

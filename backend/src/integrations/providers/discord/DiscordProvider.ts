@@ -2,6 +2,7 @@ import crypto from "crypto";
 import { config as appConfig, getOAuthRedirectUri } from "../../../core/config";
 import { BaseProvider } from "../../core/BaseProvider";
 import { DiscordClient } from "./client/DiscordClient";
+import { DiscordMCPAdapter } from "./mcp/DiscordMCPAdapter";
 import {
     sendMessageOperation,
     executeSendMessage,
@@ -46,6 +47,7 @@ export class DiscordProvider extends BaseProvider {
     };
 
     private clientPool: Map<string, DiscordClient> = new Map();
+    private mcpAdapter: DiscordMCPAdapter;
 
     constructor() {
         super();
@@ -56,6 +58,9 @@ export class DiscordProvider extends BaseProvider {
         this.registerOperation(listChannelsOperation);
         this.registerOperation(createWebhookOperation);
         this.registerOperation(executeWebhookOperation);
+
+        // Initialize MCP adapter
+        this.mcpAdapter = new DiscordMCPAdapter(this.operations);
 
         // Configure webhook settings
         this.setWebhookConfig({
@@ -312,21 +317,21 @@ export class DiscordProvider extends BaseProvider {
 
     /**
      * Get MCP tools
-     * Discord doesn't have MCP adapter yet, return empty array
      */
     getMCPTools(): MCPTool[] {
-        return [];
+        return this.mcpAdapter.getTools();
     }
 
     /**
      * Execute MCP tool
      */
     async executeMCPTool(
-        _toolName: string,
-        _params: Record<string, unknown>,
-        _connection: ConnectionWithData
+        toolName: string,
+        params: Record<string, unknown>,
+        connection: ConnectionWithData
     ): Promise<unknown> {
-        throw new Error("Discord MCP tools not yet implemented");
+        const client = this.getOrCreateClient(connection);
+        return await this.mcpAdapter.executeTool(toolName, params, client);
     }
 
     /**

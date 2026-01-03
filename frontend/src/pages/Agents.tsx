@@ -1,6 +1,7 @@
 import { Plus, Bot, Trash2, MoreVertical, Calendar, Edit2 } from "lucide-react";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { AgentToolIconList } from "../components/common/AgentToolIconList";
 import { Alert } from "../components/common/Alert";
 import { Badge } from "../components/common/Badge";
 import { Button } from "../components/common/Button";
@@ -9,15 +10,7 @@ import { PageHeader } from "../components/common/PageHeader";
 import { LoadingState } from "../components/common/Spinner";
 import { logger } from "../lib/logger";
 import { useAgentStore } from "../stores/agentStore";
-
-interface Agent {
-    id: string;
-    name: string;
-    description?: string;
-    provider: string;
-    model: string;
-    created_at: string;
-}
+import type { Agent } from "../lib/api";
 
 export function Agents() {
     const navigate = useNavigate();
@@ -211,7 +204,7 @@ export function Agents() {
                     {agents.map((agent) => (
                         <div
                             key={agent.id}
-                            className={`bg-card border rounded-lg p-5 hover:shadow-md transition-all group relative cursor-pointer select-none ${
+                            className={`bg-card border rounded-lg p-5 hover:shadow-md transition-all group relative cursor-pointer select-none flex flex-col ${
                                 selectedIds.has(agent.id)
                                     ? "border-primary ring-2 ring-primary/30 bg-primary/5"
                                     : "border-border hover:border-primary"
@@ -219,7 +212,8 @@ export function Agents() {
                             onClick={(e) => handleCardClick(e, agent)}
                             onContextMenu={(e) => handleContextMenu(e, agent)}
                         >
-                            <div>
+                            {/* Main Content */}
+                            <div className="flex-1">
                                 <div className="flex items-center justify-between mb-3">
                                     <Bot className="w-5 h-5 text-primary" />
                                     <div className="flex items-center gap-1">
@@ -284,10 +278,21 @@ export function Agents() {
                                 </h3>
 
                                 {agent.description && (
-                                    <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+                                    <p className="text-sm text-muted-foreground line-clamp-2">
                                         {agent.description}
                                     </p>
                                 )}
+                            </div>
+
+                            {/* Footer - Always at bottom */}
+                            <div className="mt-auto pt-3">
+                                {/* Tool Icons Row */}
+                                <AgentToolIconList
+                                    tools={agent.available_tools}
+                                    maxVisible={5}
+                                    iconSize="sm"
+                                    className="mb-3"
+                                />
 
                                 <div className="flex items-center gap-4 text-xs text-muted-foreground pt-3 border-t border-border">
                                     <div className="flex items-center gap-1">
