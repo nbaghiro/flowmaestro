@@ -12,7 +12,7 @@ import { CheckpointPanel } from "../components/CheckpointPanel";
 import { Button } from "../components/common/Button";
 import { Dialog } from "../components/common/Dialog";
 import { ExecutionPanel } from "../components/ExecutionPanel";
-import { CreateFormInterfaceDialog } from "../components/form-interface-builder/CreateFormInterfaceDialog";
+import { CreateFormInterfaceDialog } from "../components/forms/CreateFormInterfaceDialog";
 import { WorkflowSettingsDialog } from "../components/WorkflowSettingsDialog";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import {

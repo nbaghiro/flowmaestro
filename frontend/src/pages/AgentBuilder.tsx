@@ -28,7 +28,7 @@ import { Input } from "../components/common/Input";
 import { Select } from "../components/common/Select";
 import { Textarea } from "../components/common/Textarea";
 import { Tooltip } from "../components/common/Tooltip";
-import { CreateFormInterfaceDialog } from "../components/form-interface-builder/CreateFormInterfaceDialog";
+import { CreateFormInterfaceDialog } from "../components/forms/CreateFormInterfaceDialog";
 import { logger } from "../lib/logger";
 import { cn } from "../lib/utils";
 import { useAgentStore } from "../stores/agentStore";
