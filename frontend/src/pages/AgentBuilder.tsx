@@ -21,6 +21,7 @@ import { AgentChat } from "../components/agents/AgentChat";
 import { ThreadChat } from "../components/agents/ThreadChat";
 import { ThreadList } from "../components/agents/ThreadList";
 import { ToolsList } from "../components/agents/ToolsList";
+import { CreateChatInterfaceDialog } from "../components/chat/builder/CreateChatInterfaceDialog";
 import { Button } from "../components/common/Button";
 import { ConfirmDialog } from "../components/common/ConfirmDialog";
 import { Dialog } from "../components/common/Dialog";
@@ -97,6 +98,7 @@ export function AgentBuilder() {
     const [error, setError] = useState<string | null>(null);
     const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
     const [isFormInterfaceDialogOpen, setIsFormInterfaceDialogOpen] = useState(false);
+    const [isChatInterfaceDialogOpen, setIsChatInterfaceDialogOpen] = useState(false);
 
     // Track original values to detect changes
     const [originalValues, setOriginalValues] = useState<{
@@ -758,18 +760,32 @@ export function AgentBuilder() {
                 </div>
                 <div className="flex items-center gap-2">
                     {!isNewAgent && agentId && (
-                        <Tooltip content="Form Interface" position="bottom">
-                            <button
-                                onClick={() => setIsFormInterfaceDialogOpen(true)}
-                                className={cn(
-                                    "flex items-center gap-2 px-3 py-2 rounded-lg",
-                                    "text-sm font-medium text-foreground",
-                                    "border border-border hover:bg-muted transition-colors"
-                                )}
-                            >
-                                <FileText className="w-4 h-4" />
-                            </button>
-                        </Tooltip>
+                        <>
+                            <Tooltip content="Form Interface" position="bottom">
+                                <button
+                                    onClick={() => setIsFormInterfaceDialogOpen(true)}
+                                    className={cn(
+                                        "flex items-center gap-2 px-3 py-2 rounded-lg",
+                                        "text-sm font-medium text-foreground",
+                                        "border border-border hover:bg-muted transition-colors"
+                                    )}
+                                >
+                                    <FileText className="w-4 h-4" />
+                                </button>
+                            </Tooltip>
+                            <Tooltip content="Chat Interface" position="bottom">
+                                <button
+                                    onClick={() => setIsChatInterfaceDialogOpen(true)}
+                                    className={cn(
+                                        "flex items-center gap-2 px-3 py-2 rounded-lg",
+                                        "text-sm font-medium text-foreground",
+                                        "border border-border hover:bg-muted transition-colors"
+                                    )}
+                                >
+                                    <MessageSquare className="w-4 h-4" />
+                                </button>
+                            </Tooltip>
+                        </>
                     )}
                     <button
                         onClick={handleSave}
@@ -1247,6 +1263,17 @@ export function AgentBuilder() {
                 onCreated={(formInterface) => {
                     setIsFormInterfaceDialogOpen(false);
                     navigate(`/form-interfaces/${formInterface.id}/edit`);
+                }}
+                initialAgentId={!isNewAgent ? agentId : undefined}
+            />
+
+            {/* Create Chat Interface Dialog */}
+            <CreateChatInterfaceDialog
+                isOpen={isChatInterfaceDialogOpen}
+                onClose={() => setIsChatInterfaceDialogOpen(false)}
+                onCreated={(chatInterface) => {
+                    setIsChatInterfaceDialogOpen(false);
+                    navigate(`/chat-interfaces/${chatInterface.id}/edit`);
                 }}
                 initialAgentId={!isNewAgent ? agentId : undefined}
             />
