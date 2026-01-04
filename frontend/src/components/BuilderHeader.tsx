@@ -1,4 +1,13 @@
-import { Save, Play, Loader2, CheckCircle, XCircle, Settings, Layers } from "lucide-react";
+import {
+    Save,
+    Play,
+    Loader2,
+    CheckCircle,
+    XCircle,
+    Settings,
+    Layers,
+    FileText
+} from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { WorkflowTrigger } from "@flowmaestro/shared";
@@ -20,6 +29,7 @@ interface BuilderHeaderProps {
     onNameChange?: (name: string) => void;
     onOpenSettings?: () => void;
     onOpenCheckpoints?: () => void;
+    onOpenFormInterface?: () => void;
     onBack?: () => void;
 }
 
@@ -32,6 +42,7 @@ export function BuilderHeader({
     onNameChange,
     onOpenSettings,
     onOpenCheckpoints,
+    onOpenFormInterface,
     onBack
 }: BuilderHeaderProps) {
     const { startExecution, currentExecution, selectNode } = useWorkflowStore();
@@ -198,6 +209,16 @@ export function BuilderHeader({
                             <Layers className="w-4 h-4" />
                         </button>
                     </Tooltip>
+                    {onOpenFormInterface && (
+                        <Tooltip content="Create Form Interface" position="bottom">
+                            <button
+                                onClick={onOpenFormInterface}
+                                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted border border-border rounded-lg transition-colors"
+                            >
+                                <FileText className="w-4 h-4" />
+                            </button>
+                        </Tooltip>
+                    )}
                     <Tooltip content="Workflow settings (⌘,)" position="bottom">
                         <button
                             onClick={onOpenSettings}

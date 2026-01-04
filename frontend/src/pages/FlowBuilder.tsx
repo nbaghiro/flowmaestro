@@ -12,6 +12,7 @@ import { CheckpointPanel } from "../components/CheckpointPanel";
 import { Button } from "../components/common/Button";
 import { Dialog } from "../components/common/Dialog";
 import { ExecutionPanel } from "../components/ExecutionPanel";
+import { CreateFormInterfaceDialog } from "../components/forms/CreateFormInterfaceDialog";
 import { WorkflowSettingsDialog } from "../components/WorkflowSettingsDialog";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import {
@@ -76,6 +77,7 @@ export function FlowBuilder() {
     const [isCheckpointOpen, setIsCheckpointOpen] = useState(false);
     const [checkpoints, setCheckpoints] = useState<Checkpoint[]>([]);
     const [showMinorChangesDialog, setShowMinorChangesDialog] = useState(false);
+    const [isFormInterfaceDialogOpen, setIsFormInterfaceDialogOpen] = useState(false);
 
     const {
         selectedNode,
@@ -565,6 +567,7 @@ export function FlowBuilder() {
                     onNameChange={handleNameChange}
                     onOpenSettings={() => setIsSettingsOpen(true)}
                     onOpenCheckpoints={() => setIsCheckpointOpen((prev) => !prev)}
+                    onOpenFormInterface={() => setIsFormInterfaceDialogOpen(true)}
                     onBack={handleBack}
                 />
 
@@ -616,6 +619,15 @@ export function FlowBuilder() {
                         showMinorChangesDialog={showMinorChangesDialog}
                         onShowMinorChangesDialog={() => setShowMinorChangesDialog(true)}
                         onCloseMinorChangesDialog={() => setShowMinorChangesDialog(false)}
+                    />
+                    <CreateFormInterfaceDialog
+                        isOpen={isFormInterfaceDialogOpen}
+                        onClose={() => setIsFormInterfaceDialogOpen(false)}
+                        onCreated={(formInterface) => {
+                            setIsFormInterfaceDialogOpen(false);
+                            navigate(`/form-interfaces/${formInterface.id}/edit`);
+                        }}
+                        initialWorkflowId={workflowId}
                     />
                 </div>
 

@@ -6,7 +6,8 @@ import {
     MessageSquare,
     Slack,
     Wrench,
-    Pencil
+    Pencil,
+    FileText
 } from "lucide-react";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
@@ -26,6 +27,8 @@ import { Dialog } from "../components/common/Dialog";
 import { Input } from "../components/common/Input";
 import { Select } from "../components/common/Select";
 import { Textarea } from "../components/common/Textarea";
+import { Tooltip } from "../components/common/Tooltip";
+import { CreateFormInterfaceDialog } from "../components/forms/CreateFormInterfaceDialog";
 import { logger } from "../lib/logger";
 import { cn } from "../lib/utils";
 import { useAgentStore } from "../stores/agentStore";
@@ -93,6 +96,7 @@ export function AgentBuilder() {
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
+    const [isFormInterfaceDialogOpen, setIsFormInterfaceDialogOpen] = useState(false);
 
     // Track original values to detect changes
     const [originalValues, setOriginalValues] = useState<{
@@ -752,28 +756,44 @@ export function AgentBuilder() {
                         )}
                     </div>
                 </div>
-                <button
-                    onClick={handleSave}
-                    disabled={isSaving}
-                    className={cn(
-                        "flex items-center gap-2 px-4 py-2 rounded-lg",
-                        "bg-primary text-primary-foreground",
-                        "hover:bg-primary/90 transition-colors",
-                        "text-sm font-medium disabled:opacity-50"
+                <div className="flex items-center gap-2">
+                    {!isNewAgent && agentId && (
+                        <Tooltip content="Form Interface" position="bottom">
+                            <button
+                                onClick={() => setIsFormInterfaceDialogOpen(true)}
+                                className={cn(
+                                    "flex items-center gap-2 px-3 py-2 rounded-lg",
+                                    "text-sm font-medium text-foreground",
+                                    "border border-border hover:bg-muted transition-colors"
+                                )}
+                            >
+                                <FileText className="w-4 h-4" />
+                            </button>
+                        </Tooltip>
                     )}
-                >
-                    {isSaving ? (
-                        <>
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                            Saving...
-                        </>
-                    ) : (
-                        <>
-                            <Save className="w-4 h-4" />
-                            Save
-                        </>
-                    )}
-                </button>
+                    <button
+                        onClick={handleSave}
+                        disabled={isSaving}
+                        className={cn(
+                            "flex items-center gap-2 px-4 py-2 rounded-lg",
+                            "bg-primary text-primary-foreground",
+                            "hover:bg-primary/90 transition-colors",
+                            "text-sm font-medium disabled:opacity-50"
+                        )}
+                    >
+                        {isSaving ? (
+                            <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Saving...
+                            </>
+                        ) : (
+                            <>
+                                <Save className="w-4 h-4" />
+                                Save
+                            </>
+                        )}
+                    </button>
+                </div>
             </div>
 
             {/* Error message */}
@@ -1219,6 +1239,17 @@ export function AgentBuilder() {
                     </Button>
                 </div>
             </Dialog>
+
+            {/* Create Form Interface Dialog */}
+            <CreateFormInterfaceDialog
+                isOpen={isFormInterfaceDialogOpen}
+                onClose={() => setIsFormInterfaceDialogOpen(false)}
+                onCreated={(formInterface) => {
+                    setIsFormInterfaceDialogOpen(false);
+                    navigate(`/form-interfaces/${formInterface.id}/edit`);
+                }}
+                initialAgentId={!isNewAgent ? agentId : undefined}
+            />
         </div>
     );
 }
