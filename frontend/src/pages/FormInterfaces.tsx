@@ -289,7 +289,8 @@ export function FormInterfaces() {
                                 {fi.iconUrl && (
                                     <div className="absolute -bottom-6 left-4">
                                         <div className="w-12 h-12 rounded-lg bg-card border-2 border-background overflow-hidden flex items-center justify-center text-2xl">
-                                            {fi.iconUrl.startsWith("http") ? (
+                                            {fi.iconUrl.startsWith("http") ||
+                                            fi.iconUrl.startsWith("blob:") ? (
                                                 <img
                                                     src={fi.iconUrl}
                                                     alt=""

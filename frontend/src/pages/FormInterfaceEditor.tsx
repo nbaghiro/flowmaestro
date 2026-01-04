@@ -24,7 +24,7 @@ import { Input } from "../components/common/Input";
 import { LoadingState } from "../components/common/Spinner";
 import { CoverPicker } from "../components/form-interface-builder/CoverPicker";
 import { IconPicker } from "../components/form-interface-builder/IconPicker";
-import { getFormInterface } from "../lib/api";
+import { getFormInterface, uploadFormInterfaceAsset } from "../lib/api";
 import { logger } from "../lib/logger";
 import { useFormInterfaceBuilderStore } from "../stores/formInterfaceBuilderStore";
 
@@ -54,6 +54,7 @@ export function FormInterfaceEditor() {
     const [showIconPicker, setShowIconPicker] = useState(false);
     const [showSettingsDialog, setShowSettingsDialog] = useState(false);
     const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
+    const [isUploadingIcon, setIsUploadingIcon] = useState(false);
 
     // Refs
     const iconButtonRef = useRef<HTMLDivElement>(null);
@@ -292,7 +293,8 @@ export function FormInterfaceEditor() {
                                 className="w-16 h-16 rounded-xl bg-card border-4 border-background flex items-center justify-center text-3xl hover:bg-muted transition-colors overflow-hidden"
                             >
                                 {formInterface.iconUrl ? (
-                                    formInterface.iconUrl.startsWith("http") ? (
+                                    formInterface.iconUrl.startsWith("http") ||
+                                    formInterface.iconUrl.startsWith("blob:") ? (
                                         <img
                                             src={formInterface.iconUrl}
                                             alt=""
@@ -315,7 +317,25 @@ export function FormInterfaceEditor() {
                                         updateFormInterface({ iconUrl: icon });
                                         setShowIconPicker(false);
                                     }}
+                                    onUpload={async (file) => {
+                                        if (!id) throw new Error("Form interface ID not found");
+                                        setIsUploadingIcon(true);
+                                        try {
+                                            const response = await uploadFormInterfaceAsset(
+                                                id,
+                                                file,
+                                                "icon"
+                                            );
+                                            if (response.success && response.data) {
+                                                return response.data.url;
+                                            }
+                                            throw new Error(response.error || "Upload failed");
+                                        } finally {
+                                            setIsUploadingIcon(false);
+                                        }
+                                    }}
                                     currentIcon={formInterface.iconUrl}
+                                    isUploading={isUploadingIcon}
                                 />
                             )}
                         </div>

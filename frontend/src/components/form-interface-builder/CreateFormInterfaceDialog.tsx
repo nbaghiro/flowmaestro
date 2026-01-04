@@ -14,6 +14,9 @@ interface CreateFormInterfaceDialogProps {
     isOpen: boolean;
     onClose: () => void;
     onCreated: (formInterface: { id: string; title: string }) => void;
+    initialWorkflowId?: string;
+    initialAgentId?: string;
+    startAtStep?: 1 | 2;
 }
 
 interface WorkflowOption {
@@ -38,10 +41,13 @@ function generateSlug(title: string): string {
 export function CreateFormInterfaceDialog({
     isOpen,
     onClose,
-    onCreated
+    onCreated,
+    initialWorkflowId,
+    initialAgentId,
+    startAtStep = 1
 }: CreateFormInterfaceDialogProps) {
     // Step state
-    const [step, setStep] = useState<1 | 2>(1);
+    const [step, setStep] = useState<1 | 2>(startAtStep);
 
     // Target selection state
     const [selectedType, setSelectedType] = useState<FormInterfaceTargetType | null>(null);
@@ -66,9 +72,19 @@ export function CreateFormInterfaceDialog({
     useEffect(() => {
         if (isOpen) {
             loadOptions();
+            // Set initial step
+            setStep(startAtStep);
+            // Pre-select target if provided
+            if (initialWorkflowId) {
+                setSelectedType("workflow");
+                setSelectedId(initialWorkflowId);
+            } else if (initialAgentId) {
+                setSelectedType("agent");
+                setSelectedId(initialAgentId);
+            }
         } else {
             // Reset all state when closing
-            setStep(1);
+            setStep(startAtStep);
             setSelectedType(null);
             setSelectedId("");
             setTitle("");
@@ -77,7 +93,7 @@ export function CreateFormInterfaceDialog({
             setSlugEdited(false);
             setError(null);
         }
-    }, [isOpen]);
+    }, [isOpen, startAtStep, initialWorkflowId, initialAgentId]);
 
     // Auto-generate slug from title
     useEffect(() => {
@@ -128,6 +144,27 @@ export function CreateFormInterfaceDialog({
             setStep(2);
         }
     };
+
+    // Pre-fill title when starting at step 2 with pre-selected target
+    useEffect(() => {
+        if (isOpen && startAtStep === 2 && (initialWorkflowId || initialAgentId)) {
+            // Wait for options to load, then pre-fill title
+            if (
+                (initialWorkflowId && workflows.length > 0) ||
+                (initialAgentId && agents.length > 0)
+            ) {
+                const target =
+                    initialWorkflowId && workflows.length > 0
+                        ? workflows.find((w) => w.id === initialWorkflowId)
+                        : initialAgentId && agents.length > 0
+                          ? agents.find((a) => a.id === initialAgentId)
+                          : null;
+                if (target && !title) {
+                    setTitle(target.name);
+                }
+            }
+        }
+    }, [isOpen, startAtStep, initialWorkflowId, initialAgentId, workflows, agents, title]);
 
     const handleBack = () => {
         setStep(1);
