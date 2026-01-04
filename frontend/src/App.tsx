@@ -6,7 +6,12 @@ import { Account } from "./pages/Account";
 import { AgentBuilder } from "./pages/AgentBuilder";
 import { Agents } from "./pages/Agents";
 import { Analytics } from "./pages/Analytics";
+import { ChatInterfaceEditorPage } from "./pages/ChatInterfaceEditorPage";
+import { ChatInterfacePreviewPage } from "./pages/ChatInterfacePreviewPage";
+import { ChatInterfaceSessionsPage } from "./pages/ChatInterfaceSessionsPage";
+import { ChatInterfacesPage } from "./pages/ChatInterfacesPage";
 import { Connections } from "./pages/Connections";
+import { EmbedChatPage } from "./pages/EmbedChatPage";
 import { FlowBuilder } from "./pages/FlowBuilder";
 import { ForgotPassword } from "./pages/ForgotPassword";
 import { FormInterfaceEditor } from "./pages/FormInterfaceEditor";
@@ -15,6 +20,7 @@ import { FormInterfaceSubmissions } from "./pages/FormInterfaceSubmissions";
 import { KnowledgeBaseDetail } from "./pages/KnowledgeBaseDetail";
 import { KnowledgeBases } from "./pages/KnowledgeBases";
 import { Login } from "./pages/Login";
+import { PublicChatPage } from "./pages/PublicChatPage";
 import { PublicFormInterfacePage } from "./pages/PublicFormInterface";
 import { Register } from "./pages/Register";
 import { ResetPassword } from "./pages/ResetPassword";
@@ -51,6 +57,7 @@ function App() {
                         path="form-interfaces/:id/submissions"
                         element={<FormInterfaceSubmissions />}
                     />
+                    <Route path="chat-interfaces" element={<ChatInterfacesPage />} />
                     <Route path="analytics" element={<Analytics />} />
                     <Route path="connections" element={<Connections />} />
                     <Route path="knowledge-bases" element={<KnowledgeBases />} />
@@ -136,8 +143,44 @@ function App() {
                     }
                 />
 
+                {/* Full-screen chat interface editor without sidebar */}
+                <Route
+                    path="/chat-interfaces/:id/edit"
+                    element={
+                        <ProtectedRoute>
+                            <ChatInterfaceEditorPage />
+                        </ProtectedRoute>
+                    }
+                />
+
+                {/* Full-screen chat interface preview without sidebar */}
+                <Route
+                    path="/chat-interfaces/:id/preview"
+                    element={
+                        <ProtectedRoute>
+                            <ChatInterfacePreviewPage />
+                        </ProtectedRoute>
+                    }
+                />
+
+                {/* Chat interface sessions page */}
+                <Route
+                    path="/chat-interfaces/:id/sessions"
+                    element={
+                        <ProtectedRoute>
+                            <ChatInterfaceSessionsPage />
+                        </ProtectedRoute>
+                    }
+                />
+
                 {/* Public form interface (no auth required) */}
                 <Route path="/i/:slug" element={<PublicFormInterfacePage />} />
+
+                {/* Public chat interface (no auth required) */}
+                <Route path="/c/:slug" element={<PublicChatPage />} />
+
+                {/* Embedded chat interface for iframe (no auth required) */}
+                <Route path="/embed/:slug" element={<EmbedChatPage />} />
 
                 {/* Catch all - redirect to root */}
                 <Route path="*" element={<Navigate to="/" replace />} />

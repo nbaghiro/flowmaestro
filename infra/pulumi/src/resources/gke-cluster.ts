@@ -2,7 +2,7 @@ import * as gcp from "@pulumi/gcp";
 import * as pulumi from "@pulumi/pulumi";
 import { infrastructureConfig, resourceName, resourceLabels } from "../utils/config";
 import { network, subnet } from "./networking";
-import { knowledgeDocsBucket } from "./storage";
+import { knowledgeDocsBucket, uploadsBucket, artifactsBucket } from "./storage";
 
 // Create GKE Autopilot cluster
 export const cluster = new gcp.container.Cluster(resourceName("cluster"), {
@@ -138,7 +138,9 @@ new gcp.projects.IAMMember(resourceName("k8s-sa-logging"), {
     member: pulumi.interpolate`serviceAccount:${k8sServiceAccount.email}`
 });
 
-// Grant Storage Object Admin role on knowledge docs bucket
+// Grant Storage Object Admin role on all GCS buckets
+
+// Knowledge docs bucket - for knowledge base documents
 new gcp.storage.BucketIAMMember(
     resourceName("k8s-sa-knowledge-docs-storage"),
     {
@@ -147,6 +149,28 @@ new gcp.storage.BucketIAMMember(
         member: pulumi.interpolate`serviceAccount:${k8sServiceAccount.email}`
     },
     { dependsOn: [knowledgeDocsBucket] }
+);
+
+// Uploads bucket - for user uploads (icons, covers, images)
+new gcp.storage.BucketIAMMember(
+    resourceName("k8s-sa-uploads-storage"),
+    {
+        bucket: uploadsBucket.name,
+        role: "roles/storage.objectAdmin",
+        member: pulumi.interpolate`serviceAccount:${k8sServiceAccount.email}`
+    },
+    { dependsOn: [uploadsBucket] }
+);
+
+// Artifacts bucket - for workflow execution artifacts
+new gcp.storage.BucketIAMMember(
+    resourceName("k8s-sa-artifacts-storage"),
+    {
+        bucket: artifactsBucket.name,
+        role: "roles/storage.objectAdmin",
+        member: pulumi.interpolate`serviceAccount:${k8sServiceAccount.email}`
+    },
+    { dependsOn: [artifactsBucket] }
 );
 
 // Allow Kubernetes service account to impersonate GCP service account

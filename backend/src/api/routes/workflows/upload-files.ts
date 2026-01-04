@@ -8,7 +8,7 @@
 import * as path from "path";
 import { FastifyInstance } from "fastify";
 import { createServiceLogger } from "../../../core/logging";
-import { getGCSStorageService } from "../../../services/GCSStorageService";
+import { getUploadsStorageService } from "../../../services/GCSStorageService";
 import { SupportedFileTypes } from "../../../temporal/core/schemas";
 import { authMiddleware } from "../../middleware";
 
@@ -30,7 +30,7 @@ export async function uploadWorkflowFilesRoute(fastify: FastifyInstance) {
         async (request, reply) => {
             const userId = request.user!.id;
             const uploadedFiles: WorkflowFileUpload[] = [];
-            const gcsService = getGCSStorageService();
+            const gcsService = getUploadsStorageService();
 
             // Generate a unique folder for this upload batch
             const uploadBatchId = `workflow-files-${Date.now()}`;

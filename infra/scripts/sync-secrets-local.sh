@@ -314,9 +314,11 @@ VITE_WS_URL=http://localhost:3001
 VITE_UNSPLASH_ACCESS_KEY=cNlNDO6FH0tAfqBa8wZJypg2aAhr9-3ZPud0omQzplo
 
 # ==============================================================================
-# Google Cloud Storage (for Knowledge Base documents)
+# Google Cloud Storage
 # ==============================================================================
-GCS_BUCKET_NAME=flowmaestro-knowledge-docs-flowmaestro-prod
+GCS_UPLOADS_BUCKET=flowmaestro-uploads-flowmaestro-prod
+GCS_KNOWLEDGE_DOCS_BUCKET=flowmaestro-knowledge-docs-flowmaestro-prod
+GCS_ARTIFACTS_BUCKET=flowmaestro-artifacts-flowmaestro-prod
 GCS_SIGNED_URL_EXPIRATION=3600
 EOF
 

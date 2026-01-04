@@ -9,7 +9,7 @@ import { ContextMenu, type ContextMenuItem } from "../components/common/ContextM
 import { Dialog } from "../components/common/Dialog";
 import { PageHeader } from "../components/common/PageHeader";
 import { LoadingState } from "../components/common/Spinner";
-import { CreateFormInterfaceDialog } from "../components/form-interface-builder/CreateFormInterfaceDialog";
+import { CreateFormInterfaceDialog } from "../components/forms/CreateFormInterfaceDialog";
 import { getFormInterfaces, deleteFormInterface, duplicateFormInterface } from "../lib/api";
 import { logger } from "../lib/logger";
 

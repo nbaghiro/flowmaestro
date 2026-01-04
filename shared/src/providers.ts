@@ -1623,11 +1623,10 @@ export const ALL_PROVIDERS: Provider[] = [
     {
         provider: "replicate",
         displayName: "Replicate",
-        description: "Run ML models in the cloud",
+        description: "Flux image generation and Wan video models",
         logoUrl: getBrandLogo("replicate.com"),
         category: "AI & ML",
-        methods: ["api_key"],
-        comingSoon: true
+        methods: ["api_key"]
     },
     {
         provider: "stabilityai",

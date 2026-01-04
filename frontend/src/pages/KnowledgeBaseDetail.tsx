@@ -1,4 +1,15 @@
-import { BookOpen, ArrowLeft, Loader2, Trash2, FileText, Search, Settings } from "lucide-react";
+import {
+    BookOpen,
+    ArrowLeft,
+    Loader2,
+    Trash2,
+    FileText,
+    Search,
+    Settings,
+    Pencil,
+    Check,
+    X
+} from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
@@ -42,7 +53,8 @@ export function KnowledgeBaseDetail() {
         deleteDoc,
         reprocessDoc,
         query,
-        deleteKB
+        deleteKB,
+        updateKB
     } = useKnowledgeBaseStore();
 
     const [activeTab, setActiveTab] = useState<TabType>("documents");
@@ -54,6 +66,12 @@ export function KnowledgeBaseDetail() {
     const [deletingKB, setDeletingKB] = useState(false);
     const [selectedDocument, setSelectedDocument] = useState<KnowledgeDocument | null>(null);
     const [viewerWidth, setViewerWidth] = useState(450);
+
+    // Name editing state
+    const [isEditingName, setIsEditingName] = useState(false);
+    const [editedName, setEditedName] = useState("");
+    const [isSavingName, setIsSavingName] = useState(false);
+    const nameInputRef = useRef<HTMLInputElement>(null);
 
     const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -184,6 +202,49 @@ export function KnowledgeBaseDetail() {
         }
     };
 
+    const handleStartEditName = () => {
+        setEditedName(currentKB?.name || "");
+        setIsEditingName(true);
+    };
+
+    const handleCancelEditName = () => {
+        setIsEditingName(false);
+        setEditedName("");
+    };
+
+    const handleSaveName = async () => {
+        if (!id || !editedName.trim() || editedName.trim() === currentKB?.name) {
+            setIsEditingName(false);
+            return;
+        }
+
+        setIsSavingName(true);
+        try {
+            await updateKB(id, { name: editedName.trim() });
+            setIsEditingName(false);
+        } catch (error) {
+            logger.error("Failed to update knowledge base name", error);
+        } finally {
+            setIsSavingName(false);
+        }
+    };
+
+    const handleNameKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === "Enter") {
+            handleSaveName();
+        } else if (e.key === "Escape") {
+            handleCancelEditName();
+        }
+    };
+
+    // Focus input when editing
+    useEffect(() => {
+        if (isEditingName && nameInputRef.current) {
+            nameInputRef.current.focus();
+            nameInputRef.current.select();
+        }
+    }, [isEditingName]);
+
     const handleDocumentClick = (doc: KnowledgeDocument) => {
         if (doc.status === "ready") {
             setSelectedDocument(doc);
@@ -242,7 +303,51 @@ export function KnowledgeBaseDetail() {
                     </button>
                     <div className="flex items-center gap-2">
                         <BookOpen className="w-5 h-5 text-primary" />
-                        <h1 className="text-lg font-semibold text-foreground">{currentKB.name}</h1>
+                        {isEditingName ? (
+                            <div className="flex items-center gap-2">
+                                <input
+                                    ref={nameInputRef}
+                                    type="text"
+                                    value={editedName}
+                                    onChange={(e) => setEditedName(e.target.value)}
+                                    onKeyDown={handleNameKeyDown}
+                                    onBlur={handleSaveName}
+                                    className="text-lg font-semibold text-foreground bg-muted border border-border rounded px-2 py-0.5 outline-none focus:border-primary"
+                                    disabled={isSavingName}
+                                />
+                                <button
+                                    onClick={handleSaveName}
+                                    disabled={isSavingName}
+                                    className="p-1 text-green-600 hover:bg-green-50 rounded transition-colors disabled:opacity-50"
+                                    title="Save"
+                                >
+                                    {isSavingName ? (
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                        <Check className="w-4 h-4" />
+                                    )}
+                                </button>
+                                <button
+                                    onClick={handleCancelEditName}
+                                    disabled={isSavingName}
+                                    className="p-1 text-muted-foreground hover:bg-muted rounded transition-colors disabled:opacity-50"
+                                    title="Cancel"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
+                        ) : (
+                            <button
+                                onClick={handleStartEditName}
+                                className="flex items-center gap-2 group"
+                                title="Click to edit name"
+                            >
+                                <h1 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
+                                    {currentKB.name}
+                                </h1>
+                                <Pencil className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -325,7 +430,16 @@ export function KnowledgeBaseDetail() {
                             />
                         )}
 
-                        {activeTab === "settings" && <KBSettingsSection kb={currentKB} />}
+                        {activeTab === "settings" && (
+                            <KBSettingsSection
+                                kb={currentKB}
+                                onUpdate={async (input) => {
+                                    if (id) {
+                                        await updateKB(id, input);
+                                    }
+                                }}
+                            />
+                        )}
                     </div>
                 </div>
 

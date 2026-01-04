@@ -4,5 +4,7 @@ metadata:
   name: gcs-config
   namespace: flowmaestro
 data:
-  # Production GCS bucket for knowledge documents
-  GCS_BUCKET_NAME: "flowmaestro-knowledge-docs-flowmaestro-prod"
+  # Production GCS buckets
+  GCS_UPLOADS_BUCKET: "flowmaestro-uploads-flowmaestro-prod"
+  GCS_KNOWLEDGE_DOCS_BUCKET: "flowmaestro-knowledge-docs-flowmaestro-prod"
+  GCS_ARTIFACTS_BUCKET: "flowmaestro-artifacts-flowmaestro-prod"

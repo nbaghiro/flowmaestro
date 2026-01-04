@@ -1,4 +1,13 @@
-import { FileText, CheckCircle, Loader2, XCircle, Clock, Trash2, RefreshCw } from "lucide-react";
+import {
+    FileText,
+    CheckCircle,
+    Loader2,
+    XCircle,
+    Clock,
+    Trash2,
+    RefreshCw,
+    Globe
+} from "lucide-react";
 import type { KnowledgeDocument } from "../../lib/api";
 
 interface DocumentListProps {
@@ -93,7 +102,11 @@ export function DocumentList({
                                 <div className="flex items-start justify-between">
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2 mb-1">
-                                            <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                            {doc.source_type === "url" ? (
+                                                <Globe className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                            ) : (
+                                                <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                            )}
                                             <span className="font-medium truncate">
                                                 {doc.source_type === "url" && doc.source_url
                                                     ? doc.source_url

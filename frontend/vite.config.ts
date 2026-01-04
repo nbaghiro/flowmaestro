@@ -18,5 +18,22 @@ export default defineConfig({
                 changeOrigin: true
             }
         }
+    },
+    build: {
+        rollupOptions: {
+            input: {
+                main: path.resolve(__dirname, "index.html"),
+                widget: path.resolve(__dirname, "src/widget/widget-sdk.ts")
+            },
+            output: {
+                // Widget SDK should be a single file without chunking
+                entryFileNames: (chunkInfo) => {
+                    if (chunkInfo.name === "widget") {
+                        return "widget/[name].js";
+                    }
+                    return "assets/[name]-[hash].js";
+                }
+            }
+        }
     }
 });

@@ -7,6 +7,11 @@ import { getLogger } from "../core/logging";
 
 const logger = getLogger();
 
+/**
+ * GCS bucket types for different use cases
+ */
+export type GCSBucketType = "uploads" | "knowledgeDocs" | "artifacts";
+
 export interface UploadOptions {
     userId: string;
     knowledgeBaseId: string;
@@ -27,12 +32,17 @@ export class GCSStorageService {
     private storage: Storage;
     private bucket: Bucket;
     private bucketName: string;
+    private bucketType: GCSBucketType;
 
-    constructor() {
-        const bucketName = config.gcs.bucketName;
+    constructor(bucketType: GCSBucketType = "knowledgeDocs") {
+        this.bucketType = bucketType;
+        const bucketName = this.getBucketName(bucketType);
 
         if (!bucketName) {
-            throw new Error("GCS_BUCKET_NAME environment variable is required");
+            const envVarName = this.getEnvVarName(bucketType);
+            throw new Error(
+                `${envVarName} environment variable is required for ${bucketType} bucket`
+            );
         }
 
         // Initialize Storage with Application Default Credentials
@@ -43,6 +53,41 @@ export class GCSStorageService {
 
         this.bucketName = bucketName;
         this.bucket = this.storage.bucket(bucketName);
+    }
+
+    /**
+     * Get bucket name from config based on bucket type
+     */
+    private getBucketName(bucketType: GCSBucketType): string {
+        switch (bucketType) {
+            case "uploads":
+                return config.gcs.uploadsBucket;
+            case "knowledgeDocs":
+                return config.gcs.knowledgeDocsBucket;
+            case "artifacts":
+                return config.gcs.artifactsBucket;
+        }
+    }
+
+    /**
+     * Get environment variable name for error messages
+     */
+    private getEnvVarName(bucketType: GCSBucketType): string {
+        switch (bucketType) {
+            case "uploads":
+                return "GCS_UPLOADS_BUCKET";
+            case "knowledgeDocs":
+                return "GCS_KNOWLEDGE_DOCS_BUCKET";
+            case "artifacts":
+                return "GCS_ARTIFACTS_BUCKET";
+        }
+    }
+
+    /**
+     * Get the bucket type this service is configured for
+     */
+    public getBucketType(): GCSBucketType {
+        return this.bucketType;
     }
 
     /**
@@ -131,20 +176,35 @@ export class GCSStorageService {
     /**
      * Generate a signed URL for downloading a file
      * @param gcsUri - GCS URI (gs://bucket/path/to/file)
-     * @param expiresIn - Expiration time in seconds (default: 3600 = 1 hour)
+     * @param expiresIn - Expiration time in seconds (default: 3600 = 1 hour, max: 604800 = 7 days)
      * @returns Signed URL that can be used to download the file
      */
     public async getSignedDownloadUrl(gcsUri: string, expiresIn: number = 3600): Promise<string> {
         const gcsPath = this.extractPathFromUri(gcsUri);
         const file = this.bucket.file(gcsPath);
 
+        // GCS signed URLs have a max expiration of 7 days
+        const maxExpiration = 7 * 24 * 60 * 60; // 604800 seconds
+        const actualExpiration = Math.min(expiresIn, maxExpiration);
+
         const [url] = await file.getSignedUrl({
             version: "v4",
             action: "read",
-            expires: Date.now() + expiresIn * 1000
+            expires: Date.now() + actualExpiration * 1000
         });
 
         return url;
+    }
+
+    /**
+     * Get a public URL for a file (requires bucket to be publicly readable)
+     * Use this for assets that need permanent URLs (icons, covers, etc.)
+     * @param gcsUri - GCS URI (gs://bucket/path/to/file)
+     * @returns Public URL that can be used to access the file
+     */
+    public getPublicUrl(gcsUri: string): string {
+        const gcsPath = this.extractPathFromUri(gcsUri);
+        return `https://storage.googleapis.com/${this.bucketName}/${gcsPath}`;
     }
 
     /**
@@ -257,6 +317,7 @@ export class GCSStorageService {
     private getContentType(filename: string): string {
         const ext = path.extname(filename).toLowerCase();
         const contentTypeMap: Record<string, string> = {
+            // Documents
             ".pdf": "application/pdf",
             ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             ".doc": "application/msword",
@@ -264,22 +325,55 @@ export class GCSStorageService {
             ".md": "text/markdown",
             ".html": "text/html",
             ".json": "application/json",
-            ".csv": "text/csv"
+            ".csv": "text/csv",
+            // Images
+            ".jpg": "image/jpeg",
+            ".jpeg": "image/jpeg",
+            ".png": "image/png",
+            ".gif": "image/gif",
+            ".webp": "image/webp",
+            ".svg": "image/svg+xml"
         };
 
         return contentTypeMap[ext] || "application/octet-stream";
     }
 }
 
-// Singleton instance
-let gcsStorageService: GCSStorageService | null = null;
+// Singleton instances for each bucket type
+const gcsStorageServices: Map<GCSBucketType, GCSStorageService> = new Map();
 
 /**
- * Get or create GCS storage service singleton
+ * Get or create GCS storage service singleton for a specific bucket type
+ * @param bucketType - The type of bucket to use (defaults to "knowledgeDocs" for backwards compatibility)
  */
-export function getGCSStorageService(): GCSStorageService {
-    if (!gcsStorageService) {
-        gcsStorageService = new GCSStorageService();
+export function getGCSStorageService(
+    bucketType: GCSBucketType = "knowledgeDocs"
+): GCSStorageService {
+    let service = gcsStorageServices.get(bucketType);
+    if (!service) {
+        service = new GCSStorageService(bucketType);
+        gcsStorageServices.set(bucketType, service);
     }
-    return gcsStorageService;
+    return service;
+}
+
+/**
+ * Get GCS storage service for user uploads (icons, covers, images)
+ */
+export function getUploadsStorageService(): GCSStorageService {
+    return getGCSStorageService("uploads");
+}
+
+/**
+ * Get GCS storage service for knowledge base documents
+ */
+export function getKnowledgeDocsStorageService(): GCSStorageService {
+    return getGCSStorageService("knowledgeDocs");
+}
+
+/**
+ * Get GCS storage service for workflow artifacts
+ */
+export function getArtifactsStorageService(): GCSStorageService {
+    return getGCSStorageService("artifacts");
 }

@@ -18,13 +18,13 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Alert } from "../components/common/Alert";
 import { Button } from "../components/common/Button";
 import { Checkbox } from "../components/common/Checkbox";
+import { CoverPicker } from "../components/common/CoverPicker";
 import { Dialog } from "../components/common/Dialog";
 import { FormField } from "../components/common/FormField";
+import { IconPicker } from "../components/common/IconPicker";
 import { Input } from "../components/common/Input";
 import { LoadingState } from "../components/common/Spinner";
-import { CoverPicker } from "../components/form-interface-builder/CoverPicker";
-import { IconPicker } from "../components/form-interface-builder/IconPicker";
-import { getFormInterface } from "../lib/api";
+import { getFormInterface, uploadFormInterfaceAsset } from "../lib/api";
 import { logger } from "../lib/logger";
 import { useFormInterfaceBuilderStore } from "../stores/formInterfaceBuilderStore";
 
@@ -315,6 +315,25 @@ export function FormInterfaceEditor() {
                                         updateFormInterface({ iconUrl: icon });
                                         setShowIconPicker(false);
                                     }}
+                                    onFileUpload={async (file) => {
+                                        if (!id) return null;
+                                        try {
+                                            const result = await uploadFormInterfaceAsset(
+                                                id,
+                                                file,
+                                                "icon"
+                                            );
+                                            return result.data.url;
+                                        } catch (err) {
+                                            logger.error("Failed to upload icon", err);
+                                            setError(
+                                                err instanceof Error
+                                                    ? err.message
+                                                    : "Failed to upload icon"
+                                            );
+                                            return null;
+                                        }
+                                    }}
                                     currentIcon={formInterface.iconUrl}
                                 />
                             )}
@@ -505,7 +524,11 @@ export function FormInterfaceEditor() {
                 isOpen={showCoverPicker}
                 onClose={() => setShowCoverPicker(false)}
                 onSelect={(type, value) => {
-                    updateFormInterface({ coverType: type, coverValue: value });
+                    // CoverPicker returns union type, cast to FormInterfaceCoverType
+                    // "gradient" maps to "color" for form interfaces
+                    const coverType =
+                        type === "gradient" ? "color" : (type as "color" | "image" | "stock");
+                    updateFormInterface({ coverType, coverValue: value });
                     setShowCoverPicker(false);
                 }}
                 currentType={formInterface.coverType}

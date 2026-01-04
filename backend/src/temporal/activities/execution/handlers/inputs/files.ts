@@ -16,7 +16,7 @@ import type {
 } from "@flowmaestro/shared";
 import { TextChunker } from "../../../../../services/embeddings/TextChunker";
 import { TextExtractor } from "../../../../../services/embeddings/TextExtractor";
-import { getGCSStorageService } from "../../../../../services/GCSStorageService";
+import { getUploadsStorageService } from "../../../../../services/GCSStorageService";
 import { createActivityLogger } from "../../../../core";
 import {
     FilesNodeConfigSchema,
@@ -110,8 +110,8 @@ export class FilesNodeHandler extends BaseNodeHandler {
             }
         }
 
-        // Initialize services
-        const gcsService = getGCSStorageService();
+        // Initialize services - use uploads bucket for user-uploaded workflow files
+        const gcsService = getUploadsStorageService();
         const textExtractor = new TextExtractor();
         const textChunker = new TextChunker({
             chunkSize: config.chunkSize,

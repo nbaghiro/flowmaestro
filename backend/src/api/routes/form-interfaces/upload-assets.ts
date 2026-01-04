@@ -1,13 +1,13 @@
 import { FastifyInstance } from "fastify";
 import { createServiceLogger } from "../../../core/logging";
-import { getGCSStorageService } from "../../../services/GCSStorageService";
+import { getUploadsStorageService } from "../../../services/GCSStorageService";
 import { FormInterfaceRepository } from "../../../storage/repositories/FormInterfaceRepository";
 import { authMiddleware } from "../../middleware";
 
 const logger = createServiceLogger("FormInterfaceRoutes");
 
 // Allowed image MIME types
-const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/svg+xml"];
 
 export async function uploadFormInterfaceAssetRoute(fastify: FastifyInstance) {
     fastify.post(
@@ -58,24 +58,24 @@ export async function uploadFormInterfaceAssetRoute(fastify: FastifyInstance) {
                     });
                 }
 
-                // Upload to GCS using the existing upload method
+                // Upload to GCS uploads bucket
                 // We use "form-interfaces/{id}/{assetType}" as the folder path
-                const gcsService = getGCSStorageService();
+                const gcsService = getUploadsStorageService();
                 const gcsUri = await gcsService.upload(data.file, {
                     userId,
                     knowledgeBaseId: `form-interfaces/${id}/${assetType}`,
                     filename: data.filename
                 });
 
-                // Get signed URL for the uploaded file (1 year expiry)
-                const signedUrl = await gcsService.getSignedDownloadUrl(gcsUri, 60 * 60 * 24 * 365);
+                // Get public URL (uploads bucket is publicly readable)
+                const publicUrl = gcsService.getPublicUrl(gcsUri);
 
                 // Update form interface with new asset URL
                 let updateData = {};
                 if (assetType === "cover") {
-                    updateData = { coverType: "image", coverValue: signedUrl };
+                    updateData = { coverType: "image", coverValue: publicUrl };
                 } else {
-                    updateData = { iconUrl: signedUrl };
+                    updateData = { iconUrl: publicUrl };
                 }
 
                 const formInterface = await formInterfaceRepo.update(id, userId, updateData);
@@ -88,7 +88,7 @@ export async function uploadFormInterfaceAssetRoute(fastify: FastifyInstance) {
                 return reply.send({
                     success: true,
                     data: {
-                        url: signedUrl,
+                        url: publicUrl,
                         assetType,
                         formInterface
                     }

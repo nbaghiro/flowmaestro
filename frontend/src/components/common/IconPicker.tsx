@@ -1,10 +1,11 @@
-import { X, Upload, Search } from "lucide-react";
+import { X, Upload, Search, Loader2 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 
 interface IconPickerProps {
     isOpen: boolean;
     onClose: () => void;
     onSelect: (icon: string) => void;
+    onFileUpload?: (file: File) => Promise<string | null>;
     currentIcon?: string | null;
 }
 
@@ -278,10 +279,17 @@ const CATEGORY_ICONS: Record<string, string> = {
 
 type TabType = "emoji" | "upload";
 
-export function IconPicker({ isOpen, onClose, onSelect, currentIcon }: IconPickerProps) {
+export function IconPicker({
+    isOpen,
+    onClose,
+    onSelect,
+    onFileUpload,
+    currentIcon
+}: IconPickerProps) {
     const [activeTab, setActiveTab] = useState<TabType>("emoji");
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedCategory, setSelectedCategory] = useState("Smileys & People");
+    const [isUploading, setIsUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const pickerRef = useRef<HTMLDivElement>(null);
 
@@ -313,14 +321,28 @@ export function IconPicker({ isOpen, onClose, onSelect, currentIcon }: IconPicke
         onClose();
     };
 
-    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        // For now, create a local URL - in production this would upload to server
-        const url = URL.createObjectURL(file);
-        onSelect(url);
-        onClose();
+        // If onFileUpload callback is provided, use it to upload to server
+        if (onFileUpload) {
+            setIsUploading(true);
+            try {
+                const url = await onFileUpload(file);
+                if (url) {
+                    onSelect(url);
+                    onClose();
+                }
+            } finally {
+                setIsUploading(false);
+            }
+        } else {
+            // Fallback: create a local URL (for contexts without server upload)
+            const url = URL.createObjectURL(file);
+            onSelect(url);
+            onClose();
+        }
     };
 
     // Filter emojis by search
@@ -440,26 +462,33 @@ export function IconPicker({ isOpen, onClose, onSelect, currentIcon }: IconPicke
 
                 {activeTab === "upload" && (
                     <div className="p-6">
-                        <label className="cursor-pointer">
-                            <div className="flex flex-col items-center gap-3 p-6 border-2 border-dashed border-border rounded-xl hover:border-primary/50 transition-colors">
-                                <Upload className="w-8 h-8 text-muted-foreground" />
-                                <div className="text-center">
-                                    <p className="text-sm font-medium text-foreground">
-                                        Upload icon
-                                    </p>
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                        PNG, JPG up to 1MB
-                                    </p>
-                                </div>
+                        {isUploading ? (
+                            <div className="flex flex-col items-center gap-3 p-6">
+                                <Loader2 className="w-8 h-8 text-muted-foreground animate-spin" />
+                                <p className="text-sm text-muted-foreground">Uploading...</p>
                             </div>
-                            <input
-                                ref={fileInputRef}
-                                type="file"
-                                accept="image/*"
-                                onChange={handleFileUpload}
-                                className="hidden"
-                            />
-                        </label>
+                        ) : (
+                            <label className="cursor-pointer">
+                                <div className="flex flex-col items-center gap-3 p-6 border-2 border-dashed border-border rounded-xl hover:border-primary/50 transition-colors">
+                                    <Upload className="w-8 h-8 text-muted-foreground" />
+                                    <div className="text-center">
+                                        <p className="text-sm font-medium text-foreground">
+                                            Upload icon
+                                        </p>
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                            PNG, JPG up to 1MB
+                                        </p>
+                                    </div>
+                                </div>
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleFileUpload}
+                                    className="hidden"
+                                />
+                            </label>
+                        )}
                     </div>
                 )}
             </div>
