@@ -156,6 +156,18 @@ export const config = {
         },
         deepgram: {
             apiKey: process.env.DEEPGRAM_API_KEY || ""
+        },
+        stabilityai: {
+            apiKey: process.env.STABILITY_API_KEY || ""
+        },
+        replicate: {
+            apiKey: process.env.REPLICATE_API_KEY || ""
+        },
+        runway: {
+            apiKey: process.env.RUNWAY_API_KEY || ""
+        },
+        luma: {
+            apiKey: process.env.LUMA_API_KEY || ""
         }
     },
 
