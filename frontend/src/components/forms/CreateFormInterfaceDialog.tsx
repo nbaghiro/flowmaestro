@@ -207,23 +207,28 @@ export function CreateFormInterfaceDialog({
     const canContinue = selectedType && selectedId;
     const canCreate = title.trim() && slug.trim();
 
+    // Hide steps and back button when starting at step 2 with pre-selected target
+    const hideSteps = startAtStep === 2 && (initialWorkflowId || initialAgentId);
+
     return (
         <Dialog isOpen={isOpen} onClose={onClose} title="Create Form Interface" size="lg">
             <div className="space-y-6">
-                {/* Step indicator */}
-                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                    <span
-                        className={`w-6 h-6 rounded-full flex items-center justify-center ${step === 1 ? "bg-primary text-primary-foreground" : "bg-muted"}`}
-                    >
-                        1
-                    </span>
-                    <div className="w-8 h-px bg-border" />
-                    <span
-                        className={`w-6 h-6 rounded-full flex items-center justify-center ${step === 2 ? "bg-primary text-primary-foreground" : "bg-muted"}`}
-                    >
-                        2
-                    </span>
-                </div>
+                {/* Step indicator - only show when not in simplified mode */}
+                {!hideSteps && (
+                    <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                        <span
+                            className={`w-6 h-6 rounded-full flex items-center justify-center ${step === 1 ? "bg-primary text-primary-foreground" : "bg-muted"}`}
+                        >
+                            1
+                        </span>
+                        <div className="w-8 h-px bg-border" />
+                        <span
+                            className={`w-6 h-6 rounded-full flex items-center justify-center ${step === 2 ? "bg-primary text-primary-foreground" : "bg-muted"}`}
+                        >
+                            2
+                        </span>
+                    </div>
+                )}
 
                 {step === 1 && (
                     <>
@@ -352,9 +357,11 @@ export function CreateFormInterfaceDialog({
 
                 {step === 2 && (
                     <>
-                        <p className="text-muted-foreground text-center">
-                            Give your form interface a name
-                        </p>
+                        {!hideSteps && (
+                            <p className="text-muted-foreground text-center">
+                                Give your form interface a name
+                            </p>
+                        )}
 
                         <div className="space-y-4">
                             <FormField label="Title *">
@@ -399,11 +406,15 @@ export function CreateFormInterfaceDialog({
 
                         {/* Actions */}
                         <div className="flex items-center justify-between pt-2">
-                            <Button variant="ghost" onClick={handleBack}>
-                                <ArrowLeft className="w-4 h-4 mr-2" />
-                                Back
-                            </Button>
-                            <div className="flex items-center gap-3">
+                            {!hideSteps && (
+                                <Button variant="ghost" onClick={handleBack}>
+                                    <ArrowLeft className="w-4 h-4 mr-2" />
+                                    Back
+                                </Button>
+                            )}
+                            <div
+                                className={`flex items-center gap-3 ${hideSteps ? "w-full justify-end" : ""}`}
+                            >
                                 <Button variant="ghost" onClick={onClose}>
                                     Cancel
                                 </Button>
