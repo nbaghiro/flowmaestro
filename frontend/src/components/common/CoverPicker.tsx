@@ -1,13 +1,16 @@
-import { X, Upload, Image, Search, Loader2 } from "lucide-react";
-import { useState, useEffect, useCallback } from "react";
-import type { FormInterfaceCoverType } from "@flowmaestro/shared";
+import { X, Upload, Image, Search, Loader2, Plus } from "lucide-react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import type { FormInterfaceCoverType, ChatInterfaceCoverType } from "@flowmaestro/shared";
 import { logger } from "../../lib/logger";
+
+// Generic cover type that works for both form and chat interfaces
+type CoverType = FormInterfaceCoverType | ChatInterfaceCoverType;
 
 interface CoverPickerProps {
     isOpen: boolean;
     onClose: () => void;
-    onSelect: (type: FormInterfaceCoverType, value: string) => void;
-    currentType?: FormInterfaceCoverType;
+    onSelect: (type: CoverType, value: string) => void;
+    currentType?: CoverType;
     currentValue?: string;
 }
 
@@ -86,6 +89,9 @@ export function CoverPicker({
     const [searchResults, setSearchResults] = useState<UnsplashPhoto[]>([]);
     const [isSearching, setIsSearching] = useState(false);
     const [hasSearched, setHasSearched] = useState(false);
+    const [showCustomColorPicker, setShowCustomColorPicker] = useState(false);
+    const [customColor, setCustomColor] = useState("#6366f1");
+    const customColorRef = useRef<HTMLDivElement>(null);
 
     // Reset state when modal closes
     useEffect(() => {
@@ -94,8 +100,23 @@ export function CoverPicker({
             setSearchResults([]);
             setHasSearched(false);
             setActiveTab("gallery");
+            setShowCustomColorPicker(false);
         }
     }, [isOpen]);
+
+    // Close custom color picker when clicking outside
+    useEffect(() => {
+        if (!showCustomColorPicker) return;
+
+        const handleClickOutside = (event: MouseEvent) => {
+            if (customColorRef.current && !customColorRef.current.contains(event.target as Node)) {
+                setShowCustomColorPicker(false);
+            }
+        };
+
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [showCustomColorPicker]);
 
     const searchUnsplash = useCallback(async (query: string) => {
         if (!query.trim() || !UNSPLASH_ACCESS_KEY) return;
@@ -151,6 +172,12 @@ export function CoverPicker({
 
     const handleColorSelect = (color: string) => {
         onSelect("color", color);
+        onClose();
+    };
+
+    const handleCustomColorSelect = () => {
+        onSelect("color", customColor);
+        setShowCustomColorPicker(false);
         onClose();
     };
 
@@ -349,6 +376,69 @@ export function CoverPicker({
                                                 style={{ backgroundColor: color }}
                                             />
                                         ))}
+                                        {/* Custom color picker */}
+                                        <div className="relative" ref={customColorRef}>
+                                            <button
+                                                onClick={() =>
+                                                    setShowCustomColorPicker(!showCustomColorPicker)
+                                                }
+                                                className={`w-10 h-10 rounded-lg transition-all hover:scale-110 border-2 border-dashed border-border hover:border-muted-foreground flex items-center justify-center ${
+                                                    showCustomColorPicker
+                                                        ? "ring-2 ring-primary ring-offset-2 ring-offset-background"
+                                                        : ""
+                                                }`}
+                                                style={{
+                                                    background:
+                                                        "conic-gradient(from 0deg, #ef4444, #f59e0b, #22c55e, #06b6d4, #3b82f6, #8b5cf6, #ec4899, #ef4444)"
+                                                }}
+                                                title="Custom color"
+                                            >
+                                                <Plus className="w-4 h-4 text-white drop-shadow-md" />
+                                            </button>
+                                            {/* Custom color popover */}
+                                            {showCustomColorPicker && (
+                                                <div className="absolute top-12 left-0 z-10 bg-card border border-border rounded-lg shadow-xl p-3 min-w-[200px]">
+                                                    <p className="text-xs text-muted-foreground mb-2">
+                                                        Choose custom color
+                                                    </p>
+                                                    <div className="flex items-center gap-2 mb-3">
+                                                        <input
+                                                            type="color"
+                                                            value={customColor}
+                                                            onChange={(e) =>
+                                                                setCustomColor(e.target.value)
+                                                            }
+                                                            className="w-10 h-10 rounded cursor-pointer border-0 p-0"
+                                                        />
+                                                        <input
+                                                            type="text"
+                                                            value={customColor}
+                                                            onChange={(e) =>
+                                                                setCustomColor(e.target.value)
+                                                            }
+                                                            className="flex-1 px-2 py-1.5 text-sm bg-muted border border-border rounded text-foreground font-mono uppercase"
+                                                            placeholder="#000000"
+                                                        />
+                                                    </div>
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={() =>
+                                                                setShowCustomColorPicker(false)
+                                                            }
+                                                            className="flex-1 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground rounded border border-border hover:bg-muted transition-colors"
+                                                        >
+                                                            Cancel
+                                                        </button>
+                                                        <button
+                                                            onClick={handleCustomColorSelect}
+                                                            className="flex-1 px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+                                                        >
+                                                            Apply
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             )}

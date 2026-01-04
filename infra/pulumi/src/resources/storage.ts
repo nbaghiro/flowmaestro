@@ -22,7 +22,7 @@ export const storageServiceAccount = new gcp.serviceaccount.Account(resourceName
     description: "Service account for GCS storage operations (local dev and production)"
 });
 
-// Create bucket for user uploads (PDFs, images, etc.)
+// Create bucket for user uploads (icons, covers, images for interfaces)
 export const uploadsBucket = new gcp.storage.Bucket(resourceName("uploads"), {
     name: `${resourceName("uploads")}-${infrastructureConfig.project}`,
     location: infrastructureConfig.region,
@@ -44,15 +44,31 @@ export const uploadsBucket = new gcp.storage.Bucket(resourceName("uploads"), {
         {
             origins: [
                 `https://api.${infrastructureConfig.domain}`,
-                `https://app.${infrastructureConfig.domain}`
+                `https://app.${infrastructureConfig.domain}`,
+                `https://${infrastructureConfig.domain}`,
+                "http://localhost:3000",
+                "http://localhost:3001",
+                "http://localhost:5173"
             ],
             methods: ["GET", "POST", "PUT", "DELETE"],
-            responseHeaders: ["Content-Type"],
+            responseHeaders: ["Content-Type", "Content-Length"],
             maxAgeSeconds: 3600
         }
     ],
     labels: resourceLabels()
 });
+
+// Make uploads bucket publicly readable (for icons, covers, images)
+// This requires the org policy constraint/iam.allowedPolicyMemberDomains to allow allUsers
+new gcp.storage.BucketIAMMember(
+    resourceName("uploads-public-read"),
+    {
+        bucket: uploadsBucket.name,
+        role: "roles/storage.objectViewer",
+        member: "allUsers"
+    },
+    { dependsOn: [uploadsBucket] }
+);
 
 // Create bucket for workflow execution artifacts
 export const artifactsBucket = new gcp.storage.Bucket(resourceName("artifacts"), {

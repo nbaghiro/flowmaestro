@@ -8,7 +8,7 @@
 import OpenAI from "openai";
 import type { JsonObject } from "@flowmaestro/shared";
 import { config as appConfig } from "../../../../../core/config";
-import { getGCSStorageService } from "../../../../../services/GCSStorageService";
+import { getArtifactsStorageService } from "../../../../../services/GCSStorageService";
 import { createActivityLogger, interpolateVariables, getExecutionContext } from "../../../../core";
 import {
     AudioOutputNodeConfigSchema,
@@ -221,8 +221,8 @@ export class AudioOutputNodeHandler extends BaseNodeHandler {
 
         // Return as URL or base64
         if (config.returnAsUrl) {
-            logger.debug("Uploading audio to GCS");
-            const gcsService = getGCSStorageService();
+            logger.debug("Uploading audio to GCS artifacts bucket");
+            const gcsService = getArtifactsStorageService();
             const fileName = `audio-output/${input.metadata.executionId}/${Date.now()}.${config.outputFormat || "mp3"}`;
             const mimeType =
                 config.outputFormat === "wav"

@@ -25,7 +25,16 @@ import type {
     FormInterfaceSubmission,
     CreateFormInterfaceInput,
     UpdateFormInterfaceInput,
-    PublicFormInterface
+    PublicFormInterface,
+    ChatInterface,
+    ChatInterfaceSession,
+    CreateChatInterfaceInput,
+    UpdateChatInterfaceInput,
+    PublicChatInterface,
+    ChatSessionResponse,
+    CreateChatSessionInput,
+    SendChatMessageInput,
+    PublicChatMessage
 } from "@flowmaestro/shared";
 import { logger } from "./logger";
 
@@ -3973,6 +3982,678 @@ export async function submitPublicFormInterface(
             "Content-Type": "application/json"
         },
         body: JSON.stringify(data)
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+// ===== Chat Interface API =====
+
+/**
+ * List chat interface response
+ */
+export interface ChatInterfaceListResponse {
+    success: boolean;
+    data: {
+        items: ChatInterface[];
+        total: number;
+        page: number;
+        pageSize: number;
+        hasMore: boolean;
+    };
+    error?: string;
+}
+
+/**
+ * Get all chat interfaces for the current user
+ */
+export async function getChatInterfaces(params?: {
+    limit?: number;
+    offset?: number;
+    agentId?: string;
+}): Promise<ChatInterfaceListResponse> {
+    const token = getAuthToken();
+
+    const queryParams = new URLSearchParams();
+    if (params?.limit) queryParams.set("limit", params.limit.toString());
+    if (params?.offset) queryParams.set("offset", params.offset.toString());
+    if (params?.agentId) queryParams.set("agentId", params.agentId);
+
+    const queryString = queryParams.toString();
+    const url = `${API_BASE_URL}/chat-interfaces${queryString ? `?${queryString}` : ""}`;
+
+    const response = await apiFetch(url, {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Get a specific chat interface by ID
+ */
+export async function getChatInterface(
+    id: string
+): Promise<{ success: boolean; data: ChatInterface; error?: string }> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/chat-interfaces/${id}`, {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Create a new chat interface
+ */
+export async function createChatInterface(
+    input: CreateChatInterfaceInput
+): Promise<{ success: boolean; data: ChatInterface; error?: string }> {
+    const token = getAuthToken();
+
+    if (!token) {
+        throw new Error("Authentication required");
+    }
+
+    const response = await apiFetch(`${API_BASE_URL}/chat-interfaces`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(input)
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Update a chat interface
+ */
+export async function updateChatInterface(
+    id: string,
+    input: UpdateChatInterfaceInput
+): Promise<{ success: boolean; data: ChatInterface; error?: string }> {
+    const token = getAuthToken();
+
+    if (!token) {
+        throw new Error("Authentication required");
+    }
+
+    const response = await apiFetch(`${API_BASE_URL}/chat-interfaces/${id}`, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(input)
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Delete a chat interface
+ */
+export async function deleteChatInterface(
+    id: string
+): Promise<{ success: boolean; message?: string; error?: string }> {
+    const token = getAuthToken();
+
+    if (!token) {
+        throw new Error("Authentication required");
+    }
+
+    const response = await apiFetch(`${API_BASE_URL}/chat-interfaces/${id}`, {
+        method: "DELETE",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Publish a chat interface
+ */
+export async function publishChatInterface(
+    id: string
+): Promise<{ success: boolean; data: ChatInterface; error?: string }> {
+    const token = getAuthToken();
+
+    if (!token) {
+        throw new Error("Authentication required");
+    }
+
+    const response = await apiFetch(`${API_BASE_URL}/chat-interfaces/${id}/publish`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Unpublish a chat interface
+ */
+export async function unpublishChatInterface(
+    id: string
+): Promise<{ success: boolean; data: ChatInterface; error?: string }> {
+    const token = getAuthToken();
+
+    if (!token) {
+        throw new Error("Authentication required");
+    }
+
+    const response = await apiFetch(`${API_BASE_URL}/chat-interfaces/${id}/unpublish`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Duplicate a chat interface
+ */
+export async function duplicateChatInterface(
+    id: string
+): Promise<{ success: boolean; data: ChatInterface; error?: string }> {
+    const token = getAuthToken();
+
+    if (!token) {
+        throw new Error("Authentication required");
+    }
+
+    const response = await apiFetch(`${API_BASE_URL}/chat-interfaces/${id}/duplicate`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Upload a chat interface asset (cover or icon)
+ */
+export async function uploadChatInterfaceAsset(
+    id: string,
+    file: File,
+    assetType: "cover" | "icon"
+): Promise<{
+    success: boolean;
+    data: { url: string; chatInterface: ChatInterface };
+    error?: string;
+}> {
+    const token = getAuthToken();
+
+    if (!token) {
+        throw new Error("Authentication required");
+    }
+
+    const formData = new FormData();
+    formData.append(assetType, file);
+
+    const response = await apiFetch(`${API_BASE_URL}/chat-interfaces/${id}/assets`, {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${token}`
+        },
+        body: formData
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Get sessions for a chat interface
+ */
+export async function getChatInterfaceSessions(
+    id: string,
+    params?: { limit?: number; offset?: number; status?: "active" | "ended" | "expired" }
+): Promise<{
+    success: boolean;
+    data: {
+        items: ChatInterfaceSession[];
+        total: number;
+        page: number;
+        pageSize: number;
+        hasMore: boolean;
+    };
+    error?: string;
+}> {
+    const token = getAuthToken();
+
+    const queryParams = new URLSearchParams();
+    if (params?.limit) queryParams.set("limit", params.limit.toString());
+    if (params?.offset) queryParams.set("offset", params.offset.toString());
+    if (params?.status) queryParams.set("status", params.status);
+
+    const queryString = queryParams.toString();
+    const url = `${API_BASE_URL}/chat-interfaces/${id}/sessions${queryString ? `?${queryString}` : ""}`;
+
+    const response = await apiFetch(url, {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Get statistics for a chat interface
+ */
+export async function getChatInterfaceStats(
+    id: string,
+    hours?: number
+): Promise<{
+    success: boolean;
+    data: {
+        activeSessions: number;
+        endedSessions: number;
+        totalMessages: number;
+        avgMessagesPerSession: number;
+        period: string;
+        chatInterface: {
+            id: string;
+            name: string;
+            sessionCount: number;
+            messageCount: number;
+        };
+    };
+    error?: string;
+}> {
+    const token = getAuthToken();
+
+    const queryParams = new URLSearchParams();
+    if (hours) queryParams.set("hours", hours.toString());
+
+    const queryString = queryParams.toString();
+    const url = `${API_BASE_URL}/chat-interfaces/${id}/stats${queryString ? `?${queryString}` : ""}`;
+
+    const response = await apiFetch(url, {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+// ===== Public Chat Interface API (No Auth Required) =====
+
+/**
+ * Get a public chat interface by slug
+ */
+export async function getPublicChatInterface(
+    slug: string
+): Promise<{ success: boolean; data: PublicChatInterface; error?: string }> {
+    const response = await apiFetch(`${API_BASE_URL}/public/chat-interfaces/${slug}`, {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json"
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Create or resume a chat session
+ */
+export async function createChatSession(
+    slug: string,
+    input: CreateChatSessionInput
+): Promise<{ success: boolean; data: ChatSessionResponse; error?: string }> {
+    const response = await apiFetch(`${API_BASE_URL}/public/chat-interfaces/${slug}/sessions`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(input)
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Get message history for a chat session
+ */
+export async function getChatSessionMessages(
+    slug: string,
+    sessionToken: string
+): Promise<{
+    success: boolean;
+    data: {
+        messages: PublicChatMessage[];
+        sessionId: string;
+        messageCount: number;
+    };
+    error?: string;
+}> {
+    const response = await apiFetch(
+        `${API_BASE_URL}/public/chat-interfaces/${slug}/sessions/${sessionToken}/messages`,
+        {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json"
+            }
+        }
+    );
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Send a message in a chat session
+ */
+export async function sendChatMessage(
+    slug: string,
+    input: SendChatMessageInput
+): Promise<{
+    success: boolean;
+    data: { messageId: string; status: string };
+    error?: string;
+}> {
+    const response = await apiFetch(`${API_BASE_URL}/public/chat-interfaces/${slug}/messages`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(input)
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+// ===== API Keys =====
+
+export type ApiKeyScope =
+    | "workflows:read"
+    | "workflows:execute"
+    | "executions:read"
+    | "executions:cancel"
+    | "agents:read"
+    | "agents:execute"
+    | "threads:read"
+    | "threads:write"
+    | "triggers:read"
+    | "triggers:execute"
+    | "knowledge-bases:read"
+    | "knowledge-bases:query"
+    | "webhooks:read"
+    | "webhooks:write";
+
+export interface ApiKey {
+    id: string;
+    name: string;
+    key_prefix: string;
+    scopes: ApiKeyScope[];
+    rate_limit_per_minute: number;
+    rate_limit_per_day: number;
+    expires_at: string | null;
+    last_used_at: string | null;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface CreateApiKeyInput {
+    name: string;
+    scopes: ApiKeyScope[];
+    rate_limit_per_minute?: number;
+    rate_limit_per_day?: number;
+    expires_in_days?: number;
+}
+
+export interface CreateApiKeyResponse {
+    id: string;
+    name: string;
+    key: string; // Full key, only returned on creation
+    key_prefix: string;
+    scopes: ApiKeyScope[];
+    rate_limit_per_minute: number;
+    rate_limit_per_day: number;
+    expires_at: string | null;
+    created_at: string;
+}
+
+export interface ApiKeyScopesResponse {
+    scopes: ApiKeyScope[];
+    bundles: {
+        name: string;
+        description: string;
+        scopes: ApiKeyScope[];
+    }[];
+}
+
+export async function getApiKeys(): Promise<ApiResponse<ApiKey[]>> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/api-keys`, {
+        headers: {
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+export async function getApiKey(id: string): Promise<ApiResponse<ApiKey>> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/api-keys/${id}`, {
+        headers: {
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+export async function getApiKeyScopes(): Promise<ApiResponse<ApiKeyScopesResponse>> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/api-keys/scopes`, {
+        headers: {
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+export async function createApiKey(
+    input: CreateApiKeyInput
+): Promise<ApiResponse<CreateApiKeyResponse>> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/api-keys`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` })
+        },
+        body: JSON.stringify(input)
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+export async function updateApiKey(
+    id: string,
+    input: { name?: string; scopes?: ApiKeyScope[]; is_active?: boolean }
+): Promise<ApiResponse<ApiKey>> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/api-keys/${id}`, {
+        method: "PATCH",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` })
+        },
+        body: JSON.stringify(input)
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+export async function rotateApiKey(id: string): Promise<ApiResponse<CreateApiKeyResponse>> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/api-keys/${id}/rotate`, {
+        method: "POST",
+        headers: {
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+export async function revokeApiKey(id: string): Promise<ApiResponse> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/api-keys/${id}`, {
+        method: "DELETE",
+        headers: {
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
     });
 
     if (!response.ok) {

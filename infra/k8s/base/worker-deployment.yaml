@@ -113,11 +113,21 @@ spec:
               value: "default"
 
             # Google Cloud Storage configuration (from configmap)
-            - name: GCS_BUCKET_NAME
+            - name: GCS_UPLOADS_BUCKET
               valueFrom:
                 configMapKeyRef:
                   name: gcs-config
-                  key: GCS_BUCKET_NAME
+                  key: GCS_UPLOADS_BUCKET
+            - name: GCS_KNOWLEDGE_DOCS_BUCKET
+              valueFrom:
+                configMapKeyRef:
+                  name: gcs-config
+                  key: GCS_KNOWLEDGE_DOCS_BUCKET
+            - name: GCS_ARTIFACTS_BUCKET
+              valueFrom:
+                configMapKeyRef:
+                  name: gcs-config
+                  key: GCS_ARTIFACTS_BUCKET
 
           # Mount Temporal certificates
           volumeMounts:

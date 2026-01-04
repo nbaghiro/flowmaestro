@@ -11,7 +11,7 @@ import * as path from "path";
 import OpenAI from "openai";
 import type { JsonObject } from "@flowmaestro/shared";
 import { config as appConfig } from "../../../../../core/config";
-import { getGCSStorageService } from "../../../../../services/GCSStorageService";
+import { getUploadsStorageService } from "../../../../../services/GCSStorageService";
 import { createActivityLogger } from "../../../../core";
 import {
     AudioInputNodeConfigSchema,
@@ -241,10 +241,10 @@ export class AudioInputNodeHandler extends BaseNodeHandler {
         let tempFilePath: string | null = null;
 
         try {
-            // Download audio from GCS or decode base64
+            // Download audio from GCS uploads bucket or decode base64
             if (audioData.gcsUri) {
                 logger.debug("Downloading audio from GCS", { gcsUri: audioData.gcsUri });
-                const gcsService = getGCSStorageService();
+                const gcsService = getUploadsStorageService();
                 tempFilePath = await gcsService.downloadToTemp({ gcsUri: audioData.gcsUri });
             } else if (audioData.base64) {
                 logger.debug("Decoding base64 audio");

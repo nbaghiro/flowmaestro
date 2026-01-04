@@ -4,6 +4,8 @@ metadata:
   name: gcs-config
   namespace: flowmaestro-staging
 data:
-  # Staging GCS bucket for knowledge documents
-  # Update this with the actual staging bucket name from Pulumi
-  GCS_BUCKET_NAME: "flowmaestro-knowledge-docs-flowmaestro-staging"
+  # Staging GCS buckets
+  # Update these with actual staging bucket names from Pulumi
+  GCS_UPLOADS_BUCKET: "flowmaestro-uploads-flowmaestro-staging"
+  GCS_KNOWLEDGE_DOCS_BUCKET: "flowmaestro-knowledge-docs-flowmaestro-staging"
+  GCS_ARTIFACTS_BUCKET: "flowmaestro-artifacts-flowmaestro-staging"

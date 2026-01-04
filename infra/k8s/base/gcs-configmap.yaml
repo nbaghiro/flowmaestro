@@ -4,7 +4,14 @@ metadata:
   name: gcs-config
   namespace: flowmaestro
 data:
-  # GCS bucket name for knowledge documents storage
-  # This value should be set via Kustomize overlay for each environment
-  # Default: flowmaestro-knowledge-docs-{PROJECT_ID}
-  GCS_BUCKET_NAME: "GCS_BUCKET_NAME_PLACEHOLDER"
+  # GCS bucket for user uploads (icons, covers, images)
+  # Value set via Kustomize overlay for each environment
+  GCS_UPLOADS_BUCKET: "GCS_UPLOADS_BUCKET_PLACEHOLDER"
+
+  # GCS bucket for knowledge base documents
+  # Value set via Kustomize overlay for each environment
+  GCS_KNOWLEDGE_DOCS_BUCKET: "GCS_KNOWLEDGE_DOCS_BUCKET_PLACEHOLDER"
+
+  # GCS bucket for workflow execution artifacts
+  # Value set via Kustomize overlay for each environment
+  GCS_ARTIFACTS_BUCKET: "GCS_ARTIFACTS_BUCKET_PLACEHOLDER"

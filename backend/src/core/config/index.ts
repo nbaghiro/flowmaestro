@@ -107,7 +107,12 @@ export const config = {
     // Google Cloud Storage
     // ==========================================================================
     gcs: {
-        bucketName: process.env.GCS_BUCKET_NAME || ""
+        // Bucket for user uploads (icons, covers, images)
+        uploadsBucket: process.env.GCS_UPLOADS_BUCKET || "",
+        // Bucket for knowledge base documents
+        knowledgeDocsBucket: process.env.GCS_KNOWLEDGE_DOCS_BUCKET || "",
+        // Bucket for workflow execution artifacts
+        artifactsBucket: process.env.GCS_ARTIFACTS_BUCKET || ""
     },
 
     // ==========================================================================
