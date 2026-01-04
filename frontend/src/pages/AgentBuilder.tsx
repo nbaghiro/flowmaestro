@@ -1249,7 +1249,6 @@ export function AgentBuilder() {
                     navigate(`/form-interfaces/${formInterface.id}/edit`);
                 }}
                 initialAgentId={!isNewAgent ? agentId : undefined}
-                startAtStep={2}
             />
         </div>
     );

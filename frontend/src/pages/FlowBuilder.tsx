@@ -628,7 +628,6 @@ export function FlowBuilder() {
                             navigate(`/form-interfaces/${formInterface.id}/edit`);
                         }}
                         initialWorkflowId={workflowId}
-                        startAtStep={2}
                     />
                 </div>
 

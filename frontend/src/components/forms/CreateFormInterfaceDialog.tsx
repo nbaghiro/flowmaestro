@@ -16,7 +16,6 @@ interface CreateFormInterfaceDialogProps {
     onCreated: (formInterface: { id: string; title: string }) => void;
     initialWorkflowId?: string;
     initialAgentId?: string;
-    startAtStep?: 1 | 2;
 }
 
 interface WorkflowOption {
@@ -43,11 +42,10 @@ export function CreateFormInterfaceDialog({
     onClose,
     onCreated,
     initialWorkflowId,
-    initialAgentId,
-    startAtStep = 1
+    initialAgentId
 }: CreateFormInterfaceDialogProps) {
-    // Step state
-    const [step, setStep] = useState<1 | 2>(startAtStep);
+    // Step state - start at step 2 if initial target is provided, otherwise step 1
+    const [step, setStep] = useState<1 | 2>(initialWorkflowId || initialAgentId ? 2 : 1);
 
     // Target selection state
     const [selectedType, setSelectedType] = useState<FormInterfaceTargetType | null>(null);
@@ -72,8 +70,9 @@ export function CreateFormInterfaceDialog({
     useEffect(() => {
         if (isOpen) {
             loadOptions();
-            // Set initial step
-            setStep(startAtStep);
+            // Start at step 2 if initial target is provided, otherwise step 1
+            const initialStep = initialWorkflowId || initialAgentId ? 2 : 1;
+            setStep(initialStep);
             // Pre-select target if provided
             if (initialWorkflowId) {
                 setSelectedType("workflow");
@@ -84,7 +83,8 @@ export function CreateFormInterfaceDialog({
             }
         } else {
             // Reset all state when closing
-            setStep(startAtStep);
+            const initialStep = initialWorkflowId || initialAgentId ? 2 : 1;
+            setStep(initialStep);
             setSelectedType(null);
             setSelectedId("");
             setTitle("");
@@ -93,7 +93,7 @@ export function CreateFormInterfaceDialog({
             setSlugEdited(false);
             setError(null);
         }
-    }, [isOpen, startAtStep, initialWorkflowId, initialAgentId]);
+    }, [isOpen, initialWorkflowId, initialAgentId]);
 
     // Auto-generate slug from title
     useEffect(() => {
@@ -147,7 +147,7 @@ export function CreateFormInterfaceDialog({
 
     // Pre-fill title when starting at step 2 with pre-selected target
     useEffect(() => {
-        if (isOpen && startAtStep === 2 && (initialWorkflowId || initialAgentId)) {
+        if (isOpen && (initialWorkflowId || initialAgentId)) {
             // Wait for options to load, then pre-fill title
             if (
                 (initialWorkflowId && workflows.length > 0) ||
@@ -164,7 +164,7 @@ export function CreateFormInterfaceDialog({
                 }
             }
         }
-    }, [isOpen, startAtStep, initialWorkflowId, initialAgentId, workflows, agents, title]);
+    }, [isOpen, initialWorkflowId, initialAgentId, workflows, agents, title]);
 
     const handleBack = () => {
         setStep(1);
@@ -208,7 +208,7 @@ export function CreateFormInterfaceDialog({
     const canCreate = title.trim() && slug.trim();
 
     // Hide steps and back button when starting at step 2 with pre-selected target
-    const hideSteps = startAtStep === 2 && (initialWorkflowId || initialAgentId);
+    const hideSteps = !!(initialWorkflowId || initialAgentId);
 
     return (
         <Dialog isOpen={isOpen} onClose={onClose} title="Create Form Interface" size="lg">
