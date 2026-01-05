@@ -6,7 +6,8 @@ import {
     MessageSquare,
     Slack,
     Wrench,
-    Pencil
+    Pencil,
+    FileText
 } from "lucide-react";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
@@ -20,12 +21,15 @@ import { AgentChat } from "../components/agents/AgentChat";
 import { ThreadChat } from "../components/agents/ThreadChat";
 import { ThreadList } from "../components/agents/ThreadList";
 import { ToolsList } from "../components/agents/ToolsList";
+import { CreateChatInterfaceDialog } from "../components/chat/builder/CreateChatInterfaceDialog";
 import { Button } from "../components/common/Button";
 import { ConfirmDialog } from "../components/common/ConfirmDialog";
 import { Dialog } from "../components/common/Dialog";
 import { Input } from "../components/common/Input";
 import { Select } from "../components/common/Select";
 import { Textarea } from "../components/common/Textarea";
+import { Tooltip } from "../components/common/Tooltip";
+import { CreateFormInterfaceDialog } from "../components/forms/CreateFormInterfaceDialog";
 import { logger } from "../lib/logger";
 import { cn } from "../lib/utils";
 import { useAgentStore } from "../stores/agentStore";
@@ -93,6 +97,8 @@ export function AgentBuilder() {
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
+    const [isFormInterfaceDialogOpen, setIsFormInterfaceDialogOpen] = useState(false);
+    const [isChatInterfaceDialogOpen, setIsChatInterfaceDialogOpen] = useState(false);
 
     // Track original values to detect changes
     const [originalValues, setOriginalValues] = useState<{
@@ -752,28 +758,58 @@ export function AgentBuilder() {
                         )}
                     </div>
                 </div>
-                <button
-                    onClick={handleSave}
-                    disabled={isSaving}
-                    className={cn(
-                        "flex items-center gap-2 px-4 py-2 rounded-lg",
-                        "bg-primary text-primary-foreground",
-                        "hover:bg-primary/90 transition-colors",
-                        "text-sm font-medium disabled:opacity-50"
-                    )}
-                >
-                    {isSaving ? (
+                <div className="flex items-center gap-2">
+                    {!isNewAgent && agentId && (
                         <>
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                            Saving...
-                        </>
-                    ) : (
-                        <>
-                            <Save className="w-4 h-4" />
-                            Save
+                            <Tooltip content="Form Interface" position="bottom">
+                                <button
+                                    onClick={() => setIsFormInterfaceDialogOpen(true)}
+                                    className={cn(
+                                        "flex items-center gap-2 px-3 py-2 rounded-lg",
+                                        "text-sm font-medium text-foreground",
+                                        "border border-border hover:bg-muted transition-colors"
+                                    )}
+                                >
+                                    <FileText className="w-4 h-4" />
+                                </button>
+                            </Tooltip>
+                            <Tooltip content="Chat Interface" position="bottom">
+                                <button
+                                    onClick={() => setIsChatInterfaceDialogOpen(true)}
+                                    className={cn(
+                                        "flex items-center gap-2 px-3 py-2 rounded-lg",
+                                        "text-sm font-medium text-foreground",
+                                        "border border-border hover:bg-muted transition-colors"
+                                    )}
+                                >
+                                    <MessageSquare className="w-4 h-4" />
+                                </button>
+                            </Tooltip>
                         </>
                     )}
-                </button>
+                    <button
+                        onClick={handleSave}
+                        disabled={isSaving}
+                        className={cn(
+                            "flex items-center gap-2 px-4 py-2 rounded-lg",
+                            "bg-primary text-primary-foreground",
+                            "hover:bg-primary/90 transition-colors",
+                            "text-sm font-medium disabled:opacity-50"
+                        )}
+                    >
+                        {isSaving ? (
+                            <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Saving...
+                            </>
+                        ) : (
+                            <>
+                                <Save className="w-4 h-4" />
+                                Save
+                            </>
+                        )}
+                    </button>
+                </div>
             </div>
 
             {/* Error message */}
@@ -1219,6 +1255,28 @@ export function AgentBuilder() {
                     </Button>
                 </div>
             </Dialog>
+
+            {/* Create Form Interface Dialog */}
+            <CreateFormInterfaceDialog
+                isOpen={isFormInterfaceDialogOpen}
+                onClose={() => setIsFormInterfaceDialogOpen(false)}
+                onCreated={(formInterface) => {
+                    setIsFormInterfaceDialogOpen(false);
+                    navigate(`/form-interfaces/${formInterface.id}/edit`);
+                }}
+                initialAgentId={!isNewAgent ? agentId : undefined}
+            />
+
+            {/* Create Chat Interface Dialog */}
+            <CreateChatInterfaceDialog
+                isOpen={isChatInterfaceDialogOpen}
+                onClose={() => setIsChatInterfaceDialogOpen(false)}
+                onCreated={(chatInterface) => {
+                    setIsChatInterfaceDialogOpen(false);
+                    navigate(`/chat-interfaces/${chatInterface.id}/edit`);
+                }}
+                initialAgentId={!isNewAgent ? agentId : undefined}
+            />
         </div>
     );
 }

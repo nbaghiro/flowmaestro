@@ -14,6 +14,7 @@ interface CreateChatInterfaceDialogProps {
     isOpen: boolean;
     onClose: () => void;
     onCreated: (chatInterface: { id: string; title: string }) => void;
+    initialAgentId?: string;
 }
 
 interface AgentOption {
@@ -33,10 +34,11 @@ function generateSlug(title: string): string {
 export function CreateChatInterfaceDialog({
     isOpen,
     onClose,
-    onCreated
+    onCreated,
+    initialAgentId
 }: CreateChatInterfaceDialogProps) {
-    // Step state
-    const [step, setStep] = useState<1 | 2>(1);
+    // Step state - start at step 2 if initial agent is provided, otherwise step 1
+    const [step, setStep] = useState<1 | 2>(initialAgentId ? 2 : 1);
 
     // Agent selection state
     const [selectedAgentId, setSelectedAgentId] = useState<string>("");
@@ -59,9 +61,17 @@ export function CreateChatInterfaceDialog({
     useEffect(() => {
         if (isOpen) {
             loadAgents();
+            // Start at step 2 if initial agent is provided, otherwise step 1
+            const initialStep = initialAgentId ? 2 : 1;
+            setStep(initialStep);
+            // Pre-select agent if provided
+            if (initialAgentId) {
+                setSelectedAgentId(initialAgentId);
+            }
         } else {
             // Reset all state when closing
-            setStep(1);
+            const initialStep = initialAgentId ? 2 : 1;
+            setStep(initialStep);
             setSelectedAgentId("");
             setTitle("");
             setDescription("");
@@ -69,7 +79,7 @@ export function CreateChatInterfaceDialog({
             setSlugEdited(false);
             setError(null);
         }
-    }, [isOpen]);
+    }, [isOpen, initialAgentId]);
 
     // Auto-generate slug from title
     useEffect(() => {
@@ -77,6 +87,19 @@ export function CreateChatInterfaceDialog({
             setSlug(generateSlug(title));
         }
     }, [title, slugEdited]);
+
+    // Pre-fill title when starting at step 2 with pre-selected agent
+    useEffect(() => {
+        if (isOpen && initialAgentId) {
+            // Wait for agents to load, then pre-fill title
+            if (agents.length > 0) {
+                const agent = agents.find((a) => a.id === initialAgentId);
+                if (agent && !title) {
+                    setTitle(`${agent.name} Chat`);
+                }
+            }
+        }
+    }, [isOpen, initialAgentId, agents, title]);
 
     const loadAgents = async () => {
         setIsLoadingAgents(true);
@@ -148,23 +171,28 @@ export function CreateChatInterfaceDialog({
     const canContinue = selectedAgentId;
     const canCreate = title.trim() && slug.trim();
 
+    // Hide steps and back button when starting at step 2 with pre-selected agent
+    const hideSteps = !!initialAgentId;
+
     return (
         <Dialog isOpen={isOpen} onClose={onClose} title="Create Chat Interface" size="lg">
             <div className="space-y-6">
-                {/* Step indicator */}
-                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                    <span
-                        className={`w-6 h-6 rounded-full flex items-center justify-center ${step === 1 ? "bg-primary text-primary-foreground" : "bg-muted"}`}
-                    >
-                        1
-                    </span>
-                    <div className="w-8 h-px bg-border" />
-                    <span
-                        className={`w-6 h-6 rounded-full flex items-center justify-center ${step === 2 ? "bg-primary text-primary-foreground" : "bg-muted"}`}
-                    >
-                        2
-                    </span>
-                </div>
+                {/* Step indicator - only show when not in simplified mode */}
+                {!hideSteps && (
+                    <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                        <span
+                            className={`w-6 h-6 rounded-full flex items-center justify-center ${step === 1 ? "bg-primary text-primary-foreground" : "bg-muted"}`}
+                        >
+                            1
+                        </span>
+                        <div className="w-8 h-px bg-border" />
+                        <span
+                            className={`w-6 h-6 rounded-full flex items-center justify-center ${step === 2 ? "bg-primary text-primary-foreground" : "bg-muted"}`}
+                        >
+                            2
+                        </span>
+                    </div>
+                )}
 
                 {step === 1 && (
                     <>
@@ -221,9 +249,11 @@ export function CreateChatInterfaceDialog({
 
                 {step === 2 && (
                     <>
-                        <p className="text-muted-foreground text-center">
-                            Give your chat interface a name
-                        </p>
+                        {!hideSteps && (
+                            <p className="text-muted-foreground text-center">
+                                Give your chat interface a name
+                            </p>
+                        )}
 
                         <div className="space-y-4">
                             <FormField label="Title *">
@@ -268,11 +298,15 @@ export function CreateChatInterfaceDialog({
 
                         {/* Actions */}
                         <div className="flex items-center justify-between pt-2">
-                            <Button variant="ghost" onClick={handleBack}>
-                                <ArrowLeft className="w-4 h-4 mr-2" />
-                                Back
-                            </Button>
-                            <div className="flex items-center gap-3">
+                            {!hideSteps && (
+                                <Button variant="ghost" onClick={handleBack}>
+                                    <ArrowLeft className="w-4 h-4 mr-2" />
+                                    Back
+                                </Button>
+                            )}
+                            <div
+                                className={`flex items-center gap-3 ${hideSteps ? "w-full justify-end" : ""}`}
+                            >
                                 <Button variant="ghost" onClick={onClose}>
                                     Cancel
                                 </Button>
