@@ -195,12 +195,12 @@ export {
     createTransformNodeHandler,
     type TransformNodeConfig,
     type TransformNodeResult,
-    // Variable
-    executeVariableNode,
-    VariableNodeHandler,
-    createVariableNodeHandler,
-    type VariableNodeConfig,
-    type VariableNodeResult,
+    // Shared Memory
+    executeSharedMemoryWithContext,
+    SharedMemoryNodeHandler,
+    createSharedMemoryNodeHandler,
+    type SharedMemoryNodeConfig,
+    type SharedMemoryNodeResult,
     // Code
     executeCodeNode,
     CodeNodeHandler,
@@ -300,7 +300,7 @@ import {
     createWaitNodeHandler,
     createWaitForUserNodeHandler,
     createTransformNodeHandler,
-    createVariableNodeHandler,
+    createSharedMemoryNodeHandler,
     createCodeNodeHandler
 } from "./handlers/logic";
 import {
@@ -346,7 +346,7 @@ export function registerDefaultHandlers(): void {
     registerHandler(createWaitNodeHandler(), "logic", 43);
     registerHandler(createWaitForUserNodeHandler(), "logic", 44);
     registerHandler(createTransformNodeHandler(), "logic", 45);
-    registerHandler(createVariableNodeHandler(), "logic", 46);
+    registerHandler(createSharedMemoryNodeHandler(), "ai", 16);
     registerHandler(createCodeNodeHandler(), "logic", 47);
 
     // Utils handlers (priority 50-59)

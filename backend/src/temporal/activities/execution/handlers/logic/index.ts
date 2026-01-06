@@ -58,14 +58,14 @@ export {
     type TransformNodeResult
 } from "./transform";
 
-// Variable
+// Shared Memory
 export {
-    executeVariableNode,
-    VariableNodeHandler,
-    createVariableNodeHandler,
-    type VariableNodeConfig,
-    type VariableNodeResult
-} from "./variable";
+    executeSharedMemoryWithContext,
+    SharedMemoryNodeHandler,
+    createSharedMemoryNodeHandler,
+    type SharedMemoryNodeConfig,
+    type SharedMemoryNodeResult
+} from "./shared-memory";
 
 // Code
 export {

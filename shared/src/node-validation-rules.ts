@@ -34,12 +34,6 @@ const visionRules: NodeValidationRule[] = [
     requiredUUID("connectionId", "Select a connection")
 ];
 
-const audioRules: NodeValidationRule[] = [
-    requiredField("provider", "Select a provider"),
-    requiredField("operation", "Select an operation"),
-    requiredUUID("connectionId", "Select a connection")
-];
-
 // Audio Input (STT) rules
 const audioInputRules: NodeValidationRule[] = [
     requiredField("provider", "Select an STT provider"),
@@ -175,13 +169,14 @@ const transformRules: NodeValidationRule[] = [
     requiredIdentifier("outputVariable", "Enter an output variable name")
 ];
 
-const variableRules: NodeValidationRule[] = [
-    requiredField("operation", "Select an operation"),
-    requiredIdentifier("variableName", "Enter a variable name"),
+const sharedMemoryRules: NodeValidationRule[] = [
+    requiredField("operation", "Select an operation (Store or Search)"),
+    conditionalRule("key", (config) => config.operation === "store", "Enter a key for the value"),
+    conditionalRule("value", (config) => config.operation === "store", "Enter a value to store"),
     conditionalRule(
-        "value",
-        (config) => config.operation === "set",
-        "Enter a value for the variable"
+        "searchQuery",
+        (config) => config.operation === "search",
+        "Enter a search query"
     )
 ];
 
@@ -235,10 +230,10 @@ export const nodeValidationRules: NodeValidationRulesMap = {
     // AI nodes
     llm: llmRules,
     vision: visionRules,
-    audio: audioRules, // Legacy - will be removed
     embeddings: embeddingsRules,
     router: routerRules,
     "kb-query": kbQueryRules,
+    "shared-memory": sharedMemoryRules,
 
     // Audio nodes (separate input/output)
     audioInput: audioInputRules,
@@ -248,7 +243,8 @@ export const nodeValidationRules: NodeValidationRulesMap = {
     input: inputRules,
     output: outputRules,
     files: filesRules,
-    "wait-for-user": waitForUserRules,
+    trigger: triggerRules,
+    action: actionRules,
 
     // Logic nodes
     conditional: conditionalRules,
@@ -256,8 +252,8 @@ export const nodeValidationRules: NodeValidationRulesMap = {
     loop: loopRules,
     wait: waitRules,
     transform: transformRules,
-    variable: variableRules,
     code: codeRules,
+    "wait-for-user": waitForUserRules,
 
     // Utils nodes
     http: httpRules,
@@ -265,12 +261,6 @@ export const nodeValidationRules: NodeValidationRulesMap = {
 
     // Integration nodes
     integration: integrationRules,
-
-    // Trigger nodes
-    trigger: triggerRules,
-
-    // Action nodes
-    action: actionRules,
 
     // Nodes without validation requirements
     comment: []

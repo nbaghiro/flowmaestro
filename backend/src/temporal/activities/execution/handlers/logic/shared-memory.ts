@@ -1,97 +1,153 @@
 /**
- * Variable Node Execution
+ * Shared Memory Node Execution
  *
- * Complete execution logic and handler for variable management nodes.
- * Supports get, set, and delete operations on workflow and global variables.
+ * Provides key-value storage with semantic search capabilities.
+ *
+ * Operations:
+ * - store: Save a value with a key, optionally indexed for semantic search
+ * - search: Find relevant values by meaning/query
+ *
+ * Values can also be accessed directly via {{shared.keyName}} interpolation.
  */
 
 import type { JsonObject, JsonValue } from "@flowmaestro/shared";
 import { createActivityLogger } from "../../../../core";
 import {
-    VariableNodeConfigSchema,
+    SharedMemoryNodeConfigSchema,
     validateOrThrow,
     interpolateVariables,
     getExecutionContext,
-    type VariableNodeConfig
+    setSharedMemoryValue,
+    searchSharedMemory,
+    type SharedMemoryNodeConfig,
+    type ContextSnapshot
 } from "../../../../core";
 import { BaseNodeHandler, type NodeHandlerInput, type NodeHandlerOutput } from "../../types";
 
-const logger = createActivityLogger({ nodeType: "Variable" });
+const logger = createActivityLogger({ nodeType: "SharedMemory" });
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
-export type { VariableNodeConfig };
+export type { SharedMemoryNodeConfig };
 
-export interface VariableNodeResult {
+export interface SharedMemoryNodeResult {
     [key: string]: JsonValue;
 }
 
-type VariableStore = JsonObject | Map<string, JsonValue>;
-
 // ============================================================================
-// HELPER FUNCTIONS
+// SHARED MEMORY OPERATIONS
 // ============================================================================
 
-function setVariable(
-    config: VariableNodeConfig,
-    context: JsonObject,
-    store: VariableStore
-): VariableNodeResult {
-    let value: JsonValue = interpolateVariables(config.value || "", context);
-
-    if (config.valueType && config.valueType !== "auto") {
-        value = convertType(value, config.valueType);
-    }
-
-    if (store instanceof Map) {
-        store.set(config.variableName, value);
-    } else {
-        store[config.variableName] = value;
-    }
-
-    logger.debug("Variable set", { variableName: config.variableName });
-
-    return { [config.variableName]: value };
+interface SharedMemoryOperationResult {
+    result: JsonObject;
+    updatedContext: ContextSnapshot;
 }
 
-function getVariable(config: VariableNodeConfig, store: VariableStore): VariableNodeResult {
-    const value =
-        store instanceof Map ? store.get(config.variableName) : store[config.variableName];
+/**
+ * Execute a shared memory operation.
+ * Returns both the result and the updated context.
+ */
+async function executeSharedMemoryOperation(
+    config: SharedMemoryNodeConfig,
+    contextSnapshot: ContextSnapshot,
+    nodeId: string,
+    generateEmbedding?: (text: string) => Promise<number[]>
+): Promise<SharedMemoryOperationResult> {
+    const executionContext = getExecutionContext(contextSnapshot);
 
-    logger.debug("Variable get", {
-        variableName: config.variableName,
-        hasValue: value !== undefined
-    });
+    switch (config.operation) {
+        case "store": {
+            if (!config.key) {
+                throw new Error("Store operation requires a key");
+            }
 
-    return { [config.variableName]: value ?? null };
-}
+            const value: JsonValue = interpolateVariables(config.value || "", executionContext);
 
-function deleteVariable(config: VariableNodeConfig, store: VariableStore): VariableNodeResult {
-    if (store instanceof Map) {
-        store.delete(config.variableName);
-    } else {
-        delete store[config.variableName];
-    }
+            // Generate embedding for semantic search if enabled
+            let embedding: number[] | undefined;
+            if (
+                config.enableSemanticSearch &&
+                typeof value === "string" &&
+                value.length > 50 &&
+                generateEmbedding
+            ) {
+                try {
+                    embedding = await generateEmbedding(value);
+                    logger.debug("Generated embedding for shared memory", {
+                        key: config.key,
+                        embeddingDimensions: embedding.length
+                    });
+                } catch (error) {
+                    logger.warn("Failed to generate embedding, storing without semantic search", {
+                        key: config.key,
+                        error: error instanceof Error ? error.message : String(error)
+                    });
+                }
+            }
 
-    logger.debug("Variable deleted", { variableName: config.variableName });
+            const updatedContext = setSharedMemoryValue(
+                contextSnapshot,
+                config.key,
+                value,
+                nodeId,
+                embedding
+            );
 
-    return {};
-}
+            logger.info("Shared memory store", {
+                key: config.key,
+                hasEmbedding: !!embedding
+            });
 
-function convertType(value: JsonValue, type: string): JsonValue {
-    switch (type) {
-        case "string":
-            return String(value);
-        case "number":
-            return Number(value);
-        case "boolean":
-            return value === "true" || value === true;
-        case "json":
-            return typeof value === "string" ? JSON.parse(value) : value;
+            return {
+                result: {
+                    key: config.key,
+                    stored: true,
+                    searchable: !!embedding
+                },
+                updatedContext
+            };
+        }
+
+        case "search": {
+            if (!config.searchQuery) {
+                throw new Error("Search operation requires a searchQuery");
+            }
+
+            const query = interpolateVariables(config.searchQuery, executionContext);
+
+            if (!generateEmbedding) {
+                throw new Error("Embedding generation not available for semantic search");
+            }
+
+            const queryEmbedding = await generateEmbedding(query);
+
+            const results = searchSharedMemory(
+                contextSnapshot,
+                queryEmbedding,
+                config.topK,
+                config.similarityThreshold
+            );
+
+            logger.info("Shared memory search", {
+                query,
+                resultCount: results.length,
+                topK: config.topK
+            });
+
+            return {
+                result: {
+                    query,
+                    results,
+                    resultCount: results.length
+                },
+                updatedContext: contextSnapshot
+            };
+        }
+
         default:
-            return value;
+            throw new Error(`Unsupported shared memory operation: ${config.operation}`);
     }
 }
 
@@ -100,36 +156,78 @@ function convertType(value: JsonValue, type: string): JsonValue {
 // ============================================================================
 
 /**
- * Execute Variable node - manages workflow variables
+ * Execute Shared Memory node with full context support.
  */
-export async function executeVariableNode(
+export async function executeSharedMemoryWithContext(
     config: unknown,
-    context: JsonObject,
-    globalStore?: Map<string, JsonValue>
-): Promise<JsonObject> {
-    const validatedConfig = validateOrThrow(VariableNodeConfigSchema, config, "Variable");
+    contextSnapshot: ContextSnapshot,
+    nodeId: string,
+    generateEmbedding?: (text: string) => Promise<number[]>
+): Promise<{ result: JsonObject; updatedContext?: ContextSnapshot }> {
+    const validatedConfig = validateOrThrow(SharedMemoryNodeConfigSchema, config, "SharedMemory");
 
-    logger.info("Variable operation", {
+    logger.info("Shared memory operation", {
         operation: validatedConfig.operation,
-        variableName: validatedConfig.variableName,
-        scope: validatedConfig.scope
+        key: validatedConfig.key
     });
 
-    const store = validatedConfig.scope === "global" ? globalStore : context;
-    if (!store) {
-        throw new Error(`Storage for scope '${validatedConfig.scope}' not available`);
+    const { result, updatedContext } = await executeSharedMemoryOperation(
+        validatedConfig,
+        contextSnapshot,
+        nodeId,
+        generateEmbedding
+    );
+
+    return { result, updatedContext };
+}
+
+// ============================================================================
+// SERIALIZATION HELPERS
+// ============================================================================
+
+/**
+ * Serialize shared memory state from context for output.
+ * Converts Map to array format for JSON serialization.
+ */
+function serializeSharedMemoryForOutput(context: ContextSnapshot): JsonObject {
+    if (!context.sharedMemory) {
+        return {};
     }
 
-    switch (validatedConfig.operation) {
-        case "set":
-            return setVariable(validatedConfig, context, store);
-        case "get":
-            return getVariable(validatedConfig, store);
-        case "delete":
-            return deleteVariable(validatedConfig, store);
-        default:
-            throw new Error(`Unsupported variable operation: ${validatedConfig.operation}`);
+    const entries: Array<{
+        key: string;
+        value: JsonValue;
+        embedding?: number[];
+        metadata: {
+            createdAt: number;
+            updatedAt: number;
+            nodeId: string;
+            sizeBytes: number;
+        };
+    }> = [];
+
+    for (const [key, entry] of context.sharedMemory.entries) {
+        entries.push({
+            key,
+            value: entry.value,
+            embedding: entry.embedding,
+            metadata: entry.metadata
+        });
     }
+
+    return {
+        entries,
+        config: {
+            maxEntries: context.sharedMemory.config.maxEntries,
+            maxValueSizeBytes: context.sharedMemory.config.maxValueSizeBytes,
+            maxTotalSizeBytes: context.sharedMemory.config.maxTotalSizeBytes
+        },
+        metadata: {
+            totalSizeBytes: context.sharedMemory.metadata.totalSizeBytes,
+            entryCount: context.sharedMemory.metadata.entryCount,
+            createdAt: context.sharedMemory.metadata.createdAt
+        }
+    };
 }
 
 // ============================================================================
@@ -137,20 +235,42 @@ export async function executeVariableNode(
 // ============================================================================
 
 /**
- * Handler for Variable node type.
+ * Handler for Shared Memory node type.
  */
-export class VariableNodeHandler extends BaseNodeHandler {
-    readonly name = "VariableNodeHandler";
-    readonly supportedNodeTypes = ["variable"] as const;
+export class SharedMemoryNodeHandler extends BaseNodeHandler {
+    readonly name = "SharedMemoryNodeHandler";
+    readonly supportedNodeTypes = ["shared-memory"] as const;
+
+    private generateEmbedding?: (text: string) => Promise<number[]>;
+
+    /**
+     * Set the embedding generator function.
+     * Called by the orchestrator to inject the embedding service.
+     */
+    setEmbeddingGenerator(generator: (text: string) => Promise<number[]>): void {
+        this.generateEmbedding = generator;
+    }
 
     async execute(input: NodeHandlerInput): Promise<NodeHandlerOutput> {
         const startTime = Date.now();
-        const context = getExecutionContext(input.context);
 
-        const result = await executeVariableNode(input.nodeConfig, context);
+        const { result, updatedContext } = await executeSharedMemoryWithContext(
+            input.nodeConfig,
+            input.context,
+            input.metadata.nodeId,
+            this.generateEmbedding
+        );
+
+        // If context was updated, serialize the shared memory state for orchestrator to merge
+        const outputResult = updatedContext
+            ? {
+                  ...result,
+                  _sharedMemoryUpdates: serializeSharedMemoryForOutput(updatedContext)
+              }
+            : result;
 
         return this.success(
-            result,
+            outputResult,
             {},
             {
                 durationMs: Date.now() - startTime
@@ -160,8 +280,8 @@ export class VariableNodeHandler extends BaseNodeHandler {
 }
 
 /**
- * Factory function for creating Variable handler.
+ * Factory function for creating Shared Memory handler.
  */
-export function createVariableNodeHandler(): VariableNodeHandler {
-    return new VariableNodeHandler();
+export function createSharedMemoryNodeHandler(): SharedMemoryNodeHandler {
+    return new SharedMemoryNodeHandler();
 }

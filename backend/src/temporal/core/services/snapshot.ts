@@ -8,6 +8,7 @@
 import { v4 as uuidv4 } from "uuid";
 import type { JsonObject, JsonValue } from "@flowmaestro/shared";
 import { db } from "../../../storage/database";
+import { createSharedMemory } from "./context";
 import type {
     ExecutionQueueState,
     LoopIterationState,
@@ -424,6 +425,7 @@ export function restoreContextSnapshot(snapshot: WorkflowSnapshot): ContextSnaps
     return {
         nodeOutputs,
         workflowVariables,
+        sharedMemory: createSharedMemory(),
         inputs: snapshot.inputs,
         metadata: {
             totalSizeBytes: snapshot.totalSizeBytes,

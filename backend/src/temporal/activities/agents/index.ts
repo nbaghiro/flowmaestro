@@ -93,5 +93,13 @@ export {
     executeUpdateWorkingMemory,
     getWorkingMemoryForAgent,
     isWorkingMemoryEnabled,
-    type UpdateWorkingMemoryInput
+    type UpdateWorkingMemoryInput,
+    // Shared memory tools (workflow-scoped key-value storage)
+    createReadSharedMemoryTool,
+    createWriteSharedMemoryTool,
+    createSearchSharedMemoryTool,
+    injectSharedMemoryTools,
+    isSharedMemoryTool,
+    type SharedMemoryToolInput,
+    type SharedMemoryToolResult
 } from "./memory";

@@ -48,6 +48,10 @@ export type {
     VariableResolution,
     LoopIterationState,
     ParallelBranchState,
+    // Shared memory types
+    SharedMemoryConfig,
+    SharedMemoryState,
+    SharedMemoryEntry,
     // Re-exports
     JsonObject,
     JsonValue
@@ -72,6 +76,21 @@ export {
     getExecutionContext,
     buildFinalOutputs,
     mergeContext,
+    // Shared memory functions
+    DEFAULT_SHARED_MEMORY_CONFIG,
+    createSharedMemory,
+    setSharedMemoryValue,
+    getSharedMemoryValue,
+    getSharedMemoryEntry,
+    deleteSharedMemoryValue,
+    appendSharedMemoryValue,
+    getSharedMemoryKeys,
+    searchSharedMemory,
+    getSharedMemoryStats,
+    // Shared memory serialization
+    serializeSharedMemoryState,
+    deserializeSharedMemoryState,
+    type SerializedSharedMemoryState,
     // Queue functions
     initializeQueue,
     getReadyNodes,
@@ -274,7 +293,7 @@ export {
     WaitNodeConfigSchema,
     // Data schemas
     TransformNodeConfigSchema,
-    VariableNodeConfigSchema,
+    SharedMemoryNodeConfigSchema,
     OutputNodeConfigSchema,
     TemplateOutputNodeConfigSchema,
     // Validation functions
@@ -302,7 +321,7 @@ export type {
     SwitchNodeConfig,
     WaitNodeConfig,
     TransformNodeConfig,
-    VariableNodeConfig,
+    SharedMemoryNodeConfig,
     OutputNodeConfig,
     TemplateOutputNodeConfig,
     SchemaValidationResult

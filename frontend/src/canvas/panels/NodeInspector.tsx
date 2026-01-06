@@ -40,12 +40,12 @@ import { LLMNodeConfig } from "./configs/LLMNodeConfig";
 import { LoopNodeConfig } from "./configs/LoopNodeConfig";
 import { OutputNodeConfig } from "./configs/OutputNodeConfig";
 import { RouterNodeConfig } from "./configs/RouterNodeConfig";
+import { SharedMemoryNodeConfig } from "./configs/SharedMemoryNodeConfig";
 import { SwitchNodeConfig } from "./configs/SwitchNodeConfig";
 import { TemplateOutputNodeConfig } from "./configs/TemplateOutputNodeConfig";
 import { TransformNodeConfig } from "./configs/TransformNodeConfig";
 import { TriggerNodeConfig } from "./configs/TriggerNodeConfig";
 import { URLNodeConfig } from "./configs/URLNodeConfig";
-import { VariableNodeConfig } from "./configs/VariableNodeConfig";
 import { VisionNodeConfig } from "./configs/VisionNodeConfig";
 import { WaitForUserNodeConfig } from "./configs/WaitForUserNodeConfig";
 import { WaitNodeConfig } from "./configs/WaitNodeConfig";
@@ -315,9 +315,9 @@ export function NodeInspector() {
                         errors={validationErrors}
                     />
                 );
-            case "variable":
+            case "shared-memory":
                 return (
-                    <VariableNodeConfig
+                    <SharedMemoryNodeConfig
                         data={node.data}
                         onUpdate={handleUpdate}
                         errors={validationErrors}

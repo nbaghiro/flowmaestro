@@ -21,9 +21,9 @@ import KnowledgeBaseQueryNode from "../../canvas/nodes/KnowledgeBaseQueryNode";
 import LLMNode from "../../canvas/nodes/LLMNode";
 import LoopNode from "../../canvas/nodes/LoopNode";
 import OutputNode from "../../canvas/nodes/OutputNode";
+import SharedMemoryNode from "../../canvas/nodes/SharedMemoryNode";
 import SwitchNode from "../../canvas/nodes/SwitchNode";
 import TransformNode from "../../canvas/nodes/TransformNode";
-import VariableNode from "../../canvas/nodes/VariableNode";
 import VisionNode from "../../canvas/nodes/VisionNode";
 import WaitNode from "../../canvas/nodes/WaitNode";
 import { cn } from "../../lib/utils";
@@ -43,7 +43,7 @@ const nodeTypes = {
     wait: WaitNode,
     input: InputNode,
     transform: TransformNode,
-    variable: VariableNode,
+    "shared-memory": SharedMemoryNode,
     output: OutputNode,
     http: HTTPNode,
     database: DatabaseNode,

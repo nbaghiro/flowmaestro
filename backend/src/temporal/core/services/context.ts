@@ -15,7 +15,10 @@ import type {
     ParallelBranchState,
     ExecutionQueueState,
     NodeExecutionState,
-    NodeExecutionStatus
+    NodeExecutionStatus,
+    SharedMemoryConfig,
+    SharedMemoryState,
+    SharedMemoryEntry
 } from "../types";
 
 // ============================================================================
@@ -33,15 +36,44 @@ export const DEFAULT_CONTEXT_CONFIG: ContextStorageConfig = {
 };
 
 /**
+ * Default configuration for shared memory.
+ */
+export const DEFAULT_SHARED_MEMORY_CONFIG: SharedMemoryConfig = {
+    maxEntries: 1000,
+    maxValueSizeBytes: 100 * 1024, // 100KB per value
+    maxTotalSizeBytes: 10 * 1024 * 1024, // 10MB total
+    embeddingModel: "text-embedding-3-small",
+    embeddingDimensions: 1536,
+    enableSemanticSearch: true
+};
+
+/**
+ * Create empty shared memory state.
+ */
+export function createSharedMemory(config: Partial<SharedMemoryConfig> = {}): SharedMemoryState {
+    return {
+        entries: new Map(),
+        config: { ...DEFAULT_SHARED_MEMORY_CONFIG, ...config },
+        metadata: {
+            totalSizeBytes: 0,
+            entryCount: 0,
+            createdAt: Date.now()
+        }
+    };
+}
+
+/**
  * Create initial context snapshot.
  */
 export function createContext(
     inputs: JsonObject,
-    _config: Partial<ContextStorageConfig> = {}
+    _config: Partial<ContextStorageConfig> = {},
+    sharedMemoryConfig: Partial<SharedMemoryConfig> = {}
 ): ContextSnapshot {
     return {
         nodeOutputs: new Map(),
         workflowVariables: new Map(),
+        sharedMemory: createSharedMemory(sharedMemoryConfig),
         inputs,
         metadata: {
             totalSizeBytes: estimateSize(inputs),
@@ -117,9 +149,283 @@ export function deleteVariable(context: ContextSnapshot, name: string): ContextS
     return newContext;
 }
 
+// ============================================================================
+// SHARED MEMORY OPERATIONS
+// ============================================================================
+
+/**
+ * Set a value in shared memory.
+ * Returns new context with updated shared memory state.
+ */
+export function setSharedMemoryValue(
+    context: ContextSnapshot,
+    key: string,
+    value: JsonValue,
+    nodeId: string,
+    embedding?: number[]
+): ContextSnapshot {
+    const newContext = cloneContext(context);
+    const state = newContext.sharedMemory;
+
+    const valueStr = JSON.stringify(value);
+    const sizeBytes = valueStr.length * 2;
+
+    // Check value size limit
+    if (sizeBytes > state.config.maxValueSizeBytes) {
+        throw new Error(
+            `Shared memory value size ${sizeBytes} bytes exceeds limit of ${state.config.maxValueSizeBytes} bytes`
+        );
+    }
+
+    // Remove old entry size if updating
+    const existingEntry = state.entries.get(key);
+    if (existingEntry) {
+        state.metadata.totalSizeBytes -= existingEntry.metadata.sizeBytes;
+    } else {
+        state.metadata.entryCount++;
+    }
+
+    // Check total size limit
+    if (state.metadata.totalSizeBytes + sizeBytes > state.config.maxTotalSizeBytes) {
+        throw new Error(
+            `Shared memory total size would exceed limit of ${state.config.maxTotalSizeBytes} bytes`
+        );
+    }
+
+    // Check entry count limit
+    if (state.metadata.entryCount > state.config.maxEntries) {
+        throw new Error(
+            `Shared memory entry count would exceed limit of ${state.config.maxEntries}`
+        );
+    }
+
+    const entry: SharedMemoryEntry = {
+        key,
+        value,
+        embedding,
+        metadata: {
+            createdAt: existingEntry?.metadata.createdAt || Date.now(),
+            updatedAt: Date.now(),
+            nodeId,
+            valueType: detectValueType(value),
+            sizeBytes
+        }
+    };
+
+    state.entries.set(key, entry);
+    state.metadata.totalSizeBytes += sizeBytes;
+
+    return newContext;
+}
+
+/**
+ * Get a value from shared memory.
+ */
+export function getSharedMemoryValue(context: ContextSnapshot, key: string): JsonValue | undefined {
+    const entry = context.sharedMemory.entries.get(key);
+    return entry?.value;
+}
+
+/**
+ * Get a shared memory entry (including metadata).
+ */
+export function getSharedMemoryEntry(
+    context: ContextSnapshot,
+    key: string
+): SharedMemoryEntry | undefined {
+    return context.sharedMemory.entries.get(key);
+}
+
+/**
+ * Delete a value from shared memory.
+ */
+export function deleteSharedMemoryValue(context: ContextSnapshot, key: string): ContextSnapshot {
+    const newContext = cloneContext(context);
+    const state = newContext.sharedMemory;
+    const entry = state.entries.get(key);
+
+    if (entry) {
+        state.entries.delete(key);
+        state.metadata.totalSizeBytes -= entry.metadata.sizeBytes;
+        state.metadata.entryCount--;
+    }
+
+    return newContext;
+}
+
+/**
+ * Append to an existing shared memory value.
+ * For arrays: appends the value to the array.
+ * For strings: concatenates the value.
+ */
+export function appendSharedMemoryValue(
+    context: ContextSnapshot,
+    key: string,
+    valueToAppend: JsonValue,
+    nodeId: string
+): ContextSnapshot {
+    const existingEntry = context.sharedMemory.entries.get(key);
+
+    if (!existingEntry) {
+        // If doesn't exist, treat as set
+        return setSharedMemoryValue(context, key, valueToAppend, nodeId);
+    }
+
+    let newValue: JsonValue;
+
+    if (Array.isArray(existingEntry.value)) {
+        // Append to array
+        newValue = [...existingEntry.value, valueToAppend];
+    } else if (typeof existingEntry.value === "string") {
+        // Append to string
+        newValue = existingEntry.value + String(valueToAppend);
+    } else {
+        throw new Error(
+            `Cannot append to shared memory value of type ${typeof existingEntry.value}`
+        );
+    }
+
+    return setSharedMemoryValue(context, key, newValue, nodeId, existingEntry.embedding);
+}
+
+/**
+ * Get all keys in shared memory.
+ */
+export function getSharedMemoryKeys(context: ContextSnapshot): string[] {
+    return Array.from(context.sharedMemory.entries.keys());
+}
+
+/**
+ * Search shared memory by semantic similarity.
+ * Returns entries sorted by similarity score (highest first).
+ */
+export function searchSharedMemory(
+    context: ContextSnapshot,
+    queryEmbedding: number[],
+    topK: number = 5,
+    similarityThreshold: number = 0.7
+): Array<{ key: string; value: JsonValue; similarity: number }> {
+    const results: Array<{ key: string; value: JsonValue; similarity: number }> = [];
+
+    for (const [key, entry] of context.sharedMemory.entries) {
+        if (entry.embedding && entry.embedding.length > 0) {
+            const similarity = cosineSimilarity(queryEmbedding, entry.embedding);
+            if (similarity >= similarityThreshold) {
+                results.push({ key, value: entry.value, similarity });
+            }
+        }
+    }
+
+    // Sort by similarity descending and limit to topK
+    return results.sort((a, b) => b.similarity - a.similarity).slice(0, topK);
+}
+
+/**
+ * Get shared memory statistics.
+ */
+export function getSharedMemoryStats(context: ContextSnapshot): {
+    entryCount: number;
+    totalSizeBytes: number;
+    maxEntries: number;
+    maxTotalSizeBytes: number;
+    entriesWithEmbeddings: number;
+} {
+    let entriesWithEmbeddings = 0;
+    for (const entry of context.sharedMemory.entries.values()) {
+        if (entry.embedding && entry.embedding.length > 0) {
+            entriesWithEmbeddings++;
+        }
+    }
+
+    return {
+        entryCount: context.sharedMemory.metadata.entryCount,
+        totalSizeBytes: context.sharedMemory.metadata.totalSizeBytes,
+        maxEntries: context.sharedMemory.config.maxEntries,
+        maxTotalSizeBytes: context.sharedMemory.config.maxTotalSizeBytes,
+        entriesWithEmbeddings
+    };
+}
+
+// ============================================================================
+// SHARED MEMORY SERIALIZATION
+// ============================================================================
+
+/**
+ * Serialized format for shared memory state.
+ * Used for Temporal workflow state serialization and database persistence.
+ */
+export interface SerializedSharedMemoryState {
+    entries: Array<{
+        key: string;
+        value: JsonValue;
+        embedding?: number[];
+        metadata: {
+            createdAt: number;
+            updatedAt: number;
+            nodeId: string;
+            valueType: "string" | "number" | "boolean" | "json";
+            sizeBytes: number;
+        };
+    }>;
+    config: SharedMemoryConfig;
+    metadata: {
+        totalSizeBytes: number;
+        entryCount: number;
+        createdAt: number;
+    };
+}
+
+/**
+ * Serialize shared memory state to JSON-compatible format.
+ * Converts the entries Map to an array for serialization.
+ */
+export function serializeSharedMemoryState(state: SharedMemoryState): SerializedSharedMemoryState {
+    const entries: SerializedSharedMemoryState["entries"] = [];
+
+    for (const [key, entry] of state.entries) {
+        entries.push({
+            key,
+            value: entry.value,
+            embedding: entry.embedding,
+            metadata: { ...entry.metadata }
+        });
+    }
+
+    return {
+        entries,
+        config: { ...state.config },
+        metadata: { ...state.metadata }
+    };
+}
+
+/**
+ * Deserialize shared memory state from JSON format.
+ * Restores the entries Map from the array format.
+ */
+export function deserializeSharedMemoryState(
+    serialized: SerializedSharedMemoryState
+): SharedMemoryState {
+    const entries = new Map<string, SharedMemoryEntry>();
+
+    for (const entry of serialized.entries) {
+        entries.set(entry.key, {
+            key: entry.key,
+            value: entry.value,
+            embedding: entry.embedding,
+            metadata: { ...entry.metadata }
+        });
+    }
+
+    return {
+        entries,
+        config: { ...serialized.config },
+        metadata: { ...serialized.metadata }
+    };
+}
+
 /**
  * Resolve a variable reference.
- * Supports: {{variableName}}, {{nodeId.field}}, {{loop.index}}, {{parallel.index}}
+ * Supports: {{variableName}}, {{nodeId.field}}, {{loop.index}}, {{parallel.index}}, {{shared.key}}
  */
 export function resolveVariable(
     context: ContextSnapshot,
@@ -148,6 +454,22 @@ export function resolveVariable(
         const value = resolveParallelPath(remainingPath, parallelState);
         if (value !== undefined) {
             return { value, source: "parallel", path: cleanPath };
+        }
+    }
+
+    // Check shared memory context ({{shared.keyName}} or {{shared.keyName.nestedPath}})
+    if (rootKey === "shared" && remainingPath.length > 0) {
+        const sharedKey = remainingPath[0];
+        const sharedValue = getSharedMemoryValue(context, sharedKey);
+        if (sharedValue !== undefined) {
+            // If there are more path segments, navigate into the value
+            const finalValue =
+                remainingPath.length > 1
+                    ? navigatePath(sharedValue, remainingPath.slice(1))
+                    : sharedValue;
+            if (finalValue !== undefined) {
+                return { value: finalValue, source: "shared", path: cleanPath };
+            }
         }
     }
 
@@ -695,9 +1017,51 @@ function cloneContext(context: ContextSnapshot): ContextSnapshot {
     return {
         nodeOutputs: new Map(context.nodeOutputs),
         workflowVariables: new Map(context.workflowVariables),
+        sharedMemory: cloneSharedMemoryState(context.sharedMemory),
         inputs: { ...context.inputs },
         metadata: { ...context.metadata }
     };
+}
+
+/**
+ * Clone shared memory state for immutability.
+ */
+function cloneSharedMemoryState(state: SharedMemoryState): SharedMemoryState {
+    return {
+        entries: new Map(state.entries),
+        config: { ...state.config },
+        metadata: { ...state.metadata }
+    };
+}
+
+/**
+ * Calculate cosine similarity between two vectors.
+ */
+function cosineSimilarity(a: number[], b: number[]): number {
+    if (a.length !== b.length || a.length === 0) return 0;
+
+    let dotProduct = 0;
+    let normA = 0;
+    let normB = 0;
+
+    for (let i = 0; i < a.length; i++) {
+        dotProduct += a[i] * b[i];
+        normA += a[i] * a[i];
+        normB += b[i] * b[i];
+    }
+
+    const magnitude = Math.sqrt(normA) * Math.sqrt(normB);
+    return magnitude === 0 ? 0 : dotProduct / magnitude;
+}
+
+/**
+ * Detect the type of a JSON value.
+ */
+function detectValueType(value: JsonValue): "string" | "number" | "boolean" | "json" {
+    if (typeof value === "string") return "string";
+    if (typeof value === "number") return "number";
+    if (typeof value === "boolean") return "boolean";
+    return "json";
 }
 
 // ============================================================================

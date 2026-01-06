@@ -131,12 +131,80 @@ export interface ContextSnapshot {
     nodeOutputs: Map<string, JsonObject>;
     /** User-defined workflow variables */
     workflowVariables: Map<string, JsonValue>;
+    /** Shared memory state for cross-node data sharing with semantic search */
+    sharedMemory: SharedMemoryState;
     /** Original workflow inputs (immutable) */
     inputs: JsonObject;
     /** Context metadata */
     metadata: {
         totalSizeBytes: number;
         nodeCount: number;
+        createdAt: number;
+    };
+}
+
+// ============================================================================
+// SHARED MEMORY TYPES
+// ============================================================================
+
+/**
+ * Configuration for shared memory storage limits
+ */
+export interface SharedMemoryConfig {
+    /** Maximum number of entries in shared memory */
+    maxEntries: number;
+    /** Maximum size in bytes for a single value */
+    maxValueSizeBytes: number;
+    /** Maximum total size in bytes for all shared memory */
+    maxTotalSizeBytes: number;
+    /** Embedding model to use for semantic search */
+    embeddingModel: string;
+    /** Embedding dimensions (e.g., 1536 for text-embedding-3-small) */
+    embeddingDimensions: number;
+    /** Whether semantic search is enabled by default */
+    enableSemanticSearch: boolean;
+}
+
+/**
+ * A single entry in shared memory
+ */
+export interface SharedMemoryEntry {
+    /** The key used to store this entry */
+    key: string;
+    /** The stored value */
+    value: JsonValue;
+    /** Vector embedding for semantic search (optional) */
+    embedding?: number[];
+    /** Entry metadata */
+    metadata: {
+        /** Timestamp when the entry was created */
+        createdAt: number;
+        /** Timestamp when the entry was last updated */
+        updatedAt: number;
+        /** The node ID that last wrote this entry */
+        nodeId: string;
+        /** Detected type of the value */
+        valueType: "string" | "number" | "boolean" | "json";
+        /** Size of the value in bytes */
+        sizeBytes: number;
+    };
+}
+
+/**
+ * Complete shared memory state
+ */
+export interface SharedMemoryState {
+    /** All entries keyed by their key name */
+    entries: Map<string, SharedMemoryEntry>;
+    /** Configuration for this shared memory instance */
+    config: SharedMemoryConfig;
+    /** Shared memory metadata */
+    metadata: {
+        /** Total size of all entries in bytes */
+        totalSizeBytes: number;
+        /** Number of entries */
+        entryCount: number;
+        /** Timestamp when shared memory was created */
         createdAt: number;
     };
 }
@@ -148,7 +216,7 @@ export interface VariableResolution {
     /** Resolved value */
     value: JsonValue;
     /** Source of the value */
-    source: "nodeOutput" | "workflowVariable" | "input" | "loop" | "parallel";
+    source: "nodeOutput" | "workflowVariable" | "input" | "loop" | "parallel" | "shared";
     /** Original path that was resolved */
     path: string;
 }

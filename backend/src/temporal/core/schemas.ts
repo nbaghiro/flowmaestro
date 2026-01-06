@@ -423,17 +423,28 @@ export const TransformNodeConfigSchema = z.object({
 export type TransformNodeConfig = z.infer<typeof TransformNodeConfigSchema>;
 
 /**
- * Variable Node Configuration.
+ * Shared Memory Node Configuration.
+ * Provides key-value storage with semantic search capabilities.
+ *
+ * Operations:
+ * - store: Save a value with a key, optionally indexed for semantic search
+ * - search: Find relevant values by meaning/query
+ *
+ * Values can also be accessed directly via {{shared.keyName}} interpolation.
  */
-export const VariableNodeConfigSchema = z.object({
-    operation: z.enum(["set", "get", "delete"]),
-    variableName: z.string().min(1, "Variable name is required"),
+export const SharedMemoryNodeConfigSchema = z.object({
+    operation: z.enum(["store", "search"]),
+    // For store operation
+    key: z.string().optional(),
     value: z.string().optional(),
-    scope: z.enum(["workflow", "global", "temporary"]).default("workflow"),
-    valueType: z.enum(["auto", "string", "number", "boolean", "json"]).optional().default("auto")
+    enableSemanticSearch: z.boolean().optional().default(true),
+    // For search operation
+    searchQuery: z.string().optional(),
+    topK: z.number().int().min(1).max(50).optional().default(5),
+    similarityThreshold: z.number().min(0).max(1).optional().default(0.7)
 });
 
-export type VariableNodeConfig = z.infer<typeof VariableNodeConfigSchema>;
+export type SharedMemoryNodeConfig = z.infer<typeof SharedMemoryNodeConfigSchema>;
 
 /**
  * Output Node Configuration.
@@ -689,7 +700,7 @@ export const NodeSchemaRegistry: Record<string, z.ZodSchema> = {
     waitForUser: WaitForUserNodeConfigSchema,
     // Data
     transform: TransformNodeConfigSchema,
-    variable: VariableNodeConfigSchema,
+    "shared-memory": SharedMemoryNodeConfigSchema,
     output: OutputNodeConfigSchema,
     templateOutput: TemplateOutputNodeConfigSchema,
     // Control

@@ -11,7 +11,6 @@ import {
     Clock,
     Hand,
     Shuffle,
-    Variable,
     Send,
     BookOpen,
     Globe,
@@ -138,6 +137,13 @@ const nodeLibrary: NodeDefinition[] = [
         description: "Image generation and analysis with AI models"
     },
     {
+        type: "shared-memory",
+        label: "Shared Memory",
+        icon: Database,
+        category: "ai",
+        description: "Key-value storage accessible by all nodes with semantic search"
+    },
+    {
         type: "embeddings",
         label: "Embeddings",
         icon: Sparkles,
@@ -211,13 +217,6 @@ const nodeLibrary: NodeDefinition[] = [
         icon: Shuffle,
         category: "logic",
         description: "Transform data with JSONPath, templates, filters"
-    },
-    {
-        type: "variable",
-        label: "Variable",
-        icon: Variable,
-        category: "logic",
-        description: "Set or get workflow variables"
     },
 
     // Utils - generic tools

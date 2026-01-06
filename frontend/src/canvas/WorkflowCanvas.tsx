@@ -32,12 +32,12 @@ import LLMNode from "./nodes/LLMNode";
 import LoopNode from "./nodes/LoopNode";
 import OutputNode from "./nodes/OutputNode";
 import RouterNode from "./nodes/RouterNode";
+import SharedMemoryNode from "./nodes/SharedMemoryNode";
 import SwitchNode from "./nodes/SwitchNode";
 import TemplateOutputNode from "./nodes/TemplateOutputNode";
 import TransformNode from "./nodes/TransformNode";
 import TriggerNode from "./nodes/TriggerNode";
 import URLNode from "./nodes/URLNode";
-import VariableNode from "./nodes/VariableNode";
 import VisionNode from "./nodes/VisionNode";
 import WaitForUserNode from "./nodes/WaitForUserNode";
 import WaitNode from "./nodes/WaitNode";
@@ -75,7 +75,7 @@ const nodeTypes = {
     waitForUser: WaitForUserNode,
     input: InputNode,
     transform: TransformNode,
-    variable: VariableNode,
+    "shared-memory": SharedMemoryNode,
     output: OutputNode,
     templateOutput: TemplateOutputNode,
     http: HTTPNode,
@@ -315,8 +315,9 @@ function getDefaultLabel(type: string): string {
         trigger: "Trigger",
         llm: "LLM",
         vision: "Vision",
-        audio: "Audio",
+        "shared-memory": "Shared Memory",
         embeddings: "Embeddings",
+        audio: "Audio",
         router: "Router",
         conditional: "Conditional",
         switch: "Switch",
@@ -325,7 +326,6 @@ function getDefaultLabel(type: string): string {
         wait: "Wait/Delay",
         input: "Input",
         transform: "Transform",
-        variable: "Variable",
         output: "Output",
         http: "HTTP",
         database: "Database",

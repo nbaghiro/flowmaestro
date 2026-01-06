@@ -5,6 +5,7 @@
  */
 
 import type { JsonObject, JsonValue } from "@flowmaestro/shared";
+import { createSharedMemory } from "../../src/temporal/core/services/context";
 import type {
     ContextSnapshot,
     LoopIterationState,
@@ -18,6 +19,7 @@ export function createEmptyContext(inputs: Record<string, JsonValue> = {}): Cont
     return {
         nodeOutputs: new Map(),
         workflowVariables: new Map(),
+        sharedMemory: createSharedMemory(),
         inputs,
         metadata: {
             totalSizeBytes: JSON.stringify(inputs).length * 2,
@@ -51,6 +53,7 @@ export function createContextWithOutputs(): ContextSnapshot {
     return {
         nodeOutputs,
         workflowVariables,
+        sharedMemory: createSharedMemory(),
         inputs,
         metadata: {
             totalSizeBytes: 1024,
@@ -85,6 +88,7 @@ export function createLargeContext(
     return {
         nodeOutputs,
         workflowVariables: new Map(),
+        sharedMemory: createSharedMemory(),
         inputs: {},
         metadata: {
             totalSizeBytes: targetSizeBytes,
@@ -110,6 +114,7 @@ export function createParallelMergeContext(): ContextSnapshot {
     return {
         nodeOutputs,
         workflowVariables: new Map([["branchCount", 3]]),
+        sharedMemory: createSharedMemory(),
         inputs: { mode: "parallel" },
         metadata: {
             totalSizeBytes: 512,
@@ -194,6 +199,7 @@ export function createCollisionContext(): ContextSnapshot {
     return {
         nodeOutputs,
         workflowVariables,
+        sharedMemory: createSharedMemory(),
         inputs,
         metadata: {
             totalSizeBytes: 256,
@@ -214,6 +220,7 @@ export function deepCloneContext(context: ContextSnapshot): ContextSnapshot {
         workflowVariables: new Map(
             [...context.workflowVariables].map(([k, v]) => [k, JSON.parse(JSON.stringify(v))])
         ),
+        sharedMemory: createSharedMemory(),
         inputs: JSON.parse(JSON.stringify(context.inputs)),
         metadata: { ...context.metadata }
     };

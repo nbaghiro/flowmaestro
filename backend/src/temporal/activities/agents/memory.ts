@@ -776,3 +776,181 @@ function getSuccessMessage(reason: "created" | "appended" | "replaced" | "duplic
 export function isWorkingMemoryEnabled(agentMetadata: JsonObject): boolean {
     return agentMetadata.workingMemoryEnabled === true;
 }
+
+// =============================================================================
+// Shared Memory Tools - In-workflow key-value storage with semantic search
+// =============================================================================
+
+const sharedMemoryLogger = createActivityLogger({ component: "SharedMemoryTool" });
+
+/**
+ * Create the read_shared_memory tool definition
+ */
+export function createReadSharedMemoryTool(): Tool {
+    return {
+        id: "built-in-read-shared-memory",
+        name: "read_shared_memory",
+        type: "function",
+        description: `Read a value from the workflow's shared memory by key.
+
+Use this when you need to:
+- Retrieve information stored earlier in this workflow execution
+- Check if a particular key exists in shared memory
+- Access data that other nodes have stored
+
+Returns the value if found, or null if the key doesn't exist.`,
+        schema: {
+            type: "object",
+            properties: {
+                key: {
+                    type: "string",
+                    description: "The key to read from shared memory"
+                }
+            },
+            required: ["key"]
+        },
+        config: {
+            functionName: "read_shared_memory"
+        }
+    };
+}
+
+/**
+ * Create the write_shared_memory tool definition
+ */
+export function createWriteSharedMemoryTool(): Tool {
+    return {
+        id: "built-in-write-shared-memory",
+        name: "write_shared_memory",
+        type: "function",
+        description: `Write a value to the workflow's shared memory.
+
+Use this when you need to:
+- Store information for later use in this workflow execution
+- Share data with other nodes in the workflow
+- Save intermediate results that other parts of the workflow need
+
+The value will be available to all nodes in this workflow execution.
+Enable semantic search for longer text values to allow finding them by meaning later.`,
+        schema: {
+            type: "object",
+            properties: {
+                key: {
+                    type: "string",
+                    description: "The key to store the value under"
+                },
+                value: {
+                    type: ["string", "number", "boolean", "object", "array"],
+                    description: "The value to store"
+                },
+                enableSemanticSearch: {
+                    type: "boolean",
+                    description:
+                        "Enable semantic search for this value (default: false). When enabled, the value can be found using search_shared_memory. Only useful for longer text content."
+                }
+            },
+            required: ["key", "value"]
+        },
+        config: {
+            functionName: "write_shared_memory"
+        }
+    };
+}
+
+/**
+ * Create the search_shared_memory tool definition
+ */
+export function createSearchSharedMemoryTool(): Tool {
+    return {
+        id: "built-in-search-shared-memory",
+        name: "search_shared_memory",
+        type: "function",
+        description: `Search the workflow's shared memory using semantic similarity.
+
+Use this when you need to:
+- Find information stored earlier by meaning (not just exact key)
+- Search for relevant data without knowing the exact key
+- Retrieve related content from shared memory
+
+Note: Only values stored with enableSemanticSearch=true can be found via search.`,
+        schema: {
+            type: "object",
+            properties: {
+                query: {
+                    type: "string",
+                    description: "What you're searching for. Describe the information you need."
+                },
+                topK: {
+                    type: "number",
+                    description: "Maximum number of results to return (default: 5)",
+                    minimum: 1,
+                    maximum: 20
+                },
+                similarityThreshold: {
+                    type: "number",
+                    description:
+                        "Minimum similarity score (0-1, default: 0.7). Lower values return more results.",
+                    minimum: 0,
+                    maximum: 1
+                }
+            },
+            required: ["query"]
+        },
+        config: {
+            functionName: "search_shared_memory"
+        }
+    };
+}
+
+/**
+ * Inject shared memory tools into agent's available tools
+ */
+export function injectSharedMemoryTools(existingTools: Tool[]): Tool[] {
+    const sharedMemoryTools = [
+        createReadSharedMemoryTool(),
+        createWriteSharedMemoryTool(),
+        createSearchSharedMemoryTool()
+    ];
+
+    // Filter out tools that already exist
+    const newTools = sharedMemoryTools.filter(
+        (newTool) => !existingTools.some((existing) => existing.name === newTool.name)
+    );
+
+    if (newTools.length === 0) {
+        return existingTools;
+    }
+
+    sharedMemoryLogger.debug("Injecting shared memory tools", {
+        toolCount: newTools.length,
+        toolNames: newTools.map((t) => t.name)
+    });
+
+    return [...newTools, ...existingTools];
+}
+
+/**
+ * Input for shared memory tool execution
+ */
+export interface SharedMemoryToolInput {
+    toolName: "read_shared_memory" | "write_shared_memory" | "search_shared_memory";
+    arguments: JsonObject;
+}
+
+/**
+ * Result from shared memory tool execution
+ */
+export interface SharedMemoryToolResult {
+    result: JsonObject;
+    /** If true, the context was modified and needs to be merged back */
+    contextModified: boolean;
+    /** Serialized context updates to merge back (only when contextModified=true) */
+    contextUpdates?: JsonObject;
+}
+
+/**
+ * Check if a tool name is a shared memory tool
+ */
+export function isSharedMemoryTool(toolName: string): boolean {
+    return ["read_shared_memory", "write_shared_memory", "search_shared_memory"].includes(toolName);
+}
