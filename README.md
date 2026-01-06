@@ -30,6 +30,12 @@ Built for TypeScript developers who need both visual workflow orchestration and 
 - **[Knowledge Bases](./.docs/workflow-system.md#knowledge-base)** - RAG with document processing, chunking, and vector search
 - **Multi-LLM Support** - OpenAI, Anthropic, Google Gemini, Cohere through unified interface
 
+### Public API & SDKs
+
+- **[Public API](./.docs/public-api.md)** - RESTful API for programmatic access to workflows, agents, and knowledge bases
+- **[JavaScript SDK](/sdks/javascript)** - Official TypeScript/JavaScript SDK with streaming support
+- **[Python SDK](/sdks/python)** - Official Python SDK with sync and async clients
+
 ### Production Ready
 
 - **[Deployment Guide](./.docs/deployment-guide.md)** - Google Kubernetes Engine with Pulumi infrastructure-as-code
@@ -93,6 +99,7 @@ Comprehensive documentation is available in the `.docs/` directory:
 - **[Agent Architecture](./.docs/agent-architecture.md)** - AI agent system and memory
 - **[Temporal Workflows](./.docs/temporal-workflows.md)** - Durable workflow execution
 - **[Integration System](./.docs/integrations-system.md)** - Provider SDK and external connections
+- **[Public API & SDKs](./.docs/public-api.md)** - REST API reference and SDK documentation
 
 ### Infrastructure & Operations
 
@@ -114,6 +121,10 @@ flowmaestro/
 ├── frontend/         # React + Vite SPA (workflow canvas, agent builder)
 ├── backend/          # Fastify API + Temporal workers
 ├── shared/           # Shared TypeScript types and utilities
+├── sdks/             # Official client SDKs
+│   ├── javascript/   # TypeScript/JavaScript SDK (@flowmaestro/sdk)
+│   └── python/       # Python SDK (flowmaestro)
+├── examples/         # SDK usage examples and mini-apps
 ├── marketing/        # Marketing website
 ├── documentation/    # Docusaurus documentation site
 └── infra/            # Kubernetes manifests and Pulumi IaC
