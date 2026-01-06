@@ -8,6 +8,7 @@ import { initializeLogger, shutdownLogger } from "../core/logging";
 import { initializeOTel, shutdownOTel } from "../core/observability";
 import { redisEventBus } from "../services/events/RedisEventBus";
 import { credentialRefreshScheduler } from "../services/oauth/CredentialRefreshScheduler";
+import { webhookDispatcher } from "../services/webhooks";
 import { eventBridge } from "../services/websocket/EventBridge";
 import { db } from "../storage/database";
 import { getTemporalClient, closeTemporalConnection } from "../temporal/client";
@@ -15,6 +16,7 @@ import { errorHandler, requestContextMiddleware } from "./middleware";
 import { agentTemplateRoutes } from "./routes/agent-templates";
 import { agentRoutes } from "./routes/agents";
 import { analyticsRoutes } from "./routes/analytics";
+import { apiKeyRoutes } from "./routes/api-keys";
 import { authRoutes } from "./routes/auth";
 import { chatInterfaceRoutes } from "./routes/chat-interfaces";
 import { checkpointRoutes } from "./routes/checkpoints";
@@ -30,6 +32,7 @@ import { publicFormInterfaceRoutes } from "./routes/public/form-interfaces";
 import { templateRoutes } from "./routes/templates";
 import { threadRoutes } from "./routes/threads";
 import { triggerRoutes } from "./routes/triggers";
+import { publicApiV1Routes } from "./routes/v1";
 import { webhookRoutes } from "./routes/webhooks";
 import { websocketRoutes } from "./routes/websocket";
 import { workflowRoutes } from "./routes/workflows";
@@ -101,6 +104,10 @@ export async function buildServer() {
     credentialRefreshScheduler.start();
     fastify.log.info("Credential refresh scheduler started");
 
+    // Start webhook retry processor for failed webhook deliveries
+    webhookDispatcher.startRetryProcessor(30000); // Check every 30 seconds
+    fastify.log.info("Webhook retry processor started");
+
     // Register RequestContext middleware (runs on every request)
     fastify.addHook("onRequest", requestContextMiddleware);
 
@@ -138,6 +145,7 @@ export async function buildServer() {
     await fastify.register(oauthRoutes, { prefix: "/oauth" });
     await fastify.register(knowledgeBaseRoutes, { prefix: "/knowledge-bases" });
     await fastify.register(agentRoutes, { prefix: "/agents" });
+    await fastify.register(apiKeyRoutes, { prefix: "/api-keys" });
     await fastify.register(threadRoutes, { prefix: "/threads" });
     await fastify.register(triggerRoutes);
     await fastify.register(formInterfaceRoutes);
@@ -146,6 +154,9 @@ export async function buildServer() {
     await fastify.register(publicChatInterfaceRoutes, { prefix: "/public/chat-interfaces" });
     await fastify.register(webhookRoutes, { prefix: "/webhooks" });
     await fastify.register(websocketRoutes);
+
+    // Public API v1 routes (API key authentication)
+    await fastify.register(publicApiV1Routes, { prefix: "/api/v1" });
 
     // Error handler (must be last)
     fastify.setErrorHandler(errorHandler);
@@ -185,6 +196,9 @@ export async function startServer() {
 
             // Stop credential refresh scheduler
             credentialRefreshScheduler.stop();
+
+            // Stop webhook retry processor
+            webhookDispatcher.stopRetryProcessor();
 
             // Close Temporal connection
             await closeTemporalConnection();

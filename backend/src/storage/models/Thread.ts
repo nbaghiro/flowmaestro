@@ -29,6 +29,7 @@ export interface UpdateThreadInput {
     status?: ThreadStatus;
     metadata?: JsonObject;
     archived_at?: Date | null;
+    last_message_at?: Date | null;
 }
 
 export interface ThreadListFilter {

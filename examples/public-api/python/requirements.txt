@@ -1,0 +1,14 @@
+# FlowMaestro Python SDK (local development)
+-e ../../../sdks/python
+
+# Environment configuration
+python-dotenv>=1.0.0
+
+# For webhook receiver example
+flask>=3.0.0
+
+# For batch processing example (CSV)
+# (csv is built-in)
+
+# For better async support
+# (asyncio is built-in)

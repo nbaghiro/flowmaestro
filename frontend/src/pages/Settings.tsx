@@ -1,5 +1,6 @@
 import { Palette, Bell, Key, Shield, Sun, Moon, Monitor } from "lucide-react";
 import { PageHeader } from "../components/common/PageHeader";
+import { ApiKeysSection } from "../components/settings/ApiKeysSection";
 import { cn } from "../lib/utils";
 import { useThemeStore } from "../stores/themeStore";
 
@@ -83,7 +84,7 @@ export function Settings() {
             icon: Key,
             title: "API & Webhooks",
             description: "API keys and webhook configuration",
-            items: ["API keys", "Webhooks", "Rate limits"]
+            customContent: <ApiKeysSection />
         },
         {
             icon: Shield,

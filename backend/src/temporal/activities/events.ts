@@ -99,6 +99,14 @@ export interface EmitNodeFailedInput {
  */
 export async function emitExecutionStarted(input: EmitExecutionStartedInput): Promise<void> {
     const { executionId, workflowName, totalNodes } = input;
+
+    // Update database status
+    const executionRepo = new ExecutionRepository();
+    await executionRepo.update(executionId, {
+        status: "running",
+        started_at: new Date()
+    });
+
     await redisEventBus.publish("workflow:events:execution:started", {
         type: "execution:started",
         timestamp: Date.now(),
@@ -128,6 +136,15 @@ export async function emitExecutionProgress(input: EmitExecutionProgressInput): 
  */
 export async function emitExecutionCompleted(input: EmitExecutionCompletedInput): Promise<void> {
     const { executionId, outputs, duration } = input;
+
+    // Update database status
+    const executionRepo = new ExecutionRepository();
+    await executionRepo.update(executionId, {
+        status: "completed",
+        outputs,
+        completed_at: new Date()
+    });
+
     await redisEventBus.publish("workflow:events:execution:completed", {
         type: "execution:completed",
         timestamp: Date.now(),
@@ -143,6 +160,15 @@ export async function emitExecutionCompleted(input: EmitExecutionCompletedInput)
  */
 export async function emitExecutionFailed(input: EmitExecutionFailedInput): Promise<void> {
     const { executionId, error, failedNodeId } = input;
+
+    // Update database status
+    const executionRepo = new ExecutionRepository();
+    await executionRepo.update(executionId, {
+        status: "failed",
+        error,
+        completed_at: new Date()
+    });
+
     await redisEventBus.publish("workflow:events:execution:failed", {
         type: "execution:failed",
         timestamp: Date.now(),

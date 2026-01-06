@@ -199,6 +199,11 @@ export class ThreadRepository {
             values.push(input.archived_at);
         }
 
+        if (input.last_message_at !== undefined) {
+            updates.push(`last_message_at = $${paramIndex++}`);
+            values.push(input.last_message_at);
+        }
+
         if (updates.length === 0) {
             return this.findById(id);
         }
