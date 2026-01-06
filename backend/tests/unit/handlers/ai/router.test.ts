@@ -10,6 +10,28 @@
  * in production when API keys are configured.
  */
 
+// Mock EncryptionService before any imports that use it
+jest.mock("../../../../src/services/EncryptionService", () => ({
+    EncryptionService: jest.fn().mockImplementation(() => ({
+        encrypt: jest.fn().mockReturnValue("encrypted-value"),
+        decrypt: jest.fn().mockReturnValue("decrypted-value")
+    })),
+    getEncryptionService: jest.fn().mockReturnValue({
+        encrypt: jest.fn().mockReturnValue("encrypted-value"),
+        decrypt: jest.fn().mockReturnValue("decrypted-value")
+    })
+}));
+
+// Mock database to prevent connection attempts
+jest.mock("../../../../src/storage/database", () => ({
+    Database: {
+        getInstance: jest.fn().mockReturnValue({
+            pool: { query: jest.fn(), connect: jest.fn() }
+        })
+    },
+    db: { query: jest.fn(), connect: jest.fn() }
+}));
+
 import {
     RouterNodeHandler,
     createRouterNodeHandler
