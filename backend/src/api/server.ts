@@ -22,6 +22,7 @@ import { chatInterfaceRoutes } from "./routes/chat-interfaces";
 import { checkpointRoutes } from "./routes/checkpoints";
 import { connectionRoutes } from "./routes/connections";
 import { executionRoutes } from "./routes/executions";
+import { folderRoutes } from "./routes/folders";
 import { formInterfaceRoutes } from "./routes/form-interfaces";
 import { integrationRoutes } from "./routes/integrations";
 import { knowledgeBaseRoutes } from "./routes/knowledge-bases";
@@ -145,6 +146,7 @@ export async function buildServer() {
     await fastify.register(oauthRoutes, { prefix: "/oauth" });
     await fastify.register(knowledgeBaseRoutes, { prefix: "/knowledge-bases" });
     await fastify.register(agentRoutes, { prefix: "/agents" });
+    await fastify.register(folderRoutes, { prefix: "/api/folders" });
     await fastify.register(apiKeyRoutes, { prefix: "/api-keys" });
     await fastify.register(threadRoutes, { prefix: "/threads" });
     await fastify.register(triggerRoutes);
