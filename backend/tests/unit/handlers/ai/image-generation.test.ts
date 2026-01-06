@@ -13,6 +13,23 @@
  * Note: External API calls are mocked using nock
  */
 
+// Mock modules - use require() inside factory to avoid Jest hoisting issues
+jest.mock("../../../../src/core/config", () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { mockAIConfig } = require("../../../helpers/module-mocks");
+    return mockAIConfig();
+});
+jest.mock("../../../../src/storage/database", () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { mockDatabase } = require("../../../helpers/module-mocks");
+    return mockDatabase();
+});
+jest.mock("../../../../src/storage/repositories/ConnectionRepository", () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { mockConnectionRepository } = require("../../../helpers/module-mocks");
+    return mockConnectionRepository();
+});
+
 import nock from "nock";
 import {
     ImageGenerationNodeHandler,
@@ -24,41 +41,6 @@ import {
     mustacheRef
 } from "../../../helpers/handler-test-utils";
 import { setupHttpMocking, teardownHttpMocking, clearHttpMocks } from "../../../helpers/http-mock";
-
-// Mock the config module
-jest.mock("../../../../src/core/config", () => ({
-    config: {
-        ai: {
-            openai: { apiKey: "test-openai-key" },
-            replicate: { apiKey: "test-replicate-key" },
-            stabilityai: { apiKey: "test-stability-key" }
-        },
-        database: {
-            host: "localhost",
-            port: 5432,
-            database: "test",
-            user: "test",
-            password: "test"
-        }
-    }
-}));
-
-// Mock database module
-jest.mock("../../../../src/storage/database", () => ({
-    Database: {
-        getInstance: jest.fn().mockReturnValue({
-            pool: { query: jest.fn(), connect: jest.fn() }
-        })
-    },
-    db: { query: jest.fn(), connect: jest.fn() }
-}));
-
-// Mock connection repository
-jest.mock("../../../../src/storage/repositories/ConnectionRepository", () => ({
-    ConnectionRepository: jest.fn().mockImplementation(() => ({
-        findByIdWithData: jest.fn().mockResolvedValue(null)
-    }))
-}));
 
 describe("ImageGenerationNodeHandler", () => {
     let handler: ImageGenerationNodeHandler;

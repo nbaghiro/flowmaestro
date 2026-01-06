@@ -12,6 +12,23 @@
  * Note: External API calls are mocked using nock
  */
 
+// Mock modules - use require() inside factory to avoid Jest hoisting issues
+jest.mock("../../../../src/core/config", () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { mockAIConfig } = require("../../../helpers/module-mocks");
+    return mockAIConfig();
+});
+jest.mock("../../../../src/storage/database", () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { mockDatabase } = require("../../../helpers/module-mocks");
+    return mockDatabase();
+});
+jest.mock("fs/promises", () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { mockFsPromises } = require("../../../helpers/module-mocks");
+    return mockFsPromises();
+});
+
 import nock from "nock";
 import {
     AudioNodeHandler,
@@ -23,52 +40,6 @@ import {
     mustacheRef
 } from "../../../helpers/handler-test-utils";
 import { setupHttpMocking, teardownHttpMocking, clearHttpMocks } from "../../../helpers/http-mock";
-
-// Mock the config module to provide test API keys
-jest.mock("../../../../src/core/config", () => ({
-    config: {
-        ai: {
-            openai: {
-                apiKey: "test-openai-key"
-            },
-            elevenlabs: {
-                apiKey: "test-elevenlabs-key"
-            }
-        },
-        database: {
-            host: "localhost",
-            port: 5432,
-            database: "test",
-            user: "test",
-            password: "test"
-        }
-    }
-}));
-
-// Mock the database module to prevent actual DB connections
-jest.mock("../../../../src/storage/database", () => ({
-    Database: {
-        getInstance: jest.fn().mockReturnValue({
-            pool: {
-                query: jest.fn(),
-                connect: jest.fn()
-            }
-        })
-    },
-    db: {
-        query: jest.fn(),
-        connect: jest.fn()
-    }
-}));
-
-// Mock fs for file operations
-jest.mock("fs/promises", () => ({
-    open: jest.fn().mockResolvedValue({
-        close: jest.fn()
-    }),
-    writeFile: jest.fn().mockResolvedValue(undefined),
-    unlink: jest.fn().mockResolvedValue(undefined)
-}));
 
 describe("AudioNodeHandler", () => {
     let handler: AudioNodeHandler;

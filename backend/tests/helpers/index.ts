@@ -10,6 +10,9 @@ export * from "./http-mock";
 // Database Mocking
 export * from "./database-mock";
 
+// Module Mocks (for jest.mock)
+export * from "./module-mocks";
+
 // Handler Test Utilities
 export * from "./handler-test-utils";
 

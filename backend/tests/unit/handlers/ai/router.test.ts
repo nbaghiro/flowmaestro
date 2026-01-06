@@ -10,27 +10,18 @@
  * in production when API keys are configured.
  */
 
-// Mock EncryptionService before any imports that use it
-jest.mock("../../../../src/services/EncryptionService", () => ({
-    EncryptionService: jest.fn().mockImplementation(() => ({
-        encrypt: jest.fn().mockReturnValue("encrypted-value"),
-        decrypt: jest.fn().mockReturnValue("decrypted-value")
-    })),
-    getEncryptionService: jest.fn().mockReturnValue({
-        encrypt: jest.fn().mockReturnValue("encrypted-value"),
-        decrypt: jest.fn().mockReturnValue("decrypted-value")
-    })
-}));
-
-// Mock database to prevent connection attempts
-jest.mock("../../../../src/storage/database", () => ({
-    Database: {
-        getInstance: jest.fn().mockReturnValue({
-            pool: { query: jest.fn(), connect: jest.fn() }
-        })
-    },
-    db: { query: jest.fn(), connect: jest.fn() }
-}));
+// Mock modules before any imports that use them
+// Use require() inside factory to avoid Jest hoisting issues
+jest.mock("../../../../src/services/EncryptionService", () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { mockEncryptionService } = require("../../../helpers/module-mocks");
+    return mockEncryptionService();
+});
+jest.mock("../../../../src/storage/database", () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { mockDatabase } = require("../../../helpers/module-mocks");
+    return mockDatabase();
+});
 
 import {
     RouterNodeHandler,

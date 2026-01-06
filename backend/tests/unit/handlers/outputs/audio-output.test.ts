@@ -10,17 +10,17 @@
  * - Terminal node signaling
  */
 
-import nock from "nock";
-
-import {
-    AudioOutputNodeHandler,
-    createAudioOutputNodeHandler
-} from "../../../../src/temporal/activities/execution/handlers/outputs/audio-output";
-import {
-    createHandlerInput,
-    createTestContext,
-    assertValidOutput
-} from "../../../helpers/handler-test-utils";
+// Mock modules - use require() inside factory to avoid Jest hoisting issues
+jest.mock("../../../../src/core/config", () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { mockAIConfig } = require("../../../helpers/module-mocks");
+    return mockAIConfig();
+});
+jest.mock("../../../../src/storage/database", () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { mockDatabase } = require("../../../helpers/module-mocks");
+    return mockDatabase();
+});
 
 // Mock OpenAI
 const mockOpenAISpeechCreate = jest.fn();
@@ -34,17 +34,6 @@ jest.mock("openai", () => {
     }));
 });
 
-// Mock the config
-jest.mock("../../../../src/core/config", () => ({
-    config: {
-        ai: {
-            openai: { apiKey: "test-openai-key" },
-            elevenlabs: { apiKey: "test-elevenlabs-key" },
-            deepgram: { apiKey: "test-deepgram-key" }
-        }
-    }
-}));
-
 // Mock GCS storage service
 const mockUploadBuffer = jest.fn();
 jest.mock("../../../../src/services/GCSStorageService", () => ({
@@ -53,21 +42,16 @@ jest.mock("../../../../src/services/GCSStorageService", () => ({
     }))
 }));
 
-// Mock the database module to prevent actual DB connections
-jest.mock("../../../../src/storage/database", () => ({
-    Database: {
-        getInstance: jest.fn().mockReturnValue({
-            pool: {
-                query: jest.fn(),
-                connect: jest.fn()
-            }
-        })
-    },
-    db: {
-        query: jest.fn(),
-        connect: jest.fn()
-    }
-}));
+import nock from "nock";
+import {
+    AudioOutputNodeHandler,
+    createAudioOutputNodeHandler
+} from "../../../../src/temporal/activities/execution/handlers/outputs/audio-output";
+import {
+    createHandlerInput,
+    createTestContext,
+    assertValidOutput
+} from "../../../helpers/handler-test-utils";
 
 describe("AudioOutputNodeHandler", () => {
     let handler: AudioOutputNodeHandler;

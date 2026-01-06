@@ -9,17 +9,22 @@
  * - Error handling
  */
 
-import nock from "nock";
-
-import {
-    AudioInputNodeHandler,
-    createAudioInputNodeHandler
-} from "../../../../src/temporal/activities/execution/handlers/inputs/audio-input";
-import {
-    createHandlerInput,
-    createTestContext,
-    assertValidOutput
-} from "../../../helpers/handler-test-utils";
+// Mock modules - use require() inside factory to avoid Jest hoisting issues
+jest.mock("../../../../src/core/config", () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { mockAIConfig } = require("../../../helpers/module-mocks");
+    return mockAIConfig();
+});
+jest.mock("../../../../src/storage/database", () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { mockDatabase } = require("../../../helpers/module-mocks");
+    return mockDatabase();
+});
+jest.mock("fs/promises", () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { mockFsPromises } = require("../../../helpers/module-mocks");
+    return mockFsPromises();
+});
 
 // Mock OpenAI
 const mockOpenAICreate = jest.fn();
@@ -33,16 +38,6 @@ jest.mock("openai", () => {
     }));
 });
 
-// Mock the config
-jest.mock("../../../../src/core/config", () => ({
-    config: {
-        ai: {
-            openai: { apiKey: "test-openai-key" },
-            deepgram: { apiKey: "test-deepgram-key" }
-        }
-    }
-}));
-
 // Mock GCS storage service
 const mockDownloadToTemp = jest.fn();
 jest.mock("../../../../src/services/GCSStorageService", () => ({
@@ -51,31 +46,16 @@ jest.mock("../../../../src/services/GCSStorageService", () => ({
     }))
 }));
 
-// Mock fs operations - using inline factory since jest.mock is hoisted
-jest.mock("fs/promises", () => ({
-    open: jest.fn().mockResolvedValue({
-        close: jest.fn().mockResolvedValue(undefined)
-    }),
-    readFile: jest.fn().mockResolvedValue(Buffer.from("fake-audio-data")),
-    writeFile: jest.fn().mockResolvedValue(undefined),
-    unlink: jest.fn().mockResolvedValue(undefined)
-}));
-
-// Mock the database module to prevent actual DB connections
-jest.mock("../../../../src/storage/database", () => ({
-    Database: {
-        getInstance: jest.fn().mockReturnValue({
-            pool: {
-                query: jest.fn(),
-                connect: jest.fn()
-            }
-        })
-    },
-    db: {
-        query: jest.fn(),
-        connect: jest.fn()
-    }
-}));
+import nock from "nock";
+import {
+    AudioInputNodeHandler,
+    createAudioInputNodeHandler
+} from "../../../../src/temporal/activities/execution/handlers/inputs/audio-input";
+import {
+    createHandlerInput,
+    createTestContext,
+    assertValidOutput
+} from "../../../helpers/handler-test-utils";
 
 describe("AudioInputNodeHandler", () => {
     let handler: AudioInputNodeHandler;
