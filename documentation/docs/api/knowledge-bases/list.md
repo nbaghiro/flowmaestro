@@ -1,17 +1,17 @@
 ---
 sidebar_position: 1
-title: List Agents
+title: List Knowledge Bases
 ---
 
-# List Agents
+# List Knowledge Bases
 
-List all agents for the authenticated user.
+List all knowledge bases for the authenticated user.
 
 ```
-GET /api/v1/agents
+GET /api/v1/knowledge-bases
 ```
 
-**Required Scope:** `agents:read`
+**Required Scope:** `knowledge-bases:read`
 
 ## Request
 
@@ -25,7 +25,7 @@ GET /api/v1/agents
 ### Example
 
 ```bash
-curl "https://api.flowmaestro.io/api/v1/agents" \
+curl "https://api.flowmaestro.io/api/v1/knowledge-bases" \
   -H "X-API-Key: fm_live_your_api_key"
 ```
 
@@ -35,18 +35,19 @@ curl "https://api.flowmaestro.io/api/v1/agents" \
 {
     "data": [
         {
-            "id": "agent_abc123",
-            "name": "Support Assistant",
-            "description": "Customer support chatbot",
-            "model": "gpt-4",
-            "created_at": "2024-01-15T10:30:00.000Z",
+            "id": "kb_abc123",
+            "name": "Product Documentation",
+            "description": "Technical docs for our products",
+            "document_count": 156,
+            "chunk_count": 2340,
+            "created_at": "2024-01-01T00:00:00.000Z",
             "updated_at": "2024-01-15T10:30:00.000Z"
         }
     ],
     "pagination": {
         "page": 1,
         "per_page": 20,
-        "total_count": 5,
+        "total_count": 3,
         "total_pages": 1,
         "has_next": false,
         "has_prev": false

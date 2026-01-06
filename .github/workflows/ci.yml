@@ -39,6 +39,27 @@ jobs:
       - name: Check code formatting
         run: npm run format:check
 
+  python-sdk-lint:
+    name: Python SDK Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install ruff
+        run: pip install ruff
+
+      - name: Lint Python SDK
+        run: ruff check sdks/python/
+
+      - name: Lint Python examples
+        run: ruff check examples/public-api/python/
+
   unit-tests:
     name: Unit Tests
     runs-on: ubuntu-latest

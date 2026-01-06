@@ -75,6 +75,11 @@ const sidebars: SidebarsConfig = {
         },
         {
             type: "category",
+            label: "SDKs",
+            items: ["sdks/javascript", "sdks/python", "sdks/widget"]
+        },
+        {
+            type: "category",
             label: "API Reference",
             items: [
                 "api/introduction",
@@ -82,23 +87,57 @@ const sidebars: SidebarsConfig = {
                 {
                     type: "category",
                     label: "Workflows",
+                    items: ["api/workflows/list", "api/workflows/get", "api/workflows/execute"]
+                },
+                {
+                    type: "category",
+                    label: "Executions",
                     items: [
-                        "api/workflows/list",
-                        "api/workflows/get",
-                        "api/workflows/create",
-                        "api/workflows/update",
-                        "api/workflows/delete",
-                        "api/workflows/execute"
+                        "api/executions/list",
+                        "api/executions/get",
+                        "api/executions/cancel",
+                        "api/executions/stream"
                     ]
                 },
                 {
                     type: "category",
                     label: "Agents",
+                    items: ["api/agents/list", "api/agents/get", "api/agents/create-thread"]
+                },
+                {
+                    type: "category",
+                    label: "Threads",
                     items: [
-                        "api/agents/list",
-                        "api/agents/get",
-                        "api/agents/create",
-                        "api/agents/chat"
+                        "api/threads/get",
+                        "api/threads/list-messages",
+                        "api/threads/send-message",
+                        "api/threads/delete"
+                    ]
+                },
+                {
+                    type: "category",
+                    label: "Triggers",
+                    items: ["api/triggers/list", "api/triggers/execute"]
+                },
+                {
+                    type: "category",
+                    label: "Knowledge Bases",
+                    items: [
+                        "api/knowledge-bases/list",
+                        "api/knowledge-bases/get",
+                        "api/knowledge-bases/query"
+                    ]
+                },
+                {
+                    type: "category",
+                    label: "Webhooks",
+                    items: [
+                        "api/webhooks/overview",
+                        "api/webhooks/list",
+                        "api/webhooks/create",
+                        "api/webhooks/delete",
+                        "api/webhooks/test",
+                        "api/webhooks/deliveries"
                     ]
                 }
             ]

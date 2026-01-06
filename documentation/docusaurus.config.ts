@@ -55,21 +55,10 @@ const config: Config = {
             },
             items: [
                 {
-                    type: "docSidebar",
-                    sidebarId: "docs",
-                    position: "left",
-                    label: "Documentation"
-                },
-                {
-                    href: "https://app.flowmaestro.ai",
-                    label: "Dashboard",
-                    position: "right"
-                },
-                {
-                    href: "https://github.com/flowmaestro/flowmaestro",
-                    "aria-label": "GitHub",
+                    href: "https://github.com/nbaghiro/flow-maestro",
                     position: "right",
-                    className: "header-github-link"
+                    className: "header-github-link",
+                    "aria-label": "GitHub repository"
                 }
             ]
         },
