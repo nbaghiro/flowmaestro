@@ -25,6 +25,8 @@ export interface MockNodeConfig {
     errorMessage?: string;
     /** Custom output to return */
     customOutput?: JsonObject;
+    /** Custom signals to return */
+    customSignals?: JsonObject;
     /** Track execution calls */
     onExecute?: (input: NodeHandlerInput) => void;
 }
@@ -120,10 +122,13 @@ export function createMockActivities(config: MockActivityConfig = {}) {
                 } as NodeHandlerInput);
             }
 
+            // Use custom signals or default empty object
+            const signals = mockConfig.customSignals || {};
+
             return {
                 success: true,
                 output,
-                signals: {}
+                signals
             };
         }
     );
@@ -200,6 +205,38 @@ export function withOutputs(outputs: Record<string, JsonObject>): MockActivityCo
     const nodeConfigs: Record<string, MockNodeConfig> = {};
     for (const [nodeId, customOutput] of Object.entries(outputs)) {
         nodeConfigs[nodeId] = { customOutput };
+    }
+    return { nodeConfigs };
+}
+
+/**
+ * Create a mock config with custom signals (for pause, branch selection, etc.)
+ */
+export function withSignals(signals: Record<string, JsonObject>): MockActivityConfig {
+    const nodeConfigs: Record<string, MockNodeConfig> = {};
+    for (const [nodeId, customSignals] of Object.entries(signals)) {
+        nodeConfigs[nodeId] = { customSignals };
+    }
+    return { nodeConfigs };
+}
+
+/**
+ * Create a mock config with outputs and signals
+ */
+export function withOutputsAndSignals(
+    outputs: Record<string, JsonObject>,
+    signals: Record<string, JsonObject>
+): MockActivityConfig {
+    const nodeConfigs: Record<string, MockNodeConfig> = {};
+    for (const [nodeId, customOutput] of Object.entries(outputs)) {
+        nodeConfigs[nodeId] = { customOutput };
+    }
+    for (const [nodeId, customSignals] of Object.entries(signals)) {
+        if (nodeConfigs[nodeId]) {
+            nodeConfigs[nodeId].customSignals = customSignals;
+        } else {
+            nodeConfigs[nodeId] = { customSignals };
+        }
     }
     return { nodeConfigs };
 }
