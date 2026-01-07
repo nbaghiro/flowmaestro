@@ -150,6 +150,20 @@ jobs:
           cache-from: type=registry,ref=${{ env.ARTIFACT_REGISTRY }}/migrations:latest
           cache-to: type=inline
 
+      # Build and push static image (widget JS and static assets)
+      - name: Build and push static image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: infra/docker/static/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.ARTIFACT_REGISTRY }}/static:${{ env.IMAGE_TAG }}
+            ${{ env.ARTIFACT_REGISTRY }}/static:latest
+          cache-from: type=registry,ref=${{ env.ARTIFACT_REGISTRY }}/static:latest
+          cache-to: type=inline
+
       # Verify External Secrets are synced
       - name: Verify External Secrets are ready
         run: |
@@ -258,9 +272,10 @@ jobs:
         working-directory: infra/k8s/overlays/${{ github.event.inputs.environment }}
         run: |
           kustomize edit set image \
-            backend-image=${{ env.ARTIFACT_REGISTRY }}/backend:${{ env.IMAGE_TAG }} \
-            frontend-image=${{ env.ARTIFACT_REGISTRY }}/frontend:${{ env.IMAGE_TAG }} \
-            marketing-image=${{ env.ARTIFACT_REGISTRY }}/marketing:${{ env.IMAGE_TAG }}
+            ${{ env.ARTIFACT_REGISTRY }}/backend:latest=${{ env.ARTIFACT_REGISTRY }}/backend:${{ env.IMAGE_TAG }} \
+            ${{ env.ARTIFACT_REGISTRY }}/frontend:latest=${{ env.ARTIFACT_REGISTRY }}/frontend:${{ env.IMAGE_TAG }} \
+            ${{ env.ARTIFACT_REGISTRY }}/marketing:latest=${{ env.ARTIFACT_REGISTRY }}/marketing:${{ env.IMAGE_TAG }} \
+            ${{ env.ARTIFACT_REGISTRY }}/static:latest=${{ env.ARTIFACT_REGISTRY }}/static:${{ env.IMAGE_TAG }}
 
       # Deploy to GKE
       - name: Deploy to GKE
@@ -285,6 +300,10 @@ jobs:
       - name: Wait for marketing rollout
         run: |
           kubectl rollout status deployment/marketing -n flowmaestro --timeout=10m
+
+      - name: Wait for static rollout
+        run: |
+          kubectl rollout status deployment/static -n flowmaestro --timeout=10m
 
       - name: Wait for Temporal server rollout
         run: |
@@ -315,3 +334,4 @@ jobs:
           echo "  - backend: ${{ env.ARTIFACT_REGISTRY }}/backend:${{ env.IMAGE_TAG }}"
           echo "  - frontend: ${{ env.ARTIFACT_REGISTRY }}/frontend:${{ env.IMAGE_TAG }}"
           echo "  - marketing: ${{ env.ARTIFACT_REGISTRY }}/marketing:${{ env.IMAGE_TAG }}"
+          echo "  - static: ${{ env.ARTIFACT_REGISTRY }}/static:${{ env.IMAGE_TAG }}"

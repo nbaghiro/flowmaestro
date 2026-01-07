@@ -63,7 +63,7 @@ export function ChatContainer({
     const containerClasses = (() => {
         switch (variant) {
             case "widget":
-                return "flex flex-col bg-background shadow-2xl overflow-hidden";
+                return "flex flex-col h-full bg-background shadow-2xl overflow-hidden";
             case "embed":
                 return "flex flex-col h-full bg-background";
             case "full":
@@ -83,38 +83,42 @@ export function ChatContainer({
 
             {/* Error message */}
             {error && (
-                <div className="mx-4 my-2 px-3 py-2 text-sm text-red-600 bg-red-50 rounded-lg border border-red-200">
+                <div className="mx-4 my-2 px-3 py-2 text-sm text-red-600 bg-red-50 rounded-lg border border-red-200 flex-shrink-0">
                     {error}
                 </div>
             )}
 
-            {/* Messages or welcome screen */}
-            {hasMessages ? (
-                <MessageList
-                    messages={messages}
-                    isTyping={isTyping}
-                    primaryColor={primaryColor}
-                    borderRadius={borderRadius}
-                    iconUrl={iconUrl}
+            {/* Scrollable content area - messages/welcome + suggested prompts */}
+            <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
+                {/* Messages or welcome screen */}
+                {hasMessages ? (
+                    <MessageList
+                        messages={messages}
+                        isTyping={isTyping}
+                        borderRadius={borderRadius}
+                        iconUrl={iconUrl}
+                    />
+                ) : (
+                    <WelcomeScreen chatInterface={chatInterface} />
+                )}
+
+                {/* Suggested prompts above input */}
+                {!hasMessages && suggestedPrompts.length > 0 && (
+                    <SuggestedPrompts prompts={suggestedPrompts} onSelect={handlePromptSelect} />
+                )}
+            </div>
+
+            {/* Input - always visible at bottom */}
+            <div className="flex-shrink-0">
+                <MessageInput
+                    value={inputValue}
+                    onChange={onInputChange}
+                    onSend={onSendMessage}
+                    placeholder={placeholderText}
+                    isSending={isSending}
+                    allowFileUpload={allowFileUpload}
                 />
-            ) : (
-                <WelcomeScreen chatInterface={chatInterface} />
-            )}
-
-            {/* Suggested prompts above input */}
-            {!hasMessages && suggestedPrompts.length > 0 && (
-                <SuggestedPrompts prompts={suggestedPrompts} onSelect={handlePromptSelect} />
-            )}
-
-            {/* Input */}
-            <MessageInput
-                value={inputValue}
-                onChange={onInputChange}
-                onSend={onSendMessage}
-                placeholder={placeholderText}
-                isSending={isSending}
-                allowFileUpload={allowFileUpload}
-            />
+            </div>
         </div>
     );
 }

@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlowMaestro Widget - npm Vanilla Example</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            line-height: 1.6;
+            color: #333;
+            background: #fafafa;
+        }
+        h1 {
+            color: #1a1a1a;
+            margin-bottom: 8px;
+        }
+        .subtitle {
+            color: #666;
+            font-size: 1.1em;
+            margin-bottom: 32px;
+        }
+        .section {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        h2 {
+            color: #1a1a1a;
+            margin-top: 0;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #eee;
+        }
+        .controls {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 16px;
+        }
+        button {
+            background: #0066cc;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: #0052a3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        button.secondary {
+            background: #6c757d;
+        }
+        button.secondary:hover {
+            background: #545b62;
+        }
+        button.danger {
+            background: #dc3545;
+        }
+        button.danger:hover {
+            background: #c82333;
+        }
+        .status {
+            margin-top: 16px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        .status-item {
+            display: flex;
+            gap: 8px;
+            margin: 4px 0;
+        }
+        .status-label {
+            color: #666;
+        }
+        .status-value {
+            font-weight: 600;
+        }
+        .status-value.ready {
+            color: #28a745;
+        }
+        .status-value.loading {
+            color: #ffc107;
+        }
+        .status-value.error {
+            color: #dc3545;
+        }
+        pre {
+            background: #1a1a1a;
+            color: #f5f5f5;
+            padding: 16px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 0.9em;
+        }
+        code {
+            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+        }
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #0066cc;
+            padding: 16px 20px;
+            margin: 16px 0;
+            border-radius: 0 8px 8px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>FlowMaestro Widget - npm Package</h1>
+    <p class="subtitle">Vanilla JavaScript/TypeScript example using the npm package</p>
+
+    <div class="section">
+        <h2>Widget Status</h2>
+        <div class="status">
+            <div class="status-item">
+                <span class="status-label">Ready:</span>
+                <span id="status-ready" class="status-value loading">Loading...</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Open:</span>
+                <span id="status-open" class="status-value">false</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Error:</span>
+                <span id="status-error" class="status-value">none</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>Controls</h2>
+        <div class="controls">
+            <button id="btn-open">Open</button>
+            <button id="btn-close" class="secondary">Close</button>
+            <button id="btn-toggle" class="secondary">Toggle</button>
+            <button id="btn-destroy" class="danger">Destroy</button>
+            <button id="btn-reinit">Reinitialize</button>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>Usage Code</h2>
+        <pre><code>import { FlowMaestroWidget } from "@flowmaestro/widget";
+
+const widget = new FlowMaestroWidget({
+    slug: "my-chat-slug",
+    baseUrl: "https://flowmaestro.ai",
+    position: "bottom-right",
+    initialState: "collapsed",
+    onOpen: () => console.log("Widget opened"),
+    onClose: () => console.log("Widget closed"),
+    onReady: () => console.log("Widget ready"),
+    onError: (error) => console.error("Error:", error)
+});
+
+// Initialize the widget
+await widget.init();
+
+// Programmatic control
+widget.open();
+widget.close();
+widget.toggle();
+widget.destroy();</code></pre>
+    </div>
+
+    <div class="info-box">
+        <strong>Configuration:</strong> Update <code>src/main.ts</code> with your chat interface slug and base URL.
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

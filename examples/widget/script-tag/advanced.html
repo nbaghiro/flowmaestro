@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlowMaestro Widget - Advanced Example</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            line-height: 1.6;
+            color: #333;
+            background: #fafafa;
+        }
+        h1 {
+            color: #1a1a1a;
+            margin-bottom: 8px;
+        }
+        .subtitle {
+            color: #666;
+            font-size: 1.1em;
+            margin-bottom: 32px;
+        }
+        .section {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        h2 {
+            color: #1a1a1a;
+            margin-top: 0;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #eee;
+        }
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+            margin-top: 16px;
+        }
+        .option-card {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            padding: 16px;
+            border-radius: 8px;
+        }
+        .option-card h3 {
+            margin: 0 0 8px 0;
+            font-size: 1em;
+            color: #495057;
+        }
+        .option-card code {
+            display: block;
+            background: #1a1a1a;
+            color: #f5f5f5;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 0.9em;
+            margin-top: 8px;
+            overflow-x: auto;
+        }
+        .controls {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 16px;
+        }
+        button {
+            background: #0066cc;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: #0052a3;
+        }
+        button.secondary {
+            background: #6c757d;
+        }
+        button.secondary:hover {
+            background: #545b62;
+        }
+        button.danger {
+            background: #dc3545;
+        }
+        button.danger:hover {
+            background: #c82333;
+        }
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #0066cc;
+            padding: 16px 20px;
+            margin: 16px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        .warning-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 16px 20px;
+            margin: 16px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 16px;
+        }
+        th, td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+        code.inline {
+            background: #e8e8e8;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>FlowMaestro Widget - Advanced Example</h1>
+    <p class="subtitle">Demonstrates all configuration options and programmatic control</p>
+
+    <div class="warning-box">
+        <strong>Setup Required:</strong> Replace <code class="inline">YOUR_SLUG</code> in the script tag
+        with your actual chat interface slug before testing.
+    </div>
+
+    <div class="section">
+        <h2>Configuration Options</h2>
+        <p>The widget supports these data attributes:</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Attribute</th>
+                    <th>Values</th>
+                    <th>Default</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code class="inline">data-position</code></td>
+                    <td><code class="inline">bottom-right</code>, <code class="inline">bottom-left</code></td>
+                    <td><code class="inline">bottom-right</code></td>
+                    <td>Position of the widget bubble</td>
+                </tr>
+                <tr>
+                    <td><code class="inline">data-initial</code></td>
+                    <td><code class="inline">collapsed</code>, <code class="inline">expanded</code></td>
+                    <td><code class="inline">collapsed</code></td>
+                    <td>Initial state when page loads</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="options-grid">
+            <div class="option-card">
+                <h3>Bottom Right (Default)</h3>
+                <code>&lt;script src=".../widget/slug.js" async&gt;&lt;/script&gt;</code>
+            </div>
+            <div class="option-card">
+                <h3>Bottom Left</h3>
+                <code>&lt;script src=".../widget/slug.js" data-position="bottom-left" async&gt;&lt;/script&gt;</code>
+            </div>
+            <div class="option-card">
+                <h3>Start Expanded</h3>
+                <code>&lt;script src=".../widget/slug.js" data-initial="expanded" async&gt;&lt;/script&gt;</code>
+            </div>
+            <div class="option-card">
+                <h3>All Options</h3>
+                <code>&lt;script src=".../widget/slug.js" data-position="bottom-left" data-initial="expanded" async&gt;&lt;/script&gt;</code>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>Programmatic Control</h2>
+        <p>Control the widget via JavaScript using the global <code class="inline">FlowMaestroWidget</code> object:</p>
+
+        <div class="controls">
+            <button onclick="openWidget()">Open Widget</button>
+            <button onclick="closeWidget()" class="secondary">Close Widget</button>
+            <button onclick="toggleWidget()" class="secondary">Toggle Widget</button>
+            <button onclick="destroyWidget()" class="danger">Destroy Widget</button>
+        </div>
+
+        <div class="info-box" style="margin-top: 16px;">
+            <strong>Note:</strong> After destroying, you'll need to reload the page to restore the widget.
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>JavaScript API</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Method</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code class="inline">FlowMaestroWidget.open()</code></td>
+                    <td>Opens the chat window</td>
+                </tr>
+                <tr>
+                    <td><code class="inline">FlowMaestroWidget.close()</code></td>
+                    <td>Closes the chat window</td>
+                </tr>
+                <tr>
+                    <td><code class="inline">FlowMaestroWidget.toggle()</code></td>
+                    <td>Toggles the chat window open/closed</td>
+                </tr>
+                <tr>
+                    <td><code class="inline">FlowMaestroWidget.destroy()</code></td>
+                    <td>Removes the widget from the DOM entirely</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="section">
+        <h2>Current Widget Configuration</h2>
+        <p>This page uses the following configuration:</p>
+        <ul>
+            <li><strong>Position:</strong> bottom-left</li>
+            <li><strong>Initial State:</strong> collapsed</li>
+        </ul>
+    </div>
+
+    <script>
+        // Programmatic control functions
+        function openWidget() {
+            if (window.FlowMaestroWidget) {
+                window.FlowMaestroWidget.open();
+            } else {
+                alert('Widget not loaded yet. Make sure you replaced YOUR_SLUG with your actual slug.');
+            }
+        }
+
+        function closeWidget() {
+            if (window.FlowMaestroWidget) {
+                window.FlowMaestroWidget.close();
+            } else {
+                alert('Widget not loaded yet.');
+            }
+        }
+
+        function toggleWidget() {
+            if (window.FlowMaestroWidget) {
+                window.FlowMaestroWidget.toggle();
+            } else {
+                alert('Widget not loaded yet.');
+            }
+        }
+
+        function destroyWidget() {
+            if (window.FlowMaestroWidget) {
+                window.FlowMaestroWidget.destroy();
+                alert('Widget destroyed. Reload the page to restore it.');
+            } else {
+                alert('Widget not loaded or already destroyed.');
+            }
+        }
+    </script>
+
+    <!--
+        FlowMaestro Chat Widget - Advanced Configuration
+
+        This example uses:
+        - data-position="bottom-left" to position on the left side
+        - data-initial="collapsed" to start collapsed (default)
+
+        Replace YOUR_SLUG with your actual chat interface slug.
+        For local development, use:
+          src="http://localhost:3002/widget/YOUR_SLUG.js"
+          data-api-url="http://localhost:3001"
+    -->
+    <script
+        src="https://static.flowmaestro.ai/widget/customer-support-agent-chat.js"
+        data-api-url="https://api.flowmaestro.ai"
+        data-position="bottom-left"
+        data-initial="collapsed"
+        async
+    ></script>
+</body>
+</html>

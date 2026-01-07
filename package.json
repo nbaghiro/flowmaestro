@@ -8,7 +8,9 @@
         "backend",
         "shared",
         "marketing",
-        "documentation"
+        "documentation",
+        "sdks/javascript",
+        "sdks/widget"
     ],
     "scripts": {
         "prepare": "husky",

@@ -26,3 +26,5 @@ images:
     newTag: staging
   - name: us-central1-docker.pkg.dev/flowmaestro-prod/flowmaestro/marketing
     newTag: staging
+  - name: us-central1-docker.pkg.dev/flowmaestro-prod/flowmaestro/static
+    newTag: staging

@@ -2,17 +2,15 @@ import type { PublicChatMessage } from "@flowmaestro/shared";
 
 interface UserMessageProps {
     message: PublicChatMessage;
-    primaryColor: string;
     borderRadius: number;
 }
 
-export function UserMessage({ message, primaryColor, borderRadius }: UserMessageProps) {
+export function UserMessage({ message, borderRadius }: UserMessageProps) {
     return (
         <div className="flex justify-end">
             <div
-                className="max-w-[85%] px-4 py-2.5 text-white"
+                className="max-w-[85%] px-4 py-2.5 bg-neutral-200 dark:bg-neutral-700 text-foreground"
                 style={{
-                    backgroundColor: primaryColor,
                     borderRadius: `${borderRadius}px ${borderRadius}px 4px ${borderRadius}px`
                 }}
             >
@@ -27,7 +25,7 @@ export function UserMessage({ message, primaryColor, borderRadius }: UserMessage
                                 href={attachment.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="flex items-center gap-2 px-2 py-1 bg-white/20 rounded text-xs hover:bg-white/30 transition-colors"
+                                className="flex items-center gap-2 px-2 py-1 bg-background/50 rounded text-xs hover:bg-background/70 transition-colors"
                             >
                                 <svg
                                     xmlns="http://www.w3.org/2000/svg"

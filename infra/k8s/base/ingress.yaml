@@ -9,6 +9,7 @@ spec:
     - app.flowmaestro.ai
     - www.flowmaestro.ai
     - docs.flowmaestro.ai
+    - static.flowmaestro.ai
     - flowmaestro.ai
 
 ---
@@ -88,6 +89,18 @@ spec:
             backend:
               service:
                 name: documentation-service
+                port:
+                  number: 80
+
+    # Static assets (widget JS, etc.)
+    - host: static.flowmaestro.ai
+      http:
+        paths:
+          - path: /*
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: static-service
                 port:
                   number: 80
 
