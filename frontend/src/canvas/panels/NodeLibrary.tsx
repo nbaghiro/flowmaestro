@@ -42,6 +42,7 @@ import { useCallback, useState } from "react";
 import { ALL_PROVIDERS } from "@flowmaestro/shared";
 import { Button } from "../../components/common/Button";
 import { Input } from "../../components/common/Input";
+import { Tooltip } from "../../components/common/Tooltip";
 import { useThemeStore } from "../../stores/themeStore";
 
 interface NodeDefinition {
@@ -477,49 +478,56 @@ export function NodeLibrary({
                                             const hasLogo = !!node.logoUrl;
 
                                             return (
-                                                <div
+                                                <Tooltip
                                                     key={node.type}
-                                                    draggable
-                                                    onDragStart={(e) => onDragStart(e, node.type)}
-                                                    className="group pl-7 pr-3 py-1.5 cursor-move hover:bg-muted/70 transition-colors active:bg-muted flex items-center gap-2"
-                                                    title={node.description}
+                                                    content={node.description}
+                                                    position="right"
+                                                    delay={400}
                                                 >
                                                     <div
-                                                        className={`p-1 rounded ${hasLogo ? (effectiveTheme === "dark" ? "bg-zinc-700" : "bg-white") : category.bgColor} flex-shrink-0 flex items-center justify-center`}
+                                                        draggable
+                                                        onDragStart={(e) =>
+                                                            onDragStart(e, node.type)
+                                                        }
+                                                        className="group pl-7 pr-3 py-1.5 cursor-move hover:bg-muted/70 transition-colors active:bg-muted flex items-center gap-2"
                                                     >
-                                                        {hasLogo ? (
-                                                            <img
-                                                                src={node.logoUrl}
-                                                                alt={node.label}
-                                                                className="w-4 h-4 object-contain"
-                                                                onError={(e) => {
-                                                                    // Fallback to Plug icon on error
-                                                                    e.currentTarget.style.display =
-                                                                        "none";
-                                                                    e.currentTarget.nextElementSibling?.classList.remove(
-                                                                        "hidden"
-                                                                    );
-                                                                }}
-                                                            />
-                                                        ) : IconComponent ? (
-                                                            <IconComponent
-                                                                className={`w-3.5 h-3.5 ${category.color}`}
-                                                            />
-                                                        ) : (
-                                                            <Plug
-                                                                className={`w-3.5 h-3.5 ${category.color}`}
-                                                            />
-                                                        )}
-                                                        {hasLogo && (
-                                                            <Plug
-                                                                className={`w-4 h-4 ${category.color} hidden`}
-                                                            />
-                                                        )}
+                                                        <div
+                                                            className={`p-1 rounded ${hasLogo ? (effectiveTheme === "dark" ? "bg-zinc-700" : "bg-white") : category.bgColor} flex-shrink-0 flex items-center justify-center`}
+                                                        >
+                                                            {hasLogo ? (
+                                                                <img
+                                                                    src={node.logoUrl}
+                                                                    alt={node.label}
+                                                                    className="w-4 h-4 object-contain"
+                                                                    onError={(e) => {
+                                                                        // Fallback to Plug icon on error
+                                                                        e.currentTarget.style.display =
+                                                                            "none";
+                                                                        e.currentTarget.nextElementSibling?.classList.remove(
+                                                                            "hidden"
+                                                                        );
+                                                                    }}
+                                                                />
+                                                            ) : IconComponent ? (
+                                                                <IconComponent
+                                                                    className={`w-3.5 h-3.5 ${category.color}`}
+                                                                />
+                                                            ) : (
+                                                                <Plug
+                                                                    className={`w-3.5 h-3.5 ${category.color}`}
+                                                                />
+                                                            )}
+                                                            {hasLogo && (
+                                                                <Plug
+                                                                    className={`w-4 h-4 ${category.color} hidden`}
+                                                                />
+                                                            )}
+                                                        </div>
+                                                        <span className="text-xs font-medium text-foreground">
+                                                            {node.label}
+                                                        </span>
                                                     </div>
-                                                    <span className="text-xs font-medium text-foreground">
-                                                        {node.label}
-                                                    </span>
-                                                </div>
+                                                </Tooltip>
                                             );
                                         })}
                                     </div>

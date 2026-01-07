@@ -149,7 +149,12 @@ export function AppSidebar() {
                         );
 
                         return isCollapsed ? (
-                            <Tooltip key={item.path} content={tooltipContent} delay={200}>
+                            <Tooltip
+                                key={item.path}
+                                content={tooltipContent}
+                                delay={200}
+                                position="right"
+                            >
                                 {linkContent}
                             </Tooltip>
                         ) : (
@@ -204,7 +209,12 @@ export function AppSidebar() {
                         );
 
                         return isCollapsed ? (
-                            <Tooltip key={item.path} content={tooltipContent} delay={200}>
+                            <Tooltip
+                                key={item.path}
+                                content={tooltipContent}
+                                delay={200}
+                                position="right"
+                            >
                                 {linkContent}
                             </Tooltip>
                         ) : (
