@@ -13,6 +13,8 @@ export function EmbedCodeDisplay({ chatInterface }: EmbedCodeDisplayProps) {
     const [copiedType, setCopiedType] = useState<EmbedType | null>(null);
 
     const baseUrl = window.location.origin;
+    const staticUrl = import.meta.env.VITE_STATIC_URL || baseUrl;
+    const apiUrl = import.meta.env.VITE_API_URL || baseUrl;
     const { slug } = chatInterface;
 
     const embedCodes: Record<EmbedType, { title: string; description: string; code: string }> = {
@@ -36,7 +38,8 @@ export function EmbedCodeDisplay({ chatInterface }: EmbedCodeDisplayProps) {
             title: "Widget Script",
             description: "Add a floating chat widget to any page on your website.",
             code: `<script
-  src="${baseUrl}/widget/${slug}.js"
+  src="${staticUrl}/widget/${slug}.js"
+  data-api-url="${apiUrl}"
   data-position="${chatInterface.widgetPosition}"
   data-initial="${chatInterface.widgetInitialState}"
   async

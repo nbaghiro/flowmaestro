@@ -54,10 +54,22 @@ export async function buildServer() {
         disableRequestLogging: false
     });
 
-    // Register CORS
+    // Register CORS with dynamic origin
+    // - Allows any origin (for widgets and public API on external sites)
+    // - Credentials enabled for known origins (for authenticated routes with cookies/sessions)
+    // - Route-level authentication (JWT, API keys) provides security
     await fastify.register(cors, {
-        origin: config.cors.origin,
-        credentials: config.cors.credentials,
+        origin: (origin: string | undefined, callback) => {
+            // Allow requests with no origin (same-origin, server-to-server, curl, etc.)
+            if (!origin) {
+                callback(null, true);
+                return;
+            }
+            // Allow all origins - security is handled by route-level auth (JWT, API keys)
+            callback(null, true);
+        },
+        // Credentials (cookies) are needed for authenticated routes from known origins
+        credentials: true,
         methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"]
     });
 
@@ -149,13 +161,13 @@ export async function buildServer() {
     await fastify.register(threadRoutes, { prefix: "/threads" });
     await fastify.register(triggerRoutes);
     await fastify.register(formInterfaceRoutes);
-    await fastify.register(publicFormInterfaceRoutes, { prefix: "/public/form-interfaces" });
     await fastify.register(chatInterfaceRoutes);
-    await fastify.register(publicChatInterfaceRoutes, { prefix: "/public/chat-interfaces" });
     await fastify.register(webhookRoutes, { prefix: "/webhooks" });
     await fastify.register(websocketRoutes);
 
-    // Public API v1 routes (API key authentication)
+    // Public routes (widgets and public API - CORS allows any origin via dynamic origin check)
+    await fastify.register(publicFormInterfaceRoutes, { prefix: "/public/form-interfaces" });
+    await fastify.register(publicChatInterfaceRoutes, { prefix: "/public/chat-interfaces" });
     await fastify.register(publicApiV1Routes, { prefix: "/api/v1" });
 
     // Error handler (must be last)

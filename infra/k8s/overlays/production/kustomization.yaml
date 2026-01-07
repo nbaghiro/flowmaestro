@@ -22,3 +22,5 @@ images:
     newTag: latest
   - name: us-central1-docker.pkg.dev/flowmaestro-prod/flowmaestro/marketing
     newTag: latest
+  - name: us-central1-docker.pkg.dev/flowmaestro-prod/flowmaestro/static
+    newTag: latest
