@@ -75,7 +75,7 @@ export function ChatInterfacePreviewPage() {
     const deviceWidths: Record<DeviceSize, string> = {
         desktop: "w-full",
         tablet: "w-[768px]",
-        mobile: "w-[375px]"
+        mobile: "w-[480px]"
     };
 
     return (
@@ -183,16 +183,16 @@ export function ChatInterfacePreviewPage() {
                 {/* Preview */}
                 <div className="flex-1 overflow-auto flex justify-center p-4">
                     <div
-                        className={`${deviceWidths[deviceSize]} h-[600px] transition-all duration-300`}
+                        className={`${deviceWidths[deviceSize]} h-full transition-all duration-300`}
                     >
                         {previewMode === "fullpage" && (
                             <PreviewFullPage chatInterface={chatInterface} />
                         )}
                         {previewMode === "iframe" && (
-                            <PreviewIframe chatInterface={chatInterface} />
+                            <PreviewIframe chatInterface={chatInterface} deviceSize={deviceSize} />
                         )}
                         {previewMode === "widget" && (
-                            <PreviewWidget chatInterface={chatInterface} />
+                            <PreviewWidget chatInterface={chatInterface} deviceSize={deviceSize} />
                         )}
                     </div>
                 </div>

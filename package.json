@@ -9,7 +9,8 @@
         "shared",
         "marketing",
         "documentation",
-        "sdks/javascript"
+        "sdks/javascript",
+        "sdks/widget"
     ],
     "scripts": {
         "prepare": "husky",

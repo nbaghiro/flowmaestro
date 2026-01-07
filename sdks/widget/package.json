@@ -1,0 +1,83 @@
+{
+    "name": "@flowmaestro/widget",
+    "version": "0.1.0",
+    "description": "FlowMaestro embeddable chat widget for websites and React applications",
+    "author": "FlowMaestro",
+    "license": "MIT",
+    "type": "module",
+    "main": "./dist/index.cjs",
+    "module": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "import": {
+                "types": "./dist/index.d.ts",
+                "default": "./dist/index.js"
+            },
+            "require": {
+                "types": "./dist/index.d.cts",
+                "default": "./dist/index.cjs"
+            }
+        },
+        "./react": {
+            "import": {
+                "types": "./dist/react/index.d.ts",
+                "default": "./dist/react/index.js"
+            },
+            "require": {
+                "types": "./dist/react/index.d.cts",
+                "default": "./dist/react/index.cjs"
+            }
+        },
+        "./global": "./dist/auto-init.global.js"
+    },
+    "files": [
+        "dist",
+        "README.md"
+    ],
+    "scripts": {
+        "build": "tsup",
+        "dev": "tsup --watch",
+        "typecheck": "tsc --noEmit",
+        "clean": "rm -rf dist",
+        "prepublishOnly": "npm run build"
+    },
+    "peerDependencies": {
+        "react": ">=17.0.0",
+        "react-dom": ">=17.0.0"
+    },
+    "peerDependenciesMeta": {
+        "react": {
+            "optional": true
+        },
+        "react-dom": {
+            "optional": true
+        }
+    },
+    "devDependencies": {
+        "@types/react": "^18.2.0",
+        "@types/react-dom": "^18.2.0",
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0",
+        "tsup": "^8.0.0",
+        "typescript": "^5.3.0"
+    },
+    "keywords": [
+        "flowmaestro",
+        "chat",
+        "widget",
+        "chatbot",
+        "ai",
+        "react",
+        "embed"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/flowmaestro/flowmaestro.git",
+        "directory": "sdks/widget"
+    },
+    "bugs": {
+        "url": "https://github.com/flowmaestro/flowmaestro/issues"
+    },
+    "homepage": "https://flowmaestro.ai"
+}

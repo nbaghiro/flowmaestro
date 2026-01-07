@@ -7,18 +7,11 @@ import { UserMessage } from "./UserMessage";
 interface MessageListProps {
     messages: PublicChatMessage[];
     isTyping: boolean;
-    primaryColor: string;
     borderRadius: number;
     iconUrl?: string | null;
 }
 
-export function MessageList({
-    messages,
-    isTyping,
-    primaryColor,
-    borderRadius,
-    iconUrl
-}: MessageListProps) {
+export function MessageList({ messages, isTyping, borderRadius, iconUrl }: MessageListProps) {
     const scrollRef = useRef<HTMLDivElement>(null);
     const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -35,12 +28,7 @@ export function MessageList({
         <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
             {messages.map((message) =>
                 message.role === "user" ? (
-                    <UserMessage
-                        key={message.id}
-                        message={message}
-                        primaryColor={primaryColor}
-                        borderRadius={borderRadius}
-                    />
+                    <UserMessage key={message.id} message={message} borderRadius={borderRadius} />
                 ) : (
                     <AssistantMessage
                         key={message.id}

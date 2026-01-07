@@ -56,7 +56,7 @@ export function PreviewFullPage({ chatInterface }: PreviewFullPageProps) {
     return (
         <div className="bg-muted/30 h-full flex items-center justify-center p-4">
             <div
-                className="w-full max-w-lg h-[500px] rounded-xl shadow-lg overflow-hidden border border-border bg-background"
+                className="w-full max-w-lg h-full max-h-[800px] rounded-xl shadow-lg overflow-hidden border border-border bg-background"
                 style={{ borderRadius: `${chatInterface.borderRadius}px` }}
             >
                 <ChatContainer

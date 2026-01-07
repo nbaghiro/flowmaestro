@@ -186,19 +186,17 @@ export function ChatInterfaceEditorPage() {
                 </div>
 
                 <div className="flex items-center gap-3">
-                    {chatInterface.status === "published" && (
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => window.open(`/c/${chatInterface.slug}`, "_blank")}
-                        >
-                            <Eye className="w-4 h-4 mr-2" />
-                            Preview
-                        </Button>
-                    )}
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => navigate(`/chat-interfaces/${id}/preview`)}
+                    >
+                        <Eye className="w-4 h-4 mr-1.5" />
+                        Preview
+                    </Button>
 
                     <Button variant="ghost" size="sm" onClick={() => setShowSettingsDialog(true)}>
-                        <Settings className="w-4 h-4 mr-2" />
+                        <Settings className="w-4 h-4 mr-1.5" />
                         Settings
                     </Button>
 
@@ -209,9 +207,9 @@ export function ChatInterfaceEditorPage() {
                         disabled={!isDirty || isSaving}
                     >
                         {isSaving ? (
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
                         ) : (
-                            <Save className="w-4 h-4 mr-2" />
+                            <Save className="w-4 h-4 mr-1.5" />
                         )}
                         Save
                     </Button>
@@ -224,9 +222,9 @@ export function ChatInterfaceEditorPage() {
                             disabled={isPublishing}
                         >
                             {isPublishing ? (
-                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
                             ) : (
-                                <Globe className="w-4 h-4 mr-2" />
+                                <Globe className="w-4 h-4 mr-1.5" />
                             )}
                             Publish
                         </Button>
@@ -238,9 +236,9 @@ export function ChatInterfaceEditorPage() {
                             disabled={isPublishing}
                         >
                             {isPublishing ? (
-                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
                             ) : (
-                                <Globe className="w-4 h-4 mr-2" />
+                                <Globe className="w-4 h-4 mr-1.5" />
                             )}
                             Unpublish
                         </Button>
