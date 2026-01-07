@@ -31,6 +31,7 @@ import {
     getParallelNodeIdFromBranch,
     getBranchesForParallelNode,
     // Edge constructor exports
+    constructEdges,
     getEdgesFromSource,
     getEdgesToTarget,
     getEdgesByHandle,
@@ -680,6 +681,236 @@ describe("NodeConstructor", () => {
 // ============================================================================
 
 describe("EdgeConstructor", () => {
+    describe("constructEdges", () => {
+        it("copies edges without parallel expansion", () => {
+            const loopResult = {
+                nodes: new Map([
+                    [
+                        "A",
+                        {
+                            id: "A",
+                            type: "input" as const,
+                            name: "A",
+                            config: {},
+                            depth: 0,
+                            dependencies: [],
+                            dependents: ["B"]
+                        }
+                    ],
+                    [
+                        "B",
+                        {
+                            id: "B",
+                            type: "output" as const,
+                            name: "B",
+                            config: {},
+                            depth: 1,
+                            dependencies: ["A"],
+                            dependents: []
+                        }
+                    ]
+                ]),
+                edges: new Map([
+                    [
+                        "A->B",
+                        { id: "A->B", source: "A", target: "B", handleType: "default" as const }
+                    ]
+                ]),
+                loopContexts: new Map()
+            };
+            const nodeResult = constructNodes(loopResult);
+
+            const result = constructEdges(loopResult, nodeResult);
+
+            expect(result.edges.size).toBe(1);
+            expect(result.edges.has("A->B")).toBe(true);
+        });
+
+        it("expands edges for parallel branches - source expanded", () => {
+            const loopResult = {
+                nodes: new Map([
+                    [
+                        "Input",
+                        {
+                            id: "Input",
+                            type: "input" as const,
+                            name: "Input",
+                            config: {},
+                            depth: 0,
+                            dependencies: [],
+                            dependents: ["Parallel"]
+                        }
+                    ],
+                    [
+                        "Parallel",
+                        {
+                            id: "Parallel",
+                            type: "transform" as const,
+                            name: "Parallel",
+                            config: {},
+                            depth: 1,
+                            dependencies: ["Input"],
+                            dependents: ["Output"]
+                        }
+                    ],
+                    [
+                        "Output",
+                        {
+                            id: "Output",
+                            type: "output" as const,
+                            name: "Output",
+                            config: {},
+                            depth: 2,
+                            dependencies: ["Parallel"],
+                            dependents: []
+                        }
+                    ]
+                ]),
+                edges: new Map([
+                    [
+                        "Input->Parallel",
+                        {
+                            id: "Input->Parallel",
+                            source: "Input",
+                            target: "Parallel",
+                            handleType: "default" as const
+                        }
+                    ],
+                    [
+                        "Parallel->Output",
+                        {
+                            id: "Parallel->Output",
+                            source: "Parallel",
+                            target: "Output",
+                            handleType: "default" as const
+                        }
+                    ]
+                ]),
+                loopContexts: new Map()
+            };
+
+            // Simulate parallel branches expansion
+            const nodeResult = {
+                nodes: new Map([
+                    [
+                        "Input",
+                        {
+                            id: "Input",
+                            type: "input" as const,
+                            name: "Input",
+                            config: {},
+                            depth: 0,
+                            dependencies: [] as string[],
+                            dependents: ["Branch1", "Branch2"]
+                        }
+                    ],
+                    [
+                        "Branch1",
+                        {
+                            id: "Branch1",
+                            type: "transform" as const,
+                            name: "Branch1",
+                            config: {},
+                            depth: 1,
+                            dependencies: ["Input"],
+                            dependents: ["Output"]
+                        }
+                    ],
+                    [
+                        "Branch2",
+                        {
+                            id: "Branch2",
+                            type: "transform" as const,
+                            name: "Branch2",
+                            config: {},
+                            depth: 1,
+                            dependencies: ["Input"],
+                            dependents: ["Output"]
+                        }
+                    ],
+                    [
+                        "Output",
+                        {
+                            id: "Output",
+                            type: "output" as const,
+                            name: "Output",
+                            config: {},
+                            depth: 2,
+                            dependencies: ["Branch1", "Branch2"],
+                            dependents: [] as string[]
+                        }
+                    ]
+                ]),
+                parallelBranches: new Map([["Parallel", ["Branch1", "Branch2"]]])
+            };
+
+            const result = constructEdges(loopResult, nodeResult);
+
+            // Should have expanded edges
+            // Input->Branch1, Input->Branch2 (target expanded)
+            // Branch1->Output, Branch2->Output (source expanded)
+            expect(result.edges.size).toBe(4);
+        });
+
+        it("handles edges with no expansion needed", () => {
+            const loopResult = {
+                nodes: new Map([
+                    [
+                        "A",
+                        {
+                            id: "A",
+                            type: "conditional" as const,
+                            name: "Condition",
+                            config: {},
+                            depth: 0,
+                            dependencies: [],
+                            dependents: ["B", "C"]
+                        }
+                    ],
+                    [
+                        "B",
+                        {
+                            id: "B",
+                            type: "transform" as const,
+                            name: "True",
+                            config: {},
+                            depth: 1,
+                            dependencies: ["A"],
+                            dependents: []
+                        }
+                    ],
+                    [
+                        "C",
+                        {
+                            id: "C",
+                            type: "transform" as const,
+                            name: "False",
+                            config: {},
+                            depth: 1,
+                            dependencies: ["A"],
+                            dependents: []
+                        }
+                    ]
+                ]),
+                edges: new Map([
+                    ["A->B", { id: "A->B", source: "A", target: "B", handleType: "true" as const }],
+                    ["A->C", { id: "A->C", source: "A", target: "C", handleType: "false" as const }]
+                ]),
+                loopContexts: new Map()
+            };
+            const nodeResult = {
+                nodes: loopResult.nodes,
+                parallelBranches: new Map<string, string[]>()
+            };
+
+            const result = constructEdges(loopResult, nodeResult);
+
+            expect(result.edges.size).toBe(2);
+            expect(result.edges.get("A->B")?.handleType).toBe("true");
+            expect(result.edges.get("A->C")?.handleType).toBe("false");
+        });
+    });
+
     describe("getEdgesFromSource", () => {
         it("returns edges from specified source", () => {
             const edges = new Map([

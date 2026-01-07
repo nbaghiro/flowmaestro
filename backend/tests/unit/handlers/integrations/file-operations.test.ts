@@ -22,9 +22,19 @@ jest.mock("fs/promises", () => ({
     mkdir: mockMkdir
 }));
 
-// Mock pdf-parse (module is a function)
+// Mock pdf-parse (module is imported with "import * as pdf")
+// The handler calls pdf() directly via type casting, so we need the module itself to be callable
+// With "import * as pdf", jest creates a namespace object, so we use __esModule to control the shape
 const mockPdfParse = jest.fn();
-jest.mock("pdf-parse", () => mockPdfParse);
+jest.mock("pdf-parse", () => {
+    // Create a callable function that is also the default export
+    const pdfParseFunction = (...args: unknown[]) => mockPdfParse(...args);
+    // Mark as ES module to prevent jest from wrapping it
+    return Object.assign(pdfParseFunction, {
+        __esModule: true,
+        default: pdfParseFunction
+    });
+});
 
 // Mock config
 jest.mock("../../../../src/core/config", () => ({
@@ -316,15 +326,176 @@ describe("FileOperationsNodeHandler", () => {
         });
     });
 
-    // Note: parsePDF tests are skipped because pdf-parse uses CommonJS patterns
-    // that are difficult to mock with ESM import interop. The handler works
-    // correctly in production when pdf-parse is available.
-    describe.skip("parsePDF operation (requires pdf-parse module)", () => {
-        it("parses PDF from local path", async () => {});
-        it("parses PDF from URL", async () => {});
-        it("parses PDF from base64 data", async () => {});
-        it("throws error when PDF source not specified", async () => {});
-        it("returns page count in metadata", async () => {});
+    describe("parsePDF operation", () => {
+        beforeEach(() => {
+            // Reset and set up pdf-parse mock for each test
+            mockPdfParse.mockReset();
+        });
+
+        it("parses PDF from local path", async () => {
+            // Mock fs.readFile to return PDF buffer
+            mockReadFile.mockResolvedValue(Buffer.from("fake PDF content"));
+            // Mock pdf-parse to return parsed content
+            mockPdfParse.mockResolvedValue({
+                numpages: 5,
+                text: "This is the extracted text from the PDF document."
+            });
+
+            const input = createHandlerInput({
+                nodeConfig: {
+                    operation: "parsePDF",
+                    fileSource: "path",
+                    filePath: "/tmp/document.pdf"
+                }
+            });
+
+            const output = await handler.execute(input);
+            const result = output.result as JsonObject;
+
+            expect(result.content).toBe("This is the extracted text from the PDF document.");
+            expect((result.metadata as JsonObject).pages).toBe(5);
+            expect((result.metadata as JsonObject).format).toBe("pdf");
+            expect(mockPdfParse).toHaveBeenCalled();
+        });
+
+        it("parses PDF from URL", async () => {
+            // Mock HTTP response
+            nock("https://example.com")
+                .get("/document.pdf")
+                .reply(200, Buffer.from("fake PDF bytes"), {
+                    "Content-Type": "application/pdf"
+                });
+
+            mockPdfParse.mockResolvedValue({
+                numpages: 3,
+                text: "Downloaded PDF content."
+            });
+
+            const input = createHandlerInput({
+                nodeConfig: {
+                    operation: "parsePDF",
+                    fileSource: "url",
+                    filePath: "https://example.com/document.pdf"
+                }
+            });
+
+            const output = await handler.execute(input);
+            const result = output.result as JsonObject;
+
+            expect(result.content).toBe("Downloaded PDF content.");
+            expect((result.metadata as JsonObject).pages).toBe(3);
+        });
+
+        it("parses PDF from base64 data", async () => {
+            const base64Pdf = Buffer.from("fake PDF content").toString("base64");
+
+            mockPdfParse.mockResolvedValue({
+                numpages: 1,
+                text: "Base64 decoded PDF text."
+            });
+
+            const input = createHandlerInput({
+                nodeConfig: {
+                    operation: "parsePDF",
+                    fileData: base64Pdf
+                }
+            });
+
+            const output = await handler.execute(input);
+            const result = output.result as JsonObject;
+
+            expect(result.content).toBe("Base64 decoded PDF text.");
+            expect((result.metadata as JsonObject).pages).toBe(1);
+        });
+
+        it("throws error when PDF source not specified", async () => {
+            const input = createHandlerInput({
+                nodeConfig: {
+                    operation: "parsePDF",
+                    // Explicitly set to undefined to override defaults
+                    fileSource: undefined,
+                    filePath: undefined,
+                    fileData: undefined
+                }
+            });
+
+            await expect(handler.execute(input)).rejects.toThrow(/PDF source not specified/);
+        });
+
+        it("returns page count in metadata", async () => {
+            mockReadFile.mockResolvedValue(Buffer.from("large PDF"));
+            mockPdfParse.mockResolvedValue({
+                numpages: 42,
+                text: "Multi-page document content..."
+            });
+
+            const input = createHandlerInput({
+                nodeConfig: {
+                    operation: "parsePDF",
+                    fileSource: "path",
+                    filePath: "/tmp/large-doc.pdf"
+                }
+            });
+
+            const output = await handler.execute(input);
+            const result = output.result as JsonObject;
+
+            expect((result.metadata as JsonObject).pages).toBe(42);
+        });
+
+        it("interpolates variables in PDF path", async () => {
+            mockReadFile.mockResolvedValue(Buffer.from("PDF data"));
+            mockPdfParse.mockResolvedValue({
+                numpages: 1,
+                text: "Interpolated PDF"
+            });
+
+            const context = createTestContext({
+                inputs: { documentId: "doc-123" }
+            });
+
+            const input = createHandlerInput({
+                context,
+                nodeConfig: {
+                    operation: "parsePDF",
+                    fileSource: "path",
+                    filePath: "/uploads/{{documentId}}/document.pdf"
+                }
+            });
+
+            await handler.execute(input);
+
+            expect(mockReadFile).toHaveBeenCalledWith("/uploads/doc-123/document.pdf");
+        });
+
+        it("handles PDF download errors", async () => {
+            nock("https://example.com").get("/missing.pdf").reply(404, "Not Found");
+
+            const input = createHandlerInput({
+                nodeConfig: {
+                    operation: "parsePDF",
+                    fileSource: "url",
+                    filePath: "https://example.com/missing.pdf"
+                }
+            });
+
+            await expect(handler.execute(input)).rejects.toThrow(/HTTP 404/);
+        });
+
+        it("handles PDF parsing errors", async () => {
+            mockReadFile.mockResolvedValue(Buffer.from("not a valid PDF"));
+            mockPdfParse.mockRejectedValue(new Error("Invalid PDF structure"));
+
+            const input = createHandlerInput({
+                nodeConfig: {
+                    operation: "parsePDF",
+                    fileSource: "path",
+                    filePath: "/tmp/invalid.pdf"
+                }
+            });
+
+            await expect(handler.execute(input)).rejects.toThrow(/Invalid PDF/);
+        });
     });
 
     describe("parseCSV operation", () => {

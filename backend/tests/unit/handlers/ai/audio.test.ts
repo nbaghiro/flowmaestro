@@ -9,8 +9,28 @@
  * - Output formats (base64, path)
  * - Error handling
  *
- * Note: External API calls are mocked using nock
+ * Note: External API calls are mocked using nock for TTS,
+ * and OpenAI SDK is mocked for transcription.
  */
+
+import nock from "nock";
+
+// Mock OpenAI SDK for transcription (before any imports that use it)
+const mockTranscriptionCreate = jest.fn();
+const mockSpeechCreate = jest.fn();
+
+jest.mock("openai", () => {
+    return jest.fn().mockImplementation(() => ({
+        audio: {
+            transcriptions: {
+                create: mockTranscriptionCreate
+            },
+            speech: {
+                create: mockSpeechCreate
+            }
+        }
+    }));
+});
 
 // Mock modules - use require() inside factory to avoid Jest hoisting issues
 jest.mock("../../../../src/core/config", () => {
@@ -29,7 +49,6 @@ jest.mock("fs/promises", () => {
     return mockFsPromises();
 });
 
-import nock from "nock";
 import {
     AudioNodeHandler,
     createAudioNodeHandler
@@ -55,6 +74,7 @@ describe("AudioNodeHandler", () => {
     beforeEach(() => {
         handler = createAudioNodeHandler();
         clearHttpMocks();
+        jest.clearAllMocks();
     });
 
     describe("handler properties", () => {
@@ -106,18 +126,22 @@ describe("AudioNodeHandler", () => {
         });
     });
 
-    // Note: OpenAI transcription tests are skipped because they require
-    // proper file handle mocking that's incompatible with the OpenAI SDK's
-    // multipart form handling. The handler works correctly in production.
-    describe.skip("OpenAI transcription (requires file handle mocking)", () => {
+    describe("OpenAI transcription", () => {
+        beforeEach(() => {
+            // Reset the mock before each test
+            mockTranscriptionCreate.mockReset();
+        });
+
         it("transcribes audio file and returns text", async () => {
             // Mock the audio file download
             nock("https://example.com")
                 .get("/audio.mp3")
-                .reply(200, Buffer.from("fake audio data"));
+                .reply(200, Buffer.from("fake audio data"), {
+                    "Content-Type": "audio/mpeg"
+                });
 
-            // Mock OpenAI transcription endpoint
-            nock("https://api.openai.com").post("/v1/audio/transcriptions").reply(200, {
+            // Mock OpenAI transcription SDK
+            mockTranscriptionCreate.mockResolvedValue({
                 text: "This is the transcribed text from the audio file."
             });
 
@@ -141,11 +165,13 @@ describe("AudioNodeHandler", () => {
         it("passes language hint to transcription", async () => {
             nock("https://example.com")
                 .get("/audio.mp3")
-                .reply(200, Buffer.from("fake audio data"));
+                .reply(200, Buffer.from("fake audio data"), {
+                    "Content-Type": "audio/mpeg"
+                });
 
-            nock("https://api.openai.com")
-                .post("/v1/audio/transcriptions")
-                .reply(200, { text: "Bonjour" });
+            mockTranscriptionCreate.mockResolvedValue({
+                text: "Bonjour, comment allez-vous?"
+            });
 
             const input = createHandlerInput({
                 nodeType: "audio",
@@ -160,17 +186,24 @@ describe("AudioNodeHandler", () => {
 
             const output = await handler.execute(input);
 
+            expect(mockTranscriptionCreate).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    language: "fr"
+                })
+            );
             expect(output.result.language).toBe("fr");
         });
 
         it("interpolates audio input URL from context", async () => {
             nock("https://storage.example.com")
                 .get("/uploads/recording-123.mp3")
-                .reply(200, Buffer.from("audio data"));
+                .reply(200, Buffer.from("audio data"), {
+                    "Content-Type": "audio/mpeg"
+                });
 
-            nock("https://api.openai.com")
-                .post("/v1/audio/transcriptions")
-                .reply(200, { text: "Transcribed content" });
+            mockTranscriptionCreate.mockResolvedValue({
+                text: "Transcribed content from uploaded file"
+            });
 
             const context = createTestContext({
                 nodeOutputs: {
@@ -191,17 +224,72 @@ describe("AudioNodeHandler", () => {
 
             const output = await handler.execute(input);
 
-            expect(output.result.text).toBe("Transcribed content");
+            expect(output.result.text).toBe("Transcribed content from uploaded file");
+        });
+
+        it("passes prompt to transcription for context", async () => {
+            nock("https://example.com").get("/audio.mp3").reply(200, Buffer.from("audio data"), {
+                "Content-Type": "audio/mpeg"
+            });
+
+            mockTranscriptionCreate.mockResolvedValue({
+                text: "Technical transcription with context"
+            });
+
+            const input = createHandlerInput({
+                nodeType: "audio",
+                nodeConfig: {
+                    provider: "openai",
+                    operation: "transcribe",
+                    model: "whisper-1",
+                    audioInput: "https://example.com/audio.mp3",
+                    prompt: "This is a technical discussion about TypeScript"
+                }
+            });
+
+            await handler.execute(input);
+
+            expect(mockTranscriptionCreate).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    prompt: "This is a technical discussion about TypeScript"
+                })
+            );
+        });
+
+        it("handles base64 audio input", async () => {
+            const base64Audio = Buffer.from("fake audio content").toString("base64");
+
+            mockTranscriptionCreate.mockResolvedValue({
+                text: "Transcribed from base64"
+            });
+
+            const input = createHandlerInput({
+                nodeType: "audio",
+                nodeConfig: {
+                    provider: "openai",
+                    operation: "transcribe",
+                    model: "whisper-1",
+                    audioInput: `data:audio/mp3;base64,${base64Audio}`
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            expect(output.result.text).toBe("Transcribed from base64");
         });
     });
 
     describe("OpenAI text-to-speech", () => {
+        beforeEach(() => {
+            // Reset the mock before each test
+            mockSpeechCreate.mockReset();
+        });
+
         it("generates speech from text", async () => {
-            nock("https://api.openai.com")
-                .post("/v1/audio/speech")
-                .reply(200, Buffer.from("fake audio bytes"), {
-                    "Content-Type": "audio/mpeg"
-                });
+            const audioBuffer = Buffer.from("fake audio bytes");
+            mockSpeechCreate.mockResolvedValue({
+                arrayBuffer: async () => audioBuffer
+            });
 
             const input = createHandlerInput({
                 nodeType: "audio",
@@ -224,10 +312,9 @@ describe("AudioNodeHandler", () => {
 
         it("returns base64 audio by default", async () => {
             const audioBuffer = Buffer.from("audio content");
-
-            nock("https://api.openai.com")
-                .post("/v1/audio/speech")
-                .reply(200, audioBuffer, { "Content-Type": "audio/mpeg" });
+            mockSpeechCreate.mockResolvedValue({
+                arrayBuffer: async () => audioBuffer
+            });
 
             const input = createHandlerInput({
                 nodeType: "audio",
@@ -247,14 +334,9 @@ describe("AudioNodeHandler", () => {
         });
 
         it("uses configured voice", async () => {
-            let capturedBody: Record<string, unknown> | null = null;
-
-            nock("https://api.openai.com")
-                .post("/v1/audio/speech", (body) => {
-                    capturedBody = body as Record<string, unknown>;
-                    return true;
-                })
-                .reply(200, Buffer.from("audio"), { "Content-Type": "audio/mpeg" });
+            mockSpeechCreate.mockResolvedValue({
+                arrayBuffer: async () => Buffer.from("audio")
+            });
 
             const input = createHandlerInput({
                 nodeType: "audio",
@@ -269,18 +351,17 @@ describe("AudioNodeHandler", () => {
 
             await handler.execute(input);
 
-            expect(capturedBody!.voice).toBe("nova");
+            expect(mockSpeechCreate).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    voice: "nova"
+                })
+            );
         });
 
         it("uses configured speed", async () => {
-            let capturedBody: Record<string, unknown> | null = null;
-
-            nock("https://api.openai.com")
-                .post("/v1/audio/speech", (body) => {
-                    capturedBody = body as Record<string, unknown>;
-                    return true;
-                })
-                .reply(200, Buffer.from("audio"), { "Content-Type": "audio/mpeg" });
+            mockSpeechCreate.mockResolvedValue({
+                arrayBuffer: async () => Buffer.from("audio")
+            });
 
             const input = createHandlerInput({
                 nodeType: "audio",
@@ -295,22 +376,21 @@ describe("AudioNodeHandler", () => {
 
             await handler.execute(input);
 
-            expect(capturedBody!.speed).toBe(1.5);
+            expect(mockSpeechCreate).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    speed: 1.5
+                })
+            );
         });
 
-        it("interpolates text input from context", async () => {
-            let capturedBody: Record<string, unknown> | null = null;
-
-            nock("https://api.openai.com")
-                .post("/v1/audio/speech", (body) => {
-                    capturedBody = body as Record<string, unknown>;
-                    return true;
-                })
-                .reply(200, Buffer.from("audio"), { "Content-Type": "audio/mpeg" });
+        it("interpolates text from context", async () => {
+            mockSpeechCreate.mockResolvedValue({
+                arrayBuffer: async () => Buffer.from("audio")
+            });
 
             const context = createTestContext({
                 nodeOutputs: {
-                    llm: { text: "Generated message to speak" }
+                    generate: { response: "This is the generated response to speak" }
                 }
             });
 
@@ -320,115 +400,24 @@ describe("AudioNodeHandler", () => {
                     provider: "openai",
                     operation: "tts",
                     model: "tts-1",
-                    textInput: mustacheRef("llm", "text")
+                    textInput: mustacheRef("generate", "response")
                 },
                 context
             });
 
             await handler.execute(input);
 
-            expect(capturedBody!.input).toBe("Generated message to speak");
-        });
-    });
-
-    describe("ElevenLabs text-to-speech", () => {
-        it("generates speech using ElevenLabs API", async () => {
-            nock("https://api.elevenlabs.io")
-                .post("/v1/text-to-speech/21m00Tcm4TlvDq8ikWAM")
-                .reply(200, Buffer.from("elevenlabs audio"), { "Content-Type": "audio/mpeg" });
-
-            const input = createHandlerInput({
-                nodeType: "audio",
-                nodeConfig: {
-                    provider: "elevenlabs",
-                    operation: "tts",
-                    model: "eleven_monolingual_v1",
-                    textInput: "Hello from ElevenLabs"
-                }
-            });
-
-            const output = await handler.execute(input);
-
-            expect(output.result.operation).toBe("tts");
-            expect(output.result.provider).toBe("elevenlabs");
-            expect(output.result.audio).toBeDefined();
-        });
-
-        it("uses custom voice ID", async () => {
-            const customVoiceId = "custom-voice-123";
-
-            nock("https://api.elevenlabs.io")
-                .post(`/v1/text-to-speech/${customVoiceId}`)
-                .reply(200, Buffer.from("audio"), { "Content-Type": "audio/mpeg" });
-
-            const input = createHandlerInput({
-                nodeType: "audio",
-                nodeConfig: {
-                    provider: "elevenlabs",
-                    operation: "tts",
-                    model: "eleven_monolingual_v1",
-                    textInput: "Test",
-                    voice: customVoiceId
-                }
-            });
-
-            const output = await handler.execute(input);
-
-            expect(output.result.provider).toBe("elevenlabs");
-        });
-
-        it("passes stability and similarity settings", async () => {
-            let capturedBody: Record<string, unknown> | null = null;
-
-            nock("https://api.elevenlabs.io")
-                .post("/v1/text-to-speech/21m00Tcm4TlvDq8ikWAM", (body) => {
-                    capturedBody = body as Record<string, unknown>;
-                    return true;
+            expect(mockSpeechCreate).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    input: "This is the generated response to speak"
                 })
-                .reply(200, Buffer.from("audio"), { "Content-Type": "audio/mpeg" });
-
-            const input = createHandlerInput({
-                nodeType: "audio",
-                nodeConfig: {
-                    provider: "elevenlabs",
-                    operation: "tts",
-                    model: "eleven_monolingual_v1",
-                    textInput: "Test",
-                    stability: 0.7,
-                    similarityBoost: 0.8
-                }
-            });
-
-            await handler.execute(input);
-
-            const voiceSettings = capturedBody!.voice_settings as {
-                stability: number;
-                similarity_boost: number;
-            };
-            expect(voiceSettings.stability).toBe(0.7);
-            expect(voiceSettings.similarity_boost).toBe(0.8);
+            );
         });
 
-        it("throws error for transcribe operation (not supported)", async () => {
-            const input = createHandlerInput({
-                nodeType: "audio",
-                nodeConfig: {
-                    provider: "elevenlabs",
-                    operation: "transcribe",
-                    model: "test",
-                    audioInput: "https://example.com/audio.mp3"
-                }
-            });
-
-            await expect(handler.execute(input)).rejects.toThrow(/only supports.*tts/i);
-        });
-    });
-
-    describe("output variable", () => {
         it("wraps result in outputVariable when specified", async () => {
-            nock("https://api.openai.com")
-                .post("/v1/audio/speech")
-                .reply(200, Buffer.from("audio"), { "Content-Type": "audio/mpeg" });
+            mockSpeechCreate.mockResolvedValue({
+                arrayBuffer: async () => Buffer.from("audio")
+            });
 
             const input = createHandlerInput({
                 nodeType: "audio",
@@ -444,59 +433,129 @@ describe("AudioNodeHandler", () => {
             const output = await handler.execute(input);
 
             expect(output.result).toHaveProperty("speechResult");
-            expect((output.result.speechResult as Record<string, unknown>).operation).toBe("tts");
+            const wrapped = output.result.speechResult as { operation: string };
+            expect(wrapped.operation).toBe("tts");
         });
     });
 
-    describe("metadata", () => {
-        it("includes processing time in metadata", async () => {
-            nock("https://api.openai.com")
-                .post("/v1/audio/speech")
-                .reply(200, Buffer.from("audio"), { "Content-Type": "audio/mpeg" });
+    describe("ElevenLabs text-to-speech", () => {
+        it("generates speech with ElevenLabs", async () => {
+            nock("https://api.elevenlabs.io")
+                .post(/\/v1\/text-to-speech\//)
+                .reply(200, Buffer.from("elevenlabs audio"), {
+                    "Content-Type": "audio/mpeg"
+                });
 
             const input = createHandlerInput({
                 nodeType: "audio",
                 nodeConfig: {
-                    provider: "openai",
+                    provider: "elevenlabs",
                     operation: "tts",
-                    model: "tts-1",
-                    textInput: "Test"
+                    model: "eleven_monolingual_v1",
+                    textInput: "Hello from ElevenLabs"
                 }
             });
 
             const output = await handler.execute(input);
 
-            const metadata = output.result.metadata as { processingTime: number };
-            expect(metadata.processingTime).toBeGreaterThanOrEqual(0);
+            expect(output.result.operation).toBe("tts");
+            expect(output.result.provider).toBe("elevenlabs");
         });
 
-        it("includes character count for TTS", async () => {
-            nock("https://api.openai.com")
-                .post("/v1/audio/speech")
+        it("uses voice ID for ElevenLabs", async () => {
+            let capturedUrl: string | null = null;
+
+            nock("https://api.elevenlabs.io")
+                .post(/\/v1\/text-to-speech\//)
+                .reply(function () {
+                    capturedUrl = this.req.path;
+                    return [200, Buffer.from("audio"), { "Content-Type": "audio/mpeg" }];
+                });
+
+            const input = createHandlerInput({
+                nodeType: "audio",
+                nodeConfig: {
+                    provider: "elevenlabs",
+                    operation: "tts",
+                    model: "eleven_monolingual_v1",
+                    textInput: "Test",
+                    voice: "custom-voice-id-123"
+                }
+            });
+
+            await handler.execute(input);
+
+            expect(capturedUrl).toContain("custom-voice-id-123");
+        });
+
+        it("sends voice settings to ElevenLabs", async () => {
+            let capturedBody: Record<string, unknown> | null = null;
+
+            nock("https://api.elevenlabs.io")
+                .post(/\/v1\/text-to-speech\//, (body) => {
+                    capturedBody = body as Record<string, unknown>;
+                    return true;
+                })
                 .reply(200, Buffer.from("audio"), { "Content-Type": "audio/mpeg" });
 
             const input = createHandlerInput({
                 nodeType: "audio",
                 nodeConfig: {
-                    provider: "openai",
+                    provider: "elevenlabs",
                     operation: "tts",
-                    model: "tts-1",
-                    textInput: "Hello world"
+                    model: "eleven_monolingual_v1",
+                    textInput: "Test",
+                    stability: 0.8,
+                    similarityBoost: 0.9
                 }
             });
 
-            const output = await handler.execute(input);
+            await handler.execute(input);
 
-            const metadata = output.result.metadata as { charactersUsed: number };
-            expect(metadata.charactersUsed).toBe(11);
+            expect(capturedBody!.voice_settings).toEqual({
+                stability: 0.8,
+                similarity_boost: 0.9
+            });
+        });
+
+        it("throws error for transcribe operation (not supported)", async () => {
+            const input = createHandlerInput({
+                nodeType: "audio",
+                nodeConfig: {
+                    provider: "elevenlabs",
+                    operation: "transcribe",
+                    model: "eleven_monolingual_v1",
+                    audioInput: "https://example.com/audio.mp3"
+                }
+            });
+
+            await expect(handler.execute(input)).rejects.toThrow(/only supports.*tts/i);
         });
     });
 
     describe("error handling", () => {
-        it("handles API error responses", async () => {
-            nock("https://api.openai.com")
-                .post("/v1/audio/speech")
-                .reply(500, { error: { message: "Internal server error" } });
+        it("handles transcription API errors", async () => {
+            nock("https://example.com")
+                .get("/audio.mp3")
+                .reply(200, Buffer.from("audio"), { "Content-Type": "audio/mpeg" });
+
+            mockTranscriptionCreate.mockRejectedValue(new Error("API Error: Rate limit exceeded"));
+
+            const input = createHandlerInput({
+                nodeType: "audio",
+                nodeConfig: {
+                    provider: "openai",
+                    operation: "transcribe",
+                    model: "whisper-1",
+                    audioInput: "https://example.com/audio.mp3"
+                }
+            });
+
+            await expect(handler.execute(input)).rejects.toThrow();
+        });
+
+        it("handles TTS API errors", async () => {
+            mockSpeechCreate.mockRejectedValue(new Error("TTS API Error"));
 
             const input = createHandlerInput({
                 nodeType: "audio",
@@ -513,8 +572,8 @@ describe("AudioNodeHandler", () => {
 
         it("handles ElevenLabs API errors", async () => {
             nock("https://api.elevenlabs.io")
-                .post("/v1/text-to-speech/21m00Tcm4TlvDq8ikWAM")
-                .reply(429, { detail: "Rate limit exceeded" });
+                .post(/\/v1\/text-to-speech\//)
+                .reply(429, { error: "Rate limit exceeded" });
 
             const input = createHandlerInput({
                 nodeType: "audio",
@@ -529,8 +588,8 @@ describe("AudioNodeHandler", () => {
             await expect(handler.execute(input)).rejects.toThrow();
         });
 
-        it("handles audio download failures", async () => {
-            nock("https://example.com").get("/audio.mp3").reply(404);
+        it("handles audio download errors", async () => {
+            nock("https://example.com").get("/audio.mp3").reply(404, "Not Found");
 
             const input = createHandlerInput({
                 nodeType: "audio",
@@ -542,15 +601,15 @@ describe("AudioNodeHandler", () => {
                 }
             });
 
-            await expect(handler.execute(input)).rejects.toThrow();
+            await expect(handler.execute(input)).rejects.toThrow(/HTTP 404/);
         });
     });
 
     describe("metrics", () => {
         it("records execution duration", async () => {
-            nock("https://api.openai.com")
-                .post("/v1/audio/speech")
-                .reply(200, Buffer.from("audio"), { "Content-Type": "audio/mpeg" });
+            mockSpeechCreate.mockResolvedValue({
+                arrayBuffer: async () => Buffer.from("audio")
+            });
 
             const input = createHandlerInput({
                 nodeType: "audio",
@@ -566,6 +625,27 @@ describe("AudioNodeHandler", () => {
 
             expect(output.metrics).toBeDefined();
             expect(output.metrics?.durationMs).toBeGreaterThanOrEqual(0);
+        });
+
+        it("records character count for TTS", async () => {
+            mockSpeechCreate.mockResolvedValue({
+                arrayBuffer: async () => Buffer.from("audio")
+            });
+
+            const input = createHandlerInput({
+                nodeType: "audio",
+                nodeConfig: {
+                    provider: "openai",
+                    operation: "tts",
+                    model: "tts-1",
+                    textInput: "This is a test message with some words"
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            const metadata = output.result.metadata as { charactersUsed?: number };
+            expect(metadata?.charactersUsed).toBe(38);
         });
     });
 });
