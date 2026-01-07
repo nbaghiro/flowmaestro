@@ -155,6 +155,7 @@ for (const [category, group] of Object.entries(secretsByCategory)) {
                 target: {
                     name: group.k8sSecretName,
                     creationPolicy: "Owner",
+                    deletionPolicy: "Merge", // Skip missing secrets instead of failing
                     template: {
                         type: "Opaque"
                     }
