@@ -32,7 +32,7 @@ interface AgentStore {
     currentExecutionStatus: AgentExecution["status"] | null;
 
     // Actions
-    fetchAgents: () => Promise<void>;
+    fetchAgents: (params?: { folderId?: string }) => Promise<void>;
     fetchAgent: (agentId: string) => Promise<void>;
     createAgent: (data: CreateAgentRequest) => Promise<Agent>;
     updateAgent: (agentId: string, data: UpdateAgentRequest) => Promise<void>;
@@ -94,10 +94,10 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
     currentExecutionStatus: null,
 
     // Fetch all agents
-    fetchAgents: async () => {
+    fetchAgents: async (params?: { folderId?: string }) => {
         set({ isLoading: true, error: null });
         try {
-            const response = await api.getAgents();
+            const response = await api.getAgents({ folderId: params?.folderId });
             set({ agents: response.data.agents, isLoading: false });
         } catch (error) {
             set({

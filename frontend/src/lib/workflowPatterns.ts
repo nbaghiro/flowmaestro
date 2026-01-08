@@ -7,6 +7,8 @@ export interface WorkflowPattern {
     useCase: string;
     icon: string;
     nodeCount: number;
+    category: "basic" | "advanced";
+    integrations?: string[];
     definition: WorkflowDefinition;
 }
 
@@ -18,6 +20,7 @@ const simpleChatPattern: WorkflowPattern = {
     useCase: "Basic Q&A",
     icon: "MessageSquare",
     nodeCount: 3,
+    category: "basic",
     definition: {
         name: "Starter - Simple Chat",
         nodes: {
@@ -32,7 +35,7 @@ const simpleChatPattern: WorkflowPattern = {
                     description: "Enter your question or message",
                     defaultValue: ""
                 },
-                position: { x: 100, y: 200 }
+                position: { x: 100, y: 150 }
             },
             "llm-1": {
                 type: "llm",
@@ -48,7 +51,7 @@ const simpleChatPattern: WorkflowPattern = {
                     topP: 1,
                     outputVariable: "response"
                 },
-                position: { x: 400, y: 200 }
+                position: { x: 400, y: 300 }
             },
             "output-1": {
                 type: "output",
@@ -59,7 +62,7 @@ const simpleChatPattern: WorkflowPattern = {
                     format: "string",
                     description: "The AI assistant's response"
                 },
-                position: { x: 700, y: 200 }
+                position: { x: 700, y: 150 }
             }
         },
         edges: [
@@ -78,6 +81,7 @@ const chainOfThoughtPattern: WorkflowPattern = {
     useCase: "Multi-step reasoning",
     icon: "Link",
     nodeCount: 5,
+    category: "basic",
     definition: {
         name: "Starter - Chain of Thought",
         nodes: {
@@ -92,7 +96,7 @@ const chainOfThoughtPattern: WorkflowPattern = {
                     description: "Describe the problem or question requiring analysis",
                     defaultValue: ""
                 },
-                position: { x: 100, y: 200 }
+                position: { x: 100, y: 150 }
             },
             "llm-analyze": {
                 type: "llm",
@@ -107,7 +111,7 @@ const chainOfThoughtPattern: WorkflowPattern = {
                     maxTokens: 1500,
                     outputVariable: "analysis"
                 },
-                position: { x: 350, y: 200 }
+                position: { x: 350, y: 320 }
             },
             "llm-reason": {
                 type: "llm",
@@ -122,7 +126,7 @@ const chainOfThoughtPattern: WorkflowPattern = {
                     maxTokens: 2000,
                     outputVariable: "reasoning"
                 },
-                position: { x: 600, y: 200 }
+                position: { x: 600, y: 150 }
             },
             "llm-synthesize": {
                 type: "llm",
@@ -137,7 +141,7 @@ const chainOfThoughtPattern: WorkflowPattern = {
                     maxTokens: 2000,
                     outputVariable: "synthesis"
                 },
-                position: { x: 850, y: 200 }
+                position: { x: 850, y: 320 }
             },
             "output-1": {
                 type: "output",
@@ -148,7 +152,7 @@ const chainOfThoughtPattern: WorkflowPattern = {
                     format: "json",
                     description: "Complete reasoning chain result"
                 },
-                position: { x: 1100, y: 200 }
+                position: { x: 1100, y: 150 }
             }
         },
         edges: [
@@ -169,6 +173,7 @@ const smartRouterPattern: WorkflowPattern = {
     useCase: "Task classification & delegation",
     icon: "GitBranch",
     nodeCount: 6,
+    category: "basic",
     definition: {
         name: "Starter - Smart Router",
         nodes: {
@@ -309,6 +314,7 @@ const selfImprovingPattern: WorkflowPattern = {
     useCase: "Code/content that needs refinement",
     icon: "RefreshCw",
     nodeCount: 5,
+    category: "basic",
     definition: {
         name: "Starter - Self-Improving",
         nodes: {
@@ -323,7 +329,7 @@ const selfImprovingPattern: WorkflowPattern = {
                     description: "Describe what content you want to generate",
                     defaultValue: ""
                 },
-                position: { x: 100, y: 200 }
+                position: { x: 100, y: 100 }
             },
             "llm-generate": {
                 type: "llm",
@@ -338,7 +344,7 @@ const selfImprovingPattern: WorkflowPattern = {
                     maxTokens: 3000,
                     outputVariable: "generated"
                 },
-                position: { x: 350, y: 200 }
+                position: { x: 350, y: 280 }
             },
             "llm-critique": {
                 type: "llm",
@@ -353,7 +359,7 @@ const selfImprovingPattern: WorkflowPattern = {
                     maxTokens: 1000,
                     outputVariable: "critique"
                 },
-                position: { x: 600, y: 200 }
+                position: { x: 600, y: 100 }
             },
             "conditional-quality": {
                 type: "conditional",
@@ -363,7 +369,7 @@ const selfImprovingPattern: WorkflowPattern = {
                     expression: "critique.text.includes('\"isGoodEnough\": true')",
                     outputVariable: "qualityGate"
                 },
-                position: { x: 850, y: 200 }
+                position: { x: 850, y: 280 }
             },
             "output-1": {
                 type: "output",
@@ -374,7 +380,7 @@ const selfImprovingPattern: WorkflowPattern = {
                     format: "json",
                     description: "Final refined content"
                 },
-                position: { x: 1100, y: 200 }
+                position: { x: 1100, y: 100 }
             }
         },
         edges: [
@@ -406,6 +412,7 @@ const researchAgentPattern: WorkflowPattern = {
     useCase: "Knowledge-based answers",
     icon: "Search",
     nodeCount: 5,
+    category: "basic",
     definition: {
         name: "Starter - Research Agent",
         nodes: {
@@ -420,7 +427,7 @@ const researchAgentPattern: WorkflowPattern = {
                     description: "Enter your research question",
                     defaultValue: ""
                 },
-                position: { x: 100, y: 200 }
+                position: { x: 100, y: 150 }
             },
             "kb-query-1": {
                 type: "knowledgeBaseQuery",
@@ -432,7 +439,7 @@ const researchAgentPattern: WorkflowPattern = {
                     similarityThreshold: 0.7,
                     outputVariable: "kbResults"
                 },
-                position: { x: 350, y: 200 }
+                position: { x: 350, y: 320 }
             },
             "code-combine": {
                 type: "code",
@@ -443,7 +450,7 @@ const researchAgentPattern: WorkflowPattern = {
                     timeout: 10,
                     outputVariable: "combinedContext"
                 },
-                position: { x: 600, y: 200 }
+                position: { x: 600, y: 150 }
             },
             "llm-research": {
                 type: "llm",
@@ -458,7 +465,7 @@ const researchAgentPattern: WorkflowPattern = {
                     maxTokens: 3000,
                     outputVariable: "answer"
                 },
-                position: { x: 850, y: 200 }
+                position: { x: 850, y: 320 }
             },
             "output-1": {
                 type: "output",
@@ -469,7 +476,7 @@ const researchAgentPattern: WorkflowPattern = {
                     format: "json",
                     description: "Research answer with sources"
                 },
-                position: { x: 1100, y: 200 }
+                position: { x: 1100, y: 150 }
             }
         },
         edges: [
@@ -490,6 +497,7 @@ const qualityReviewerPattern: WorkflowPattern = {
     useCase: "High-quality content generation",
     icon: "CheckCircle",
     nodeCount: 5,
+    category: "basic",
     definition: {
         name: "Starter - Quality Reviewer",
         nodes: {
@@ -505,7 +513,7 @@ const qualityReviewerPattern: WorkflowPattern = {
                     defaultValue:
                         '{"topic": "", "tone": "professional", "length": "medium", "audience": "general"}'
                 },
-                position: { x: 100, y: 200 }
+                position: { x: 100, y: 100 }
             },
             "llm-generate": {
                 type: "llm",
@@ -520,7 +528,7 @@ const qualityReviewerPattern: WorkflowPattern = {
                     maxTokens: 3000,
                     outputVariable: "content"
                 },
-                position: { x: 350, y: 200 }
+                position: { x: 350, y: 280 }
             },
             "llm-evaluate": {
                 type: "llm",
@@ -535,7 +543,7 @@ const qualityReviewerPattern: WorkflowPattern = {
                     maxTokens: 1000,
                     outputVariable: "evaluation"
                 },
-                position: { x: 600, y: 200 }
+                position: { x: 600, y: 100 }
             },
             "conditional-quality": {
                 type: "conditional",
@@ -546,7 +554,7 @@ const qualityReviewerPattern: WorkflowPattern = {
                         "evaluation.text.includes('\"overall\": 8') || evaluation.text.includes('\"overall\": 9') || evaluation.text.includes('\"overall\": 10')",
                     outputVariable: "qualityGate"
                 },
-                position: { x: 850, y: 200 }
+                position: { x: 850, y: 280 }
             },
             "output-1": {
                 type: "output",
@@ -557,7 +565,7 @@ const qualityReviewerPattern: WorkflowPattern = {
                     format: "json",
                     description: "Content with quality scores"
                 },
-                position: { x: 1100, y: 200 }
+                position: { x: 1100, y: 100 }
             }
         },
         edges: [
@@ -589,6 +597,7 @@ const parallelAnalyzerPattern: WorkflowPattern = {
     useCase: "Multiple perspectives/analysis",
     icon: "Layers",
     nodeCount: 5,
+    category: "basic",
     definition: {
         name: "Starter - Parallel Analyzer",
         nodes: {
@@ -698,6 +707,7 @@ const supervisedAgentPattern: WorkflowPattern = {
     useCase: "Critical decisions",
     icon: "UserCheck",
     nodeCount: 6,
+    category: "basic",
     definition: {
         name: "Starter - Supervised Agent",
         nodes: {
@@ -712,7 +722,7 @@ const supervisedAgentPattern: WorkflowPattern = {
                     description: "Task requiring supervised execution",
                     defaultValue: '{"action": "", "context": "", "priority": "normal"}'
                 },
-                position: { x: 100, y: 200 }
+                position: { x: 100, y: 150 }
             },
             "llm-propose": {
                 type: "llm",
@@ -727,7 +737,7 @@ const supervisedAgentPattern: WorkflowPattern = {
                     maxTokens: 2000,
                     outputVariable: "proposal"
                 },
-                position: { x: 350, y: 200 }
+                position: { x: 350, y: 300 }
             },
             "wait-review": {
                 type: "wait-for-user",
@@ -740,7 +750,7 @@ const supervisedAgentPattern: WorkflowPattern = {
                     required: true,
                     placeholder: '{"decision": "approve", "feedback": ""}'
                 },
-                position: { x: 600, y: 200 }
+                position: { x: 600, y: 150 }
             },
             "conditional-decision": {
                 type: "conditional",
@@ -752,7 +762,7 @@ const supervisedAgentPattern: WorkflowPattern = {
                     rightValue: "approve",
                     outputVariable: "isApproved"
                 },
-                position: { x: 850, y: 200 }
+                position: { x: 850, y: 300 }
             },
             "llm-execute": {
                 type: "llm",
@@ -778,7 +788,7 @@ const supervisedAgentPattern: WorkflowPattern = {
                     format: "json",
                     description: "Supervised execution result"
                 },
-                position: { x: 1350, y: 200 }
+                position: { x: 1350, y: 300 }
             }
         },
         edges: [
@@ -811,6 +821,7 @@ const safeAgentPattern: WorkflowPattern = {
     useCase: "Production deployments",
     icon: "Shield",
     nodeCount: 7,
+    category: "basic",
     definition: {
         name: "Starter - Safe Agent",
         nodes: {
@@ -946,6 +957,7 @@ const taskPlannerPattern: WorkflowPattern = {
     useCase: "Complex multi-step tasks",
     icon: "ListTodo",
     nodeCount: 5,
+    category: "basic",
     definition: {
         name: "Starter - Task Planner",
         nodes: {
@@ -960,7 +972,7 @@ const taskPlannerPattern: WorkflowPattern = {
                     description: "Describe your goal or complex task",
                     defaultValue: ""
                 },
-                position: { x: 100, y: 200 }
+                position: { x: 100, y: 150 }
             },
             "llm-planner": {
                 type: "llm",
@@ -975,7 +987,7 @@ const taskPlannerPattern: WorkflowPattern = {
                     maxTokens: 2000,
                     outputVariable: "plan"
                 },
-                position: { x: 350, y: 200 }
+                position: { x: 350, y: 320 }
             },
             "llm-execute": {
                 type: "llm",
@@ -990,7 +1002,7 @@ const taskPlannerPattern: WorkflowPattern = {
                     maxTokens: 3000,
                     outputVariable: "execution"
                 },
-                position: { x: 600, y: 200 }
+                position: { x: 600, y: 150 }
             },
             "llm-synthesize": {
                 type: "llm",
@@ -1005,7 +1017,7 @@ const taskPlannerPattern: WorkflowPattern = {
                     maxTokens: 3000,
                     outputVariable: "synthesis"
                 },
-                position: { x: 850, y: 200 }
+                position: { x: 850, y: 320 }
             },
             "output-1": {
                 type: "output",
@@ -1016,7 +1028,7 @@ const taskPlannerPattern: WorkflowPattern = {
                     format: "json",
                     description: "Complete task planning result"
                 },
-                position: { x: 1100, y: 200 }
+                position: { x: 1100, y: 150 }
             }
         },
         edges: [
@@ -1051,6 +1063,7 @@ export const BLANK_WORKFLOW_PATTERN: WorkflowPattern = {
     useCase: "Basic Q&A",
     icon: "Plus",
     nodeCount: 3,
+    category: "basic",
     definition: {
         name: "New Workflow",
         nodes: {

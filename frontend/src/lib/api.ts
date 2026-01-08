@@ -34,7 +34,14 @@ import type {
     ChatSessionResponse,
     CreateChatSessionInput,
     SendChatMessageInput,
-    PublicChatMessage
+    PublicChatMessage,
+    Folder,
+    FolderWithCounts,
+    FolderContents,
+    CreateFolderInput,
+    UpdateFolderInput,
+    MoveItemsToFolderInput,
+    FolderResourceType
 } from "@flowmaestro/shared";
 import { logger } from "./logger";
 
@@ -698,10 +705,27 @@ export async function unlinkMicrosoftAccount(): Promise<ApiResponse> {
 /**
  * Get list of workflows for current user
  */
-export async function getWorkflows(limit = 50, offset = 0) {
+export async function getWorkflows(params?: {
+    limit?: number;
+    offset?: number;
+    folderId?: string | null;
+}) {
     const token = getAuthToken();
+    const limit = params?.limit ?? 50;
+    const offset = params?.offset ?? 0;
 
-    const response = await apiFetch(`${API_BASE_URL}/workflows?limit=${limit}&offset=${offset}`, {
+    const queryParams = new URLSearchParams();
+    queryParams.set("limit", limit.toString());
+    queryParams.set("offset", offset.toString());
+
+    // folderId: null means root level (no folder), undefined means all
+    if (params?.folderId === null) {
+        queryParams.set("folderId", "null");
+    } else if (params?.folderId !== undefined) {
+        queryParams.set("folderId", params.folderId);
+    }
+
+    const response = await apiFetch(`${API_BASE_URL}/workflows?${queryParams.toString()}`, {
         method: "GET",
         headers: {
             "Content-Type": "application/json",
@@ -1990,14 +2014,33 @@ export async function createAgent(
 /**
  * Get all agents for the current user
  */
-export async function getAgents(): Promise<{
+export async function getAgents(params?: {
+    limit?: number;
+    offset?: number;
+    folderId?: string | null;
+}): Promise<{
     success: boolean;
     data: { agents: Agent[]; total: number };
     error?: string;
 }> {
     const token = getAuthToken();
 
-    const response = await apiFetch(`${API_BASE_URL}/agents`, {
+    const queryParams = new URLSearchParams();
+    if (params?.limit) queryParams.set("limit", params.limit.toString());
+    if (params?.offset) queryParams.set("offset", params.offset.toString());
+
+    // folderId: null means root level (no folder), undefined means all
+    if (params?.folderId === null) {
+        queryParams.set("folderId", "null");
+    } else if (params?.folderId !== undefined) {
+        queryParams.set("folderId", params.folderId);
+    }
+
+    const url = queryParams.toString()
+        ? `${API_BASE_URL}/agents?${queryParams.toString()}`
+        : `${API_BASE_URL}/agents`;
+
+    const response = await apiFetch(url, {
         method: "GET",
         headers: {
             "Content-Type": "application/json",
@@ -2713,10 +2756,28 @@ export async function unarchiveThread(
 /**
  * Get all knowledge bases
  */
-export async function getKnowledgeBases(): Promise<ApiResponse<KnowledgeBase[]>> {
+export async function getKnowledgeBases(params?: {
+    limit?: number;
+    offset?: number;
+    folderId?: string | null;
+}): Promise<ApiResponse<KnowledgeBase[]>> {
     const token = getAuthToken();
 
-    const response = await apiFetch(`${API_BASE_URL}/knowledge-bases`, {
+    const queryParams = new URLSearchParams();
+    if (params?.limit) queryParams.set("limit", params.limit.toString());
+    if (params?.offset) queryParams.set("offset", params.offset.toString());
+
+    // folderId: null means root level (no folder), undefined means all
+    if (params?.folderId === null) {
+        queryParams.set("folderId", "null");
+    } else if (params?.folderId !== undefined) {
+        queryParams.set("folderId", params.folderId);
+    }
+
+    const queryString = queryParams.toString();
+    const url = `${API_BASE_URL}/knowledge-bases${queryString ? `?${queryString}` : ""}`;
+
+    const response = await apiFetch(url, {
         method: "GET",
         headers: {
             "Content-Type": "application/json",
@@ -3636,6 +3697,7 @@ export async function getFormInterfaces(params?: {
     offset?: number;
     workflowId?: string;
     agentId?: string;
+    folderId?: string | null;
 }): Promise<FormInterfaceListResponse> {
     const token = getAuthToken();
 
@@ -3644,6 +3706,13 @@ export async function getFormInterfaces(params?: {
     if (params?.offset) queryParams.set("offset", params.offset.toString());
     if (params?.workflowId) queryParams.set("workflowId", params.workflowId);
     if (params?.agentId) queryParams.set("agentId", params.agentId);
+
+    // folderId: null means root level (no folder), undefined means all
+    if (params?.folderId === null) {
+        queryParams.set("folderId", "null");
+    } else if (params?.folderId !== undefined) {
+        queryParams.set("folderId", params.folderId);
+    }
 
     const queryString = queryParams.toString();
     const url = `${API_BASE_URL}/form-interfaces${queryString ? `?${queryString}` : ""}`;
@@ -4016,6 +4085,7 @@ export async function getChatInterfaces(params?: {
     limit?: number;
     offset?: number;
     agentId?: string;
+    folderId?: string | null;
 }): Promise<ChatInterfaceListResponse> {
     const token = getAuthToken();
 
@@ -4023,6 +4093,13 @@ export async function getChatInterfaces(params?: {
     if (params?.limit) queryParams.set("limit", params.limit.toString());
     if (params?.offset) queryParams.set("offset", params.offset.toString());
     if (params?.agentId) queryParams.set("agentId", params.agentId);
+
+    // folderId: null means root level (no folder), undefined means all
+    if (params?.folderId === null) {
+        queryParams.set("folderId", "null");
+    } else if (params?.folderId !== undefined) {
+        queryParams.set("folderId", params.folderId);
+    }
 
     const queryString = queryParams.toString();
     const url = `${API_BASE_URL}/chat-interfaces${queryString ? `?${queryString}` : ""}`;
@@ -4654,6 +4731,180 @@ export async function revokeApiKey(id: string): Promise<ApiResponse> {
         headers: {
             ...(token && { Authorization: `Bearer ${token}` })
         }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+// ===== Folder API Functions =====
+
+// Re-export folder types for components
+export type {
+    Folder,
+    FolderWithCounts,
+    FolderContents,
+    CreateFolderInput,
+    UpdateFolderInput,
+    MoveItemsToFolderInput,
+    FolderResourceType
+};
+
+/**
+ * List all folders for the current user with item counts
+ */
+export async function getFolders(): Promise<ApiResponse<FolderWithCounts[]>> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/folders`, {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Get a specific folder by ID
+ */
+export async function getFolder(id: string): Promise<ApiResponse<Folder>> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/folders/${id}`, {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Get folder contents grouped by type
+ */
+export async function getFolderContents(id: string): Promise<ApiResponse<FolderContents>> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/folders/${id}/contents`, {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Create a new folder
+ */
+export async function createFolder(input: CreateFolderInput): Promise<ApiResponse<Folder>> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/folders`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` })
+        },
+        body: JSON.stringify(input)
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Update a folder
+ */
+export async function updateFolder(
+    id: string,
+    input: UpdateFolderInput
+): Promise<ApiResponse<Folder>> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/folders/${id}`, {
+        method: "PATCH",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` })
+        },
+        body: JSON.stringify(input)
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Delete a folder (items are moved to root, not deleted)
+ */
+export async function deleteFolder(id: string): Promise<ApiResponse> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/folders/${id}`, {
+        method: "DELETE",
+        headers: {
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Move items to a folder (or to root if folderId is null)
+ */
+export async function moveItemsToFolder(
+    input: MoveItemsToFolderInput
+): Promise<ApiResponse<{ movedCount: number }>> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/folders/move`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` })
+        },
+        body: JSON.stringify(input)
     });
 
     if (!response.ok) {

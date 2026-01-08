@@ -132,29 +132,46 @@ export class ChatInterfaceRepository {
      */
     async findByUserId(
         userId: string,
-        options: { limit?: number; offset?: number } = {}
+        options: { limit?: number; offset?: number; folderId?: string | null } = {}
     ): Promise<{ chatInterfaces: ChatInterface[]; total: number }> {
         const limit = options.limit || 50;
         const offset = options.offset || 0;
 
+        // Build folder filter
+        let folderFilter = "";
+        const countParams: unknown[] = [userId];
+        const queryParams: unknown[] = [userId];
+
+        if (options.folderId === null) {
+            folderFilter = " AND ci.folder_id IS NULL";
+        } else if (options.folderId !== undefined) {
+            folderFilter = " AND ci.folder_id = $2";
+            countParams.push(options.folderId);
+            queryParams.push(options.folderId);
+        }
+
         const countQuery = `
             SELECT COUNT(*) as count
-            FROM flowmaestro.chat_interfaces
-            WHERE user_id = $1 AND deleted_at IS NULL
+            FROM flowmaestro.chat_interfaces ci
+            WHERE ci.user_id = $1 AND ci.deleted_at IS NULL${folderFilter}
         `;
 
+        const limitParamIndex = queryParams.length + 1;
+        const offsetParamIndex = queryParams.length + 2;
         const query = `
             SELECT ci.*, a.name as agent_name
             FROM flowmaestro.chat_interfaces ci
             LEFT JOIN flowmaestro.agents a ON ci.agent_id = a.id
-            WHERE ci.user_id = $1 AND ci.deleted_at IS NULL
+            WHERE ci.user_id = $1 AND ci.deleted_at IS NULL${folderFilter}
             ORDER BY ci.updated_at DESC
-            LIMIT $2 OFFSET $3
+            LIMIT $${limitParamIndex} OFFSET $${offsetParamIndex}
         `;
 
+        queryParams.push(limit, offset);
+
         const [countResult, chatInterfacesResult] = await Promise.all([
-            db.query<{ count: string }>(countQuery, [userId]),
-            db.query(query, [userId, limit, offset])
+            db.query<{ count: string }>(countQuery, countParams),
+            db.query(query, queryParams)
         ]);
 
         return {

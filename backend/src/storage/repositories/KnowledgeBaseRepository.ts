@@ -58,27 +58,44 @@ export class KnowledgeBaseRepository {
 
     async findByUserId(
         userId: string,
-        options: { limit?: number; offset?: number } = {}
+        options: { limit?: number; offset?: number; folderId?: string | null } = {}
     ): Promise<{ knowledgeBases: KnowledgeBaseModel[]; total: number }> {
         const limit = options.limit || 50;
         const offset = options.offset || 0;
 
+        // Build folder filter
+        let folderFilter = "";
+        const countParams: unknown[] = [userId];
+        const queryParams: unknown[] = [userId];
+
+        if (options.folderId === null) {
+            folderFilter = " AND folder_id IS NULL";
+        } else if (options.folderId !== undefined) {
+            folderFilter = " AND folder_id = $2";
+            countParams.push(options.folderId);
+            queryParams.push(options.folderId);
+        }
+
         const countQuery = `
             SELECT COUNT(*) as count
             FROM flowmaestro.knowledge_bases
-            WHERE user_id = $1
+            WHERE user_id = $1${folderFilter}
         `;
 
+        const limitParamIndex = queryParams.length + 1;
+        const offsetParamIndex = queryParams.length + 2;
         const query = `
             SELECT * FROM flowmaestro.knowledge_bases
-            WHERE user_id = $1
+            WHERE user_id = $1${folderFilter}
             ORDER BY created_at DESC
-            LIMIT $2 OFFSET $3
+            LIMIT $${limitParamIndex} OFFSET $${offsetParamIndex}
         `;
 
+        queryParams.push(limit, offset);
+
         const [countResult, kbResult] = await Promise.all([
-            db.query<{ count: string }>(countQuery, [userId]),
-            db.query<KnowledgeBaseRow>(query, [userId, limit, offset])
+            db.query<{ count: string }>(countQuery, countParams),
+            db.query<KnowledgeBaseRow>(query, queryParams)
         ]);
 
         return {

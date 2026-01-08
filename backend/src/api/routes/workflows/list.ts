@@ -11,11 +11,25 @@ export async function listWorkflowsRoute(fastify: FastifyInstance) {
         },
         async (request, reply) => {
             const workflowRepository = new WorkflowRepository();
-            const query = request.query as { limit?: number; offset?: number };
+            const query = request.query as {
+                limit?: number;
+                offset?: number;
+                folderId?: string;
+            };
+
+            // Parse folderId: "null" string means root level (no folder), undefined means all
+            let folderId: string | null | undefined;
+            if (query.folderId === "null") {
+                folderId = null; // Root level (items not in any folder)
+            } else if (query.folderId) {
+                folderId = query.folderId; // Specific folder
+            }
+            // If folderId is undefined, all workflows are returned (no folder filter)
 
             const { workflows, total } = await workflowRepository.findByUserId(request.user!.id, {
                 limit: query.limit || 50,
-                offset: query.offset || 0
+                offset: query.offset || 0,
+                folderId
             });
 
             const limit = query.limit || 50;

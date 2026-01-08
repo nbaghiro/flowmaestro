@@ -112,30 +112,47 @@ export class FormInterfaceRepository {
      */
     async findByUserId(
         userId: string,
-        options: { limit?: number; offset?: number } = {}
+        options: { limit?: number; offset?: number; folderId?: string | null } = {}
     ): Promise<{ formInterfaces: FormInterface[]; total: number }> {
         const limit = options.limit || 50;
         const offset = options.offset || 0;
 
+        // Build folder filter
+        let folderFilter = "";
+        const countParams: unknown[] = [userId];
+        const queryParams: unknown[] = [userId];
+
+        if (options.folderId === null) {
+            folderFilter = " AND fi.folder_id IS NULL";
+        } else if (options.folderId !== undefined) {
+            folderFilter = " AND fi.folder_id = $2";
+            countParams.push(options.folderId);
+            queryParams.push(options.folderId);
+        }
+
         const countQuery = `
             SELECT COUNT(*) as count
-            FROM flowmaestro.form_interfaces
-            WHERE user_id = $1 AND deleted_at IS NULL
+            FROM flowmaestro.form_interfaces fi
+            WHERE fi.user_id = $1 AND fi.deleted_at IS NULL${folderFilter}
         `;
 
+        const limitParamIndex = queryParams.length + 1;
+        const offsetParamIndex = queryParams.length + 2;
         const query = `
             SELECT fi.*, w.name as workflow_name, a.name as agent_name
             FROM flowmaestro.form_interfaces fi
             LEFT JOIN flowmaestro.workflows w ON fi.workflow_id = w.id
             LEFT JOIN flowmaestro.agents a ON fi.agent_id = a.id
-            WHERE fi.user_id = $1 AND fi.deleted_at IS NULL
+            WHERE fi.user_id = $1 AND fi.deleted_at IS NULL${folderFilter}
             ORDER BY fi.updated_at DESC
-            LIMIT $2 OFFSET $3
+            LIMIT $${limitParamIndex} OFFSET $${offsetParamIndex}
         `;
 
+        queryParams.push(limit, offset);
+
         const [countResult, formInterfacesResult] = await Promise.all([
-            db.query<{ count: string }>(countQuery, [userId]),
-            db.query(query, [userId, limit, offset])
+            db.query<{ count: string }>(countQuery, countParams),
+            db.query(query, queryParams)
         ]);
 
         return {

@@ -33,7 +33,7 @@ interface KnowledgeBaseStore {
     error: string | null;
 
     // Actions
-    fetchKnowledgeBases: () => Promise<void>;
+    fetchKnowledgeBases: (params?: { folderId?: string }) => Promise<void>;
     fetchKnowledgeBase: (id: string) => Promise<void>;
     createKB: (input: CreateKnowledgeBaseInput) => Promise<KnowledgeBase>;
     updateKB: (id: string, input: UpdateKnowledgeBaseInput) => Promise<void>;
@@ -59,10 +59,10 @@ export const useKnowledgeBaseStore = create<KnowledgeBaseStore>((set, get) => ({
     error: null,
 
     // Fetch all knowledge bases
-    fetchKnowledgeBases: async () => {
+    fetchKnowledgeBases: async (params?: { folderId?: string }) => {
         set({ loading: true, error: null });
         try {
-            const response = await getKnowledgeBases();
+            const response = await getKnowledgeBases({ folderId: params?.folderId });
             if (response.success && response.data) {
                 set({ knowledgeBases: response.data, loading: false });
             } else {

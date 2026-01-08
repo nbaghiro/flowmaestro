@@ -18,6 +18,7 @@ export async function listChatInterfacesRoute(fastify: FastifyInstance) {
                 limit?: string;
                 offset?: string;
                 agentId?: string;
+                folderId?: string;
             };
 
             try {
@@ -43,9 +44,18 @@ export async function listChatInterfacesRoute(fastify: FastifyInstance) {
                 const limit = query.limit ? parseInt(query.limit) : 50;
                 const offset = query.offset ? parseInt(query.offset) : 0;
 
+                // Parse folderId: "null" string means root level (no folder), undefined means all
+                let folderId: string | null | undefined;
+                if (query.folderId === "null") {
+                    folderId = null;
+                } else if (query.folderId) {
+                    folderId = query.folderId;
+                }
+
                 const { chatInterfaces, total } = await chatInterfaceRepo.findByUserId(userId, {
                     limit,
-                    offset
+                    offset,
+                    folderId
                 });
 
                 const page = Math.floor(offset / limit) + 1;

@@ -1,20 +1,27 @@
 import {
     MessageSquare,
+    MessageCircle,
     Link,
     GitBranch,
+    GitPullRequest,
     RefreshCw,
     Search,
     CheckCircle,
     Layers,
     UserCheck,
+    UserPlus,
     Shield,
     ListTodo,
     Plus,
+    Mail,
+    Bug,
+    Share2,
     type LucideIcon
 } from "lucide-react";
 import { useMemo } from "react";
 import Flow, { Background, BackgroundVariant, type Edge, type Node } from "reactflow";
 import "reactflow/dist/style.css";
+import ActionNode from "../canvas/nodes/ActionNode";
 import AudioInputNode from "../canvas/nodes/AudioInputNode";
 import AudioOutputNode from "../canvas/nodes/AudioOutputNode";
 import CodeNode from "../canvas/nodes/CodeNode";
@@ -31,15 +38,18 @@ import OutputNode from "../canvas/nodes/OutputNode";
 import RouterNode from "../canvas/nodes/RouterNode";
 import SharedMemoryNode from "../canvas/nodes/SharedMemoryNode";
 import SwitchNode from "../canvas/nodes/SwitchNode";
+import TemplateOutputNode from "../canvas/nodes/TemplateOutputNode";
 import TransformNode from "../canvas/nodes/TransformNode";
+import TriggerNode from "../canvas/nodes/TriggerNode";
 import VisionNode from "../canvas/nodes/VisionNode";
 import WaitForUserNode from "../canvas/nodes/WaitForUserNode";
 import WaitNode from "../canvas/nodes/WaitNode";
 import { cn } from "../lib/utils";
-import { type WorkflowPattern, getAllPatterns } from "../lib/workflowPatterns";
+import type { WorkflowPattern } from "../lib/workflowPatterns";
 
 // Register node types for preview
 const nodeTypes = {
+    action: ActionNode,
     llm: LLMNode,
     vision: VisionNode,
     audioInput: AudioInputNode,
@@ -59,25 +69,34 @@ const nodeTypes = {
     database: DatabaseNode,
     integration: IntegrationNode,
     knowledgeBaseQuery: KnowledgeBaseQueryNode,
-    router: RouterNode
+    router: RouterNode,
+    templateOutput: TemplateOutputNode,
+    trigger: TriggerNode
 };
 
 // Icon mapping
 const iconMap: Record<string, LucideIcon> = {
     MessageSquare,
+    MessageCircle,
     Link,
     GitBranch,
+    GitPullRequest,
     RefreshCw,
     Search,
     CheckCircle,
     Layers,
     UserCheck,
+    UserPlus,
     Shield,
     ListTodo,
-    Plus
+    Plus,
+    Mail,
+    Bug,
+    Share2
 };
 
 interface PatternPickerProps {
+    patterns: WorkflowPattern[];
     selectedPatternId: string | null;
     onSelect: (pattern: WorkflowPattern) => void;
 }
@@ -205,35 +224,37 @@ function PatternCard({ pattern, isSelected, onClick }: PatternCardProps) {
                     </span>
                     <span>{pattern.useCase}</span>
                 </div>
+
+                {/* Integration badges for advanced patterns */}
+                {pattern.integrations && pattern.integrations.length > 0 && (
+                    <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-border">
+                        <span className="text-xs text-muted-foreground">Integrations:</span>
+                        {pattern.integrations.map((integration) => (
+                            <span
+                                key={integration}
+                                className="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-primary/10 text-primary rounded-full"
+                            >
+                                {integration}
+                            </span>
+                        ))}
+                    </div>
+                )}
             </div>
         </div>
     );
 }
 
-export function PatternPicker({ selectedPatternId, onSelect }: PatternPickerProps) {
-    const patterns = getAllPatterns();
-
+export function PatternPicker({ patterns, selectedPatternId, onSelect }: PatternPickerProps) {
     return (
-        <div className="space-y-4">
-            <div className="text-center mb-6">
-                <h3 className="text-lg font-semibold text-foreground mb-1">
-                    Choose a starting point
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                    Select a pattern to start with, or create a blank workflow
-                </p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-h-[70vh] overflow-y-scroll pr-2">
-                {patterns.map((pattern) => (
-                    <PatternCard
-                        key={pattern.id}
-                        pattern={pattern}
-                        isSelected={selectedPatternId === pattern.id}
-                        onClick={() => onSelect(pattern)}
-                    />
-                ))}
-            </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {patterns.map((pattern) => (
+                <PatternCard
+                    key={pattern.id}
+                    pattern={pattern}
+                    isSelected={selectedPatternId === pattern.id}
+                    onClick={() => onSelect(pattern)}
+                />
+            ))}
         </div>
     );
 }

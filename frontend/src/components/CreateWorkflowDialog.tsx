@@ -1,5 +1,8 @@
 import { Upload, FileJson, ChevronRight, ChevronLeft, ArrowRight } from "lucide-react";
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, useMemo } from "react";
+import { getAdvancedPatterns } from "../lib/advancedWorkflowPatterns";
+import { cn } from "../lib/utils";
+import { getAllPatterns, type WorkflowPattern } from "../lib/workflowPatterns";
 import { Alert } from "./common/Alert";
 import { Button } from "./common/Button";
 import { Dialog } from "./common/Dialog";
@@ -7,7 +10,6 @@ import { Input } from "./common/Input";
 import { Textarea } from "./common/Textarea";
 import { PatternPicker } from "./PatternPicker";
 import type { WorkflowDefinition } from "../lib/api";
-import type { WorkflowPattern } from "../lib/workflowPatterns";
 
 interface CreateWorkflowDialogProps {
     isOpen: boolean;
@@ -24,6 +26,13 @@ type DialogStep = "pattern" | "details" | "json-import";
 export function CreateWorkflowDialog({ isOpen, onClose, onCreate }: CreateWorkflowDialogProps) {
     // Step state
     const [step, setStep] = useState<DialogStep>("pattern");
+
+    // Tab state for pattern selection
+    const [activeTab, setActiveTab] = useState<"basic" | "advanced">("basic");
+
+    // Get patterns for each tab
+    const basicPatterns = useMemo(() => getAllPatterns(), []);
+    const advancedPatterns = useMemo(() => getAdvancedPatterns(), []);
 
     // Pattern selection state
     const [selectedPattern, setSelectedPattern] = useState<WorkflowPattern | null>(null);
@@ -229,6 +238,7 @@ export function CreateWorkflowDialog({ isOpen, onClose, onCreate }: CreateWorkfl
 
     const resetForm = () => {
         setStep("pattern");
+        setActiveTab("basic");
         setSelectedPattern(null);
         setName("");
         setDescription("");
@@ -289,15 +299,58 @@ export function CreateWorkflowDialog({ isOpen, onClose, onCreate }: CreateWorkfl
                 {/* Step 1: Pattern Selection */}
                 {step === "pattern" && (
                     <div className="flex flex-col">
-                        <div className="flex-1 min-h-0">
+                        {/* Compact header with tabs and description inline */}
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-4">
+                                <span className="text-sm text-muted-foreground">
+                                    Select a starting template:
+                                </span>
+                                <div className="flex bg-muted rounded-lg p-0.5">
+                                    <button
+                                        type="button"
+                                        onClick={() => setActiveTab("basic")}
+                                        className={cn(
+                                            "px-3 py-1 text-sm font-medium rounded-md transition-colors",
+                                            activeTab === "basic"
+                                                ? "bg-background text-foreground shadow-sm"
+                                                : "text-muted-foreground hover:text-foreground"
+                                        )}
+                                    >
+                                        Basic
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setActiveTab("advanced")}
+                                        className={cn(
+                                            "px-3 py-1 text-sm font-medium rounded-md transition-colors",
+                                            activeTab === "advanced"
+                                                ? "bg-background text-foreground shadow-sm"
+                                                : "text-muted-foreground hover:text-foreground"
+                                        )}
+                                    >
+                                        Advanced
+                                    </button>
+                                </div>
+                            </div>
+                            <span className="text-xs text-muted-foreground">
+                                {activeTab === "basic"
+                                    ? basicPatterns.length
+                                    : advancedPatterns.length}{" "}
+                                templates
+                            </span>
+                        </div>
+
+                        {/* Scrollable grid area */}
+                        <div className="max-h-[60vh] overflow-y-auto pr-2">
                             <PatternPicker
+                                patterns={activeTab === "basic" ? basicPatterns : advancedPatterns}
                                 selectedPatternId={selectedPattern?.id || null}
                                 onSelect={handlePatternSelect}
                             />
                         </div>
 
                         {/* Actions - always visible */}
-                        <div className="flex items-center justify-between pt-4 mt-4 border-t border-border bg-background sticky bottom-0">
+                        <div className="flex items-center justify-between pt-4 mt-4 border-t border-border bg-background">
                             <Button
                                 type="button"
                                 variant="ghost"

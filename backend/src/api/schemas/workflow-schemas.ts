@@ -74,7 +74,8 @@ export const listWorkflowsQuerySchema = z.object({
         .string()
         .transform((val) => parseInt(val))
         .pipe(z.number().min(0))
-        .optional()
+        .optional(),
+    folderId: z.string().optional() // "null" for root level, UUID for specific folder, undefined for all
 });
 
 // URL parameters

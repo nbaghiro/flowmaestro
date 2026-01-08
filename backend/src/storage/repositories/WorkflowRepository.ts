@@ -49,27 +49,47 @@ export class WorkflowRepository {
 
     async findByUserId(
         userId: string,
-        options: { limit?: number; offset?: number } = {}
+        options: { limit?: number; offset?: number; folderId?: string | null } = {}
     ): Promise<{ workflows: WorkflowModel[]; total: number }> {
         const limit = options.limit || 50;
         const offset = options.offset || 0;
 
+        // Build folder filter
+        // folderId = undefined: return all workflows (no filter)
+        // folderId = null: return workflows not in any folder (folder_id IS NULL)
+        // folderId = 'uuid': return workflows in that folder
+        let folderFilter = "";
+        const countParams: unknown[] = [userId];
+        const queryParams: unknown[] = [userId];
+
+        if (options.folderId === null) {
+            folderFilter = " AND folder_id IS NULL";
+        } else if (options.folderId !== undefined) {
+            folderFilter = " AND folder_id = $2";
+            countParams.push(options.folderId);
+            queryParams.push(options.folderId);
+        }
+
         const countQuery = `
             SELECT COUNT(*) as count
             FROM flowmaestro.workflows
-            WHERE user_id = $1 AND deleted_at IS NULL
+            WHERE user_id = $1 AND deleted_at IS NULL${folderFilter}
         `;
 
+        const limitParamIndex = queryParams.length + 1;
+        const offsetParamIndex = queryParams.length + 2;
         const query = `
             SELECT * FROM flowmaestro.workflows
-            WHERE user_id = $1 AND deleted_at IS NULL
+            WHERE user_id = $1 AND deleted_at IS NULL${folderFilter}
             ORDER BY created_at DESC
-            LIMIT $2 OFFSET $3
+            LIMIT $${limitParamIndex} OFFSET $${offsetParamIndex}
         `;
 
+        queryParams.push(limit, offset);
+
         const [countResult, workflowsResult] = await Promise.all([
-            db.query<{ count: string }>(countQuery, [userId]),
-            db.query<WorkflowRow>(query, [userId, limit, offset])
+            db.query<{ count: string }>(countQuery, countParams),
+            db.query<WorkflowRow>(query, queryParams)
         ]);
 
         return {
