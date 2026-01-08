@@ -184,11 +184,11 @@ export {
     createWaitNodeHandler,
     type WaitNodeConfig,
     type WaitNodeResult,
-    // Wait for User
-    WaitForUserNodeHandler,
-    createWaitForUserNodeHandler,
-    type WaitForUserNodeConfig,
-    type WaitForUserNodeResult,
+    // Human Review
+    HumanReviewNodeHandler,
+    createHumanReviewNodeHandler,
+    type HumanReviewNodeConfig,
+    type HumanReviewNodeResult,
     // Transform
     executeTransformNode,
     TransformNodeHandler,
@@ -298,7 +298,7 @@ import {
     createSwitchNodeHandler,
     createLoopNodeHandler,
     createWaitNodeHandler,
-    createWaitForUserNodeHandler,
+    createHumanReviewNodeHandler,
     createTransformNodeHandler,
     createSharedMemoryNodeHandler,
     createCodeNodeHandler
@@ -344,7 +344,7 @@ export function registerDefaultHandlers(): void {
     registerHandler(createSwitchNodeHandler(), "logic", 41);
     registerHandler(createLoopNodeHandler(), "logic", 42);
     registerHandler(createWaitNodeHandler(), "logic", 43);
-    registerHandler(createWaitForUserNodeHandler(), "logic", 44);
+    registerHandler(createHumanReviewNodeHandler(), "ai", 15);
     registerHandler(createTransformNodeHandler(), "logic", 45);
     registerHandler(createSharedMemoryNodeHandler(), "ai", 16);
     registerHandler(createCodeNodeHandler(), "logic", 47);
@@ -398,10 +398,36 @@ export interface ExecuteNodeInput {
 export type NodeResult = JsonObject;
 
 /**
- * Execute a node using the handler registry.
- * This is a backwards-compatible wrapper around executeWithRegistry.
+ * Full result from node execution including signals for workflow control.
  */
-export async function executeNode(input: ExecuteNodeInput): Promise<JsonObject> {
+export interface NodeExecutionResult {
+    /** The output data from the node */
+    result: JsonObject;
+    /** Signals for workflow control (pause, skip branches, etc.) */
+    signals: {
+        pause?: boolean;
+        pauseContext?: {
+            reason: string;
+            nodeId: string;
+            pausedAt: number;
+            resumeTrigger?: "manual" | "timeout" | "webhook" | "signal";
+            timeoutMs?: number;
+            preservedData?: JsonObject;
+        };
+        branchesToSkip?: string[];
+        selectedRoute?: string;
+    };
+    /** Execution metrics */
+    metrics?: {
+        durationMs?: number;
+    };
+}
+
+/**
+ * Execute a node using the handler registry.
+ * Returns full output including signals for workflow control.
+ */
+export async function executeNode(input: ExecuteNodeInput): Promise<NodeExecutionResult> {
     const { nodeType, nodeConfig, context, executionContext } = input;
 
     // Create a context snapshot from the plain context object
@@ -423,7 +449,12 @@ export async function executeNode(input: ExecuteNodeInput): Promise<JsonObject> 
     // Execute using registry
     const output = await executeRegistry(handlerInput);
 
-    return output.result;
+    // Return full result including signals
+    return {
+        result: output.result,
+        signals: output.signals || {},
+        metrics: output.metrics
+    };
 }
 
 // ============================================================================

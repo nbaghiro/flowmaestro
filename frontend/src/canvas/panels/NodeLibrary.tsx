@@ -22,7 +22,7 @@ import {
     Search,
     Pin,
     PinOff,
-    UserCircle,
+    UserCheck,
     // Category icons
     Download,
     Upload,
@@ -138,6 +138,13 @@ const nodeLibrary: NodeDefinition[] = [
         description: "Image generation and analysis with AI models"
     },
     {
+        type: "humanReview",
+        label: "Human Review",
+        icon: UserCheck,
+        category: "ai",
+        description: "Pause workflow for human review and approval"
+    },
+    {
         type: "shared-memory",
         label: "Shared Memory",
         icon: Database,
@@ -204,13 +211,6 @@ const nodeLibrary: NodeDefinition[] = [
         icon: Clock,
         category: "logic",
         description: "Pause workflow execution for a duration"
-    },
-    {
-        type: "waitForUser",
-        label: "Wait for User",
-        icon: UserCircle,
-        category: "logic",
-        description: "Pause workflow and wait for user input"
     },
     {
         type: "transform",

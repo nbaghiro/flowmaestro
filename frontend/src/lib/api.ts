@@ -1295,13 +1295,30 @@ export async function getTriggerEvents(providerId: string): Promise<GetTriggerEv
 
 // ===== Execution API Functions =====
 
+export interface ExecutionPauseContext {
+    reason: string;
+    nodeId: string;
+    nodeName?: string;
+    pausedAt: number;
+    resumeTrigger?: "manual" | "timeout" | "webhook" | "signal";
+    timeoutMs?: number;
+    prompt?: string;
+    description?: string;
+    variableName: string;
+    inputType: "text" | "number" | "boolean" | "json";
+    placeholder?: string;
+    validation?: JsonObject;
+    required?: boolean;
+}
+
 export interface Execution {
     id: string;
     workflow_id: string;
-    status: "pending" | "running" | "completed" | "failed" | "cancelled";
+    status: "pending" | "running" | "paused" | "completed" | "failed" | "cancelled";
     inputs: JsonObject | null;
     outputs: JsonObject | null;
     current_state: JsonValue | null;
+    pause_context: ExecutionPauseContext | null;
     error: string | null;
     started_at: string | null;
     completed_at: string | null;
@@ -1326,7 +1343,7 @@ export interface ListExecutionsResponse {
 export async function getExecutions(
     workflowId?: string,
     params?: {
-        status?: "pending" | "running" | "completed" | "failed" | "cancelled";
+        status?: "pending" | "running" | "paused" | "completed" | "failed" | "cancelled";
         limit?: number;
         offset?: number;
     }
@@ -1383,33 +1400,34 @@ export async function getExecution(
 }
 
 /**
- * Submit user input to a running workflow execution
+ * Submit user response to a paused workflow execution (Human Review node)
  */
-export async function submitUserInput(
+export async function submitUserResponse(
     executionId: string,
-    userResponse: string,
-    nodeId?: string
-): Promise<{ success: boolean; message?: string; error?: string }> {
+    response: string | number | boolean | Record<string, unknown>
+): Promise<{ success: boolean; data?: Execution; message?: string; error?: string }> {
     const token = getAuthToken();
 
-    const response = await apiFetch(`${API_BASE_URL}/executions/${executionId}/submit-input`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            ...(token && { Authorization: `Bearer ${token}` })
-        },
-        body: JSON.stringify({
-            userResponse,
-            nodeId
-        })
-    });
+    const fetchResponse = await apiFetch(
+        `${API_BASE_URL}/executions/${executionId}/submit-response`,
+        {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                ...(token && { Authorization: `Bearer ${token}` })
+            },
+            body: JSON.stringify({ response })
+        }
+    );
 
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    if (!fetchResponse.ok) {
+        const errorData = await fetchResponse.json().catch(() => ({}));
+        throw new Error(
+            errorData.error || `HTTP ${fetchResponse.status}: ${fetchResponse.statusText}`
+        );
     }
 
-    return response.json();
+    return fetchResponse.json();
 }
 
 // ===== Connection API Functions =====

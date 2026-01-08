@@ -29,6 +29,7 @@ import ConditionalNode from "../canvas/nodes/ConditionalNode";
 import DatabaseNode from "../canvas/nodes/DatabaseNode";
 import EmbeddingsNode from "../canvas/nodes/EmbeddingsNode";
 import HTTPNode from "../canvas/nodes/HTTPNode";
+import HumanReviewNode from "../canvas/nodes/HumanReviewNode";
 import InputNode from "../canvas/nodes/InputNode";
 import IntegrationNode from "../canvas/nodes/IntegrationNode";
 import KnowledgeBaseQueryNode from "../canvas/nodes/KnowledgeBaseQueryNode";
@@ -42,7 +43,6 @@ import TemplateOutputNode from "../canvas/nodes/TemplateOutputNode";
 import TransformNode from "../canvas/nodes/TransformNode";
 import TriggerNode from "../canvas/nodes/TriggerNode";
 import VisionNode from "../canvas/nodes/VisionNode";
-import WaitForUserNode from "../canvas/nodes/WaitForUserNode";
 import WaitNode from "../canvas/nodes/WaitNode";
 import { cn } from "../lib/utils";
 import type { WorkflowPattern } from "../lib/workflowPatterns";
@@ -60,7 +60,7 @@ const nodeTypes = {
     loop: LoopNode,
     code: CodeNode,
     wait: WaitNode,
-    "wait-for-user": WaitForUserNode,
+    humanReview: HumanReviewNode,
     input: InputNode,
     transform: TransformNode,
     "shared-memory": SharedMemoryNode,

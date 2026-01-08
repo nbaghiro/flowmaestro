@@ -33,6 +33,7 @@ import { DatabaseNodeConfig } from "./configs/DatabaseNodeConfig";
 import { EmbeddingsNodeConfig } from "./configs/EmbeddingsNodeConfig";
 import { FilesNodeConfig } from "./configs/FilesNodeConfig";
 import { HTTPNodeConfig } from "./configs/HTTPNodeConfig";
+import { HumanReviewNodeConfig } from "./configs/HumanReviewNodeConfig";
 import { InputNodeConfig } from "./configs/InputNodeConfig";
 import { IntegrationNodeConfig } from "./configs/IntegrationNodeConfig";
 import { KnowledgeBaseQueryNodeConfig } from "./configs/KnowledgeBaseQueryNodeConfig";
@@ -47,7 +48,6 @@ import { TransformNodeConfig } from "./configs/TransformNodeConfig";
 import { TriggerNodeConfig } from "./configs/TriggerNodeConfig";
 import { URLNodeConfig } from "./configs/URLNodeConfig";
 import { VisionNodeConfig } from "./configs/VisionNodeConfig";
-import { WaitForUserNodeConfig } from "./configs/WaitForUserNodeConfig";
 import { WaitNodeConfig } from "./configs/WaitNodeConfig";
 
 export function NodeInspector() {
@@ -243,9 +243,9 @@ export function NodeInspector() {
                         errors={validationErrors}
                     />
                 );
-            case "waitForUser":
+            case "humanReview":
                 return (
-                    <WaitForUserNodeConfig
+                    <HumanReviewNodeConfig
                         nodeId={node.id}
                         data={node.data}
                         onUpdate={handleUpdate}

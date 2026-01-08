@@ -1,5 +1,5 @@
 /**
- * Wait For User Node Handler Unit Tests
+ * Human Review Node Handler Unit Tests
  *
  * Tests human-in-the-loop patterns:
  * - Pause signals for user input
@@ -9,33 +9,33 @@
  */
 
 import {
-    WaitForUserNodeHandler,
-    createWaitForUserNodeHandler
-} from "../../../src/temporal/activities/execution/handlers/logic/wait-for-user";
+    HumanReviewNodeHandler,
+    createHumanReviewNodeHandler
+} from "../../../src/temporal/activities/execution/handlers/logic/human-review";
 import {
     createHandlerInput,
     createTestContext,
     assertValidOutput
 } from "../../helpers/handler-test-utils";
 
-describe("WaitForUserNodeHandler", () => {
-    let handler: WaitForUserNodeHandler;
+describe("HumanReviewNodeHandler", () => {
+    let handler: HumanReviewNodeHandler;
 
     beforeEach(() => {
-        handler = createWaitForUserNodeHandler();
+        handler = createHumanReviewNodeHandler();
     });
 
     describe("handler properties", () => {
         it("has correct name", () => {
-            expect(handler.name).toBe("WaitForUserNodeHandler");
+            expect(handler.name).toBe("HumanReviewNodeHandler");
         });
 
-        it("supports waitForUser node type", () => {
-            expect(handler.supportedNodeTypes).toContain("waitForUser");
+        it("supports humanReview node type", () => {
+            expect(handler.supportedNodeTypes).toContain("humanReview");
         });
 
-        it("can handle waitForUser type", () => {
-            expect(handler.canHandle("waitForUser")).toBe(true);
+        it("can handle humanReview type", () => {
+            expect(handler.canHandle("humanReview")).toBe(true);
         });
 
         it("cannot handle other types", () => {
@@ -48,7 +48,7 @@ describe("WaitForUserNodeHandler", () => {
     describe("pause for input", () => {
         it("pauses when required input not provided", async () => {
             const input = createHandlerInput({
-                nodeType: "waitForUser",
+                nodeType: "humanReview",
                 nodeConfig: {
                     variableName: "userResponse",
                     inputType: "text",
@@ -63,12 +63,12 @@ describe("WaitForUserNodeHandler", () => {
             assertValidOutput(output);
             expect(output.signals.pause).toBe(true);
             expect(output.signals.pauseContext).toBeDefined();
-            expect(output.signals.pauseContext?.reason).toContain("Waiting for user input");
+            expect(output.signals.pauseContext?.reason).toContain("Waiting for human review");
         });
 
         it("includes prompt in pause context", async () => {
             const input = createHandlerInput({
-                nodeType: "waitForUser",
+                nodeType: "humanReview",
                 nodeConfig: {
                     variableName: "feedback",
                     inputType: "text",
@@ -86,7 +86,7 @@ describe("WaitForUserNodeHandler", () => {
 
         it("includes description in result when pausing", async () => {
             const input = createHandlerInput({
-                nodeType: "waitForUser",
+                nodeType: "humanReview",
                 nodeConfig: {
                     variableName: "approval",
                     inputType: "boolean",
@@ -105,7 +105,7 @@ describe("WaitForUserNodeHandler", () => {
 
         it("includes placeholder in result when pausing", async () => {
             const input = createHandlerInput({
-                nodeType: "waitForUser",
+                nodeType: "humanReview",
                 nodeConfig: {
                     variableName: "email",
                     inputType: "text",
@@ -124,7 +124,7 @@ describe("WaitForUserNodeHandler", () => {
 
         it("preserves node data for resume", async () => {
             const input = createHandlerInput({
-                nodeType: "waitForUser",
+                nodeType: "humanReview",
                 nodeConfig: {
                     variableName: "quantity",
                     inputType: "number",
@@ -145,7 +145,7 @@ describe("WaitForUserNodeHandler", () => {
 
         it("sets resumeTrigger to signal", async () => {
             const input = createHandlerInput({
-                nodeType: "waitForUser",
+                nodeType: "humanReview",
                 nodeConfig: {
                     variableName: "answer",
                     inputType: "text",
@@ -168,7 +168,7 @@ describe("WaitForUserNodeHandler", () => {
             });
 
             const input = createHandlerInput({
-                nodeType: "waitForUser",
+                nodeType: "humanReview",
                 nodeConfig: {
                     variableName: "userName",
                     inputType: "text",
@@ -192,7 +192,7 @@ describe("WaitForUserNodeHandler", () => {
             });
 
             const input = createHandlerInput({
-                nodeType: "waitForUser",
+                nodeType: "humanReview",
                 nodeConfig: {
                     variableName: "userAge",
                     inputType: "number",
@@ -205,7 +205,7 @@ describe("WaitForUserNodeHandler", () => {
 
             const output = await handler.execute(input);
 
-            const metadata = output.result._waitForUserMetadata as {
+            const metadata = output.result._humanReviewMetadata as {
                 source?: string;
                 variableName?: string;
             };
@@ -219,7 +219,7 @@ describe("WaitForUserNodeHandler", () => {
             });
 
             const input = createHandlerInput({
-                nodeType: "waitForUser",
+                nodeType: "humanReview",
                 nodeConfig: {
                     variableName: "consent",
                     inputType: "boolean",
@@ -242,7 +242,7 @@ describe("WaitForUserNodeHandler", () => {
             });
 
             const input = createHandlerInput({
-                nodeType: "waitForUser",
+                nodeType: "humanReview",
                 nodeConfig: {
                     variableName: "userPrefs",
                     inputType: "json",
@@ -262,7 +262,7 @@ describe("WaitForUserNodeHandler", () => {
     describe("default values", () => {
         it("uses default value when input not provided and not required", async () => {
             const input = createHandlerInput({
-                nodeType: "waitForUser",
+                nodeType: "humanReview",
                 nodeConfig: {
                     variableName: "theme",
                     inputType: "text",
@@ -282,7 +282,7 @@ describe("WaitForUserNodeHandler", () => {
 
         it("marks source as default when using default value", async () => {
             const input = createHandlerInput({
-                nodeType: "waitForUser",
+                nodeType: "humanReview",
                 nodeConfig: {
                     variableName: "retryCount",
                     inputType: "number",
@@ -295,13 +295,13 @@ describe("WaitForUserNodeHandler", () => {
 
             const output = await handler.execute(input);
 
-            const metadata = output.result._waitForUserMetadata as { source?: string };
+            const metadata = output.result._humanReviewMetadata as { source?: string };
             expect(metadata?.source).toBe("default");
         });
 
         it("handles boolean default value", async () => {
             const input = createHandlerInput({
-                nodeType: "waitForUser",
+                nodeType: "humanReview",
                 nodeConfig: {
                     variableName: "enableNotifications",
                     inputType: "boolean",
@@ -319,7 +319,7 @@ describe("WaitForUserNodeHandler", () => {
 
         it("pauses if required even with default value specified", async () => {
             const input = createHandlerInput({
-                nodeType: "waitForUser",
+                nodeType: "humanReview",
                 nodeConfig: {
                     variableName: "criticalInput",
                     inputType: "text",
@@ -341,7 +341,7 @@ describe("WaitForUserNodeHandler", () => {
             });
 
             const input = createHandlerInput({
-                nodeType: "waitForUser",
+                nodeType: "humanReview",
                 nodeConfig: {
                     variableName: "color",
                     inputType: "text",
@@ -356,7 +356,7 @@ describe("WaitForUserNodeHandler", () => {
             const output = await handler.execute(input);
 
             expect(output.result.selectedColor).toBe("blue");
-            const metadata = output.result._waitForUserMetadata as { source?: string };
+            const metadata = output.result._humanReviewMetadata as { source?: string };
             expect(metadata?.source).toBe("provided");
         });
     });
@@ -368,7 +368,7 @@ describe("WaitForUserNodeHandler", () => {
             });
 
             const input = createHandlerInput({
-                nodeType: "waitForUser",
+                nodeType: "humanReview",
                 nodeConfig: {
                     variableName: "message",
                     inputType: "text",
@@ -390,7 +390,7 @@ describe("WaitForUserNodeHandler", () => {
             });
 
             const input = createHandlerInput({
-                nodeType: "waitForUser",
+                nodeType: "humanReview",
                 nodeConfig: {
                     variableName: "quantity",
                     inputType: "number",
@@ -419,7 +419,7 @@ describe("WaitForUserNodeHandler", () => {
             });
 
             const input = createHandlerInput({
-                nodeType: "waitForUser",
+                nodeType: "humanReview",
                 nodeConfig: {
                     variableName: "orderData",
                     inputType: "json",
@@ -439,7 +439,7 @@ describe("WaitForUserNodeHandler", () => {
     describe("validation", () => {
         it("includes validation rules in pause context when specified", async () => {
             const input = createHandlerInput({
-                nodeType: "waitForUser",
+                nodeType: "humanReview",
                 nodeConfig: {
                     variableName: "email",
                     inputType: "text",
@@ -462,7 +462,7 @@ describe("WaitForUserNodeHandler", () => {
 
         it("preserves validation in pause context for resume", async () => {
             const input = createHandlerInput({
-                nodeType: "waitForUser",
+                nodeType: "humanReview",
                 nodeConfig: {
                     variableName: "age",
                     inputType: "number",
@@ -488,7 +488,7 @@ describe("WaitForUserNodeHandler", () => {
     describe("metrics", () => {
         it("records execution duration when pausing", async () => {
             const input = createHandlerInput({
-                nodeType: "waitForUser",
+                nodeType: "humanReview",
                 nodeConfig: {
                     variableName: "input",
                     inputType: "text",
@@ -510,7 +510,7 @@ describe("WaitForUserNodeHandler", () => {
             });
 
             const input = createHandlerInput({
-                nodeType: "waitForUser",
+                nodeType: "humanReview",
                 nodeConfig: {
                     variableName: "data",
                     inputType: "text",
@@ -535,7 +535,7 @@ describe("WaitForUserNodeHandler", () => {
             });
 
             const input = createHandlerInput({
-                nodeType: "waitForUser",
+                nodeType: "humanReview",
                 nodeConfig: {
                     variableName: "note",
                     inputType: "text",
@@ -559,7 +559,7 @@ describe("WaitForUserNodeHandler", () => {
             });
 
             const input = createHandlerInput({
-                nodeType: "waitForUser",
+                nodeType: "humanReview",
                 nodeConfig: {
                     variableName: "count",
                     inputType: "number",
@@ -582,7 +582,7 @@ describe("WaitForUserNodeHandler", () => {
             });
 
             const input = createHandlerInput({
-                nodeType: "waitForUser",
+                nodeType: "humanReview",
                 nodeConfig: {
                     variableName: "optIn",
                     inputType: "boolean",
@@ -601,7 +601,7 @@ describe("WaitForUserNodeHandler", () => {
 
         it("handles null default value", async () => {
             const input = createHandlerInput({
-                nodeType: "waitForUser",
+                nodeType: "humanReview",
                 nodeConfig: {
                     variableName: "optionalField",
                     inputType: "json",

@@ -41,13 +41,13 @@ export {
     type WaitNodeResult
 } from "./wait";
 
-// Wait for User (human-in-the-loop)
+// Human Review (human-in-the-loop)
 export {
-    WaitForUserNodeHandler,
-    createWaitForUserNodeHandler,
-    type WaitForUserNodeConfig,
-    type WaitForUserNodeResult
-} from "./wait-for-user";
+    HumanReviewNodeHandler,
+    createHumanReviewNodeHandler,
+    type HumanReviewNodeConfig,
+    type HumanReviewNodeResult
+} from "./human-review";
 
 // Transform
 export {

@@ -1,4 +1,4 @@
-import { ExecutionStatus, JsonValue } from "@flowmaestro/shared";
+import { ExecutionPauseContext, ExecutionStatus, JsonValue } from "@flowmaestro/shared";
 import { db } from "../database";
 import { ExecutionModel, CreateExecutionInput, UpdateExecutionInput } from "../models/Execution";
 
@@ -10,6 +10,7 @@ interface ExecutionRow {
     inputs: Record<string, JsonValue> | string | null;
     outputs: Record<string, JsonValue> | string | null;
     current_state: JsonValue | string | null;
+    pause_context: ExecutionPauseContext | string | null;
     error: string | null;
     started_at: string | Date | null;
     completed_at: string | Date | null;
@@ -111,6 +112,11 @@ export class ExecutionRepository {
         if (input.current_state !== undefined) {
             updates.push(`current_state = $${paramIndex++}`);
             values.push(JSON.stringify(input.current_state));
+        }
+
+        if (input.pause_context !== undefined) {
+            updates.push(`pause_context = $${paramIndex++}`);
+            values.push(input.pause_context ? JSON.stringify(input.pause_context) : null);
         }
 
         if (input.error !== undefined) {
@@ -275,6 +281,11 @@ export class ExecutionRepository {
                 ? typeof row.current_state === "string"
                     ? JSON.parse(row.current_state)
                     : row.current_state
+                : null,
+            pause_context: row.pause_context
+                ? typeof row.pause_context === "string"
+                    ? JSON.parse(row.pause_context)
+                    : row.pause_context
                 : null,
             error: row.error,
             created_at: new Date(row.created_at),

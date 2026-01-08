@@ -164,32 +164,32 @@ CREATE INDEX idx_credit_transactions_type ON flowmaestro.credit_transactions(tra
 Add `workspace_id` to all resource tables:
 
 ```sql
--- Workflows
+-- Core Resources
 ALTER TABLE flowmaestro.workflows ADD COLUMN workspace_id UUID;
-
--- Agents
 ALTER TABLE flowmaestro.agents ADD COLUMN workspace_id UUID;
-
--- Threads
 ALTER TABLE flowmaestro.threads ADD COLUMN workspace_id UUID;
-
--- Connections
 ALTER TABLE flowmaestro.connections ADD COLUMN workspace_id UUID;
-
--- Database Connections
 ALTER TABLE flowmaestro.database_connections ADD COLUMN workspace_id UUID;
-
--- Knowledge Bases
 ALTER TABLE flowmaestro.knowledge_bases ADD COLUMN workspace_id UUID;
 
--- Analytics tables
+-- Organization & Interfaces
+ALTER TABLE flowmaestro.folders ADD COLUMN workspace_id UUID;
+ALTER TABLE flowmaestro.form_interfaces ADD COLUMN workspace_id UUID;
+ALTER TABLE flowmaestro.chat_interfaces ADD COLUMN workspace_id UUID;
+
+-- Automation & API
+ALTER TABLE flowmaestro.workflow_triggers ADD COLUMN workspace_id UUID;
+ALTER TABLE flowmaestro.api_keys ADD COLUMN workspace_id UUID;
+ALTER TABLE flowmaestro.outgoing_webhooks ADD COLUMN workspace_id UUID;
+
+-- Analytics & Audit
 ALTER TABLE flowmaestro.daily_analytics ADD COLUMN workspace_id UUID;
 ALTER TABLE flowmaestro.hourly_analytics ADD COLUMN workspace_id UUID;
 ALTER TABLE flowmaestro.model_usage_stats ADD COLUMN workspace_id UUID;
-
--- Safety Logs
 ALTER TABLE flowmaestro.safety_logs ADD COLUMN workspace_id UUID;
 ```
+
+> **Note:** Folders are workspace-scoped, meaning each workspace has its own independent set of folders. This preserves the existing folder UX (colors, ordering, drag-drop) while adding workspace isolation.
 
 ### 1.3 Users Table Updates
 
@@ -502,6 +502,8 @@ fastify.get(
 
 ## 5. Frontend Architecture
 
+> **Note:** This codebase uses **Zustand exclusively** for state management (not React Context). All workspace state should be managed via a Zustand store.
+
 ### 5.1 New Files
 
 ```
@@ -510,9 +512,7 @@ frontend/src/
 │   ├── WorkspaceSettings.tsx           # Workspace settings page
 │   └── AcceptInvitation.tsx            # Accept invitation page
 ├── stores/
-│   └── workspaceStore.ts               # Workspace state
-├── contexts/
-│   └── WorkspaceContext.tsx            # Active workspace context
+│   └── workspaceStore.ts               # Workspace state (Zustand)
 ├── components/
 │   └── workspace/
 │       ├── WorkspaceSwitcher.tsx       # Dropdown to switch workspaces
@@ -524,85 +524,120 @@ frontend/src/
 │       ├── WorkspaceUsage.tsx          # Usage stats
 │       ├── WorkspaceBilling.tsx        # Billing info
 │       └── UpgradeDialog.tsx           # Upgrade workspace
-└── hooks/
-    └── useWorkspace.ts                 # Workspace hook
 ```
 
-### 5.2 Workspace Store
+### 5.2 Workspace Store (Zustand)
 
 ```typescript
 // frontend/src/stores/workspaceStore.ts
+import { create } from "zustand";
+import type { Workspace, WorkspaceRole, Permission } from "@flowmaestro/shared";
+
 interface WorkspaceStore {
+    // State
     workspaces: Workspace[];
     currentWorkspace: Workspace | null;
+    currentRole: WorkspaceRole | null;
     isLoading: boolean;
 
+    // Actions
     fetchWorkspaces: () => Promise<void>;
     setCurrentWorkspace: (workspace: Workspace) => void;
     switchWorkspace: (workspaceId: string) => Promise<void>;
     createWorkspace: (data: CreateWorkspaceInput) => Promise<Workspace>;
     updateWorkspace: (id: string, data: UpdateWorkspaceInput) => Promise<void>;
     deleteWorkspace: (id: string) => Promise<void>;
-}
-```
 
-### 5.3 Workspace Context
-
-```typescript
-// frontend/src/contexts/WorkspaceContext.tsx
-interface WorkspaceContextType {
-    currentWorkspace: Workspace | null;
-    workspaces: Workspace[];
-    isLoading: boolean;
-    switchWorkspace: (id: string) => Promise<void>;
+    // Permission helpers (computed from currentRole)
     hasPermission: (permission: Permission) => boolean;
     checkLimit: (resource: string) => { allowed: boolean; current: number; max: number };
 }
+
+export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
+    workspaces: [],
+    currentWorkspace: null,
+    currentRole: null,
+    isLoading: false,
+
+    fetchWorkspaces: async () => {
+        set({ isLoading: true });
+        const { data } = await api.getWorkspaces();
+        set({ workspaces: data, isLoading: false });
+    },
+
+    switchWorkspace: async (workspaceId: string) => {
+        const workspace = get().workspaces.find((w) => w.id === workspaceId);
+        if (workspace) {
+            localStorage.setItem("currentWorkspaceId", workspaceId);
+            set({ currentWorkspace: workspace });
+            // Refresh other stores that depend on workspace
+        }
+    },
+
+    hasPermission: (permission: Permission) => {
+        const role = get().currentRole;
+        if (!role) return false;
+        return ROLE_PERMISSIONS[role].includes("*") || ROLE_PERMISSIONS[role].includes(permission);
+    },
+
+    checkLimit: (resource: string) => {
+        const workspace = get().currentWorkspace;
+        if (!workspace) return { allowed: false, current: 0, max: 0 };
+        const max = workspace.limits[`max_${resource}`];
+        // current count would come from workspace stats
+        return { allowed: max === -1 || current < max, current, max };
+    }
+}));
 ```
 
-### 5.4 API Client Updates
+### 5.3 API Client Updates
 
-Add workspace header to all requests:
+Integrate workspace header into the existing `apiFetch()` wrapper:
 
 ```typescript
 // frontend/src/lib/api.ts
-function getHeaders(): HeadersInit {
-    const token = getAuthToken();
-    const workspaceId = getCurrentWorkspaceId(); // from localStorage
+export function getCurrentWorkspaceId(): string | null {
+    return localStorage.getItem("currentWorkspaceId");
+}
 
-    return {
-        "Content-Type": "application/json",
-        ...(token && { Authorization: `Bearer ${token}` }),
+async function apiFetch(url: string, options: RequestInit = {}): Promise<Response> {
+    const sessionId = getOrCreateSessionId();
+    const workspaceId = getCurrentWorkspaceId();
+
+    const headers = {
+        ...options.headers,
+        "X-Session-ID": sessionId,
         ...(workspaceId && { "X-Workspace-Id": workspaceId })
     };
+
+    // ... existing correlation and logging logic
+    return fetch(url, { ...options, headers });
 }
 ```
 
-### 5.5 App.tsx Updates
+### 5.4 App.tsx Updates
+
+No provider wrapper needed (Zustand stores are global):
 
 ```tsx
-<AuthProvider>
-    <WorkspaceProvider>
-        <Routes>
-            {/* Public */}
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/invitation/:token" element={<AcceptInvitation />} />
+<Routes>
+    {/* Public */}
+    <Route path="/login" element={<Login />} />
+    <Route path="/register" element={<Register />} />
+    <Route path="/invitation/:token" element={<AcceptInvitation />} />
 
-            {/* Protected */}
-            <Route element={<ProtectedRoute />}>
-                <Route element={<AppLayout />}>
-                    <Route path="/" element={<Workflows />} />
-                    <Route path="/workspace/settings" element={<WorkspaceSettings />} />
-                    {/* ... other routes */}
-                </Route>
-            </Route>
-        </Routes>
-    </WorkspaceProvider>
-</AuthProvider>
+    {/* Protected */}
+    <Route element={<ProtectedRoute />}>
+        <Route element={<AppLayout />}>
+            <Route path="/" element={<Workflows />} />
+            <Route path="/workspace/settings" element={<WorkspaceSettings />} />
+            {/* ... other routes */}
+        </Route>
+    </Route>
+</Routes>
 ```
 
-### 5.6 Sidebar Updates
+### 5.5 Sidebar Updates
 
 Add WorkspaceSwitcher above navigation:
 
@@ -732,7 +767,7 @@ async findByWorkspaceId(workspaceId: string, options: ListOptions): Promise<Work
 
 **Files to create:**
 
-- `backend/migrations/XXXX_create_workspaces_tables.sql`
+- `backend/migrations/1730000000037_create_workspaces_tables.sql`
 
 **Tasks:**
 
@@ -741,7 +776,7 @@ async findByWorkspaceId(workspaceId: string, options: ListOptions): Promise<Work
 3. Create workspace_invitations table
 4. Create workspace_credits table
 5. Create credit_transactions table
-6. Add workspace_id to existing tables (nullable)
+6. Add workspace_id to all resource tables (nullable initially)
 7. Add user workspace preference columns
 
 ### Phase 2: Backend Models & Repositories
@@ -781,66 +816,76 @@ async findByWorkspaceId(workspaceId: string, options: ListOptions): Promise<Work
 
 ### Phase 5: Update Existing Routes
 
-**Files to modify:**
+**Files to modify (add workspace middleware):**
 
 - All routes in `backend/src/api/routes/workflows/`
 - All routes in `backend/src/api/routes/agents/`
+- All routes in `backend/src/api/routes/folders/`
 - All routes in `backend/src/api/routes/connections/`
 - All routes in `backend/src/api/routes/knowledge-bases/`
+- All routes in `backend/src/api/routes/form-interfaces/`
+- All routes in `backend/src/api/routes/chat-interfaces/`
 - All routes in `backend/src/api/routes/triggers/`
+- All routes in `backend/src/api/routes/api-keys/`
+- All routes in `backend/src/api/routes/webhooks/`
 - All routes in `backend/src/api/routes/threads/`
 
 ### Phase 6: Update Repositories
 
-**Files to modify:**
+**Files to modify (change `findByUserId` → `findByWorkspaceId`):**
 
 - `backend/src/storage/repositories/WorkflowRepository.ts`
 - `backend/src/storage/repositories/AgentRepository.ts`
+- `backend/src/storage/repositories/FolderRepository.ts`
 - `backend/src/storage/repositories/ConnectionRepository.ts`
 - `backend/src/storage/repositories/KnowledgeBaseRepository.ts`
+- `backend/src/storage/repositories/FormInterfaceRepository.ts`
+- `backend/src/storage/repositories/ChatInterfaceRepository.ts`
 - `backend/src/storage/repositories/TriggerRepository.ts`
+- `backend/src/storage/repositories/ApiKeyRepository.ts`
+- `backend/src/storage/repositories/OutgoingWebhookRepository.ts`
 - `backend/src/storage/repositories/ThreadRepository.ts`
 
-### Phase 7: Frontend Store & Context
+### Phase 7: Frontend Store (Zustand)
 
 **Files to create:**
 
 - `frontend/src/stores/workspaceStore.ts`
-- `frontend/src/contexts/WorkspaceContext.tsx`
-- `frontend/src/hooks/useWorkspace.ts`
 
 **Files to modify:**
 
-- `frontend/src/lib/api.ts` (add workspace header)
-- `frontend/src/main.tsx` (add WorkspaceProvider)
+- `frontend/src/lib/api.ts` (add workspace header to apiFetch)
+- `frontend/src/stores/index.ts` (export workspaceStore)
 
 ### Phase 8: Frontend Components
 
 **Files to create:**
 
 - `frontend/src/components/workspace/WorkspaceSwitcher.tsx`
+- `frontend/src/components/workspace/WorkspaceCard.tsx`
 - `frontend/src/components/workspace/CreateWorkspaceDialog.tsx`
 - `frontend/src/components/workspace/InviteMemberDialog.tsx`
 - `frontend/src/components/workspace/MemberList.tsx`
 - `frontend/src/components/workspace/MemberRoleSelect.tsx`
 - `frontend/src/components/workspace/WorkspaceUsage.tsx`
+- `frontend/src/components/workspace/WorkspaceBilling.tsx`
 - `frontend/src/components/workspace/UpgradeDialog.tsx`
 
 **Files to modify:**
 
 - `frontend/src/components/layout/Sidebar.tsx` (add WorkspaceSwitcher)
-- `frontend/src/pages/Workspace.tsx` (replace placeholder)
 
-### Phase 9: Invitation Flow
+### Phase 9: Invitation Flow & Email
 
 **Files to create:**
 
 - `frontend/src/pages/AcceptInvitation.tsx`
+- `backend/src/services/email/templates/WorkspaceInvitationEmail.tsx`
 
 **Files to modify:**
 
 - `frontend/src/App.tsx` (add invitation route)
-- `backend/src/services/EmailService.ts` (invitation emails)
+- `backend/src/services/email/EmailService.ts` (add sendWorkspaceInvitation method)
 
 ### Phase 10: Data Migration
 
@@ -851,12 +896,19 @@ async findByWorkspaceId(workspaceId: string, options: ListOptions): Promise<Work
 3. Test all functionality
 4. Run migration on production
 
-### Phase 11: Credit System Integration
+### Phase 11: Stripe Billing Integration
 
-**Files to modify:**
+**Files to create:**
 
-- Update credit-subscription-system.md exploration
-- Integrate workspace credits with execution flow
+- `backend/src/services/stripe/StripeService.ts`
+- `backend/src/api/routes/workspaces/billing.ts`
+
+**Tasks:**
+
+- Create Stripe customers for workspaces
+- Manage subscriptions (Pro $29/mo, Team $99/mo)
+- Handle billing webhooks (payment_succeeded, subscription_updated)
+- Create checkout sessions for upgrades
 
 ---
 
@@ -864,21 +916,93 @@ async findByWorkspaceId(workspaceId: string, options: ListOptions): Promise<Work
 
 These existing files should be studied for patterns:
 
-| Pattern            | Reference File                                           |
-| ------------------ | -------------------------------------------------------- |
-| Migration format   | `backend/migrations/1730000000001_initial-schema.sql`    |
-| Repository pattern | `backend/src/storage/repositories/WorkflowRepository.ts` |
-| Model pattern      | `backend/src/storage/models/User.ts`                     |
-| Route pattern      | `backend/src/api/routes/workflows/create.ts`             |
-| Middleware pattern | `backend/src/api/middleware/auth.ts`                     |
-| Service pattern    | `backend/src/services/AnalyticsService.ts`               |
-| Zustand store      | `frontend/src/stores/workflowStore.ts`                   |
-| Context pattern    | `frontend/src/contexts/AuthContext.tsx`                  |
-| Dialog component   | `frontend/src/components/common/ConfirmDialog.tsx`       |
+| Pattern            | Reference File                                            |
+| ------------------ | --------------------------------------------------------- |
+| Migration format   | `backend/migrations/1730000000035_create-folders.sql`     |
+| Repository pattern | `backend/src/storage/repositories/FolderRepository.ts`    |
+| Model pattern      | `backend/src/storage/models/Folder.ts`                    |
+| Route pattern      | `backend/src/api/routes/folders/index.ts`                 |
+| Middleware pattern | `backend/src/api/middleware/auth.ts`                      |
+| Zustand store      | `frontend/src/stores/workflowStore.ts`                    |
+| Dialog component   | `frontend/src/components/folders/CreateFolderDialog.tsx`  |
+| API client         | `frontend/src/lib/api.ts`                                 |
+| Email template     | `backend/src/services/email/templates/PasswordResetEmail` |
 
 ---
 
-## 9. Testing Checklist
+## 9. Folder Integration
+
+This codebase already has a folder system for organizing resources. Workspaces will integrate with folders as follows:
+
+### Hierarchy
+
+```
+User (authentication)
+└── Workspace (resource isolation, billing, team)
+    └── Folder (organization, colors, ordering)
+        └── Resources (workflows, agents, etc.)
+```
+
+### Key Points
+
+1. **Folders are workspace-scoped:** Each workspace has its own independent set of folders
+2. **No cross-workspace folders:** Folders cannot span multiple workspaces
+3. **Preserved UX:** Existing folder features (colors, positions, drag-drop) remain unchanged
+4. **Migration:** Existing folders migrate to the user's personal workspace
+
+### Schema Change
+
+```sql
+-- Add workspace_id to folders table
+ALTER TABLE flowmaestro.folders ADD COLUMN workspace_id UUID;
+
+-- After data migration, add constraint
+ALTER TABLE flowmaestro.folders
+ADD CONSTRAINT fk_folders_workspace
+    FOREIGN KEY (workspace_id) REFERENCES flowmaestro.workspaces(id) ON DELETE CASCADE;
+
+ALTER TABLE flowmaestro.folders ALTER COLUMN workspace_id SET NOT NULL;
+```
+
+### Repository Update
+
+```typescript
+// FolderRepository.ts - Update query pattern
+async findByWorkspaceId(workspaceId: string): Promise<FolderModel[]> {
+    const query = `
+        SELECT * FROM flowmaestro.folders
+        WHERE workspace_id = $1 AND deleted_at IS NULL
+        ORDER BY position ASC, created_at ASC
+    `;
+    const result = await db.query<FolderRow>(query, [workspaceId]);
+    return result.rows.map((row) => this.mapRow(row));
+}
+```
+
+---
+
+## 10. Infrastructure Status
+
+### Email Service ✅ Ready
+
+- **Location:** `backend/src/services/email/EmailService.ts`
+- **Provider:** Resend with React email templates
+- **Existing templates:** Password reset, email verification, 2FA notifications
+- **Action needed:** Add `WorkspaceInvitationEmail.tsx` template
+
+### Stripe Integration ⚠️ Partial
+
+- **Current:** `backend/src/api/routes/webhooks/stripe.ts` handles workflow triggers only
+- **Missing:** Billing/subscription management for workspace upgrades
+- **Action needed:**
+    - Create `backend/src/services/stripe/StripeService.ts`
+    - Implement customer creation, subscription management
+    - Handle billing webhooks (payment_succeeded, subscription_updated)
+    - Create checkout sessions for Pro/Team upgrades
+
+---
+
+## 11. Testing Checklist
 
 - [ ] User can create workspace
 - [ ] User can switch between workspaces

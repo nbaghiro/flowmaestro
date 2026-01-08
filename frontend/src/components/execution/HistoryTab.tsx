@@ -3,7 +3,15 @@
  * Displays past executions for the current workflow
  */
 
-import { CheckCircle2, XCircle, Clock, AlertCircle, RotateCcw, ChevronRight } from "lucide-react";
+import {
+    CheckCircle2,
+    XCircle,
+    Clock,
+    AlertCircle,
+    RotateCcw,
+    ChevronRight,
+    PauseCircle
+} from "lucide-react";
 import { useState, useEffect } from "react";
 import { getExecutions, Execution } from "../../lib/api";
 import { logger } from "../../lib/logger";
@@ -70,12 +78,26 @@ export function HistoryTab({ workflowId }: HistoryTabProps) {
                     bg: "bg-red-50 dark:bg-red-900/20",
                     label: "Failed"
                 };
+            case "paused":
+                return {
+                    icon: <PauseCircle className="w-4 h-4" />,
+                    color: "text-amber-500",
+                    bg: "bg-amber-50 dark:bg-amber-900/20",
+                    label: "Paused"
+                };
             case "cancelled":
                 return {
                     icon: <AlertCircle className="w-4 h-4" />,
                     color: "text-gray-500",
                     bg: "bg-muted/30 dark:bg-gray-900/20",
                     label: "Cancelled"
+                };
+            default:
+                return {
+                    icon: <Clock className="w-4 h-4" />,
+                    color: "text-gray-500",
+                    bg: "bg-muted/30 dark:bg-gray-900/20",
+                    label: status
                 };
         }
     };

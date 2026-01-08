@@ -25,6 +25,7 @@ import DatabaseNode from "./nodes/DatabaseNode";
 import EmbeddingsNode from "./nodes/EmbeddingsNode";
 import FilesNode from "./nodes/FilesNode";
 import HTTPNode from "./nodes/HTTPNode";
+import HumanReviewNode from "./nodes/HumanReviewNode";
 import InputNode from "./nodes/InputNode";
 import IntegrationNode from "./nodes/IntegrationNode";
 import KnowledgeBaseQueryNode from "./nodes/KnowledgeBaseQueryNode";
@@ -39,7 +40,6 @@ import TransformNode from "./nodes/TransformNode";
 import TriggerNode from "./nodes/TriggerNode";
 import URLNode from "./nodes/URLNode";
 import VisionNode from "./nodes/VisionNode";
-import WaitForUserNode from "./nodes/WaitForUserNode";
 import WaitNode from "./nodes/WaitNode";
 
 // Register edge types
@@ -72,7 +72,7 @@ const nodeTypes = {
     loop: LoopNode,
     code: CodeNode,
     wait: WaitNode,
-    waitForUser: WaitForUserNode,
+    humanReview: HumanReviewNode,
     input: InputNode,
     transform: TransformNode,
     "shared-memory": SharedMemoryNode,
@@ -324,6 +324,7 @@ function getDefaultLabel(type: string): string {
         loop: "Loop",
         code: "Code",
         wait: "Wait/Delay",
+        humanReview: "Human Review",
         input: "Input",
         transform: "Transform",
         output: "Output",

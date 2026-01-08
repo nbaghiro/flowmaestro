@@ -3,11 +3,24 @@
  * Displays real-time execution monitoring with logs, variables, and status
  */
 
-import { Play, CheckCircle2, XCircle, Clock, StopCircle, Filter, ChevronDown } from "lucide-react";
+import {
+    Play,
+    CheckCircle2,
+    XCircle,
+    Clock,
+    StopCircle,
+    Filter,
+    ChevronDown,
+    PauseCircle,
+    MessageSquareText
+} from "lucide-react";
 import { useState, useEffect, useRef } from "react";
+import { submitUserResponse, type ExecutionPauseContext } from "../../lib/api";
 import { cn } from "../../lib/utils";
 import { useWorkflowStore } from "../../stores/workflowStore";
+import { Button } from "../common/Button";
 import { Select } from "../common/Select";
+import { UserResponseDialog } from "./UserResponseDialog";
 
 interface ExecutionTabProps {
     workflowId: string;
@@ -16,10 +29,11 @@ interface ExecutionTabProps {
 type LogLevel = "info" | "debug" | "warn" | "error" | "all";
 
 export function ExecutionTab({ workflowId: _workflowId }: ExecutionTabProps) {
-    const { currentExecution } = useWorkflowStore();
+    const { currentExecution, setPauseContext, updateExecutionStatus } = useWorkflowStore();
     const [logLevelFilter, setLogLevelFilter] = useState<LogLevel>("all");
     const [nodeFilter, setNodeFilter] = useState<string>("all");
     const [showFilters, setShowFilters] = useState(false);
+    const [showResponseDialog, setShowResponseDialog] = useState(false);
     const logsEndRef = useRef<HTMLDivElement>(null);
 
     // Auto-scroll to bottom when new logs arrive
@@ -28,6 +42,27 @@ export function ExecutionTab({ workflowId: _workflowId }: ExecutionTabProps) {
             logsEndRef.current.scrollIntoView({ behavior: "smooth" });
         }
     }, [currentExecution?.logs.length]);
+
+    // Auto-open dialog when execution is paused
+    useEffect(() => {
+        if (currentExecution?.status === "paused" && currentExecution?.pauseContext) {
+            setShowResponseDialog(true);
+        }
+    }, [currentExecution?.status, currentExecution?.pauseContext]);
+
+    // Handle submitting user response
+    const handleSubmitResponse = async (
+        response: string | number | boolean | Record<string, unknown>
+    ) => {
+        if (!currentExecution) return;
+
+        await submitUserResponse(currentExecution.id, response);
+
+        // Update local state
+        setPauseContext(null);
+        updateExecutionStatus("running");
+        setShowResponseDialog(false);
+    };
 
     if (!currentExecution) {
         return (
@@ -52,6 +87,13 @@ export function ExecutionTab({ workflowId: _workflowId }: ExecutionTabProps) {
                     color: "text-blue-500",
                     bg: "bg-blue-50 dark:bg-blue-900/20",
                     border: "border-blue-200 dark:border-blue-800"
+                };
+            case "paused":
+                return {
+                    icon: <PauseCircle className="w-5 h-5" />,
+                    color: "text-amber-500",
+                    bg: "bg-amber-50 dark:bg-amber-900/20",
+                    border: "border-amber-200 dark:border-amber-800"
                 };
             case "completed":
                 return {
@@ -141,6 +183,15 @@ export function ExecutionTab({ workflowId: _workflowId }: ExecutionTabProps) {
                             <StopCircle className="w-4 h-4" />
                             Cancel
                         </button>
+                    )}
+                    {currentExecution.status === "paused" && currentExecution.pauseContext && (
+                        <Button
+                            onClick={() => setShowResponseDialog(true)}
+                            className="flex items-center gap-2"
+                        >
+                            <MessageSquareText className="w-4 h-4" />
+                            Respond
+                        </Button>
                     )}
                 </div>
             </div>
@@ -248,6 +299,17 @@ export function ExecutionTab({ workflowId: _workflowId }: ExecutionTabProps) {
                 )}
                 <div ref={logsEndRef} />
             </div>
+
+            {/* User Response Dialog */}
+            {currentExecution.pauseContext && (
+                <UserResponseDialog
+                    isOpen={showResponseDialog}
+                    onClose={() => setShowResponseDialog(false)}
+                    onSubmit={handleSubmitResponse}
+                    pauseContext={currentExecution.pauseContext as ExecutionPauseContext}
+                    nodeName={currentExecution.pauseContext.nodeName}
+                />
+            )}
         </div>
     );
 }

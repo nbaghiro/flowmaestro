@@ -1,4 +1,4 @@
-import type { ExecutionStatus, JsonValue } from "@flowmaestro/shared";
+import type { ExecutionPauseContext, ExecutionStatus, JsonValue } from "@flowmaestro/shared";
 
 export interface ExecutionModel {
     id: string;
@@ -7,6 +7,7 @@ export interface ExecutionModel {
     inputs: Record<string, JsonValue> | null;
     outputs: Record<string, JsonValue> | null;
     current_state: JsonValue | null;
+    pause_context: ExecutionPauseContext | null;
     error: string | null;
     started_at: Date | null;
     completed_at: Date | null;
@@ -22,6 +23,7 @@ export interface UpdateExecutionInput {
     status?: ExecutionStatus;
     outputs?: Record<string, JsonValue>;
     current_state?: JsonValue;
+    pause_context?: ExecutionPauseContext | null;
     error?: string;
     started_at?: Date;
     completed_at?: Date;

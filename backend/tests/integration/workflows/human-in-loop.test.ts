@@ -323,7 +323,7 @@ describe("Human-in-the-Loop Orchestration", () => {
             const workflow = createWorkflow(
                 [
                     { id: "Input", type: "input", name: "Input" },
-                    { id: "WaitForUser", type: "waitForUser", name: "Wait For User" },
+                    { id: "WaitForUser", type: "humanReview", name: "Wait For User" },
                     { id: "Output", type: "output", name: "Output" }
                 ],
                 [
@@ -371,7 +371,7 @@ describe("Human-in-the-Loop Orchestration", () => {
             const workflow = createWorkflow(
                 [
                     { id: "Input", type: "input", name: "Input" },
-                    { id: "WaitForUser", type: "waitForUser", name: "Wait For User" }
+                    { id: "WaitForUser", type: "humanReview", name: "Wait For User" }
                 ],
                 [{ source: "Input", target: "WaitForUser" }]
             );
@@ -415,7 +415,7 @@ describe("Human-in-the-Loop Orchestration", () => {
             const workflow = createWorkflow(
                 [
                     { id: "Input", type: "input", name: "Input" },
-                    { id: "WaitForUser", type: "waitForUser", name: "Wait For User" },
+                    { id: "WaitForUser", type: "humanReview", name: "Wait For User" },
                     { id: "Process", type: "transform", name: "Process" },
                     { id: "Output", type: "output", name: "Output" }
                 ],
@@ -477,7 +477,7 @@ describe("Human-in-the-Loop Orchestration", () => {
             const workflow = createWorkflow(
                 [
                     { id: "Input", type: "input", name: "Input" },
-                    { id: "WaitForUser", type: "waitForUser", name: "Wait For User" },
+                    { id: "WaitForUser", type: "humanReview", name: "Wait For User" },
                     { id: "LLM", type: "llm", name: "LLM" },
                     { id: "Output", type: "output", name: "Output" }
                 ],
@@ -528,7 +528,7 @@ describe("Human-in-the-Loop Orchestration", () => {
             const workflow = createWorkflow(
                 [
                     { id: "Input", type: "input", name: "Input" },
-                    { id: "WaitForUser", type: "waitForUser", name: "Wait For User" },
+                    { id: "WaitForUser", type: "humanReview", name: "Wait For User" },
                     { id: "Output", type: "output", name: "Output" }
                 ],
                 [
@@ -560,7 +560,7 @@ describe("Human-in-the-Loop Orchestration", () => {
             const workflow = createWorkflow(
                 [
                     { id: "Input", type: "input", name: "Input" },
-                    { id: "WaitForUser", type: "waitForUser", name: "Wait For User" },
+                    { id: "WaitForUser", type: "humanReview", name: "Wait For User" },
                     { id: "Output", type: "output", name: "Output" }
                 ],
                 [
@@ -595,8 +595,8 @@ describe("Human-in-the-Loop Orchestration", () => {
             const workflow = createWorkflow(
                 [
                     { id: "Input", type: "input", name: "Input" },
-                    { id: "ManagerApproval", type: "waitForUser", name: "Manager Approval" },
-                    { id: "DirectorApproval", type: "waitForUser", name: "Director Approval" },
+                    { id: "ManagerApproval", type: "humanReview", name: "Manager Approval" },
+                    { id: "DirectorApproval", type: "humanReview", name: "Director Approval" },
                     { id: "Execute", type: "transform", name: "Execute" },
                     { id: "Output", type: "output", name: "Output" }
                 ],
@@ -672,7 +672,7 @@ describe("Human-in-the-Loop Orchestration", () => {
             const workflow = createWorkflow(
                 [
                     { id: "Input", type: "input", name: "Input" },
-                    { id: "WaitForUser", type: "waitForUser", name: "Wait For User" }
+                    { id: "WaitForUser", type: "humanReview", name: "Wait For User" }
                 ],
                 [{ source: "Input", target: "WaitForUser" }]
             );
@@ -722,7 +722,7 @@ describe("Human-in-the-Loop Orchestration", () => {
                 const workflow = createWorkflow(
                     [
                         { id: "Input", type: "input", name: "Input" },
-                        { id: "WaitForUser", type: "waitForUser", name: "Wait For User" }
+                        { id: "WaitForUser", type: "humanReview", name: "Wait For User" }
                     ],
                     [{ source: "Input", target: "WaitForUser" }]
                 );
@@ -757,7 +757,7 @@ describe("Human-in-the-Loop Orchestration", () => {
             const workflow = createWorkflow(
                 [
                     { id: "Input", type: "input", name: "Input" },
-                    { id: "WaitForUser", type: "waitForUser", name: "Wait For User" },
+                    { id: "WaitForUser", type: "humanReview", name: "Wait For User" },
                     { id: "Output", type: "output", name: "Output" }
                 ],
                 [
@@ -798,7 +798,7 @@ describe("Human-in-the-Loop Orchestration", () => {
             const workflow = createWorkflow(
                 [
                     { id: "Input", type: "input", name: "Input" },
-                    { id: "WaitForUser", type: "waitForUser", name: "Wait For User" },
+                    { id: "WaitForUser", type: "humanReview", name: "Wait For User" },
                     { id: "Output", type: "output", name: "Output" }
                 ],
                 [
@@ -839,7 +839,7 @@ describe("Human-in-the-Loop Orchestration", () => {
                 [
                     { id: "Input", type: "input", name: "Input" },
                     { id: "AutoProcess", type: "transform", name: "Auto Process" },
-                    { id: "EscalateToHuman", type: "waitForUser", name: "Escalate" },
+                    { id: "EscalateToHuman", type: "humanReview", name: "Escalate" },
                     { id: "Finalize", type: "transform", name: "Finalize" },
                     { id: "Output", type: "output", name: "Output" }
                 ],

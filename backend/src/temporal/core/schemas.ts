@@ -499,11 +499,11 @@ export const InputNodeConfigSchema = z.object({
 export type InputNodeConfig = z.infer<typeof InputNodeConfigSchema>;
 
 /**
- * Wait For User Node Configuration.
+ * Human Review Node Configuration.
  * For collecting user input during workflow execution (human-in-the-loop).
  * Pauses workflow until user provides input.
  */
-export const WaitForUserNodeConfigSchema = z.object({
+export const HumanReviewNodeConfigSchema = z.object({
     prompt: z.string().min(1, "Prompt is required"),
     description: z.string().optional(),
     variableName: z.string().min(1, "Variable name is required"),
@@ -515,7 +515,7 @@ export const WaitForUserNodeConfigSchema = z.object({
     outputVariable: z.string().min(1, "Output variable is required")
 });
 
-export type WaitForUserNodeConfig = z.infer<typeof WaitForUserNodeConfigSchema>;
+export type HumanReviewNodeConfig = z.infer<typeof HumanReviewNodeConfigSchema>;
 
 /**
  * Supported file types for the Files node.
@@ -697,7 +697,7 @@ export const NodeSchemaRegistry: Record<string, z.ZodSchema> = {
     loop: LoopNodeConfigSchema,
     switch: SwitchNodeConfigSchema,
     wait: WaitNodeConfigSchema,
-    waitForUser: WaitForUserNodeConfigSchema,
+    humanReview: HumanReviewNodeConfigSchema,
     // Data
     transform: TransformNodeConfigSchema,
     "shared-memory": SharedMemoryNodeConfigSchema,

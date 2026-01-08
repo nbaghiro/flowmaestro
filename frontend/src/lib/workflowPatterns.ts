@@ -740,7 +740,7 @@ const supervisedAgentPattern: WorkflowPattern = {
                 position: { x: 350, y: 300 }
             },
             "wait-review": {
-                type: "wait-for-user",
+                type: "humanReview",
                 name: "Human Review",
                 config: {
                     prompt: "Please review the AI proposal and decide whether to approve or reject.",

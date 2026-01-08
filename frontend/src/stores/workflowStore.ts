@@ -60,9 +60,25 @@ export interface ExecutionLog {
     metadata?: JsonObject;
 }
 
+export interface ExecutionPauseContextState {
+    reason: string;
+    nodeId: string;
+    nodeName?: string;
+    pausedAt: number;
+    resumeTrigger?: "manual" | "timeout" | "webhook" | "signal";
+    timeoutMs?: number;
+    prompt?: string;
+    description?: string;
+    variableName: string;
+    inputType: "text" | "number" | "boolean" | "json";
+    placeholder?: string;
+    validation?: Record<string, unknown>;
+    required?: boolean;
+}
+
 export interface CurrentExecution {
     id: string;
-    status: "pending" | "running" | "completed" | "failed" | "cancelled";
+    status: "pending" | "running" | "paused" | "completed" | "failed" | "cancelled";
     nodeStates: Map<string, NodeExecutionState>;
     variables: Map<string, JsonValue>;
     logs: ExecutionLog[];
@@ -70,6 +86,7 @@ export interface CurrentExecution {
     completedAt: Date | null;
     duration: number | null;
     triggerId?: string;
+    pauseContext?: ExecutionPauseContextState | null;
 }
 
 interface WorkflowStore {
@@ -112,6 +129,7 @@ interface WorkflowStore {
     updateNodeState: (nodeId: string, state: Partial<NodeExecutionState>) => void;
     addExecutionLog: (log: Omit<ExecutionLog, "id">) => void;
     updateVariable: (key: string, value: JsonValue) => void;
+    setPauseContext: (pauseContext: ExecutionPauseContextState | null) => void;
     clearExecution: () => void;
     resetWorkflow: () => void;
 
@@ -418,6 +436,28 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
         });
 
         logger.debug("Variable updated", { key });
+    },
+
+    setPauseContext: (pauseContext: ExecutionPauseContextState | null) => {
+        const { currentExecution } = get();
+        if (!currentExecution) return;
+
+        set({
+            currentExecution: {
+                ...currentExecution,
+                pauseContext,
+                status: pauseContext ? "paused" : currentExecution.status
+            }
+        });
+
+        if (pauseContext) {
+            logger.info("Execution paused for user response", {
+                nodeId: pauseContext.nodeId,
+                variableName: pauseContext.variableName
+            });
+        } else {
+            logger.info("Execution pause context cleared");
+        }
     },
 
     clearExecution: () => {

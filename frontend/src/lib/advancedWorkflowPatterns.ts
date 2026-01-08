@@ -424,8 +424,8 @@ const emailAutoresponderPattern: WorkflowPattern = {
                 },
                 position: { x: 600, y: 150 }
             },
-            "wait-review": {
-                type: "wait-for-user",
+            "human-review": {
+                type: "humanReview",
                 name: "Review Draft",
                 config: {
                     prompt: "Please review and edit the draft email response before sending.",
@@ -480,8 +480,8 @@ const emailAutoresponderPattern: WorkflowPattern = {
         edges: [
             { id: "edge-1", source: "input-1", target: "router-1" },
             { id: "edge-2", source: "router-1", target: "llm-draft" },
-            { id: "edge-3", source: "llm-draft", target: "wait-review" },
-            { id: "edge-4", source: "wait-review", target: "conditional-send" },
+            { id: "edge-3", source: "llm-draft", target: "human-review" },
+            { id: "edge-4", source: "human-review", target: "conditional-send" },
             { id: "edge-5", source: "conditional-send", target: "http-send", sourceHandle: "true" },
             { id: "edge-6", source: "conditional-send", target: "output-1", sourceHandle: "false" },
             { id: "edge-7", source: "http-send", target: "output-1" }

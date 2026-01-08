@@ -1,5 +1,5 @@
 /**
- * Wait For User Node Handler
+ * Human Review Node Handler
  *
  * Handles human-in-the-loop patterns by pausing workflow for user input.
  * Supports text, number, boolean, and JSON input types with validation.
@@ -8,21 +8,21 @@
 import type { JsonObject, JsonValue } from "@flowmaestro/shared";
 import { createActivityLogger } from "../../../../core";
 import {
-    WaitForUserNodeConfigSchema,
+    HumanReviewNodeConfigSchema,
     validateOrThrow,
-    type WaitForUserNodeConfig
+    type HumanReviewNodeConfig
 } from "../../../../core/schemas";
 import { BaseNodeHandler, type NodeHandlerInput, type NodeHandlerOutput } from "../../types";
 
-const logger = createActivityLogger({ nodeType: "WaitForUser" });
+const logger = createActivityLogger({ nodeType: "HumanReview" });
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
-export type { WaitForUserNodeConfig };
+export type { HumanReviewNodeConfig };
 
-export interface WaitForUserNodeResult {
+export interface HumanReviewNodeResult {
     variableName: string;
     inputType: string;
     value: JsonValue;
@@ -34,22 +34,22 @@ export interface WaitForUserNodeResult {
 // ============================================================================
 
 /**
- * Handler for WaitForUser node type.
+ * Handler for HumanReview node type.
  * Pauses workflow execution when user input is required.
  */
-export class WaitForUserNodeHandler extends BaseNodeHandler {
-    readonly name = "WaitForUserNodeHandler";
-    readonly supportedNodeTypes = ["waitForUser"] as const;
+export class HumanReviewNodeHandler extends BaseNodeHandler {
+    readonly name = "HumanReviewNodeHandler";
+    readonly supportedNodeTypes = ["humanReview"] as const;
 
     async execute(input: NodeHandlerInput): Promise<NodeHandlerOutput> {
         const startTime = Date.now();
         const config = validateOrThrow(
-            WaitForUserNodeConfigSchema,
+            HumanReviewNodeConfigSchema,
             input.nodeConfig,
-            "WaitForUser"
+            "HumanReview"
         );
 
-        logger.info("Processing wait for user node", {
+        logger.info("Processing human review node", {
             variableName: config.variableName,
             inputType: config.inputType,
             required: config.required
@@ -63,7 +63,7 @@ export class WaitForUserNodeHandler extends BaseNodeHandler {
                 variableName: config.variableName
             });
 
-            const result: WaitForUserNodeResult = {
+            const result: HumanReviewNodeResult = {
                 variableName: config.variableName,
                 inputType: config.inputType,
                 value: existingValue as JsonValue,
@@ -73,7 +73,7 @@ export class WaitForUserNodeHandler extends BaseNodeHandler {
             return this.success(
                 {
                     [config.outputVariable]: existingValue,
-                    _waitForUserMetadata: result as unknown as JsonObject
+                    _humanReviewMetadata: result as unknown as JsonObject
                 },
                 {},
                 { durationMs: Date.now() - startTime }
@@ -86,7 +86,7 @@ export class WaitForUserNodeHandler extends BaseNodeHandler {
                 variableName: config.variableName
             });
 
-            const result: WaitForUserNodeResult = {
+            const result: HumanReviewNodeResult = {
                 variableName: config.variableName,
                 inputType: config.inputType,
                 value: config.defaultValue as JsonValue,
@@ -96,7 +96,7 @@ export class WaitForUserNodeHandler extends BaseNodeHandler {
             return this.success(
                 {
                     [config.outputVariable]: config.defaultValue as JsonValue,
-                    _waitForUserMetadata: result as unknown as JsonObject
+                    _humanReviewMetadata: result as unknown as JsonObject
                 } as JsonObject,
                 {},
                 { durationMs: Date.now() - startTime }
@@ -104,7 +104,7 @@ export class WaitForUserNodeHandler extends BaseNodeHandler {
         }
 
         // No input provided - pause for human input
-        logger.info("Pausing workflow for user input", {
+        logger.info("Pausing workflow for human review", {
             variableName: config.variableName,
             nodeId: input.metadata.nodeId
         });
@@ -119,7 +119,7 @@ export class WaitForUserNodeHandler extends BaseNodeHandler {
                 ...(config.validation && { validation: config.validation as unknown as JsonObject })
             },
             {
-                reason: `Waiting for user input: ${config.prompt || config.variableName}`,
+                reason: `Waiting for human review: ${config.prompt || config.variableName}`,
                 nodeId: input.metadata.nodeId,
                 pausedAt: Date.now(),
                 resumeTrigger: "signal",
@@ -139,8 +139,8 @@ export class WaitForUserNodeHandler extends BaseNodeHandler {
 }
 
 /**
- * Factory function for creating WaitForUser handler.
+ * Factory function for creating HumanReview handler.
  */
-export function createWaitForUserNodeHandler(): WaitForUserNodeHandler {
-    return new WaitForUserNodeHandler();
+export function createHumanReviewNodeHandler(): HumanReviewNodeHandler {
+    return new HumanReviewNodeHandler();
 }

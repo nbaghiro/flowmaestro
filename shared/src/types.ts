@@ -115,8 +115,31 @@ export interface ErrorHandlingConfig {
 }
 
 // Execution Types
-export type ExecutionStatus = "pending" | "running" | "completed" | "failed" | "cancelled";
+export type ExecutionStatus =
+    | "pending"
+    | "running"
+    | "paused"
+    | "completed"
+    | "failed"
+    | "cancelled";
 export type NodeStatus = "pending" | "running" | "completed" | "failed" | "skipped";
+
+export interface ExecutionPauseContext {
+    reason: string;
+    nodeId: string;
+    nodeName?: string;
+    pausedAt: number;
+    resumeTrigger?: "manual" | "timeout" | "webhook" | "signal";
+    timeoutMs?: number;
+    // Data needed to collect and validate user response
+    prompt?: string;
+    description?: string;
+    variableName: string;
+    inputType: "text" | "number" | "boolean" | "json";
+    placeholder?: string;
+    validation?: JsonObject;
+    required?: boolean;
+}
 
 export interface Execution {
     id: string;
@@ -125,6 +148,7 @@ export interface Execution {
     inputs?: JsonObject;
     outputs?: JsonObject;
     currentState?: JsonValue;
+    pauseContext?: ExecutionPauseContext;
     error?: string;
     startedAt?: Date;
     completedAt?: Date;
@@ -308,6 +332,8 @@ export type WebSocketEventType =
     | "connection:established"
     | "execution:started"
     | "execution:progress"
+    | "execution:paused"
+    | "execution:resumed"
     | "execution:completed"
     | "execution:failed"
     | "node:started"
@@ -379,6 +405,32 @@ export type WebSocketEvent =
           failedNode?: string;
           failedNodeId?: string;
           status?: string;
+      } & JsonObject)
+    | ({
+          type: "execution:paused";
+          timestamp: number;
+          executionId: string;
+          status?: string;
+          reason?: string;
+          pausedAtNodeId?: string;
+          pausedAtNodeName?: string;
+          pauseContext?: {
+              prompt?: string;
+              description?: string;
+              variableName: string;
+              inputType: "text" | "number" | "boolean" | "json";
+              placeholder?: string;
+              validation?: JsonObject;
+              required?: boolean;
+          };
+      } & JsonObject)
+    | ({
+          type: "execution:resumed";
+          timestamp: number;
+          executionId: string;
+          status?: string;
+          variableName?: string;
+          response?: JsonValue;
       } & JsonObject)
     | ({
           type: "node:started";

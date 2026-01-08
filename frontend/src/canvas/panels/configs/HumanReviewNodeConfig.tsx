@@ -6,7 +6,7 @@ import { Input } from "../../../components/common/Input";
 import { Select } from "../../../components/common/Select";
 import { Textarea } from "../../../components/common/Textarea";
 
-interface WaitForUserNodeConfigProps {
+interface HumanReviewNodeConfigProps {
     nodeId?: string;
     data: Record<string, unknown>;
     onUpdate: (config: unknown) => void;
@@ -49,11 +49,11 @@ const validationPresets = {
     }
 };
 
-export function WaitForUserNodeConfig({
+export function HumanReviewNodeConfig({
     data,
     onUpdate,
     errors: _errors = []
-}: WaitForUserNodeConfigProps) {
+}: HumanReviewNodeConfigProps) {
     const [prompt, setPrompt] = useState((data.prompt as string) || "");
     const [description, setDescription] = useState((data.description as string) || "");
     const [variableName, setVariableName] = useState((data.variableName as string) || "");
@@ -75,6 +75,7 @@ export function WaitForUserNodeConfig({
             defaultValue,
             required,
             validation,
+            outputVariable: variableName, // Auto-derive from variableName
             ...(inputType === "number" && { minValue, maxValue })
         });
     }, [

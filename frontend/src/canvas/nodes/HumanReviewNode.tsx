@@ -1,9 +1,9 @@
-import { UserCircle } from "lucide-react";
+import { UserCheck } from "lucide-react";
 import { memo } from "react";
 import { NodeProps } from "reactflow";
 import { BaseNode } from "./BaseNode";
 
-interface WaitForUserNodeData {
+interface HumanReviewNodeData {
     label: string;
     status?: "idle" | "pending" | "running" | "success" | "error";
     prompt?: string;
@@ -12,17 +12,17 @@ interface WaitForUserNodeData {
     required?: boolean;
 }
 
-function WaitForUserNode({ data, selected }: NodeProps<WaitForUserNodeData>) {
+function HumanReviewNode({ data, selected }: NodeProps<HumanReviewNodeData>) {
     const prompt = data.prompt || "Enter your input";
     const variableName = data.variableName || "userInput";
     const inputType = data.inputType || "text";
 
     return (
         <BaseNode
-            icon={UserCircle}
-            label={data.label || "Wait for User"}
+            icon={UserCheck}
+            label={data.label || "Human Review"}
             status={data.status}
-            category="logic"
+            category="ai"
             selected={selected}
         >
             <div className="space-y-2">
@@ -46,4 +46,4 @@ function WaitForUserNode({ data, selected }: NodeProps<WaitForUserNodeData>) {
     );
 }
 
-export default memo(WaitForUserNode);
+export default memo(HumanReviewNode);

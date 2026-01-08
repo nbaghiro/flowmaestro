@@ -49,6 +49,7 @@ const {
     emitExecutionProgress,
     emitExecutionCompleted,
     emitExecutionFailed,
+    emitExecutionPaused,
     emitNodeStarted,
     emitNodeCompleted,
     emitNodeFailed
@@ -236,6 +237,50 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
                         result.output
                     );
 
+                    // Handle pause signal from human review node
+                    if (result.pause && result.pauseContext) {
+                        const node = builtWorkflow.nodes.get(result.nodeId);
+
+                        // Emit execution paused event
+                        await emitExecutionPaused({
+                            executionId,
+                            reason: result.pauseContext.reason || "Waiting for user response",
+                            pausedAtNodeId: result.nodeId,
+                            pausedAtNodeName: node?.name || result.nodeId,
+                            pauseContext: {
+                                prompt: result.pauseContext.prompt,
+                                description: result.pauseContext.description,
+                                variableName: result.pauseContext.variableName || "userResponse",
+                                inputType: result.pauseContext.inputType || "text",
+                                placeholder: result.pauseContext.placeholder,
+                                validation: result.pauseContext.validation,
+                                required: result.pauseContext.required
+                            }
+                        });
+
+                        // End workflow span with paused status
+                        await endSpan({
+                            spanId: workflowRunSpanId,
+                            output: { paused: true, pausedAtNodeId: result.nodeId },
+                            attributes: {
+                                status: "paused",
+                                pausedAtNodeId: result.nodeId
+                            }
+                        });
+
+                        logger.info("Workflow paused for human review", {
+                            nodeId: result.nodeId,
+                            variableName: result.pauseContext.variableName
+                        });
+
+                        // Return paused state - Temporal workflow will wait for signal to resume
+                        return {
+                            success: true,
+                            outputs: { _paused: true, _pausedAtNodeId: result.nodeId },
+                            error: undefined
+                        };
+                    }
+
                     // Handle special node types
                     if (result.branchesToSkip && result.branchesToSkip.length > 0) {
                         // Conditional node - skip inactive branches
@@ -364,6 +409,23 @@ interface NodeExecutionResult {
     output: JsonObject;
     error: string;
     branchesToSkip?: string[];
+    pause?: boolean;
+    pauseContext?: {
+        reason: string;
+        nodeId: string;
+        pausedAt: number;
+        resumeTrigger?: "manual" | "timeout" | "webhook" | "signal";
+        timeoutMs?: number;
+        preservedData?: JsonObject;
+        // Human review specific fields
+        prompt?: string;
+        description?: string;
+        variableName?: string;
+        inputType?: "text" | "number" | "boolean" | "json";
+        placeholder?: string;
+        validation?: JsonObject;
+        required?: boolean;
+    };
 }
 
 interface ExecutionMeta {
@@ -460,7 +522,7 @@ async function executeNodeWithContext(
 
             default: {
                 // Standard node execution via activity
-                output = await executeNode({
+                const executionResult = await executeNode({
                     nodeType: node.type,
                     nodeConfig: node.config,
                     context: execContext,
@@ -471,6 +533,44 @@ async function executeNodeWithContext(
                         nodeId
                     }
                 });
+
+                // Handle new return format with signals
+                output = executionResult.result;
+
+                // Check for pause signal (human review node)
+                if (executionResult.signals?.pause) {
+                    const nodeDuration = Date.now() - nodeStartTime;
+
+                    await emitNodeCompleted({
+                        executionId,
+                        nodeId,
+                        nodeName: node.name || nodeId,
+                        nodeType: node.type,
+                        output,
+                        duration: nodeDuration,
+                        metadata: { paused: true }
+                    });
+
+                    await endSpan({
+                        spanId: nodeSpanId,
+                        output: { nodeType: node.type, success: true, paused: true },
+                        attributes: { durationMs: nodeDuration }
+                    });
+
+                    return {
+                        nodeId,
+                        success: true,
+                        output,
+                        error: "",
+                        pause: true,
+                        pauseContext: executionResult.signals.pauseContext
+                    };
+                }
+
+                // Handle branch skip signals from router nodes
+                if (executionResult.signals?.branchesToSkip) {
+                    branchesToSkip = executionResult.signals.branchesToSkip;
+                }
             }
         }
 

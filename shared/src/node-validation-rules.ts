@@ -89,10 +89,9 @@ const filesRules: NodeValidationRule[] = [
     requiredIdentifier("outputVariable", "Enter an output variable name")
 ];
 
-const waitForUserRules: NodeValidationRule[] = [
+const humanReviewRules: NodeValidationRule[] = [
     requiredField("prompt", "Enter a prompt for the user"),
-    requiredIdentifier("variableName", "Enter a variable name"),
-    requiredIdentifier("outputVariable", "Enter an output variable name")
+    requiredIdentifier("variableName", "Enter a variable name")
 ];
 
 // ============================================================================
@@ -253,7 +252,7 @@ export const nodeValidationRules: NodeValidationRulesMap = {
     wait: waitRules,
     transform: transformRules,
     code: codeRules,
-    "wait-for-user": waitForUserRules,
+    humanReview: humanReviewRules,
 
     // Utils nodes
     http: httpRules,

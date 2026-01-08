@@ -65,6 +65,22 @@ export interface EmitExecutionFailedInput {
     failedNodeId?: string;
 }
 
+export interface EmitExecutionPausedInput {
+    executionId: string;
+    reason: string;
+    pausedAtNodeId: string;
+    pausedAtNodeName?: string;
+    pauseContext: {
+        prompt?: string;
+        description?: string;
+        variableName: string;
+        inputType: "text" | "number" | "boolean" | "json";
+        placeholder?: string;
+        validation?: JsonObject;
+        required?: boolean;
+    };
+}
+
 export interface EmitNodeStartedInput {
     executionId: string;
     nodeId: string;
@@ -176,6 +192,44 @@ export async function emitExecutionFailed(input: EmitExecutionFailedInput): Prom
         status: "failed",
         error,
         ...(failedNodeId && { failedNodeId })
+    });
+}
+
+/**
+ * Emit execution paused event for human review.
+ */
+export async function emitExecutionPaused(input: EmitExecutionPausedInput): Promise<void> {
+    const { executionId, reason, pausedAtNodeId, pausedAtNodeName, pauseContext } = input;
+
+    // Update database status and store pause context
+    const executionRepo = new ExecutionRepository();
+    await executionRepo.update(executionId, {
+        status: "paused",
+        pause_context: {
+            reason,
+            nodeId: pausedAtNodeId,
+            nodeName: pausedAtNodeName,
+            pausedAt: Date.now(),
+            resumeTrigger: "manual",
+            prompt: pauseContext.prompt,
+            description: pauseContext.description,
+            variableName: pauseContext.variableName,
+            inputType: pauseContext.inputType,
+            placeholder: pauseContext.placeholder,
+            validation: pauseContext.validation,
+            required: pauseContext.required
+        }
+    });
+
+    await redisEventBus.publish("workflow:events:execution:paused", {
+        type: "execution:paused",
+        timestamp: Date.now(),
+        executionId,
+        status: "paused",
+        reason,
+        pausedAtNodeId,
+        ...(pausedAtNodeName && { pausedAtNodeName }),
+        pauseContext
     });
 }
 
