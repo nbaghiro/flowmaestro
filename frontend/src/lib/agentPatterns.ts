@@ -5,6 +5,12 @@ export interface AgentPatternToolSuggestion {
     label: string;
 }
 
+export interface AgentMCPToolConfig {
+    provider: string; // e.g., "slack", "github", "hubspot"
+    tools: string[]; // e.g., ["sendMessage", "createIssue"]
+    description: string; // Why this tool is useful
+}
+
 export interface AgentPattern {
     id: string;
     name: string;
@@ -16,6 +22,8 @@ export interface AgentPattern {
     maxTokens: number;
     suggestedTools: AgentPatternToolSuggestion[];
     category: "general" | "technical" | "business" | "creative";
+    tier: "basic" | "advanced";
+    mcpTools?: AgentMCPToolConfig[];
 }
 
 // Pattern 1: Blank Agent
@@ -29,7 +37,8 @@ const blankAgentPattern: AgentPattern = {
     temperature: 0.7,
     maxTokens: 4096,
     suggestedTools: [],
-    category: "general"
+    category: "general",
+    tier: "basic"
 };
 
 // Pattern 2: General Assistant
@@ -51,7 +60,8 @@ Guidelines:
     temperature: 0.7,
     maxTokens: 4096,
     suggestedTools: [],
-    category: "general"
+    category: "general",
+    tier: "basic"
 };
 
 // Pattern 3: Code Helper
@@ -80,7 +90,8 @@ When providing code:
     temperature: 0.3,
     maxTokens: 8192,
     suggestedTools: [{ type: "knowledge_base", label: "Documentation" }],
-    category: "technical"
+    category: "technical",
+    tier: "basic"
 };
 
 // Pattern 4: Customer Support
@@ -114,7 +125,8 @@ Remember: Every interaction is an opportunity to create a positive customer expe
         { type: "knowledge_base", label: "FAQs" },
         { type: "workflow", label: "Ticket creation" }
     ],
-    category: "business"
+    category: "business",
+    tier: "basic"
 };
 
 // Pattern 5: Data Analyst
@@ -144,7 +156,8 @@ When analyzing data:
     temperature: 0.2,
     maxTokens: 8192,
     suggestedTools: [{ type: "knowledge_base", label: "Data dictionary" }],
-    category: "technical"
+    category: "technical",
+    tier: "basic"
 };
 
 // Pattern 6: Writing Assistant
@@ -175,7 +188,8 @@ Types of content you can help with:
     temperature: 0.8,
     maxTokens: 8192,
     suggestedTools: [],
-    category: "creative"
+    category: "creative",
+    tier: "basic"
 };
 
 // Pattern 7: Research Agent
@@ -209,7 +223,8 @@ When presenting research:
         { type: "knowledge_base", label: "Research docs" },
         { type: "mcp", label: "Web search" }
     ],
-    category: "general"
+    category: "general",
+    tier: "basic"
 };
 
 // Pattern 8: Sales Assistant
@@ -243,7 +258,8 @@ Your approach:
         { type: "knowledge_base", label: "Product catalog" },
         { type: "mcp", label: "CRM" }
     ],
-    category: "business"
+    category: "business",
+    tier: "basic"
 };
 
 // Pattern 9: Technical Reviewer
@@ -277,7 +293,8 @@ Always explain the "why" behind your feedback, not just the "what".`,
     temperature: 0.3,
     maxTokens: 8192,
     suggestedTools: [{ type: "knowledge_base", label: "Coding standards" }],
-    category: "technical"
+    category: "technical",
+    tier: "basic"
 };
 
 // Pattern 10: Onboarding Guide
@@ -312,7 +329,8 @@ Your approach:
         { type: "knowledge_base", label: "Help docs" },
         { type: "workflow", label: "Setup wizard" }
     ],
-    category: "business"
+    category: "business",
+    tier: "basic"
 };
 
 // Export all patterns

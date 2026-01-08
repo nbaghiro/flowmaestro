@@ -1,4 +1,25 @@
-import { Upload, FileJson, ChevronRight, ChevronLeft, ArrowRight } from "lucide-react";
+import {
+    Upload,
+    FileJson,
+    ChevronRight,
+    ChevronLeft,
+    ArrowRight,
+    MessageSquare,
+    Link,
+    GitBranch,
+    RefreshCw,
+    Search,
+    CheckCircle,
+    Layers,
+    UserCheck,
+    Shield,
+    ListTodo,
+    Plus,
+    Mail,
+    Bug,
+    Share2,
+    type LucideIcon
+} from "lucide-react";
 import { useState, FormEvent, useMemo } from "react";
 import { getAdvancedPatterns } from "../lib/advancedWorkflowPatterns";
 import { cn } from "../lib/utils";
@@ -10,6 +31,24 @@ import { Input } from "./common/Input";
 import { Textarea } from "./common/Textarea";
 import { PatternPicker } from "./PatternPicker";
 import type { WorkflowDefinition } from "../lib/api";
+
+// Icon mapping for patterns (same as PatternPicker)
+const iconMap: Record<string, LucideIcon> = {
+    MessageSquare,
+    Link,
+    GitBranch,
+    RefreshCw,
+    Search,
+    CheckCircle,
+    Layers,
+    UserCheck,
+    Shield,
+    ListTodo,
+    Plus,
+    Mail,
+    Bug,
+    Share2
+};
 
 interface CreateWorkflowDialogProps {
     isOpen: boolean;
@@ -305,7 +344,7 @@ export function CreateWorkflowDialog({ isOpen, onClose, onCreate }: CreateWorkfl
                                 <span className="text-sm text-muted-foreground">
                                     Select a starting template:
                                 </span>
-                                <div className="flex bg-muted rounded-lg p-0.5">
+                                <div className="flex bg-gray-200 dark:bg-muted rounded-lg p-0.5">
                                     <button
                                         type="button"
                                         onClick={() => setActiveTab("basic")}
@@ -350,7 +389,7 @@ export function CreateWorkflowDialog({ isOpen, onClose, onCreate }: CreateWorkfl
                         </div>
 
                         {/* Actions - always visible */}
-                        <div className="flex items-center justify-between pt-4 mt-4 border-t border-border bg-background">
+                        <div className="flex items-center justify-between pt-4 mt-4 border-t border-border bg-card">
                             <Button
                                 type="button"
                                 variant="ghost"
@@ -377,23 +416,25 @@ export function CreateWorkflowDialog({ isOpen, onClose, onCreate }: CreateWorkfl
                 {step === "details" && (
                     <>
                         {/* Selected pattern indicator */}
-                        {selectedPattern && (
-                            <div className="flex items-center gap-3 p-3 bg-primary/5 border border-primary/20 rounded-lg mb-4">
-                                <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                                    <span className="text-lg">
-                                        {selectedPattern.id === "blank" ? "+" : ""}
-                                    </span>
-                                </div>
-                                <div>
-                                    <p className="text-sm font-medium text-foreground">
-                                        {selectedPattern.name}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                        {selectedPattern.nodeCount} nodes
-                                    </p>
-                                </div>
-                            </div>
-                        )}
+                        {selectedPattern &&
+                            (() => {
+                                const PatternIcon = iconMap[selectedPattern.icon] || Plus;
+                                return (
+                                    <div className="flex items-center gap-3 p-3 bg-primary/5 border border-primary/20 rounded-lg mb-4">
+                                        <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                                            <PatternIcon className="w-5 h-5 text-primary" />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-medium text-foreground">
+                                                {selectedPattern.name}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground">
+                                                {selectedPattern.nodeCount} nodes
+                                            </p>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
 
                         <div>
                             <label

@@ -15,14 +15,14 @@ export interface WorkflowPattern {
 // Pattern 1: Simple Chat (Input -> LLM -> Output)
 const simpleChatPattern: WorkflowPattern = {
     id: "simple-chat",
-    name: "Starter - Simple Chat",
+    name: "Simple Chat",
     description: "Basic conversational pattern with input, LLM processing, and output",
     useCase: "Basic Q&A",
     icon: "MessageSquare",
     nodeCount: 3,
     category: "basic",
     definition: {
-        name: "Starter - Simple Chat",
+        name: "Simple Chat",
         nodes: {
             "input-1": {
                 type: "input",
@@ -35,7 +35,7 @@ const simpleChatPattern: WorkflowPattern = {
                     description: "Enter your question or message",
                     defaultValue: ""
                 },
-                position: { x: 100, y: 150 }
+                position: { x: 100, y: 100 }
             },
             "llm-1": {
                 type: "llm",
@@ -51,7 +51,7 @@ const simpleChatPattern: WorkflowPattern = {
                     topP: 1,
                     outputVariable: "response"
                 },
-                position: { x: 400, y: 300 }
+                position: { x: 400, y: 220 }
             },
             "output-1": {
                 type: "output",
@@ -62,7 +62,7 @@ const simpleChatPattern: WorkflowPattern = {
                     format: "string",
                     description: "The AI assistant's response"
                 },
-                position: { x: 700, y: 150 }
+                position: { x: 700, y: 340 }
             }
         },
         edges: [
@@ -76,14 +76,14 @@ const simpleChatPattern: WorkflowPattern = {
 // Pattern 2: Chain of Thought (Sequential reasoning)
 const chainOfThoughtPattern: WorkflowPattern = {
     id: "chain-of-thought",
-    name: "Starter - Chain of Thought",
+    name: "Chain of Thought",
     description: "Multi-step reasoning with analyze, reason, and synthesize stages",
     useCase: "Multi-step reasoning",
     icon: "Link",
     nodeCount: 5,
     category: "basic",
     definition: {
-        name: "Starter - Chain of Thought",
+        name: "Chain of Thought",
         nodes: {
             "input-1": {
                 type: "input",
@@ -168,14 +168,14 @@ const chainOfThoughtPattern: WorkflowPattern = {
 // Pattern 3: Smart Router (Classification + routing)
 const smartRouterPattern: WorkflowPattern = {
     id: "smart-router",
-    name: "Starter - Smart Router",
+    name: "Smart Router",
     description: "Classify incoming requests and route to specialized handlers",
     useCase: "Task classification & delegation",
     icon: "GitBranch",
     nodeCount: 6,
     category: "basic",
     definition: {
-        name: "Starter - Smart Router",
+        name: "Smart Router",
         nodes: {
             "input-1": {
                 type: "input",
@@ -308,7 +308,7 @@ const smartRouterPattern: WorkflowPattern = {
 // Pattern 4: Self-Improving (Reflection loop)
 const selfImprovingPattern: WorkflowPattern = {
     id: "self-improving",
-    name: "Starter - Self-Improving",
+    name: "Self-Improving",
     description:
         "Generate content, critique it, and iteratively refine until quality threshold met",
     useCase: "Code/content that needs refinement",
@@ -316,7 +316,7 @@ const selfImprovingPattern: WorkflowPattern = {
     nodeCount: 5,
     category: "basic",
     definition: {
-        name: "Starter - Self-Improving",
+        name: "Self-Improving",
         nodes: {
             "input-1": {
                 type: "input",
@@ -407,14 +407,14 @@ const selfImprovingPattern: WorkflowPattern = {
 // Pattern 5: Research Agent (RAG + Tool Use)
 const researchAgentPattern: WorkflowPattern = {
     id: "research-agent",
-    name: "Starter - Research Agent",
+    name: "Research Agent",
     description: "Query knowledge base, optionally search web, and synthesize answers",
     useCase: "Knowledge-based answers",
     icon: "Search",
     nodeCount: 5,
     category: "basic",
     definition: {
-        name: "Starter - Research Agent",
+        name: "Research Agent",
         nodes: {
             "input-1": {
                 type: "input",
@@ -492,14 +492,14 @@ const researchAgentPattern: WorkflowPattern = {
 // Pattern 6: Quality Reviewer (Evaluator-Optimizer)
 const qualityReviewerPattern: WorkflowPattern = {
     id: "quality-reviewer",
-    name: "Starter - Quality Reviewer",
+    name: "Quality Reviewer",
     description: "Generate content with quality scoring and iterative optimization",
     useCase: "High-quality content generation",
     icon: "CheckCircle",
     nodeCount: 5,
     category: "basic",
     definition: {
-        name: "Starter - Quality Reviewer",
+        name: "Quality Reviewer",
         nodes: {
             "input-1": {
                 type: "input",
@@ -592,14 +592,14 @@ const qualityReviewerPattern: WorkflowPattern = {
 // Pattern 7: Parallel Analyzer (Multiple perspectives)
 const parallelAnalyzerPattern: WorkflowPattern = {
     id: "parallel-analyzer",
-    name: "Starter - Parallel Analyzer",
+    name: "Parallel Analyzer",
     description: "Analyze input from multiple perspectives simultaneously and synthesize",
     useCase: "Multiple perspectives/analysis",
     icon: "Layers",
     nodeCount: 5,
     category: "basic",
     definition: {
-        name: "Starter - Parallel Analyzer",
+        name: "Parallel Analyzer",
         nodes: {
             "input-1": {
                 type: "input",
@@ -702,14 +702,14 @@ const parallelAnalyzerPattern: WorkflowPattern = {
 // Pattern 8: Supervised Agent (Human-in-the-Loop)
 const supervisedAgentPattern: WorkflowPattern = {
     id: "supervised-agent",
-    name: "Starter - Supervised Agent",
+    name: "Supervised Agent",
     description: "AI proposes actions, human reviews and approves before execution",
     useCase: "Critical decisions",
     icon: "UserCheck",
     nodeCount: 6,
     category: "basic",
     definition: {
-        name: "Starter - Supervised Agent",
+        name: "Supervised Agent",
         nodes: {
             "input-1": {
                 type: "input",
@@ -816,14 +816,14 @@ const supervisedAgentPattern: WorkflowPattern = {
 // Pattern 9: Safe Agent (Guardrails)
 const safeAgentPattern: WorkflowPattern = {
     id: "safe-agent",
-    name: "Starter - Safe Agent",
+    name: "Safe Agent",
     description: "Input and output guardrails for safe AI interactions in production",
     useCase: "Production deployments",
     icon: "Shield",
     nodeCount: 7,
     category: "basic",
     definition: {
-        name: "Starter - Safe Agent",
+        name: "Safe Agent",
         nodes: {
             "input-1": {
                 type: "input",
@@ -952,14 +952,14 @@ const safeAgentPattern: WorkflowPattern = {
 // Pattern 10: Task Planner (Planning pattern)
 const taskPlannerPattern: WorkflowPattern = {
     id: "task-planner",
-    name: "Starter - Task Planner",
+    name: "Task Planner",
     description: "Break down complex goals into steps, execute each, and synthesize results",
     useCase: "Complex multi-step tasks",
     icon: "ListTodo",
     nodeCount: 5,
     category: "basic",
     definition: {
-        name: "Starter - Task Planner",
+        name: "Task Planner",
         nodes: {
             "input-1": {
                 type: "input",
@@ -976,7 +976,7 @@ const taskPlannerPattern: WorkflowPattern = {
             },
             "llm-planner": {
                 type: "llm",
-                name: "Starter - Task Planner",
+                name: "Task Planner",
                 config: {
                     provider: "openai",
                     model: "gpt-4o",
@@ -1055,14 +1055,14 @@ export const WORKFLOW_PATTERNS: WorkflowPattern[] = [
     taskPlannerPattern
 ];
 
-// Blank workflow pattern (same as current default)
+// Blank workflow pattern - minimal starting point
 export const BLANK_WORKFLOW_PATTERN: WorkflowPattern = {
     id: "blank",
-    name: "Starter - Blank Workflow",
-    description: "Start from scratch with a simple Input, LLM, and Output pipeline",
-    useCase: "Basic Q&A",
+    name: "Blank Workflow",
+    description: "Start from scratch with a simple Input to Output flow",
+    useCase: "Blank workflow",
     icon: "Plus",
-    nodeCount: 3,
+    nodeCount: 2,
     category: "basic",
     definition: {
         name: "New Workflow",
@@ -1078,39 +1078,21 @@ export const BLANK_WORKFLOW_PATTERN: WorkflowPattern = {
                     description: "",
                     defaultValue: ""
                 },
-                position: { x: 100, y: 100 }
-            },
-            "node-llm-1": {
-                type: "llm",
-                name: "LLM",
-                config: {
-                    provider: "openai",
-                    model: "gpt-4o",
-                    prompt: "{{userInput}}",
-                    systemPrompt: "",
-                    temperature: 0.7,
-                    maxTokens: 1000,
-                    topP: 1,
-                    outputVariable: "llmResponse"
-                },
-                position: { x: 400, y: 220 }
+                position: { x: 225, y: 200 }
             },
             "node-output-1": {
                 type: "output",
                 name: "Output",
                 config: {
                     outputName: "result",
-                    value: "{{llmResponse.text}}",
+                    value: "{{userInput}}",
                     format: "string",
                     description: ""
                 },
-                position: { x: 700, y: 340 }
+                position: { x: 575, y: 200 }
             }
         },
-        edges: [
-            { id: "edge-1", source: "node-input-1", target: "node-llm-1" },
-            { id: "edge-2", source: "node-llm-1", target: "node-output-1" }
-        ],
+        edges: [{ id: "edge-1", source: "node-input-1", target: "node-output-1" }],
         entryPoint: "node-input-1"
     }
 };

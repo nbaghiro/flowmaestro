@@ -9,19 +9,24 @@ import {
     DollarSign,
     GitPullRequestDraft,
     UserPlus,
+    GitBranch,
+    AlertTriangle,
+    FileText,
+    HeartHandshake,
     type LucideIcon
 } from "lucide-react";
 import { useState, FormEvent } from "react";
+import { getAdvancedAgentPatterns } from "../lib/advancedAgentPatterns";
+import { getAllAgentPatterns, type AgentPattern } from "../lib/agentPatterns";
+import { cn } from "../lib/utils";
 import { AgentPatternPicker } from "./AgentPatternPicker";
 import { Alert } from "./common/Alert";
 import { Button } from "./common/Button";
 import { Dialog } from "./common/Dialog";
 import { Input } from "./common/Input";
 import { Textarea } from "./common/Textarea";
-import type { AgentPattern } from "../lib/agentPatterns";
 
 // Icon mapping (subset for the selected pattern indicator)
-
 const iconMap: Record<string, LucideIcon> = {
     Plus,
     Bot,
@@ -32,7 +37,11 @@ const iconMap: Record<string, LucideIcon> = {
     Search,
     DollarSign,
     GitPullRequestDraft,
-    UserPlus
+    UserPlus,
+    GitBranch,
+    AlertTriangle,
+    FileText,
+    HeartHandshake
 };
 
 export interface AgentPatternData {
@@ -53,6 +62,9 @@ export function CreateAgentDialog({ isOpen, onClose, onCreate }: CreateAgentDial
     // Step state
     const [step, setStep] = useState<DialogStep>("pattern");
 
+    // Tab state
+    const [activeTab, setActiveTab] = useState<"basic" | "advanced">("basic");
+
     // Pattern selection state
     const [selectedPattern, setSelectedPattern] = useState<AgentPattern | null>(null);
 
@@ -63,6 +75,10 @@ export function CreateAgentDialog({ isOpen, onClose, onCreate }: CreateAgentDial
     // UI state
     const [error, setError] = useState("");
 
+    // Get patterns
+    const basicPatterns = getAllAgentPatterns();
+    const advancedPatterns = getAdvancedAgentPatterns();
+
     const handlePatternSelect = (pattern: AgentPattern) => {
         setSelectedPattern(pattern);
         setError("");
@@ -71,7 +87,7 @@ export function CreateAgentDialog({ isOpen, onClose, onCreate }: CreateAgentDial
     const handlePatternNext = () => {
         if (selectedPattern) {
             // Pre-fill name and description from pattern
-            setName(`Starter - ${selectedPattern.name}`);
+            setName(selectedPattern.name);
             setDescription(selectedPattern.description);
             setStep("details");
         }
@@ -105,6 +121,7 @@ export function CreateAgentDialog({ isOpen, onClose, onCreate }: CreateAgentDial
 
     const resetForm = () => {
         setStep("pattern");
+        setActiveTab("basic");
         setSelectedPattern(null);
         setName("");
         setDescription("");
@@ -156,15 +173,58 @@ export function CreateAgentDialog({ isOpen, onClose, onCreate }: CreateAgentDial
                 {/* Step 1: Pattern Selection */}
                 {step === "pattern" && (
                     <div className="flex flex-col">
-                        <div className="flex-1 min-h-0">
+                        {/* Compact header with tabs */}
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-4">
+                                <span className="text-sm text-muted-foreground">
+                                    Select a template:
+                                </span>
+                                <div className="flex bg-gray-200 dark:bg-muted rounded-lg p-0.5">
+                                    <button
+                                        type="button"
+                                        onClick={() => setActiveTab("basic")}
+                                        className={cn(
+                                            "px-3 py-1 text-sm font-medium rounded-md transition-colors",
+                                            activeTab === "basic"
+                                                ? "bg-background text-foreground shadow-sm"
+                                                : "text-muted-foreground hover:text-foreground"
+                                        )}
+                                    >
+                                        Basic
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setActiveTab("advanced")}
+                                        className={cn(
+                                            "px-3 py-1 text-sm font-medium rounded-md transition-colors",
+                                            activeTab === "advanced"
+                                                ? "bg-background text-foreground shadow-sm"
+                                                : "text-muted-foreground hover:text-foreground"
+                                        )}
+                                    >
+                                        Advanced
+                                    </button>
+                                </div>
+                            </div>
+                            <span className="text-xs text-muted-foreground">
+                                {activeTab === "basic"
+                                    ? basicPatterns.length
+                                    : advancedPatterns.length}{" "}
+                                templates
+                            </span>
+                        </div>
+
+                        {/* Scrollable pattern grid */}
+                        <div className="max-h-[60vh] overflow-y-auto pr-2">
                             <AgentPatternPicker
+                                patterns={activeTab === "basic" ? basicPatterns : advancedPatterns}
                                 selectedPatternId={selectedPattern?.id || null}
                                 onSelect={handlePatternSelect}
                             />
                         </div>
 
                         {/* Actions - always visible */}
-                        <div className="flex items-center justify-between pt-4 mt-4 border-t border-border bg-background sticky bottom-0">
+                        <div className="flex items-center justify-between pt-4 mt-4 border-t border-border bg-card sticky bottom-0">
                             <Button type="button" variant="ghost" onClick={handleClose}>
                                 Cancel
                             </Button>

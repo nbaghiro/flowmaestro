@@ -13,11 +13,15 @@ import {
     Database,
     Workflow,
     Plug,
+    GitBranch,
+    AlertTriangle,
+    FileText,
+    HeartHandshake,
     type LucideIcon
 } from "lucide-react";
-import { type AgentPattern, getAllAgentPatterns } from "../lib/agentPatterns";
 import { cn } from "../lib/utils";
 import { Badge } from "./common/Badge";
+import type { AgentPattern } from "../lib/agentPatterns";
 
 // Icon mapping for patterns
 const iconMap: Record<string, LucideIcon> = {
@@ -30,7 +34,11 @@ const iconMap: Record<string, LucideIcon> = {
     Search,
     DollarSign,
     GitPullRequestDraft,
-    UserPlus
+    UserPlus,
+    GitBranch,
+    AlertTriangle,
+    FileText,
+    HeartHandshake
 };
 
 // Icon mapping for tool suggestions
@@ -49,6 +57,7 @@ const categoryColors: Record<string, { bg: string; text: string }> = {
 };
 
 interface AgentPatternPickerProps {
+    patterns: AgentPattern[];
     selectedPatternId: string | null;
     onSelect: (pattern: AgentPattern) => void;
 }
@@ -74,7 +83,7 @@ function PatternCard({ pattern, isSelected, onClick }: PatternCardProps) {
         <div
             onClick={onClick}
             className={cn(
-                "bg-card rounded-xl border-2 transition-all duration-200 cursor-pointer overflow-hidden group",
+                "bg-card rounded-xl border-2 transition-all duration-200 cursor-pointer overflow-hidden group flex flex-col h-full",
                 isSelected
                     ? "border-primary ring-2 ring-primary/20 shadow-lg"
                     : "border-border hover:border-border/60 hover:shadow-md"
@@ -116,13 +125,11 @@ function PatternCard({ pattern, isSelected, onClick }: PatternCardProps) {
                 </div>
 
                 {/* Description */}
-                <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-                    {pattern.description}
-                </p>
+                <p className="text-sm text-muted-foreground line-clamp-2">{pattern.description}</p>
             </div>
 
             {/* System Prompt Preview */}
-            <div className="px-4 pb-3">
+            <div className="px-4 pb-3 flex-grow">
                 <div className="bg-muted/50 rounded-lg p-3 border border-border/50">
                     <p className="text-xs font-mono text-muted-foreground line-clamp-3 whitespace-pre-wrap">
                         {promptPreview}
@@ -130,8 +137,8 @@ function PatternCard({ pattern, isSelected, onClick }: PatternCardProps) {
                 </div>
             </div>
 
-            {/* Footer */}
-            <div className="px-4 pb-4">
+            {/* Footer - always at bottom */}
+            <div className="px-4 pb-4 mt-auto">
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                     {/* Suggested Tools */}
                     <div className="flex items-center gap-2">
@@ -157,35 +164,42 @@ function PatternCard({ pattern, isSelected, onClick }: PatternCardProps) {
                     {/* Use Case */}
                     <span>{pattern.useCase}</span>
                 </div>
+
+                {/* MCP Tool Badges for Advanced Patterns */}
+                {pattern.mcpTools && pattern.mcpTools.length > 0 && (
+                    <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-border">
+                        <span className="text-xs text-muted-foreground">Integrations:</span>
+                        {pattern.mcpTools.map((tool) => (
+                            <span
+                                key={tool.provider}
+                                className="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-primary/10 text-primary rounded-full"
+                                title={tool.description}
+                            >
+                                {tool.provider}
+                            </span>
+                        ))}
+                    </div>
+                )}
             </div>
         </div>
     );
 }
 
-export function AgentPatternPicker({ selectedPatternId, onSelect }: AgentPatternPickerProps) {
-    const patterns = getAllAgentPatterns();
-
+export function AgentPatternPicker({
+    patterns,
+    selectedPatternId,
+    onSelect
+}: AgentPatternPickerProps) {
     return (
-        <div className="space-y-4">
-            <div className="text-center mb-6">
-                <h3 className="text-lg font-semibold text-foreground mb-1">
-                    Choose a starting point
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                    Select a pattern to start with, or create a blank agent
-                </p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 max-h-[70vh] overflow-y-scroll pr-2">
-                {patterns.map((pattern) => (
-                    <PatternCard
-                        key={pattern.id}
-                        pattern={pattern}
-                        isSelected={selectedPatternId === pattern.id}
-                        onClick={() => onSelect(pattern)}
-                    />
-                ))}
-            </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {patterns.map((pattern) => (
+                <PatternCard
+                    key={pattern.id}
+                    pattern={pattern}
+                    isSelected={selectedPatternId === pattern.id}
+                    onClick={() => onSelect(pattern)}
+                />
+            ))}
         </div>
     );
 }

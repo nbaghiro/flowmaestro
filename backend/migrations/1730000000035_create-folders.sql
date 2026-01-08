@@ -55,8 +55,11 @@ ADD COLUMN IF NOT EXISTS folder_id UUID REFERENCES folders(id) ON DELETE SET NUL
 
 CREATE INDEX IF NOT EXISTS idx_chat_interfaces_folder ON chat_interfaces(folder_id) WHERE deleted_at IS NULL;
 
--- Add folder_id to knowledge_bases (note: knowledge_bases doesn't have deleted_at column)
+-- Add folder_id and deleted_at to knowledge_bases (for consistency with other tables)
 ALTER TABLE knowledge_bases
 ADD COLUMN IF NOT EXISTS folder_id UUID REFERENCES folders(id) ON DELETE SET NULL;
 
-CREATE INDEX IF NOT EXISTS idx_knowledge_bases_folder ON knowledge_bases(folder_id);
+ALTER TABLE knowledge_bases
+ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP NULL;
+
+CREATE INDEX IF NOT EXISTS idx_knowledge_bases_folder ON knowledge_bases(folder_id) WHERE deleted_at IS NULL;
