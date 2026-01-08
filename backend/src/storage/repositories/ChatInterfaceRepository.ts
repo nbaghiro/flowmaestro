@@ -10,7 +10,6 @@ import type {
     PublicChatInterface
 } from "@flowmaestro/shared";
 import { db } from "../database";
-import { FolderRepository } from "./FolderRepository";
 
 // Database row interface
 interface ChatInterfaceRow {
@@ -138,43 +137,30 @@ export class ChatInterfaceRepository {
         const limit = options.limit || 50;
         const offset = options.offset || 0;
 
-        // Ensure junction tables exist
-        const folderRepo = new FolderRepository();
-        await folderRepo.ensureJunctionTablesExist();
-
-        // Build folder filter using junction table
-        let folderJoin = "";
+        // Build folder filter using folder_ids array
         let folderFilter = "";
         const countParams: unknown[] = [userId];
         const queryParams: unknown[] = [userId];
 
         if (options.folderId === null) {
-            // Chat interfaces not in any folder
-            folderFilter = ` AND NOT EXISTS (
-                SELECT 1 FROM flowmaestro.folder_chat_interfaces fci
-                WHERE fci.chat_interface_id = ci.id
-            )`;
+            folderFilter = " AND (ci.folder_ids IS NULL OR ci.folder_ids = ARRAY[]::UUID[])";
         } else if (options.folderId !== undefined) {
-            // Chat interfaces in specific folder
-            folderJoin =
-                " INNER JOIN flowmaestro.folder_chat_interfaces fci ON fci.chat_interface_id = ci.id AND fci.folder_id = $2";
+            folderFilter = " AND $2 = ANY(COALESCE(ci.folder_ids, ARRAY[]::UUID[]))";
             countParams.push(options.folderId);
             queryParams.push(options.folderId);
         }
 
         const countQuery = `
-            SELECT COUNT(DISTINCT ci.id) as count
+            SELECT COUNT(*) as count
             FROM flowmaestro.chat_interfaces ci
-            ${folderJoin}
             WHERE ci.user_id = $1 AND ci.deleted_at IS NULL${folderFilter}
         `;
 
         const limitParamIndex = queryParams.length + 1;
         const offsetParamIndex = queryParams.length + 2;
         const query = `
-            SELECT DISTINCT ci.*, a.name as agent_name
+            SELECT ci.*, a.name as agent_name
             FROM flowmaestro.chat_interfaces ci
-            ${folderJoin}
             LEFT JOIN flowmaestro.agents a ON ci.agent_id = a.id
             WHERE ci.user_id = $1 AND ci.deleted_at IS NULL${folderFilter}
             ORDER BY ci.updated_at DESC

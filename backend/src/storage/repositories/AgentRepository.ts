@@ -7,7 +7,6 @@ import {
     Tool,
     MemoryConfig
 } from "../models/Agent";
-import { FolderRepository } from "./FolderRepository";
 import type { SafetyConfig } from "../../core/safety/types";
 
 // Database row interface
@@ -91,45 +90,32 @@ export class AgentRepository {
         const limit = options.limit || 50;
         const offset = options.offset || 0;
 
-        // Ensure junction tables exist
-        const folderRepo = new FolderRepository();
-        await folderRepo.ensureJunctionTablesExist();
-
-        // Build folder filter using junction table
-        let folderJoin = "";
+        // Build folder filter using folder_ids array
         let folderFilter = "";
         const countParams: unknown[] = [userId];
         const queryParams: unknown[] = [userId];
 
         if (options.folderId === null) {
-            // Agents not in any folder
-            folderFilter = ` AND NOT EXISTS (
-                SELECT 1 FROM flowmaestro.folder_agents fa
-                WHERE fa.agent_id = agents.id
-            )`;
+            folderFilter = " AND (folder_ids IS NULL OR folder_ids = ARRAY[]::UUID[])";
         } else if (options.folderId !== undefined) {
-            // Agents in specific folder
-            folderJoin =
-                " INNER JOIN flowmaestro.folder_agents fa ON fa.agent_id = agents.id AND fa.folder_id = $2";
+            folderFilter = " AND $2 = ANY(COALESCE(folder_ids, ARRAY[]::UUID[]))";
             countParams.push(options.folderId);
             queryParams.push(options.folderId);
         }
 
         const countQuery = `
-            SELECT COUNT(DISTINCT agents.id) as count
+            SELECT COUNT(*) as count
             FROM flowmaestro.agents
-            ${folderJoin}
-            WHERE agents.user_id = $1 AND agents.deleted_at IS NULL${folderFilter}
+            WHERE user_id = $1 AND deleted_at IS NULL${folderFilter}
         `;
 
         const limitParamIndex = queryParams.length + 1;
         const offsetParamIndex = queryParams.length + 2;
         const query = `
-            SELECT DISTINCT agents.*
+            SELECT *
             FROM flowmaestro.agents
-            ${folderJoin}
-            WHERE agents.user_id = $1 AND agents.deleted_at IS NULL${folderFilter}
-            ORDER BY agents.created_at DESC
+            WHERE user_id = $1 AND deleted_at IS NULL${folderFilter}
+            ORDER BY created_at DESC
             LIMIT $${limitParamIndex} OFFSET $${offsetParamIndex}
         `;
 

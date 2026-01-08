@@ -52,18 +52,6 @@ export async function moveItemsToFolderRoute(fastify: FastifyInstance) {
                     });
                 }
 
-                // Ensure junction tables exist
-                await folderRepo.ensureJunctionTablesExist();
-
-                // Get junction table configuration
-                const junctionConfig = folderRepo.getJunctionTableConfig(body.itemType);
-                if (!junctionConfig) {
-                    return reply.status(400).send({
-                        success: false,
-                        error: `Invalid item type: ${body.itemType}`
-                    });
-                }
-
                 // Verify items exist and belong to user
                 const placeholders = body.itemIds.map((_, i) => `$${i + 1}`).join(", ");
                 const verifyQuery = `
@@ -83,7 +71,7 @@ export async function moveItemsToFolderRoute(fastify: FastifyInstance) {
                 let movedCount = 0;
 
                 if (body.folderId !== null) {
-                    // Add items to folder (many-to-many: items can be in multiple folders)
+                    // Add items to folder (add folder_id to folder_ids array)
                     const folder = await folderRepo.findByIdAndUserId(body.folderId, userId);
                     if (!folder) {
                         return reply.status(404).send({
@@ -92,20 +80,23 @@ export async function moveItemsToFolderRoute(fastify: FastifyInstance) {
                         });
                     }
 
-                    // Insert into junction table, ignoring conflicts (item already in folder)
-                    const insertPlaceholders = body.itemIds
-                        .map((_, i) => `($1, $${i + 2})`)
-                        .join(", ");
-                    const insertQuery = `
-                        INSERT INTO flowmaestro.${junctionConfig.tableName} (folder_id, ${junctionConfig.itemIdColumn})
-                        VALUES ${insertPlaceholders}
-                        ON CONFLICT (folder_id, ${junctionConfig.itemIdColumn}) DO NOTHING
+                    // Add folder_id to folder_ids array if not already present
+                    const updatePlaceholders = body.itemIds.map((_, i) => `$${i + 2}`).join(", ");
+                    const updateQuery = `
+                        UPDATE flowmaestro.${tableName}
+                        SET folder_ids = CASE 
+                            WHEN $1 = ANY(COALESCE(folder_ids, ARRAY[]::UUID[])) THEN folder_ids
+                            ELSE array_append(COALESCE(folder_ids, ARRAY[]::UUID[]), $1)
+                        END,
+                        updated_at = CURRENT_TIMESTAMP
+                        WHERE id IN (${updatePlaceholders})
+                        ${tableName === "knowledge_bases" ? "" : "AND deleted_at IS NULL"}
                     `;
-                    const insertResult = await db.query(insertQuery, [
+                    const updateResult = await db.query(updateQuery, [
                         body.folderId,
                         ...body.itemIds
                     ]);
-                    movedCount = insertResult.rowCount || 0;
+                    movedCount = updateResult.rowCount || 0;
                 } else {
                     // Remove items from folder(s)
                     const sourceFolderId = body.sourceFolderId;
@@ -123,29 +114,35 @@ export async function moveItemsToFolderRoute(fastify: FastifyInstance) {
                             });
                         }
 
-                        const deletePlaceholders = body.itemIds
+                        // Remove specific folder_id from folder_ids array
+                        const updatePlaceholders = body.itemIds
                             .map((_, i) => `$${i + 2}`)
                             .join(", ");
-                        const deleteQuery = `
-                            DELETE FROM flowmaestro.${junctionConfig.tableName}
-                            WHERE folder_id = $1 AND ${junctionConfig.itemIdColumn} IN (${deletePlaceholders})
+                        const updateQuery = `
+                            UPDATE flowmaestro.${tableName}
+                            SET folder_ids = array_remove(COALESCE(folder_ids, ARRAY[]::UUID[]), $1::UUID),
+                            updated_at = CURRENT_TIMESTAMP
+                            WHERE id IN (${updatePlaceholders})
+                            ${tableName === "knowledge_bases" ? "" : "AND deleted_at IS NULL"}
                         `;
-                        const deleteResult = await db.query(deleteQuery, [
+                        const updateResult = await db.query(updateQuery, [
                             sourceFolderId,
                             ...body.itemIds
                         ]);
-                        movedCount = deleteResult.rowCount || 0;
+                        movedCount = updateResult.rowCount || 0;
                     } else {
-                        // Remove from all folders (when no sourceFolderId specified)
-                        const deletePlaceholders = body.itemIds
+                        // Remove from all folders (clear folder_ids array)
+                        const updatePlaceholders = body.itemIds
                             .map((_, i) => `$${i + 1}`)
                             .join(", ");
-                        const deleteQuery = `
-                            DELETE FROM flowmaestro.${junctionConfig.tableName}
-                            WHERE ${junctionConfig.itemIdColumn} IN (${deletePlaceholders})
+                        const updateQuery = `
+                            UPDATE flowmaestro.${tableName}
+                            SET folder_ids = ARRAY[]::UUID[], updated_at = CURRENT_TIMESTAMP
+                            WHERE id IN (${updatePlaceholders})
+                            ${tableName === "knowledge_bases" ? "" : "AND deleted_at IS NULL"}
                         `;
-                        const deleteResult = await db.query(deleteQuery, body.itemIds);
-                        movedCount = deleteResult.rowCount || 0;
+                        const updateResult = await db.query(updateQuery, body.itemIds);
+                        movedCount = updateResult.rowCount || 0;
                     }
                 }
 

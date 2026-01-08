@@ -8,43 +8,8 @@ import type {
     ChatInterfaceSummary,
     KnowledgeBaseSummary
 } from "@flowmaestro/shared";
-import { createServiceLogger } from "../../core/logging";
 import { db } from "../database";
 import { FolderModel, CreateFolderInput, UpdateFolderInput } from "../models/Folder";
-
-const logger = createServiceLogger("FolderRepository");
-
-// Map resource types to junction table names and column names
-const JUNCTION_TABLE_CONFIG: Record<
-    string,
-    { tableName: string; itemIdColumn: string; resourceTable: string }
-> = {
-    workflow: {
-        tableName: "folder_workflows",
-        itemIdColumn: "workflow_id",
-        resourceTable: "workflows"
-    },
-    agent: {
-        tableName: "folder_agents",
-        itemIdColumn: "agent_id",
-        resourceTable: "agents"
-    },
-    "form-interface": {
-        tableName: "folder_form_interfaces",
-        itemIdColumn: "form_interface_id",
-        resourceTable: "form_interfaces"
-    },
-    "chat-interface": {
-        tableName: "folder_chat_interfaces",
-        itemIdColumn: "chat_interface_id",
-        resourceTable: "chat_interfaces"
-    },
-    "knowledge-base": {
-        tableName: "folder_knowledge_bases",
-        itemIdColumn: "knowledge_base_id",
-        resourceTable: "knowledge_bases"
-    }
-};
 
 interface FolderRow {
     id: string;
@@ -119,26 +84,19 @@ export class FolderRepository {
     }
 
     async findByUserIdWithCounts(userId: string): Promise<FolderWithCounts[]> {
-        // Ensure junction tables exist
-        await this.ensureJunctionTablesExist();
-
         const query = `
             SELECT
                 f.*,
-                (SELECT COUNT(*) FROM flowmaestro.folder_workflows fw
-                 INNER JOIN flowmaestro.workflows w ON w.id = fw.workflow_id
-                 WHERE fw.folder_id = f.id AND w.deleted_at IS NULL) as workflow_count,
-                (SELECT COUNT(*) FROM flowmaestro.folder_agents fa
-                 INNER JOIN flowmaestro.agents a ON a.id = fa.agent_id
-                 WHERE fa.folder_id = f.id AND a.deleted_at IS NULL) as agent_count,
-                (SELECT COUNT(*) FROM flowmaestro.folder_form_interfaces ffi
-                 INNER JOIN flowmaestro.form_interfaces fi ON fi.id = ffi.form_interface_id
-                 WHERE ffi.folder_id = f.id AND fi.deleted_at IS NULL) as form_interface_count,
-                (SELECT COUNT(*) FROM flowmaestro.folder_chat_interfaces fci
-                 INNER JOIN flowmaestro.chat_interfaces ci ON ci.id = fci.chat_interface_id
-                 WHERE fci.folder_id = f.id AND ci.deleted_at IS NULL) as chat_interface_count,
-                (SELECT COUNT(*) FROM flowmaestro.folder_knowledge_bases fkb
-                 WHERE fkb.folder_id = f.id) as knowledge_base_count
+                (SELECT COUNT(*) FROM flowmaestro.workflows
+                 WHERE f.id = ANY(COALESCE(folder_ids, ARRAY[]::UUID[])) AND deleted_at IS NULL) as workflow_count,
+                (SELECT COUNT(*) FROM flowmaestro.agents
+                 WHERE f.id = ANY(COALESCE(folder_ids, ARRAY[]::UUID[])) AND deleted_at IS NULL) as agent_count,
+                (SELECT COUNT(*) FROM flowmaestro.form_interfaces
+                 WHERE f.id = ANY(COALESCE(folder_ids, ARRAY[]::UUID[])) AND deleted_at IS NULL) as form_interface_count,
+                (SELECT COUNT(*) FROM flowmaestro.chat_interfaces
+                 WHERE f.id = ANY(COALESCE(folder_ids, ARRAY[]::UUID[])) AND deleted_at IS NULL) as chat_interface_count,
+                (SELECT COUNT(*) FROM flowmaestro.knowledge_bases
+                 WHERE f.id = ANY(COALESCE(folder_ids, ARRAY[]::UUID[]))) as knowledge_base_count
             FROM flowmaestro.folders f
             WHERE f.user_id = $1 AND f.deleted_at IS NULL
             ORDER BY f.position ASC, f.created_at ASC
@@ -198,25 +156,18 @@ export class FolderRepository {
     }
 
     async getItemCounts(id: string): Promise<FolderItemCounts> {
-        // Ensure junction tables exist
-        await this.ensureJunctionTablesExist();
-
         const query = `
             SELECT
-                (SELECT COUNT(*) FROM flowmaestro.folder_workflows fw
-                 INNER JOIN flowmaestro.workflows w ON w.id = fw.workflow_id
-                 WHERE fw.folder_id = $1 AND w.deleted_at IS NULL) as workflow_count,
-                (SELECT COUNT(*) FROM flowmaestro.folder_agents fa
-                 INNER JOIN flowmaestro.agents a ON a.id = fa.agent_id
-                 WHERE fa.folder_id = $1 AND a.deleted_at IS NULL) as agent_count,
-                (SELECT COUNT(*) FROM flowmaestro.folder_form_interfaces ffi
-                 INNER JOIN flowmaestro.form_interfaces fi ON fi.id = ffi.form_interface_id
-                 WHERE ffi.folder_id = $1 AND fi.deleted_at IS NULL) as form_interface_count,
-                (SELECT COUNT(*) FROM flowmaestro.folder_chat_interfaces fci
-                 INNER JOIN flowmaestro.chat_interfaces ci ON ci.id = fci.chat_interface_id
-                 WHERE fci.folder_id = $1 AND ci.deleted_at IS NULL) as chat_interface_count,
-                (SELECT COUNT(*) FROM flowmaestro.folder_knowledge_bases fkb
-                 WHERE fkb.folder_id = $1) as knowledge_base_count
+                (SELECT COUNT(*) FROM flowmaestro.workflows
+                 WHERE $1 = ANY(COALESCE(folder_ids, ARRAY[]::UUID[])) AND deleted_at IS NULL) as workflow_count,
+                (SELECT COUNT(*) FROM flowmaestro.agents
+                 WHERE $1 = ANY(COALESCE(folder_ids, ARRAY[]::UUID[])) AND deleted_at IS NULL) as agent_count,
+                (SELECT COUNT(*) FROM flowmaestro.form_interfaces
+                 WHERE $1 = ANY(COALESCE(folder_ids, ARRAY[]::UUID[])) AND deleted_at IS NULL) as form_interface_count,
+                (SELECT COUNT(*) FROM flowmaestro.chat_interfaces
+                 WHERE $1 = ANY(COALESCE(folder_ids, ARRAY[]::UUID[])) AND deleted_at IS NULL) as chat_interface_count,
+                (SELECT COUNT(*) FROM flowmaestro.knowledge_bases
+                 WHERE $1 = ANY(COALESCE(folder_ids, ARRAY[]::UUID[]))) as knowledge_base_count
         `;
 
         const result = await db.query<{
@@ -287,12 +238,7 @@ export class FolderRepository {
     }
 
     async delete(id: string, userId: string): Promise<boolean> {
-        // Ensure junction tables exist
-        await this.ensureJunctionTablesExist();
-
-        // Soft delete the folder - junction table entries will be deleted via ON DELETE CASCADE
-        // when the folder is hard deleted, but for soft delete we need to clear junction entries
-        // Also clear folder_id column for backward compatibility
+        // Clear folder_id from all items when folder is deleted
         await this.clearFolderIdFromItems(id);
 
         const query = `
@@ -319,13 +265,11 @@ export class FolderRepository {
 
     // Helper methods for getting items in folder
     private async getWorkflowsInFolder(folderId: string): Promise<WorkflowSummary[]> {
-        await this.ensureJunctionTablesExist();
         const query = `
-            SELECT w.id, w.name, w.description, w.created_at, w.updated_at
-            FROM flowmaestro.workflows w
-            INNER JOIN flowmaestro.folder_workflows fw ON fw.workflow_id = w.id
-            WHERE fw.folder_id = $1 AND w.deleted_at IS NULL
-            ORDER BY w.updated_at DESC
+            SELECT id, name, description, created_at, updated_at
+            FROM flowmaestro.workflows
+            WHERE $1 = ANY(COALESCE(folder_ids, ARRAY[]::UUID[])) AND deleted_at IS NULL
+            ORDER BY updated_at DESC
         `;
         const result = await db.query<{
             id: string;
@@ -345,13 +289,11 @@ export class FolderRepository {
     }
 
     private async getAgentsInFolder(folderId: string): Promise<AgentSummary[]> {
-        await this.ensureJunctionTablesExist();
         const query = `
-            SELECT a.id, a.name, a.description, a.provider, a.model, a.created_at, a.updated_at
-            FROM flowmaestro.agents a
-            INNER JOIN flowmaestro.folder_agents fa ON fa.agent_id = a.id
-            WHERE fa.folder_id = $1 AND a.deleted_at IS NULL
-            ORDER BY a.updated_at DESC
+            SELECT id, name, description, provider, model, created_at, updated_at
+            FROM flowmaestro.agents
+            WHERE $1 = ANY(COALESCE(folder_ids, ARRAY[]::UUID[])) AND deleted_at IS NULL
+            ORDER BY updated_at DESC
         `;
         const result = await db.query<{
             id: string;
@@ -375,13 +317,11 @@ export class FolderRepository {
     }
 
     private async getFormInterfacesInFolder(folderId: string): Promise<FormInterfaceSummary[]> {
-        await this.ensureJunctionTablesExist();
         const query = `
-            SELECT fi.id, fi.name, fi.title, fi.status, fi.created_at, fi.updated_at
-            FROM flowmaestro.form_interfaces fi
-            INNER JOIN flowmaestro.folder_form_interfaces ffi ON ffi.form_interface_id = fi.id
-            WHERE ffi.folder_id = $1 AND fi.deleted_at IS NULL
-            ORDER BY fi.updated_at DESC
+            SELECT id, name, title, status, created_at, updated_at
+            FROM flowmaestro.form_interfaces
+            WHERE $1 = ANY(COALESCE(folder_ids, ARRAY[]::UUID[])) AND deleted_at IS NULL
+            ORDER BY updated_at DESC
         `;
         const result = await db.query<{
             id: string;
@@ -403,13 +343,11 @@ export class FolderRepository {
     }
 
     private async getChatInterfacesInFolder(folderId: string): Promise<ChatInterfaceSummary[]> {
-        await this.ensureJunctionTablesExist();
         const query = `
-            SELECT ci.id, ci.name, ci.title, ci.status, ci.created_at, ci.updated_at
-            FROM flowmaestro.chat_interfaces ci
-            INNER JOIN flowmaestro.folder_chat_interfaces fci ON fci.chat_interface_id = ci.id
-            WHERE fci.folder_id = $1 AND ci.deleted_at IS NULL
-            ORDER BY ci.updated_at DESC
+            SELECT id, name, title, status, created_at, updated_at
+            FROM flowmaestro.chat_interfaces
+            WHERE $1 = ANY(COALESCE(folder_ids, ARRAY[]::UUID[])) AND deleted_at IS NULL
+            ORDER BY updated_at DESC
         `;
         const result = await db.query<{
             id: string;
@@ -431,14 +369,12 @@ export class FolderRepository {
     }
 
     private async getKnowledgeBasesInFolder(folderId: string): Promise<KnowledgeBaseSummary[]> {
-        await this.ensureJunctionTablesExist();
         const query = `
             SELECT kb.id, kb.name, kb.description, kb.created_at, kb.updated_at,
                    COUNT(kd.id) as document_count
             FROM flowmaestro.knowledge_bases kb
-            INNER JOIN flowmaestro.folder_knowledge_bases fkb ON fkb.knowledge_base_id = kb.id
             LEFT JOIN flowmaestro.knowledge_documents kd ON kd.knowledge_base_id = kb.id
-            WHERE fkb.folder_id = $1
+            WHERE $1 = ANY(COALESCE(kb.folder_ids, ARRAY[]::UUID[]))
             GROUP BY kb.id
             ORDER BY kb.updated_at DESC
         `;
@@ -461,89 +397,29 @@ export class FolderRepository {
         }));
     }
 
-    /**
-     * Ensure junction tables exist for folder-item relationships
-     * Creates them if they don't exist (idempotent)
-     */
-    async ensureJunctionTablesExist(): Promise<void> {
-        try {
-            // Check if tables exist, create if not
-            for (const [itemType, config] of Object.entries(JUNCTION_TABLE_CONFIG)) {
-                const checkQuery = `
-                    SELECT EXISTS (
-                        SELECT FROM information_schema.tables
-                        WHERE table_schema = 'flowmaestro'
-                        AND table_name = $1
-                    );
-                `;
-                const existsResult = await db.query<{ exists: boolean }>(checkQuery, [
-                    config.tableName
-                ]);
-
-                if (!existsResult.rows[0]?.exists) {
-                    logger.info({ tableName: config.tableName }, "Creating junction table");
-
-                    // Create the junction table
-                    const createQuery = `
-                        CREATE TABLE IF NOT EXISTS flowmaestro.${config.tableName} (
-                            id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-                            folder_id UUID NOT NULL REFERENCES flowmaestro.folders(id) ON DELETE CASCADE,
-                            ${config.itemIdColumn} UUID NOT NULL REFERENCES flowmaestro.${config.resourceTable}(id) ON DELETE CASCADE,
-                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                            CONSTRAINT unique_folder_${itemType.replace("-", "_")} UNIQUE (folder_id, ${config.itemIdColumn})
-                        );
-
-                        CREATE INDEX IF NOT EXISTS idx_${config.tableName}_folder ON flowmaestro.${config.tableName}(folder_id);
-                        CREATE INDEX IF NOT EXISTS idx_${config.tableName}_item ON flowmaestro.${config.tableName}(${config.itemIdColumn});
-                    `;
-
-                    await db.query(createQuery);
-
-                    // Migrate existing data from folder_id column
-                    const migrateQuery = `
-                        INSERT INTO flowmaestro.${config.tableName} (folder_id, ${config.itemIdColumn})
-                        SELECT folder_id, id
-                        FROM flowmaestro.${config.resourceTable}
-                        WHERE folder_id IS NOT NULL
-                        ${config.resourceTable !== "knowledge_bases" ? "AND deleted_at IS NULL" : ""}
-                        ON CONFLICT DO NOTHING;
-                    `;
-
-                    await db.query(migrateQuery);
-                    logger.info(
-                        { tableName: config.tableName },
-                        "Junction table created and migrated"
-                    );
-                }
-            }
-        } catch (error) {
-            logger.error({ error }, "Error ensuring junction tables exist");
-            throw error;
-        }
-    }
-
-    /**
-     * Get junction table configuration for a resource type
-     */
-    getJunctionTableConfig(itemType: string) {
-        return JUNCTION_TABLE_CONFIG[itemType];
-    }
-
     private async clearFolderIdFromItems(folderId: string): Promise<void> {
-        // Delete from junction tables (ON DELETE CASCADE will handle this automatically when folder is hard deleted,
-        // but for soft delete we need to manually clear junction entries)
+        // Remove folder_id from folder_ids array when folder is deleted
         await Promise.all([
-            db.query("DELETE FROM flowmaestro.folder_workflows WHERE folder_id = $1", [folderId]),
-            db.query("DELETE FROM flowmaestro.folder_agents WHERE folder_id = $1", [folderId]),
-            db.query("DELETE FROM flowmaestro.folder_form_interfaces WHERE folder_id = $1", [
-                folderId
-            ]),
-            db.query("DELETE FROM flowmaestro.folder_chat_interfaces WHERE folder_id = $1", [
-                folderId
-            ]),
-            db.query("DELETE FROM flowmaestro.folder_knowledge_bases WHERE folder_id = $1", [
-                folderId
-            ])
+            db.query(
+                "UPDATE flowmaestro.workflows SET folder_ids = array_remove(COALESCE(folder_ids, ARRAY[]::UUID[]), $1::UUID) WHERE $1 = ANY(COALESCE(folder_ids, ARRAY[]::UUID[]))",
+                [folderId]
+            ),
+            db.query(
+                "UPDATE flowmaestro.agents SET folder_ids = array_remove(COALESCE(folder_ids, ARRAY[]::UUID[]), $1::UUID) WHERE $1 = ANY(COALESCE(folder_ids, ARRAY[]::UUID[]))",
+                [folderId]
+            ),
+            db.query(
+                "UPDATE flowmaestro.form_interfaces SET folder_ids = array_remove(COALESCE(folder_ids, ARRAY[]::UUID[]), $1::UUID) WHERE $1 = ANY(COALESCE(folder_ids, ARRAY[]::UUID[]))",
+                [folderId]
+            ),
+            db.query(
+                "UPDATE flowmaestro.chat_interfaces SET folder_ids = array_remove(COALESCE(folder_ids, ARRAY[]::UUID[]), $1::UUID) WHERE $1 = ANY(COALESCE(folder_ids, ARRAY[]::UUID[]))",
+                [folderId]
+            ),
+            db.query(
+                "UPDATE flowmaestro.knowledge_bases SET folder_ids = array_remove(COALESCE(folder_ids, ARRAY[]::UUID[]), $1::UUID) WHERE $1 = ANY(COALESCE(folder_ids, ARRAY[]::UUID[]))",
+                [folderId]
+            )
         ]);
     }
 

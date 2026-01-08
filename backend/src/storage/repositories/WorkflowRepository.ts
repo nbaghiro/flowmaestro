@@ -1,7 +1,6 @@
 import type { JsonValue, WorkflowDefinition } from "@flowmaestro/shared";
 import { db } from "../database";
 import { WorkflowModel, CreateWorkflowInput, UpdateWorkflowInput } from "../models/Workflow";
-import { FolderRepository } from "./FolderRepository";
 
 interface WorkflowRow {
     id: string;
@@ -52,51 +51,38 @@ export class WorkflowRepository {
         userId: string,
         options: { limit?: number; offset?: number; folderId?: string | null } = {}
     ): Promise<{ workflows: WorkflowModel[]; total: number }> {
-        // Ensure junction tables exist
-        const folderRepo = new FolderRepository();
-        await folderRepo.ensureJunctionTablesExist();
-
         const limit = options.limit || 50;
         const offset = options.offset || 0;
 
-        // Build folder filter using junction table
+        // Build folder filter using folder_ids array
         // folderId = undefined: return all workflows (no filter)
-        // folderId = null: return workflows not in any folder (not in any junction table entry)
-        // folderId = 'uuid': return workflows in that folder (via junction table)
-        let folderJoin = "";
+        // folderId = null: return workflows not in any folder (folder_ids IS NULL OR folder_ids = ARRAY[]::UUID[])
+        // folderId = 'uuid': return workflows in that folder ($2 = ANY(folder_ids))
         let folderFilter = "";
         const countParams: unknown[] = [userId];
         const queryParams: unknown[] = [userId];
 
         if (options.folderId === null) {
-            // Workflows not in any folder
-            folderFilter = ` AND NOT EXISTS (
-                SELECT 1 FROM flowmaestro.folder_workflows fw
-                WHERE fw.workflow_id = workflows.id
-            )`;
+            folderFilter = " AND (folder_ids IS NULL OR folder_ids = ARRAY[]::UUID[])";
         } else if (options.folderId !== undefined) {
-            // Workflows in specific folder
-            folderJoin =
-                " INNER JOIN flowmaestro.folder_workflows fw ON fw.workflow_id = workflows.id AND fw.folder_id = $2";
+            folderFilter = " AND $2 = ANY(COALESCE(folder_ids, ARRAY[]::UUID[]))";
             countParams.push(options.folderId);
             queryParams.push(options.folderId);
         }
 
         const countQuery = `
-            SELECT COUNT(DISTINCT workflows.id) as count
+            SELECT COUNT(*) as count
             FROM flowmaestro.workflows
-            ${folderJoin}
-            WHERE workflows.user_id = $1 AND workflows.deleted_at IS NULL${folderFilter}
+            WHERE user_id = $1 AND deleted_at IS NULL${folderFilter}
         `;
 
         const limitParamIndex = queryParams.length + 1;
         const offsetParamIndex = queryParams.length + 2;
         const query = `
-            SELECT DISTINCT workflows.*
+            SELECT *
             FROM flowmaestro.workflows
-            ${folderJoin}
-            WHERE workflows.user_id = $1 AND workflows.deleted_at IS NULL${folderFilter}
-            ORDER BY workflows.created_at DESC
+            WHERE user_id = $1 AND deleted_at IS NULL${folderFilter}
+            ORDER BY created_at DESC
             LIMIT $${limitParamIndex} OFFSET $${offsetParamIndex}
         `;
 

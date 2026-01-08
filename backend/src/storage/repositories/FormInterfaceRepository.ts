@@ -7,7 +7,6 @@ import type {
     UpdateFormInterfaceInput
 } from "@flowmaestro/shared";
 import { db } from "../database";
-import { FolderRepository } from "./FolderRepository";
 
 // Database row interface
 interface FormInterfaceRow {
@@ -118,43 +117,30 @@ export class FormInterfaceRepository {
         const limit = options.limit || 50;
         const offset = options.offset || 0;
 
-        // Ensure junction tables exist
-        const folderRepo = new FolderRepository();
-        await folderRepo.ensureJunctionTablesExist();
-
-        // Build folder filter using junction table
-        let folderJoin = "";
+        // Build folder filter using folder_ids array
         let folderFilter = "";
         const countParams: unknown[] = [userId];
         const queryParams: unknown[] = [userId];
 
         if (options.folderId === null) {
-            // Form interfaces not in any folder
-            folderFilter = ` AND NOT EXISTS (
-                SELECT 1 FROM flowmaestro.folder_form_interfaces ffi
-                WHERE ffi.form_interface_id = fi.id
-            )`;
+            folderFilter = " AND (fi.folder_ids IS NULL OR fi.folder_ids = ARRAY[]::UUID[])";
         } else if (options.folderId !== undefined) {
-            // Form interfaces in specific folder
-            folderJoin =
-                " INNER JOIN flowmaestro.folder_form_interfaces ffi ON ffi.form_interface_id = fi.id AND ffi.folder_id = $2";
+            folderFilter = " AND $2 = ANY(COALESCE(fi.folder_ids, ARRAY[]::UUID[]))";
             countParams.push(options.folderId);
             queryParams.push(options.folderId);
         }
 
         const countQuery = `
-            SELECT COUNT(DISTINCT fi.id) as count
+            SELECT COUNT(*) as count
             FROM flowmaestro.form_interfaces fi
-            ${folderJoin}
             WHERE fi.user_id = $1 AND fi.deleted_at IS NULL${folderFilter}
         `;
 
         const limitParamIndex = queryParams.length + 1;
         const offsetParamIndex = queryParams.length + 2;
         const query = `
-            SELECT DISTINCT fi.*, w.name as workflow_name, a.name as agent_name
+            SELECT fi.*, w.name as workflow_name, a.name as agent_name
             FROM flowmaestro.form_interfaces fi
-            ${folderJoin}
             LEFT JOIN flowmaestro.workflows w ON fi.workflow_id = w.id
             LEFT JOIN flowmaestro.agents a ON fi.agent_id = a.id
             WHERE fi.user_id = $1 AND fi.deleted_at IS NULL${folderFilter}

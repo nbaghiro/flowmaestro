@@ -6,7 +6,6 @@ import {
     KnowledgeBaseStats,
     KnowledgeBaseConfig
 } from "../models/KnowledgeBase";
-import { FolderRepository } from "./FolderRepository";
 
 const DEFAULT_CONFIG: KnowledgeBaseConfig = {
     embeddingModel: "text-embedding-3-small",
@@ -64,45 +63,32 @@ export class KnowledgeBaseRepository {
         const limit = options.limit || 50;
         const offset = options.offset || 0;
 
-        // Ensure junction tables exist
-        const folderRepo = new FolderRepository();
-        await folderRepo.ensureJunctionTablesExist();
-
-        // Build folder filter using junction table
-        let folderJoin = "";
+        // Build folder filter using folder_ids array
         let folderFilter = "";
         const countParams: unknown[] = [userId];
         const queryParams: unknown[] = [userId];
 
         if (options.folderId === null) {
-            // Knowledge bases not in any folder
-            folderFilter = ` AND NOT EXISTS (
-                SELECT 1 FROM flowmaestro.folder_knowledge_bases fkb
-                WHERE fkb.knowledge_base_id = knowledge_bases.id
-            )`;
+            folderFilter = " AND (folder_ids IS NULL OR folder_ids = ARRAY[]::UUID[])";
         } else if (options.folderId !== undefined) {
-            // Knowledge bases in specific folder
-            folderJoin =
-                " INNER JOIN flowmaestro.folder_knowledge_bases fkb ON fkb.knowledge_base_id = knowledge_bases.id AND fkb.folder_id = $2";
+            folderFilter = " AND $2 = ANY(COALESCE(folder_ids, ARRAY[]::UUID[]))";
             countParams.push(options.folderId);
             queryParams.push(options.folderId);
         }
 
         const countQuery = `
-            SELECT COUNT(DISTINCT knowledge_bases.id) as count
+            SELECT COUNT(*) as count
             FROM flowmaestro.knowledge_bases
-            ${folderJoin}
-            WHERE knowledge_bases.user_id = $1${folderFilter}
+            WHERE user_id = $1${folderFilter}
         `;
 
         const limitParamIndex = queryParams.length + 1;
         const offsetParamIndex = queryParams.length + 2;
         const query = `
-            SELECT DISTINCT knowledge_bases.*
+            SELECT *
             FROM flowmaestro.knowledge_bases
-            ${folderJoin}
-            WHERE knowledge_bases.user_id = $1${folderFilter}
-            ORDER BY knowledge_bases.created_at DESC
+            WHERE user_id = $1${folderFilter}
+            ORDER BY created_at DESC
             LIMIT $${limitParamIndex} OFFSET $${offsetParamIndex}
         `;
 
