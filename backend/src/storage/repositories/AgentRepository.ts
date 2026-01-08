@@ -7,6 +7,7 @@ import {
     Tool,
     MemoryConfig
 } from "../models/Agent";
+import { FolderRepository } from "./FolderRepository";
 import type { SafetyConfig } from "../../core/safety/types";
 
 // Database row interface
@@ -90,31 +91,45 @@ export class AgentRepository {
         const limit = options.limit || 50;
         const offset = options.offset || 0;
 
-        // Build folder filter
+        // Ensure junction tables exist
+        const folderRepo = new FolderRepository();
+        await folderRepo.ensureJunctionTablesExist();
+
+        // Build folder filter using junction table
+        let folderJoin = "";
         let folderFilter = "";
         const countParams: unknown[] = [userId];
         const queryParams: unknown[] = [userId];
 
         if (options.folderId === null) {
-            folderFilter = " AND folder_id IS NULL";
+            // Agents not in any folder
+            folderFilter = ` AND NOT EXISTS (
+                SELECT 1 FROM flowmaestro.folder_agents fa
+                WHERE fa.agent_id = agents.id
+            )`;
         } else if (options.folderId !== undefined) {
-            folderFilter = " AND folder_id = $2";
+            // Agents in specific folder
+            folderJoin =
+                " INNER JOIN flowmaestro.folder_agents fa ON fa.agent_id = agents.id AND fa.folder_id = $2";
             countParams.push(options.folderId);
             queryParams.push(options.folderId);
         }
 
         const countQuery = `
-            SELECT COUNT(*) as count
+            SELECT COUNT(DISTINCT agents.id) as count
             FROM flowmaestro.agents
-            WHERE user_id = $1 AND deleted_at IS NULL${folderFilter}
+            ${folderJoin}
+            WHERE agents.user_id = $1 AND agents.deleted_at IS NULL${folderFilter}
         `;
 
         const limitParamIndex = queryParams.length + 1;
         const offsetParamIndex = queryParams.length + 2;
         const query = `
-            SELECT * FROM flowmaestro.agents
-            WHERE user_id = $1 AND deleted_at IS NULL${folderFilter}
-            ORDER BY created_at DESC
+            SELECT DISTINCT agents.*
+            FROM flowmaestro.agents
+            ${folderJoin}
+            WHERE agents.user_id = $1 AND agents.deleted_at IS NULL${folderFilter}
+            ORDER BY agents.created_at DESC
             LIMIT $${limitParamIndex} OFFSET $${offsetParamIndex}
         `;
 

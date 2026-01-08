@@ -10,6 +10,7 @@ import {
     HardDrive,
     FolderPlus,
     FolderInput,
+    FolderMinus,
     GripVertical,
     ChevronDown
 } from "lucide-react";
@@ -298,6 +299,41 @@ export function KnowledgeBases() {
         setSelectedIds(new Set());
     };
 
+    const handleRemoveFromFolder = async (kbId: string) => {
+        if (!currentFolderId) return; // Can only remove when viewing inside a folder
+        try {
+            await moveItemsToFolder({
+                itemIds: [kbId],
+                itemType: "knowledge-base",
+                folderId: null,
+                sourceFolderId: currentFolderId
+            });
+            const currentFolderIdParam = currentFolderId || undefined;
+            await fetchKnowledgeBases({ folderId: currentFolderIdParam });
+            await loadFolders();
+        } catch (err) {
+            logger.error("Failed to remove knowledge base from folder", err);
+        }
+    };
+
+    const handleRemoveSelectedFromFolder = async () => {
+        if (selectedIds.size === 0 || !currentFolderId) return; // Can only remove when viewing inside a folder
+        try {
+            await moveItemsToFolder({
+                itemIds: Array.from(selectedIds),
+                itemType: "knowledge-base",
+                folderId: null,
+                sourceFolderId: currentFolderId
+            });
+            const currentFolderIdParam = currentFolderId || undefined;
+            await fetchKnowledgeBases({ folderId: currentFolderIdParam });
+            await loadFolders();
+            setSelectedIds(new Set());
+        } catch (err) {
+            logger.error("Failed to remove knowledge bases from folder", err);
+        }
+    };
+
     // Selection handlers for batch operations
     const handleCardClick = useCallback(
         (e: React.MouseEvent, kb: KnowledgeBase) => {
@@ -404,6 +440,18 @@ export function KnowledgeBases() {
                 closeContextMenu();
             }
         },
+        ...(currentFolderId
+            ? [
+                  {
+                      label: "Remove from folder",
+                      icon: <FolderMinus className="w-4 h-4" />,
+                      onClick: () => {
+                          handleRemoveSelectedFromFolder();
+                          closeContextMenu();
+                      }
+                  }
+              ]
+            : []),
         {
             label: `Delete ${selectedIds.size} knowledge base${selectedIds.size !== 1 ? "s" : ""}`,
             icon: <Trash2 className="w-4 h-4" />,
@@ -470,6 +518,15 @@ export function KnowledgeBases() {
                             <Button variant="ghost" onClick={() => setSelectedIds(new Set())}>
                                 Clear selection
                             </Button>
+                            {currentFolderId && (
+                                <Button
+                                    variant="secondary"
+                                    onClick={handleRemoveSelectedFromFolder}
+                                >
+                                    <FolderMinus className="w-4 h-4" />
+                                    Remove from folder
+                                </Button>
+                            )}
                             <Button variant="secondary" onClick={() => setIsMoveDialogOpen(true)}>
                                 <FolderInput className="w-4 h-4" />
                                 Move to folder
@@ -683,6 +740,21 @@ export function KnowledgeBases() {
                                                                     <FolderInput className="w-4 h-4" />
                                                                     Move to folder
                                                                 </button>
+                                                                {currentFolderId && (
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            setOpenMenuId(null);
+                                                                            handleRemoveFromFolder(
+                                                                                kb.id
+                                                                            );
+                                                                        }}
+                                                                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+                                                                    >
+                                                                        <FolderMinus className="w-4 h-4" />
+                                                                        Remove from folder
+                                                                    </button>
+                                                                )}
                                                                 <button
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();

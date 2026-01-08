@@ -8,6 +8,7 @@ import {
     Copy,
     FolderPlus,
     FolderInput,
+    FolderMinus,
     GripVertical,
     ChevronDown
 } from "lucide-react";
@@ -426,6 +427,39 @@ export function Workflows() {
         setSelectedIds(new Set());
     };
 
+    const handleRemoveFromFolder = async (workflowId: string) => {
+        if (!currentFolderId) return; // Can only remove when viewing inside a folder
+        try {
+            await moveItemsToFolder({
+                itemIds: [workflowId],
+                itemType: "workflow",
+                folderId: null,
+                sourceFolderId: currentFolderId
+            });
+            await loadWorkflows();
+            await loadFolders();
+        } catch (err) {
+            logger.error("Failed to remove workflow from folder", err);
+        }
+    };
+
+    const handleRemoveSelectedFromFolder = async () => {
+        if (selectedIds.size === 0 || !currentFolderId) return; // Can only remove when viewing inside a folder
+        try {
+            await moveItemsToFolder({
+                itemIds: Array.from(selectedIds),
+                itemType: "workflow",
+                folderId: null,
+                sourceFolderId: currentFolderId
+            });
+            await loadWorkflows();
+            await loadFolders();
+            setSelectedIds(new Set());
+        } catch (err) {
+            logger.error("Failed to remove workflows from folder", err);
+        }
+    };
+
     // Drag and drop handlers
     const handleDragStart = useCallback(
         (e: React.DragEvent, workflow: Workflow) => {
@@ -535,6 +569,18 @@ export function Workflows() {
                 closeContextMenu();
             }
         },
+        ...(currentFolderId
+            ? [
+                  {
+                      label: "Remove from folder",
+                      icon: <FolderMinus className="w-4 h-4" />,
+                      onClick: () => {
+                          handleRemoveSelectedFromFolder();
+                          closeContextMenu();
+                      }
+                  }
+              ]
+            : []),
         {
             label: `Delete ${selectedIds.size} workflow${selectedIds.size !== 1 ? "s" : ""}`,
             icon: <Trash2 className="w-4 h-4" />,
@@ -605,6 +651,15 @@ export function Workflows() {
                                 <FolderInput className="w-4 h-4" />
                                 Move to folder
                             </Button>
+                            {currentFolderId && (
+                                <Button
+                                    variant="secondary"
+                                    onClick={handleRemoveSelectedFromFolder}
+                                >
+                                    <FolderMinus className="w-4 h-4" />
+                                    Remove from folder
+                                </Button>
+                            )}
                             <Button
                                 variant="destructive"
                                 onClick={handleBatchDelete}
@@ -805,6 +860,21 @@ export function Workflows() {
                                                                 <FolderInput className="w-4 h-4" />
                                                                 Move to folder
                                                             </button>
+                                                            {currentFolderId && (
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setOpenMenuId(null);
+                                                                        handleRemoveFromFolder(
+                                                                            workflow.id
+                                                                        );
+                                                                    }}
+                                                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+                                                                >
+                                                                    <FolderMinus className="w-4 h-4" />
+                                                                    Remove from folder
+                                                                </button>
+                                                            )}
                                                             <button
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();

@@ -7,6 +7,7 @@ import {
     Edit2,
     FolderPlus,
     FolderInput,
+    FolderMinus,
     GripVertical,
     ChevronDown
 } from "lucide-react";
@@ -239,6 +240,41 @@ export function Agents() {
         setSelectedIds(new Set());
     };
 
+    const handleRemoveFromFolder = async (agentId: string) => {
+        if (!currentFolderId) return; // Can only remove when viewing inside a folder
+        try {
+            await moveItemsToFolder({
+                itemIds: [agentId],
+                itemType: "agent",
+                folderId: null,
+                sourceFolderId: currentFolderId
+            });
+            const currentFolderIdParam = currentFolderId || undefined;
+            await fetchAgents({ folderId: currentFolderIdParam });
+            await loadFolders();
+        } catch (err) {
+            logger.error("Failed to remove agent from folder", err);
+        }
+    };
+
+    const handleRemoveSelectedFromFolder = async () => {
+        if (selectedIds.size === 0 || !currentFolderId) return; // Can only remove when viewing inside a folder
+        try {
+            await moveItemsToFolder({
+                itemIds: Array.from(selectedIds),
+                itemType: "agent",
+                folderId: null,
+                sourceFolderId: currentFolderId
+            });
+            const currentFolderIdParam = currentFolderId || undefined;
+            await fetchAgents({ folderId: currentFolderIdParam });
+            await loadFolders();
+            setSelectedIds(new Set());
+        } catch (err) {
+            logger.error("Failed to remove agents from folder", err);
+        }
+    };
+
     // Drag and drop handlers
     const handleDragStart = useCallback(
         (e: React.DragEvent, agent: Agent) => {
@@ -354,6 +390,18 @@ export function Agents() {
                 closeContextMenu();
             }
         },
+        ...(currentFolderId
+            ? [
+                  {
+                      label: "Remove from folder",
+                      icon: <FolderMinus className="w-4 h-4" />,
+                      onClick: () => {
+                          handleRemoveSelectedFromFolder();
+                          closeContextMenu();
+                      }
+                  }
+              ]
+            : []),
         {
             label: `Delete ${selectedIds.size} agent${selectedIds.size !== 1 ? "s" : ""}`,
             icon: <Trash2 className="w-4 h-4" />,
@@ -411,6 +459,15 @@ export function Agents() {
                             <Button variant="ghost" onClick={() => setSelectedIds(new Set())}>
                                 Clear selection
                             </Button>
+                            {currentFolderId && (
+                                <Button
+                                    variant="secondary"
+                                    onClick={handleRemoveSelectedFromFolder}
+                                >
+                                    <FolderMinus className="w-4 h-4" />
+                                    Remove from folder
+                                </Button>
+                            )}
                             <Button variant="secondary" onClick={() => setIsMoveDialogOpen(true)}>
                                 <FolderInput className="w-4 h-4" />
                                 Move to folder
@@ -615,6 +672,21 @@ export function Agents() {
                                                                 <FolderInput className="w-4 h-4" />
                                                                 Move to folder
                                                             </button>
+                                                            {currentFolderId && (
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setOpenMenuId(null);
+                                                                        handleRemoveFromFolder(
+                                                                            agent.id
+                                                                        );
+                                                                    }}
+                                                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+                                                                >
+                                                                    <FolderMinus className="w-4 h-4" />
+                                                                    Remove from folder
+                                                                </button>
+                                                            )}
                                                             <button
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();

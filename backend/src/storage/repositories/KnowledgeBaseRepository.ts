@@ -6,6 +6,7 @@ import {
     KnowledgeBaseStats,
     KnowledgeBaseConfig
 } from "../models/KnowledgeBase";
+import { FolderRepository } from "./FolderRepository";
 
 const DEFAULT_CONFIG: KnowledgeBaseConfig = {
     embeddingModel: "text-embedding-3-small",
@@ -63,31 +64,45 @@ export class KnowledgeBaseRepository {
         const limit = options.limit || 50;
         const offset = options.offset || 0;
 
-        // Build folder filter
+        // Ensure junction tables exist
+        const folderRepo = new FolderRepository();
+        await folderRepo.ensureJunctionTablesExist();
+
+        // Build folder filter using junction table
+        let folderJoin = "";
         let folderFilter = "";
         const countParams: unknown[] = [userId];
         const queryParams: unknown[] = [userId];
 
         if (options.folderId === null) {
-            folderFilter = " AND folder_id IS NULL";
+            // Knowledge bases not in any folder
+            folderFilter = ` AND NOT EXISTS (
+                SELECT 1 FROM flowmaestro.folder_knowledge_bases fkb
+                WHERE fkb.knowledge_base_id = knowledge_bases.id
+            )`;
         } else if (options.folderId !== undefined) {
-            folderFilter = " AND folder_id = $2";
+            // Knowledge bases in specific folder
+            folderJoin =
+                " INNER JOIN flowmaestro.folder_knowledge_bases fkb ON fkb.knowledge_base_id = knowledge_bases.id AND fkb.folder_id = $2";
             countParams.push(options.folderId);
             queryParams.push(options.folderId);
         }
 
         const countQuery = `
-            SELECT COUNT(*) as count
+            SELECT COUNT(DISTINCT knowledge_bases.id) as count
             FROM flowmaestro.knowledge_bases
-            WHERE user_id = $1${folderFilter}
+            ${folderJoin}
+            WHERE knowledge_bases.user_id = $1${folderFilter}
         `;
 
         const limitParamIndex = queryParams.length + 1;
         const offsetParamIndex = queryParams.length + 2;
         const query = `
-            SELECT * FROM flowmaestro.knowledge_bases
-            WHERE user_id = $1${folderFilter}
-            ORDER BY created_at DESC
+            SELECT DISTINCT knowledge_bases.*
+            FROM flowmaestro.knowledge_bases
+            ${folderJoin}
+            WHERE knowledge_bases.user_id = $1${folderFilter}
+            ORDER BY knowledge_bases.created_at DESC
             LIMIT $${limitParamIndex} OFFSET $${offsetParamIndex}
         `;
 

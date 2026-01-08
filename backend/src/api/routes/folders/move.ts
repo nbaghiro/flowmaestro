@@ -52,8 +52,38 @@ export async function moveItemsToFolderRoute(fastify: FastifyInstance) {
                     });
                 }
 
-                // If folderId is provided, verify it exists and belongs to user
+                // Ensure junction tables exist
+                await folderRepo.ensureJunctionTablesExist();
+
+                // Get junction table configuration
+                const junctionConfig = folderRepo.getJunctionTableConfig(body.itemType);
+                if (!junctionConfig) {
+                    return reply.status(400).send({
+                        success: false,
+                        error: `Invalid item type: ${body.itemType}`
+                    });
+                }
+
+                // Verify items exist and belong to user
+                const placeholders = body.itemIds.map((_, i) => `$${i + 1}`).join(", ");
+                const verifyQuery = `
+                    SELECT id FROM flowmaestro.${tableName}
+                    WHERE user_id = $${body.itemIds.length + 1} AND id IN (${placeholders})
+                    ${tableName === "knowledge_bases" ? "" : "AND deleted_at IS NULL"}
+                `;
+                const verifyResult = await db.query(verifyQuery, [...body.itemIds, userId]);
+
+                if (verifyResult.rows.length !== body.itemIds.length) {
+                    return reply.status(400).send({
+                        success: false,
+                        error: "One or more items not found or do not belong to user"
+                    });
+                }
+
+                let movedCount = 0;
+
                 if (body.folderId !== null) {
+                    // Add items to folder (many-to-many: items can be in multiple folders)
                     const folder = await folderRepo.findByIdAndUserId(body.folderId, userId);
                     if (!folder) {
                         return reply.status(404).send({
@@ -61,21 +91,63 @@ export async function moveItemsToFolderRoute(fastify: FastifyInstance) {
                             error: "Folder not found"
                         });
                     }
+
+                    // Insert into junction table, ignoring conflicts (item already in folder)
+                    const insertPlaceholders = body.itemIds
+                        .map((_, i) => `($1, $${i + 2})`)
+                        .join(", ");
+                    const insertQuery = `
+                        INSERT INTO flowmaestro.${junctionConfig.tableName} (folder_id, ${junctionConfig.itemIdColumn})
+                        VALUES ${insertPlaceholders}
+                        ON CONFLICT (folder_id, ${junctionConfig.itemIdColumn}) DO NOTHING
+                    `;
+                    const insertResult = await db.query(insertQuery, [
+                        body.folderId,
+                        ...body.itemIds
+                    ]);
+                    movedCount = insertResult.rowCount || 0;
+                } else {
+                    // Remove items from folder(s)
+                    const sourceFolderId = body.sourceFolderId;
+
+                    if (sourceFolderId) {
+                        // Remove from specific folder only
+                        const sourceFolder = await folderRepo.findByIdAndUserId(
+                            sourceFolderId,
+                            userId
+                        );
+                        if (!sourceFolder) {
+                            return reply.status(404).send({
+                                success: false,
+                                error: "Source folder not found"
+                            });
+                        }
+
+                        const deletePlaceholders = body.itemIds
+                            .map((_, i) => `$${i + 2}`)
+                            .join(", ");
+                        const deleteQuery = `
+                            DELETE FROM flowmaestro.${junctionConfig.tableName}
+                            WHERE folder_id = $1 AND ${junctionConfig.itemIdColumn} IN (${deletePlaceholders})
+                        `;
+                        const deleteResult = await db.query(deleteQuery, [
+                            sourceFolderId,
+                            ...body.itemIds
+                        ]);
+                        movedCount = deleteResult.rowCount || 0;
+                    } else {
+                        // Remove from all folders (when no sourceFolderId specified)
+                        const deletePlaceholders = body.itemIds
+                            .map((_, i) => `$${i + 1}`)
+                            .join(", ");
+                        const deleteQuery = `
+                            DELETE FROM flowmaestro.${junctionConfig.tableName}
+                            WHERE ${junctionConfig.itemIdColumn} IN (${deletePlaceholders})
+                        `;
+                        const deleteResult = await db.query(deleteQuery, body.itemIds);
+                        movedCount = deleteResult.rowCount || 0;
+                    }
                 }
-
-                // Update items
-                // Use parameterized query with array of IDs
-                const placeholders = body.itemIds.map((_, i) => `$${i + 3}`).join(", ");
-                const query = `
-                    UPDATE flowmaestro.${tableName}
-                    SET folder_id = $1, updated_at = CURRENT_TIMESTAMP
-                    WHERE user_id = $2 AND id IN (${placeholders}) AND deleted_at IS NULL
-                `;
-
-                const values = [body.folderId, userId, ...body.itemIds];
-                const result = await db.query(query, values);
-
-                const movedCount = result.rowCount || 0;
 
                 logger.info(
                     {

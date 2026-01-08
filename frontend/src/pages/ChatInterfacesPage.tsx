@@ -10,6 +10,7 @@ import {
     Users,
     FolderPlus,
     FolderInput,
+    FolderMinus,
     GripVertical,
     ChevronDown
 } from "lucide-react";
@@ -323,6 +324,41 @@ export function ChatInterfacesPage() {
         setSelectedIds(new Set());
     };
 
+    const handleRemoveFromFolder = async (chatId: string) => {
+        if (!currentFolderId) return; // Can only remove when viewing inside a folder
+        try {
+            await moveItemsToFolder({
+                itemIds: [chatId],
+                itemType: "chat-interface",
+                folderId: null,
+                sourceFolderId: currentFolderId
+            });
+            const currentFolderIdParam = currentFolderId || undefined;
+            await loadChatInterfaces(currentFolderIdParam);
+            await loadFolders();
+        } catch (err) {
+            logger.error("Failed to remove chat interface from folder", err);
+        }
+    };
+
+    const handleRemoveSelectedFromFolder = async () => {
+        if (selectedIds.size === 0 || !currentFolderId) return; // Can only remove when viewing inside a folder
+        try {
+            await moveItemsToFolder({
+                itemIds: Array.from(selectedIds),
+                itemType: "chat-interface",
+                folderId: null,
+                sourceFolderId: currentFolderId
+            });
+            const currentFolderIdParam = currentFolderId || undefined;
+            await loadChatInterfaces(currentFolderIdParam);
+            await loadFolders();
+            setSelectedIds(new Set());
+        } catch (err) {
+            logger.error("Failed to remove chat interfaces from folder", err);
+        }
+    };
+
     const formatDate = (date: Date | string) => {
         return new Date(date).toLocaleDateString("en-US", {
             month: "short",
@@ -413,6 +449,18 @@ export function ChatInterfacesPage() {
                 closeContextMenu();
             }
         },
+        ...(currentFolderId
+            ? [
+                  {
+                      label: "Remove from folder",
+                      icon: <FolderMinus className="w-4 h-4" />,
+                      onClick: () => {
+                          handleRemoveSelectedFromFolder();
+                          closeContextMenu();
+                      }
+                  }
+              ]
+            : []),
         {
             label: `Delete ${selectedIds.size} chat${selectedIds.size !== 1 ? "s" : ""}`,
             icon: <Trash2 className="w-4 h-4" />,
@@ -478,6 +526,15 @@ export function ChatInterfacesPage() {
                             <Button variant="ghost" onClick={() => setSelectedIds(new Set())}>
                                 Clear selection
                             </Button>
+                            {currentFolderId && (
+                                <Button
+                                    variant="secondary"
+                                    onClick={handleRemoveSelectedFromFolder}
+                                >
+                                    <FolderMinus className="w-4 h-4" />
+                                    Remove from folder
+                                </Button>
+                            )}
                             <Button variant="secondary" onClick={() => setIsMoveDialogOpen(true)}>
                                 <FolderInput className="w-4 h-4" />
                                 Move to folder
@@ -726,6 +783,18 @@ export function ChatInterfacesPage() {
                                                     <FolderInput className="w-4 h-4" />
                                                     Move to folder
                                                 </button>
+                                                {currentFolderId && (
+                                                    <button
+                                                        onClick={() => {
+                                                            setOpenMenuId(null);
+                                                            handleRemoveFromFolder(ci.id);
+                                                        }}
+                                                        className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted"
+                                                    >
+                                                        <FolderMinus className="w-4 h-4" />
+                                                        Remove from folder
+                                                    </button>
+                                                )}
                                                 <hr className="my-1 border-border" />
                                                 <button
                                                     onClick={() => {

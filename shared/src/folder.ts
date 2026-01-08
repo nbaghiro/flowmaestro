@@ -112,6 +112,7 @@ export interface MoveItemsToFolderInput {
     itemIds: string[];
     itemType: FolderResourceType;
     folderId: string | null; // null = move to root (remove from folder)
+    sourceFolderId?: string; // Optional: when removing (folderId=null), specify which folder to remove from
 }
 
 // Color palette (predefined options)

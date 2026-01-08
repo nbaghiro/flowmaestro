@@ -9,6 +9,7 @@ import {
     Globe,
     FolderPlus,
     FolderInput,
+    FolderMinus,
     GripVertical,
     ChevronDown
 } from "lucide-react";
@@ -291,6 +292,41 @@ export function FormInterfaces() {
         setSelectedIds(new Set());
     };
 
+    const handleRemoveFromFolder = async (formId: string) => {
+        if (!currentFolderId) return; // Can only remove when viewing inside a folder
+        try {
+            await moveItemsToFolder({
+                itemIds: [formId],
+                itemType: "form-interface",
+                folderId: null,
+                sourceFolderId: currentFolderId
+            });
+            const currentFolderIdParam = currentFolderId || undefined;
+            await loadFormInterfaces(currentFolderIdParam);
+            await loadFolders();
+        } catch (err) {
+            logger.error("Failed to remove form interface from folder", err);
+        }
+    };
+
+    const handleRemoveSelectedFromFolder = async () => {
+        if (selectedIds.size === 0 || !currentFolderId) return; // Can only remove when viewing inside a folder
+        try {
+            await moveItemsToFolder({
+                itemIds: Array.from(selectedIds),
+                itemType: "form-interface",
+                folderId: null,
+                sourceFolderId: currentFolderId
+            });
+            const currentFolderIdParam = currentFolderId || undefined;
+            await loadFormInterfaces(currentFolderIdParam);
+            await loadFolders();
+            setSelectedIds(new Set());
+        } catch (err) {
+            logger.error("Failed to remove form interfaces from folder", err);
+        }
+    };
+
     // Drag and drop handlers
     const handleDragStart = useCallback(
         (e: React.DragEvent, fi: FormInterface) => {
@@ -412,6 +448,18 @@ export function FormInterfaces() {
                 closeContextMenu();
             }
         },
+        ...(currentFolderId
+            ? [
+                  {
+                      label: "Remove from folder",
+                      icon: <FolderMinus className="w-4 h-4" />,
+                      onClick: () => {
+                          handleRemoveSelectedFromFolder();
+                          closeContextMenu();
+                      }
+                  }
+              ]
+            : []),
         {
             label: `Delete ${selectedIds.size} form${selectedIds.size !== 1 ? "s" : ""}`,
             icon: <Trash2 className="w-4 h-4" />,
@@ -477,6 +525,15 @@ export function FormInterfaces() {
                             <Button variant="ghost" onClick={() => setSelectedIds(new Set())}>
                                 Clear selection
                             </Button>
+                            {currentFolderId && (
+                                <Button
+                                    variant="secondary"
+                                    onClick={handleRemoveSelectedFromFolder}
+                                >
+                                    <FolderMinus className="w-4 h-4" />
+                                    Remove from folder
+                                </Button>
+                            )}
                             <Button variant="secondary" onClick={() => setIsMoveDialogOpen(true)}>
                                 <FolderInput className="w-4 h-4" />
                                 Move to folder
@@ -723,6 +780,18 @@ export function FormInterfaces() {
                                                     <FolderInput className="w-4 h-4" />
                                                     Move to folder
                                                 </button>
+                                                {currentFolderId && (
+                                                    <button
+                                                        onClick={() => {
+                                                            setOpenMenuId(null);
+                                                            handleRemoveFromFolder(fi.id);
+                                                        }}
+                                                        className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted"
+                                                    >
+                                                        <FolderMinus className="w-4 h-4" />
+                                                        Remove from folder
+                                                    </button>
+                                                )}
                                                 <hr className="my-1 border-border" />
                                                 <button
                                                     onClick={() => {

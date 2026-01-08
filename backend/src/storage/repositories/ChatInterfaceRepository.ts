@@ -10,6 +10,7 @@ import type {
     PublicChatInterface
 } from "@flowmaestro/shared";
 import { db } from "../database";
+import { FolderRepository } from "./FolderRepository";
 
 // Database row interface
 interface ChatInterfaceRow {
@@ -137,30 +138,43 @@ export class ChatInterfaceRepository {
         const limit = options.limit || 50;
         const offset = options.offset || 0;
 
-        // Build folder filter
+        // Ensure junction tables exist
+        const folderRepo = new FolderRepository();
+        await folderRepo.ensureJunctionTablesExist();
+
+        // Build folder filter using junction table
+        let folderJoin = "";
         let folderFilter = "";
         const countParams: unknown[] = [userId];
         const queryParams: unknown[] = [userId];
 
         if (options.folderId === null) {
-            folderFilter = " AND ci.folder_id IS NULL";
+            // Chat interfaces not in any folder
+            folderFilter = ` AND NOT EXISTS (
+                SELECT 1 FROM flowmaestro.folder_chat_interfaces fci
+                WHERE fci.chat_interface_id = ci.id
+            )`;
         } else if (options.folderId !== undefined) {
-            folderFilter = " AND ci.folder_id = $2";
+            // Chat interfaces in specific folder
+            folderJoin =
+                " INNER JOIN flowmaestro.folder_chat_interfaces fci ON fci.chat_interface_id = ci.id AND fci.folder_id = $2";
             countParams.push(options.folderId);
             queryParams.push(options.folderId);
         }
 
         const countQuery = `
-            SELECT COUNT(*) as count
+            SELECT COUNT(DISTINCT ci.id) as count
             FROM flowmaestro.chat_interfaces ci
+            ${folderJoin}
             WHERE ci.user_id = $1 AND ci.deleted_at IS NULL${folderFilter}
         `;
 
         const limitParamIndex = queryParams.length + 1;
         const offsetParamIndex = queryParams.length + 2;
         const query = `
-            SELECT ci.*, a.name as agent_name
+            SELECT DISTINCT ci.*, a.name as agent_name
             FROM flowmaestro.chat_interfaces ci
+            ${folderJoin}
             LEFT JOIN flowmaestro.agents a ON ci.agent_id = a.id
             WHERE ci.user_id = $1 AND ci.deleted_at IS NULL${folderFilter}
             ORDER BY ci.updated_at DESC
