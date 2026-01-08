@@ -8,6 +8,7 @@ import { Button } from "../components/common/Button";
 import { ContextMenu, type ContextMenuItem } from "../components/common/ContextMenu";
 import { PageHeader } from "../components/common/PageHeader";
 import { LoadingState } from "../components/common/Spinner";
+import { CreateAgentDialog } from "../components/CreateAgentDialog";
 import { logger } from "../lib/logger";
 import { useAgentStore } from "../stores/agentStore";
 import type { Agent } from "../lib/api";
@@ -24,6 +25,7 @@ export function Agents() {
         position: { x: number; y: number };
     }>({ isOpen: false, position: { x: 0, y: 0 } });
     const [isBatchDeleting, setIsBatchDeleting] = useState(false);
+    const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -168,7 +170,7 @@ export function Agents() {
                             </Button>
                         </div>
                     ) : (
-                        <Button variant="primary" onClick={() => navigate("/agents/new")}>
+                        <Button variant="primary" onClick={() => setIsCreateDialogOpen(true)}>
                             <Plus className="w-4 h-4" />
                             New Agent
                         </Button>
@@ -194,7 +196,7 @@ export function Agents() {
                         Create your first AI agent to automate tasks, answer questions, or execute
                         workflows.
                     </p>
-                    <Button variant="primary" onClick={() => navigate("/agents/new")} size="lg">
+                    <Button variant="primary" onClick={() => setIsCreateDialogOpen(true)} size="lg">
                         <Plus className="w-4 h-4" />
                         Create Your First Agent
                     </Button>
@@ -342,6 +344,16 @@ export function Agents() {
                 position={contextMenu.position}
                 items={contextMenuItems}
                 onClose={closeContextMenu}
+            />
+
+            {/* Create Agent Dialog */}
+            <CreateAgentDialog
+                isOpen={isCreateDialogOpen}
+                onClose={() => setIsCreateDialogOpen(false)}
+                onCreate={(patternData) => {
+                    setIsCreateDialogOpen(false);
+                    navigate("/agents/new", { state: { patternData } });
+                }}
             />
         </div>
     );

@@ -34,6 +34,7 @@ import { logger } from "../lib/logger";
 import { cn } from "../lib/utils";
 import { useAgentStore } from "../stores/agentStore";
 import { useConnectionStore } from "../stores/connectionStore";
+import type { AgentPatternData } from "../components/CreateAgentDialog";
 import type {
     CreateAgentRequest,
     UpdateAgentRequest,
@@ -49,6 +50,7 @@ export function AgentBuilder() {
     const navigate = useNavigate();
     const location = useLocation();
     const isNewAgent = agentId === "new";
+    const patternData = location.state?.patternData as AgentPatternData | undefined;
 
     // Initialize tab from URL path
     const getTabFromPath = (): AgentTab => {
@@ -177,6 +179,17 @@ export function AgentBuilder() {
             });
         }
     }, [currentAgent]);
+
+    // Initialize form from pattern data when creating a new agent
+    useEffect(() => {
+        if (isNewAgent && patternData) {
+            setName(patternData.name);
+            setDescription(patternData.description || "");
+            setSystemPrompt(patternData.pattern.systemPrompt);
+            setTemperature(patternData.pattern.temperature);
+            setMaxTokens(patternData.pattern.maxTokens);
+        }
+    }, [isNewAgent, patternData]);
 
     // Load threads when agent loads and auto-select most recent for build tab
     useEffect(() => {
@@ -945,6 +958,16 @@ export function AgentBuilder() {
                                         {/* Add Tool Buttons */}
                                         <div className="space-y-2">
                                             <button
+                                                onClick={() => setIsWorkflowDialogOpen(true)}
+                                                className={cn(
+                                                    "w-full px-4 py-3 rounded-lg border border-dashed border-border",
+                                                    "text-sm text-muted-foreground text-left",
+                                                    "hover:border-primary/50 hover:bg-muted transition-colors"
+                                                )}
+                                            >
+                                                + Add a workflow
+                                            </button>
+                                            <button
                                                 onClick={() => setIsKnowledgeBaseDialogOpen(true)}
                                                 className={cn(
                                                     "w-full px-4 py-3 rounded-lg border border-dashed border-border",
@@ -963,16 +986,6 @@ export function AgentBuilder() {
                                                 )}
                                             >
                                                 + Add an MCP integration
-                                            </button>
-                                            <button
-                                                onClick={() => setIsWorkflowDialogOpen(true)}
-                                                className={cn(
-                                                    "w-full px-4 py-3 rounded-lg border border-dashed border-border",
-                                                    "text-sm text-muted-foreground text-left",
-                                                    "hover:border-primary/50 hover:bg-muted transition-colors"
-                                                )}
-                                            >
-                                                + Add a workflow
                                             </button>
                                             <button
                                                 onClick={() => setIsCustomMCPDialogOpen(true)}

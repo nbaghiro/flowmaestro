@@ -160,8 +160,9 @@ export function CreateWorkflowDialog({ isOpen, onClose, onCreate }: CreateWorkfl
 
     const handlePatternNext = () => {
         if (selectedPattern) {
-            // Pre-fill name from pattern
+            // Pre-fill name and description from pattern
             setName(selectedPattern.name);
+            setDescription(selectedPattern.description);
             setStep("details");
         }
     };
