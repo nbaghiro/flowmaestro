@@ -6,6 +6,7 @@ import { Select } from "../../../components/common/Select";
 import { Textarea } from "../../../components/common/Textarea";
 
 interface OutputNodeConfigProps {
+    nodeId?: string;
     data: Record<string, unknown>;
     onUpdate: (config: unknown) => void;
     errors?: ValidationError[];
@@ -18,7 +19,12 @@ const formats = [
     { value: "boolean", label: "Boolean" }
 ];
 
-export function OutputNodeConfig({ data, onUpdate, errors = [] }: OutputNodeConfigProps) {
+export function OutputNodeConfig({
+    nodeId: _nodeId,
+    data,
+    onUpdate,
+    errors = []
+}: OutputNodeConfigProps) {
     const getError = (field: string) => errors.find((e) => e.field === field)?.message;
     const [outputName, setOutputName] = useState((data.outputName as string) || "result");
     const [value, setValue] = useState((data.value as string) || "");

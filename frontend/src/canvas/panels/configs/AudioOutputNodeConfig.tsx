@@ -14,6 +14,7 @@ import { Slider } from "../../../components/common/Slider";
 import { Textarea } from "../../../components/common/Textarea";
 
 interface AudioOutputNodeConfigProps {
+    nodeId?: string;
     data: Record<string, unknown>;
     onUpdate: (config: unknown) => void;
     errors?: ValidationError[];
@@ -66,7 +67,12 @@ const OUTPUT_FORMATS = [
     { value: "opus", label: "Opus" }
 ];
 
-export function AudioOutputNodeConfig({ data, onUpdate, errors = [] }: AudioOutputNodeConfigProps) {
+export function AudioOutputNodeConfig({
+    nodeId: _nodeId,
+    data,
+    onUpdate,
+    errors = []
+}: AudioOutputNodeConfigProps) {
     const getError = (field: string) => errors.find((e) => e.field === field)?.message;
 
     // State

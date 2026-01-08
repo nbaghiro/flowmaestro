@@ -5,10 +5,11 @@ import { Button } from "../../../components/common/Button";
 import { FormField, FormSection } from "../../../components/common/FormField";
 import { Input } from "../../../components/common/Input";
 import { Select } from "../../../components/common/Select";
-import { Textarea } from "../../../components/common/Textarea";
+import { VariableInput } from "../../../components/common/VariableInput";
 import { OutputSettingsSection } from "../../../components/OutputSettingsSection";
 
 interface HTTPNodeConfigProps {
+    nodeId: string;
     data: Record<string, unknown>;
     onUpdate: (config: unknown) => void;
     errors?: ValidationError[];
@@ -40,7 +41,7 @@ interface KeyValue {
     value: string;
 }
 
-export function HTTPNodeConfig({ data, onUpdate, errors = [] }: HTTPNodeConfigProps) {
+export function HTTPNodeConfig({ nodeId, data, onUpdate, errors = [] }: HTTPNodeConfigProps) {
     const getError = (field: string) => errors.find((e) => e.field === field)?.message;
     // Helper function to convert object to KeyValue array
     const toKeyValueArray = (obj: unknown): KeyValue[] => {
@@ -123,15 +124,14 @@ export function HTTPNodeConfig({ data, onUpdate, errors = [] }: HTTPNodeConfigPr
 
                 <FormField
                     label="URL"
-                    description="Supports {{variableName}} interpolation"
+                    description="Type {{ to autocomplete variables, or use the picker"
                     error={getError("url")}
                 >
-                    <Input
-                        type="text"
+                    <VariableInput
+                        nodeId={nodeId}
                         value={url}
-                        onChange={(e) => setUrl(e.target.value)}
+                        onChange={setUrl}
                         placeholder="https://api.example.com/endpoint"
-                        className="font-mono"
                     />
                 </FormField>
             </FormSection>
@@ -239,17 +239,18 @@ export function HTTPNodeConfig({ data, onUpdate, errors = [] }: HTTPNodeConfigPr
                         <Select value={bodyType} onChange={setBodyType} options={bodyTypes} />
                     </FormField>
 
-                    <FormField label="Body">
-                        <Textarea
+                    <FormField label="Body" description="Type {{ to autocomplete variables">
+                        <VariableInput
+                            nodeId={nodeId}
                             value={body}
-                            onChange={(e) => setBody(e.target.value)}
+                            onChange={setBody}
                             placeholder={
                                 bodyType === "json"
-                                    ? '{\n  "key": "${value}"\n}'
+                                    ? '{\n  "key": "{{value}}"\n}'
                                     : "Request body..."
                             }
+                            multiline
                             rows={8}
-                            className="font-mono"
                         />
                     </FormField>
                 </FormSection>

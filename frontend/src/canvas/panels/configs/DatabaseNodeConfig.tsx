@@ -11,6 +11,7 @@ import { OutputSettingsSection } from "../../../components/OutputSettingsSection
 import { useConnectionStore } from "../../../stores/connectionStore";
 
 interface DatabaseNodeConfigProps {
+    nodeId?: string;
     data: Record<string, unknown>;
     onUpdate: (config: unknown) => void;
     errors?: ValidationError[];

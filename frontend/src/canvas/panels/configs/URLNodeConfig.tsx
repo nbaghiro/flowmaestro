@@ -19,6 +19,7 @@ import { Select } from "../../../components/common/Select";
 import { Tooltip } from "../../../components/common/Tooltip";
 
 interface URLNodeConfigProps {
+    nodeId?: string;
     data: Record<string, unknown>;
     onUpdate: (config: unknown) => void;
 }
@@ -162,7 +163,7 @@ function SliderWithValue({
     );
 }
 
-export function URLNodeConfig({ data, onUpdate }: URLNodeConfigProps) {
+export function URLNodeConfig({ nodeId: _nodeId, data, onUpdate }: URLNodeConfigProps) {
     // URL State
     const [urls, setUrls] = useState<string[]>((data.urls as string[]) || []);
     const [newUrl, setNewUrl] = useState("");

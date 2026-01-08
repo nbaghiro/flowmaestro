@@ -8,6 +8,7 @@ import { Select } from "../../../components/common/Select";
 import { Textarea } from "../../../components/common/Textarea";
 
 interface TemplateOutputNodeConfigProps {
+    nodeId?: string;
     data: Record<string, unknown>;
     onUpdate: (config: unknown) => void;
     errors?: ValidationError[];

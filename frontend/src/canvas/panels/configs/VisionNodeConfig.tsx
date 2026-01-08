@@ -13,6 +13,7 @@ import { Textarea } from "../../../components/common/Textarea";
 import { OutputSettingsSection } from "../../../components/OutputSettingsSection";
 
 interface VisionNodeConfigProps {
+    nodeId?: string;
     data: Record<string, unknown>;
     onUpdate: (config: unknown) => void;
     errors?: ValidationError[];
@@ -23,7 +24,12 @@ const operations = [
     { value: "generate", label: "Generate Image" }
 ];
 
-export function VisionNodeConfig({ data, onUpdate, errors: _errors = [] }: VisionNodeConfigProps) {
+export function VisionNodeConfig({
+    nodeId: _nodeId,
+    data,
+    onUpdate,
+    errors: _errors = []
+}: VisionNodeConfigProps) {
     const [operation, setOperation] = useState((data.operation as string) || "analyze");
     const [provider, setProvider] = useState((data.provider as string) || "openai");
     const [model, setModel] = useState(

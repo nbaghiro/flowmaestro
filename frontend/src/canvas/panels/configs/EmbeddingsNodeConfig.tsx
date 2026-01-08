@@ -12,6 +12,7 @@ import { Textarea } from "../../../components/common/Textarea";
 import { OutputSettingsSection } from "../../../components/OutputSettingsSection";
 
 interface EmbeddingsNodeConfigProps {
+    nodeId?: string;
     data: Record<string, unknown>;
     onUpdate: (config: unknown) => void;
     errors?: ValidationError[];

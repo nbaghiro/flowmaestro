@@ -17,6 +17,7 @@ import {
 import { useConnectionStore } from "../../../stores/connectionStore";
 
 interface IntegrationNodeConfigProps {
+    nodeId?: string;
     data: Record<string, unknown>;
     onUpdate: (config: unknown) => void;
     errors?: ValidationError[];
@@ -26,7 +27,12 @@ interface IntegrationNodeConfigProps {
  * Dynamic Integration Node Config
  * Loads providers and operations dynamically from the backend
  */
-export function IntegrationNodeConfig({ data, onUpdate, errors = [] }: IntegrationNodeConfigProps) {
+export function IntegrationNodeConfig({
+    nodeId: _nodeId,
+    data,
+    onUpdate,
+    errors = []
+}: IntegrationNodeConfigProps) {
     const getError = (field: string) => errors.find((e) => e.field === field)?.message;
     const [provider, setProvider] = useState((data.provider as string) || "");
     const [operation, setOperation] = useState((data.operation as string) || "");

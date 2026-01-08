@@ -16,6 +16,7 @@ import { cn } from "../../../lib/utils";
 import type { TriggerProviderSummary, TriggerEvent, TriggerConfigField } from "../../../lib/api";
 
 export interface TriggerNodeConfigProps {
+    nodeId?: string;
     data: Record<string, unknown>;
     onUpdate: (config: unknown) => void;
     errors?: ValidationError[];
@@ -24,7 +25,12 @@ export interface TriggerNodeConfigProps {
 // View states for the multi-step flow
 type ViewState = "provider-list" | "event-list" | "event-config";
 
-export function TriggerNodeConfig({ data, onUpdate, errors: _errors }: TriggerNodeConfigProps) {
+export function TriggerNodeConfig({
+    nodeId: _nodeId,
+    data,
+    onUpdate,
+    errors: _errors
+}: TriggerNodeConfigProps) {
     // Use ref to avoid infinite update loops when onUpdate changes
     const onUpdateRef = useRef(onUpdate);
     onUpdateRef.current = onUpdate;
@@ -180,6 +186,7 @@ export function TriggerNodeConfig({ data, onUpdate, errors: _errors }: TriggerNo
 
 // Provider Event Configuration Component
 interface ProviderEventConfigProps {
+    nodeId?: string;
     provider: TriggerProviderSummary;
     event: TriggerEvent;
     eventConfig: Record<string, unknown>;
@@ -301,6 +308,7 @@ function ProviderEventConfig({
 
 // Event Config Field Component
 interface EventConfigFieldProps {
+    nodeId?: string;
     field: TriggerConfigField;
     value: unknown;
     onChange: (value: unknown) => void;

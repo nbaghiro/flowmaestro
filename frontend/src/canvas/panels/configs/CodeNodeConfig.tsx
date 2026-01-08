@@ -7,6 +7,7 @@ import { Select } from "../../../components/common/Select";
 import { OutputSettingsSection } from "../../../components/OutputSettingsSection";
 
 interface CodeNodeConfigProps {
+    nodeId?: string;
     data: Record<string, unknown>;
     onUpdate: (config: unknown) => void;
     errors?: ValidationError[];
@@ -18,7 +19,12 @@ const languages = [
     { value: "python", label: "Python" }
 ];
 
-export function CodeNodeConfig({ data, onUpdate, errors: _errors = [] }: CodeNodeConfigProps) {
+export function CodeNodeConfig({
+    nodeId: _nodeId,
+    data,
+    onUpdate,
+    errors: _errors = []
+}: CodeNodeConfigProps) {
     const [language, setLanguage] = useState((data.language as string) || "javascript");
     const [code, setCode] = useState((data.code as string) || "");
     const [timeout, setTimeout] = useState((data.timeout as number) || 30);

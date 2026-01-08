@@ -154,6 +154,7 @@ export function NodeInspector() {
             case "llm":
                 return (
                     <LLMNodeConfig
+                        nodeId={node.id}
                         data={node.data}
                         onUpdate={handleUpdate}
                         errors={validationErrors}
@@ -162,6 +163,7 @@ export function NodeInspector() {
             case "vision":
                 return (
                     <VisionNodeConfig
+                        nodeId={node.id}
                         data={node.data}
                         onUpdate={handleUpdate}
                         errors={validationErrors}
@@ -170,6 +172,7 @@ export function NodeInspector() {
             case "audioInput":
                 return (
                     <AudioInputNodeConfig
+                        nodeId={node.id}
                         data={node.data}
                         onUpdate={handleUpdate}
                         errors={validationErrors}
@@ -178,6 +181,7 @@ export function NodeInspector() {
             case "embeddings":
                 return (
                     <EmbeddingsNodeConfig
+                        nodeId={node.id}
                         data={node.data}
                         onUpdate={handleUpdate}
                         errors={validationErrors}
@@ -186,6 +190,7 @@ export function NodeInspector() {
             case "router":
                 return (
                     <RouterNodeConfig
+                        nodeId={node.id}
                         data={node.data}
                         onUpdate={handleUpdate}
                         errors={validationErrors}
@@ -196,6 +201,7 @@ export function NodeInspector() {
             case "conditional":
                 return (
                     <ConditionalNodeConfig
+                        nodeId={node.id}
                         data={node.data}
                         onUpdate={handleUpdate}
                         errors={validationErrors}
@@ -204,6 +210,7 @@ export function NodeInspector() {
             case "switch":
                 return (
                     <SwitchNodeConfig
+                        nodeId={node.id}
                         data={node.data}
                         onUpdate={handleUpdate}
                         errors={validationErrors}
@@ -212,6 +219,7 @@ export function NodeInspector() {
             case "loop":
                 return (
                     <LoopNodeConfig
+                        nodeId={node.id}
                         data={node.data}
                         onUpdate={handleUpdate}
                         errors={validationErrors}
@@ -220,6 +228,7 @@ export function NodeInspector() {
             case "code":
                 return (
                     <CodeNodeConfig
+                        nodeId={node.id}
                         data={node.data}
                         onUpdate={handleUpdate}
                         errors={validationErrors}
@@ -228,6 +237,7 @@ export function NodeInspector() {
             case "wait":
                 return (
                     <WaitNodeConfig
+                        nodeId={node.id}
                         data={node.data}
                         onUpdate={handleUpdate}
                         errors={validationErrors}
@@ -236,6 +246,7 @@ export function NodeInspector() {
             case "waitForUser":
                 return (
                     <WaitForUserNodeConfig
+                        nodeId={node.id}
                         data={node.data}
                         onUpdate={handleUpdate}
                         errors={validationErrors}
@@ -246,6 +257,7 @@ export function NodeInspector() {
             case "trigger":
                 return (
                     <TriggerNodeConfig
+                        nodeId={node.id}
                         data={node.data}
                         onUpdate={handleUpdate}
                         errors={validationErrors}
@@ -254,16 +266,18 @@ export function NodeInspector() {
             case "files":
                 return (
                     <FilesNodeConfig
+                        nodeId={node.id}
                         data={node.data}
                         onUpdate={handleUpdate}
                         errors={validationErrors}
                     />
                 );
             case "url":
-                return <URLNodeConfig data={node.data} onUpdate={handleUpdate} />;
+                return <URLNodeConfig nodeId={node.id} data={node.data} onUpdate={handleUpdate} />;
             case "input":
                 return (
                     <InputNodeConfig
+                        nodeId={node.id}
                         data={node.data}
                         onUpdate={handleUpdate}
                         errors={validationErrors}
@@ -274,6 +288,7 @@ export function NodeInspector() {
             case "output":
                 return (
                     <OutputNodeConfig
+                        nodeId={node.id}
                         data={node.data}
                         onUpdate={handleUpdate}
                         errors={validationErrors}
@@ -282,6 +297,7 @@ export function NodeInspector() {
             case "audioOutput":
                 return (
                     <AudioOutputNodeConfig
+                        nodeId={node.id}
                         data={node.data}
                         onUpdate={handleUpdate}
                         errors={validationErrors}
@@ -291,6 +307,7 @@ export function NodeInspector() {
             case "templateOutput":
                 return (
                     <TemplateOutputNodeConfig
+                        nodeId={node.id}
                         data={node.data}
                         onUpdate={handleUpdate}
                         errors={validationErrors}
@@ -300,6 +317,7 @@ export function NodeInspector() {
             case "action":
                 return (
                     <ActionNodeConfig
+                        nodeId={node.id}
                         data={node.data}
                         onUpdate={handleUpdate}
                         errors={validationErrors}
@@ -310,6 +328,7 @@ export function NodeInspector() {
             case "transform":
                 return (
                     <TransformNodeConfig
+                        nodeId={node.id}
                         data={node.data}
                         onUpdate={handleUpdate}
                         errors={validationErrors}
@@ -318,6 +337,7 @@ export function NodeInspector() {
             case "shared-memory":
                 return (
                     <SharedMemoryNodeConfig
+                        nodeId={node.id}
                         data={node.data}
                         onUpdate={handleUpdate}
                         errors={validationErrors}
@@ -328,6 +348,7 @@ export function NodeInspector() {
             case "http":
                 return (
                     <HTTPNodeConfig
+                        nodeId={node.id}
                         data={node.data}
                         onUpdate={handleUpdate}
                         errors={validationErrors}
@@ -336,6 +357,7 @@ export function NodeInspector() {
             case "database":
                 return (
                     <DatabaseNodeConfig
+                        nodeId={node.id}
                         data={node.data}
                         onUpdate={handleUpdate}
                         errors={validationErrors}
@@ -344,6 +366,7 @@ export function NodeInspector() {
             case "integration":
                 return (
                     <IntegrationNodeConfig
+                        nodeId={node.id}
                         data={node.data}
                         onUpdate={handleUpdate}
                         errors={validationErrors}
@@ -352,6 +375,7 @@ export function NodeInspector() {
             case "knowledgeBaseQuery":
                 return (
                     <KnowledgeBaseQueryNodeConfig
+                        nodeId={node.id}
                         data={node.data}
                         onUpdate={handleUpdate}
                         errors={validationErrors}
@@ -363,6 +387,7 @@ export function NodeInspector() {
                 if (node.type && isProviderNodeType(node.type)) {
                     return (
                         <IntegrationNodeConfig
+                            nodeId={node.id}
                             data={node.data}
                             onUpdate={handleUpdate}
                             errors={validationErrors}

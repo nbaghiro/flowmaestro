@@ -7,6 +7,7 @@ import { Select } from "../../../components/common/Select";
 import { OutputSettingsSection } from "../../../components/OutputSettingsSection";
 
 interface WaitNodeConfigProps {
+    nodeId?: string;
     data: Record<string, unknown>;
     onUpdate: (config: unknown) => void;
     errors?: ValidationError[];
@@ -25,7 +26,12 @@ const timeUnits = [
     { value: "days", label: "Days" }
 ];
 
-export function WaitNodeConfig({ data, onUpdate, errors: _errors = [] }: WaitNodeConfigProps) {
+export function WaitNodeConfig({
+    nodeId: _nodeId,
+    data,
+    onUpdate,
+    errors: _errors = []
+}: WaitNodeConfigProps) {
     const [waitType, setWaitType] = useState((data.waitType as string) || "duration");
     const [duration, setDuration] = useState((data.duration as number) || 5);
     const [unit, setUnit] = useState((data.unit as string) || "seconds");

@@ -6,6 +6,7 @@ import { Select } from "../../../components/common/Select";
 import { Textarea } from "../../../components/common/Textarea";
 
 interface InputNodeConfigProps {
+    nodeId?: string;
     data: Record<string, unknown>;
     onUpdate: (config: unknown) => void;
     errors?: ValidationError[];
@@ -16,7 +17,12 @@ const inputTypes = [
     { value: "json", label: "JSON" }
 ];
 
-export function InputNodeConfig({ data, onUpdate, errors: _errors = [] }: InputNodeConfigProps) {
+export function InputNodeConfig({
+    nodeId: _nodeId,
+    data,
+    onUpdate,
+    errors: _errors = []
+}: InputNodeConfigProps) {
     const [variableName, setVariableName] = useState((data.variableName as string) || "userInput");
     const [inputType, setInputType] = useState((data.inputType as string) || "text");
     const [description, setDescription] = useState((data.description as string) || "");

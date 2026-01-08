@@ -1,11 +1,13 @@
-import { Upload, FileJson, ChevronRight } from "lucide-react";
+import { Upload, FileJson, ChevronRight, ChevronLeft, ArrowRight } from "lucide-react";
 import { useState, FormEvent } from "react";
 import { Alert } from "./common/Alert";
 import { Button } from "./common/Button";
 import { Dialog } from "./common/Dialog";
 import { Input } from "./common/Input";
 import { Textarea } from "./common/Textarea";
+import { PatternPicker } from "./PatternPicker";
 import type { WorkflowDefinition } from "../lib/api";
+import type { WorkflowPattern } from "../lib/workflowPatterns";
 
 interface CreateWorkflowDialogProps {
     isOpen: boolean;
@@ -17,14 +19,26 @@ interface CreateWorkflowDialogProps {
     ) => Promise<void>;
 }
 
+type DialogStep = "pattern" | "details" | "json-import";
+
 export function CreateWorkflowDialog({ isOpen, onClose, onCreate }: CreateWorkflowDialogProps) {
+    // Step state
+    const [step, setStep] = useState<DialogStep>("pattern");
+
+    // Pattern selection state
+    const [selectedPattern, setSelectedPattern] = useState<WorkflowPattern | null>(null);
+
+    // Form state
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
+
+    // JSON import state
     const [jsonInput, setJsonInput] = useState("");
+    const [parsedWorkflow, setParsedWorkflow] = useState<WorkflowDefinition | null>(null);
+
+    // UI state
     const [isCreating, setIsCreating] = useState(false);
     const [error, setError] = useState("");
-    const [showJsonImport, setShowJsonImport] = useState(false);
-    const [parsedWorkflow, setParsedWorkflow] = useState<WorkflowDefinition | null>(null);
 
     const validateAndParseJSON = (
         json: string
@@ -139,42 +153,71 @@ export function CreateWorkflowDialog({ isOpen, onClose, onCreate }: CreateWorkfl
         reader.readAsText(file);
     };
 
+    const handlePatternSelect = (pattern: WorkflowPattern) => {
+        setSelectedPattern(pattern);
+        setError("");
+    };
+
+    const handlePatternNext = () => {
+        if (selectedPattern) {
+            // Pre-fill name from pattern
+            setName(selectedPattern.name);
+            setStep("details");
+        }
+    };
+
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
         setError("");
 
-        // When importing JSON, use the workflow name from JSON
-        const workflowName = parsedWorkflow?.name || name.trim();
-        const workflowDescription = parsedWorkflow?.description || description.trim();
+        // Determine workflow name and definition based on step
+        let workflowName: string;
+        let workflowDescription: string | undefined;
+        let workflowDefinition: WorkflowDefinition | undefined;
 
-        if (!workflowName) {
-            setError("Workflow name is required");
-            return;
-        }
+        if (step === "json-import") {
+            // JSON import mode
+            workflowName = parsedWorkflow?.name || name.trim();
+            workflowDescription = parsedWorkflow?.description || description.trim() || undefined;
 
-        // Validate JSON if provided
-        if (jsonInput.trim()) {
-            const result = validateAndParseJSON(jsonInput);
-            if (!result.valid) {
-                setError(result.error || "Invalid JSON");
+            if (!workflowName) {
+                setError("Workflow name is required");
                 return;
+            }
+
+            if (jsonInput.trim()) {
+                const result = validateAndParseJSON(jsonInput);
+                if (!result.valid) {
+                    setError(result.error || "Invalid JSON");
+                    return;
+                }
+                workflowDefinition = parsedWorkflow || undefined;
+            }
+        } else {
+            // Pattern-based creation
+            workflowName = name.trim();
+            workflowDescription = description.trim() || undefined;
+
+            if (!workflowName) {
+                setError("Workflow name is required");
+                return;
+            }
+
+            if (selectedPattern) {
+                // Clone the definition and update the name
+                workflowDefinition = {
+                    ...selectedPattern.definition,
+                    name: workflowName
+                };
             }
         }
 
         setIsCreating(true);
         try {
-            await onCreate(
-                workflowName,
-                workflowDescription || undefined,
-                parsedWorkflow || undefined
-            );
+            await onCreate(workflowName, workflowDescription, workflowDefinition);
 
             // Reset form
-            setName("");
-            setDescription("");
-            setJsonInput("");
-            setParsedWorkflow(null);
-            setShowJsonImport(false);
+            resetForm();
             onClose();
         } catch (err: unknown) {
             setError(err instanceof Error ? err.message : "Failed to create workflow");
@@ -183,32 +226,121 @@ export function CreateWorkflowDialog({ isOpen, onClose, onCreate }: CreateWorkfl
         }
     };
 
+    const resetForm = () => {
+        setStep("pattern");
+        setSelectedPattern(null);
+        setName("");
+        setDescription("");
+        setJsonInput("");
+        setParsedWorkflow(null);
+        setError("");
+    };
+
     const handleClose = () => {
         if (!isCreating) {
-            setName("");
-            setDescription("");
+            resetForm();
+            onClose();
+        }
+    };
+
+    const handleBack = () => {
+        if (step === "details") {
+            setStep("pattern");
+            setError("");
+        } else if (step === "json-import") {
+            setStep("details");
             setJsonInput("");
             setParsedWorkflow(null);
             setError("");
-            setShowJsonImport(false);
-            onClose();
         }
+    };
+
+    // Determine dialog title based on step
+    const getDialogTitle = () => {
+        switch (step) {
+            case "pattern":
+                return "Create New Workflow";
+            case "details":
+                return "Name Your Workflow";
+            case "json-import":
+                return "Import Workflow from JSON";
+            default:
+                return "Create New Workflow";
+        }
+    };
+
+    // Determine dialog size based on step
+    const getDialogSize = () => {
+        return step === "pattern" ? "6xl" : "md";
     };
 
     return (
         <Dialog
             isOpen={isOpen}
             onClose={handleClose}
-            title={showJsonImport ? "Import Workflow from JSON" : "Create New Workflow"}
-            size="md"
+            title={getDialogTitle()}
+            size={getDialogSize()}
             closeOnBackdropClick={!isCreating}
         >
             <form onSubmit={handleSubmit} className="space-y-4">
                 {error && <Alert variant="error">{error}</Alert>}
 
-                {/* Show name/description fields only when NOT in import mode */}
-                {!showJsonImport && (
+                {/* Step 1: Pattern Selection */}
+                {step === "pattern" && (
+                    <div className="flex flex-col">
+                        <div className="flex-1 min-h-0">
+                            <PatternPicker
+                                selectedPatternId={selectedPattern?.id || null}
+                                onSelect={handlePatternSelect}
+                            />
+                        </div>
+
+                        {/* Actions - always visible */}
+                        <div className="flex items-center justify-between pt-4 mt-4 border-t border-border bg-background sticky bottom-0">
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                onClick={handleClose}
+                                disabled={isCreating}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="primary"
+                                onClick={handlePatternNext}
+                                disabled={!selectedPattern}
+                                className="gap-2"
+                            >
+                                Next
+                                <ArrowRight className="w-4 h-4" />
+                            </Button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Step 2: Name & Description */}
+                {step === "details" && (
                     <>
+                        {/* Selected pattern indicator */}
+                        {selectedPattern && (
+                            <div className="flex items-center gap-3 p-3 bg-primary/5 border border-primary/20 rounded-lg mb-4">
+                                <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                                    <span className="text-lg">
+                                        {selectedPattern.id === "blank" ? "+" : ""}
+                                    </span>
+                                </div>
+                                <div>
+                                    <p className="text-sm font-medium text-foreground">
+                                        {selectedPattern.name}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                        {selectedPattern.nodeCount} nodes
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
                         <div>
                             <label
                                 htmlFor="workflow-name"
@@ -253,7 +385,7 @@ export function CreateWorkflowDialog({ isOpen, onClose, onCreate }: CreateWorkfl
                             <Button
                                 type="button"
                                 variant="ghost"
-                                onClick={() => setShowJsonImport(true)}
+                                onClick={() => setStep("json-import")}
                                 disabled={isCreating}
                                 className="gap-2"
                             >
@@ -262,28 +394,45 @@ export function CreateWorkflowDialog({ isOpen, onClose, onCreate }: CreateWorkfl
                                 <ChevronRight className="w-4 h-4 ml-auto" />
                             </Button>
                         </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center justify-between pt-2">
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                onClick={handleBack}
+                                disabled={isCreating}
+                                className="gap-2"
+                            >
+                                <ChevronLeft className="w-4 h-4" />
+                                Back
+                            </Button>
+                            <div className="flex gap-3">
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    onClick={handleClose}
+                                    disabled={isCreating}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    type="submit"
+                                    variant="primary"
+                                    disabled={isCreating || !name.trim()}
+                                    loading={isCreating}
+                                >
+                                    {isCreating ? "Creating..." : "Create Workflow"}
+                                </Button>
+                            </div>
+                        </div>
                     </>
                 )}
 
-                {/* JSON Import Section */}
-                {showJsonImport && (
-                    <div>
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            onClick={() => {
-                                setShowJsonImport(false);
-                                setJsonInput("");
-                                setParsedWorkflow(null);
-                                setError("");
-                            }}
-                            disabled={isCreating}
-                            className="gap-2 mb-4"
-                        >
-                            <ChevronRight className="w-4 h-4 rotate-180" />
-                            <span>Back to manual creation</span>
-                        </Button>
-                        <div className="mt-3 space-y-3">
+                {/* Step 3: JSON Import */}
+                {step === "json-import" && (
+                    <>
+                        <div className="space-y-3">
                             {/* File Upload */}
                             <div>
                                 <label className="flex items-center justify-center gap-2 px-4 py-2 border border-dashed border-border rounded-lg hover:border-primary hover:bg-primary/5 transition-colors cursor-pointer">
@@ -355,34 +504,40 @@ export function CreateWorkflowDialog({ isOpen, onClose, onCreate }: CreateWorkfl
                                 )}
                             </div>
                         </div>
-                    </div>
-                )}
 
-                {/* Actions */}
-                <div className="flex items-center justify-end gap-3 pt-2">
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        onClick={handleClose}
-                        disabled={isCreating}
-                    >
-                        Cancel
-                    </Button>
-                    <Button
-                        type="submit"
-                        variant="primary"
-                        disabled={isCreating || (showJsonImport ? !parsedWorkflow : !name.trim())}
-                        loading={isCreating}
-                    >
-                        {isCreating
-                            ? showJsonImport
-                                ? "Importing..."
-                                : "Creating..."
-                            : showJsonImport
-                              ? "Import Workflow"
-                              : "Create Workflow"}
-                    </Button>
-                </div>
+                        {/* Actions */}
+                        <div className="flex items-center justify-between pt-4">
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                onClick={handleBack}
+                                disabled={isCreating}
+                                className="gap-2"
+                            >
+                                <ChevronLeft className="w-4 h-4" />
+                                Back
+                            </Button>
+                            <div className="flex gap-3">
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    onClick={handleClose}
+                                    disabled={isCreating}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    type="submit"
+                                    variant="primary"
+                                    disabled={isCreating || !parsedWorkflow}
+                                    loading={isCreating}
+                                >
+                                    {isCreating ? "Importing..." : "Import Workflow"}
+                                </Button>
+                            </div>
+                        </div>
+                    </>
+                )}
             </form>
         </Dialog>
     );

@@ -8,6 +8,7 @@ import { OutputSettingsSection } from "../../../components/OutputSettingsSection
 import { VariableDialog } from "../../../components/VariableDialog";
 
 interface LoopNodeConfigProps {
+    nodeId?: string;
     data: Record<string, unknown>;
     onUpdate: (config: unknown) => void;
     errors?: ValidationError[];
@@ -19,7 +20,12 @@ const loopTypes = [
     { value: "times", label: "Times (fixed count)" }
 ];
 
-export function LoopNodeConfig({ data, onUpdate, errors: _errors = [] }: LoopNodeConfigProps) {
+export function LoopNodeConfig({
+    nodeId: _nodeId,
+    data,
+    onUpdate,
+    errors: _errors = []
+}: LoopNodeConfigProps) {
     const [loopType, setLoopType] = useState((data.loopType as string) || "forEach");
     const [arrayVariable, setArrayVariable] = useState((data.arrayVariable as string) || "");
     const [itemVariable, setItemVariable] = useState((data.itemVariable as string) || "item");

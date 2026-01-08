@@ -13,6 +13,7 @@ import { Input } from "../../../components/common/Input";
 import { Select } from "../../../components/common/Select";
 
 interface AudioInputNodeConfigProps {
+    nodeId?: string;
     data: Record<string, unknown>;
     onUpdate: (config: unknown) => void;
     errors?: ValidationError[];
@@ -48,7 +49,12 @@ const LANGUAGES = [
     { value: "ru", label: "Russian" }
 ];
 
-export function AudioInputNodeConfig({ data, onUpdate, errors = [] }: AudioInputNodeConfigProps) {
+export function AudioInputNodeConfig({
+    nodeId: _nodeId,
+    data,
+    onUpdate,
+    errors = []
+}: AudioInputNodeConfigProps) {
     const getError = (field: string) => errors.find((e) => e.field === field)?.message;
 
     // State

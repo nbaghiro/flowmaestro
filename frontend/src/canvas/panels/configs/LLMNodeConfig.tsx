@@ -10,18 +10,19 @@ import { FormField, FormSection } from "../../../components/common/FormField";
 import { Input } from "../../../components/common/Input";
 import { Select } from "../../../components/common/Select";
 import { Slider } from "../../../components/common/Slider";
-import { Textarea } from "../../../components/common/Textarea";
+import { VariableInput } from "../../../components/common/VariableInput";
 import { ProviderConnectionDialog } from "../../../components/connections/ProviderConnectionDialog";
 import { OutputSettingsSection } from "../../../components/OutputSettingsSection";
 import { useConnectionStore } from "../../../stores/connectionStore";
 
 interface LLMNodeConfigProps {
+    nodeId: string;
     data: Record<string, unknown>;
     onUpdate: (config: unknown) => void;
     errors?: ValidationError[];
 }
 
-export function LLMNodeConfig({ data, onUpdate, errors = [] }: LLMNodeConfigProps) {
+export function LLMNodeConfig({ nodeId, data, onUpdate, errors = [] }: LLMNodeConfigProps) {
     const getError = (field: string) => errors.find((e) => e.field === field)?.message;
     const [provider, setProvider] = useState((data.provider as string) || "");
     const [model, setModel] = useState(
@@ -156,25 +157,28 @@ export function LLMNodeConfig({ data, onUpdate, errors = [] }: LLMNodeConfigProp
                     label="System Prompt"
                     description="Instructions for the AI model's behavior"
                 >
-                    <Textarea
+                    <VariableInput
+                        nodeId={nodeId}
                         value={systemPrompt}
-                        onChange={(e) => setSystemPrompt(e.target.value)}
+                        onChange={setSystemPrompt}
                         placeholder="You are a helpful assistant..."
+                        multiline
                         rows={4}
                     />
                 </FormField>
 
                 <FormField
                     label="User Prompt"
-                    description="Use {{variableName}} to reference other node outputs"
+                    description="Type {{ to autocomplete variables, or use the picker"
                     error={getError("prompt")}
                 >
-                    <Textarea
+                    <VariableInput
+                        nodeId={nodeId}
                         value={prompt}
-                        onChange={(e) => setPrompt(e.target.value)}
+                        onChange={setPrompt}
                         placeholder="Enter your prompt here..."
+                        multiline
                         rows={6}
-                        className="font-mono"
                     />
                 </FormField>
             </FormSection>

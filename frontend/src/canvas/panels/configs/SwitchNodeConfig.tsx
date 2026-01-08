@@ -7,6 +7,7 @@ import { Select } from "../../../components/common/Select";
 import { OutputSettingsSection } from "../../../components/OutputSettingsSection";
 
 interface SwitchNodeConfigProps {
+    nodeId?: string;
     data: Record<string, unknown>;
     onUpdate: (config: unknown) => void;
     errors?: ValidationError[];
@@ -23,7 +24,12 @@ interface SwitchCase {
     label: string;
 }
 
-export function SwitchNodeConfig({ data, onUpdate, errors: _errors = [] }: SwitchNodeConfigProps) {
+export function SwitchNodeConfig({
+    nodeId: _nodeId,
+    data,
+    onUpdate,
+    errors: _errors = []
+}: SwitchNodeConfigProps) {
     const [inputVariable, setInputVariable] = useState((data.inputVariable as string) || "");
     const [matchType, setMatchType] = useState((data.matchType as string) || "exact");
     const [cases, setCases] = useState<SwitchCase[]>(

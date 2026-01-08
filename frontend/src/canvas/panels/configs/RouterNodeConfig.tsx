@@ -16,6 +16,7 @@ import { OutputSettingsSection } from "../../../components/OutputSettingsSection
 import { useConnectionStore } from "../../../stores/connectionStore";
 
 interface RouterNodeConfigProps {
+    nodeId?: string;
     data: Record<string, unknown>;
     onUpdate: (config: unknown) => void;
     errors?: ValidationError[];
@@ -27,7 +28,12 @@ interface RouterRoute {
     description?: string;
 }
 
-export function RouterNodeConfig({ data, onUpdate, errors: _errors = [] }: RouterNodeConfigProps) {
+export function RouterNodeConfig({
+    nodeId: _nodeId,
+    data,
+    onUpdate,
+    errors: _errors = []
+}: RouterNodeConfigProps) {
     const [provider, setProvider] = useState((data.provider as string) || "");
     const [model, setModel] = useState(
         (data.model as string) || getDefaultModelForProvider((data.provider as string) || "openai")

@@ -12,6 +12,7 @@ import { Select } from "../../../components/common/Select";
 import { Tooltip } from "../../../components/common/Tooltip";
 
 interface FilesNodeConfigProps {
+    nodeId?: string;
     data: Record<string, unknown>;
     onUpdate: (config: unknown) => void;
     errors?: ValidationError[];
@@ -161,7 +162,12 @@ interface UploadedFileInfo {
     type: string;
 }
 
-export function FilesNodeConfig({ data, onUpdate, errors: _errors = [] }: FilesNodeConfigProps) {
+export function FilesNodeConfig({
+    nodeId: _nodeId,
+    data,
+    onUpdate,
+    errors: _errors = []
+}: FilesNodeConfigProps) {
     // State
     const [chunkingAlgorithm, setChunkingAlgorithm] = useState(
         (data.chunkingAlgorithm as string) || "sentence"

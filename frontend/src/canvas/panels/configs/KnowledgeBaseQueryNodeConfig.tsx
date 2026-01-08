@@ -8,6 +8,7 @@ import { OutputSettingsSection } from "../../../components/OutputSettingsSection
 import { getKnowledgeBases, type KnowledgeBase } from "../../../lib/api";
 
 interface KnowledgeBaseQueryNodeConfigProps {
+    nodeId?: string;
     data: Record<string, unknown>;
     onUpdate: (config: unknown) => void;
     errors?: ValidationError[];

@@ -22,6 +22,7 @@ import { useConnectionStore } from "../../../stores/connectionStore";
 import type { OperationSummary, OperationParameter } from "../../../lib/api";
 
 export interface ActionNodeConfigProps {
+    nodeId?: string;
     data: Record<string, unknown>;
     onUpdate: (config: unknown) => void;
     errors?: ValidationError[];
@@ -30,7 +31,12 @@ export interface ActionNodeConfigProps {
 // View states for the multi-step flow
 type ViewState = "provider-list" | "operation-list" | "operation-config";
 
-export function ActionNodeConfig({ data, onUpdate, errors: _errors }: ActionNodeConfigProps) {
+export function ActionNodeConfig({
+    nodeId: _nodeId,
+    data,
+    onUpdate,
+    errors: _errors
+}: ActionNodeConfigProps) {
     // Use ref to avoid infinite update loops when onUpdate changes
     const onUpdateRef = useRef(onUpdate);
     onUpdateRef.current = onUpdate;
@@ -235,6 +241,7 @@ export function ActionNodeConfig({ data, onUpdate, errors: _errors }: ActionNode
 
 // Action Operation Configuration Component
 interface ActionOperationConfigProps {
+    nodeId?: string;
     provider: ActionProviderSummary;
     operation: OperationSummary;
     connectionId: string;
@@ -435,6 +442,7 @@ function ActionOperationConfig({
 
 // Parameter Field Component
 interface ParameterFieldProps {
+    nodeId?: string;
     param: OperationParameter;
     value: unknown;
     onChange: (value: unknown) => void;

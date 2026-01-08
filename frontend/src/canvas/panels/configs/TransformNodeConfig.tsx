@@ -7,6 +7,7 @@ import { Select } from "../../../components/common/Select";
 import { OutputSettingsSection } from "../../../components/OutputSettingsSection";
 
 interface TransformNodeConfigProps {
+    nodeId?: string;
     data: Record<string, unknown>;
     onUpdate: (config: unknown) => void;
     errors?: ValidationError[];
