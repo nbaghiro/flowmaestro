@@ -6,14 +6,17 @@ import { BaseNode } from "./BaseNode";
 interface TemplateOutputNodeData {
     label: string;
     status?: "idle" | "pending" | "running" | "success" | "error";
-    template?: string;
-    outputFormat?: "markdown" | "html";
+    template?: string | Record<string, unknown>;
+    outputFormat?: "markdown" | "html" | "json";
 }
 
 function TemplateOutputNode({ data, selected }: NodeProps<TemplateOutputNodeData>) {
     const template = data.template || "No template defined";
     const format = data.outputFormat || "markdown";
-    const templatePreview = template.substring(0, 60) + (template.length > 60 ? "..." : "");
+
+    // Handle both string and object templates
+    const templateStr = typeof template === "string" ? template : JSON.stringify(template, null, 2);
+    const templatePreview = templateStr.substring(0, 60) + (templateStr.length > 60 ? "..." : "");
 
     return (
         <BaseNode
