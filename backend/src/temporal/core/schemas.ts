@@ -50,7 +50,11 @@ export const LLMNodeConfigSchema = z.object({
     temperature: z.number().min(0).max(2).optional(),
     maxTokens: z.number().int().positive().optional(),
     topP: z.number().min(0).max(1).optional(),
-    outputVariable: OutputVariableSchema
+    outputVariable: OutputVariableSchema,
+    /** Enable extended thinking/reasoning mode for supported models */
+    enableThinking: z.boolean().optional(),
+    /** Token budget for thinking (minimum 1024, maximum 32768) */
+    thinkingBudget: z.number().int().min(1024).max(32768).optional()
 });
 
 export type LLMNodeConfig = z.infer<typeof LLMNodeConfigSchema>;

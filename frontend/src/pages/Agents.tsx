@@ -23,6 +23,7 @@ import { ConfirmDialog } from "../components/common/ConfirmDialog";
 import { ContextMenu, type ContextMenuItem } from "../components/common/ContextMenu";
 import { ExpandableSearch } from "../components/common/ExpandableSearch";
 import { PageHeader } from "../components/common/PageHeader";
+import { SortDropdown } from "../components/common/SortDropdown";
 import { LoadingState } from "../components/common/Spinner";
 import { CreateAgentDialog } from "../components/CreateAgentDialog";
 import {
@@ -32,6 +33,7 @@ import {
     FolderBreadcrumb
 } from "../components/folders";
 import { useSearch } from "../hooks/useSearch";
+import { useSort, AGENT_SORT_FIELDS } from "../hooks/useSort";
 import {
     getFolders,
     createFolder,
@@ -76,11 +78,28 @@ export function Agents() {
     const {
         searchQuery,
         setSearchQuery,
-        filteredItems: filteredAgents,
+        filteredItems: searchFilteredAgents,
         isSearchActive
     } = useSearch({
         items: agents,
         searchFields: ["name", "description"]
+    });
+
+    // Sorting functionality
+    const {
+        sortState,
+        setSortField,
+        sortedItems: filteredAgents,
+        availableFields
+    } = useSort({
+        items: searchFilteredAgents,
+        fields: {
+            name: "name",
+            created: "created_at",
+            modified: "updated_at",
+            provider: "provider"
+        },
+        availableFields: AGENT_SORT_FIELDS
     });
 
     // Load folders on mount
@@ -500,6 +519,11 @@ export function Agents() {
                                 value={searchQuery}
                                 onChange={setSearchQuery}
                                 placeholder="Search agents..."
+                            />
+                            <SortDropdown
+                                value={sortState}
+                                onChange={setSortField}
+                                fields={availableFields}
                             />
                             <Button
                                 variant="ghost"

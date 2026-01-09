@@ -25,6 +25,7 @@ import { ErrorDialog } from "../components/common/ErrorDialog";
 import { ExpandableSearch } from "../components/common/ExpandableSearch";
 import { PageHeader } from "../components/common/PageHeader";
 import { ProviderIconList } from "../components/common/ProviderIconList";
+import { SortDropdown } from "../components/common/SortDropdown";
 import { LoadingState } from "../components/common/Spinner";
 import { CreateWorkflowDialog } from "../components/CreateWorkflowDialog";
 import {
@@ -33,7 +34,9 @@ import {
     MoveToFolderDialog,
     FolderBreadcrumb
 } from "../components/folders";
+import { WorkflowGenerationChatPanel } from "../components/WorkflowGenerationChatPanel";
 import { useSearch } from "../hooks/useSearch";
+import { useSort, WORKFLOW_SORT_FIELDS } from "../hooks/useSort";
 import {
     getWorkflows,
     createWorkflow,
@@ -52,6 +55,7 @@ import {
 import { logger } from "../lib/logger";
 import { convertToReactFlowFormat } from "../lib/workflowLayout";
 import { extractProvidersFromNodes } from "../lib/workflowUtils";
+import { useWorkflowGenerationChatStore } from "../stores/workflowGenerationChatStore";
 
 interface Workflow {
     id: string;
@@ -71,6 +75,9 @@ interface Workflow {
 export function Workflows() {
     const [searchParams, setSearchParams] = useSearchParams();
     const currentFolderId = searchParams.get("folder");
+
+    // Workflow generation chat panel
+    const { openPanel: openGenerationPanel } = useWorkflowGenerationChatStore();
 
     const [workflows, setWorkflows] = useState<Workflow[]>([]);
     const [folders, setFolders] = useState<FolderWithCounts[]>([]);
@@ -103,11 +110,27 @@ export function Workflows() {
     const {
         searchQuery,
         setSearchQuery,
-        filteredItems: filteredWorkflows,
+        filteredItems: searchFilteredWorkflows,
         isSearchActive
     } = useSearch({
         items: workflows,
         searchFields: ["name", "description"]
+    });
+
+    // Sorting functionality
+    const {
+        sortState,
+        setSortField,
+        sortedItems: filteredWorkflows,
+        availableFields
+    } = useSort({
+        items: searchFilteredWorkflows,
+        fields: {
+            name: "name",
+            created: "created_at",
+            modified: "updated_at"
+        },
+        availableFields: WORKFLOW_SORT_FIELDS
     });
 
     // Load folders on mount
@@ -689,6 +712,11 @@ export function Workflows() {
                                 onChange={setSearchQuery}
                                 placeholder="Search workflows..."
                             />
+                            <SortDropdown
+                                value={sortState}
+                                onChange={setSortField}
+                                fields={availableFields}
+                            />
                             <Button
                                 variant="ghost"
                                 onClick={() => setIsCreateFolderDialogOpen(true)}
@@ -698,7 +726,7 @@ export function Workflows() {
                             </Button>
                             <Button
                                 variant="secondary"
-                                onClick={() => setIsAIDialogOpen(true)}
+                                onClick={openGenerationPanel}
                                 title="Generate workflow with AI"
                             >
                                 <Sparkles className="w-4 h-4" />
@@ -1042,6 +1070,9 @@ export function Workflows() {
                 }
                 onClose={closeContextMenu}
             />
+
+            {/* Workflow Generation Chat Panel */}
+            <WorkflowGenerationChatPanel />
         </div>
     );
 }

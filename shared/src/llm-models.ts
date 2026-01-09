@@ -10,6 +10,10 @@ export interface LLMModelDefinition {
     contextWindow?: number;
     capabilities?: string[];
     deprecated?: boolean;
+    /** Whether this model supports extended thinking/reasoning mode */
+    supportsThinking?: boolean;
+    /** Default thinking budget in tokens (minimum 1024) */
+    defaultThinkingBudget?: number;
 }
 
 export interface LLMProviderDefinition {
@@ -74,14 +78,18 @@ export const LLM_MODELS_BY_PROVIDER: Record<string, LLMModelDefinition[]> = {
             label: "o1 Preview (Reasoning)",
             provider: "openai",
             contextWindow: 128000,
-            capabilities: ["text", "reasoning"]
+            capabilities: ["text", "reasoning"],
+            supportsThinking: true,
+            defaultThinkingBudget: 8192
         },
         {
             value: "o1-mini",
             label: "o1 Mini (Reasoning, Fast)",
             provider: "openai",
             contextWindow: 128000,
-            capabilities: ["text", "reasoning"]
+            capabilities: ["text", "reasoning"],
+            supportsThinking: true,
+            defaultThinkingBudget: 4096
         }
     ],
     anthropic: [
@@ -90,21 +98,27 @@ export const LLM_MODELS_BY_PROVIDER: Record<string, LLMModelDefinition[]> = {
             label: "Claude Sonnet 4.5 (Latest)",
             provider: "anthropic",
             contextWindow: 200000,
-            capabilities: ["text", "vision", "function-calling"]
+            capabilities: ["text", "vision", "function-calling"],
+            supportsThinking: true,
+            defaultThinkingBudget: 4096
         },
         {
             value: "claude-haiku-4-5-20251001",
             label: "Claude Haiku 4.5 (Fast)",
             provider: "anthropic",
             contextWindow: 200000,
-            capabilities: ["text", "vision", "function-calling"]
+            capabilities: ["text", "vision", "function-calling"],
+            supportsThinking: true,
+            defaultThinkingBudget: 2048
         },
         {
             value: "claude-opus-4-1-20250805",
             label: "Claude Opus 4.1 (Most Capable)",
             provider: "anthropic",
             contextWindow: 200000,
-            capabilities: ["text", "vision", "function-calling"]
+            capabilities: ["text", "vision", "function-calling"],
+            supportsThinking: true,
+            defaultThinkingBudget: 8192
         },
         {
             value: "claude-3-7-sonnet-20250219",
@@ -134,14 +148,18 @@ export const LLM_MODELS_BY_PROVIDER: Record<string, LLMModelDefinition[]> = {
             label: "Gemini 2.5 Flash (Latest, Fastest)",
             provider: "google",
             contextWindow: 1000000,
-            capabilities: ["text", "vision", "audio", "function-calling"]
+            capabilities: ["text", "vision", "audio", "function-calling"],
+            supportsThinking: true,
+            defaultThinkingBudget: 4096
         },
         {
             value: "gemini-2.5-pro",
             label: "Gemini 2.5 Pro (Latest, Most Capable)",
             provider: "google",
             contextWindow: 2000000,
-            capabilities: ["text", "vision", "audio", "function-calling"]
+            capabilities: ["text", "vision", "audio", "function-calling"],
+            supportsThinking: true,
+            defaultThinkingBudget: 8192
         },
         {
             value: "gemini-2.0-flash",
@@ -274,4 +292,34 @@ export function findModelByValue(modelValue: string): LLMModelDefinition | undef
         if (model) return model;
     }
     return undefined;
+}
+
+/**
+ * Check if a model supports extended thinking/reasoning
+ */
+export function modelSupportsThinking(modelValue: string): boolean {
+    const model = findModelByValue(modelValue);
+    return model?.supportsThinking ?? false;
+}
+
+/**
+ * Get the default thinking budget for a model
+ * Returns undefined if model doesn't support thinking
+ */
+export function getDefaultThinkingBudget(modelValue: string): number | undefined {
+    const model = findModelByValue(modelValue);
+    if (!model?.supportsThinking) return undefined;
+    return model.defaultThinkingBudget ?? 4096;
+}
+
+/**
+ * Get all models that support extended thinking
+ */
+export function getThinkingCapableModels(): LLMModelDefinition[] {
+    const models: LLMModelDefinition[] = [];
+    for (const provider in LLM_MODELS_BY_PROVIDER) {
+        const providerModels = LLM_MODELS_BY_PROVIDER[provider].filter((m) => m.supportsThinking);
+        models.push(...providerModels);
+    }
+    return models;
 }

@@ -42,7 +42,11 @@ import type {
     UpdateFolderInput,
     MoveItemsToFolderInput,
     RemoveItemsFromFolderInput,
-    FolderResourceType
+    FolderResourceType,
+    GenerationChatMessage,
+    GenerationChatRequest,
+    GenerationChatResponse,
+    WorkflowPlan
 } from "@flowmaestro/shared";
 import { logger } from "./logger";
 
@@ -4958,3 +4962,147 @@ export async function removeItemsFromFolder(
 
     return response.json();
 }
+
+// ===== Workflow Generation Chat API Functions =====
+
+/**
+ * Initiate a workflow generation chat message
+ * Returns an execution ID for streaming the response
+ */
+export async function initiateGenerationChat(
+    request: GenerationChatRequest
+): Promise<ApiResponse<{ executionId: string; messageId: string }>> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/workflows/generation/chat`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` })
+        },
+        body: JSON.stringify(request)
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Callbacks for generation chat streaming events
+ */
+export interface GenerationChatStreamCallbacks {
+    onThinkingStart?: () => void;
+    onThinkingToken?: (token: string) => void;
+    onThinkingComplete?: (content: string) => void;
+    onToken?: (token: string) => void;
+    onPlanDetected?: (plan: WorkflowPlan) => void;
+    onComplete?: (response: GenerationChatResponse) => void;
+    onError?: (error: string) => void;
+}
+
+/**
+ * Stream generation chat response via SSE
+ * Handles thinking tokens, response tokens, and workflow plan events
+ * Returns a cleanup function to close the connection
+ */
+export function streamGenerationChatResponse(
+    executionId: string,
+    callbacks: GenerationChatStreamCallbacks
+): () => void {
+    const token = getAuthToken();
+    const url = new URL(`${API_BASE_URL}/workflows/generation/chat-stream/${executionId}`);
+
+    // EventSource doesn't support custom headers, so pass token as query param
+    if (token) {
+        url.searchParams.set("token", token);
+    }
+
+    const eventSource = new EventSource(url.toString());
+
+    eventSource.addEventListener("connected", (event) => {
+        logger.debug("Generation chat SSE connected", { eventData: event.data });
+    });
+
+    eventSource.addEventListener("thinking_start", () => {
+        callbacks.onThinkingStart?.();
+    });
+
+    eventSource.addEventListener("thinking_token", (event) => {
+        const data = JSON.parse(event.data);
+        callbacks.onThinkingToken?.(data.token);
+    });
+
+    eventSource.addEventListener("thinking_complete", (event) => {
+        const data = JSON.parse(event.data);
+        callbacks.onThinkingComplete?.(data.content);
+    });
+
+    eventSource.addEventListener("token", (event) => {
+        const data = JSON.parse(event.data);
+        callbacks.onToken?.(data.token);
+    });
+
+    eventSource.addEventListener("plan_detected", (event) => {
+        const data = JSON.parse(event.data);
+        callbacks.onPlanDetected?.(data.plan as WorkflowPlan);
+    });
+
+    eventSource.addEventListener("complete", (event) => {
+        const data = JSON.parse(event.data);
+        callbacks.onComplete?.(data as GenerationChatResponse);
+        eventSource.close();
+    });
+
+    eventSource.addEventListener("error", (event) => {
+        try {
+            const data = JSON.parse((event as MessageEvent).data);
+            callbacks.onError?.(data.message);
+        } catch {
+            callbacks.onError?.("Connection error");
+        }
+        eventSource.close();
+    });
+
+    eventSource.onerror = () => {
+        callbacks.onError?.("Connection lost");
+        eventSource.close();
+    };
+
+    // Return cleanup function
+    return () => {
+        eventSource.close();
+    };
+}
+
+/**
+ * Create a workflow from an approved generation plan
+ */
+export async function createWorkflowFromPlan(
+    plan: WorkflowPlan,
+    folderId?: string
+): Promise<ApiResponse<{ workflowId: string; name: string }>> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/workflows/generation/create`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` })
+        },
+        body: JSON.stringify({ plan, folderId })
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+// Re-export generation chat types for convenience
+export type { GenerationChatMessage, GenerationChatRequest, GenerationChatResponse, WorkflowPlan };

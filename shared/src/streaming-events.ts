@@ -16,7 +16,10 @@ export type StreamingEventType =
     | "thread:message:token" // Individual token with sequence
     | "thread:message:complete" // Message finalized, saved to DB
     | "thread:message:error" // Message generation failed
-    | "thread:thinking" // Agent thinking indicator
+    | "thread:thinking" // Agent thinking indicator (simple)
+    | "thread:thinking:start" // Extended thinking started
+    | "thread:thinking:token" // Extended thinking token
+    | "thread:thinking:complete" // Extended thinking completed
     | "thread:tool:started" // Tool execution started
     | "thread:tool:completed" // Tool execution completed
     | "thread:tool:failed" // Tool execution failed
@@ -75,9 +78,41 @@ export interface MessageErrorEvent extends BaseStreamingEvent {
 
 /**
  * Emitted when agent is thinking (no tokens yet)
+ * Simple indicator for basic thinking state
  */
 export interface ThinkingEvent extends BaseStreamingEvent {
     type: "thread:thinking";
+}
+
+/**
+ * Emitted when extended thinking starts (for reasoning models)
+ * Used with Claude extended thinking, OpenAI o1/o3, Gemini thinking
+ */
+export interface ThinkingStartEvent extends BaseStreamingEvent {
+    type: "thread:thinking:start";
+    messageId: string;
+}
+
+/**
+ * Emitted for each token in the extended thinking process
+ * Includes sequence number for guaranteed ordering
+ */
+export interface ThinkingTokenEvent extends BaseStreamingEvent {
+    type: "thread:thinking:token";
+    messageId: string;
+    token: string;
+    sequence: number;
+}
+
+/**
+ * Emitted when extended thinking completes
+ * Contains the full thinking content (may be summarized by provider)
+ */
+export interface ThinkingCompleteEvent extends BaseStreamingEvent {
+    type: "thread:thinking:complete";
+    messageId: string;
+    thinkingContent: string; // Full thinking text (may be summarized)
+    tokenCount: number;
 }
 
 /**
@@ -134,6 +169,9 @@ export type ThreadStreamingEvent =
     | MessageCompleteEvent
     | MessageErrorEvent
     | ThinkingEvent
+    | ThinkingStartEvent
+    | ThinkingTokenEvent
+    | ThinkingCompleteEvent
     | ToolStartedEvent
     | ToolCompletedEvent
     | ToolFailedEvent

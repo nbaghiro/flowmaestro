@@ -45,6 +45,12 @@ export interface LLMExecutionCallbacks {
     onToken?: (token: string) => void;
     onComplete?: (response: string) => void;
     onError?: (error: Error) => void;
+    /** Called when extended thinking starts */
+    onThinkingStart?: () => void;
+    /** Called for each thinking token (for streaming thinking content) */
+    onThinkingToken?: (token: string) => void;
+    /** Called when extended thinking completes */
+    onThinkingComplete?: (thinkingContent: string) => void;
 }
 
 export interface LLMNodeResult {
@@ -53,9 +59,13 @@ export interface LLMNodeResult {
         promptTokens: number;
         completionTokens: number;
         totalTokens: number;
+        /** Tokens used for extended thinking (if enabled) */
+        thinkingTokens?: number;
     };
     model: string;
     provider: string;
+    /** Extended thinking content (if thinking was enabled) */
+    thinking?: string;
 }
 
 // ============================================================================
@@ -213,22 +223,53 @@ async function executeOpenAI(
     const apiKey = await getApiKey(config.connectionId, "openai", "OPENAI_API_KEY");
     const openai = new OpenAI({ apiKey });
 
+    // Check if this is a reasoning model (o1, o3 series)
+    const isReasoningModel = /^o[13](-preview|-mini)?$/.test(config.model);
+
+    // For reasoning models: no system messages, merge into user message
+    // For reasoning models: no temperature parameter
     const messages: Array<{ role: "system" | "user"; content: string }> = [];
-    if (systemPrompt) {
-        messages.push({ role: "system", content: systemPrompt });
+
+    if (isReasoningModel) {
+        // Merge system prompt into user message for o1/o3 models
+        const combinedPrompt = systemPrompt
+            ? `${systemPrompt}\n\n---\n\n${userPrompt}`
+            : userPrompt;
+        messages.push({ role: "user", content: combinedPrompt });
+        activityLogger.info("Using reasoning model, merged system prompt into user message", {
+            model: config.model
+        });
+    } else {
+        if (systemPrompt) {
+            messages.push({ role: "system", content: systemPrompt });
+        }
+        messages.push({ role: "user", content: userPrompt });
     }
-    messages.push({ role: "user", content: userPrompt });
 
     return withRetry(async () => {
         if (callbacks?.onToken) {
-            const stream = await openai.chat.completions.create({
+            // Build stream params - reasoning models don't support temperature
+            const streamParams: Parameters<typeof openai.chat.completions.create>[0] = {
                 model: config.model,
                 messages,
-                temperature: config.temperature ?? 0.7,
                 max_tokens: config.maxTokens ?? 1000,
-                top_p: config.topP ?? 1,
                 stream: true
-            });
+            };
+
+            if (!isReasoningModel) {
+                streamParams.temperature = config.temperature ?? 0.7;
+                streamParams.top_p = config.topP ?? 1;
+            }
+
+            // Notify that reasoning is starting for o1/o3 models
+            if (isReasoningModel && config.enableThinking) {
+                callbacks.onThinkingStart?.();
+            }
+
+            const streamResponse = await openai.chat.completions.create(streamParams);
+            // Type assertion for streaming response
+            const stream =
+                streamResponse as AsyncIterable<OpenAI.Chat.Completions.ChatCompletionChunk>;
 
             let fullContent = "";
             for await (const chunk of stream) {
@@ -239,8 +280,14 @@ async function executeOpenAI(
                 }
             }
 
+            // For reasoning models, notify thinking complete (reasoning happens internally)
+            if (isReasoningModel && config.enableThinking) {
+                callbacks.onThinkingComplete?.("(Reasoning completed internally by model)");
+            }
+
             activityLogger.info("OpenAI streaming response completed", {
-                responseLength: fullContent.length
+                responseLength: fullContent.length,
+                isReasoningModel
             });
 
             return {
@@ -250,20 +297,38 @@ async function executeOpenAI(
             };
         }
 
-        const response = await openai.chat.completions.create({
+        // Non-streaming request
+        const requestParams: Parameters<typeof openai.chat.completions.create>[0] = {
             model: config.model,
             messages,
-            temperature: config.temperature ?? 0.7,
-            max_tokens: config.maxTokens ?? 1000,
-            top_p: config.topP ?? 1
-        });
+            max_tokens: config.maxTokens ?? 1000
+        };
+
+        if (!isReasoningModel) {
+            requestParams.temperature = config.temperature ?? 0.7;
+            requestParams.top_p = config.topP ?? 1;
+        }
+
+        const rawResponse = await openai.chat.completions.create(requestParams);
+        // Type assertion for non-streaming response
+        const response = rawResponse as OpenAI.Chat.Completions.ChatCompletion;
 
         const text = response.choices[0]?.message?.content || "";
         const usage = response.usage;
 
+        // Extract reasoning tokens for o1/o3 models if available
+        let thinkingTokens: number | undefined;
+        if (isReasoningModel && usage) {
+            const completionDetails = (usage as unknown as Record<string, unknown>)
+                .completion_tokens_details as { reasoning_tokens?: number } | undefined;
+            thinkingTokens = completionDetails?.reasoning_tokens;
+        }
+
         activityLogger.info("OpenAI response completed", {
             responseLength: text.length,
-            totalTokens: usage?.total_tokens
+            totalTokens: usage?.total_tokens,
+            reasoningTokens: thinkingTokens,
+            isReasoningModel
         });
 
         return {
@@ -272,7 +337,8 @@ async function executeOpenAI(
                 ? {
                       promptTokens: usage.prompt_tokens,
                       completionTokens: usage.completion_tokens,
-                      totalTokens: usage.total_tokens
+                      totalTokens: usage.total_tokens,
+                      thinkingTokens
                   }
                 : undefined,
             model: config.model,
@@ -290,55 +356,129 @@ async function executeAnthropic(
     const apiKey = await getApiKey(config.connectionId, "anthropic", "ANTHROPIC_API_KEY");
     const anthropic = new Anthropic({ apiKey });
 
+    // Check if extended thinking is enabled and model supports it
+    const useExtendedThinking = config.enableThinking && config.model.includes("claude-");
+    const thinkingBudget = config.thinkingBudget ?? 4096;
+
     return withRetry(async () => {
         if (callbacks?.onToken) {
-            const stream = await anthropic.messages.create({
+            // Build request params with optional extended thinking
+            const streamParams: Parameters<typeof anthropic.messages.create>[0] = {
                 model: config.model,
                 max_tokens: config.maxTokens ?? 1000,
-                temperature: config.temperature ?? 0.7,
                 system: systemPrompt,
                 messages: [{ role: "user", content: userPrompt }],
                 stream: true
-            });
+            };
+
+            // Add extended thinking if enabled (Claude 4+ models)
+            if (useExtendedThinking) {
+                // Extended thinking requires specific parameters
+                // Note: temperature must not be set when using extended thinking
+                (streamParams as unknown as Record<string, unknown>).thinking = {
+                    type: "enabled",
+                    budget_tokens: thinkingBudget
+                };
+                activityLogger.info("Extended thinking enabled for Anthropic", {
+                    budgetTokens: thinkingBudget
+                });
+            } else {
+                streamParams.temperature = config.temperature ?? 0.7;
+            }
+
+            const streamResponse = await anthropic.messages.create(streamParams);
+            // Type assertion for streaming response
+            const stream = streamResponse as AsyncIterable<Anthropic.MessageStreamEvent>;
 
             let fullContent = "";
+            let thinkingContent = "";
+            let isInThinkingBlock = false;
+
             for await (const chunk of stream) {
-                if (chunk.type === "content_block_delta" && chunk.delta.type === "text_delta") {
-                    const delta = chunk.delta.text;
-                    fullContent += delta;
-                    callbacks.onToken(delta);
+                // Handle thinking content blocks (Claude 4+ extended thinking)
+                if (chunk.type === "content_block_start") {
+                    const block = chunk.content_block as { type: string };
+                    if (block.type === "thinking") {
+                        isInThinkingBlock = true;
+                        callbacks.onThinkingStart?.();
+                    }
+                } else if (chunk.type === "content_block_stop") {
+                    if (isInThinkingBlock) {
+                        isInThinkingBlock = false;
+                        callbacks.onThinkingComplete?.(thinkingContent);
+                    }
+                } else if (chunk.type === "content_block_delta") {
+                    if (isInThinkingBlock && chunk.delta.type === "thinking_delta") {
+                        const delta = (chunk.delta as { thinking?: string }).thinking || "";
+                        thinkingContent += delta;
+                        callbacks.onThinkingToken?.(delta);
+                    } else if (chunk.delta.type === "text_delta") {
+                        const delta = chunk.delta.text;
+                        fullContent += delta;
+                        callbacks.onToken(delta);
+                    }
                 }
             }
 
             activityLogger.info("Anthropic streaming response completed", {
-                responseLength: fullContent.length
+                responseLength: fullContent.length,
+                thinkingLength: thinkingContent.length,
+                extendedThinking: useExtendedThinking
             });
 
             return {
                 text: fullContent,
+                thinking: thinkingContent || undefined,
                 model: config.model,
                 provider: "anthropic"
             };
         }
 
-        const response = await anthropic.messages.create({
+        // Non-streaming request
+        const requestParams: Parameters<typeof anthropic.messages.create>[0] = {
             model: config.model,
             max_tokens: config.maxTokens ?? 1000,
-            temperature: config.temperature ?? 0.7,
             system: systemPrompt,
             messages: [{ role: "user", content: userPrompt }]
-        });
+        };
 
-        const text = response.content[0].type === "text" ? response.content[0].text : "";
+        if (useExtendedThinking) {
+            (requestParams as unknown as Record<string, unknown>).thinking = {
+                type: "enabled",
+                budget_tokens: thinkingBudget
+            };
+        } else {
+            requestParams.temperature = config.temperature ?? 0.7;
+        }
+
+        const rawResponse = await anthropic.messages.create(requestParams);
+        // Type assertion for non-streaming response
+        const response = rawResponse as Anthropic.Message;
+
+        // Extract text and thinking content from response
+        let text = "";
+        let thinkingContent = "";
+
+        for (const block of response.content) {
+            if (block.type === "text") {
+                text = block.text;
+            } else if (block.type === "thinking") {
+                thinkingContent = (block as { thinking?: string }).thinking || "";
+            }
+        }
+
         const usage = response.usage;
 
         activityLogger.info("Anthropic response completed", {
             responseLength: text.length,
-            totalTokens: usage.input_tokens + usage.output_tokens
+            thinkingLength: thinkingContent.length,
+            totalTokens: usage.input_tokens + usage.output_tokens,
+            extendedThinking: useExtendedThinking
         });
 
         return {
             text,
+            thinking: thinkingContent || undefined,
             usage: {
                 promptTokens: usage.input_tokens,
                 completionTokens: usage.output_tokens,
@@ -358,34 +498,78 @@ async function executeGoogle(
 ): Promise<LLMNodeResult> {
     const apiKey = await getApiKey(config.connectionId, "google", "GOOGLE_API_KEY");
     const genAI = new GoogleGenerativeAI(apiKey);
+
+    // Check if thinking is enabled and model supports it (Gemini 2.5+)
+    const useThinking = config.enableThinking && config.model.includes("gemini-2.5");
+    const thinkingBudget = config.thinkingBudget ?? 4096;
+
+    // Build generation config with optional thinking
+    const generationConfig: Record<string, unknown> = {
+        temperature: config.temperature ?? 0.7,
+        maxOutputTokens: config.maxTokens ?? 1000,
+        topP: config.topP ?? 1
+    };
+
+    // Add thinking config for Gemini 2.5+ models
+    if (useThinking) {
+        generationConfig.thinkingConfig = {
+            thinkingBudget: thinkingBudget
+        };
+        activityLogger.info("Extended thinking enabled for Google Gemini", {
+            budgetTokens: thinkingBudget
+        });
+    }
+
     const model = genAI.getGenerativeModel({
         model: config.model,
-        generationConfig: {
-            temperature: config.temperature ?? 0.7,
-            maxOutputTokens: config.maxTokens ?? 1000,
-            topP: config.topP ?? 1
-        }
+        generationConfig
     });
 
     const fullPrompt = systemPrompt ? `${systemPrompt}\n\n${userPrompt}` : userPrompt;
 
     return withRetry(async () => {
         if (callbacks?.onToken) {
+            // Notify thinking start for Gemini 2.5+ with thinking enabled
+            if (useThinking) {
+                callbacks.onThinkingStart?.();
+            }
+
             const result = await model.generateContentStream(fullPrompt);
 
             let fullContent = "";
+            let thinkingContent = "";
+
             for await (const chunk of result.stream) {
                 const delta = chunk.text();
                 fullContent += delta;
                 callbacks.onToken(delta);
+
+                // Check for thinking content in Gemini response (if available)
+                const candidates = chunk.candidates;
+                if (candidates?.[0]?.content?.parts) {
+                    for (const part of candidates[0].content.parts) {
+                        const partObj = part as { thought?: string };
+                        if (partObj.thought) {
+                            thinkingContent += partObj.thought;
+                            callbacks.onThinkingToken?.(partObj.thought);
+                        }
+                    }
+                }
+            }
+
+            if (useThinking) {
+                callbacks.onThinkingComplete?.(thinkingContent || "(Thinking completed)");
             }
 
             activityLogger.info("Google streaming response completed", {
-                responseLength: fullContent.length
+                responseLength: fullContent.length,
+                thinkingLength: thinkingContent.length,
+                useThinking
             });
 
             return {
                 text: fullContent,
+                thinking: thinkingContent || undefined,
                 model: config.model,
                 provider: "google"
             };
@@ -395,10 +579,27 @@ async function executeGoogle(
         const response = result.response;
         const text = response.text();
 
-        activityLogger.info("Google response completed", { responseLength: text.length });
+        // Extract thinking content from non-streaming response if available
+        let thinkingContent = "";
+        const candidates = response.candidates;
+        if (candidates?.[0]?.content?.parts) {
+            for (const part of candidates[0].content.parts) {
+                const partObj = part as { thought?: string };
+                if (partObj.thought) {
+                    thinkingContent += partObj.thought;
+                }
+            }
+        }
+
+        activityLogger.info("Google response completed", {
+            responseLength: text.length,
+            thinkingLength: thinkingContent.length,
+            useThinking
+        });
 
         return {
             text,
+            thinking: thinkingContent || undefined,
             model: config.model,
             provider: "google"
         };

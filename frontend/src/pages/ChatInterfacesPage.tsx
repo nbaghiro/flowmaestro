@@ -26,6 +26,7 @@ import { ContextMenu, type ContextMenuItem } from "../components/common/ContextM
 import { Dialog } from "../components/common/Dialog";
 import { ExpandableSearch } from "../components/common/ExpandableSearch";
 import { PageHeader } from "../components/common/PageHeader";
+import { SortDropdown } from "../components/common/SortDropdown";
 import { LoadingState } from "../components/common/Spinner";
 import {
     FolderCard,
@@ -34,6 +35,7 @@ import {
     FolderBreadcrumb
 } from "../components/folders";
 import { useSearch } from "../hooks/useSearch";
+import { useSort, CHAT_INTERFACE_SORT_FIELDS } from "../hooks/useSort";
 import {
     getChatInterfaces,
     deleteChatInterface,
@@ -89,11 +91,29 @@ export function ChatInterfacesPage() {
     const {
         searchQuery,
         setSearchQuery,
-        filteredItems: filteredChatInterfaces,
+        filteredItems: searchFilteredChatInterfaces,
         isSearchActive
     } = useSearch({
         items: chatInterfaces,
         searchFields: ["title", "description"]
+    });
+
+    // Sorting functionality
+    const {
+        sortState,
+        setSortField,
+        sortedItems: filteredChatInterfaces,
+        availableFields
+    } = useSort({
+        items: searchFilteredChatInterfaces,
+        fields: {
+            name: "title",
+            created: "createdAt",
+            modified: "updatedAt",
+            sessions: "sessionCount",
+            status: "status"
+        },
+        availableFields: CHAT_INTERFACE_SORT_FIELDS
     });
 
     // Load folders on mount
@@ -567,6 +587,11 @@ export function ChatInterfacesPage() {
                                 value={searchQuery}
                                 onChange={setSearchQuery}
                                 placeholder="Search chat interfaces..."
+                            />
+                            <SortDropdown
+                                value={sortState}
+                                onChange={setSortField}
+                                fields={availableFields}
                             />
                             <Button
                                 variant="ghost"

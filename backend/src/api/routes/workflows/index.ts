@@ -6,6 +6,8 @@ import { createWorkflowRoute } from "./create";
 import { deleteWorkflowRoute } from "./delete";
 import { executeWorkflowRoute } from "./execute";
 import { generateWorkflowRoute } from "./generate";
+import { generationChatRoute } from "./generation-chat";
+import { generationChatStreamHandler } from "./generation-chat-stream";
 import { getWorkflowRoute } from "./get";
 import { listWorkflowsRoute } from "./list";
 import { updateWorkflowRoute } from "./update";
@@ -21,6 +23,7 @@ export async function workflowRoutes(fastify: FastifyInstance) {
     await executeWorkflowRoute(fastify);
     await generateWorkflowRoute(fastify);
     await chatRoute(fastify);
+    await generationChatRoute(fastify);
     await uploadWorkflowFilesRoute(fastify);
 
     // Register SSE streaming endpoint for chat
@@ -29,5 +32,12 @@ export async function workflowRoutes(fastify: FastifyInstance) {
         "/chat-stream/:executionId",
         { preHandler: [authMiddleware] },
         chatStreamHandler
+    );
+
+    // Register SSE streaming endpoint for generation chat (with thinking support)
+    fastify.get<{ Params: { executionId: string }; Querystring: { token?: string } }>(
+        "/generation/chat-stream/:executionId",
+        { preHandler: [authMiddleware] },
+        generationChatStreamHandler
     );
 }

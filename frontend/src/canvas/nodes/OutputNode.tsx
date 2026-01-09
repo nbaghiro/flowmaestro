@@ -11,7 +11,14 @@ interface OutputNodeData {
 }
 
 function OutputNode({ data, selected }: NodeProps<OutputNodeData>) {
-    const value = data.value || "No output template";
+    // Ensure value is always a string (AI-generated workflows may pass objects)
+    const rawValue = data.value;
+    const value =
+        typeof rawValue === "string"
+            ? rawValue
+            : rawValue
+              ? JSON.stringify(rawValue)
+              : "No output template";
     const format = data.format || "text";
     const valuePreview = value.substring(0, 60) + (value.length > 60 ? "..." : "");
 

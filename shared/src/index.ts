@@ -18,3 +18,4 @@ export * from "./node-validation-rules";
 export * from "./form-interface";
 export * from "./chat-interface";
 export * from "./folder";
+export * from "./workflow-generation-chat";

@@ -24,6 +24,7 @@ import { ContextMenu, type ContextMenuItem } from "../components/common/ContextM
 import { Dialog } from "../components/common/Dialog";
 import { ExpandableSearch } from "../components/common/ExpandableSearch";
 import { PageHeader } from "../components/common/PageHeader";
+import { SortDropdown } from "../components/common/SortDropdown";
 import { LoadingState } from "../components/common/Spinner";
 import {
     FolderCard,
@@ -33,6 +34,7 @@ import {
 } from "../components/folders";
 import { CreateFormInterfaceDialog } from "../components/forms/CreateFormInterfaceDialog";
 import { useSearch } from "../hooks/useSearch";
+import { useSort, FORM_INTERFACE_SORT_FIELDS } from "../hooks/useSort";
 import {
     getFormInterfaces,
     deleteFormInterface,
@@ -88,11 +90,29 @@ export function FormInterfaces() {
     const {
         searchQuery,
         setSearchQuery,
-        filteredItems: filteredFormInterfaces,
+        filteredItems: searchFilteredFormInterfaces,
         isSearchActive
     } = useSearch({
         items: formInterfaces,
         searchFields: ["title", "description"]
+    });
+
+    // Sorting functionality
+    const {
+        sortState,
+        setSortField,
+        sortedItems: filteredFormInterfaces,
+        availableFields
+    } = useSort({
+        items: searchFilteredFormInterfaces,
+        fields: {
+            name: "title",
+            created: "createdAt",
+            modified: "updatedAt",
+            submissions: "submissionCount",
+            status: "status"
+        },
+        availableFields: FORM_INTERFACE_SORT_FIELDS
     });
 
     // Load folders on mount
@@ -566,6 +586,11 @@ export function FormInterfaces() {
                                 value={searchQuery}
                                 onChange={setSearchQuery}
                                 placeholder="Search forms..."
+                            />
+                            <SortDropdown
+                                value={sortState}
+                                onChange={setSortField}
+                                fields={availableFields}
                             />
                             <Button
                                 variant="ghost"
