@@ -9,7 +9,8 @@ import {
     FolderPlus,
     FolderInput,
     GripVertical,
-    ChevronDown
+    ChevronDown,
+    Search
 } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -20,6 +21,7 @@ import { Button } from "../components/common/Button";
 import { ConfirmDialog } from "../components/common/ConfirmDialog";
 import { ContextMenu, type ContextMenuItem } from "../components/common/ContextMenu";
 import { ErrorDialog } from "../components/common/ErrorDialog";
+import { ExpandableSearch } from "../components/common/ExpandableSearch";
 import { PageHeader } from "../components/common/PageHeader";
 import { ProviderIconList } from "../components/common/ProviderIconList";
 import { LoadingState } from "../components/common/Spinner";
@@ -30,6 +32,7 @@ import {
     MoveToFolderDialog,
     FolderBreadcrumb
 } from "../components/folders";
+import { useSearch } from "../hooks/useSearch";
 import {
     getWorkflows,
     createWorkflow,
@@ -93,6 +96,17 @@ export function Workflows() {
     const [isFoldersCollapsed, setIsFoldersCollapsed] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
     const navigate = useNavigate();
+
+    // Search functionality
+    const {
+        searchQuery,
+        setSearchQuery,
+        filteredItems: filteredWorkflows,
+        isSearchActive
+    } = useSearch({
+        items: workflows,
+        searchFields: ["name", "description"]
+    });
 
     // Load folders on mount
     useEffect(() => {
@@ -576,9 +590,11 @@ export function Workflows() {
                         ? `${selectedFolderIds.size} folder${selectedFolderIds.size !== 1 ? "s" : ""} selected`
                         : selectedIds.size > 0
                           ? `${selectedIds.size} selected`
-                          : currentFolder
-                            ? `${workflows.length} workflow${workflows.length !== 1 ? "s" : ""} in ${currentFolder.name}`
-                            : `${workflows.length} ${workflows.length === 1 ? "workflow" : "workflows"}`
+                          : isSearchActive
+                            ? `${filteredWorkflows.length} result${filteredWorkflows.length !== 1 ? "s" : ""} for "${searchQuery}"`
+                            : currentFolder
+                              ? `${workflows.length} workflow${workflows.length !== 1 ? "s" : ""} in ${currentFolder.name}`
+                              : `${workflows.length} ${workflows.length === 1 ? "workflow" : "workflows"}`
                 }
                 action={
                     selectedFolderIds.size > 0 ? (
@@ -616,7 +632,12 @@ export function Workflows() {
                             </Button>
                         </div>
                     ) : (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
+                            <ExpandableSearch
+                                value={searchQuery}
+                                onChange={setSearchQuery}
+                                placeholder="Search workflows..."
+                            />
                             <Button
                                 variant="ghost"
                                 onClick={() => setIsCreateFolderDialogOpen(true)}
@@ -703,7 +724,20 @@ export function Workflows() {
                     )}
 
                     {/* Workflows Grid */}
-                    {workflows.length === 0 ? (
+                    {filteredWorkflows.length === 0 && isSearchActive ? (
+                        <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed border-border rounded-lg bg-card">
+                            <Search className="w-12 h-12 text-muted-foreground mb-4" />
+                            <h3 className="text-lg font-semibold text-foreground mb-2">
+                                No results found
+                            </h3>
+                            <p className="text-sm text-muted-foreground mb-6 text-center max-w-md">
+                                No workflows match "{searchQuery}". Try a different search term.
+                            </p>
+                            <Button variant="secondary" onClick={() => setSearchQuery("")}>
+                                Clear search
+                            </Button>
+                        </div>
+                    ) : workflows.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed border-border rounded-lg bg-card">
                             <FileText className="w-12 h-12 text-muted-foreground mb-4" />
                             <h3 className="text-lg font-semibold text-foreground mb-2">
@@ -725,7 +759,7 @@ export function Workflows() {
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {workflows.map((workflow) => (
+                            {filteredWorkflows.map((workflow) => (
                                 <div
                                     key={workflow.id}
                                     className={`bg-card border rounded-lg p-5 hover:shadow-md transition-all group relative cursor-pointer select-none flex flex-col h-full ${

@@ -8,7 +8,8 @@ import {
     FolderPlus,
     FolderInput,
     GripVertical,
-    ChevronDown
+    ChevronDown,
+    Search
 } from "lucide-react";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -19,6 +20,7 @@ import { Badge } from "../components/common/Badge";
 import { Button } from "../components/common/Button";
 import { ConfirmDialog } from "../components/common/ConfirmDialog";
 import { ContextMenu, type ContextMenuItem } from "../components/common/ContextMenu";
+import { ExpandableSearch } from "../components/common/ExpandableSearch";
 import { PageHeader } from "../components/common/PageHeader";
 import { LoadingState } from "../components/common/Spinner";
 import { CreateAgentDialog } from "../components/CreateAgentDialog";
@@ -28,6 +30,7 @@ import {
     MoveToFolderDialog,
     FolderBreadcrumb
 } from "../components/folders";
+import { useSearch } from "../hooks/useSearch";
 import {
     getFolders,
     createFolder,
@@ -66,6 +69,17 @@ export function Agents() {
     const [folderToEdit, setFolderToEdit] = useState<Folder | null>(null);
     const [folderToDelete, setFolderToDelete] = useState<FolderWithCounts | null>(null);
     const menuRef = useRef<HTMLDivElement>(null);
+
+    // Search functionality
+    const {
+        searchQuery,
+        setSearchQuery,
+        filteredItems: filteredAgents,
+        isSearchActive
+    } = useSearch({
+        items: agents,
+        searchFields: ["name", "description"]
+    });
 
     // Load folders on mount
     useEffect(() => {
@@ -386,9 +400,11 @@ export function Agents() {
                         ? `${selectedFolderIds.size} folder${selectedFolderIds.size !== 1 ? "s" : ""} selected`
                         : selectedIds.size > 0
                           ? `${selectedIds.size} selected`
-                          : currentFolder
-                            ? `${agents.length} agent${agents.length !== 1 ? "s" : ""} in ${currentFolder.name}`
-                            : `${agents.length} ${agents.length === 1 ? "agent" : "agents"}`
+                          : isSearchActive
+                            ? `${filteredAgents.length} result${filteredAgents.length !== 1 ? "s" : ""} for "${searchQuery}"`
+                            : currentFolder
+                              ? `${agents.length} agent${agents.length !== 1 ? "s" : ""} in ${currentFolder.name}`
+                              : `${agents.length} ${agents.length === 1 ? "agent" : "agents"}`
                 }
                 action={
                     selectedFolderIds.size > 0 ? (
@@ -426,7 +442,12 @@ export function Agents() {
                             </Button>
                         </div>
                     ) : (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
+                            <ExpandableSearch
+                                value={searchQuery}
+                                onChange={setSearchQuery}
+                                placeholder="Search agents..."
+                            />
                             <Button
                                 variant="ghost"
                                 onClick={() => setIsCreateFolderDialogOpen(true)}
@@ -512,7 +533,20 @@ export function Agents() {
                     )}
 
                     {/* Agents Grid */}
-                    {agents.length === 0 ? (
+                    {filteredAgents.length === 0 && isSearchActive ? (
+                        <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed border-border rounded-lg bg-card">
+                            <Search className="w-12 h-12 text-muted-foreground mb-4" />
+                            <h3 className="text-lg font-semibold text-foreground mb-2">
+                                No results found
+                            </h3>
+                            <p className="text-sm text-muted-foreground mb-6 text-center max-w-md">
+                                No agents match "{searchQuery}". Try a different search term.
+                            </p>
+                            <Button variant="secondary" onClick={() => setSearchQuery("")}>
+                                Clear search
+                            </Button>
+                        </div>
+                    ) : agents.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed border-border rounded-lg bg-card">
                             <Bot className="w-12 h-12 text-muted-foreground mb-4" />
                             <h3 className="text-lg font-semibold text-foreground mb-2">
@@ -534,7 +568,7 @@ export function Agents() {
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {agents.map((agent) => (
+                            {filteredAgents.map((agent) => (
                                 <div
                                     key={agent.id}
                                     className={`bg-card border rounded-lg p-5 hover:shadow-md transition-all group relative cursor-pointer select-none flex flex-col ${
