@@ -1,4 +1,5 @@
 import { FastifyError, FastifyReply, FastifyRequest } from "fastify";
+import { ZodError } from "zod";
 import type { JsonValue } from "@flowmaestro/shared";
 import { config } from "../../core/config";
 
@@ -49,7 +50,7 @@ export class BadRequestError extends AppError {
 }
 
 export async function errorHandler(
-    error: FastifyError | AppError,
+    error: FastifyError | AppError | Error,
     request: FastifyRequest,
     reply: FastifyReply
 ) {
@@ -61,6 +62,19 @@ export async function errorHandler(
         method: request.method
     });
 
+    // Handle Zod validation errors first (use duck typing for compatibility)
+    if (error.name === "ZodError" && "issues" in error) {
+        const zodError = error as ZodError;
+        return reply.status(400).send({
+            success: false,
+            error: "Validation error",
+            details: zodError.errors.map((e) => ({
+                path: e.path.join("."),
+                message: e.message
+            }))
+        });
+    }
+
     // Handle known app errors
     if (error instanceof AppError) {
         return reply.status(error.statusCode).send({
@@ -71,11 +85,11 @@ export async function errorHandler(
     }
 
     // Handle Fastify validation errors
-    if (error.validation) {
+    if ((error as FastifyError).validation) {
         return reply.status(400).send({
             success: false,
             error: "Validation error",
-            details: error.validation
+            details: (error as FastifyError).validation
         });
     }
 
@@ -94,8 +108,12 @@ export async function errorHandler(
         });
     }
 
-    // Default 500 error
-    return reply.status(500).send({
+    // Check for pre-set statusCode (e.g., from content type parsers)
+    const errorWithStatus = error as Error & { statusCode?: number };
+    const statusCode = errorWithStatus.statusCode || 500;
+
+    // Default error response
+    return reply.status(statusCode).send({
         success: false,
         error: config.env === "production" ? "Internal server error" : error.message
     });
