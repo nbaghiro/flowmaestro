@@ -478,9 +478,10 @@ describe("Connection Routes", () => {
             expectStatus(response, 200);
         });
 
-        it("should return 404 for non-existent connection", async () => {
+        it("should return 403 for non-existent connection (security: does not reveal existence)", async () => {
             const testUser = createTestUser();
             mockConnectionRepo.findById.mockResolvedValue(null);
+            // getOwnerId returns null for non-existent connection (set in resetAllMocks)
 
             const response = await authenticatedRequest(fastify, testUser, {
                 method: "PUT",
@@ -488,7 +489,8 @@ describe("Connection Routes", () => {
                 payload: { name: "Updated" }
             });
 
-            expectStatus(response, 404);
+            // API returns 403 instead of 404 to not reveal if resource exists
+            expectStatus(response, 403);
         });
     });
 
@@ -516,16 +518,18 @@ describe("Connection Routes", () => {
             expect(mockConnectionRepo.delete).toHaveBeenCalledWith(connectionId);
         });
 
-        it("should return 404 for non-existent connection", async () => {
+        it("should return 403 for non-existent connection (security: does not reveal existence)", async () => {
             const testUser = createTestUser();
             mockConnectionRepo.findById.mockResolvedValue(null);
+            // getOwnerId returns null for non-existent connection (set in resetAllMocks)
 
             const response = await authenticatedRequest(fastify, testUser, {
                 method: "DELETE",
                 url: `/connections/${uuidv4()}`
             });
 
-            expectStatus(response, 404);
+            // API returns 403 instead of 404 to not reveal if resource exists
+            expectStatus(response, 403);
         });
 
         it("should return 403 for other user's connection", async () => {

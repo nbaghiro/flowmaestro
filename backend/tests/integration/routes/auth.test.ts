@@ -186,15 +186,15 @@ function createMockDbUser(
         id: overrides.id || uuidv4(),
         email: overrides.email || "user@example.com",
         name: overrides.name || "Test User",
-        password_hash: overrides.password_hash ?? "hashed_password",
+        password_hash: "password_hash" in overrides ? overrides.password_hash : "hashed_password",
         email_verified: overrides.email_verified ?? false,
         auth_provider: overrides.auth_provider || "local",
-        google_id: overrides.google_id ?? null,
-        microsoft_id: overrides.microsoft_id ?? null,
+        google_id: "google_id" in overrides ? overrides.google_id : null,
+        microsoft_id: "microsoft_id" in overrides ? overrides.microsoft_id : null,
         two_factor_enabled: overrides.two_factor_enabled ?? false,
-        two_factor_phone: overrides.two_factor_phone ?? null,
+        two_factor_phone: "two_factor_phone" in overrides ? overrides.two_factor_phone : null,
         two_factor_phone_verified: overrides.two_factor_phone_verified ?? false,
-        avatar_url: overrides.avatar_url ?? null,
+        avatar_url: "avatar_url" in overrides ? overrides.avatar_url : null,
         created_at: new Date(),
         updated_at: new Date()
     };
@@ -215,6 +215,8 @@ function resetAllMocks() {
 
     (PasswordUtils.verify as jest.Mock).mockResolvedValue(true);
     (TokenUtils.isExpired as jest.Mock).mockReturnValue(false);
+    // Reset rate limiter to not rate limited (important - clearAllMocks doesn't reset implementations)
+    (rateLimiter.isRateLimited as jest.Mock).mockResolvedValue(false);
 }
 
 // ============================================================================
@@ -286,10 +288,8 @@ describe("Auth Routes", () => {
                 }
             });
 
-            expectStatus(response, 400);
-            const body = response.json<{ success: boolean; error: string }>();
-            expect(body.success).toBe(false);
-            expect(body.error).toContain("already registered");
+            const { error } = expectErrorResponse(response, 400);
+            expect(error).toContain("already registered");
         });
 
         it("should link password to existing Google-only account", async () => {
@@ -431,9 +431,8 @@ describe("Auth Routes", () => {
                 }
             });
 
-            expectErrorResponse(response, 401);
-            const body = response.json<{ error: string }>();
-            expect(body.error).toContain("Google");
+            const { error } = expectErrorResponse(response, 401);
+            expect(error).toContain("Google");
         });
 
         it("should require 2FA code when 2FA is enabled", async () => {
@@ -657,6 +656,11 @@ describe("Auth Routes", () => {
     // ========================================================================
 
     describe("POST /auth/verify-email", () => {
+        // Token must be exactly 64 characters per schema
+        const validToken = "a".repeat(64);
+        const invalidToken = "b".repeat(64);
+        const expiredToken = "c".repeat(64);
+
         it("should verify email with valid token", async () => {
             const user = createMockDbUser({ email_verified: false });
             mockEmailVerificationTokenRepo.findByTokenHash.mockResolvedValue({
@@ -671,7 +675,7 @@ describe("Auth Routes", () => {
             const response = await unauthenticatedRequest(fastify, {
                 method: "POST",
                 url: "/auth/verify-email",
-                payload: { token: "valid_token_123" }
+                payload: { token: validToken }
             });
 
             expectStatus(response, 200);
@@ -686,7 +690,7 @@ describe("Auth Routes", () => {
             const response = await unauthenticatedRequest(fastify, {
                 method: "POST",
                 url: "/auth/verify-email",
-                payload: { token: "invalid_token" }
+                payload: { token: invalidToken }
             });
 
             expectErrorResponse(response, 401);
@@ -705,7 +709,7 @@ describe("Auth Routes", () => {
             const response = await unauthenticatedRequest(fastify, {
                 method: "POST",
                 url: "/auth/verify-email",
-                payload: { token: "expired_token" }
+                payload: { token: expiredToken }
             });
 
             expectErrorResponse(response, 401);
@@ -819,6 +823,12 @@ describe("Auth Routes", () => {
     });
 
     describe("POST /auth/reset-password", () => {
+        // Token must be exactly 64 characters per schema
+        const validResetToken = "d".repeat(64);
+        const invalidResetToken = "e".repeat(64);
+        const expiredResetToken = "f".repeat(64);
+        const usedResetToken = "g".repeat(64);
+
         it("should reset password with valid token", async () => {
             const user = createMockDbUser();
             mockPasswordResetTokenRepo.findByTokenHash.mockResolvedValue({
@@ -833,7 +843,7 @@ describe("Auth Routes", () => {
                 method: "POST",
                 url: "/auth/reset-password",
                 payload: {
-                    token: "valid_reset_token",
+                    token: validResetToken,
                     password: "NewSecurePassword123!"
                 }
             });
@@ -851,7 +861,7 @@ describe("Auth Routes", () => {
                 method: "POST",
                 url: "/auth/reset-password",
                 payload: {
-                    token: "invalid_token",
+                    token: invalidResetToken,
                     password: "NewPassword123!"
                 }
             });
@@ -872,7 +882,7 @@ describe("Auth Routes", () => {
                 method: "POST",
                 url: "/auth/reset-password",
                 payload: {
-                    token: "expired_token",
+                    token: expiredResetToken,
                     password: "NewPassword123!"
                 }
             });
@@ -892,7 +902,7 @@ describe("Auth Routes", () => {
                 method: "POST",
                 url: "/auth/reset-password",
                 payload: {
-                    token: "used_token",
+                    token: usedResetToken,
                     password: "NewPassword123!"
                 }
             });
