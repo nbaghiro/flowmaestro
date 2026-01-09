@@ -67,6 +67,7 @@ const mockSchedulerService = {
     updateSchedule: jest.fn().mockResolvedValue(undefined),
     pauseSchedule: jest.fn().mockResolvedValue(undefined),
     deleteSchedule: jest.fn().mockResolvedValue(undefined),
+    deleteScheduledTrigger: jest.fn().mockResolvedValue(undefined),
     getScheduleInfo: jest.fn().mockResolvedValue(null)
 };
 
@@ -510,7 +511,7 @@ describe("Trigger Routes", () => {
                 url: `/triggers/${trigger.id}`
             });
 
-            expect(mockSchedulerService.deleteSchedule).toHaveBeenCalled();
+            expect(mockSchedulerService.deleteScheduledTrigger).toHaveBeenCalled();
         });
 
         it("should return 404 for non-existent trigger", async () => {
