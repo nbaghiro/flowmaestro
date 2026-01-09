@@ -38,6 +38,7 @@ import {
     updateFolder,
     deleteFolder,
     moveItemsToFolder,
+    removeItemsFromFolder,
     type KnowledgeBaseStats,
     type KnowledgeBase
 } from "../lib/api";
@@ -288,6 +289,9 @@ export function KnowledgeBases() {
     };
 
     const handleMoveToFolder = async (folderId: string | null) => {
+        if (!folderId) {
+            throw new Error("Folder ID is required");
+        }
         await moveItemsToFolder({
             itemIds: Array.from(selectedIds),
             itemType: "knowledge-base",
@@ -299,38 +303,22 @@ export function KnowledgeBases() {
         setSelectedIds(new Set());
     };
 
-    const handleRemoveFromFolder = async (kbId: string) => {
+    const handleRemoveFromFolder = async (kbIds: string | string[]) => {
         if (!currentFolderId) return; // Can only remove when viewing inside a folder
+        const ids = Array.isArray(kbIds) ? kbIds : [kbIds];
+        if (ids.length === 0) return;
+
         try {
-            await moveItemsToFolder({
-                itemIds: [kbId],
+            await removeItemsFromFolder({
+                itemIds: ids,
                 itemType: "knowledge-base",
-                folderId: null,
-                sourceFolderId: currentFolderId
+                folderId: currentFolderId
             });
             const currentFolderIdParam = currentFolderId || undefined;
             await fetchKnowledgeBases({ folderId: currentFolderIdParam });
             await loadFolders();
         } catch (err) {
             logger.error("Failed to remove knowledge base from folder", err);
-        }
-    };
-
-    const handleRemoveSelectedFromFolder = async () => {
-        if (selectedIds.size === 0 || !currentFolderId) return; // Can only remove when viewing inside a folder
-        try {
-            await moveItemsToFolder({
-                itemIds: Array.from(selectedIds),
-                itemType: "knowledge-base",
-                folderId: null,
-                sourceFolderId: currentFolderId
-            });
-            const currentFolderIdParam = currentFolderId || undefined;
-            await fetchKnowledgeBases({ folderId: currentFolderIdParam });
-            await loadFolders();
-            setSelectedIds(new Set());
-        } catch (err) {
-            logger.error("Failed to remove knowledge bases from folder", err);
         }
     };
 
@@ -446,7 +434,10 @@ export function KnowledgeBases() {
                       label: "Remove from folder",
                       icon: <FolderMinus className="w-4 h-4" />,
                       onClick: () => {
-                          handleRemoveSelectedFromFolder();
+                          if (selectedIds.size > 0 && currentFolderId) {
+                              handleRemoveFromFolder(Array.from(selectedIds));
+                              setSelectedIds(new Set());
+                          }
                           closeContextMenu();
                       }
                   }
@@ -521,7 +512,12 @@ export function KnowledgeBases() {
                             {currentFolderId && (
                                 <Button
                                     variant="secondary"
-                                    onClick={handleRemoveSelectedFromFolder}
+                                    onClick={() => {
+                                        if (selectedIds.size > 0 && currentFolderId) {
+                                            handleRemoveFromFolder(Array.from(selectedIds));
+                                            setSelectedIds(new Set());
+                                        }
+                                    }}
                                 >
                                     <FolderMinus className="w-4 h-4" />
                                     Remove from folder

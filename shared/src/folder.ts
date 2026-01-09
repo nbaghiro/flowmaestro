@@ -107,12 +107,18 @@ export interface FolderContents {
     itemCounts: FolderItemCounts;
 }
 
-// Move items request
+// Move items to folder request
 export interface MoveItemsToFolderInput {
     itemIds: string[];
     itemType: FolderResourceType;
-    folderId: string | null; // null = move to root (remove from folder)
-    sourceFolderId?: string; // Optional: when removing (folderId=null), specify which folder to remove from
+    folderId: string; // Required: folder to add items to
+}
+
+// Remove items from folder request
+export interface RemoveItemsFromFolderInput {
+    itemIds: string[];
+    itemType: FolderResourceType;
+    folderId?: string; // Optional: when provided, removes from specific folder only; when omitted, removes from all folders
 }
 
 // Color palette (predefined options)

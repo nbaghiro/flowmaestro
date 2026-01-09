@@ -39,7 +39,8 @@ import {
     createFolder,
     updateFolder,
     deleteFolder,
-    moveItemsToFolder
+    moveItemsToFolder,
+    removeItemsFromFolder
 } from "../lib/api";
 import { logger } from "../lib/logger";
 
@@ -313,6 +314,9 @@ export function ChatInterfacesPage() {
     );
 
     const handleMoveToFolder = async (folderId: string | null) => {
+        if (!folderId) {
+            throw new Error("Folder ID is required");
+        }
         await moveItemsToFolder({
             itemIds: Array.from(selectedIds),
             itemType: "chat-interface",
@@ -324,38 +328,22 @@ export function ChatInterfacesPage() {
         setSelectedIds(new Set());
     };
 
-    const handleRemoveFromFolder = async (chatId: string) => {
+    const handleRemoveFromFolder = async (chatIds: string | string[]) => {
         if (!currentFolderId) return; // Can only remove when viewing inside a folder
+        const ids = Array.isArray(chatIds) ? chatIds : [chatIds];
+        if (ids.length === 0) return;
+
         try {
-            await moveItemsToFolder({
-                itemIds: [chatId],
+            await removeItemsFromFolder({
+                itemIds: ids,
                 itemType: "chat-interface",
-                folderId: null,
-                sourceFolderId: currentFolderId
+                folderId: currentFolderId
             });
             const currentFolderIdParam = currentFolderId || undefined;
             await loadChatInterfaces(currentFolderIdParam);
             await loadFolders();
         } catch (err) {
             logger.error("Failed to remove chat interface from folder", err);
-        }
-    };
-
-    const handleRemoveSelectedFromFolder = async () => {
-        if (selectedIds.size === 0 || !currentFolderId) return; // Can only remove when viewing inside a folder
-        try {
-            await moveItemsToFolder({
-                itemIds: Array.from(selectedIds),
-                itemType: "chat-interface",
-                folderId: null,
-                sourceFolderId: currentFolderId
-            });
-            const currentFolderIdParam = currentFolderId || undefined;
-            await loadChatInterfaces(currentFolderIdParam);
-            await loadFolders();
-            setSelectedIds(new Set());
-        } catch (err) {
-            logger.error("Failed to remove chat interfaces from folder", err);
         }
     };
 
@@ -455,7 +443,10 @@ export function ChatInterfacesPage() {
                       label: "Remove from folder",
                       icon: <FolderMinus className="w-4 h-4" />,
                       onClick: () => {
-                          handleRemoveSelectedFromFolder();
+                          if (selectedIds.size > 0 && currentFolderId) {
+                              handleRemoveFromFolder(Array.from(selectedIds));
+                              setSelectedIds(new Set());
+                          }
                           closeContextMenu();
                       }
                   }
@@ -529,7 +520,12 @@ export function ChatInterfacesPage() {
                             {currentFolderId && (
                                 <Button
                                     variant="secondary"
-                                    onClick={handleRemoveSelectedFromFolder}
+                                    onClick={() => {
+                                        if (selectedIds.size > 0 && currentFolderId) {
+                                            handleRemoveFromFolder(Array.from(selectedIds));
+                                            setSelectedIds(new Set());
+                                        }
+                                    }}
                                 >
                                     <FolderMinus className="w-4 h-4" />
                                     Remove from folder

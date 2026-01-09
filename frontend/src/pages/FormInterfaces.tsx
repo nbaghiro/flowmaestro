@@ -38,7 +38,8 @@ import {
     createFolder,
     updateFolder,
     deleteFolder,
-    moveItemsToFolder
+    moveItemsToFolder,
+    removeItemsFromFolder
 } from "../lib/api";
 import { logger } from "../lib/logger";
 
@@ -281,6 +282,9 @@ export function FormInterfaces() {
     };
 
     const handleMoveToFolder = async (folderId: string | null) => {
+        if (!folderId) {
+            throw new Error("Folder ID is required");
+        }
         await moveItemsToFolder({
             itemIds: Array.from(selectedIds),
             itemType: "form-interface",
@@ -292,38 +296,22 @@ export function FormInterfaces() {
         setSelectedIds(new Set());
     };
 
-    const handleRemoveFromFolder = async (formId: string) => {
+    const handleRemoveFromFolder = async (formIds: string | string[]) => {
         if (!currentFolderId) return; // Can only remove when viewing inside a folder
+        const ids = Array.isArray(formIds) ? formIds : [formIds];
+        if (ids.length === 0) return;
+
         try {
-            await moveItemsToFolder({
-                itemIds: [formId],
+            await removeItemsFromFolder({
+                itemIds: ids,
                 itemType: "form-interface",
-                folderId: null,
-                sourceFolderId: currentFolderId
+                folderId: currentFolderId
             });
             const currentFolderIdParam = currentFolderId || undefined;
             await loadFormInterfaces(currentFolderIdParam);
             await loadFolders();
         } catch (err) {
             logger.error("Failed to remove form interface from folder", err);
-        }
-    };
-
-    const handleRemoveSelectedFromFolder = async () => {
-        if (selectedIds.size === 0 || !currentFolderId) return; // Can only remove when viewing inside a folder
-        try {
-            await moveItemsToFolder({
-                itemIds: Array.from(selectedIds),
-                itemType: "form-interface",
-                folderId: null,
-                sourceFolderId: currentFolderId
-            });
-            const currentFolderIdParam = currentFolderId || undefined;
-            await loadFormInterfaces(currentFolderIdParam);
-            await loadFolders();
-            setSelectedIds(new Set());
-        } catch (err) {
-            logger.error("Failed to remove form interfaces from folder", err);
         }
     };
 
@@ -454,7 +442,10 @@ export function FormInterfaces() {
                       label: "Remove from folder",
                       icon: <FolderMinus className="w-4 h-4" />,
                       onClick: () => {
-                          handleRemoveSelectedFromFolder();
+                          if (selectedIds.size > 0 && currentFolderId) {
+                              handleRemoveFromFolder(Array.from(selectedIds));
+                              setSelectedIds(new Set());
+                          }
                           closeContextMenu();
                       }
                   }
@@ -528,7 +519,12 @@ export function FormInterfaces() {
                             {currentFolderId && (
                                 <Button
                                     variant="secondary"
-                                    onClick={handleRemoveSelectedFromFolder}
+                                    onClick={() => {
+                                        if (selectedIds.size > 0 && currentFolderId) {
+                                            handleRemoveFromFolder(Array.from(selectedIds));
+                                            setSelectedIds(new Set());
+                                        }
+                                    }}
                                 >
                                     <FolderMinus className="w-4 h-4" />
                                     Remove from folder

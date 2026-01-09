@@ -5,6 +5,7 @@ import { deleteFolderRoute } from "./delete";
 import { getFolderRoute } from "./get";
 import { listFoldersRoute } from "./list";
 import { moveItemsToFolderRoute } from "./move";
+import { removeItemsFromFolderRoute } from "./remove";
 import { updateFolderRoute } from "./update";
 
 export async function folderRoutes(fastify: FastifyInstance) {
@@ -17,6 +18,7 @@ export async function folderRoutes(fastify: FastifyInstance) {
             instance.register(deleteFolderRoute);
             instance.register(getFolderContentsRoute);
             instance.register(moveItemsToFolderRoute);
+            instance.register(removeItemsFromFolderRoute);
         },
         { prefix: "/folders" }
     );

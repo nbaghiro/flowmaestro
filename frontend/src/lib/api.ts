@@ -41,6 +41,7 @@ import type {
     CreateFolderInput,
     UpdateFolderInput,
     MoveItemsToFolderInput,
+    RemoveItemsFromFolderInput,
     FolderResourceType
 } from "@flowmaestro/shared";
 import { logger } from "./logger";
@@ -4909,7 +4910,7 @@ export async function deleteFolder(id: string): Promise<ApiResponse> {
 }
 
 /**
- * Move items to a folder (or to root if folderId is null)
+ * Move items to a folder
  */
 export async function moveItemsToFolder(
     input: MoveItemsToFolderInput
@@ -4917,6 +4918,31 @@ export async function moveItemsToFolder(
     const token = getAuthToken();
 
     const response = await apiFetch(`${API_BASE_URL}/folders/move`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` })
+        },
+        body: JSON.stringify(input)
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Remove items from a folder (or from all folders if folderId is not provided)
+ */
+export async function removeItemsFromFolder(
+    input: RemoveItemsFromFolderInput
+): Promise<ApiResponse<{ removedCount: number }>> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/folders/remove`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
