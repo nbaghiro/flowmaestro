@@ -87,16 +87,16 @@ export class FolderRepository {
         const query = `
             SELECT
                 f.*,
-                (SELECT COUNT(*) FROM flowmaestro.workflows w
-                 WHERE w.folder_id = f.id AND w.deleted_at IS NULL) as workflow_count,
-                (SELECT COUNT(*) FROM flowmaestro.agents a
-                 WHERE a.folder_id = f.id AND a.deleted_at IS NULL) as agent_count,
-                (SELECT COUNT(*) FROM flowmaestro.form_interfaces fi
-                 WHERE fi.folder_id = f.id AND fi.deleted_at IS NULL) as form_interface_count,
-                (SELECT COUNT(*) FROM flowmaestro.chat_interfaces ci
-                 WHERE ci.folder_id = f.id AND ci.deleted_at IS NULL) as chat_interface_count,
-                (SELECT COUNT(*) FROM flowmaestro.knowledge_bases kb
-                 WHERE kb.folder_id = f.id) as knowledge_base_count
+                (SELECT COUNT(*) FROM flowmaestro.workflows
+                 WHERE f.id = ANY(COALESCE(folder_ids, ARRAY[]::UUID[])) AND deleted_at IS NULL) as workflow_count,
+                (SELECT COUNT(*) FROM flowmaestro.agents
+                 WHERE f.id = ANY(COALESCE(folder_ids, ARRAY[]::UUID[])) AND deleted_at IS NULL) as agent_count,
+                (SELECT COUNT(*) FROM flowmaestro.form_interfaces
+                 WHERE f.id = ANY(COALESCE(folder_ids, ARRAY[]::UUID[])) AND deleted_at IS NULL) as form_interface_count,
+                (SELECT COUNT(*) FROM flowmaestro.chat_interfaces
+                 WHERE f.id = ANY(COALESCE(folder_ids, ARRAY[]::UUID[])) AND deleted_at IS NULL) as chat_interface_count,
+                (SELECT COUNT(*) FROM flowmaestro.knowledge_bases
+                 WHERE f.id = ANY(COALESCE(folder_ids, ARRAY[]::UUID[]))) as knowledge_base_count
             FROM flowmaestro.folders f
             WHERE f.user_id = $1 AND f.deleted_at IS NULL
             ORDER BY f.position ASC, f.created_at ASC
@@ -158,16 +158,16 @@ export class FolderRepository {
     async getItemCounts(id: string): Promise<FolderItemCounts> {
         const query = `
             SELECT
-                (SELECT COUNT(*) FROM flowmaestro.workflows w
-                 WHERE w.folder_id = $1 AND w.deleted_at IS NULL) as workflow_count,
-                (SELECT COUNT(*) FROM flowmaestro.agents a
-                 WHERE a.folder_id = $1 AND a.deleted_at IS NULL) as agent_count,
-                (SELECT COUNT(*) FROM flowmaestro.form_interfaces fi
-                 WHERE fi.folder_id = $1 AND fi.deleted_at IS NULL) as form_interface_count,
-                (SELECT COUNT(*) FROM flowmaestro.chat_interfaces ci
-                 WHERE ci.folder_id = $1 AND ci.deleted_at IS NULL) as chat_interface_count,
-                (SELECT COUNT(*) FROM flowmaestro.knowledge_bases kb
-                 WHERE kb.folder_id = $1) as knowledge_base_count
+                (SELECT COUNT(*) FROM flowmaestro.workflows
+                 WHERE $1 = ANY(COALESCE(folder_ids, ARRAY[]::UUID[])) AND deleted_at IS NULL) as workflow_count,
+                (SELECT COUNT(*) FROM flowmaestro.agents
+                 WHERE $1 = ANY(COALESCE(folder_ids, ARRAY[]::UUID[])) AND deleted_at IS NULL) as agent_count,
+                (SELECT COUNT(*) FROM flowmaestro.form_interfaces
+                 WHERE $1 = ANY(COALESCE(folder_ids, ARRAY[]::UUID[])) AND deleted_at IS NULL) as form_interface_count,
+                (SELECT COUNT(*) FROM flowmaestro.chat_interfaces
+                 WHERE $1 = ANY(COALESCE(folder_ids, ARRAY[]::UUID[])) AND deleted_at IS NULL) as chat_interface_count,
+                (SELECT COUNT(*) FROM flowmaestro.knowledge_bases
+                 WHERE $1 = ANY(COALESCE(folder_ids, ARRAY[]::UUID[]))) as knowledge_base_count
         `;
 
         const result = await db.query<{
@@ -238,8 +238,7 @@ export class FolderRepository {
     }
 
     async delete(id: string, userId: string): Promise<boolean> {
-        // Soft delete the folder - items will have folder_id set to NULL via ON DELETE SET NULL
-        // But since we're soft deleting, we need to manually clear folder_id on items
+        // Clear folder_id from all items when folder is deleted
         await this.clearFolderIdFromItems(id);
 
         const query = `
@@ -269,7 +268,7 @@ export class FolderRepository {
         const query = `
             SELECT id, name, description, created_at, updated_at
             FROM flowmaestro.workflows
-            WHERE folder_id = $1 AND deleted_at IS NULL
+            WHERE $1 = ANY(COALESCE(folder_ids, ARRAY[]::UUID[])) AND deleted_at IS NULL
             ORDER BY updated_at DESC
         `;
         const result = await db.query<{
@@ -293,7 +292,7 @@ export class FolderRepository {
         const query = `
             SELECT id, name, description, provider, model, created_at, updated_at
             FROM flowmaestro.agents
-            WHERE folder_id = $1 AND deleted_at IS NULL
+            WHERE $1 = ANY(COALESCE(folder_ids, ARRAY[]::UUID[])) AND deleted_at IS NULL
             ORDER BY updated_at DESC
         `;
         const result = await db.query<{
@@ -321,7 +320,7 @@ export class FolderRepository {
         const query = `
             SELECT id, name, title, status, created_at, updated_at
             FROM flowmaestro.form_interfaces
-            WHERE folder_id = $1 AND deleted_at IS NULL
+            WHERE $1 = ANY(COALESCE(folder_ids, ARRAY[]::UUID[])) AND deleted_at IS NULL
             ORDER BY updated_at DESC
         `;
         const result = await db.query<{
@@ -347,7 +346,7 @@ export class FolderRepository {
         const query = `
             SELECT id, name, title, status, created_at, updated_at
             FROM flowmaestro.chat_interfaces
-            WHERE folder_id = $1 AND deleted_at IS NULL
+            WHERE $1 = ANY(COALESCE(folder_ids, ARRAY[]::UUID[])) AND deleted_at IS NULL
             ORDER BY updated_at DESC
         `;
         const result = await db.query<{
@@ -375,7 +374,7 @@ export class FolderRepository {
                    COUNT(kd.id) as document_count
             FROM flowmaestro.knowledge_bases kb
             LEFT JOIN flowmaestro.knowledge_documents kd ON kd.knowledge_base_id = kb.id
-            WHERE kb.folder_id = $1
+            WHERE $1 = ANY(COALESCE(kb.folder_ids, ARRAY[]::UUID[]))
             GROUP BY kb.id
             ORDER BY kb.updated_at DESC
         `;
@@ -399,24 +398,26 @@ export class FolderRepository {
     }
 
     private async clearFolderIdFromItems(folderId: string): Promise<void> {
-        // Clear folder_id from all resource tables when folder is deleted
+        // Remove folder_id from folder_ids array when folder is deleted
         await Promise.all([
-            db.query("UPDATE flowmaestro.workflows SET folder_id = NULL WHERE folder_id = $1", [
-                folderId
-            ]),
-            db.query("UPDATE flowmaestro.agents SET folder_id = NULL WHERE folder_id = $1", [
-                folderId
-            ]),
             db.query(
-                "UPDATE flowmaestro.form_interfaces SET folder_id = NULL WHERE folder_id = $1",
+                "UPDATE flowmaestro.workflows SET folder_ids = array_remove(COALESCE(folder_ids, ARRAY[]::UUID[]), $1::UUID) WHERE $1 = ANY(COALESCE(folder_ids, ARRAY[]::UUID[]))",
                 [folderId]
             ),
             db.query(
-                "UPDATE flowmaestro.chat_interfaces SET folder_id = NULL WHERE folder_id = $1",
+                "UPDATE flowmaestro.agents SET folder_ids = array_remove(COALESCE(folder_ids, ARRAY[]::UUID[]), $1::UUID) WHERE $1 = ANY(COALESCE(folder_ids, ARRAY[]::UUID[]))",
                 [folderId]
             ),
             db.query(
-                "UPDATE flowmaestro.knowledge_bases SET folder_id = NULL WHERE folder_id = $1",
+                "UPDATE flowmaestro.form_interfaces SET folder_ids = array_remove(COALESCE(folder_ids, ARRAY[]::UUID[]), $1::UUID) WHERE $1 = ANY(COALESCE(folder_ids, ARRAY[]::UUID[]))",
+                [folderId]
+            ),
+            db.query(
+                "UPDATE flowmaestro.chat_interfaces SET folder_ids = array_remove(COALESCE(folder_ids, ARRAY[]::UUID[]), $1::UUID) WHERE $1 = ANY(COALESCE(folder_ids, ARRAY[]::UUID[]))",
+                [folderId]
+            ),
+            db.query(
+                "UPDATE flowmaestro.knowledge_bases SET folder_ids = array_remove(COALESCE(folder_ids, ARRAY[]::UUID[]), $1::UUID) WHERE $1 = ANY(COALESCE(folder_ids, ARRAY[]::UUID[]))",
                 [folderId]
             )
         ]);

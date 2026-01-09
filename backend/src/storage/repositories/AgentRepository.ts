@@ -90,15 +90,15 @@ export class AgentRepository {
         const limit = options.limit || 50;
         const offset = options.offset || 0;
 
-        // Build folder filter
+        // Build folder filter using folder_ids array
         let folderFilter = "";
         const countParams: unknown[] = [userId];
         const queryParams: unknown[] = [userId];
 
         if (options.folderId === null) {
-            folderFilter = " AND folder_id IS NULL";
+            folderFilter = " AND (folder_ids IS NULL OR folder_ids = ARRAY[]::UUID[])";
         } else if (options.folderId !== undefined) {
-            folderFilter = " AND folder_id = $2";
+            folderFilter = " AND $2 = ANY(COALESCE(folder_ids, ARRAY[]::UUID[]))";
             countParams.push(options.folderId);
             queryParams.push(options.folderId);
         }
@@ -112,7 +112,8 @@ export class AgentRepository {
         const limitParamIndex = queryParams.length + 1;
         const offsetParamIndex = queryParams.length + 2;
         const query = `
-            SELECT * FROM flowmaestro.agents
+            SELECT *
+            FROM flowmaestro.agents
             WHERE user_id = $1 AND deleted_at IS NULL${folderFilter}
             ORDER BY created_at DESC
             LIMIT $${limitParamIndex} OFFSET $${offsetParamIndex}

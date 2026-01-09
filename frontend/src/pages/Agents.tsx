@@ -7,6 +7,7 @@ import {
     Edit2,
     FolderPlus,
     FolderInput,
+    FolderMinus,
     GripVertical,
     ChevronDown,
     Search
@@ -36,7 +37,8 @@ import {
     createFolder,
     updateFolder,
     deleteFolder,
-    moveItemsToFolder
+    moveItemsToFolder,
+    removeItemsFromFolder
 } from "../lib/api";
 import { logger } from "../lib/logger";
 import { useAgentStore } from "../stores/agentStore";
@@ -242,6 +244,9 @@ export function Agents() {
     };
 
     const handleMoveToFolder = async (folderId: string | null) => {
+        if (!folderId) {
+            throw new Error("Folder ID is required");
+        }
         await moveItemsToFolder({
             itemIds: Array.from(selectedIds),
             itemType: "agent",
@@ -251,6 +256,25 @@ export function Agents() {
         await fetchAgents({ folderId: currentFolderIdParam });
         await loadFolders();
         setSelectedIds(new Set());
+    };
+
+    const handleRemoveFromFolder = async (agentIds: string | string[]) => {
+        if (!currentFolderId) return; // Can only remove when viewing inside a folder
+        const ids = Array.isArray(agentIds) ? agentIds : [agentIds];
+        if (ids.length === 0) return;
+
+        try {
+            await removeItemsFromFolder({
+                itemIds: ids,
+                itemType: "agent",
+                folderId: currentFolderId
+            });
+            const currentFolderIdParam = currentFolderId || undefined;
+            await fetchAgents({ folderId: currentFolderIdParam });
+            await loadFolders();
+        } catch (err) {
+            logger.error("Failed to remove agent from folder", err);
+        }
     };
 
     // Drag and drop handlers
@@ -368,6 +392,21 @@ export function Agents() {
                 closeContextMenu();
             }
         },
+        ...(currentFolderId
+            ? [
+                  {
+                      label: "Remove from folder",
+                      icon: <FolderMinus className="w-4 h-4" />,
+                      onClick: () => {
+                          if (selectedIds.size > 0 && currentFolderId) {
+                              handleRemoveFromFolder(Array.from(selectedIds));
+                              setSelectedIds(new Set());
+                          }
+                          closeContextMenu();
+                      }
+                  }
+              ]
+            : []),
         {
             label: `Delete ${selectedIds.size} agent${selectedIds.size !== 1 ? "s" : ""}`,
             icon: <Trash2 className="w-4 h-4" />,
@@ -427,6 +466,20 @@ export function Agents() {
                             <Button variant="ghost" onClick={() => setSelectedIds(new Set())}>
                                 Clear selection
                             </Button>
+                            {currentFolderId && (
+                                <Button
+                                    variant="secondary"
+                                    onClick={() => {
+                                        if (selectedIds.size > 0 && currentFolderId) {
+                                            handleRemoveFromFolder(Array.from(selectedIds));
+                                            setSelectedIds(new Set());
+                                        }
+                                    }}
+                                >
+                                    <FolderMinus className="w-4 h-4" />
+                                    Remove from folder
+                                </Button>
+                            )}
                             <Button variant="secondary" onClick={() => setIsMoveDialogOpen(true)}>
                                 <FolderInput className="w-4 h-4" />
                                 Move to folder
@@ -649,6 +702,21 @@ export function Agents() {
                                                                 <FolderInput className="w-4 h-4" />
                                                                 Move to folder
                                                             </button>
+                                                            {currentFolderId && (
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setOpenMenuId(null);
+                                                                        handleRemoveFromFolder(
+                                                                            agent.id
+                                                                        );
+                                                                    }}
+                                                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+                                                                >
+                                                                    <FolderMinus className="w-4 h-4" />
+                                                                    Remove from folder
+                                                                </button>
+                                                            )}
                                                             <button
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();

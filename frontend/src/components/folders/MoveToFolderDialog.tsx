@@ -1,4 +1,4 @@
-import { Folder, FolderOpen, Home, Plus } from "lucide-react";
+import { Folder, FolderOpen, Plus } from "lucide-react";
 import { useState, useEffect } from "react";
 import type { FolderWithCounts, FolderResourceType } from "@flowmaestro/shared";
 import { Alert } from "../common/Alert";
@@ -80,6 +80,31 @@ export function MoveToFolderDialog({
         }
     };
 
+    // Get count for the current item type in a folder
+    const getItemTypeCount = (folder: FolderWithCounts): number => {
+        switch (itemType) {
+            case "workflow":
+                return folder.itemCounts.workflows;
+            case "agent":
+                return folder.itemCounts.agents;
+            case "form-interface":
+                return folder.itemCounts.formInterfaces;
+            case "chat-interface":
+                return folder.itemCounts.chatInterfaces;
+            case "knowledge-base":
+                return folder.itemCounts.knowledgeBases;
+            default:
+                return folder.itemCounts.total;
+        }
+    };
+
+    // Get display label for item type count
+    const getItemTypeCountLabel = (count: number): string => {
+        if (count === 0) return "Empty";
+        const typeLabel = getItemTypeDisplay();
+        return `${count} ${typeLabel}`;
+    };
+
     // Filter out the current folder from options
     const availableFolders = folders.filter((f) => f.id !== currentFolderId);
 
@@ -99,30 +124,6 @@ export function MoveToFolderDialog({
                     <LoadingState message="Loading folders..." />
                 ) : (
                     <div className="space-y-2">
-                        {/* Root (No folder) option */}
-                        {currentFolderId && (
-                            <button
-                                type="button"
-                                onClick={() => setSelectedFolderId(null)}
-                                className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-colors text-left ${
-                                    selectedFolderId === null
-                                        ? "border-primary bg-primary/5"
-                                        : "border-border hover:border-primary/50 hover:bg-muted/50"
-                                }`}
-                                disabled={isMoving}
-                            >
-                                <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
-                                    <Home className="w-5 h-5 text-muted-foreground" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="font-medium text-foreground">Root (No folder)</p>
-                                    <p className="text-sm text-muted-foreground">
-                                        Remove from current folder
-                                    </p>
-                                </div>
-                            </button>
-                        )}
-
                         {/* Folder options */}
                         {availableFolders.length > 0 ? (
                             availableFolders.map((folder) => (
@@ -159,9 +160,7 @@ export function MoveToFolderDialog({
                                             {folder.name}
                                         </p>
                                         <p className="text-sm text-muted-foreground">
-                                            {folder.itemCounts.total === 0
-                                                ? "Empty"
-                                                : `${folder.itemCounts.total} item${folder.itemCounts.total !== 1 ? "s" : ""}`}
+                                            {getItemTypeCountLabel(getItemTypeCount(folder))}
                                         </p>
                                     </div>
                                 </button>
@@ -208,11 +207,7 @@ export function MoveToFolderDialog({
                         type="button"
                         variant="primary"
                         onClick={handleMove}
-                        disabled={
-                            isMoving ||
-                            isLoadingFolders ||
-                            (selectedFolderId === null && !currentFolderId)
-                        }
+                        disabled={isMoving || isLoadingFolders || selectedFolderId === null}
                         loading={isMoving}
                     >
                         {isMoving ? "Moving..." : "Move"}

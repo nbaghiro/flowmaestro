@@ -137,15 +137,15 @@ export class ChatInterfaceRepository {
         const limit = options.limit || 50;
         const offset = options.offset || 0;
 
-        // Build folder filter
+        // Build folder filter using folder_ids array
         let folderFilter = "";
         const countParams: unknown[] = [userId];
         const queryParams: unknown[] = [userId];
 
         if (options.folderId === null) {
-            folderFilter = " AND ci.folder_id IS NULL";
+            folderFilter = " AND (ci.folder_ids IS NULL OR ci.folder_ids = ARRAY[]::UUID[])";
         } else if (options.folderId !== undefined) {
-            folderFilter = " AND ci.folder_id = $2";
+            folderFilter = " AND $2 = ANY(COALESCE(ci.folder_ids, ARRAY[]::UUID[]))";
             countParams.push(options.folderId);
             queryParams.push(options.folderId);
         }
