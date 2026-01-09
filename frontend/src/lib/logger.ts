@@ -84,7 +84,7 @@ const LOG_LEVEL_PRIORITY: Record<LogLevel, number> = {
 /**
  * Recursively sanitize an object by redacting sensitive fields
  */
-function sanitizeLogData<T>(data: T, depth = 0): T {
+export function sanitizeLogData<T>(data: T, depth = 0): T {
     if (depth > 10 || data === null || data === undefined) {
         return data;
     }
