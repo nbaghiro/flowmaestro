@@ -11,7 +11,8 @@ import {
     FolderInput,
     FolderMinus,
     GripVertical,
-    ChevronDown
+    ChevronDown,
+    Search
 } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -21,6 +22,7 @@ import { Button } from "../components/common/Button";
 import { ConfirmDialog } from "../components/common/ConfirmDialog";
 import { ContextMenu, type ContextMenuItem } from "../components/common/ContextMenu";
 import { Dialog } from "../components/common/Dialog";
+import { ExpandableSearch } from "../components/common/ExpandableSearch";
 import { PageHeader } from "../components/common/PageHeader";
 import { LoadingState } from "../components/common/Spinner";
 import {
@@ -30,6 +32,7 @@ import {
     FolderBreadcrumb
 } from "../components/folders";
 import { CreateFormInterfaceDialog } from "../components/forms/CreateFormInterfaceDialog";
+import { useSearch } from "../hooks/useSearch";
 import {
     getFormInterfaces,
     deleteFormInterface,
@@ -80,6 +83,17 @@ export function FormInterfaces() {
     // Dropdown menu state
     const [openMenuId, setOpenMenuId] = useState<string | null>(null);
     const menuRef = useRef<HTMLDivElement>(null);
+
+    // Search functionality
+    const {
+        searchQuery,
+        setSearchQuery,
+        filteredItems: filteredFormInterfaces,
+        isSearchActive
+    } = useSearch({
+        items: formInterfaces,
+        searchFields: ["title", "description"]
+    });
 
     // Load folders on mount
     useEffect(() => {
@@ -491,9 +505,11 @@ export function FormInterfaces() {
                         ? `${selectedFolderIds.size} folder${selectedFolderIds.size !== 1 ? "s" : ""} selected`
                         : selectedIds.size > 0
                           ? `${selectedIds.size} selected`
-                          : currentFolder
-                            ? `${formInterfaces.length} form${formInterfaces.length !== 1 ? "s" : ""} in ${currentFolder.name}`
-                            : "Create public forms that connect to your workflows and agents"
+                          : isSearchActive
+                            ? `${filteredFormInterfaces.length} result${filteredFormInterfaces.length !== 1 ? "s" : ""} for "${searchQuery}"`
+                            : currentFolder
+                              ? `${formInterfaces.length} form${formInterfaces.length !== 1 ? "s" : ""} in ${currentFolder.name}`
+                              : "Create public forms that connect to your workflows and agents"
                 }
                 action={
                     selectedFolderIds.size > 0 ? (
@@ -545,7 +561,12 @@ export function FormInterfaces() {
                             </Button>
                         </div>
                     ) : (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
+                            <ExpandableSearch
+                                value={searchQuery}
+                                onChange={setSearchQuery}
+                                placeholder="Search forms..."
+                            />
                             <Button
                                 variant="ghost"
                                 onClick={() => setIsCreateFolderDialogOpen(true)}
@@ -619,7 +640,18 @@ export function FormInterfaces() {
                 </>
             )}
 
-            {formInterfaces.length === 0 ? (
+            {filteredFormInterfaces.length === 0 && isSearchActive ? (
+                <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed border-border rounded-lg bg-card">
+                    <Search className="w-12 h-12 text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-semibold text-foreground mb-2">No results found</h3>
+                    <p className="text-sm text-muted-foreground mb-6 text-center max-w-md">
+                        No form interfaces match "{searchQuery}". Try a different search term.
+                    </p>
+                    <Button variant="secondary" onClick={() => setSearchQuery("")}>
+                        Clear search
+                    </Button>
+                </div>
+            ) : formInterfaces.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed border-border rounded-lg bg-card">
                     <ClipboardList className="w-12 h-12 text-muted-foreground mb-4" />
                     <h3 className="text-lg font-semibold text-foreground mb-2">
@@ -639,7 +671,7 @@ export function FormInterfaces() {
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
-                    {formInterfaces.map((fi) => (
+                    {filteredFormInterfaces.map((fi) => (
                         <div
                             key={fi.id}
                             className={`bg-card border rounded-lg transition-colors cursor-pointer select-none group relative ${
