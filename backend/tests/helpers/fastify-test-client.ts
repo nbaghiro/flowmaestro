@@ -311,6 +311,9 @@ export async function createTestServer(options: TestServerOptions = {}): Promise
         const { triggerRoutes } = await import("../../src/api/routes/triggers");
         const { errorHandler } = await import("../../src/api/middleware");
 
+        // Set error handler BEFORE routes so it applies to all route contexts
+        fastify.setErrorHandler(errorHandler);
+
         // Register routes
         await fastify.register(authRoutes, { prefix: "/auth" });
         await fastify.register(workflowRoutes, { prefix: "/workflows" });
@@ -318,9 +321,6 @@ export async function createTestServer(options: TestServerOptions = {}): Promise
         await fastify.register(connectionRoutes, { prefix: "/connections" });
         await fastify.register(executionRoutes, { prefix: "/executions" });
         await fastify.register(triggerRoutes);
-
-        // Error handler
-        fastify.setErrorHandler(errorHandler);
     }
 
     return fastify;
