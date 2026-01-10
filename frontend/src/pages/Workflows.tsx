@@ -27,6 +27,7 @@ import { PageHeader } from "../components/common/PageHeader";
 import { ProviderIconList } from "../components/common/ProviderIconList";
 import { SortDropdown } from "../components/common/SortDropdown";
 import { LoadingState } from "../components/common/Spinner";
+import { WorkflowCanvasPreview } from "../components/common/WorkflowCanvasPreview";
 import { CreateWorkflowDialog } from "../components/CreateWorkflowDialog";
 import {
     FolderCard,
@@ -53,6 +54,7 @@ import {
     type WorkflowDefinition
 } from "../lib/api";
 import { logger } from "../lib/logger";
+import { createDragPreview } from "../lib/utils";
 import { convertToReactFlowFormat } from "../lib/workflowLayout";
 import { extractProvidersFromNodes } from "../lib/workflowUtils";
 import { useWorkflowGenerationChatStore } from "../stores/workflowGenerationChatStore";
@@ -65,8 +67,20 @@ interface Workflow {
     definition?: {
         nodes?: Record<
             string,
-            { type: string; config?: { provider?: string; providerId?: string } }
+            {
+                type: string;
+                name?: string;
+                position?: { x: number; y: number };
+                config?: { provider?: string; providerId?: string };
+            }
         >;
+        edges?: Array<{
+            id?: string;
+            source: string;
+            target: string;
+            sourceHandle?: string;
+            targetHandle?: string;
+        }>;
     };
     created_at: string;
     updated_at: string;
@@ -401,13 +415,14 @@ export function Workflows() {
                     return newSet;
                 });
             } else if (selectedFolderIds.size === 0) {
-                setSearchParams({ folder: folder.id });
+                // Navigate to unified folder contents page
+                navigate(`/folders/${folder.id}`);
             } else {
                 // Clear selection on normal click when folders are selected
                 setSelectedFolderIds(new Set());
             }
         },
-        [setSearchParams, selectedFolderIds.size]
+        [navigate, selectedFolderIds.size]
     );
 
     const handleFolderContextMenu = useCallback(
@@ -496,6 +511,10 @@ export function Workflows() {
                 JSON.stringify({ itemIds, itemType: "workflow" })
             );
             e.dataTransfer.effectAllowed = "move";
+
+            // Create custom drag preview
+            const cleanup = createDragPreview(e, itemIds.length, "workflow");
+            cleanup();
         },
         [selectedIds]
     );
@@ -841,7 +860,7 @@ export function Workflows() {
                             {filteredWorkflows.map((workflow) => (
                                 <div
                                     key={workflow.id}
-                                    className={`bg-card border rounded-lg p-5 hover:shadow-md transition-all group relative cursor-pointer select-none flex flex-col h-full ${
+                                    className={`bg-card border rounded-lg overflow-hidden hover:shadow-md transition-all group relative cursor-pointer select-none flex flex-col h-full ${
                                         selectedIds.has(workflow.id)
                                             ? "border-primary ring-2 ring-primary/30 bg-primary/5"
                                             : "border-border hover:border-primary"
@@ -851,6 +870,13 @@ export function Workflows() {
                                     draggable
                                     onDragStart={(e) => handleDragStart(e, workflow)}
                                 >
+                                    {/* Canvas Preview */}
+                                    <WorkflowCanvasPreview
+                                        definition={workflow.definition}
+                                        height="h-32"
+                                        className="border-b border-border"
+                                    />
+
                                     {/* Drag Handle - visible on hover */}
                                     <div
                                         className="absolute bottom-2 right-2 p-1 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing"
@@ -859,7 +885,7 @@ export function Workflows() {
                                         <GripVertical className="w-4 h-4" />
                                     </div>
 
-                                    <div className="flex-1">
+                                    <div className="flex-1 p-5">
                                         <div className="flex items-center justify-between mb-3">
                                             <FileText className="w-5 h-5 text-primary" />
                                             <div className="flex items-center gap-1">
@@ -959,25 +985,25 @@ export function Workflows() {
                                                 {workflow.description}
                                             </p>
                                         )}
-                                    </div>
 
-                                    {/* Footer - always at bottom */}
-                                    <div className="mt-auto pt-4">
-                                        <ProviderIconList
-                                            providers={extractProvidersFromNodes(
-                                                workflow.definition?.nodes
-                                            )}
-                                            maxVisible={5}
-                                            iconSize="sm"
-                                            className="mb-3"
-                                        />
+                                        {/* Footer - always at bottom */}
+                                        <div className="mt-auto pt-4">
+                                            <ProviderIconList
+                                                providers={extractProvidersFromNodes(
+                                                    workflow.definition?.nodes
+                                                )}
+                                                maxVisible={5}
+                                                iconSize="sm"
+                                                className="mb-3"
+                                            />
 
-                                        <div className="flex items-center gap-4 text-xs text-muted-foreground pt-3 border-t border-border">
-                                            <div className="flex items-center gap-1">
-                                                <Calendar className="w-3 h-3" />
-                                                <span>
-                                                    Created {formatDate(workflow.created_at)}
-                                                </span>
+                                            <div className="flex items-center gap-4 text-xs text-muted-foreground pt-3 border-t border-border">
+                                                <div className="flex items-center gap-1">
+                                                    <Calendar className="w-3 h-3" />
+                                                    <span>
+                                                        Created {formatDate(workflow.created_at)}
+                                                    </span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
