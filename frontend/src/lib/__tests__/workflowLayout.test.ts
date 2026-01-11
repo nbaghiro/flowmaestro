@@ -9,10 +9,10 @@ import {
 } from "../workflowLayout";
 
 // Constants from the source file
-const HORIZONTAL_SPACING = 250;
-const VERTICAL_SPACING = 150;
+const HORIZONTAL_SPACING = 380;
+const VERTICAL_SPACING = 200;
 const START_X = 100;
-const START_Y = 300;
+const START_Y = 100;
 
 describe("autoLayoutNodes", () => {
     it("should position single node at start position", () => {
