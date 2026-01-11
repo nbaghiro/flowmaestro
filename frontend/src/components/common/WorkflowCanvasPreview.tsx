@@ -98,7 +98,13 @@ export function WorkflowCanvasPreview({
     }
 
     return (
-        <div className={cn(height, "bg-muted dark:bg-muted relative overflow-hidden", className)}>
+        <div
+            className={cn(
+                height,
+                "bg-muted dark:bg-muted relative overflow-hidden shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)]",
+                className
+            )}
+        >
             <Flow
                 nodes={nodes}
                 edges={edges}

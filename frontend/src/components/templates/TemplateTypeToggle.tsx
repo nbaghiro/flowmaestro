@@ -16,7 +16,7 @@ export function TemplateTypeToggle({ value, onChange }: TemplateTypeToggleProps)
                 className={cn(
                     "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200",
                     value === "workflows"
-                        ? "bg-background text-foreground shadow-sm"
+                        ? "bg-card text-foreground shadow-sm"
                         : "text-muted-foreground hover:text-foreground"
                 )}
             >
@@ -28,7 +28,7 @@ export function TemplateTypeToggle({ value, onChange }: TemplateTypeToggleProps)
                 className={cn(
                     "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200",
                     value === "agents"
-                        ? "bg-background text-foreground shadow-sm"
+                        ? "bg-card text-foreground shadow-sm"
                         : "text-muted-foreground hover:text-foreground"
                 )}
             >

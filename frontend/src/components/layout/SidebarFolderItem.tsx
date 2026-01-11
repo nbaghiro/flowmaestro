@@ -90,7 +90,7 @@ export function SidebarFolderItem({
     };
 
     // Calculate left padding based on depth (for tree indentation)
-    const paddingLeft = isCollapsed ? undefined : `${12 + depth * 16}px`;
+    const paddingLeft = isCollapsed ? undefined : `${20 + depth * 16}px`;
 
     const content = (
         <div>

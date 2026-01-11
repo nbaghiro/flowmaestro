@@ -71,7 +71,7 @@ export function AgentCard({
         <div
             className={`bg-card border rounded-lg p-5 hover:shadow-md transition-all group relative cursor-pointer select-none flex flex-col ${
                 isSelected
-                    ? "border-primary ring-2 ring-primary/30 bg-primary/5"
+                    ? "border-primary ring-2 ring-primary/30"
                     : "border-border hover:border-primary"
             }`}
             onClick={onClick}

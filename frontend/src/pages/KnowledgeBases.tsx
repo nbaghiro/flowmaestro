@@ -1,5 +1,5 @@
 import { BookOpen, Plus, Trash2, FolderInput, FolderMinus, Search } from "lucide-react";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import type { Folder, FolderWithCounts, KnowledgeBaseSummary } from "@flowmaestro/shared";
 import { KnowledgeBaseCard } from "../components/cards";
@@ -32,6 +32,7 @@ import {
 } from "../lib/api";
 import { logger } from "../lib/logger";
 import { createDragPreview } from "../lib/utils";
+import { buildFolderTree } from "../stores/folderStore";
 import { useKnowledgeBaseStore } from "../stores/knowledgeBaseStore";
 
 // Convert KnowledgeBase + stats to KnowledgeBaseSummary for card components
@@ -74,6 +75,7 @@ export function KnowledgeBases() {
 
     // Folder state
     const [folders, setFolders] = useState<FolderWithCounts[]>([]);
+    const folderTree = useMemo(() => buildFolderTree(folders), [folders]);
     const [currentFolder, setCurrentFolder] = useState<Folder | null>(null);
     const [isLoadingFolders, setIsLoadingFolders] = useState(true);
     const [selectedFolderIds, setSelectedFolderIds] = useState<Set<string>>(new Set());
@@ -740,6 +742,7 @@ export function KnowledgeBases() {
                 isOpen={isMoveDialogOpen}
                 onClose={() => setIsMoveDialogOpen(false)}
                 folders={folders}
+                folderTree={folderTree}
                 isLoadingFolders={isLoadingFolders}
                 selectedItemCount={selectedIds.size}
                 itemType="knowledge-base"

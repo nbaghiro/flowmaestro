@@ -1,5 +1,5 @@
 import { MessageSquare, Plus, Trash2, FolderInput, FolderMinus, Search } from "lucide-react";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import type {
     ChatInterface,
@@ -39,6 +39,7 @@ import {
 } from "../lib/api";
 import { logger } from "../lib/logger";
 import { createDragPreview } from "../lib/utils";
+import { buildFolderTree } from "../stores/folderStore";
 
 // Convert ChatInterface to ChatInterfaceSummary for card components
 function toChatInterfaceSummary(ci: ChatInterface): ChatInterfaceSummary {
@@ -71,6 +72,7 @@ export function ChatInterfacesPage() {
 
     // Folder state
     const [folders, setFolders] = useState<FolderWithCounts[]>([]);
+    const folderTree = useMemo(() => buildFolderTree(folders), [folders]);
     const [currentFolder, setCurrentFolder] = useState<Folder | null>(null);
     const [isLoadingFolders, setIsLoadingFolders] = useState(true);
     const [selectedFolderIds, setSelectedFolderIds] = useState<Set<string>>(new Set());
@@ -211,7 +213,9 @@ export function ChatInterfacesPage() {
         const folderId = currentFolderId || undefined;
         loadChatInterfaces(folderId);
         // Navigate to edit the newly created chat interface
-        navigate(`/chat-interfaces/${newChatInterface.id}/edit`);
+        navigate(`/chat-interfaces/${newChatInterface.id}/edit`, {
+            state: currentFolderId ? { fromFolderId: currentFolderId } : undefined
+        });
     };
 
     // Folder handlers
@@ -391,13 +395,15 @@ export function ChatInterfacesPage() {
                     return newSet;
                 });
             } else if (selectedIds.size === 0) {
-                navigate(`/chat-interfaces/${ci.id}/edit`);
+                navigate(`/chat-interfaces/${ci.id}/edit`, {
+                    state: currentFolderId ? { fromFolderId: currentFolderId } : undefined
+                });
             } else {
                 // Clear selection on normal click when items are selected
                 setSelectedIds(new Set());
             }
         },
-        [navigate, selectedIds.size]
+        [navigate, selectedIds.size, currentFolderId]
     );
 
     const handleContextMenu = useCallback(
@@ -682,7 +688,13 @@ export function ChatInterfacesPage() {
                             onClick={(e) => handleCardClick(e, ci)}
                             onContextMenu={(e) => handleContextMenu(e, ci)}
                             onDragStart={(e) => handleDragStart(e, ci)}
-                            onEdit={() => navigate(`/chat-interfaces/${ci.id}/edit`)}
+                            onEdit={() =>
+                                navigate(`/chat-interfaces/${ci.id}/edit`, {
+                                    state: currentFolderId
+                                        ? { fromFolderId: currentFolderId }
+                                        : undefined
+                                })
+                            }
                             onViewLive={
                                 ci.status === "published" && ci.slug
                                     ? () => window.open(`/c/${ci.slug}`, "_blank")
@@ -760,6 +772,7 @@ export function ChatInterfacesPage() {
                 isOpen={isMoveDialogOpen}
                 onClose={() => setIsMoveDialogOpen(false)}
                 folders={folders}
+                folderTree={folderTree}
                 isLoadingFolders={isLoadingFolders}
                 selectedItemCount={selectedIds.size}
                 itemType="chat-interface"

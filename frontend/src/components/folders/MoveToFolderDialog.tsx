@@ -1,4 +1,4 @@
-import { Folder, FolderOpen, Plus, ChevronRight, Home } from "lucide-react";
+import { Folder, Plus, ChevronRight, Home } from "lucide-react";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import type { FolderWithCounts, FolderResourceType, FolderTreeNode } from "@flowmaestro/shared";
 import { cn } from "../../lib/utils";
@@ -218,21 +218,11 @@ export function MoveToFolderDialog({
                         <div className="w-3.5 h-3.5 -ml-1" />
                     )}
 
-                    {/* Folder icon */}
+                    {/* Folder color bar */}
                     <div
-                        className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                        style={{ backgroundColor: `${folder.color}20` }}
-                    >
-                        {isSelected ? (
-                            <FolderOpen className="w-4 h-4" style={{ color: folder.color }} />
-                        ) : (
-                            <Folder
-                                className="w-4 h-4"
-                                style={{ color: folder.color }}
-                                fill={folder.color}
-                            />
-                        )}
-                    </div>
+                        className="w-0.5 h-6 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: folder.color }}
+                    />
 
                     {/* Folder info */}
                     <div className="flex-1 min-w-0">

@@ -1,6 +1,6 @@
 import { ArrowLeft, ExternalLink, Monitor, Smartphone, Code, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import type { ChatInterface } from "@flowmaestro/shared";
 import {
     PreviewFullPage,
@@ -16,6 +16,10 @@ type DeviceSize = "desktop" | "tablet" | "mobile";
 export function ChatInterfacePreviewPage() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const location = useLocation();
+
+    // Get the folder ID if passed from the editor
+    const fromFolderId = (location.state as { fromFolderId?: string } | null)?.fromFolderId;
 
     const [chatInterface, setChatInterface] = useState<ChatInterface | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -84,7 +88,12 @@ export function ChatInterfacePreviewPage() {
             <header className="h-14 border-b border-border flex items-center justify-between px-4 bg-card">
                 <div className="flex items-center gap-4">
                     <button
-                        onClick={() => navigate(`/chat-interfaces/${id}/edit`)}
+                        onClick={() =>
+                            navigate(`/chat-interfaces/${id}/edit`, {
+                                replace: true,
+                                state: fromFolderId ? { fromFolderId } : undefined
+                            })
+                        }
                         className="p-2 hover:bg-muted rounded-md text-muted-foreground hover:text-foreground transition-colors"
                     >
                         <ArrowLeft className="w-5 h-5" />

@@ -1,6 +1,6 @@
 import { Loader2, Save, LayoutGrid } from "lucide-react";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { ReactFlowProvider, useReactFlow, Node } from "reactflow";
 import { NodeInspector } from "../canvas/panels/NodeInspector";
 import { NodeLibrary } from "../canvas/panels/NodeLibrary";
@@ -64,6 +64,19 @@ interface Checkpoint {
 export function FlowBuilder() {
     const { workflowId } = useParams<{ workflowId: string }>();
     const navigate = useNavigate();
+    const location = useLocation();
+
+    // Get the folder ID if navigated from a folder page
+    const fromFolderId = (location.state as { fromFolderId?: string } | null)?.fromFolderId;
+
+    // Determine where to navigate back to
+    const getBackUrl = useCallback(() => {
+        if (fromFolderId) {
+            return `/folders/${fromFolderId}`;
+        }
+        return "/";
+    }, [fromFolderId]);
+
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
     const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
     const [isSidebarPinned, setIsSidebarPinned] = useState(false);
@@ -249,15 +262,15 @@ export function FlowBuilder() {
         if (hasUnsavedChanges) {
             setShowUnsavedDialog(true);
         } else {
-            navigate(-1);
+            navigate(getBackUrl());
         }
-    }, [hasUnsavedChanges, navigate]);
+    }, [hasUnsavedChanges, navigate, getBackUrl]);
 
     const handleDiscardChanges = useCallback(() => {
         setShowUnsavedDialog(false);
         resetWorkflow();
-        navigate(-1);
-    }, [navigate, resetWorkflow]);
+        navigate(getBackUrl());
+    }, [navigate, resetWorkflow, getBackUrl]);
 
     const handleSave = useCallback(async () => {
         if (!workflowId) return;
@@ -338,13 +351,13 @@ export function FlowBuilder() {
             await updateWorkflow(workflowId, updatePayload as Parameters<typeof updateWorkflow>[1]);
 
             setShowUnsavedDialog(false);
-            navigate(-1);
+            navigate(getBackUrl());
         } catch (error: unknown) {
             logger.error("Failed to save workflow", error);
             setSaveStatus("error");
             setTimeout(() => setSaveStatus("idle"), SAVE_ERROR_TIMEOUT);
         }
-    }, [workflowId, nodes, edges, workflowName, navigate]);
+    }, [workflowId, nodes, edges, workflowName, navigate, getBackUrl]);
 
     const handleDuplicateNode = useCallback(() => {
         if (!selectedNode) return;

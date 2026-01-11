@@ -75,7 +75,7 @@ export function ChatInterfaceCard({
         <div
             className={`group bg-card border rounded-lg transition-colors cursor-pointer select-none relative ${
                 isSelected
-                    ? "border-primary ring-2 ring-primary/30 bg-primary/5"
+                    ? "border-primary ring-2 ring-primary/30"
                     : "border-border hover:border-primary/50"
             }`}
             draggable={!!onDragStart}

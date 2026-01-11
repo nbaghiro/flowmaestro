@@ -90,7 +90,7 @@ export function FolderItemSection<T extends ItemType>({
     }
 
     const handleItemClick = (item: T) => {
-        navigate(getItemPath(itemType, item.id));
+        navigate(getItemPath(itemType, item.id), { state: { fromFolderId: folderId } });
     };
 
     const renderCard = (item: T) => {

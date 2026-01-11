@@ -14,7 +14,7 @@ import {
     X
 } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { Alert } from "../components/common/Alert";
 import { Button } from "../components/common/Button";
 import { Checkbox } from "../components/common/Checkbox";
@@ -30,7 +30,19 @@ import { useFormInterfaceBuilderStore } from "../stores/formInterfaceBuilderStor
 
 export function FormInterfaceEditor() {
     const navigate = useNavigate();
+    const location = useLocation();
     const { id } = useParams();
+
+    // Get the folder ID if navigated from a folder page
+    const fromFolderId = (location.state as { fromFolderId?: string } | null)?.fromFolderId;
+
+    // Determine where to navigate back to
+    const getBackUrl = useCallback(() => {
+        if (fromFolderId) {
+            return `/folders/${fromFolderId}`;
+        }
+        return "/form-interfaces";
+    }, [fromFolderId]);
 
     // Store
     const {
@@ -86,23 +98,23 @@ export function FormInterfaceEditor() {
         if (isDirty) {
             setShowUnsavedDialog(true);
         } else {
-            navigate(-1);
+            navigate(getBackUrl());
         }
-    }, [isDirty, navigate]);
+    }, [isDirty, navigate, getBackUrl]);
 
     const handleDiscardChanges = useCallback(() => {
         setShowUnsavedDialog(false);
         reset();
-        navigate(-1);
-    }, [navigate, reset]);
+        navigate(getBackUrl());
+    }, [navigate, reset, getBackUrl]);
 
     const handleSaveAndLeave = useCallback(async () => {
         const success = await save();
         if (success) {
             setShowUnsavedDialog(false);
-            navigate(-1);
+            navigate(getBackUrl());
         }
-    }, [save, navigate]);
+    }, [save, navigate, getBackUrl]);
 
     const loadFormInterface = async () => {
         try {

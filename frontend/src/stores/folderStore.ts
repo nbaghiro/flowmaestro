@@ -86,13 +86,13 @@ const initialState = {
     currentFolderContents: null as FolderContents | null,
     isLoadingContents: false,
     contentsError: null as string | null,
-    isFoldersSectionExpanded: true,
+    isFoldersSectionExpanded: false,
     showAllFolders: false,
     expandedFolderIds: new Set<string>()
 };
 
 // Helper function to build tree from flat folder list
-function buildFolderTree(folders: FolderWithCounts[]): FolderTreeNode[] {
+export function buildFolderTree(folders: FolderWithCounts[]): FolderTreeNode[] {
     const map = new Map<string, FolderTreeNode>();
     const roots: FolderTreeNode[] = [];
 

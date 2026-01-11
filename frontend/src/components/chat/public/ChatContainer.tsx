@@ -63,12 +63,12 @@ export function ChatContainer({
     const containerClasses = (() => {
         switch (variant) {
             case "widget":
-                return "flex flex-col h-full bg-background shadow-2xl overflow-hidden";
+                return "flex flex-col h-full bg-card shadow-2xl overflow-hidden";
             case "embed":
-                return "flex flex-col h-full bg-background";
+                return "flex flex-col h-full bg-card";
             case "full":
             default:
-                return "flex flex-col h-full bg-background";
+                return "flex flex-col h-full bg-card";
         }
     })();
 

@@ -1,5 +1,5 @@
 import { Plus, FileText, Sparkles, Trash2, FolderInput, FolderMinus, Search } from "lucide-react";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import type { WorkflowNode, Folder, FolderWithCounts, WorkflowSummary } from "@flowmaestro/shared";
 import { AIGenerateDialog } from "../components/AIGenerateDialog";
@@ -41,6 +41,7 @@ import {
 import { logger } from "../lib/logger";
 import { createDragPreview } from "../lib/utils";
 import { convertToReactFlowFormat } from "../lib/workflowLayout";
+import { buildFolderTree } from "../stores/folderStore";
 import { useWorkflowGenerationChatStore } from "../stores/workflowGenerationChatStore";
 
 // Local workflow type that maps to API response (snake_case) and WorkflowSummary (camelCase)
@@ -92,6 +93,7 @@ export function Workflows() {
 
     const [workflows, setWorkflows] = useState<Workflow[]>([]);
     const [folders, setFolders] = useState<FolderWithCounts[]>([]);
+    const folderTree = useMemo(() => buildFolderTree(folders), [folders]);
     const [currentFolder, setCurrentFolder] = useState<Folder | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isLoadingFolders, setIsLoadingFolders] = useState(true);
@@ -202,7 +204,9 @@ export function Workflows() {
 
         if (response.success && response.data) {
             const workflowId = response.data.id;
-            navigate(`/builder/${workflowId}`);
+            navigate(`/builder/${workflowId}`, {
+                state: currentFolderId ? { fromFolderId: currentFolderId } : undefined
+            });
         }
     };
 
@@ -269,7 +273,9 @@ export function Workflows() {
                 });
 
                 // Navigate to the builder with the new workflow
-                navigate(`/builder/${workflowId}`);
+                navigate(`/builder/${workflowId}`, {
+                    state: currentFolderId ? { fromFolderId: currentFolderId } : undefined
+                });
             } else {
                 throw new Error(createResponse.error || "Failed to create workflow");
             }
@@ -335,7 +341,9 @@ export function Workflows() {
                 await loadWorkflows();
 
                 // Navigate to the new workflow
-                navigate(`/builder/${createData.data.id}`);
+                navigate(`/builder/${createData.data.id}`, {
+                    state: currentFolderId ? { fromFolderId: currentFolderId } : undefined
+                });
             }
         } catch (err: unknown) {
             const error = err as { message?: string };
@@ -530,13 +538,15 @@ export function Workflows() {
                     return newSet;
                 });
             } else if (selectedIds.size === 0) {
-                navigate(`/builder/${workflow.id}`);
+                navigate(`/builder/${workflow.id}`, {
+                    state: currentFolderId ? { fromFolderId: currentFolderId } : undefined
+                });
             } else {
                 // Clear selection on normal click when items are selected
                 setSelectedIds(new Set());
             }
         },
-        [navigate, selectedIds.size]
+        [navigate, selectedIds.size, currentFolderId]
     );
 
     const handleContextMenu = useCallback(
@@ -874,6 +884,7 @@ export function Workflows() {
                 isOpen={isMoveDialogOpen}
                 onClose={() => setIsMoveDialogOpen(false)}
                 folders={folders}
+                folderTree={folderTree}
                 isLoadingFolders={isLoadingFolders}
                 selectedItemCount={selectedIds.size}
                 itemType="workflow"

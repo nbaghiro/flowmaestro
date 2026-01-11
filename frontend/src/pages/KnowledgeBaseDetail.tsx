@@ -354,13 +354,13 @@ export function KnowledgeBaseDetail() {
                 {/* Center: Stats badges */}
                 {currentStats && (
                     <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground bg-muted px-2.5 py-1 rounded-md">
+                        <span className="text-xs text-muted-foreground bg-background border border-border px-2.5 py-1 rounded-md">
                             {currentStats.document_count} docs
                         </span>
-                        <span className="text-xs text-muted-foreground bg-muted px-2.5 py-1 rounded-md">
+                        <span className="text-xs text-muted-foreground bg-background border border-border px-2.5 py-1 rounded-md">
                             {currentStats.chunk_count} chunks
                         </span>
-                        <span className="text-xs text-muted-foreground bg-muted px-2.5 py-1 rounded-md">
+                        <span className="text-xs text-muted-foreground bg-background border border-border px-2.5 py-1 rounded-md">
                             {formatFileSize(currentStats.total_size_bytes)}
                         </span>
                     </div>

@@ -16,7 +16,7 @@ import {
     Send
 } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import type { ChatInterfaceSuggestedPrompt } from "@flowmaestro/shared";
 import { Alert } from "../components/common/Alert";
 import { Button } from "../components/common/Button";
@@ -34,7 +34,19 @@ import { useChatInterfaceBuilderStore } from "../stores/chatInterfaceBuilderStor
 
 export function ChatInterfaceEditorPage() {
     const navigate = useNavigate();
+    const location = useLocation();
     const { id } = useParams();
+
+    // Get the folder ID if navigated from a folder page
+    const fromFolderId = (location.state as { fromFolderId?: string } | null)?.fromFolderId;
+
+    // Determine where to navigate back to
+    const getBackUrl = useCallback(() => {
+        if (fromFolderId) {
+            return `/folders/${fromFolderId}`;
+        }
+        return "/chat-interfaces";
+    }, [fromFolderId]);
 
     // Store
     const {
@@ -94,23 +106,23 @@ export function ChatInterfaceEditorPage() {
         if (isDirty) {
             setShowUnsavedDialog(true);
         } else {
-            navigate(-1);
+            navigate(getBackUrl());
         }
-    }, [isDirty, navigate]);
+    }, [isDirty, navigate, getBackUrl]);
 
     const handleDiscardChanges = useCallback(() => {
         setShowUnsavedDialog(false);
         reset();
-        navigate(-1);
-    }, [navigate, reset]);
+        navigate(getBackUrl());
+    }, [navigate, reset, getBackUrl]);
 
     const handleSaveAndLeave = useCallback(async () => {
         const success = await save();
         if (success) {
             setShowUnsavedDialog(false);
-            navigate(-1);
+            navigate(getBackUrl());
         }
-    }, [save, navigate]);
+    }, [save, navigate, getBackUrl]);
 
     const loadChatInterface = async () => {
         try {
@@ -189,7 +201,11 @@ export function ChatInterfaceEditorPage() {
                     <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => navigate(`/chat-interfaces/${id}/preview`)}
+                        onClick={() =>
+                            navigate(`/chat-interfaces/${id}/preview`, {
+                                state: fromFolderId ? { fromFolderId } : undefined
+                            })
+                        }
                     >
                         <Eye className="w-4 h-4 mr-1.5" />
                         Preview

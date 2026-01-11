@@ -51,6 +51,15 @@ export function AgentBuilder() {
     const location = useLocation();
     const isNewAgent = agentId === "new";
     const patternData = location.state?.patternData as AgentPatternData | undefined;
+    const fromFolderId = (location.state as { fromFolderId?: string } | null)?.fromFolderId;
+
+    // Determine where to navigate back to
+    const getBackUrl = useCallback(() => {
+        if (fromFolderId) {
+            return `/folders/${fromFolderId}`;
+        }
+        return "/agents";
+    }, [fromFolderId]);
 
     // Initialize tab from URL path
     const getTabFromPath = (): AgentTab => {
@@ -382,15 +391,15 @@ export function AgentBuilder() {
         if (hasUnsavedChanges) {
             setShowUnsavedDialog(true);
         } else {
-            navigate(-1);
+            navigate(getBackUrl());
         }
-    }, [hasUnsavedChanges, navigate]);
+    }, [hasUnsavedChanges, navigate, getBackUrl]);
 
     const handleDiscardChanges = useCallback(() => {
         setShowUnsavedDialog(false);
         resetAgentState();
-        navigate(-1);
-    }, [navigate, resetAgentState]);
+        navigate(getBackUrl());
+    }, [navigate, resetAgentState, getBackUrl]);
 
     const handleSaveAndLeave = useCallback(async () => {
         if (!name.trim() || !model) return;
@@ -416,7 +425,7 @@ export function AgentBuilder() {
             }
 
             setShowUnsavedDialog(false);
-            navigate(-1);
+            navigate(getBackUrl());
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to save agent");
             setIsSaving(false);
@@ -434,7 +443,8 @@ export function AgentBuilder() {
         agentId,
         createAgent,
         updateAgent,
-        navigate
+        navigate,
+        getBackUrl
     ]);
 
     // Inline name editing handlers
@@ -930,7 +940,7 @@ export function AgentBuilder() {
                                             placeholder="Add instructions for the agent..."
                                             className={cn(
                                                 "w-full px-3 py-2 rounded-lg",
-                                                "bg-background border border-border",
+                                                "bg-muted border border-border",
                                                 "text-foreground placeholder:text-muted-foreground",
                                                 "focus:outline-none focus:ring-2 focus:ring-primary",
                                                 "font-mono text-sm resize-y"
@@ -1086,7 +1096,7 @@ export function AgentBuilder() {
                                         placeholder="My Assistant"
                                         className={cn(
                                             "w-full px-3 py-2 rounded-lg",
-                                            "bg-background border border-border",
+                                            "bg-muted border border-border",
                                             "text-foreground placeholder:text-muted-foreground",
                                             "focus:outline-none focus:ring-2 focus:ring-primary"
                                         )}
@@ -1107,7 +1117,7 @@ export function AgentBuilder() {
                                         rows={2}
                                         className={cn(
                                             "w-full px-3 py-2 rounded-lg",
-                                            "bg-background border border-border",
+                                            "bg-muted border border-border",
                                             "text-foreground placeholder:text-muted-foreground",
                                             "focus:outline-none focus:ring-2 focus:ring-primary",
                                             "resize-y"
@@ -1181,7 +1191,7 @@ export function AgentBuilder() {
                                                 }
                                                 className={cn(
                                                     "w-full px-3 py-2 rounded-lg",
-                                                    "bg-background border border-border",
+                                                    "bg-muted border border-border",
                                                     "text-foreground",
                                                     "focus:outline-none focus:ring-2 focus:ring-primary"
                                                 )}

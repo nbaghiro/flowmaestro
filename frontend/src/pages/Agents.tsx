@@ -1,5 +1,5 @@
 import { Plus, Bot, Trash2, FolderInput, FolderMinus, Search } from "lucide-react";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import type { Folder, FolderWithCounts, AgentSummary } from "@flowmaestro/shared";
 import { AgentCard } from "../components/cards";
@@ -32,6 +32,7 @@ import {
 import { logger } from "../lib/logger";
 import { createDragPreview } from "../lib/utils";
 import { useAgentStore } from "../stores/agentStore";
+import { buildFolderTree } from "../stores/folderStore";
 import type { Agent } from "../lib/api";
 
 // Convert local Agent to AgentSummary for card components
@@ -55,6 +56,7 @@ export function Agents() {
 
     const { agents, isLoading, error, fetchAgents, deleteAgent } = useAgentStore();
     const [folders, setFolders] = useState<FolderWithCounts[]>([]);
+    const folderTree = useMemo(() => buildFolderTree(folders), [folders]);
     const [currentFolder, setCurrentFolder] = useState<Folder | null>(null);
     const [isLoadingFolders, setIsLoadingFolders] = useState(true);
     const [agentToDelete, setAgentToDelete] = useState<{ id: string; name: string } | null>(null);
@@ -331,13 +333,15 @@ export function Agents() {
                     return newSet;
                 });
             } else if (selectedIds.size === 0) {
-                navigate(`/agents/${agent.id}`);
+                navigate(`/agents/${agent.id}`, {
+                    state: currentFolderId ? { fromFolderId: currentFolderId } : undefined
+                });
             } else {
                 // Clear selection on normal click when items are selected
                 setSelectedIds(new Set());
             }
         },
-        [navigate, selectedIds.size]
+        [navigate, selectedIds.size, currentFolderId]
     );
 
     const handleContextMenu = useCallback(
@@ -622,7 +626,13 @@ export function Agents() {
                                     onClick={(e) => handleCardClick(e, agent)}
                                     onContextMenu={(e) => handleContextMenu(e, agent)}
                                     onDragStart={(e) => handleDragStart(e, agent)}
-                                    onEdit={() => navigate(`/agents/${agent.id}`)}
+                                    onEdit={() =>
+                                        navigate(`/agents/${agent.id}`, {
+                                            state: currentFolderId
+                                                ? { fromFolderId: currentFolderId }
+                                                : undefined
+                                        })
+                                    }
                                     onMoveToFolder={() => {
                                         setSelectedIds(new Set([agent.id]));
                                         setIsMoveDialogOpen(true);
@@ -687,7 +697,12 @@ export function Agents() {
                 onClose={() => setIsCreateDialogOpen(false)}
                 onCreate={(patternData) => {
                     setIsCreateDialogOpen(false);
-                    navigate("/agents/new", { state: { patternData } });
+                    navigate("/agents/new", {
+                        state: {
+                            patternData,
+                            ...(currentFolderId && { fromFolderId: currentFolderId })
+                        }
+                    });
                 }}
             />
 
@@ -707,6 +722,7 @@ export function Agents() {
                 isOpen={isMoveDialogOpen}
                 onClose={() => setIsMoveDialogOpen(false)}
                 folders={folders}
+                folderTree={folderTree}
                 isLoadingFolders={isLoadingFolders}
                 selectedItemCount={selectedIds.size}
                 itemType="agent"

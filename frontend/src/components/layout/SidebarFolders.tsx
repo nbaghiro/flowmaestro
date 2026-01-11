@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronUp, FolderPlus, Folder, Edit2, Trash2, Plus } from "lucide-react";
+import { ChevronDown, ChevronUp, Folder, Edit2, Trash2, Plus } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import type {
     FolderWithCounts,
@@ -169,7 +169,7 @@ export function SidebarFolders({ isCollapsed }: SidebarFoldersProps) {
     // Collapsed sidebar: show folder icon that opens popover
     if (isCollapsed) {
         return (
-            <div className="px-2 py-2">
+            <div className="px-2 py-2 border-t border-border">
                 <Tooltip content="Folders" delay={200} position="right">
                     <button
                         onClick={() => setIsCreateDialogOpen(true)}
@@ -190,23 +190,34 @@ export function SidebarFolders({ isCollapsed }: SidebarFoldersProps) {
     }
 
     return (
-        <div>
+        <div className="border-t border-border">
             {/* Section Header */}
             <div className="px-2">
-                <button
-                    onClick={toggleFoldersSection}
-                    className="w-full flex items-center justify-between px-3 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
-                >
-                    <div className="flex items-center gap-3">
+                <div className="flex items-center justify-between px-3 py-3">
+                    <button
+                        onClick={toggleFoldersSection}
+                        className="flex items-center gap-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
+                    >
                         <Folder className="w-5 h-5" />
                         <span>Folders</span>
-                    </div>
-                    {isFoldersSectionExpanded ? (
-                        <ChevronUp className="w-4 h-4" />
-                    ) : (
-                        <ChevronDown className="w-4 h-4" />
-                    )}
-                </button>
+                        {isFoldersSectionExpanded ? (
+                            <ChevronUp className="w-4 h-4" />
+                        ) : (
+                            <ChevronDown className="w-4 h-4" />
+                        )}
+                    </button>
+                    <Tooltip content="New folder" delay={200} position="top">
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setIsCreateDialogOpen(true);
+                            }}
+                            className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
+                        >
+                            <Plus className="w-4 h-4" />
+                        </button>
+                    </Tooltip>
+                </div>
             </div>
 
             {/* Folder List */}
@@ -224,15 +235,6 @@ export function SidebarFolders({ isCollapsed }: SidebarFoldersProps) {
                             {renderFolderTree(folderTree, 0)}
                         </div>
                     )}
-
-                    {/* New Folder Button */}
-                    <button
-                        onClick={() => setIsCreateDialogOpen(true)}
-                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground rounded-lg transition-colors mt-1"
-                    >
-                        <FolderPlus className="w-4 h-4" />
-                        <span>New Folder</span>
-                    </button>
                 </div>
             )}
 

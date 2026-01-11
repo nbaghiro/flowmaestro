@@ -179,14 +179,14 @@ export function CreateAgentDialog({ isOpen, onClose, onCreate }: CreateAgentDial
                                 <span className="text-sm text-muted-foreground">
                                     Select a template:
                                 </span>
-                                <div className="flex bg-gray-200 dark:bg-muted rounded-lg p-0.5">
+                                <div className="flex bg-muted rounded-lg p-0.5">
                                     <button
                                         type="button"
                                         onClick={() => setActiveTab("basic")}
                                         className={cn(
                                             "px-3 py-1 text-sm font-medium rounded-md transition-colors",
                                             activeTab === "basic"
-                                                ? "bg-background text-foreground shadow-sm"
+                                                ? "bg-card text-foreground shadow-sm"
                                                 : "text-muted-foreground hover:text-foreground"
                                         )}
                                     >
@@ -198,7 +198,7 @@ export function CreateAgentDialog({ isOpen, onClose, onCreate }: CreateAgentDial
                                         className={cn(
                                             "px-3 py-1 text-sm font-medium rounded-md transition-colors",
                                             activeTab === "advanced"
-                                                ? "bg-background text-foreground shadow-sm"
+                                                ? "bg-card text-foreground shadow-sm"
                                                 : "text-muted-foreground hover:text-foreground"
                                         )}
                                     >

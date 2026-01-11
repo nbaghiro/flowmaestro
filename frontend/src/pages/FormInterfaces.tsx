@@ -1,5 +1,5 @@
 import { ClipboardList, Plus, Trash2, FolderInput, FolderMinus, Search } from "lucide-react";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import type {
     FormInterface,
@@ -39,6 +39,7 @@ import {
 } from "../lib/api";
 import { logger } from "../lib/logger";
 import { createDragPreview } from "../lib/utils";
+import { buildFolderTree } from "../stores/folderStore";
 
 // Convert FormInterface to FormInterfaceSummary for card components
 function toFormInterfaceSummary(fi: FormInterface): FormInterfaceSummary {
@@ -70,6 +71,7 @@ export function FormInterfaces() {
 
     // Folder state
     const [folders, setFolders] = useState<FolderWithCounts[]>([]);
+    const folderTree = useMemo(() => buildFolderTree(folders), [folders]);
     const [currentFolder, setCurrentFolder] = useState<Folder | null>(null);
     const [isLoadingFolders, setIsLoadingFolders] = useState(true);
 
@@ -210,7 +212,9 @@ export function FormInterfaces() {
         const folderId = currentFolderId || undefined;
         loadFormInterfaces(folderId);
         // Navigate to edit the newly created form
-        navigate(`/form-interfaces/${newFormInterface.id}/edit`);
+        navigate(`/form-interfaces/${newFormInterface.id}/edit`, {
+            state: currentFolderId ? { fromFolderId: currentFolderId } : undefined
+        });
     };
 
     // Folder handlers
@@ -390,13 +394,15 @@ export function FormInterfaces() {
                     return newSet;
                 });
             } else if (selectedIds.size === 0) {
-                navigate(`/form-interfaces/${fi.id}/edit`);
+                navigate(`/form-interfaces/${fi.id}/edit`, {
+                    state: currentFolderId ? { fromFolderId: currentFolderId } : undefined
+                });
             } else {
                 // Clear selection on normal click when items are selected
                 setSelectedIds(new Set());
             }
         },
-        [navigate, selectedIds.size]
+        [navigate, selectedIds.size, currentFolderId]
     );
 
     const handleContextMenu = useCallback(
@@ -681,7 +687,13 @@ export function FormInterfaces() {
                             onClick={(e) => handleCardClick(e, fi)}
                             onContextMenu={(e) => handleContextMenu(e, fi)}
                             onDragStart={(e) => handleDragStart(e, fi)}
-                            onEdit={() => navigate(`/form-interfaces/${fi.id}/edit`)}
+                            onEdit={() =>
+                                navigate(`/form-interfaces/${fi.id}/edit`, {
+                                    state: currentFolderId
+                                        ? { fromFolderId: currentFolderId }
+                                        : undefined
+                                })
+                            }
                             onViewLive={
                                 fi.status === "published" && fi.slug
                                     ? () => window.open(`/i/${fi.slug}`, "_blank")
@@ -761,6 +773,7 @@ export function FormInterfaces() {
                 isOpen={isMoveDialogOpen}
                 onClose={() => setIsMoveDialogOpen(false)}
                 folders={folders}
+                folderTree={folderTree}
                 isLoadingFolders={isLoadingFolders}
                 selectedItemCount={selectedIds.size}
                 itemType="form-interface"

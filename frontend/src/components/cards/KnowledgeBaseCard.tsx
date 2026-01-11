@@ -78,7 +78,7 @@ export function KnowledgeBaseCard({
         <div
             className={`bg-card border rounded-lg p-5 hover:shadow-md transition-all group relative flex flex-col h-full cursor-pointer select-none ${
                 isSelected
-                    ? "border-primary ring-2 ring-primary/30 bg-primary/5"
+                    ? "border-primary ring-2 ring-primary/30"
                     : "border-border hover:border-primary"
             }`}
             draggable={!!onDragStart}
