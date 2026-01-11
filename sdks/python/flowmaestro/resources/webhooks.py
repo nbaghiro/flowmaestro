@@ -3,6 +3,7 @@ Webhooks resource.
 """
 from __future__ import annotations
 
+import builtins
 from typing import Any
 
 from .._http.async_client import AsyncHttpClient
@@ -66,7 +67,7 @@ class SyncWebhooks:
         self,
         name: str,
         url: str,
-        events: list[WebhookEventType],
+        events: builtins.list[WebhookEventType],
         *,
         headers: dict[str, str] | None = None,
     ) -> dict[str, Any]:
@@ -195,7 +196,7 @@ class AsyncWebhooks:
         self,
         name: str,
         url: str,
-        events: list[WebhookEventType],
+        events: builtins.list[WebhookEventType],
         *,
         headers: dict[str, str] | None = None,
     ) -> dict[str, Any]:

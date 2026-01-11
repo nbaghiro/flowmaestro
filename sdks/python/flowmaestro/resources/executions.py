@@ -6,7 +6,7 @@ from __future__ import annotations
 import asyncio
 import time
 from collections.abc import AsyncIterator, Iterator
-from typing import Any
+from typing import Any, cast
 
 from .._http.async_client import AsyncHttpClient
 from .._http.sse_client import AsyncSSEClient, SyncSSEClient
@@ -155,7 +155,8 @@ class SyncExecutions:
                     print(f"Outputs: {event.get('outputs')}")
                     break
         """
-        yield from self._sse.stream(f"/api/v1/executions/{execution_id}/events")
+        for event in self._sse.stream(f"/api/v1/executions/{execution_id}/events"):
+            yield cast(ExecutionEvent, event)
 
 
 class AsyncExecutions:
@@ -295,4 +296,4 @@ class AsyncExecutions:
                     break
         """
         async for event in self._sse.stream(f"/api/v1/executions/{execution_id}/events"):
-            yield event
+            yield cast(ExecutionEvent, event)

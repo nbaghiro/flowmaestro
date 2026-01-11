@@ -4,7 +4,7 @@ Threads resource.
 from __future__ import annotations
 
 from collections.abc import AsyncIterator, Iterator
-from typing import Any
+from typing import Any, cast
 
 from .._http.async_client import AsyncHttpClient
 from .._http.sse_client import AsyncSSEClient, SyncSSEClient
@@ -140,7 +140,8 @@ class SyncThreads:
         )
 
         # Stream events
-        yield from self._sse.stream(f"/api/v1/threads/{thread_id}/events")
+        for event in self._sse.stream(f"/api/v1/threads/{thread_id}/events"):
+            yield cast(ThreadEvent, event)
 
     def stream(self, thread_id: str) -> Iterator[ThreadEvent]:
         """
@@ -156,7 +157,8 @@ class SyncThreads:
             for event in client.threads.stream("thread_123"):
                 print(f"Event: {event['type']}")
         """
-        yield from self._sse.stream(f"/api/v1/threads/{thread_id}/events")
+        for event in self._sse.stream(f"/api/v1/threads/{thread_id}/events"):
+            yield cast(ThreadEvent, event)
 
 
 class AsyncThreads:
@@ -288,7 +290,7 @@ class AsyncThreads:
 
         # Stream events
         async for event in self._sse.stream(f"/api/v1/threads/{thread_id}/events"):
-            yield event
+            yield cast(ThreadEvent, event)
 
     async def stream(self, thread_id: str) -> AsyncIterator[ThreadEvent]:
         """
@@ -305,4 +307,4 @@ class AsyncThreads:
                 print(f"Event: {event['type']}")
         """
         async for event in self._sse.stream(f"/api/v1/threads/{thread_id}/events"):
-            yield event
+            yield cast(ThreadEvent, event)

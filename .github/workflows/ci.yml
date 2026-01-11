@@ -55,8 +55,8 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install dependencies
-        run: pip install ruff mypy
+      - name: Install SDK with dev dependencies
+        run: pip install -e "sdks/python[dev]"
 
       - name: Lint Python SDK
         run: ruff check sdks/python/
@@ -81,10 +81,10 @@ jobs:
           cache: "npm"
 
       - name: Install dependencies
-        run: npm ci --workspace=@flowmaestro/sdk-javascript
+        run: npm ci --workspace=@flowmaestro/sdk --ignore-scripts
 
       - name: Type check JavaScript SDK
-        run: npm run typecheck --workspace=@flowmaestro/sdk-javascript
+        run: npm run typecheck --workspace=@flowmaestro/sdk
 
   lint-sdk-widget:
     name: Lint SDK (Widget)
@@ -100,7 +100,7 @@ jobs:
           cache: "npm"
 
       - name: Install dependencies
-        run: npm ci --workspace=@flowmaestro/widget
+        run: npm ci --workspace=@flowmaestro/widget --ignore-scripts
 
       - name: Type check Widget SDK
         run: npm run typecheck --workspace=@flowmaestro/widget
