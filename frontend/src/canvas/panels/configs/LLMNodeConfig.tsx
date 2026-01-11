@@ -48,6 +48,19 @@ export function LLMNodeConfig({ nodeId, data, onUpdate, errors = [] }: LLMNodeCo
     const selectedConnection = connections.find((conn) => conn.id === connectionId);
     const providerInfo = ALL_PROVIDERS.find((p) => p.provider === provider);
 
+    // Auto-select connection when provider is set but connectionId is missing
+    useEffect(() => {
+        if (provider && !connectionId && connections.length > 0) {
+            // Find an active connection for this provider
+            const matchingConnection = connections.find(
+                (conn) => conn.provider === provider && conn.status === "active"
+            );
+            if (matchingConnection) {
+                setConnectionId(matchingConnection.id);
+            }
+        }
+    }, [provider, connectionId, connections]);
+
     useEffect(() => {
         onUpdate({
             provider,

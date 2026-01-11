@@ -1,4 +1,4 @@
-import { Loader2, Save } from "lucide-react";
+import { Loader2, Save, LayoutGrid } from "lucide-react";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ReactFlowProvider, useReactFlow, Node } from "reactflow";
@@ -11,6 +11,7 @@ import { BuilderHeader } from "../components/BuilderHeader";
 import { CheckpointPanel } from "../components/CheckpointPanel";
 import { Button } from "../components/common/Button";
 import { Dialog } from "../components/common/Dialog";
+import { Tooltip } from "../components/common/Tooltip";
 import { ExecutionPanel } from "../components/ExecutionPanel";
 import { CreateFormInterfaceDialog } from "../components/forms/CreateFormInterfaceDialog";
 import { WorkflowSettingsDialog } from "../components/WorkflowSettingsDialog";
@@ -26,6 +27,7 @@ import {
 } from "../lib/api";
 import { logger } from "../lib/logger";
 import { generateId } from "../lib/utils";
+import { autoLayoutWorkflow } from "../lib/workflowLayout";
 import {
     createWorkflowSnapshot,
     transformNodesToBackendMap,
@@ -247,14 +249,14 @@ export function FlowBuilder() {
         if (hasUnsavedChanges) {
             setShowUnsavedDialog(true);
         } else {
-            navigate("/");
+            navigate(-1);
         }
     }, [hasUnsavedChanges, navigate]);
 
     const handleDiscardChanges = useCallback(() => {
         setShowUnsavedDialog(false);
         resetWorkflow();
-        navigate("/");
+        navigate(-1);
     }, [navigate, resetWorkflow]);
 
     const handleSave = useCallback(async () => {
@@ -336,7 +338,7 @@ export function FlowBuilder() {
             await updateWorkflow(workflowId, updatePayload as Parameters<typeof updateWorkflow>[1]);
 
             setShowUnsavedDialog(false);
-            navigate("/");
+            navigate(-1);
         } catch (error: unknown) {
             logger.error("Failed to save workflow", error);
             setSaveStatus("error");
@@ -419,6 +421,25 @@ export function FlowBuilder() {
             reactFlowInstanceRef.current.fitView({ padding: FIT_VIEW_PADDING });
         }
     }, []);
+
+    const handleAutoLayout = useCallback(() => {
+        if (nodes.length === 0) return;
+
+        const newPositions = autoLayoutWorkflow(nodes, edges);
+        const updatedNodes = nodes.map((node) => ({
+            ...node,
+            position: newPositions.get(node.id) || node.position
+        }));
+
+        setNodes(updatedNodes);
+
+        // Fit view after layout with slight delay for positions to update
+        setTimeout(() => {
+            if (reactFlowInstanceRef.current) {
+                reactFlowInstanceRef.current.fitView({ padding: FIT_VIEW_PADDING, duration: 300 });
+            }
+        }, 50);
+    }, [nodes, edges, setNodes]);
 
     const handleRunWorkflow = useCallback(() => {
         const runButton = document.querySelector('[data-action="run"]') as HTMLButtonElement;
@@ -537,6 +558,7 @@ export function FlowBuilder() {
         onSelectAll: handleSelectAll,
         onDeselectAll: handleDeselectAll,
         onFitView: handleFitView,
+        onAutoLayout: handleAutoLayout,
         canUndo,
         canRedo,
         onCreateComment: handleCreateComment
@@ -599,6 +621,14 @@ export function FlowBuilder() {
                     <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40">
                         <div className="flex items-center gap-2">
                             <AIAskButton />
+                            <Tooltip content="Auto-layout nodes (Shift+L)" position="top">
+                                <button
+                                    onClick={handleAutoLayout}
+                                    className="px-4 py-2 border rounded-lg shadow-lg transition-colors bg-card border-border hover:bg-muted"
+                                >
+                                    <LayoutGrid className="w-4 h-4" />
+                                </button>
+                            </Tooltip>
                             {workflowId && (
                                 <ExecutionPanel workflowId={workflowId} renderButtonOnly />
                             )}

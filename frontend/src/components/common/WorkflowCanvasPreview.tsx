@@ -1,46 +1,8 @@
 import { useMemo } from "react";
 import Flow, { Background, BackgroundVariant, Edge, Node } from "reactflow";
 import "reactflow/dist/style.css";
-import AudioInputNode from "../../canvas/nodes/AudioInputNode";
-import AudioOutputNode from "../../canvas/nodes/AudioOutputNode";
-import CodeNode from "../../canvas/nodes/CodeNode";
-import ConditionalNode from "../../canvas/nodes/ConditionalNode";
-import DatabaseNode from "../../canvas/nodes/DatabaseNode";
-import EmbeddingsNode from "../../canvas/nodes/EmbeddingsNode";
-import HTTPNode from "../../canvas/nodes/HTTPNode";
-import InputNode from "../../canvas/nodes/InputNode";
-import IntegrationNode from "../../canvas/nodes/IntegrationNode";
-import KnowledgeBaseQueryNode from "../../canvas/nodes/KnowledgeBaseQueryNode";
-import LLMNode from "../../canvas/nodes/LLMNode";
-import LoopNode from "../../canvas/nodes/LoopNode";
-import OutputNode from "../../canvas/nodes/OutputNode";
-import SharedMemoryNode from "../../canvas/nodes/SharedMemoryNode";
-import SwitchNode from "../../canvas/nodes/SwitchNode";
-import TransformNode from "../../canvas/nodes/TransformNode";
-import VisionNode from "../../canvas/nodes/VisionNode";
-import WaitNode from "../../canvas/nodes/WaitNode";
+import { nodeTypes } from "../../canvas/nodeTypes";
 import { cn } from "../../lib/utils";
-
-const nodeTypes = {
-    llm: LLMNode,
-    vision: VisionNode,
-    audioInput: AudioInputNode,
-    audioOutput: AudioOutputNode,
-    embeddings: EmbeddingsNode,
-    conditional: ConditionalNode,
-    switch: SwitchNode,
-    loop: LoopNode,
-    code: CodeNode,
-    wait: WaitNode,
-    input: InputNode,
-    transform: TransformNode,
-    "shared-memory": SharedMemoryNode,
-    output: OutputNode,
-    http: HTTPNode,
-    database: DatabaseNode,
-    integration: IntegrationNode,
-    knowledgeBaseQuery: KnowledgeBaseQueryNode
-};
 
 interface WorkflowDefinition {
     nodes?:

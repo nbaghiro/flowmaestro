@@ -21,58 +21,9 @@ import {
 import { useMemo } from "react";
 import Flow, { Background, BackgroundVariant, type Edge, type Node } from "reactflow";
 import "reactflow/dist/style.css";
-import ActionNode from "../canvas/nodes/ActionNode";
-import AudioInputNode from "../canvas/nodes/AudioInputNode";
-import AudioOutputNode from "../canvas/nodes/AudioOutputNode";
-import CodeNode from "../canvas/nodes/CodeNode";
-import ConditionalNode from "../canvas/nodes/ConditionalNode";
-import DatabaseNode from "../canvas/nodes/DatabaseNode";
-import EmbeddingsNode from "../canvas/nodes/EmbeddingsNode";
-import HTTPNode from "../canvas/nodes/HTTPNode";
-import HumanReviewNode from "../canvas/nodes/HumanReviewNode";
-import InputNode from "../canvas/nodes/InputNode";
-import IntegrationNode from "../canvas/nodes/IntegrationNode";
-import KnowledgeBaseQueryNode from "../canvas/nodes/KnowledgeBaseQueryNode";
-import LLMNode from "../canvas/nodes/LLMNode";
-import LoopNode from "../canvas/nodes/LoopNode";
-import OutputNode from "../canvas/nodes/OutputNode";
-import RouterNode from "../canvas/nodes/RouterNode";
-import SharedMemoryNode from "../canvas/nodes/SharedMemoryNode";
-import SwitchNode from "../canvas/nodes/SwitchNode";
-import TemplateOutputNode from "../canvas/nodes/TemplateOutputNode";
-import TransformNode from "../canvas/nodes/TransformNode";
-import TriggerNode from "../canvas/nodes/TriggerNode";
-import VisionNode from "../canvas/nodes/VisionNode";
-import WaitNode from "../canvas/nodes/WaitNode";
+import { previewNodeTypes } from "../canvas/nodeTypes";
 import { cn } from "../lib/utils";
 import type { WorkflowPattern } from "../lib/workflowPatterns";
-
-// Register node types for preview
-const nodeTypes = {
-    action: ActionNode,
-    llm: LLMNode,
-    vision: VisionNode,
-    audioInput: AudioInputNode,
-    audioOutput: AudioOutputNode,
-    embeddings: EmbeddingsNode,
-    conditional: ConditionalNode,
-    switch: SwitchNode,
-    loop: LoopNode,
-    code: CodeNode,
-    wait: WaitNode,
-    humanReview: HumanReviewNode,
-    input: InputNode,
-    transform: TransformNode,
-    "shared-memory": SharedMemoryNode,
-    output: OutputNode,
-    http: HTTPNode,
-    database: DatabaseNode,
-    integration: IntegrationNode,
-    knowledgeBaseQuery: KnowledgeBaseQueryNode,
-    router: RouterNode,
-    templateOutput: TemplateOutputNode,
-    trigger: TriggerNode
-};
 
 // Icon mapping
 const iconMap: Record<string, LucideIcon> = {
@@ -158,7 +109,7 @@ function PatternCard({ pattern, isSelected, onClick }: PatternCardProps) {
                 <Flow
                     nodes={nodes}
                     edges={edges}
-                    nodeTypes={nodeTypes}
+                    nodeTypes={previewNodeTypes}
                     fitView
                     fitViewOptions={{ padding: 0.1, maxZoom: 1.5 }}
                     minZoom={0.1}

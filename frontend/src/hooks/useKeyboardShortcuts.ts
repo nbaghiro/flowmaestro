@@ -14,6 +14,7 @@ export interface KeyboardShortcutHandlers {
     onSelectAll: () => void;
     onDeselectAll: () => void;
     onFitView: () => void;
+    onAutoLayout?: () => void;
     canUndo?: () => boolean;
     canRedo?: () => boolean;
     onCreateComment?: () => void;
@@ -39,6 +40,7 @@ export function useKeyboardShortcuts(handlers: KeyboardShortcutHandlers): void {
         onSelectAll,
         onDeselectAll,
         onFitView,
+        onAutoLayout,
         onCreateComment,
         canUndo = () => true,
         canRedo = () => true
@@ -165,6 +167,13 @@ export function useKeyboardShortcuts(handlers: KeyboardShortcutHandlers): void {
                 onCreateComment();
                 return;
             }
+
+            // Shift+L - Auto-layout nodes
+            if (!modifier && event.shiftKey && key === "l" && onAutoLayout) {
+                event.preventDefault();
+                onAutoLayout();
+                return;
+            }
         };
 
         document.addEventListener("keydown", handleKeyDown);
@@ -186,6 +195,7 @@ export function useKeyboardShortcuts(handlers: KeyboardShortcutHandlers): void {
         onSelectAll,
         onDeselectAll,
         onFitView,
+        onAutoLayout,
         canUndo,
         canRedo,
         onCreateComment
