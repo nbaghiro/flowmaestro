@@ -19,6 +19,10 @@ export interface ChatMessage {
     timestamp: Date;
     action?: ActionType;
     proposedChanges?: NodeChange[];
+    // Thinking support
+    thinking?: string;
+    thinkingExpanded?: boolean;
+    isThinkingStreaming?: boolean;
 }
 
 export interface NodeChange {
@@ -46,11 +50,16 @@ interface ChatStore {
     // Chat state
     messages: ChatMessage[];
     isStreaming: boolean;
+    isThinking: boolean;
     currentAction: ActionType | null;
 
     // LLM Connection settings
     selectedConnectionId: string | null;
     selectedModel: string | null;
+
+    // Thinking settings
+    enableThinking: boolean;
+    thinkingBudget: number;
 
     // Workflow context
     workflowContext: WorkflowSnapshot | null;
@@ -67,10 +76,16 @@ interface ChatStore {
     addMessage: (message: Omit<ChatMessage, "id" | "timestamp">) => void;
     updateLastMessage: (contentOrUpdater: string | ((current: string) => string)) => void;
     setStreaming: (isStreaming: boolean) => void;
+    setThinking: (isThinking: boolean) => void;
     setCurrentAction: (action: ActionType | null) => void;
     setConnection: (connectionId: string, model?: string) => void;
+    setEnableThinking: (enabled: boolean) => void;
+    setThinkingBudget: (budget: number) => void;
     setWorkflowContext: (context: WorkflowSnapshot) => void;
     setProposedChanges: (changes: NodeChange[] | null) => void;
+    appendToThinking: (token: string) => void;
+    completeThinking: (content: string) => void;
+    toggleThinkingExpanded: (messageId: string) => void;
     clearChat: () => void;
     clearProposedChanges: () => void;
 }
@@ -81,9 +96,12 @@ export const useChatStore = create<ChatStore>((set) => ({
     panelWidth: DEFAULT_WIDTH,
     messages: [],
     isStreaming: false,
+    isThinking: false,
     currentAction: null,
     selectedConnectionId: null,
     selectedModel: null,
+    enableThinking: true,
+    thinkingBudget: 4096,
     workflowContext: null,
     contextTimestamp: null,
     proposedChanges: null,
@@ -133,6 +151,8 @@ export const useChatStore = create<ChatStore>((set) => ({
 
     setStreaming: (isStreaming: boolean) => set({ isStreaming }),
 
+    setThinking: (isThinking: boolean) => set({ isThinking }),
+
     setCurrentAction: (action: ActionType | null) => set({ currentAction: action }),
 
     setConnection: (connectionId: string, model?: string) =>
@@ -140,6 +160,10 @@ export const useChatStore = create<ChatStore>((set) => ({
             selectedConnectionId: connectionId,
             selectedModel: model || null
         }),
+
+    setEnableThinking: (enabled: boolean) => set({ enableThinking: enabled }),
+
+    setThinkingBudget: (budget: number) => set({ thinkingBudget: budget }),
 
     setWorkflowContext: (context: WorkflowSnapshot) =>
         set({
@@ -149,10 +173,46 @@ export const useChatStore = create<ChatStore>((set) => ({
 
     setProposedChanges: (changes: NodeChange[] | null) => set({ proposedChanges: changes }),
 
+    appendToThinking: (token: string) => {
+        set((state) => {
+            const messages = [...state.messages];
+            const lastMessage = messages[messages.length - 1];
+            if (lastMessage && lastMessage.role === "assistant") {
+                lastMessage.thinking = (lastMessage.thinking || "") + token;
+                lastMessage.isThinkingStreaming = true;
+                lastMessage.thinkingExpanded = true; // Auto-expand while streaming
+            }
+            return { messages, isThinking: true };
+        });
+    },
+
+    completeThinking: (content: string) => {
+        set((state) => {
+            const messages = [...state.messages];
+            const lastMessage = messages[messages.length - 1];
+            if (lastMessage && lastMessage.role === "assistant") {
+                lastMessage.thinking = content || lastMessage.thinking;
+                lastMessage.isThinkingStreaming = false;
+                lastMessage.thinkingExpanded = false; // Auto-collapse when done
+            }
+            return { messages, isThinking: false };
+        });
+    },
+
+    toggleThinkingExpanded: (messageId: string) => {
+        set((state) => {
+            const messages = state.messages.map((msg) =>
+                msg.id === messageId ? { ...msg, thinkingExpanded: !msg.thinkingExpanded } : msg
+            );
+            return { messages };
+        });
+    },
+
     clearChat: () =>
         set({
             messages: [],
             isStreaming: false,
+            isThinking: false,
             currentAction: null,
             proposedChanges: null
         }),

@@ -39,6 +39,7 @@ export async function chatRoute(fastify: FastifyInstance) {
 
                 // Process chat in background with streaming callbacks
                 let tokenCount = 0;
+                let thinkingTokenCount = 0;
                 let firstTokenTime: number | null = null;
 
                 chatService
@@ -50,6 +51,21 @@ export async function chatRoute(fastify: FastifyInstance) {
                         body.connectionId,
                         body.model,
                         {
+                            onThinkingStart: () => {
+                                logger.info({ executionId }, "Thinking started");
+                                emitChatEvent(executionId, "thinking_start", {});
+                            },
+                            onThinkingToken: (token: string) => {
+                                thinkingTokenCount++;
+                                emitChatEvent(executionId, "thinking_token", token);
+                            },
+                            onThinkingComplete: (content: string) => {
+                                logger.info(
+                                    { executionId, thinkingTokenCount },
+                                    "Thinking completed"
+                                );
+                                emitChatEvent(executionId, "thinking_complete", content);
+                            },
                             onToken: (token: string) => {
                                 tokenCount++;
                                 if (tokenCount === 1) {
@@ -64,6 +80,7 @@ export async function chatRoute(fastify: FastifyInstance) {
                                     {
                                         executionId,
                                         tokenCount,
+                                        thinkingTokenCount,
                                         durationMs: duration
                                     },
                                     "Completed execution"
@@ -73,6 +90,11 @@ export async function chatRoute(fastify: FastifyInstance) {
                             onError: (error: Error) => {
                                 emitChatEvent(executionId, "error", error.message);
                             }
+                        },
+                        // Pass thinking config
+                        {
+                            enableThinking: body.enableThinking,
+                            thinkingBudget: body.thinkingBudget
                         }
                     )
                     .catch((error) => {

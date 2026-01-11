@@ -33,7 +33,8 @@ export const chatMessageSchema = z.object({
     role: z.enum(["user", "assistant", "system"]),
     content: z.string(),
     timestamp: z.date().or(z.string()),
-    proposedChanges: z.array(z.any()).optional()
+    proposedChanges: z.array(z.any()).optional(),
+    thinking: z.string().optional()
 });
 
 /**
@@ -56,7 +57,9 @@ export const chatRequestSchema = z.object({
     context: workflowContextSchema,
     conversationHistory: z.array(chatMessageSchema).optional().default([]),
     connectionId: z.string().uuid(),
-    model: z.string().optional()
+    model: z.string().optional(),
+    enableThinking: z.boolean().optional().default(false),
+    thinkingBudget: z.number().min(1024).max(32000).optional()
 });
 
 /**
@@ -64,7 +67,8 @@ export const chatRequestSchema = z.object({
  */
 export const chatResponseSchema = z.object({
     response: z.string(),
-    changes: z.array(nodeChangeSchema).optional()
+    changes: z.array(nodeChangeSchema).optional(),
+    thinking: z.string().optional()
 });
 
 /**

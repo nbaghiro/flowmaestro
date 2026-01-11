@@ -14,9 +14,17 @@ import type {
 const logger = getLogger();
 
 export interface StreamCallbacks {
+    onThinkingStart?: () => void;
+    onThinkingToken?: (token: string) => void;
+    onThinkingComplete?: (content: string) => void;
     onToken?: (token: string) => void;
     onComplete?: (response: ChatResponse) => void;
     onError?: (error: Error) => void;
+}
+
+export interface ThinkingConfig {
+    enableThinking?: boolean;
+    thinkingBudget?: number;
 }
 
 // Interface for React Flow node structure
@@ -43,7 +51,8 @@ export class WorkflowChatService {
         conversationHistory: ChatMessage[],
         connectionId: string,
         model: string | undefined,
-        callbacks?: StreamCallbacks
+        callbacks?: StreamCallbacks,
+        thinkingConfig?: ThinkingConfig
     ): Promise<ChatResponse> {
         try {
             let response: ChatResponse;
@@ -56,7 +65,8 @@ export class WorkflowChatService {
                     conversationHistory,
                     connectionId,
                     model,
-                    callbacks
+                    callbacks,
+                    thinkingConfig
                 );
             } else {
                 // Node modification operations
@@ -67,7 +77,8 @@ export class WorkflowChatService {
                             message,
                             connectionId,
                             model,
-                            callbacks
+                            callbacks,
+                            thinkingConfig
                         );
                         break;
                     case "modify":
@@ -76,7 +87,8 @@ export class WorkflowChatService {
                             message,
                             connectionId,
                             model,
-                            callbacks
+                            callbacks,
+                            thinkingConfig
                         );
                         break;
                     case "remove":
@@ -85,7 +97,8 @@ export class WorkflowChatService {
                             message,
                             connectionId,
                             model,
-                            callbacks
+                            callbacks,
+                            thinkingConfig
                         );
                         break;
                     default:
@@ -112,7 +125,8 @@ export class WorkflowChatService {
         conversationHistory: ChatMessage[],
         connectionId: string,
         model: string | undefined,
-        callbacks?: StreamCallbacks
+        callbacks?: StreamCallbacks,
+        thinkingConfig?: ThinkingConfig
     ): Promise<ChatResponse> {
         // Build conversation context from history (last 10 messages)
         const conversationContext = conversationHistory
@@ -164,9 +178,23 @@ Guidelines:
             : `User: ${message}\n\nAssistant:`;
 
         // Call LLM with streaming support
-        const llmCallbacks: LLMExecutionCallbacks | undefined = callbacks?.onToken
-            ? { onToken: callbacks.onToken }
-            : undefined;
+        const llmCallbacks: LLMExecutionCallbacks | undefined =
+            callbacks?.onToken || callbacks?.onThinkingToken
+                ? {
+                      onToken: callbacks.onToken,
+                      onThinkingStart: callbacks.onThinkingStart,
+                      onThinkingToken: callbacks.onThinkingToken,
+                      onThinkingComplete: callbacks.onThinkingComplete
+                  }
+                : undefined;
+
+        // Calculate max tokens to account for thinking budget
+        const enableThinking = thinkingConfig?.enableThinking ?? false;
+        const thinkingBudget = thinkingConfig?.thinkingBudget ?? 4096;
+        const responseTokens = 1500;
+        const effectiveMaxTokens = enableThinking
+            ? thinkingBudget + responseTokens
+            : responseTokens;
 
         const result = await executeLLMNode(
             {
@@ -176,16 +204,20 @@ Guidelines:
                 systemPrompt,
                 prompt,
                 temperature: 0.7,
-                maxTokens: 1500
+                maxTokens: effectiveMaxTokens,
+                enableThinking,
+                thinkingBudget: enableThinking ? thinkingBudget : undefined
             },
             {},
             llmCallbacks
         );
 
         const responseText = (result as { text?: string }).text || String(result);
+        const thinkingText = (result as { thinking?: string }).thinking;
 
         return {
             response: responseText,
+            thinking: thinkingText,
             changes: undefined // Conversational mode doesn't propose changes
         };
     }
@@ -369,7 +401,8 @@ ${workflowSummary}`;
         message: string,
         connectionId: string,
         model: string | undefined,
-        callbacks?: StreamCallbacks
+        callbacks?: StreamCallbacks,
+        _thinkingConfig?: ThinkingConfig
     ): Promise<ChatResponse> {
         const systemPrompt = `You are an AI workflow assistant helping users add nodes to their workflow.
 
@@ -491,7 +524,8 @@ Please suggest nodes to add based on the user's request.`;
         message: string,
         connectionId: string,
         model: string | undefined,
-        callbacks?: StreamCallbacks
+        callbacks?: StreamCallbacks,
+        _thinkingConfig?: ThinkingConfig
     ): Promise<ChatResponse> {
         const systemPrompt = `You are an AI workflow assistant helping users modify nodes in their workflow.
 
@@ -589,7 +623,8 @@ Please suggest modifications based on the user's request.`;
         message: string,
         connectionId: string,
         model: string | undefined,
-        callbacks?: StreamCallbacks
+        callbacks?: StreamCallbacks,
+        _thinkingConfig?: ThinkingConfig
     ): Promise<ChatResponse> {
         const systemPrompt = `You are an AI workflow assistant helping users remove or clean up nodes in their workflow.
 

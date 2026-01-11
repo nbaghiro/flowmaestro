@@ -66,11 +66,23 @@ export async function chatStreamHandler(
     }
 
     // Setup event listeners
+    const onThinkingStart = (): void => {
+        sendEvent("thinking_start", {});
+    };
+
+    const onThinkingToken = (token: string): void => {
+        sendEvent("thinking_token", { token });
+    };
+
+    const onThinkingComplete = (content: string): void => {
+        sendEvent("thinking_complete", { content });
+    };
+
     const onToken = (token: string): void => {
         sendEvent("token", { token });
     };
 
-    const onComplete = (data: { response: string; changes?: unknown }): void => {
+    const onComplete = (data: { response: string; changes?: unknown; thinking?: string }): void => {
         sendEvent("complete", data);
         cleanup();
     };
@@ -82,6 +94,9 @@ export async function chatStreamHandler(
     };
 
     const cleanup = (): void => {
+        emitter?.removeListener("thinking_start", onThinkingStart);
+        emitter?.removeListener("thinking_token", onThinkingToken);
+        emitter?.removeListener("thinking_complete", onThinkingComplete);
         emitter?.removeListener("token", onToken);
         emitter?.removeListener("complete", onComplete);
         emitter?.removeListener("error", onError);
@@ -90,6 +105,9 @@ export async function chatStreamHandler(
     };
 
     // Attach listeners
+    emitter.on("thinking_start", onThinkingStart);
+    emitter.on("thinking_token", onThinkingToken);
+    emitter.on("thinking_complete", onThinkingComplete);
     emitter.on("token", onToken);
     emitter.on("complete", onComplete);
     emitter.on("error", onError);
@@ -104,7 +122,13 @@ export async function chatStreamHandler(
 // Export helper to emit events from WorkflowChatService
 export function emitChatEvent(
     executionId: string,
-    event: "token" | "complete" | "error",
+    event:
+        | "thinking_start"
+        | "thinking_token"
+        | "thinking_complete"
+        | "token"
+        | "complete"
+        | "error",
     data: unknown
 ): void {
     const emitter = executionStreams.get(executionId);

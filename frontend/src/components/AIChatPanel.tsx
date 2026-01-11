@@ -1,14 +1,21 @@
 import { Send, X, Bot, RotateCcw } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import type { JsonObject } from "@flowmaestro/shared";
+import { modelSupportsThinking } from "@flowmaestro/shared";
 import { chatWorkflow, streamChatResponse } from "../lib/api";
 import { logger } from "../lib/logger";
 import { cn } from "../lib/utils";
-import { useChatStore, type ActionType, type NodeChange } from "../stores/chatStore";
+import {
+    useChatStore,
+    type ActionType,
+    type NodeChange,
+    type ChatMessage as ChatMessageType
+} from "../stores/chatStore";
 import { useWorkflowStore } from "../stores/workflowStore";
 import { ChatMessage } from "./chat/ChatMessage";
 import { ConnectionSelector } from "./chat/ConnectionSelector";
 import { SuggestedQuestions } from "./chat/SuggestedQuestions";
+import { ThinkingBlock } from "./chat/ThinkingBlock";
 import { Button } from "./common/Button";
 import { ConfirmDialog } from "./common/ConfirmDialog";
 import { Input } from "./common/Input";
@@ -52,17 +59,28 @@ export function AIChatPanel({ workflowId }: AIChatPanelProps) {
         panelWidth,
         messages,
         isStreaming,
+        isThinking,
         selectedConnectionId,
         selectedModel,
+        enableThinking,
+        thinkingBudget,
         setPanelWidth,
         closePanel,
         addMessage,
         updateLastMessage,
         setStreaming,
+        appendToThinking,
+        completeThinking,
+        toggleThinkingExpanded,
         clearProposedChanges,
         setWorkflowContext,
         clearChat
     } = useChatStore();
+
+    // Check if current model supports thinking
+    const currentModelSupportsThinking = selectedModel
+        ? modelSupportsThinking(selectedModel)
+        : false;
 
     const { nodes, edges, selectedNode } = useWorkflowStore();
 
@@ -164,7 +182,9 @@ export function AIChatPanel({ workflowId }: AIChatPanelProps) {
                 },
                 conversationHistory: messages, // Include conversation history for context
                 connectionId: selectedConnectionId,
-                model: selectedModel || undefined
+                model: selectedModel || undefined,
+                enableThinking: currentModelSupportsThinking && enableThinking,
+                thinkingBudget: enableThinking ? thinkingBudget : undefined
             });
 
             if (!response.success || !response.data?.executionId) {
@@ -176,6 +196,15 @@ export function AIChatPanel({ workflowId }: AIChatPanelProps) {
             // Step 2: Open SSE stream
             // TODO: Store cleanup function for cancellation
             streamChatResponse(executionId, {
+                onThinkingStart: () => {
+                    // Thinking started - state will be set by appendToThinking
+                },
+                onThinkingToken: (token: string) => {
+                    appendToThinking(token);
+                },
+                onThinkingComplete: (content: string) => {
+                    completeThinking(content);
+                },
                 onToken: (token: string) => {
                     // Append token to last message
                     updateLastMessage((current) => current + token);
@@ -196,7 +225,8 @@ export function AIChatPanel({ workflowId }: AIChatPanelProps) {
                                     role: "assistant" as const,
                                     content: data.response,
                                     timestamp: new Date(),
-                                    proposedChanges: data.changes
+                                    proposedChanges: data.changes,
+                                    thinking: data.thinking
                                 }
                             ]
                         });
@@ -433,13 +463,18 @@ export function AIChatPanel({ workflowId }: AIChatPanelProps) {
                     ) : (
                         <>
                             {messages.map((message) => (
-                                <ChatMessage
+                                <MessageWithThinking
                                     key={message.id}
                                     message={message}
                                     isStreaming={
                                         isStreaming &&
                                         message.id === messages[messages.length - 1]?.id
                                     }
+                                    isThinking={
+                                        isThinking &&
+                                        message.id === messages[messages.length - 1]?.id
+                                    }
+                                    onToggleThinking={() => toggleThinkingExpanded(message.id)}
                                     onApplyChanges={handleApplyChanges}
                                     onRejectChanges={handleRejectChanges}
                                 />
@@ -505,6 +540,62 @@ export function AIChatPanel({ workflowId }: AIChatPanelProps) {
                 confirmText="Clear"
                 cancelText="Cancel"
                 variant="default"
+            />
+        </div>
+    );
+}
+
+/**
+ * Wrapper component that adds ThinkingBlock to assistant messages
+ */
+interface MessageWithThinkingProps {
+    message: ChatMessageType;
+    isStreaming: boolean;
+    isThinking: boolean;
+    onToggleThinking: () => void;
+    onApplyChanges: (changes: NodeChange[]) => void;
+    onRejectChanges: () => void;
+}
+
+function MessageWithThinking({
+    message,
+    isStreaming,
+    isThinking,
+    onToggleThinking,
+    onApplyChanges,
+    onRejectChanges
+}: MessageWithThinkingProps) {
+    // User messages don't have thinking
+    if (message.role === "user") {
+        return (
+            <ChatMessage
+                message={message}
+                isStreaming={false}
+                onApplyChanges={onApplyChanges}
+                onRejectChanges={onRejectChanges}
+            />
+        );
+    }
+
+    // Assistant messages may have thinking
+    return (
+        <div className="space-y-2">
+            {/* Thinking Block - shown above the response */}
+            {(message.thinking || message.isThinkingStreaming) && (
+                <ThinkingBlock
+                    content={message.thinking || ""}
+                    isExpanded={message.thinkingExpanded ?? false}
+                    isStreaming={message.isThinkingStreaming ?? false}
+                    onToggle={onToggleThinking}
+                />
+            )}
+
+            {/* Response message */}
+            <ChatMessage
+                message={message}
+                isStreaming={isStreaming && !isThinking}
+                onApplyChanges={onApplyChanges}
+                onRejectChanges={onRejectChanges}
             />
         </div>
     );
