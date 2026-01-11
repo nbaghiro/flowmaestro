@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import Flow, { Background, BackgroundVariant, Edge, Node } from "reactflow";
 import "reactflow/dist/style.css";
-import { nodeTypes } from "../../canvas/nodeTypes";
+import { previewNodeTypes } from "../../canvas/nodeTypes";
 import { cn } from "../../lib/utils";
 
 interface WorkflowDefinition {
@@ -98,13 +98,11 @@ export function WorkflowCanvasPreview({
     }
 
     return (
-        <div
-            className={cn(height, "bg-muted/30 dark:bg-muted relative overflow-hidden", className)}
-        >
+        <div className={cn(height, "bg-muted dark:bg-muted relative overflow-hidden", className)}>
             <Flow
                 nodes={nodes}
                 edges={edges}
-                nodeTypes={nodeTypes}
+                nodeTypes={previewNodeTypes}
                 fitView
                 fitViewOptions={{ padding: 0.1 }}
                 minZoom={0.1}

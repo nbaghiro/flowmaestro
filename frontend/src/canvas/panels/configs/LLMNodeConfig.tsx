@@ -1,14 +1,13 @@
 import { Plus } from "lucide-react";
 import { useState, useEffect } from "react";
 import {
-    LLM_MODELS_BY_PROVIDER,
     getDefaultModelForProvider,
     ALL_PROVIDERS,
     type ValidationError
 } from "@flowmaestro/shared";
 import { FormField, FormSection } from "../../../components/common/FormField";
 import { Input } from "../../../components/common/Input";
-import { Select } from "../../../components/common/Select";
+import { LLMModelSelect } from "../../../components/common/LLMModelSelect";
 import { Slider } from "../../../components/common/Slider";
 import { VariableInput } from "../../../components/common/VariableInput";
 import { ProviderConnectionDialog } from "../../../components/connections/ProviderConnectionDialog";
@@ -152,14 +151,11 @@ export function LLMNodeConfig({ nodeId, data, onUpdate, errors = [] }: LLMNodeCo
 
                 {provider && (
                     <FormField label="Model" error={getError("model")}>
-                        <Select
+                        <LLMModelSelect
+                            provider={provider}
                             value={model}
                             onChange={setModel}
-                            options={
-                                LLM_MODELS_BY_PROVIDER[
-                                    provider as keyof typeof LLM_MODELS_BY_PROVIDER
-                                ] || []
-                            }
+                            error={getError("model")}
                         />
                     </FormField>
                 )}

@@ -52,25 +52,25 @@ input:-webkit-autofill::first-line {
 
 @layer base {
     :root {
-        --background: 0 0% 95%;
-        --foreground: 222.2 84% 4.9%;
-        --card: 0 0% 100%;
-        --card-foreground: 222.2 84% 4.9%;
-        --popover: 0 0% 100%;
-        --popover-foreground: 222.2 84% 4.9%;
-        --primary: 222.2 47.4% 11.2%;
-        --primary-foreground: 210 40% 98%;
-        --secondary: 0 0% 93%;
-        --secondary-foreground: 222.2 47.4% 11.2%;
-        --muted: 0 0% 93%;
-        --muted-foreground: 0 0% 45%;
-        --accent: 0 0% 93%;
-        --accent-foreground: 222.2 47.4% 11.2%;
+        --background: 0 0% 86%;
+        --foreground: 0 0% 10%;
+        --card: 0 0% 95%;
+        --card-foreground: 0 0% 10%;
+        --popover: 0 0% 95%;
+        --popover-foreground: 0 0% 10%;
+        --primary: 0 0% 15%;
+        --primary-foreground: 0 0% 98%;
+        --secondary: 0 0% 90%;
+        --secondary-foreground: 0 0% 15%;
+        --muted: 0 0% 90%;
+        --muted-foreground: 0 0% 40%;
+        --accent: 0 0% 90%;
+        --accent-foreground: 0 0% 15%;
         --destructive: 0 84.2% 60.2%;
-        --destructive-foreground: 210 40% 98%;
-        --border: 0 0% 88%;
-        --input: 0 0% 88%;
-        --ring: 222.2 84% 4.9%;
+        --destructive-foreground: 0 0% 98%;
+        --border: 0 0% 75%;
+        --input: 0 0% 92%;
+        --ring: 0 0% 15%;
         --radius: 0.5rem;
     }
 
@@ -250,7 +250,7 @@ input:-webkit-autofill::first-line {
 .react-flow__node.selected .node-connect-category { border-color: var(--category-connect) !important; }
 
 .react-flow__edge-path {
-    stroke: #d1d5db; /* gray-300 */
+    stroke: #9ca3af; /* gray-400 */
 }
 
 .dark .react-flow__edge-path {
@@ -258,7 +258,7 @@ input:-webkit-autofill::first-line {
 }
 
 .react-flow__edge.selected .react-flow__edge-path {
-    stroke: #9ca3af; /* gray-400 - slightly darker than non-selected */
+    stroke: #6b7280; /* gray-500 */
     stroke-width: 2px;
 }
 

@@ -1,6 +1,10 @@
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
-import { LLM_MODELS_BY_PROVIDER, getDefaultModelForProvider } from "@flowmaestro/shared";
+import {
+    LLM_MODELS_BY_PROVIDER,
+    getDefaultModelForProvider,
+    getModelNickname
+} from "@flowmaestro/shared";
 import { cn } from "../../lib/utils";
 import type { Connection } from "../../lib/api";
 
@@ -36,18 +40,6 @@ export function AgentBuilderConnectionSelector({
     const availableModels = selectedConnection
         ? LLM_MODELS_BY_PROVIDER[selectedConnection.provider] || []
         : [];
-
-    // Get model display name with parenthetical descriptions removed
-    const getModelNickname = (modelValue: string | null): string => {
-        if (!modelValue) return "";
-
-        const model = availableModels.find((m) => m.value === modelValue);
-        if (model) {
-            return model.label.replace(/\s*\([^)]*\)/g, "").trim();
-        }
-
-        return modelValue;
-    };
 
     const displayText = selectedConnection
         ? `${selectedConnection.name} - ${getModelNickname(selectedModel)}`

@@ -103,16 +103,6 @@ export const LLM_MODELS_BY_PROVIDER: Record<string, LLMModelDefinition[]> = {
             capabilities: ["text", "reasoning"],
             supportsThinking: true,
             defaultThinkingBudget: 8192
-        },
-        {
-            value: "o1",
-            label: "o1 (Reasoning, Legacy)",
-            provider: "openai",
-            contextWindow: 200000,
-            capabilities: ["text", "reasoning"],
-            supportsThinking: true,
-            defaultThinkingBudget: 8192,
-            deprecated: true
         }
     ],
     anthropic: [
@@ -144,33 +134,13 @@ export const LLM_MODELS_BY_PROVIDER: Record<string, LLMModelDefinition[]> = {
             supportsThinking: true,
             defaultThinkingBudget: 2048
         },
-        // Claude 4.x Legacy (Still available)
-        {
-            value: "claude-opus-4-1-20250805",
-            label: "Claude Opus 4.1 (Legacy)",
-            provider: "anthropic",
-            contextWindow: 200000,
-            capabilities: ["text", "vision", "function-calling"],
-            supportsThinking: true,
-            defaultThinkingBudget: 8192
-        },
-        {
-            value: "claude-sonnet-4-20250514",
-            label: "Claude Sonnet 4 (Legacy)",
-            provider: "anthropic",
-            contextWindow: 200000,
-            capabilities: ["text", "vision", "function-calling"],
-            supportsThinking: true,
-            defaultThinkingBudget: 4096
-        },
-        // Claude 3.x Legacy
+        // Claude 3 Haiku - kept for budget-conscious users (5x cheaper than Haiku 4.5)
         {
             value: "claude-3-haiku-20240307",
-            label: "Claude 3 Haiku (Legacy, Cheap)",
+            label: "Claude 3 Haiku (Budget)",
             provider: "anthropic",
             contextWindow: 200000,
-            capabilities: ["text", "vision"],
-            deprecated: true
+            capabilities: ["text", "vision"]
         }
     ],
     google: [
@@ -218,15 +188,6 @@ export const LLM_MODELS_BY_PROVIDER: Record<string, LLMModelDefinition[]> = {
             provider: "google",
             contextWindow: 1000000,
             capabilities: ["text", "vision", "function-calling"]
-        },
-        // Gemini 2.0 Series (Retiring March 2026)
-        {
-            value: "gemini-2.0-flash",
-            label: "Gemini 2.0 Flash (Legacy)",
-            provider: "google",
-            contextWindow: 1000000,
-            capabilities: ["text", "vision", "audio", "function-calling"],
-            deprecated: true
         }
     ],
     cohere: [
@@ -412,4 +373,21 @@ export function getThinkingCapableModels(): LLMModelDefinition[] {
  */
 export function getActiveModelsForProvider(provider: string): LLMModelDefinition[] {
     return getModelsForProvider(provider).filter((m) => !m.deprecated);
+}
+
+/**
+ * Get a short display name for a model by removing parenthetical descriptions
+ * Example: "GPT-4.1 (Latest, Smartest)" -> "GPT-4.1"
+ */
+export function getModelNickname(modelValue: string): string {
+    if (!modelValue) return "";
+
+    const model = findModelByValue(modelValue);
+    if (model) {
+        // Remove parenthetical descriptions: "GPT-4o (Latest, Multimodal)" -> "GPT-4o"
+        return model.label.replace(/\s*\([^)]*\)/g, "").trim();
+    }
+
+    // Fallback to model value if not found
+    return modelValue;
 }

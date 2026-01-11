@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import {
     LLM_PROVIDERS,
-    LLM_MODELS_BY_PROVIDER,
     getDefaultModelForProvider,
     type ValidationError
 } from "@flowmaestro/shared";
 import { FormField, FormSection } from "../../../components/common/FormField";
 import { Input } from "../../../components/common/Input";
+import { LLMModelSelect } from "../../../components/common/LLMModelSelect";
 import { Select } from "../../../components/common/Select";
 import { Slider } from "../../../components/common/Slider";
 import { Textarea } from "../../../components/common/Textarea";
@@ -81,15 +81,7 @@ export function VisionNodeConfig({
                 </FormField>
 
                 <FormField label="Model">
-                    <Select
-                        value={model}
-                        onChange={setModel}
-                        options={
-                            LLM_MODELS_BY_PROVIDER[
-                                provider as keyof typeof LLM_MODELS_BY_PROVIDER
-                            ] || []
-                        }
-                    />
+                    <LLMModelSelect provider={provider} value={model} onChange={setModel} />
                 </FormField>
             </FormSection>
 

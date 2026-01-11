@@ -1,6 +1,10 @@
 import { Settings, ChevronDown } from "lucide-react";
 import { useState, useEffect } from "react";
-import { LLM_MODELS_BY_PROVIDER, getDefaultModelForProvider } from "@flowmaestro/shared";
+import {
+    LLM_MODELS_BY_PROVIDER,
+    getDefaultModelForProvider,
+    getModelNickname
+} from "@flowmaestro/shared";
 import { getConnections, type Connection, type Agent } from "../../lib/api";
 import { logger } from "../../lib/logger";
 import { cn } from "../../lib/utils";
@@ -66,22 +70,7 @@ export function AgentConnectionSelector({
         ? LLM_MODELS_BY_PROVIDER[selectedConnection.provider] || []
         : [];
 
-    // Get model display name with parenthetical descriptions removed
-    const getModelNickname = (modelValue: string | null): string => {
-        if (!modelValue) return "";
-
-        // Find the full model label from the available models
-        const model = availableModels.find((m) => m.value === modelValue);
-        if (model) {
-            // Remove parenthetical descriptions: "GPT-4o (Latest, Multimodal)" -> "GPT-4o"
-            return model.label.replace(/\s*\([^)]*\)/g, "").trim();
-        }
-
-        // Fallback to model value if label not found
-        return modelValue;
-    };
-
-    const modelNickname = getModelNickname(activeModel);
+    const modelNickname = activeModel ? getModelNickname(activeModel) : "";
 
     const handleConnectionChange = (connectionId: string) => {
         const connection = connections.find((c) => c.id === connectionId);

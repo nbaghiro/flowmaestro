@@ -28,7 +28,8 @@ import {
     getDefaultModelForProvider,
     modelSupportsThinking,
     getDefaultThinkingBudget,
-    getRandomExamplePrompts
+    getRandomExamplePrompts,
+    getModelNickname
 } from "@flowmaestro/shared";
 import {
     getConnections,
@@ -215,16 +216,6 @@ export function WorkflowGenerationChatPanel() {
     const currentModelSupportsThinking = selectedModel
         ? modelSupportsThinking(selectedModel)
         : false;
-
-    // Get model display name
-    const getModelNickname = (modelValue: string | null): string => {
-        if (!modelValue) return "";
-        const model = availableModels.find((m) => m.value === modelValue);
-        if (model) {
-            return model.label.replace(/\s*\([^)]*\)/g, "").trim();
-        }
-        return modelValue;
-    };
 
     // Handle connection change
     const handleConnectionChange = (connectionId: string) => {
@@ -454,7 +445,9 @@ export function WorkflowGenerationChatPanel() {
                                     <>
                                         <Settings className="w-3.5 h-3.5" />
                                         <span className="font-medium">
-                                            {getModelNickname(selectedModel) || "Select"}
+                                            {selectedModel
+                                                ? getModelNickname(selectedModel)
+                                                : "Select"}
                                         </span>
                                         <ChevronDown className="w-3 h-3" />
                                     </>
