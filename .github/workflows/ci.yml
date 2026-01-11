@@ -14,8 +14,12 @@ env:
   NODE_VERSION: "22"
 
 jobs:
-  lint-and-typecheck:
-    name: Lint & Type Check
+  # ============================================================================
+  # ROOT LEVEL JOBS (no dependencies, run immediately)
+  # ============================================================================
+
+  lint-app:
+    name: Lint App
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -39,8 +43,8 @@ jobs:
       - name: Check code formatting
         run: npm run format:check
 
-  python-sdk-lint:
-    name: Python SDK Lint
+  lint-sdk-python:
+    name: Lint SDK (Python)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -51,18 +55,64 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install ruff
-        run: pip install ruff
+      - name: Install dependencies
+        run: pip install ruff mypy
 
       - name: Lint Python SDK
         run: ruff check sdks/python/
 
+      - name: Type check Python SDK
+        run: mypy sdks/python/
+
       - name: Lint Python examples
         run: ruff check examples/public-api/python/
+
+  lint-sdk-javascript:
+    name: Lint SDK (JavaScript)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci --workspace=@flowmaestro/sdk-javascript
+
+      - name: Type check JavaScript SDK
+        run: npm run typecheck --workspace=@flowmaestro/sdk-javascript
+
+  lint-sdk-widget:
+    name: Lint SDK (Widget)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci --workspace=@flowmaestro/widget
+
+      - name: Type check Widget SDK
+        run: npm run typecheck --workspace=@flowmaestro/widget
+
+  # ============================================================================
+  # SECOND LEVEL JOBS (depend on lint-app)
+  # ============================================================================
 
   unit-tests:
     name: Unit Tests
     runs-on: ubuntu-latest
+    needs: [lint-app]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -82,7 +132,7 @@ jobs:
   integration-tests:
     name: Integration Tests
     runs-on: ubuntu-latest
-    needs: [lint-and-typecheck, unit-tests]
+    needs: [lint-app]
     env:
       DATABASE_URL: postgresql://flowmaestro:flowmaestro_dev_password@localhost:5432/flowmaestro
       POSTGRES_HOST: localhost
@@ -166,7 +216,7 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
-    needs: [lint-and-typecheck]
+    needs: [lint-app]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -183,10 +233,14 @@ jobs:
       - name: Build all packages
         run: npm run build
 
-  docker-build:
-    name: Docker Build
+  # ============================================================================
+  # THIRD LEVEL JOBS (depend on build, run Docker builds in parallel)
+  # ============================================================================
+
+  docker-build-backend:
+    name: Docker (backend)
     runs-on: ubuntu-latest
-    needs: [lint-and-typecheck]
+    needs: [build]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -201,8 +255,19 @@ jobs:
           file: infra/docker/backend/Dockerfile
           platforms: linux/amd64
           push: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
+
+  docker-build-frontend:
+    name: Docker (frontend)
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Build frontend image
         uses: docker/build-push-action@v5
@@ -214,8 +279,19 @@ jobs:
           build-args: |
             VITE_API_URL=https://api.example.com
             VITE_WS_URL=wss://api.example.com
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
+
+  docker-build-marketing:
+    name: Docker (marketing)
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Build marketing image
         uses: docker/build-push-action@v5
@@ -224,8 +300,19 @@ jobs:
           file: infra/docker/marketing/Dockerfile
           platforms: linux/amd64
           push: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=marketing
+          cache-to: type=gha,mode=max,scope=marketing
+
+  docker-build-migrations:
+    name: Docker (migrations)
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Build migrations image
         uses: docker/build-push-action@v5
@@ -234,8 +321,19 @@ jobs:
           file: infra/docker/migrations/Dockerfile
           platforms: linux/amd64
           push: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=migrations
+          cache-to: type=gha,mode=max,scope=migrations
+
+  docker-build-static:
+    name: Docker (static)
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Build static image
         uses: docker/build-push-action@v5
@@ -244,5 +342,5 @@ jobs:
           file: infra/docker/static/Dockerfile
           platforms: linux/amd64
           push: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=static
+          cache-to: type=gha,mode=max,scope=static
