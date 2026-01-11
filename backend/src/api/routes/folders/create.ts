@@ -50,12 +50,20 @@ export async function createFolderRoute(fastify: FastifyInstance) {
                     });
                 }
 
-                // Check name availability (case-insensitive)
-                const isAvailable = await folderRepo.isNameAvailable(body.name.trim(), userId);
+                // Normalize parentId (empty string or undefined -> null)
+                const parentId = body.parentId || null;
+
+                // Check name availability within the same parent folder
+                const isAvailable = await folderRepo.isNameAvailable(
+                    body.name.trim(),
+                    userId,
+                    parentId
+                );
                 if (!isAvailable) {
+                    const parentContext = parentId ? " in this folder" : " at the root level";
                     return reply.status(400).send({
                         success: false,
-                        error: `A folder named '${body.name}' already exists`
+                        error: `A folder named '${body.name}' already exists${parentContext}`
                     });
                 }
 
@@ -63,10 +71,11 @@ export async function createFolderRoute(fastify: FastifyInstance) {
                 const folder = await folderRepo.create({
                     user_id: userId,
                     name: body.name.trim(),
-                    color: body.color?.toLowerCase()
+                    color: body.color?.toLowerCase(),
+                    parent_id: parentId
                 });
 
-                logger.info({ folderId: folder.id, userId }, "Folder created");
+                logger.info({ folderId: folder.id, userId, parentId }, "Folder created");
 
                 return reply.status(201).send({
                     success: true,
@@ -76,6 +85,9 @@ export async function createFolderRoute(fastify: FastifyInstance) {
                         name: folder.name,
                         color: folder.color,
                         position: folder.position,
+                        parentId: folder.parent_id,
+                        depth: folder.depth,
+                        path: folder.path,
                         createdAt: folder.created_at,
                         updatedAt: folder.updated_at,
                         itemCounts: {

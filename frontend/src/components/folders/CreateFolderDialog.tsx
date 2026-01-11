@@ -12,9 +12,17 @@ interface CreateFolderDialogProps {
     onSubmit: (name: string, color: string) => Promise<void>;
     /** If provided, the dialog is in edit mode */
     folder?: Folder | null;
+    /** If provided, we're creating a subfolder inside this parent */
+    parentFolderName?: string;
 }
 
-export function CreateFolderDialog({ isOpen, onClose, onSubmit, folder }: CreateFolderDialogProps) {
+export function CreateFolderDialog({
+    isOpen,
+    onClose,
+    onSubmit,
+    folder,
+    parentFolderName
+}: CreateFolderDialogProps) {
     const [name, setName] = useState("");
     const [color, setColor] = useState<string>(FOLDER_COLORS[0]);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -24,6 +32,7 @@ export function CreateFolderDialog({ isOpen, onClose, onSubmit, folder }: Create
     const colorPickerRef = useRef<HTMLDivElement>(null);
 
     const isEditMode = !!folder;
+    const isSubfolderMode = !!parentFolderName && !isEditMode;
     const isCustomColor = !FOLDER_COLORS.includes(color as (typeof FOLDER_COLORS)[number]);
 
     // Initialize form when folder changes or dialog opens
@@ -95,11 +104,18 @@ export function CreateFolderDialog({ isOpen, onClose, onSubmit, folder }: Create
         }
     };
 
+    // Determine dialog title
+    const dialogTitle = isEditMode
+        ? "Edit Folder"
+        : isSubfolderMode
+          ? `Create Subfolder in "${parentFolderName}"`
+          : "Create New Folder";
+
     return (
         <Dialog
             isOpen={isOpen}
             onClose={handleClose}
-            title={isEditMode ? "Edit Folder" : "Create New Folder"}
+            title={dialogTitle}
             size="sm"
             closeOnBackdropClick={!isSubmitting}
         >
@@ -278,7 +294,9 @@ export function CreateFolderDialog({ isOpen, onClose, onSubmit, folder }: Create
                                 : "Creating..."
                             : isEditMode
                               ? "Save Changes"
-                              : "Create Folder"}
+                              : isSubfolderMode
+                                ? "Create Subfolder"
+                                : "Create Folder"}
                     </Button>
                 </div>
             </form>

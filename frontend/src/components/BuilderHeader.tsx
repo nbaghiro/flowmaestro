@@ -131,7 +131,7 @@ export function BuilderHeader({
         if (onBack) {
             onBack();
         } else {
-            navigate("/");
+            navigate(-1);
         }
     };
 

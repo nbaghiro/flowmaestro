@@ -1,33 +1,18 @@
-import {
-    Plus,
-    FileText,
-    Calendar,
-    Sparkles,
-    Trash2,
-    MoreVertical,
-    Copy,
-    FolderPlus,
-    FolderInput,
-    FolderMinus,
-    GripVertical,
-    ChevronDown,
-    Search
-} from "lucide-react";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { Plus, FileText, Sparkles, Trash2, FolderInput, FolderMinus, Search } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import type { WorkflowNode, Folder, FolderWithCounts } from "@flowmaestro/shared";
+import type { WorkflowNode, Folder, FolderWithCounts, WorkflowSummary } from "@flowmaestro/shared";
 import { AIGenerateDialog } from "../components/AIGenerateDialog";
-import { Badge } from "../components/common/Badge";
+import { WorkflowCard } from "../components/cards";
 import { Button } from "../components/common/Button";
 import { ConfirmDialog } from "../components/common/ConfirmDialog";
 import { ContextMenu, type ContextMenuItem } from "../components/common/ContextMenu";
 import { ErrorDialog } from "../components/common/ErrorDialog";
 import { ExpandableSearch } from "../components/common/ExpandableSearch";
+import { FolderDropdown } from "../components/common/FolderDropdown";
 import { PageHeader } from "../components/common/PageHeader";
-import { ProviderIconList } from "../components/common/ProviderIconList";
 import { SortDropdown } from "../components/common/SortDropdown";
 import { LoadingState } from "../components/common/Spinner";
-import { WorkflowCanvasPreview } from "../components/common/WorkflowCanvasPreview";
 import { CreateWorkflowDialog } from "../components/CreateWorkflowDialog";
 import {
     FolderCard,
@@ -56,13 +41,13 @@ import {
 import { logger } from "../lib/logger";
 import { createDragPreview } from "../lib/utils";
 import { convertToReactFlowFormat } from "../lib/workflowLayout";
-import { extractProvidersFromNodes } from "../lib/workflowUtils";
 import { useWorkflowGenerationChatStore } from "../stores/workflowGenerationChatStore";
 
+// Local workflow type that maps to API response (snake_case) and WorkflowSummary (camelCase)
 interface Workflow {
     id: string;
     name: string;
-    description?: string;
+    description?: string | null;
     folder_id?: string | null;
     definition?: {
         nodes?: Record<
@@ -86,6 +71,18 @@ interface Workflow {
     updated_at: string;
 }
 
+// Convert local Workflow to WorkflowSummary for card components
+function toWorkflowSummary(workflow: Workflow): WorkflowSummary {
+    return {
+        id: workflow.id,
+        name: workflow.name,
+        description: workflow.description ?? null,
+        definition: workflow.definition as Record<string, unknown> | null,
+        createdAt: new Date(workflow.created_at),
+        updatedAt: new Date(workflow.updated_at)
+    };
+}
+
 export function Workflows() {
     const [searchParams, setSearchParams] = useSearchParams();
     const currentFolderId = searchParams.get("folder");
@@ -106,7 +103,6 @@ export function Workflows() {
     const [folderToDelete, setFolderToDelete] = useState<FolderWithCounts | null>(null);
     const [workflowToDelete, setWorkflowToDelete] = useState<Workflow | null>(null);
     const [_isDeleting, setIsDeleting] = useState(false);
-    const [openMenuId, setOpenMenuId] = useState<string | null>(null);
     const [error, setError] = useState<{ title: string; message: string } | null>(null);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [selectedFolderIds, setSelectedFolderIds] = useState<Set<string>>(new Set());
@@ -116,8 +112,7 @@ export function Workflows() {
         type: "workflow" | "folder";
     }>({ isOpen: false, position: { x: 0, y: 0 }, type: "workflow" });
     const [isBatchDeleting, setIsBatchDeleting] = useState(false);
-    const [isFoldersCollapsed, setIsFoldersCollapsed] = useState(false);
-    const menuRef = useRef<HTMLDivElement>(null);
+    const [showFoldersSection, setShowFoldersSection] = useState(false);
     const navigate = useNavigate();
 
     // Search functionality
@@ -166,21 +161,6 @@ export function Workflows() {
             setCurrentFolder(null);
         }
     }, [currentFolderId, folders]);
-
-    // Close menu when clicking outside
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-                setOpenMenuId(null);
-            }
-        };
-
-        if (openMenuId) {
-            document.addEventListener("mousedown", handleClickOutside);
-            return () => document.removeEventListener("mousedown", handleClickOutside);
-        }
-        return undefined;
-    }, [openMenuId]);
 
     const loadFolders = async () => {
         setIsLoadingFolders(true);
@@ -322,8 +302,6 @@ export function Workflows() {
 
     const handleDuplicateWorkflow = async (workflow: Workflow) => {
         try {
-            setOpenMenuId(null);
-
             // Fetch the full workflow with definition
             const response = await getWorkflow(workflow.id);
             if (!response.success || !response.data) {
@@ -346,7 +324,11 @@ export function Workflows() {
                   };
 
             // Create workflow using the centralized API function
-            const createData = await createWorkflow(newName, workflow.description, newDefinition);
+            const createData = await createWorkflow(
+                newName,
+                workflow.description ?? undefined,
+                newDefinition
+            );
 
             if (createData.success && createData.data) {
                 // Refresh the workflow list
@@ -513,8 +495,7 @@ export function Workflows() {
             e.dataTransfer.effectAllowed = "move";
 
             // Create custom drag preview
-            const cleanup = createDragPreview(e, itemIds.length, "workflow");
-            cleanup();
+            createDragPreview(e, itemIds.length, "workflow");
         },
         [selectedIds]
     );
@@ -647,18 +628,9 @@ export function Workflows() {
         }
     ];
 
-    const formatDate = (dateString: string) => {
-        const date = new Date(dateString);
-        return date.toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric"
-        });
-    };
-
     // Filter folders to show only those with workflows when at root
     const foldersToShow = currentFolderId ? [] : folders;
-    const showFoldersSection = !currentFolderId && foldersToShow.length > 0;
+    const canShowFoldersSection = !currentFolderId && foldersToShow.length > 0;
 
     return (
         <div className="max-w-7xl mx-auto px-6 py-8">
@@ -736,13 +708,13 @@ export function Workflows() {
                                 onChange={setSortField}
                                 fields={availableFields}
                             />
-                            <Button
-                                variant="ghost"
-                                onClick={() => setIsCreateFolderDialogOpen(true)}
-                                title="Create folder"
-                            >
-                                <FolderPlus className="w-4 h-4" />
-                            </Button>
+                            <FolderDropdown
+                                onCreateFolder={() => setIsCreateFolderDialogOpen(true)}
+                                showFoldersSection={showFoldersSection}
+                                onToggleFoldersSection={() =>
+                                    setShowFoldersSection(!showFoldersSection)
+                                }
+                            />
                             <Button
                                 variant="secondary"
                                 onClick={openGenerationPanel}
@@ -776,42 +748,30 @@ export function Workflows() {
             ) : (
                 <>
                     {/* Folders Section */}
-                    {showFoldersSection && (
+                    {showFoldersSection && canShowFoldersSection && (
                         <>
-                            <button
-                                onClick={() => setIsFoldersCollapsed(!isFoldersCollapsed)}
-                                className="flex items-center gap-1.5 mb-4 group"
-                            >
-                                <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide group-hover:text-foreground transition-colors">
+                            <div className="mb-4">
+                                <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
                                     Folders
                                 </h2>
-                                <ChevronDown
-                                    className={`w-4 h-4 text-muted-foreground group-hover:text-foreground transition-all ${
-                                        isFoldersCollapsed ? "-rotate-90" : ""
-                                    }`}
-                                />
-                            </button>
-                            {!isFoldersCollapsed && (
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                                    {foldersToShow.map((folder) => (
-                                        <FolderCard
-                                            key={folder.id}
-                                            folder={folder}
-                                            onClick={(e) => handleFolderClick(e, folder)}
-                                            onEdit={() => setFolderToEdit(folder)}
-                                            onDelete={() => setFolderToDelete(folder)}
-                                            isSelected={selectedFolderIds.has(folder.id)}
-                                            onContextMenu={(e) =>
-                                                handleFolderContextMenu(e, folder)
-                                            }
-                                            onDrop={(itemIds, itemType) =>
-                                                handleDropOnFolder(folder.id, itemIds, itemType)
-                                            }
-                                            displayItemType="workflow"
-                                        />
-                                    ))}
-                                </div>
-                            )}
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                                {foldersToShow.map((folder) => (
+                                    <FolderCard
+                                        key={folder.id}
+                                        folder={folder}
+                                        onClick={(e) => handleFolderClick(e, folder)}
+                                        onEdit={() => setFolderToEdit(folder)}
+                                        onDelete={() => setFolderToDelete(folder)}
+                                        isSelected={selectedFolderIds.has(folder.id)}
+                                        onContextMenu={(e) => handleFolderContextMenu(e, folder)}
+                                        onDrop={(itemIds, itemType) =>
+                                            handleDropOnFolder(folder.id, itemIds, itemType)
+                                        }
+                                        displayItemType="workflow"
+                                    />
+                                ))}
+                            </div>
                             <div className="border-t border-border my-6" />
                             <div className="mb-4">
                                 <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
@@ -858,156 +818,26 @@ export function Workflows() {
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {filteredWorkflows.map((workflow) => (
-                                <div
+                                <WorkflowCard
                                     key={workflow.id}
-                                    className={`bg-card border rounded-lg overflow-hidden hover:shadow-md transition-all group relative cursor-pointer select-none flex flex-col h-full ${
-                                        selectedIds.has(workflow.id)
-                                            ? "border-primary ring-2 ring-primary/30 bg-primary/5"
-                                            : "border-border hover:border-primary"
-                                    }`}
+                                    workflow={toWorkflowSummary(workflow)}
+                                    isSelected={selectedIds.has(workflow.id)}
                                     onClick={(e) => handleCardClick(e, workflow)}
                                     onContextMenu={(e) => handleContextMenu(e, workflow)}
-                                    draggable
                                     onDragStart={(e) => handleDragStart(e, workflow)}
-                                >
-                                    {/* Canvas Preview */}
-                                    <WorkflowCanvasPreview
-                                        definition={workflow.definition}
-                                        height="h-32"
-                                        className="border-b border-border"
-                                    />
-
-                                    {/* Drag Handle - visible on hover */}
-                                    <div
-                                        className="absolute bottom-2 right-2 p-1 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing"
-                                        onMouseDown={(e) => e.stopPropagation()}
-                                    >
-                                        <GripVertical className="w-4 h-4" />
-                                    </div>
-
-                                    <div className="flex-1 p-5">
-                                        <div className="flex items-center justify-between mb-3">
-                                            <FileText className="w-5 h-5 text-primary" />
-                                            <div className="flex items-center gap-1">
-                                                <Badge variant="default" size="sm">
-                                                    Workflow
-                                                </Badge>
-
-                                                {/* Menu Button */}
-                                                <div
-                                                    className="relative"
-                                                    ref={
-                                                        openMenuId === workflow.id ? menuRef : null
-                                                    }
-                                                >
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setOpenMenuId(
-                                                                openMenuId === workflow.id
-                                                                    ? null
-                                                                    : workflow.id
-                                                            );
-                                                        }}
-                                                        className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
-                                                        title="More options"
-                                                    >
-                                                        <MoreVertical className="w-4 h-4" />
-                                                    </button>
-
-                                                    {/* Dropdown Menu */}
-                                                    {openMenuId === workflow.id && (
-                                                        <div className="absolute right-0 mt-1 w-48 bg-card border border-border rounded-lg shadow-lg py-1 z-10">
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleDuplicateWorkflow(
-                                                                        workflow
-                                                                    );
-                                                                }}
-                                                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
-                                                            >
-                                                                <Copy className="w-4 h-4" />
-                                                                Duplicate
-                                                            </button>
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    setOpenMenuId(null);
-                                                                    setSelectedIds(
-                                                                        new Set([workflow.id])
-                                                                    );
-                                                                    setIsMoveDialogOpen(true);
-                                                                }}
-                                                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
-                                                            >
-                                                                <FolderInput className="w-4 h-4" />
-                                                                Move to folder
-                                                            </button>
-                                                            {currentFolderId && (
-                                                                <button
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        setOpenMenuId(null);
-                                                                        handleRemoveFromFolder(
-                                                                            workflow.id
-                                                                        );
-                                                                    }}
-                                                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
-                                                                >
-                                                                    <FolderMinus className="w-4 h-4" />
-                                                                    Remove from folder
-                                                                </button>
-                                                            )}
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    setOpenMenuId(null);
-                                                                    setWorkflowToDelete(workflow);
-                                                                }}
-                                                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors"
-                                                            >
-                                                                <Trash2 className="w-4 h-4" />
-                                                                Delete
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <h3 className="text-base font-semibold text-foreground mb-2 group-hover:text-primary transition-colors">
-                                            {workflow.name}
-                                        </h3>
-
-                                        {workflow.description && (
-                                            <p className="text-sm text-muted-foreground line-clamp-2">
-                                                {workflow.description}
-                                            </p>
-                                        )}
-
-                                        {/* Footer - always at bottom */}
-                                        <div className="mt-auto pt-4">
-                                            <ProviderIconList
-                                                providers={extractProvidersFromNodes(
-                                                    workflow.definition?.nodes
-                                                )}
-                                                maxVisible={5}
-                                                iconSize="sm"
-                                                className="mb-3"
-                                            />
-
-                                            <div className="flex items-center gap-4 text-xs text-muted-foreground pt-3 border-t border-border">
-                                                <div className="flex items-center gap-1">
-                                                    <Calendar className="w-3 h-3" />
-                                                    <span>
-                                                        Created {formatDate(workflow.created_at)}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                                    onDuplicate={() => handleDuplicateWorkflow(workflow)}
+                                    onMoveToFolder={() => {
+                                        setSelectedIds(new Set([workflow.id]));
+                                        setIsMoveDialogOpen(true);
+                                    }}
+                                    onRemoveFromFolder={
+                                        currentFolderId
+                                            ? () => handleRemoveFromFolder(workflow.id)
+                                            : undefined
+                                    }
+                                    onDelete={() => setWorkflowToDelete(workflow)}
+                                    currentFolderId={currentFolderId}
+                                />
                             ))}
                         </div>
                     )}

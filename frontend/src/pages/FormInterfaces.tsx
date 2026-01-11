@@ -1,28 +1,19 @@
-import {
-    ClipboardList,
-    Plus,
-    MoreVertical,
-    Copy,
-    Trash2,
-    Eye,
-    Edit,
-    Globe,
-    FolderPlus,
-    FolderInput,
-    FolderMinus,
-    GripVertical,
-    ChevronDown,
-    Search
-} from "lucide-react";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { ClipboardList, Plus, Trash2, FolderInput, FolderMinus, Search } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import type { FormInterface, Folder, FolderWithCounts } from "@flowmaestro/shared";
-import { Badge } from "../components/common/Badge";
+import type {
+    FormInterface,
+    Folder,
+    FolderWithCounts,
+    FormInterfaceSummary
+} from "@flowmaestro/shared";
+import { FormInterfaceCard } from "../components/cards";
 import { Button } from "../components/common/Button";
 import { ConfirmDialog } from "../components/common/ConfirmDialog";
 import { ContextMenu, type ContextMenuItem } from "../components/common/ContextMenu";
 import { Dialog } from "../components/common/Dialog";
 import { ExpandableSearch } from "../components/common/ExpandableSearch";
+import { FolderDropdown } from "../components/common/FolderDropdown";
 import { PageHeader } from "../components/common/PageHeader";
 import { SortDropdown } from "../components/common/SortDropdown";
 import { LoadingState } from "../components/common/Spinner";
@@ -47,6 +38,25 @@ import {
     removeItemsFromFolder
 } from "../lib/api";
 import { logger } from "../lib/logger";
+import { createDragPreview } from "../lib/utils";
+
+// Convert FormInterface to FormInterfaceSummary for card components
+function toFormInterfaceSummary(fi: FormInterface): FormInterfaceSummary {
+    return {
+        id: fi.id,
+        name: fi.name,
+        title: fi.title,
+        description: fi.description ?? undefined,
+        status: fi.status,
+        coverType: fi.coverType,
+        coverValue: fi.coverValue,
+        iconUrl: fi.iconUrl,
+        submissionCount: fi.submissionCount,
+        slug: fi.slug,
+        createdAt: fi.createdAt,
+        updatedAt: fi.updatedAt
+    };
+}
 
 export function FormInterfaces() {
     const navigate = useNavigate();
@@ -75,16 +85,12 @@ export function FormInterfaces() {
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [selectedFolderIds, setSelectedFolderIds] = useState<Set<string>>(new Set());
     const [isBatchDeleting, setIsBatchDeleting] = useState(false);
-    const [isFoldersCollapsed, setIsFoldersCollapsed] = useState(false);
+    const [showFoldersSection, setShowFoldersSection] = useState(false);
     const [contextMenu, setContextMenu] = useState<{
         isOpen: boolean;
         position: { x: number; y: number };
         type: "form" | "folder";
     }>({ isOpen: false, position: { x: 0, y: 0 }, type: "form" });
-
-    // Dropdown menu state
-    const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-    const menuRef = useRef<HTMLDivElement>(null);
 
     // Search functionality
     const {
@@ -135,20 +141,6 @@ export function FormInterfaces() {
             setCurrentFolder(null);
         }
     }, [currentFolderId, folders]);
-
-    // Close menu on outside click
-    useEffect(() => {
-        if (!openMenuId) return;
-
-        const handleClickOutside = (event: MouseEvent) => {
-            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-                setOpenMenuId(null);
-            }
-        };
-
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, [openMenuId]);
 
     const loadFormInterfaces = async (folderId?: string) => {
         setIsLoading(true);
@@ -211,7 +203,6 @@ export function FormInterfaces() {
                 message: err instanceof Error ? err.message : "Failed to duplicate"
             });
         }
-        setOpenMenuId(null);
     };
 
     const handleCreated = (newFormInterface: { id: string; title: string }) => {
@@ -268,12 +259,13 @@ export function FormInterfaces() {
                     return newSet;
                 });
             } else if (selectedFolderIds.size === 0) {
-                setSearchParams({ folder: folder.id });
+                // Navigate to unified folder contents page
+                navigate(`/folders/${folder.id}`);
             } else {
                 setSelectedFolderIds(new Set());
             }
         },
-        [setSearchParams, selectedFolderIds.size]
+        [navigate, selectedFolderIds.size]
     );
 
     const handleFolderContextMenu = useCallback(
@@ -360,6 +352,9 @@ export function FormInterfaces() {
                 JSON.stringify({ itemIds, itemType: "form-interface" })
             );
             e.dataTransfer.effectAllowed = "move";
+
+            // Create custom drag preview
+            createDragPreview(e, itemIds.length, "form");
         },
         [selectedIds]
     );
@@ -379,14 +374,6 @@ export function FormInterfaces() {
         },
         [currentFolderId]
     );
-
-    const formatDate = (date: Date | string) => {
-        return new Date(date).toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric"
-        });
-    };
 
     // Selection handlers for batch operations
     const handleCardClick = useCallback(
@@ -506,7 +493,7 @@ export function FormInterfaces() {
 
     // Folders to show
     const foldersToShow = currentFolderId ? [] : folders;
-    const showFoldersSection = !currentFolderId && foldersToShow.length > 0;
+    const canShowFoldersSection = !currentFolderId && foldersToShow.length > 0;
 
     if (isLoading || isLoadingFolders) {
         return (
@@ -592,13 +579,13 @@ export function FormInterfaces() {
                                 onChange={setSortField}
                                 fields={availableFields}
                             />
-                            <Button
-                                variant="ghost"
-                                onClick={() => setIsCreateFolderDialogOpen(true)}
-                                title="Create folder"
-                            >
-                                <FolderPlus className="w-4 h-4" />
-                            </Button>
+                            <FolderDropdown
+                                onCreateFolder={() => setIsCreateFolderDialogOpen(true)}
+                                showFoldersSection={showFoldersSection}
+                                onToggleFoldersSection={() =>
+                                    setShowFoldersSection(!showFoldersSection)
+                                }
+                            />
                             <Button variant="primary" onClick={() => setIsCreateDialogOpen(true)}>
                                 <Plus className="w-4 h-4 mr-2" />
                                 Create Form Interface
@@ -622,40 +609,30 @@ export function FormInterfaces() {
             )}
 
             {/* Folders Section */}
-            {showFoldersSection && (
+            {showFoldersSection && canShowFoldersSection && (
                 <>
-                    <button
-                        onClick={() => setIsFoldersCollapsed(!isFoldersCollapsed)}
-                        className="flex items-center gap-1.5 mb-4 group"
-                    >
-                        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide group-hover:text-foreground transition-colors">
+                    <div className="mb-4">
+                        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
                             Folders
                         </h2>
-                        <ChevronDown
-                            className={`w-4 h-4 text-muted-foreground group-hover:text-foreground transition-all ${
-                                isFoldersCollapsed ? "-rotate-90" : ""
-                            }`}
-                        />
-                    </button>
-                    {!isFoldersCollapsed && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                            {foldersToShow.map((folder) => (
-                                <FolderCard
-                                    key={folder.id}
-                                    folder={folder}
-                                    onClick={(e) => handleFolderClick(e, folder)}
-                                    onEdit={() => setFolderToEdit(folder)}
-                                    onDelete={() => setFolderToDelete(folder)}
-                                    isSelected={selectedFolderIds.has(folder.id)}
-                                    onContextMenu={(e) => handleFolderContextMenu(e, folder)}
-                                    onDrop={(itemIds, itemType) =>
-                                        handleDropOnFolder(folder.id, itemIds, itemType)
-                                    }
-                                    displayItemType="form-interface"
-                                />
-                            ))}
-                        </div>
-                    )}
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                        {foldersToShow.map((folder) => (
+                            <FolderCard
+                                key={folder.id}
+                                folder={folder}
+                                onClick={(e) => handleFolderClick(e, folder)}
+                                onEdit={() => setFolderToEdit(folder)}
+                                onDelete={() => setFolderToDelete(folder)}
+                                isSelected={selectedFolderIds.has(folder.id)}
+                                onContextMenu={(e) => handleFolderContextMenu(e, folder)}
+                                onDrop={(itemIds, itemType) =>
+                                    handleDropOnFolder(folder.id, itemIds, itemType)
+                                }
+                                displayItemType="form-interface"
+                            />
+                        ))}
+                    </div>
                     <div className="border-t border-border my-6" />
                     <div className="mb-4">
                         <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
@@ -697,194 +674,33 @@ export function FormInterfaces() {
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
                     {filteredFormInterfaces.map((fi) => (
-                        <div
+                        <FormInterfaceCard
                             key={fi.id}
-                            className={`bg-card border rounded-lg transition-colors cursor-pointer select-none group relative ${
-                                selectedIds.has(fi.id)
-                                    ? "border-primary ring-2 ring-primary/30 bg-primary/5"
-                                    : "border-border hover:border-primary/50"
-                            }`}
-                            draggable
-                            onDragStart={(e) => handleDragStart(e, fi)}
+                            formInterface={toFormInterfaceSummary(fi)}
+                            isSelected={selectedIds.has(fi.id)}
                             onClick={(e) => handleCardClick(e, fi)}
                             onContextMenu={(e) => handleContextMenu(e, fi)}
-                        >
-                            {/* Drag Handle - visible on hover */}
-                            <div
-                                className="absolute bottom-2 right-2 p-1 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing z-10"
-                                onMouseDown={(e) => e.stopPropagation()}
-                            >
-                                <GripVertical className="w-4 h-4" />
-                            </div>
-
-                            {/* Cover with icon */}
-                            <div className="relative">
-                                <div
-                                    className="h-32 w-full overflow-hidden rounded-t-lg"
-                                    style={{
-                                        backgroundColor:
-                                            fi.coverType === "color" ? fi.coverValue : "#6366f1",
-                                        backgroundImage:
-                                            fi.coverType === "image" || fi.coverType === "stock"
-                                                ? `url(${fi.coverValue})`
-                                                : undefined,
-                                        backgroundSize: "cover",
-                                        backgroundPosition: "center"
-                                    }}
-                                />
-                                {/* Icon overlay - positioned outside cover to avoid clip */}
-                                {fi.iconUrl && (
-                                    <div className="absolute -bottom-6 left-4">
-                                        <div className="w-12 h-12 rounded-lg bg-card border-2 border-background overflow-hidden flex items-center justify-center text-2xl">
-                                            {fi.iconUrl.startsWith("http") ? (
-                                                <img
-                                                    src={fi.iconUrl}
-                                                    alt=""
-                                                    className="w-full h-full object-cover"
-                                                />
-                                            ) : (
-                                                fi.iconUrl
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Content */}
-                            <div className={`p-4 ${fi.iconUrl ? "pt-8" : ""}`}>
-                                <div className="flex items-start justify-between">
-                                    <div className="flex-1 min-w-0">
-                                        <h3 className="font-semibold text-foreground truncate">
-                                            {fi.title}
-                                        </h3>
-                                        {fi.description && (
-                                            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                                                {fi.description}
-                                            </p>
-                                        )}
-                                    </div>
-
-                                    {/* Menu */}
-                                    <div
-                                        className="relative"
-                                        ref={openMenuId === fi.id ? menuRef : null}
-                                        onClick={(e) => e.stopPropagation()}
-                                    >
-                                        <button
-                                            onClick={() =>
-                                                setOpenMenuId(openMenuId === fi.id ? null : fi.id)
-                                            }
-                                            className="p-1.5 hover:bg-muted rounded-md text-muted-foreground"
-                                        >
-                                            <MoreVertical className="w-4 h-4" />
-                                        </button>
-
-                                        {openMenuId === fi.id && (
-                                            <div className="absolute right-0 mt-1 w-48 bg-card border border-border rounded-lg shadow-lg py-1 z-50">
-                                                <button
-                                                    onClick={() => {
-                                                        navigate(`/form-interfaces/${fi.id}/edit`);
-                                                        setOpenMenuId(null);
-                                                    }}
-                                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted"
-                                                >
-                                                    <Edit className="w-4 h-4" />
-                                                    Edit
-                                                </button>
-                                                {fi.status === "published" && (
-                                                    <button
-                                                        onClick={() => {
-                                                            window.open(`/i/${fi.slug}`, "_blank");
-                                                            setOpenMenuId(null);
-                                                        }}
-                                                        className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted"
-                                                    >
-                                                        <Eye className="w-4 h-4" />
-                                                        View Live
-                                                    </button>
-                                                )}
-                                                <button
-                                                    onClick={() => {
-                                                        navigate(
-                                                            `/form-interfaces/${fi.id}/submissions`
-                                                        );
-                                                        setOpenMenuId(null);
-                                                    }}
-                                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted"
-                                                >
-                                                    <ClipboardList className="w-4 h-4" />
-                                                    Submissions ({fi.submissionCount})
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDuplicate(fi)}
-                                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted"
-                                                >
-                                                    <Copy className="w-4 h-4" />
-                                                    Duplicate
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        setOpenMenuId(null);
-                                                        setSelectedIds(new Set([fi.id]));
-                                                        setIsMoveDialogOpen(true);
-                                                    }}
-                                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted"
-                                                >
-                                                    <FolderInput className="w-4 h-4" />
-                                                    Move to folder
-                                                </button>
-                                                {currentFolderId && (
-                                                    <button
-                                                        onClick={() => {
-                                                            setOpenMenuId(null);
-                                                            handleRemoveFromFolder(fi.id);
-                                                        }}
-                                                        className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted"
-                                                    >
-                                                        <FolderMinus className="w-4 h-4" />
-                                                        Remove from folder
-                                                    </button>
-                                                )}
-                                                <hr className="my-1 border-border" />
-                                                <button
-                                                    onClick={() => {
-                                                        setDeleteTarget(fi);
-                                                        setOpenMenuId(null);
-                                                    }}
-                                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                    Delete
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* Status & Stats */}
-                                <div className="flex items-center gap-2 mt-3">
-                                    <Badge
-                                        variant={fi.status === "published" ? "success" : "default"}
-                                    >
-                                        {fi.status === "published" ? (
-                                            <>
-                                                <Globe className="w-3 h-3 mr-1" />
-                                                Published
-                                            </>
-                                        ) : (
-                                            "Draft"
-                                        )}
-                                    </Badge>
-                                    <span className="text-xs text-muted-foreground">
-                                        {fi.submissionCount} submissions
-                                    </span>
-                                </div>
-
-                                <p className="text-xs text-muted-foreground mt-2">
-                                    Updated {formatDate(fi.updatedAt)}
-                                </p>
-                            </div>
-                        </div>
+                            onDragStart={(e) => handleDragStart(e, fi)}
+                            onEdit={() => navigate(`/form-interfaces/${fi.id}/edit`)}
+                            onViewLive={
+                                fi.status === "published" && fi.slug
+                                    ? () => window.open(`/i/${fi.slug}`, "_blank")
+                                    : undefined
+                            }
+                            onViewSubmissions={() =>
+                                navigate(`/form-interfaces/${fi.id}/submissions`)
+                            }
+                            onDuplicate={() => handleDuplicate(fi)}
+                            onMoveToFolder={() => {
+                                setSelectedIds(new Set([fi.id]));
+                                setIsMoveDialogOpen(true);
+                            }}
+                            onRemoveFromFolder={
+                                currentFolderId ? () => handleRemoveFromFolder(fi.id) : undefined
+                            }
+                            onDelete={() => setDeleteTarget(fi)}
+                            currentFolderId={currentFolderId}
+                        />
                     ))}
                 </div>
             )}

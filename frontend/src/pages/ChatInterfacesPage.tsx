@@ -1,30 +1,20 @@
-import {
-    MessageSquare,
-    Plus,
-    MoreVertical,
-    Copy,
-    Trash2,
-    Eye,
-    Edit,
-    Globe,
-    Users,
-    FolderPlus,
-    FolderInput,
-    FolderMinus,
-    GripVertical,
-    ChevronDown,
-    Search
-} from "lucide-react";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { MessageSquare, Plus, Trash2, FolderInput, FolderMinus, Search } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import type { ChatInterface, Folder, FolderWithCounts } from "@flowmaestro/shared";
+import type {
+    ChatInterface,
+    Folder,
+    FolderWithCounts,
+    ChatInterfaceSummary
+} from "@flowmaestro/shared";
+import { ChatInterfaceCard } from "../components/cards";
 import { CreateChatInterfaceDialog } from "../components/chat/builder/CreateChatInterfaceDialog";
-import { Badge } from "../components/common/Badge";
 import { Button } from "../components/common/Button";
 import { ConfirmDialog } from "../components/common/ConfirmDialog";
 import { ContextMenu, type ContextMenuItem } from "../components/common/ContextMenu";
 import { Dialog } from "../components/common/Dialog";
 import { ExpandableSearch } from "../components/common/ExpandableSearch";
+import { FolderDropdown } from "../components/common/FolderDropdown";
 import { PageHeader } from "../components/common/PageHeader";
 import { SortDropdown } from "../components/common/SortDropdown";
 import { LoadingState } from "../components/common/Spinner";
@@ -48,6 +38,26 @@ import {
     removeItemsFromFolder
 } from "../lib/api";
 import { logger } from "../lib/logger";
+import { createDragPreview } from "../lib/utils";
+
+// Convert ChatInterface to ChatInterfaceSummary for card components
+function toChatInterfaceSummary(ci: ChatInterface): ChatInterfaceSummary {
+    return {
+        id: ci.id,
+        name: ci.name,
+        title: ci.title,
+        description: ci.description ?? undefined,
+        status: ci.status,
+        coverType: ci.coverType,
+        coverValue: ci.coverValue,
+        iconUrl: ci.iconUrl,
+        sessionCount: ci.sessionCount,
+        messageCount: ci.messageCount,
+        slug: ci.slug,
+        createdAt: ci.createdAt,
+        updatedAt: ci.updatedAt
+    };
+}
 
 export function ChatInterfacesPage() {
     const navigate = useNavigate();
@@ -76,16 +86,12 @@ export function ChatInterfacesPage() {
     // Selection state
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [isBatchDeleting, setIsBatchDeleting] = useState(false);
-    const [isFoldersCollapsed, setIsFoldersCollapsed] = useState(false);
+    const [showFoldersSection, setShowFoldersSection] = useState(false);
     const [contextMenu, setContextMenu] = useState<{
         isOpen: boolean;
         position: { x: number; y: number };
         type: "chat" | "folder";
     }>({ isOpen: false, position: { x: 0, y: 0 }, type: "chat" });
-
-    // Dropdown menu state
-    const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-    const menuRef = useRef<HTMLDivElement>(null);
 
     // Search functionality
     const {
@@ -136,20 +142,6 @@ export function ChatInterfacesPage() {
             setCurrentFolder(null);
         }
     }, [currentFolderId, folders]);
-
-    // Close menu on outside click
-    useEffect(() => {
-        if (!openMenuId) return;
-
-        const handleClickOutside = (event: MouseEvent) => {
-            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-                setOpenMenuId(null);
-            }
-        };
-
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, [openMenuId]);
 
     const loadFolders = async () => {
         setIsLoadingFolders(true);
@@ -212,7 +204,6 @@ export function ChatInterfacesPage() {
                 message: err instanceof Error ? err.message : "Failed to duplicate"
             });
         }
-        setOpenMenuId(null);
     };
 
     const handleCreated = (newChatInterface: { id: string; title: string }) => {
@@ -269,12 +260,13 @@ export function ChatInterfacesPage() {
                     return newSet;
                 });
             } else if (selectedFolderIds.size === 0) {
-                setSearchParams({ folder: folder.id });
+                // Navigate to unified folder contents page
+                navigate(`/folders/${folder.id}`);
             } else {
                 setSelectedFolderIds(new Set());
             }
         },
-        [setSearchParams, selectedFolderIds.size]
+        [navigate, selectedFolderIds.size]
     );
 
     const handleFolderContextMenu = useCallback(
@@ -327,6 +319,9 @@ export function ChatInterfacesPage() {
                 JSON.stringify({ itemIds, itemType: "chat-interface" })
             );
             e.dataTransfer.effectAllowed = "move";
+
+            // Create custom drag preview
+            createDragPreview(e, itemIds.length, "chat");
         },
         [selectedIds]
     );
@@ -379,14 +374,6 @@ export function ChatInterfacesPage() {
         } catch (err) {
             logger.error("Failed to remove chat interface from folder", err);
         }
-    };
-
-    const formatDate = (date: Date | string) => {
-        return new Date(date).toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric"
-        });
     };
 
     // Selection handlers for batch operations
@@ -507,7 +494,7 @@ export function ChatInterfacesPage() {
 
     // Folders to show
     const foldersToShow = currentFolderId ? [] : folders;
-    const showFoldersSection = !currentFolderId && foldersToShow.length > 0;
+    const canShowFoldersSection = !currentFolderId && foldersToShow.length > 0;
 
     if (isLoading || isLoadingFolders) {
         return (
@@ -593,13 +580,13 @@ export function ChatInterfacesPage() {
                                 onChange={setSortField}
                                 fields={availableFields}
                             />
-                            <Button
-                                variant="ghost"
-                                onClick={() => setIsCreateFolderDialogOpen(true)}
-                                title="Create folder"
-                            >
-                                <FolderPlus className="w-4 h-4" />
-                            </Button>
+                            <FolderDropdown
+                                onCreateFolder={() => setIsCreateFolderDialogOpen(true)}
+                                showFoldersSection={showFoldersSection}
+                                onToggleFoldersSection={() =>
+                                    setShowFoldersSection(!showFoldersSection)
+                                }
+                            />
                             <Button variant="primary" onClick={() => setIsCreateDialogOpen(true)}>
                                 <Plus className="w-4 h-4 mr-2" />
                                 Create Chat Interface
@@ -623,40 +610,30 @@ export function ChatInterfacesPage() {
             )}
 
             {/* Folders Section */}
-            {showFoldersSection && (
+            {showFoldersSection && canShowFoldersSection && (
                 <>
-                    <button
-                        onClick={() => setIsFoldersCollapsed(!isFoldersCollapsed)}
-                        className="flex items-center gap-1.5 mb-4 group"
-                    >
-                        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide group-hover:text-foreground transition-colors">
+                    <div className="mb-4">
+                        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
                             Folders
                         </h2>
-                        <ChevronDown
-                            className={`w-4 h-4 text-muted-foreground group-hover:text-foreground transition-all ${
-                                isFoldersCollapsed ? "-rotate-90" : ""
-                            }`}
-                        />
-                    </button>
-                    {!isFoldersCollapsed && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                            {foldersToShow.map((folder) => (
-                                <FolderCard
-                                    key={folder.id}
-                                    folder={folder}
-                                    onClick={(e) => handleFolderClick(e, folder)}
-                                    onEdit={() => setFolderToEdit(folder)}
-                                    onDelete={() => setFolderToDelete(folder)}
-                                    isSelected={selectedFolderIds.has(folder.id)}
-                                    onContextMenu={(e) => handleFolderContextMenu(e, folder)}
-                                    onDrop={(itemIds, itemType) =>
-                                        handleDropOnFolder(folder.id, itemIds, itemType)
-                                    }
-                                    displayItemType="chat-interface"
-                                />
-                            ))}
-                        </div>
-                    )}
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                        {foldersToShow.map((folder) => (
+                            <FolderCard
+                                key={folder.id}
+                                folder={folder}
+                                onClick={(e) => handleFolderClick(e, folder)}
+                                onEdit={() => setFolderToEdit(folder)}
+                                onDelete={() => setFolderToDelete(folder)}
+                                isSelected={selectedFolderIds.has(folder.id)}
+                                onContextMenu={(e) => handleFolderContextMenu(e, folder)}
+                                onDrop={(itemIds, itemType) =>
+                                    handleDropOnFolder(folder.id, itemIds, itemType)
+                                }
+                                displayItemType="chat-interface"
+                            />
+                        ))}
+                    </div>
                     <div className="border-t border-border my-6" />
                     <div className="mb-4">
                         <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
@@ -698,199 +675,31 @@ export function ChatInterfacesPage() {
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
                     {filteredChatInterfaces.map((ci) => (
-                        <div
+                        <ChatInterfaceCard
                             key={ci.id}
-                            className={`group bg-card border rounded-lg transition-colors cursor-pointer select-none ${
-                                selectedIds.has(ci.id)
-                                    ? "border-primary ring-2 ring-primary/30 bg-primary/5"
-                                    : "border-border hover:border-primary/50"
-                            }`}
-                            draggable
-                            onDragStart={(e) => handleDragStart(e, ci)}
+                            chatInterface={toChatInterfaceSummary(ci)}
+                            isSelected={selectedIds.has(ci.id)}
                             onClick={(e) => handleCardClick(e, ci)}
                             onContextMenu={(e) => handleContextMenu(e, ci)}
-                        >
-                            {/* Drag Handle - visible on hover */}
-                            <div
-                                className="absolute bottom-2 right-2 p-1 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing z-10"
-                                onMouseDown={(e) => e.stopPropagation()}
-                            >
-                                <GripVertical className="w-4 h-4" />
-                            </div>
-
-                            {/* Cover with icon */}
-                            <div className="relative">
-                                <div
-                                    className="h-32 w-full overflow-hidden rounded-t-lg"
-                                    style={{
-                                        backgroundColor:
-                                            ci.coverType === "color" ? ci.coverValue : "#6366f1",
-                                        backgroundImage:
-                                            ci.coverType === "image"
-                                                ? `url(${ci.coverValue})`
-                                                : ci.coverType === "gradient"
-                                                  ? ci.coverValue
-                                                  : undefined,
-                                        backgroundSize: "cover",
-                                        backgroundPosition: "center"
-                                    }}
-                                />
-                                {/* Icon overlay - positioned outside cover to avoid clip */}
-                                {ci.iconUrl && (
-                                    <div className="absolute -bottom-6 left-4">
-                                        <div className="w-12 h-12 rounded-lg bg-card border-2 border-background overflow-hidden flex items-center justify-center text-2xl">
-                                            {ci.iconUrl.startsWith("http") ? (
-                                                <img
-                                                    src={ci.iconUrl}
-                                                    alt=""
-                                                    className="w-full h-full object-cover"
-                                                />
-                                            ) : (
-                                                ci.iconUrl
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Content */}
-                            <div className={`p-4 ${ci.iconUrl ? "pt-8" : ""}`}>
-                                <div className="flex items-start justify-between">
-                                    <div className="flex-1 min-w-0">
-                                        <h3 className="font-semibold text-foreground truncate">
-                                            {ci.title}
-                                        </h3>
-                                        {ci.description && (
-                                            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                                                {ci.description}
-                                            </p>
-                                        )}
-                                    </div>
-
-                                    {/* Menu */}
-                                    <div
-                                        className="relative"
-                                        ref={openMenuId === ci.id ? menuRef : null}
-                                        onClick={(e) => e.stopPropagation()}
-                                    >
-                                        <button
-                                            onClick={() =>
-                                                setOpenMenuId(openMenuId === ci.id ? null : ci.id)
-                                            }
-                                            className="p-1.5 hover:bg-muted rounded-md text-muted-foreground"
-                                        >
-                                            <MoreVertical className="w-4 h-4" />
-                                        </button>
-
-                                        {openMenuId === ci.id && (
-                                            <div className="absolute right-0 mt-1 w-48 bg-card border border-border rounded-lg shadow-lg py-1 z-50">
-                                                <button
-                                                    onClick={() => {
-                                                        navigate(`/chat-interfaces/${ci.id}/edit`);
-                                                        setOpenMenuId(null);
-                                                    }}
-                                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted"
-                                                >
-                                                    <Edit className="w-4 h-4" />
-                                                    Edit
-                                                </button>
-                                                {ci.status === "published" && (
-                                                    <button
-                                                        onClick={() => {
-                                                            window.open(`/c/${ci.slug}`, "_blank");
-                                                            setOpenMenuId(null);
-                                                        }}
-                                                        className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted"
-                                                    >
-                                                        <Eye className="w-4 h-4" />
-                                                        View Live
-                                                    </button>
-                                                )}
-                                                <button
-                                                    onClick={() => {
-                                                        navigate(
-                                                            `/chat-interfaces/${ci.id}/sessions`
-                                                        );
-                                                        setOpenMenuId(null);
-                                                    }}
-                                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted"
-                                                >
-                                                    <Users className="w-4 h-4" />
-                                                    Sessions ({ci.sessionCount})
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDuplicate(ci)}
-                                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted"
-                                                >
-                                                    <Copy className="w-4 h-4" />
-                                                    Duplicate
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        setOpenMenuId(null);
-                                                        setSelectedIds(new Set([ci.id]));
-                                                        setIsMoveDialogOpen(true);
-                                                    }}
-                                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted"
-                                                >
-                                                    <FolderInput className="w-4 h-4" />
-                                                    Move to folder
-                                                </button>
-                                                {currentFolderId && (
-                                                    <button
-                                                        onClick={() => {
-                                                            setOpenMenuId(null);
-                                                            handleRemoveFromFolder(ci.id);
-                                                        }}
-                                                        className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted"
-                                                    >
-                                                        <FolderMinus className="w-4 h-4" />
-                                                        Remove from folder
-                                                    </button>
-                                                )}
-                                                <hr className="my-1 border-border" />
-                                                <button
-                                                    onClick={() => {
-                                                        setDeleteTarget(ci);
-                                                        setOpenMenuId(null);
-                                                    }}
-                                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                    Delete
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* Status & Stats */}
-                                <div className="flex items-center gap-2 mt-3">
-                                    <Badge
-                                        variant={ci.status === "published" ? "success" : "default"}
-                                    >
-                                        {ci.status === "published" ? (
-                                            <>
-                                                <Globe className="w-3 h-3 mr-1" />
-                                                Published
-                                            </>
-                                        ) : (
-                                            "Draft"
-                                        )}
-                                    </Badge>
-                                    <span className="text-xs text-muted-foreground">
-                                        {ci.sessionCount} sessions
-                                    </span>
-                                    <span className="text-xs text-muted-foreground">
-                                        {ci.messageCount} messages
-                                    </span>
-                                </div>
-
-                                <p className="text-xs text-muted-foreground mt-2">
-                                    Updated {formatDate(ci.updatedAt)}
-                                </p>
-                            </div>
-                        </div>
+                            onDragStart={(e) => handleDragStart(e, ci)}
+                            onEdit={() => navigate(`/chat-interfaces/${ci.id}/edit`)}
+                            onViewLive={
+                                ci.status === "published" && ci.slug
+                                    ? () => window.open(`/c/${ci.slug}`, "_blank")
+                                    : undefined
+                            }
+                            onViewSessions={() => navigate(`/chat-interfaces/${ci.id}/sessions`)}
+                            onDuplicate={() => handleDuplicate(ci)}
+                            onMoveToFolder={() => {
+                                setSelectedIds(new Set([ci.id]));
+                                setIsMoveDialogOpen(true);
+                            }}
+                            onRemoveFromFolder={
+                                currentFolderId ? () => handleRemoveFromFolder(ci.id) : undefined
+                            }
+                            onDelete={() => setDeleteTarget(ci)}
+                            currentFolderId={currentFolderId}
+                        />
                     ))}
                 </div>
             )}

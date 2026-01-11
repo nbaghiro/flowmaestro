@@ -37,11 +37,13 @@ import type {
     PublicChatMessage,
     Folder,
     FolderWithCounts,
+    FolderTreeNode,
     FolderContents,
     CreateFolderInput,
     UpdateFolderInput,
     MoveItemsToFolderInput,
     RemoveItemsFromFolderInput,
+    MoveFolderInput,
     FolderResourceType,
     GenerationChatMessage,
     GenerationChatRequest,
@@ -1739,6 +1741,8 @@ export interface ChatWorkflowRequest {
     conversationHistory?: ChatMessage[];
     connectionId: string;
     model?: string;
+    enableThinking?: boolean;
+    thinkingBudget?: number;
 }
 
 export interface ChatWorkflowResponse {
@@ -1753,6 +1757,7 @@ export interface ChatWorkflowResponse {
         connectTo?: string;
         updates?: JsonObject;
     }>;
+    thinking?: string;
 }
 
 export async function chatWorkflow(
@@ -1787,6 +1792,9 @@ export async function chatWorkflow(
 export function streamChatResponse(
     executionId: string,
     callbacks: {
+        onThinkingStart?: () => void;
+        onThinkingToken?: (token: string) => void;
+        onThinkingComplete?: (content: string) => void;
         onToken: (token: string) => void;
         onComplete: (data: ChatWorkflowResponse) => void;
         onError: (error: string) => void;
@@ -1804,6 +1812,20 @@ export function streamChatResponse(
 
     eventSource.addEventListener("connected", (event) => {
         logger.debug("SSE Connected", { eventData: event.data });
+    });
+
+    eventSource.addEventListener("thinking_start", () => {
+        callbacks.onThinkingStart?.();
+    });
+
+    eventSource.addEventListener("thinking_token", (event) => {
+        const data = JSON.parse(event.data);
+        callbacks.onThinkingToken?.(data.token);
+    });
+
+    eventSource.addEventListener("thinking_complete", (event) => {
+        const data = JSON.parse(event.data);
+        callbacks.onThinkingComplete?.(data.content);
     });
 
     eventSource.addEventListener("token", (event) => {
@@ -4770,10 +4792,12 @@ export async function revokeApiKey(id: string): Promise<ApiResponse> {
 export type {
     Folder,
     FolderWithCounts,
+    FolderTreeNode,
     FolderContents,
     CreateFolderInput,
     UpdateFolderInput,
     MoveItemsToFolderInput,
+    MoveFolderInput,
     FolderResourceType
 };
 
@@ -4903,6 +4927,76 @@ export async function deleteFolder(id: string): Promise<ApiResponse> {
         headers: {
             ...(token && { Authorization: `Bearer ${token}` })
         }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Get folder tree structure (all folders as nested tree)
+ */
+export async function getFolderTree(): Promise<ApiResponse<FolderTreeNode[]>> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/folders/tree`, {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Get direct children of a folder
+ */
+export async function getFolderChildren(id: string): Promise<ApiResponse<FolderWithCounts[]>> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/folders/${id}/children`, {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Move a folder to a new parent folder (or to root if newParentId is null)
+ */
+export async function moveFolder(
+    id: string,
+    input: Omit<MoveFolderInput, "folderId">
+): Promise<ApiResponse<Folder>> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/folders/${id}/move`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` })
+        },
+        body: JSON.stringify(input)
     });
 
     if (!response.ok) {

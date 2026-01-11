@@ -1,29 +1,14 @@
-import {
-    BookOpen,
-    Plus,
-    Trash2,
-    MoreVertical,
-    Calendar,
-    Edit2,
-    FileText,
-    Layers,
-    HardDrive,
-    FolderPlus,
-    FolderInput,
-    FolderMinus,
-    GripVertical,
-    ChevronDown,
-    Search
-} from "lucide-react";
-import { useEffect, useState, useRef, useCallback } from "react";
+import { BookOpen, Plus, Trash2, FolderInput, FolderMinus, Search } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import type { Folder, FolderWithCounts } from "@flowmaestro/shared";
+import type { Folder, FolderWithCounts, KnowledgeBaseSummary } from "@flowmaestro/shared";
+import { KnowledgeBaseCard } from "../components/cards";
 import { Alert } from "../components/common/Alert";
-import { Badge } from "../components/common/Badge";
 import { Button } from "../components/common/Button";
 import { ConfirmDialog } from "../components/common/ConfirmDialog";
 import { ContextMenu, type ContextMenuItem } from "../components/common/ContextMenu";
 import { ExpandableSearch } from "../components/common/ExpandableSearch";
+import { FolderDropdown } from "../components/common/FolderDropdown";
 import { PageHeader } from "../components/common/PageHeader";
 import { LoadingState } from "../components/common/Spinner";
 import {
@@ -46,14 +31,25 @@ import {
     type KnowledgeBase
 } from "../lib/api";
 import { logger } from "../lib/logger";
+import { createDragPreview } from "../lib/utils";
 import { useKnowledgeBaseStore } from "../stores/knowledgeBaseStore";
 
-function formatFileSize(bytes: number) {
-    if (bytes === 0) return "0 B";
-    const k = 1024;
-    const sizes = ["B", "KB", "MB", "GB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
+// Convert KnowledgeBase + stats to KnowledgeBaseSummary for card components
+function toKnowledgeBaseSummary(
+    kb: KnowledgeBase,
+    stats?: KnowledgeBaseStats
+): KnowledgeBaseSummary {
+    return {
+        id: kb.id,
+        name: kb.name,
+        description: kb.description ?? null,
+        documentCount: stats?.document_count ?? 0,
+        chunkCount: stats?.chunk_count,
+        totalSizeBytes: stats?.total_size_bytes,
+        embeddingModel: kb.config?.embeddingModel,
+        createdAt: new Date(kb.created_at),
+        updatedAt: new Date(kb.updated_at)
+    };
 }
 
 export function KnowledgeBases() {
@@ -66,7 +62,6 @@ export function KnowledgeBases() {
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [kbToDelete, setKbToDelete] = useState<{ id: string; name: string } | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
-    const [openMenuId, setOpenMenuId] = useState<string | null>(null);
     const [kbStats, setKbStats] = useState<Record<string, KnowledgeBaseStats>>({});
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [contextMenu, setContextMenu] = useState<{
@@ -75,8 +70,7 @@ export function KnowledgeBases() {
         type: "kb" | "folder";
     }>({ isOpen: false, position: { x: 0, y: 0 }, type: "kb" });
     const [isBatchDeleting, setIsBatchDeleting] = useState(false);
-    const [isFoldersCollapsed, setIsFoldersCollapsed] = useState(false);
-    const menuRef = useRef<HTMLDivElement>(null);
+    const [showFoldersSection, setShowFoldersSection] = useState(false);
 
     // Folder state
     const [folders, setFolders] = useState<FolderWithCounts[]>([]);
@@ -149,21 +143,6 @@ export function KnowledgeBases() {
             fetchAllStats();
         }
     }, [knowledgeBases]);
-
-    // Close menu when clicking outside
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-                setOpenMenuId(null);
-            }
-        };
-
-        if (openMenuId) {
-            document.addEventListener("mousedown", handleClickOutside);
-            return () => document.removeEventListener("mousedown", handleClickOutside);
-        }
-        return undefined;
-    }, [openMenuId]);
 
     const loadFolders = async () => {
         setIsLoadingFolders(true);
@@ -255,12 +234,13 @@ export function KnowledgeBases() {
                     return newSet;
                 });
             } else if (selectedFolderIds.size === 0) {
-                setSearchParams({ folder: folder.id });
+                // Navigate to unified folder contents page
+                navigate(`/folders/${folder.id}`);
             } else {
                 setSelectedFolderIds(new Set());
             }
         },
-        [setSearchParams, selectedFolderIds.size]
+        [navigate, selectedFolderIds.size]
     );
 
     const handleFolderContextMenu = useCallback(
@@ -413,6 +393,9 @@ export function KnowledgeBases() {
                 JSON.stringify({ itemIds, itemType: "knowledge-base" })
             );
             e.dataTransfer.effectAllowed = "move";
+
+            // Create custom drag preview
+            createDragPreview(e, itemIds.length, "knowledge base");
         },
         [selectedIds]
     );
@@ -476,18 +459,9 @@ export function KnowledgeBases() {
         }
     ];
 
-    const formatDate = (dateString: string) => {
-        const date = new Date(dateString);
-        return date.toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric"
-        });
-    };
-
     // Folders to show
     const foldersToShow = currentFolderId ? [] : folders;
-    const showFoldersSection = !currentFolderId && foldersToShow.length > 0;
+    const canShowFoldersSection = !currentFolderId && foldersToShow.length > 0;
 
     return (
         <div className="max-w-7xl mx-auto px-6 py-8">
@@ -560,13 +534,13 @@ export function KnowledgeBases() {
                                 onChange={setSearchQuery}
                                 placeholder="Search knowledge bases..."
                             />
-                            <Button
-                                variant="ghost"
-                                onClick={() => setIsCreateFolderDialogOpen(true)}
-                                title="Create folder"
-                            >
-                                <FolderPlus className="w-4 h-4" />
-                            </Button>
+                            <FolderDropdown
+                                onCreateFolder={() => setIsCreateFolderDialogOpen(true)}
+                                showFoldersSection={showFoldersSection}
+                                onToggleFoldersSection={() =>
+                                    setShowFoldersSection(!showFoldersSection)
+                                }
+                            />
                             <Button variant="primary" onClick={() => setShowCreateModal(true)}>
                                 <Plus className="w-4 h-4" />
                                 New Knowledge Base
@@ -602,42 +576,30 @@ export function KnowledgeBases() {
             ) : (
                 <>
                     {/* Folders Section */}
-                    {showFoldersSection && (
+                    {showFoldersSection && canShowFoldersSection && (
                         <>
-                            <button
-                                onClick={() => setIsFoldersCollapsed(!isFoldersCollapsed)}
-                                className="flex items-center gap-1.5 mb-4 group"
-                            >
-                                <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide group-hover:text-foreground transition-colors">
+                            <div className="mb-4">
+                                <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
                                     Folders
                                 </h2>
-                                <ChevronDown
-                                    className={`w-4 h-4 text-muted-foreground group-hover:text-foreground transition-all ${
-                                        isFoldersCollapsed ? "-rotate-90" : ""
-                                    }`}
-                                />
-                            </button>
-                            {!isFoldersCollapsed && (
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                                    {foldersToShow.map((folder) => (
-                                        <FolderCard
-                                            key={folder.id}
-                                            folder={folder}
-                                            onClick={(e) => handleFolderClick(e, folder)}
-                                            onEdit={() => setFolderToEdit(folder)}
-                                            onDelete={() => setFolderToDelete(folder)}
-                                            isSelected={selectedFolderIds.has(folder.id)}
-                                            onContextMenu={(e) =>
-                                                handleFolderContextMenu(e, folder)
-                                            }
-                                            onDrop={(itemIds, itemType) =>
-                                                handleDropOnFolder(folder.id, itemIds, itemType)
-                                            }
-                                            displayItemType="knowledge-base"
-                                        />
-                                    ))}
-                                </div>
-                            )}
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                                {foldersToShow.map((folder) => (
+                                    <FolderCard
+                                        key={folder.id}
+                                        folder={folder}
+                                        onClick={(e) => handleFolderClick(e, folder)}
+                                        onEdit={() => setFolderToEdit(folder)}
+                                        onDelete={() => setFolderToDelete(folder)}
+                                        isSelected={selectedFolderIds.has(folder.id)}
+                                        onContextMenu={(e) => handleFolderContextMenu(e, folder)}
+                                        onDrop={(itemIds, itemType) =>
+                                            handleDropOnFolder(folder.id, itemIds, itemType)
+                                        }
+                                        displayItemType="knowledge-base"
+                                    />
+                                ))}
+                            </div>
                             <div className="border-t border-border my-6" />
                             <div className="mb-4">
                                 <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
@@ -688,167 +650,28 @@ export function KnowledgeBases() {
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {filteredKnowledgeBases.map((kb) => {
-                                const stats = kbStats[kb.id];
-                                return (
-                                    <div
-                                        key={kb.id}
-                                        className={`bg-card border rounded-lg p-5 hover:shadow-md transition-all group relative flex flex-col h-full cursor-pointer select-none ${
-                                            selectedIds.has(kb.id)
-                                                ? "border-primary ring-2 ring-primary/30 bg-primary/5"
-                                                : "border-border hover:border-primary"
-                                        }`}
-                                        draggable
-                                        onDragStart={(e) => handleDragStart(e, kb)}
-                                        onClick={(e) => handleCardClick(e, kb)}
-                                        onContextMenu={(e) => handleContextMenu(e, kb)}
-                                    >
-                                        {/* Drag Handle - visible on hover */}
-                                        <div
-                                            className="absolute bottom-2 right-2 p-1 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing z-10"
-                                            onMouseDown={(e) => e.stopPropagation()}
-                                        >
-                                            <GripVertical className="w-4 h-4" />
-                                        </div>
-                                        <div className="flex flex-col flex-1">
-                                            <div className="flex items-center justify-between mb-3">
-                                                <BookOpen className="w-5 h-5 text-primary" />
-                                                <div className="flex items-center gap-1">
-                                                    <Badge variant="default" size="sm">
-                                                        Documents
-                                                    </Badge>
-                                                    <Badge variant="default" size="sm">
-                                                        {kb.config.embeddingModel}
-                                                    </Badge>
-
-                                                    {/* Menu Button */}
-                                                    <div
-                                                        className="relative"
-                                                        ref={openMenuId === kb.id ? menuRef : null}
-                                                    >
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                setOpenMenuId(
-                                                                    openMenuId === kb.id
-                                                                        ? null
-                                                                        : kb.id
-                                                                );
-                                                            }}
-                                                            className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
-                                                            title="More options"
-                                                        >
-                                                            <MoreVertical className="w-4 h-4" />
-                                                        </button>
-
-                                                        {/* Dropdown Menu */}
-                                                        {openMenuId === kb.id && (
-                                                            <div className="absolute right-0 mt-1 w-48 bg-card border border-border rounded-lg shadow-lg py-1 z-50">
-                                                                <button
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        setOpenMenuId(null);
-                                                                        navigate(
-                                                                            `/knowledge-bases/${kb.id}`
-                                                                        );
-                                                                    }}
-                                                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
-                                                                >
-                                                                    <Edit2 className="w-4 h-4" />
-                                                                    Edit
-                                                                </button>
-                                                                <button
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        setOpenMenuId(null);
-                                                                        setSelectedIds(
-                                                                            new Set([kb.id])
-                                                                        );
-                                                                        setIsMoveDialogOpen(true);
-                                                                    }}
-                                                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
-                                                                >
-                                                                    <FolderInput className="w-4 h-4" />
-                                                                    Move to folder
-                                                                </button>
-                                                                {currentFolderId && (
-                                                                    <button
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            setOpenMenuId(null);
-                                                                            handleRemoveFromFolder(
-                                                                                kb.id
-                                                                            );
-                                                                        }}
-                                                                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
-                                                                    >
-                                                                        <FolderMinus className="w-4 h-4" />
-                                                                        Remove from folder
-                                                                    </button>
-                                                                )}
-                                                                <button
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        setOpenMenuId(null);
-                                                                        setKbToDelete({
-                                                                            id: kb.id,
-                                                                            name: kb.name
-                                                                        });
-                                                                    }}
-                                                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors"
-                                                                >
-                                                                    <Trash2 className="w-4 h-4" />
-                                                                    Delete
-                                                                </button>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <h3 className="text-base font-semibold text-foreground mb-2 group-hover:text-primary transition-colors">
-                                                {kb.name}
-                                            </h3>
-
-                                            {kb.description && (
-                                                <p className="text-sm text-muted-foreground line-clamp-2">
-                                                    {kb.description}
-                                                </p>
-                                            )}
-
-                                            {/* Spacer to push stats and date to bottom */}
-                                            <div className="flex-1 min-h-4" />
-
-                                            {/* Stats */}
-                                            {stats && (
-                                                <div className="flex items-center gap-4 text-xs text-muted-foreground mb-3">
-                                                    <div className="flex items-center gap-1">
-                                                        <FileText className="w-3 h-3" />
-                                                        <span>{stats.document_count} docs</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-1">
-                                                        <Layers className="w-3 h-3" />
-                                                        <span>{stats.chunk_count} chunks</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-1">
-                                                        <HardDrive className="w-3 h-3" />
-                                                        <span>
-                                                            {formatFileSize(stats.total_size_bytes)}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            <div className="flex items-center gap-4 text-xs text-muted-foreground pt-3 border-t border-border">
-                                                <div className="flex items-center gap-1">
-                                                    <Calendar className="w-3 h-3" />
-                                                    <span>Created {formatDate(kb.created_at)}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
+                            {filteredKnowledgeBases.map((kb) => (
+                                <KnowledgeBaseCard
+                                    key={kb.id}
+                                    knowledgeBase={toKnowledgeBaseSummary(kb, kbStats[kb.id])}
+                                    isSelected={selectedIds.has(kb.id)}
+                                    onClick={(e) => handleCardClick(e, kb)}
+                                    onContextMenu={(e) => handleContextMenu(e, kb)}
+                                    onDragStart={(e) => handleDragStart(e, kb)}
+                                    onEdit={() => navigate(`/knowledge-bases/${kb.id}`)}
+                                    onMoveToFolder={() => {
+                                        setSelectedIds(new Set([kb.id]));
+                                        setIsMoveDialogOpen(true);
+                                    }}
+                                    onRemoveFromFolder={
+                                        currentFolderId
+                                            ? () => handleRemoveFromFolder(kb.id)
+                                            : undefined
+                                    }
+                                    onDelete={() => setKbToDelete({ id: kb.id, name: kb.name })}
+                                    currentFolderId={currentFolderId}
+                                />
+                            ))}
                         </div>
                     )}
                 </>

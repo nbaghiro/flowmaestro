@@ -5,9 +5,9 @@ import { authMiddleware } from "../../middleware";
 
 const logger = createServiceLogger("FolderRoutes");
 
-export async function getFolderRoute(fastify: FastifyInstance) {
+export async function getFolderChildrenRoute(fastify: FastifyInstance) {
     fastify.get<{ Params: { id: string } }>(
-        "/:id",
+        "/:id/children",
         {
             preHandler: [authMiddleware]
         },
@@ -17,8 +17,8 @@ export async function getFolderRoute(fastify: FastifyInstance) {
             const { id } = request.params;
 
             try {
+                // Verify folder exists and belongs to user
                 const folder = await folderRepo.findByIdAndUserId(id, userId);
-
                 if (!folder) {
                     return reply.status(404).send({
                         success: false,
@@ -26,27 +26,14 @@ export async function getFolderRoute(fastify: FastifyInstance) {
                     });
                 }
 
-                // Get item counts
-                const itemCounts = await folderRepo.getItemCounts(id);
+                const children = await folderRepo.getChildren(id, userId);
 
                 return reply.send({
                     success: true,
-                    data: {
-                        id: folder.id,
-                        userId: folder.user_id,
-                        name: folder.name,
-                        color: folder.color,
-                        position: folder.position,
-                        parentId: folder.parent_id,
-                        depth: folder.depth,
-                        path: folder.path,
-                        createdAt: folder.created_at,
-                        updatedAt: folder.updated_at,
-                        itemCounts
-                    }
+                    data: children
                 });
             } catch (error) {
-                logger.error({ userId, folderId: id, error }, "Error getting folder");
+                logger.error({ userId, folderId: id, error }, "Error getting folder children");
                 return reply.status(500).send({
                     success: false,
                     error: error instanceof Error ? error.message : String(error)

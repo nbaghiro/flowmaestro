@@ -382,14 +382,14 @@ export function AgentBuilder() {
         if (hasUnsavedChanges) {
             setShowUnsavedDialog(true);
         } else {
-            navigate("/agents");
+            navigate(-1);
         }
     }, [hasUnsavedChanges, navigate]);
 
     const handleDiscardChanges = useCallback(() => {
         setShowUnsavedDialog(false);
         resetAgentState();
-        navigate("/agents");
+        navigate(-1);
     }, [navigate, resetAgentState]);
 
     const handleSaveAndLeave = useCallback(async () => {
@@ -416,7 +416,7 @@ export function AgentBuilder() {
             }
 
             setShowUnsavedDialog(false);
-            navigate("/agents");
+            navigate(-1);
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to save agent");
             setIsSaving(false);

@@ -13,6 +13,7 @@ import { ChatInterfacesPage } from "./pages/ChatInterfacesPage";
 import { Connections } from "./pages/Connections";
 import { EmbedChatPage } from "./pages/EmbedChatPage";
 import { FlowBuilder } from "./pages/FlowBuilder";
+import { FolderContentsPage } from "./pages/FolderContentsPage";
 import { ForgotPassword } from "./pages/ForgotPassword";
 import { FormInterfaceEditor } from "./pages/FormInterfaceEditor";
 import { FormInterfaces } from "./pages/FormInterfaces";
@@ -65,6 +66,7 @@ function App() {
                     <Route path="settings" element={<Settings />} />
                     <Route path="account" element={<Account />} />
                     <Route path="workspace" element={<Workspace />} />
+                    <Route path="folders/:folderId" element={<FolderContentsPage />} />
                 </Route>
 
                 {/* Full-screen knowledge base detail without sidebar */}

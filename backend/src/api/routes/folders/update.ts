@@ -35,6 +35,10 @@ export async function updateFolderRoute(fastify: FastifyInstance) {
                     });
                 }
 
+                // Determine target parent (use existing if not changing)
+                const targetParentId =
+                    body.parentId !== undefined ? body.parentId || null : existingFolder.parent_id;
+
                 // Validate name if provided
                 if (body.name !== undefined) {
                     if (body.name.trim().length === 0) {
@@ -51,17 +55,25 @@ export async function updateFolderRoute(fastify: FastifyInstance) {
                         });
                     }
 
-                    // Check name availability if name changed
-                    if (body.name.trim().toLowerCase() !== existingFolder.name.toLowerCase()) {
+                    // Check name availability if name or parent changed
+                    const nameChanged =
+                        body.name.trim().toLowerCase() !== existingFolder.name.toLowerCase();
+                    const parentChanged = targetParentId !== existingFolder.parent_id;
+
+                    if (nameChanged || parentChanged) {
                         const isAvailable = await folderRepo.isNameAvailable(
                             body.name.trim(),
                             userId,
+                            targetParentId,
                             id
                         );
                         if (!isAvailable) {
+                            const parentContext = targetParentId
+                                ? " in this folder"
+                                : " at the root level";
                             return reply.status(400).send({
                                 success: false,
-                                error: `A folder named '${body.name}' already exists`
+                                error: `A folder named '${body.name}' already exists${parentContext}`
                             });
                         }
                     }
@@ -75,12 +87,34 @@ export async function updateFolderRoute(fastify: FastifyInstance) {
                     });
                 }
 
-                // Update folder
-                const updatedFolder = await folderRepo.update(id, userId, {
-                    name: body.name?.trim(),
-                    color: body.color?.toLowerCase(),
-                    position: body.position
-                });
+                // Handle folder move if parentId is being changed
+                let updatedFolder = existingFolder;
+                if (body.parentId !== undefined && body.parentId !== existingFolder.parent_id) {
+                    const movedFolder = await folderRepo.moveFolder(id, userId, body.parentId);
+                    if (!movedFolder) {
+                        return reply.status(404).send({
+                            success: false,
+                            error: "Folder not found"
+                        });
+                    }
+                    updatedFolder = movedFolder;
+                }
+
+                // Update other fields if provided
+                if (
+                    body.name !== undefined ||
+                    body.color !== undefined ||
+                    body.position !== undefined
+                ) {
+                    const result = await folderRepo.update(id, userId, {
+                        name: body.name?.trim(),
+                        color: body.color?.toLowerCase(),
+                        position: body.position
+                    });
+                    if (result) {
+                        updatedFolder = result;
+                    }
+                }
 
                 if (!updatedFolder) {
                     return reply.status(404).send({
@@ -102,6 +136,9 @@ export async function updateFolderRoute(fastify: FastifyInstance) {
                         name: updatedFolder.name,
                         color: updatedFolder.color,
                         position: updatedFolder.position,
+                        parentId: updatedFolder.parent_id,
+                        depth: updatedFolder.depth,
+                        path: updatedFolder.path,
                         createdAt: updatedFolder.created_at,
                         updatedAt: updatedFolder.updated_at,
                         itemCounts

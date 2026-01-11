@@ -94,21 +94,21 @@ export function ChatInterfaceEditorPage() {
         if (isDirty) {
             setShowUnsavedDialog(true);
         } else {
-            navigate("/chat-interfaces");
+            navigate(-1);
         }
     }, [isDirty, navigate]);
 
     const handleDiscardChanges = useCallback(() => {
         setShowUnsavedDialog(false);
         reset();
-        navigate("/chat-interfaces");
+        navigate(-1);
     }, [navigate, reset]);
 
     const handleSaveAndLeave = useCallback(async () => {
         const success = await save();
         if (success) {
             setShowUnsavedDialog(false);
-            navigate("/chat-interfaces");
+            navigate(-1);
         }
     }, [save, navigate]);
 

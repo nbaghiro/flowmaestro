@@ -86,21 +86,21 @@ export function FormInterfaceEditor() {
         if (isDirty) {
             setShowUnsavedDialog(true);
         } else {
-            navigate("/form-interfaces");
+            navigate(-1);
         }
     }, [isDirty, navigate]);
 
     const handleDiscardChanges = useCallback(() => {
         setShowUnsavedDialog(false);
         reset();
-        navigate("/form-interfaces");
+        navigate(-1);
     }, [navigate, reset]);
 
     const handleSaveAndLeave = useCallback(async () => {
         const success = await save();
         if (success) {
             setShowUnsavedDialog(false);
-            navigate("/form-interfaces");
+            navigate(-1);
         }
     }, [save, navigate]);
 

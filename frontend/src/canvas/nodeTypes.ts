@@ -5,12 +5,7 @@
  * Import from here instead of defining nodeTypes locally to avoid missing node types.
  */
 
-import type { ComponentType } from "react";
-import type { NodeProps } from "reactflow";
 import { ALL_PROVIDERS } from "@flowmaestro/shared";
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type NodeComponent = ComponentType<NodeProps<any>>;
 import ActionNode from "./nodes/ActionNode";
 import AudioInputNode from "./nodes/AudioInputNode";
 import AudioOutputNode from "./nodes/AudioOutputNode";
@@ -37,6 +32,11 @@ import TriggerNode from "./nodes/TriggerNode";
 import URLNode from "./nodes/URLNode";
 import VisionNode from "./nodes/VisionNode";
 import WaitNode from "./nodes/WaitNode";
+import type { ComponentType } from "react";
+import type { NodeProps } from "reactflow";
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type NodeComponent = ComponentType<NodeProps<any>>;
 
 // AI provider IDs (these use the LLM node, not Integration node)
 const AI_PROVIDER_IDS = ["openai", "anthropic", "google", "huggingface", "cohere"];

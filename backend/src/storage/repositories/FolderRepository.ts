@@ -1,5 +1,8 @@
 import type {
+    Folder,
     FolderWithCounts,
+    FolderWithAncestors,
+    FolderTreeNode,
     FolderItemCounts,
     FolderContents,
     WorkflowSummary,
@@ -8,6 +11,7 @@ import type {
     ChatInterfaceSummary,
     KnowledgeBaseSummary
 } from "@flowmaestro/shared";
+import { MAX_FOLDER_DEPTH } from "@flowmaestro/shared";
 import { db } from "../database";
 import { FolderModel, CreateFolderInput, UpdateFolderInput } from "../models/Folder";
 
@@ -17,6 +21,9 @@ interface FolderRow {
     name: string;
     color: string;
     position: number;
+    parent_id: string | null;
+    depth: number;
+    path: string;
     created_at: string | Date;
     updated_at: string | Date;
     deleted_at: string | Date | null;
@@ -32,21 +39,42 @@ interface FolderWithCountsRow extends FolderRow {
 
 export class FolderRepository {
     async create(input: CreateFolderInput): Promise<FolderModel> {
-        // Get next position for this user's folders
+        // Validate parent exists and check depth limit if parent_id provided
+        if (input.parent_id) {
+            const parent = await this.findByIdAndUserId(input.parent_id, input.user_id);
+            if (!parent) {
+                throw new Error("Parent folder not found");
+            }
+            if (parent.depth >= MAX_FOLDER_DEPTH - 1) {
+                throw new Error(
+                    `Maximum folder nesting depth (${MAX_FOLDER_DEPTH} levels) exceeded`
+                );
+            }
+        }
+
+        // Get next position for this user's folders within the same parent
         const positionResult = await db.query<{ max_position: number | null }>(
             `SELECT MAX(position) as max_position FROM flowmaestro.folders
-             WHERE user_id = $1 AND deleted_at IS NULL`,
-            [input.user_id]
+             WHERE user_id = $1
+             AND COALESCE(parent_id, '00000000-0000-0000-0000-000000000000') = COALESCE($2, '00000000-0000-0000-0000-000000000000')::UUID
+             AND deleted_at IS NULL`,
+            [input.user_id, input.parent_id || null]
         );
         const nextPosition = (positionResult.rows[0]?.max_position ?? -1) + 1;
 
         const query = `
-            INSERT INTO flowmaestro.folders (user_id, name, color, position)
-            VALUES ($1, $2, $3, $4)
+            INSERT INTO flowmaestro.folders (user_id, name, color, position, parent_id)
+            VALUES ($1, $2, $3, $4, $5)
             RETURNING *
         `;
 
-        const values = [input.user_id, input.name, input.color || "#6366f1", nextPosition];
+        const values = [
+            input.user_id,
+            input.name,
+            input.color || "#6366f1",
+            nextPosition,
+            input.parent_id || null
+        ];
 
         const result = await db.query<FolderRow>(query, values);
         return this.mapRow(result.rows[0]);
@@ -107,17 +135,19 @@ export class FolderRepository {
     }
 
     async getContents(id: string, userId: string): Promise<FolderContents | null> {
-        const folder = await this.findByIdAndUserId(id, userId);
-        if (!folder) return null;
+        // Get folder with ancestors for breadcrumbs
+        const folderWithAncestors = await this.findByIdWithAncestors(id, userId);
+        if (!folderWithAncestors) return null;
 
-        // Fetch all items in parallel
-        const [workflows, agents, formInterfaces, chatInterfaces, knowledgeBases] =
+        // Fetch all items and subfolders in parallel
+        const [workflows, agents, formInterfaces, chatInterfaces, knowledgeBases, subfolders] =
             await Promise.all([
                 this.getWorkflowsInFolder(id),
                 this.getAgentsInFolder(id),
                 this.getFormInterfacesInFolder(id),
                 this.getChatInterfacesInFolder(id),
-                this.getKnowledgeBasesInFolder(id)
+                this.getKnowledgeBasesInFolder(id),
+                this.getChildren(id, userId)
             ]);
 
         const itemCounts: FolderItemCounts = {
@@ -135,15 +165,7 @@ export class FolderRepository {
         };
 
         return {
-            folder: {
-                id: folder.id,
-                userId: folder.user_id,
-                name: folder.name,
-                color: folder.color,
-                position: folder.position,
-                createdAt: folder.created_at,
-                updatedAt: folder.updated_at
-            },
+            folder: folderWithAncestors,
             items: {
                 workflows,
                 agents,
@@ -151,7 +173,8 @@ export class FolderRepository {
                 chatInterfaces,
                 knowledgeBases
             },
-            itemCounts
+            itemCounts,
+            subfolders
         };
     }
 
@@ -238,6 +261,18 @@ export class FolderRepository {
     }
 
     async delete(id: string, userId: string): Promise<boolean> {
+        // Get the folder to find its parent
+        const folder = await this.findByIdAndUserId(id, userId);
+        if (!folder) return false;
+
+        // Promote child folders to the deleted folder's parent
+        await db.query(
+            `UPDATE flowmaestro.folders
+             SET parent_id = $1, updated_at = CURRENT_TIMESTAMP
+             WHERE parent_id = $2 AND deleted_at IS NULL`,
+            [folder.parent_id, id]
+        );
+
         // Clear folder_id from all items when folder is deleted
         await this.clearFolderIdFromItems(id);
 
@@ -251,14 +286,27 @@ export class FolderRepository {
         return (result.rowCount || 0) > 0;
     }
 
-    async isNameAvailable(name: string, userId: string, excludeId?: string): Promise<boolean> {
+    async isNameAvailable(
+        name: string,
+        userId: string,
+        parentId: string | null = null,
+        excludeId?: string
+    ): Promise<boolean> {
+        // Check name uniqueness within the same parent folder
         const query = excludeId
             ? `SELECT 1 FROM flowmaestro.folders
-               WHERE LOWER(name) = LOWER($1) AND user_id = $2 AND id != $3 AND deleted_at IS NULL`
+               WHERE LOWER(name) = LOWER($1)
+               AND user_id = $2
+               AND COALESCE(parent_id, '00000000-0000-0000-0000-000000000000') = COALESCE($3, '00000000-0000-0000-0000-000000000000')::UUID
+               AND id != $4
+               AND deleted_at IS NULL`
             : `SELECT 1 FROM flowmaestro.folders
-               WHERE LOWER(name) = LOWER($1) AND user_id = $2 AND deleted_at IS NULL`;
+               WHERE LOWER(name) = LOWER($1)
+               AND user_id = $2
+               AND COALESCE(parent_id, '00000000-0000-0000-0000-000000000000') = COALESCE($3, '00000000-0000-0000-0000-000000000000')::UUID
+               AND deleted_at IS NULL`;
 
-        const params = excludeId ? [name, userId, excludeId] : [name, userId];
+        const params = excludeId ? [name, userId, parentId, excludeId] : [name, userId, parentId];
         const result = await db.query(query, params);
         return result.rowCount === 0;
     }
@@ -266,7 +314,7 @@ export class FolderRepository {
     // Helper methods for getting items in folder
     private async getWorkflowsInFolder(folderId: string): Promise<WorkflowSummary[]> {
         const query = `
-            SELECT id, name, description, created_at, updated_at
+            SELECT id, name, description, definition, created_at, updated_at
             FROM flowmaestro.workflows
             WHERE $1 = ANY(COALESCE(folder_ids, ARRAY[]::UUID[])) AND deleted_at IS NULL
             ORDER BY updated_at DESC
@@ -275,6 +323,7 @@ export class FolderRepository {
             id: string;
             name: string;
             description: string | null;
+            definition: Record<string, unknown> | null;
             created_at: string;
             updated_at: string;
         }>(query, [folderId]);
@@ -283,6 +332,7 @@ export class FolderRepository {
             id: row.id,
             name: row.name,
             description: row.description,
+            definition: row.definition,
             createdAt: new Date(row.created_at),
             updatedAt: new Date(row.updated_at)
         }));
@@ -290,7 +340,7 @@ export class FolderRepository {
 
     private async getAgentsInFolder(folderId: string): Promise<AgentSummary[]> {
         const query = `
-            SELECT id, name, description, provider, model, created_at, updated_at
+            SELECT id, name, description, provider, model, available_tools, created_at, updated_at
             FROM flowmaestro.agents
             WHERE $1 = ANY(COALESCE(folder_ids, ARRAY[]::UUID[])) AND deleted_at IS NULL
             ORDER BY updated_at DESC
@@ -301,6 +351,7 @@ export class FolderRepository {
             description: string | null;
             provider: string;
             model: string;
+            available_tools: string[] | null;
             created_at: string;
             updated_at: string;
         }>(query, [folderId]);
@@ -311,6 +362,7 @@ export class FolderRepository {
             description: row.description,
             provider: row.provider,
             model: row.model,
+            availableTools: row.available_tools || [],
             createdAt: new Date(row.created_at),
             updatedAt: new Date(row.updated_at)
         }));
@@ -318,7 +370,9 @@ export class FolderRepository {
 
     private async getFormInterfacesInFolder(folderId: string): Promise<FormInterfaceSummary[]> {
         const query = `
-            SELECT id, name, title, status, created_at, updated_at
+            SELECT id, name, title, description, status,
+                   cover_type, cover_value, icon_url, slug,
+                   submission_count, created_at, updated_at
             FROM flowmaestro.form_interfaces
             WHERE $1 = ANY(COALESCE(folder_ids, ARRAY[]::UUID[])) AND deleted_at IS NULL
             ORDER BY updated_at DESC
@@ -327,7 +381,13 @@ export class FolderRepository {
             id: string;
             name: string;
             title: string;
+            description: string | null;
             status: "draft" | "published";
+            cover_type: "color" | "image" | "stock" | null;
+            cover_value: string | null;
+            icon_url: string | null;
+            slug: string | null;
+            submission_count: string;
             created_at: string;
             updated_at: string;
         }>(query, [folderId]);
@@ -336,7 +396,13 @@ export class FolderRepository {
             id: row.id,
             name: row.name,
             title: row.title,
+            description: row.description,
             status: row.status,
+            coverType: row.cover_type || undefined,
+            coverValue: row.cover_value || undefined,
+            iconUrl: row.icon_url,
+            slug: row.slug || undefined,
+            submissionCount: parseInt(row.submission_count || "0"),
             createdAt: new Date(row.created_at),
             updatedAt: new Date(row.updated_at)
         }));
@@ -344,7 +410,9 @@ export class FolderRepository {
 
     private async getChatInterfacesInFolder(folderId: string): Promise<ChatInterfaceSummary[]> {
         const query = `
-            SELECT id, name, title, status, created_at, updated_at
+            SELECT id, name, title, description, status,
+                   cover_type, cover_value, icon_url, slug,
+                   session_count, message_count, created_at, updated_at
             FROM flowmaestro.chat_interfaces
             WHERE $1 = ANY(COALESCE(folder_ids, ARRAY[]::UUID[])) AND deleted_at IS NULL
             ORDER BY updated_at DESC
@@ -353,7 +421,14 @@ export class FolderRepository {
             id: string;
             name: string;
             title: string;
+            description: string | null;
             status: "draft" | "published";
+            cover_type: "color" | "image" | "gradient" | null;
+            cover_value: string | null;
+            icon_url: string | null;
+            slug: string | null;
+            session_count: string;
+            message_count: string;
             created_at: string;
             updated_at: string;
         }>(query, [folderId]);
@@ -362,7 +437,14 @@ export class FolderRepository {
             id: row.id,
             name: row.name,
             title: row.title,
+            description: row.description,
             status: row.status,
+            coverType: row.cover_type || undefined,
+            coverValue: row.cover_value || undefined,
+            iconUrl: row.icon_url,
+            slug: row.slug || undefined,
+            sessionCount: parseInt(row.session_count || "0"),
+            messageCount: parseInt(row.message_count || "0"),
             createdAt: new Date(row.created_at),
             updatedAt: new Date(row.updated_at)
         }));
@@ -370,10 +452,13 @@ export class FolderRepository {
 
     private async getKnowledgeBasesInFolder(folderId: string): Promise<KnowledgeBaseSummary[]> {
         const query = `
-            SELECT kb.id, kb.name, kb.description, kb.created_at, kb.updated_at,
-                   COUNT(kd.id) as document_count
+            SELECT kb.id, kb.name, kb.description, kb.config, kb.created_at, kb.updated_at,
+                   COUNT(DISTINCT kd.id) as document_count,
+                   COUNT(kc.id) as chunk_count,
+                   COALESCE(SUM(kd.file_size), 0) as total_size_bytes
             FROM flowmaestro.knowledge_bases kb
             LEFT JOIN flowmaestro.knowledge_documents kd ON kd.knowledge_base_id = kb.id
+            LEFT JOIN flowmaestro.knowledge_chunks kc ON kc.document_id = kd.id
             WHERE $1 = ANY(COALESCE(kb.folder_ids, ARRAY[]::UUID[]))
             GROUP BY kb.id
             ORDER BY kb.updated_at DESC
@@ -382,9 +467,12 @@ export class FolderRepository {
             id: string;
             name: string;
             description: string | null;
+            config: { embeddingModel?: string } | null;
             created_at: string;
             updated_at: string;
             document_count: string;
+            chunk_count: string;
+            total_size_bytes: string;
         }>(query, [folderId]);
 
         return result.rows.map((row) => ({
@@ -392,6 +480,9 @@ export class FolderRepository {
             name: row.name,
             description: row.description,
             documentCount: parseInt(row.document_count),
+            embeddingModel: row.config?.embeddingModel,
+            chunkCount: parseInt(row.chunk_count),
+            totalSizeBytes: parseInt(row.total_size_bytes),
             createdAt: new Date(row.created_at),
             updatedAt: new Date(row.updated_at)
         }));
@@ -430,6 +521,9 @@ export class FolderRepository {
             name: row.name,
             color: row.color,
             position: row.position,
+            parent_id: row.parent_id,
+            depth: row.depth ?? 0,
+            path: row.path ?? "",
             created_at: new Date(row.created_at),
             updated_at: new Date(row.updated_at),
             deleted_at: row.deleted_at ? new Date(row.deleted_at) : null
@@ -458,9 +552,223 @@ export class FolderRepository {
             name: row.name,
             color: row.color,
             position: row.position,
+            parentId: row.parent_id,
+            depth: row.depth ?? 0,
+            path: row.path ?? "",
             createdAt: new Date(row.created_at),
             updatedAt: new Date(row.updated_at),
             itemCounts: counts
         };
+    }
+
+    // Convert FolderModel to shared Folder type
+    private mapModelToShared(model: FolderModel): Folder {
+        return {
+            id: model.id,
+            userId: model.user_id,
+            name: model.name,
+            color: model.color,
+            position: model.position,
+            parentId: model.parent_id,
+            depth: model.depth,
+            path: model.path,
+            createdAt: model.created_at,
+            updatedAt: model.updated_at
+        };
+    }
+
+    // Get folder with ancestor chain (for breadcrumbs)
+    async findByIdWithAncestors(id: string, userId: string): Promise<FolderWithAncestors | null> {
+        const folder = await this.findByIdAndUserId(id, userId);
+        if (!folder) return null;
+
+        // Get ancestors using recursive CTE
+        const ancestorsQuery = `
+            WITH RECURSIVE ancestors AS (
+                SELECT id, user_id, name, color, position, parent_id, depth, path, created_at, updated_at
+                FROM flowmaestro.folders
+                WHERE id = $1 AND deleted_at IS NULL
+                UNION ALL
+                SELECT f.id, f.user_id, f.name, f.color, f.position, f.parent_id, f.depth, f.path, f.created_at, f.updated_at
+                FROM flowmaestro.folders f
+                INNER JOIN ancestors a ON f.id = a.parent_id
+                WHERE f.deleted_at IS NULL
+            )
+            SELECT * FROM ancestors WHERE id != $1 ORDER BY depth ASC
+        `;
+        const ancestorsResult = await db.query<FolderRow>(ancestorsQuery, [id]);
+
+        return {
+            ...this.mapModelToShared(folder),
+            ancestors: ancestorsResult.rows.map((row) => this.mapModelToShared(this.mapRow(row)))
+        };
+    }
+
+    // Get all folders as a tree structure
+    async getFolderTree(userId: string): Promise<FolderTreeNode[]> {
+        const folders = await this.findByUserIdWithCounts(userId);
+        return this.buildTree(folders);
+    }
+
+    // Build tree from flat folder list
+    private buildTree(folders: FolderWithCounts[]): FolderTreeNode[] {
+        const map = new Map<string, FolderTreeNode>();
+        const roots: FolderTreeNode[] = [];
+
+        // Create nodes with empty children arrays
+        for (const folder of folders) {
+            map.set(folder.id, { ...folder, children: [] });
+        }
+
+        // Build tree structure
+        for (const folder of folders) {
+            const node = map.get(folder.id)!;
+            if (folder.parentId) {
+                const parent = map.get(folder.parentId);
+                if (parent) {
+                    parent.children.push(node);
+                } else {
+                    // Orphan becomes root (parent may have been deleted)
+                    roots.push(node);
+                }
+            } else {
+                roots.push(node);
+            }
+        }
+
+        // Sort children by position at each level
+        const sortChildren = (nodes: FolderTreeNode[]) => {
+            nodes.sort((a, b) => a.position - b.position);
+            nodes.forEach((n) => sortChildren(n.children));
+        };
+        sortChildren(roots);
+
+        return roots;
+    }
+
+    // Get direct children of a folder
+    async getChildren(parentId: string | null, userId: string): Promise<FolderWithCounts[]> {
+        const query = `
+            SELECT
+                f.*,
+                (SELECT COUNT(*) FROM flowmaestro.workflows
+                 WHERE f.id = ANY(COALESCE(folder_ids, ARRAY[]::UUID[])) AND deleted_at IS NULL) as workflow_count,
+                (SELECT COUNT(*) FROM flowmaestro.agents
+                 WHERE f.id = ANY(COALESCE(folder_ids, ARRAY[]::UUID[])) AND deleted_at IS NULL) as agent_count,
+                (SELECT COUNT(*) FROM flowmaestro.form_interfaces
+                 WHERE f.id = ANY(COALESCE(folder_ids, ARRAY[]::UUID[])) AND deleted_at IS NULL) as form_interface_count,
+                (SELECT COUNT(*) FROM flowmaestro.chat_interfaces
+                 WHERE f.id = ANY(COALESCE(folder_ids, ARRAY[]::UUID[])) AND deleted_at IS NULL) as chat_interface_count,
+                (SELECT COUNT(*) FROM flowmaestro.knowledge_bases
+                 WHERE f.id = ANY(COALESCE(folder_ids, ARRAY[]::UUID[]))) as knowledge_base_count
+            FROM flowmaestro.folders f
+            WHERE f.user_id = $1
+            AND ${parentId ? "f.parent_id = $2" : "f.parent_id IS NULL"}
+            AND f.deleted_at IS NULL
+            ORDER BY f.position ASC, f.created_at ASC
+        `;
+        const params = parentId ? [userId, parentId] : [userId];
+        const result = await db.query<FolderWithCountsRow>(query, params);
+        return result.rows.map((row) => this.mapRowWithCounts(row));
+    }
+
+    // Get all descendant folder IDs (for cycle detection and cascade operations)
+    async getDescendantIds(folderId: string): Promise<string[]> {
+        const query = `
+            WITH RECURSIVE descendants AS (
+                SELECT id FROM flowmaestro.folders
+                WHERE parent_id = $1 AND deleted_at IS NULL
+                UNION ALL
+                SELECT f.id FROM flowmaestro.folders f
+                INNER JOIN descendants d ON f.parent_id = d.id
+                WHERE f.deleted_at IS NULL
+            )
+            SELECT id FROM descendants
+        `;
+        const result = await db.query<{ id: string }>(query, [folderId]);
+        return result.rows.map((r) => r.id);
+    }
+
+    // Move folder to a new parent
+    async moveFolder(
+        id: string,
+        userId: string,
+        newParentId: string | null
+    ): Promise<FolderModel | null> {
+        // Validate ownership
+        const folder = await this.findByIdAndUserId(id, userId);
+        if (!folder) return null;
+
+        // If moving to same parent, no-op
+        if (folder.parent_id === newParentId) {
+            return folder;
+        }
+
+        // Validate new parent if provided
+        if (newParentId) {
+            const newParent = await this.findByIdAndUserId(newParentId, userId);
+            if (!newParent) {
+                throw new Error("Target folder not found");
+            }
+
+            // Check depth constraint (folder + its descendants must fit)
+            const descendants = await this.getDescendantIds(id);
+            const maxDescendantDepth =
+                descendants.length > 0 ? await this.getMaxDescendantDepth(id) : 0;
+            const requiredDepth = newParent.depth + 1 + maxDescendantDepth;
+            if (requiredDepth >= MAX_FOLDER_DEPTH) {
+                throw new Error("Maximum folder nesting depth exceeded");
+            }
+
+            // Check for cycle (moving into own descendant)
+            if (descendants.includes(newParentId)) {
+                throw new Error("Cannot move folder into its own descendant");
+            }
+        }
+
+        // Get next position in new parent
+        const positionResult = await db.query<{ max_position: number | null }>(
+            `SELECT MAX(position) as max_position FROM flowmaestro.folders
+             WHERE user_id = $1
+             AND COALESCE(parent_id, '00000000-0000-0000-0000-000000000000') = COALESCE($2, '00000000-0000-0000-0000-000000000000')::UUID
+             AND deleted_at IS NULL`,
+            [userId, newParentId || null]
+        );
+        const nextPosition = (positionResult.rows[0]?.max_position ?? -1) + 1;
+
+        // Update folder (triggers will handle path/depth updates)
+        const updateQuery = `
+            UPDATE flowmaestro.folders
+            SET parent_id = $1, position = $2, updated_at = CURRENT_TIMESTAMP
+            WHERE id = $3 AND user_id = $4 AND deleted_at IS NULL
+            RETURNING *
+        `;
+        const result = await db.query<FolderRow>(updateQuery, [
+            newParentId,
+            nextPosition,
+            id,
+            userId
+        ]);
+        return result.rows.length > 0 ? this.mapRow(result.rows[0]) : null;
+    }
+
+    // Get maximum depth among descendants
+    private async getMaxDescendantDepth(folderId: string): Promise<number> {
+        const query = `
+            WITH RECURSIVE descendants AS (
+                SELECT id, depth FROM flowmaestro.folders
+                WHERE parent_id = $1 AND deleted_at IS NULL
+                UNION ALL
+                SELECT f.id, f.depth FROM flowmaestro.folders f
+                INNER JOIN descendants d ON f.parent_id = d.id
+                WHERE f.deleted_at IS NULL
+            )
+            SELECT COALESCE(MAX(depth), 0) as max_depth FROM descendants
+        `;
+        const result = await db.query<{ max_depth: number }>(query, [folderId]);
+        const folder = await this.findById(folderId);
+        if (!folder) return 0;
+        // Return relative depth from this folder
+        return (result.rows[0]?.max_depth ?? folder.depth) - folder.depth;
     }
 }
