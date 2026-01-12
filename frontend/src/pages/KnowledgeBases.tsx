@@ -1,7 +1,12 @@
 import { BookOpen, Plus, Trash2, FolderInput, FolderMinus, Search } from "lucide-react";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import type { Folder, FolderWithCounts, KnowledgeBaseSummary } from "@flowmaestro/shared";
+import type {
+    Folder,
+    FolderWithCounts,
+    KnowledgeBaseSummary,
+    FolderResourceType
+} from "@flowmaestro/shared";
 import { KnowledgeBaseCard } from "../components/cards";
 import { Alert } from "../components/common/Alert";
 import { Button } from "../components/common/Button";
@@ -22,17 +27,14 @@ import { useSearch } from "../hooks/useSearch";
 import {
     getKnowledgeBaseStats,
     getFolders,
-    createFolder,
     updateFolder,
-    deleteFolder,
-    moveItemsToFolder,
     removeItemsFromFolder,
     type KnowledgeBaseStats,
     type KnowledgeBase
 } from "../lib/api";
 import { logger } from "../lib/logger";
 import { createDragPreview } from "../lib/utils";
-import { buildFolderTree } from "../stores/folderStore";
+import { useFolderStore, buildFolderTree } from "../stores/folderStore";
 import { useKnowledgeBaseStore } from "../stores/knowledgeBaseStore";
 import { useUIPreferencesStore } from "../stores/uiPreferencesStore";
 
@@ -58,6 +60,14 @@ export function KnowledgeBases() {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const currentFolderId = searchParams.get("folder");
+
+    // Folder store
+    const {
+        createFolder: createFolderStore,
+        moveItemsToFolder: moveItemsToFolderStore,
+        deleteFolder: deleteFolderStore,
+        folders: storeFolders
+    } = useFolderStore();
 
     const { knowledgeBases, loading, error, fetchKnowledgeBases, createKB, deleteKB } =
         useKnowledgeBaseStore();
@@ -101,6 +111,13 @@ export function KnowledgeBases() {
     useEffect(() => {
         loadFolders();
     }, []);
+
+    // Sync folders when store folders change (e.g., when folder is created from sidebar)
+    useEffect(() => {
+        if (storeFolders.length > 0 && folders.length !== storeFolders.length) {
+            loadFolders();
+        }
+    }, [storeFolders]);
 
     // Load knowledge bases when folder changes
     useEffect(() => {
@@ -194,7 +211,8 @@ export function KnowledgeBases() {
 
     // Folder handlers
     const handleCreateFolder = async (name: string, color: string) => {
-        await createFolder({ name, color });
+        await createFolderStore({ name, color });
+        // Store's createFolder already refreshes folders, so sidebar will update
         await loadFolders();
     };
 
@@ -209,7 +227,8 @@ export function KnowledgeBases() {
         if (!folderToDelete) return;
         setIsDeleting(true);
         try {
-            await deleteFolder(folderToDelete.id);
+            await deleteFolderStore(folderToDelete.id);
+            // Store's deleteFolder already refreshes folders, so sidebar will update
             await loadFolders();
             const folderId = currentFolderId || undefined;
             await fetchKnowledgeBases({ folderId });
@@ -269,8 +288,9 @@ export function KnowledgeBases() {
 
         setIsBatchDeleting(true);
         try {
-            const deletePromises = Array.from(selectedFolderIds).map((id) => deleteFolder(id));
+            const deletePromises = Array.from(selectedFolderIds).map((id) => deleteFolderStore(id));
             await Promise.all(deletePromises);
+            // Store's deleteFolder already refreshes folders, so sidebar will update
 
             await loadFolders();
             const folderId = currentFolderId || undefined;
@@ -292,11 +312,8 @@ export function KnowledgeBases() {
         if (!folderId) {
             throw new Error("Folder ID is required");
         }
-        await moveItemsToFolder({
-            itemIds: Array.from(selectedIds),
-            itemType: "knowledge-base",
-            folderId
-        });
+        await moveItemsToFolderStore(folderId, Array.from(selectedIds), "knowledge-base");
+        // Store's moveItemsToFolder already refreshes folders, so sidebar will update
         const currentFolderIdParam = currentFolderId || undefined;
         await fetchKnowledgeBases({ folderId: currentFolderIdParam });
         await loadFolders();
@@ -410,7 +427,8 @@ export function KnowledgeBases() {
         async (folderId: string, itemIds: string[], itemType: string) => {
             if (itemType !== "knowledge-base") return;
             try {
-                await moveItemsToFolder({ itemIds, itemType, folderId });
+                await moveItemsToFolderStore(folderId, itemIds, itemType as FolderResourceType);
+                // Store's moveItemsToFolder already refreshes folders, so sidebar will update
                 const currentFolderIdParam = currentFolderId || undefined;
                 await fetchKnowledgeBases({ folderId: currentFolderIdParam });
                 await loadFolders();
@@ -419,7 +437,7 @@ export function KnowledgeBases() {
                 logger.error("Failed to move items to folder", err);
             }
         },
-        [currentFolderId, fetchKnowledgeBases]
+        [currentFolderId, fetchKnowledgeBases, moveItemsToFolderStore]
     );
 
     const kbContextMenuItems: ContextMenuItem[] = [

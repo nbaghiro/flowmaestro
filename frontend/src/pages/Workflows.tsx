@@ -1,7 +1,13 @@
 import { Plus, FileText, Sparkles, Trash2, FolderInput, FolderMinus, Search } from "lucide-react";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import type { WorkflowNode, Folder, FolderWithCounts, WorkflowSummary } from "@flowmaestro/shared";
+import type {
+    WorkflowNode,
+    Folder,
+    FolderWithCounts,
+    WorkflowSummary,
+    FolderResourceType
+} from "@flowmaestro/shared";
 import { AIGenerateDialog } from "../components/AIGenerateDialog";
 import { WorkflowCard } from "../components/cards";
 import { Button } from "../components/common/Button";
@@ -31,17 +37,14 @@ import {
     deleteWorkflow,
     getWorkflow,
     getFolders,
-    createFolder,
     updateFolder,
-    deleteFolder,
-    moveItemsToFolder,
     removeItemsFromFolder,
     type WorkflowDefinition
 } from "../lib/api";
 import { logger } from "../lib/logger";
 import { createDragPreview } from "../lib/utils";
 import { convertToReactFlowFormat } from "../lib/workflowLayout";
-import { buildFolderTree } from "../stores/folderStore";
+import { buildFolderTree, useFolderStore } from "../stores/folderStore";
 import { useUIPreferencesStore } from "../stores/uiPreferencesStore";
 import { useWorkflowGenerationChatStore } from "../stores/workflowGenerationChatStore";
 
@@ -91,6 +94,14 @@ export function Workflows() {
 
     // Workflow generation chat panel
     const { openPanel: openGenerationPanel } = useWorkflowGenerationChatStore();
+
+    // Folder store
+    const {
+        createFolder: createFolderStore,
+        moveItemsToFolder: moveItemsToFolderStore,
+        deleteFolder: deleteFolderStore,
+        folders: storeFolders
+    } = useFolderStore();
 
     const [workflows, setWorkflows] = useState<Workflow[]>([]);
     const [folders, setFolders] = useState<FolderWithCounts[]>([]);
@@ -150,6 +161,13 @@ export function Workflows() {
     useEffect(() => {
         loadFolders();
     }, []);
+
+    // Sync folders when store folders change (e.g., when folder is created from sidebar)
+    useEffect(() => {
+        if (storeFolders.length > 0 && folders.length !== storeFolders.length) {
+            loadFolders();
+        }
+    }, [storeFolders]);
 
     // Load workflows when folder changes
     useEffect(() => {
@@ -359,7 +377,8 @@ export function Workflows() {
 
     // Folder handlers
     const handleCreateFolder = async (name: string, color: string) => {
-        await createFolder({ name, color });
+        await createFolderStore({ name, color });
+        // Store's createFolder already refreshes folders, so sidebar will update
         await loadFolders();
     };
 
@@ -374,7 +393,8 @@ export function Workflows() {
         if (!folderToDelete) return;
         setIsDeleting(true);
         try {
-            await deleteFolder(folderToDelete.id);
+            await deleteFolderStore(folderToDelete.id);
+            // Store's deleteFolder already refreshes folders, so sidebar will update
             await loadFolders();
             await loadWorkflows(); // Items moved to root
             setFolderToDelete(null);
@@ -440,7 +460,7 @@ export function Workflows() {
 
         setIsBatchDeleting(true);
         try {
-            const deletePromises = Array.from(selectedFolderIds).map((id) => deleteFolder(id));
+            const deletePromises = Array.from(selectedFolderIds).map((id) => deleteFolderStore(id));
             await Promise.all(deletePromises);
 
             await loadFolders();
@@ -467,11 +487,8 @@ export function Workflows() {
         if (!folderId) {
             throw new Error("Folder ID is required");
         }
-        await moveItemsToFolder({
-            itemIds: Array.from(selectedIds),
-            itemType: "workflow",
-            folderId
-        });
+        await moveItemsToFolderStore(folderId, Array.from(selectedIds), "workflow");
+        // Store's moveItemsToFolder already refreshes folders, so sidebar will update
         await loadWorkflows();
         await loadFolders();
         setSelectedIds(new Set());
@@ -516,7 +533,8 @@ export function Workflows() {
         async (folderId: string, itemIds: string[], itemType: string) => {
             if (itemType !== "workflow") return;
             try {
-                await moveItemsToFolder({ itemIds, itemType, folderId });
+                await moveItemsToFolderStore(folderId, itemIds, itemType as FolderResourceType);
+                // Store's moveItemsToFolder already refreshes folders, so sidebar will update
                 await loadWorkflows();
                 await loadFolders();
                 setSelectedIds(new Set());
