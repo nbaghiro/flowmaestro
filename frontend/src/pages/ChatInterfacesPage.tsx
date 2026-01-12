@@ -90,6 +90,7 @@ export function ChatInterfacesPage() {
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [isBatchDeleting, setIsBatchDeleting] = useState(false);
     const { showFoldersSection, setShowFoldersSection } = useUIPreferencesStore();
+    const [expandedFolderIds, setExpandedFolderIds] = useState<Set<string>>(new Set());
     const [contextMenu, setContextMenu] = useState<{
         isOpen: boolean;
         position: { x: number; y: number };
@@ -502,8 +503,37 @@ export function ChatInterfacesPage() {
     ];
 
     // Folders to show
-    const foldersToShow = currentFolderId ? [] : folders;
-    const canShowFoldersSection = !currentFolderId && foldersToShow.length > 0;
+    // Filter folders to show only root folders (depth 0) when at root
+    const rootFolders = currentFolderId ? [] : folders.filter((f) => f.depth === 0);
+    const canShowFoldersSection = !currentFolderId && rootFolders.length > 0;
+
+    // Helper to get children of a folder from the tree
+    const getFolderChildren = (folderId: string): FolderWithCounts[] => {
+        const findInTree = (nodes: typeof folderTree): FolderWithCounts[] => {
+            for (const node of nodes) {
+                if (node.id === folderId) {
+                    return node.children;
+                }
+                const found = findInTree(node.children);
+                if (found.length > 0) return found;
+            }
+            return [];
+        };
+        return findInTree(folderTree);
+    };
+
+    // Toggle folder expansion
+    const handleToggleFolderExpand = (folderId: string) => {
+        setExpandedFolderIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(folderId)) {
+                next.delete(folderId);
+            } else {
+                next.add(folderId);
+            }
+            return next;
+        });
+    };
 
     if (isLoading || isLoadingFolders) {
         return (
@@ -627,21 +657,83 @@ export function ChatInterfacesPage() {
                         </h2>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                        {foldersToShow.map((folder) => (
-                            <FolderCard
-                                key={folder.id}
-                                folder={folder}
-                                onClick={(e) => handleFolderClick(e, folder)}
-                                onEdit={() => setFolderToEdit(folder)}
-                                onDelete={() => setFolderToDelete(folder)}
-                                isSelected={selectedFolderIds.has(folder.id)}
-                                onContextMenu={(e) => handleFolderContextMenu(e, folder)}
-                                onDrop={(itemIds, itemType) =>
-                                    handleDropOnFolder(folder.id, itemIds, itemType)
-                                }
-                                displayItemType="chat-interface"
-                            />
-                        ))}
+                        {rootFolders.map((folder) => {
+                            const children = getFolderChildren(folder.id);
+                            const hasChildren = children.length > 0;
+                            const isExpanded = expandedFolderIds.has(folder.id);
+                            const subfolders = isExpanded ? children : [];
+
+                            return (
+                                <div key={folder.id} className="contents">
+                                    <div>
+                                        <FolderCard
+                                            folder={folder}
+                                            onClick={(e) => handleFolderClick(e, folder)}
+                                            onEdit={() => setFolderToEdit(folder)}
+                                            onDelete={() => setFolderToDelete(folder)}
+                                            isSelected={selectedFolderIds.has(folder.id)}
+                                            onContextMenu={(e) =>
+                                                handleFolderContextMenu(e, folder)
+                                            }
+                                            onDrop={(itemIds, itemType) =>
+                                                handleDropOnFolder(folder.id, itemIds, itemType)
+                                            }
+                                            displayItemType="chat-interface"
+                                            hasChildren={hasChildren}
+                                            isExpanded={isExpanded}
+                                            onToggleExpand={(e) => {
+                                                e.stopPropagation();
+                                                handleToggleFolderExpand(folder.id);
+                                            }}
+                                        />
+                                        {/* Render subfolders when expanded - below parent */}
+                                        {isExpanded && subfolders.length > 0 && (
+                                            <div className="mt-2 flex flex-col gap-2">
+                                                {subfolders.map((subfolder) => (
+                                                    <FolderCard
+                                                        key={subfolder.id}
+                                                        folder={subfolder}
+                                                        onClick={(e) =>
+                                                            handleFolderClick(e, subfolder)
+                                                        }
+                                                        onEdit={() => setFolderToEdit(subfolder)}
+                                                        onDelete={() =>
+                                                            setFolderToDelete(subfolder)
+                                                        }
+                                                        isSelected={selectedFolderIds.has(
+                                                            subfolder.id
+                                                        )}
+                                                        onContextMenu={(e) =>
+                                                            handleFolderContextMenu(e, subfolder)
+                                                        }
+                                                        onDrop={(itemIds, itemType) =>
+                                                            handleDropOnFolder(
+                                                                subfolder.id,
+                                                                itemIds,
+                                                                itemType
+                                                            )
+                                                        }
+                                                        displayItemType="chat-interface"
+                                                        isSubfolder={true}
+                                                        hasChildren={
+                                                            getFolderChildren(subfolder.id).length >
+                                                            0
+                                                        }
+                                                        isExpanded={expandedFolderIds.has(
+                                                            subfolder.id
+                                                        )}
+                                                        onToggleExpand={(e) => {
+                                                            e.stopPropagation();
+                                                            handleToggleFolderExpand(subfolder.id);
+                                                        }}
+                                                    />
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
                     </div>
                     <div className="border-t border-border my-6" />
                     <div className="mb-4">
