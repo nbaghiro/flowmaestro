@@ -42,6 +42,7 @@ import { logger } from "../lib/logger";
 import { createDragPreview } from "../lib/utils";
 import { convertToReactFlowFormat } from "../lib/workflowLayout";
 import { buildFolderTree } from "../stores/folderStore";
+import { useUIPreferencesStore } from "../stores/uiPreferencesStore";
 import { useWorkflowGenerationChatStore } from "../stores/workflowGenerationChatStore";
 
 // Local workflow type that maps to API response (snake_case) and WorkflowSummary (camelCase)
@@ -114,7 +115,7 @@ export function Workflows() {
         type: "workflow" | "folder";
     }>({ isOpen: false, position: { x: 0, y: 0 }, type: "workflow" });
     const [isBatchDeleting, setIsBatchDeleting] = useState(false);
-    const [showFoldersSection, setShowFoldersSection] = useState(false);
+    const { showFoldersSection, setShowFoldersSection } = useUIPreferencesStore();
     const navigate = useNavigate();
 
     // Search functionality
