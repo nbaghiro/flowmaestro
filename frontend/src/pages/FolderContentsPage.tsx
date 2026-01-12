@@ -9,7 +9,7 @@ import {
     Check
 } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, Link, useLocation } from "react-router-dom";
 import type { FolderResourceType, Folder as FolderType } from "@flowmaestro/shared";
 import { MAX_FOLDER_DEPTH } from "@flowmaestro/shared";
 import { Button } from "../components/common/Button";
@@ -23,6 +23,11 @@ import { useFolderStore } from "../stores/folderStore";
 export function FolderContentsPage() {
     const { folderId } = useParams<{ folderId: string }>();
     const navigate = useNavigate();
+    const location = useLocation();
+
+    // Get source item type from navigation state for auto-collapse
+    const sourceItemType = (location.state as { sourceItemType?: FolderResourceType } | null)
+        ?.sourceItemType;
 
     const {
         currentFolderContents,
@@ -371,6 +376,9 @@ export function FolderContentsPage() {
                         items={items.workflows}
                         folderId={folder.id}
                         onRemoveFromFolder={handleRemoveFromFolder}
+                        defaultCollapsed={
+                            sourceItemType !== undefined && sourceItemType !== "workflow"
+                        }
                     />
 
                     <FolderItemSection
@@ -379,6 +387,9 @@ export function FolderContentsPage() {
                         items={items.agents}
                         folderId={folder.id}
                         onRemoveFromFolder={handleRemoveFromFolder}
+                        defaultCollapsed={
+                            sourceItemType !== undefined && sourceItemType !== "agent"
+                        }
                     />
 
                     <FolderItemSection
@@ -387,6 +398,9 @@ export function FolderContentsPage() {
                         items={items.formInterfaces}
                         folderId={folder.id}
                         onRemoveFromFolder={handleRemoveFromFolder}
+                        defaultCollapsed={
+                            sourceItemType !== undefined && sourceItemType !== "form-interface"
+                        }
                     />
 
                     <FolderItemSection
@@ -395,6 +409,9 @@ export function FolderContentsPage() {
                         items={items.chatInterfaces}
                         folderId={folder.id}
                         onRemoveFromFolder={handleRemoveFromFolder}
+                        defaultCollapsed={
+                            sourceItemType !== undefined && sourceItemType !== "chat-interface"
+                        }
                     />
 
                     <FolderItemSection
@@ -403,6 +420,9 @@ export function FolderContentsPage() {
                         items={items.knowledgeBases}
                         folderId={folder.id}
                         onRemoveFromFolder={handleRemoveFromFolder}
+                        defaultCollapsed={
+                            sourceItemType !== undefined && sourceItemType !== "knowledge-base"
+                        }
                     />
                 </div>
             ) : null}

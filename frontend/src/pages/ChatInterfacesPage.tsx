@@ -265,8 +265,10 @@ export function ChatInterfacesPage() {
                     return newSet;
                 });
             } else if (selectedFolderIds.size === 0) {
-                // Navigate to unified folder contents page
-                navigate(`/folders/${folder.id}`);
+                // Navigate to unified folder contents page with source type for auto-collapse
+                navigate(`/folders/${folder.id}`, {
+                    state: { sourceItemType: "chat-interface" }
+                });
             } else {
                 setSelectedFolderIds(new Set());
             }
