@@ -6,7 +6,8 @@ import {
     FolderPlus,
     ChevronRight,
     Home,
-    Check
+    Check,
+    MoreVertical
 } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate, Link, useLocation } from "react-router-dom";
@@ -48,6 +49,11 @@ export function FolderContentsPage() {
     const [showSubfolders, setShowSubfolders] = useState(false);
     const [isSubfolderDropdownOpen, setIsSubfolderDropdownOpen] = useState(false);
     const subfolderDropdownRef = useRef<HTMLDivElement>(null);
+    const [subfolderToEdit, setSubfolderToEdit] = useState<FolderType | null>(null);
+    const [subfolderToDelete, setSubfolderToDelete] = useState<FolderType | null>(null);
+    const [isDeletingSubfolder, setIsDeletingSubfolder] = useState(false);
+    const [openSubfolderMenuId, setOpenSubfolderMenuId] = useState<string | null>(null);
+    const subfolderMenuRefs = useRef<Record<string, HTMLDivElement>>({});
 
     // Fetch folder contents on mount or when folderId changes
     useEffect(() => {
@@ -60,23 +66,33 @@ export function FolderContentsPage() {
         };
     }, [folderId, fetchFolderContents, clearFolderContents]);
 
-    // Close subfolder dropdown when clicking outside
+    // Close subfolder dropdown and menu when clicking outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
+            // Close subfolder dropdown if clicking outside
             if (
+                isSubfolderDropdownOpen &&
                 subfolderDropdownRef.current &&
                 !subfolderDropdownRef.current.contains(event.target as Node)
             ) {
                 setIsSubfolderDropdownOpen(false);
             }
+
+            // Close subfolder menu if clicking outside
+            if (openSubfolderMenuId) {
+                const menuRef = subfolderMenuRefs.current[openSubfolderMenuId];
+                if (menuRef && !menuRef.contains(event.target as Node)) {
+                    setOpenSubfolderMenuId(null);
+                }
+            }
         };
 
-        if (isSubfolderDropdownOpen) {
+        if (isSubfolderDropdownOpen || openSubfolderMenuId) {
             document.addEventListener("mousedown", handleClickOutside);
             return () => document.removeEventListener("mousedown", handleClickOutside);
         }
         return undefined;
-    }, [isSubfolderDropdownOpen]);
+    }, [isSubfolderDropdownOpen, openSubfolderMenuId]);
 
     const handleBack = () => {
         navigate(-1);
@@ -131,6 +147,33 @@ export function FolderContentsPage() {
 
     const handleSubfolderClick = (subfolderId: string) => {
         navigate(`/folders/${subfolderId}`);
+    };
+
+    const handleEditSubfolder = async (name: string, color: string) => {
+        if (!subfolderToEdit) return;
+        await updateFolder(subfolderToEdit.id, { name, color });
+        // Refresh folder contents to show updated subfolder
+        if (folderId) {
+            await Promise.all([fetchFolderContents(folderId), refreshFolders()]);
+        }
+        setSubfolderToEdit(null);
+    };
+
+    const handleDeleteSubfolder = async () => {
+        if (!subfolderToDelete) return;
+        setIsDeletingSubfolder(true);
+        try {
+            await deleteFolder(subfolderToDelete.id);
+            // Refresh folder contents and sidebar
+            if (folderId) {
+                await Promise.all([fetchFolderContents(folderId), refreshFolders()]);
+            }
+            setSubfolderToDelete(null);
+        } catch (_error) {
+            // Error is logged in store
+        } finally {
+            setIsDeletingSubfolder(false);
+        }
     };
 
     // Loading state
@@ -319,28 +362,86 @@ export function FolderContentsPage() {
                     </h2>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                         {subfolders.map((subfolder) => (
-                            <button
+                            <div
                                 key={subfolder.id}
-                                onClick={() => handleSubfolderClick(subfolder.id)}
                                 className={cn(
-                                    "flex items-center gap-3 p-3 rounded-lg border border-border",
-                                    "bg-card hover:bg-muted/50 transition-colors text-left",
-                                    "focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                    "relative flex items-center gap-3 p-3 rounded-lg border border-border",
+                                    "bg-card hover:shadow-md hover:border-primary transition-all group cursor-pointer"
                                 )}
                             >
+                                <button
+                                    onClick={() => handleSubfolderClick(subfolder.id)}
+                                    className={cn(
+                                        "flex items-center gap-3 flex-1 text-left min-w-0",
+                                        "focus:outline-none focus:ring-2 focus:ring-primary/50 rounded"
+                                    )}
+                                >
+                                    <div
+                                        className="w-0.5 h-6 rounded-full flex-shrink-0"
+                                        style={{ backgroundColor: subfolder.color }}
+                                    />
+                                    <div className="min-w-0 flex-1">
+                                        <div className="font-medium text-foreground group-hover:text-primary transition-colors truncate">
+                                            {subfolder.name}
+                                        </div>
+                                        <div className="text-xs text-muted-foreground">
+                                            {subfolder.itemCounts.total} items
+                                        </div>
+                                    </div>
+                                </button>
+                                {/* Option Menu */}
                                 <div
-                                    className="w-0.5 h-6 rounded-full flex-shrink-0"
-                                    style={{ backgroundColor: subfolder.color }}
-                                />
-                                <div className="min-w-0 flex-1">
-                                    <div className="font-medium text-foreground truncate">
-                                        {subfolder.name}
-                                    </div>
-                                    <div className="text-xs text-muted-foreground">
-                                        {subfolder.itemCounts.total} items
-                                    </div>
+                                    className="relative flex-shrink-0"
+                                    ref={(el) => {
+                                        if (el) {
+                                            subfolderMenuRefs.current[subfolder.id] = el;
+                                        }
+                                    }}
+                                >
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setOpenSubfolderMenuId(
+                                                openSubfolderMenuId === subfolder.id
+                                                    ? null
+                                                    : subfolder.id
+                                            );
+                                        }}
+                                        className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors opacity-0 group-hover:opacity-100"
+                                        title="More options"
+                                    >
+                                        <MoreVertical className="w-4 h-4" />
+                                    </button>
+
+                                    {/* Dropdown Menu */}
+                                    {openSubfolderMenuId === subfolder.id && (
+                                        <div className="absolute right-0 mt-1 w-36 bg-card border border-border rounded-lg shadow-lg py-1 z-50">
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setSubfolderToEdit(subfolder);
+                                                    setOpenSubfolderMenuId(null);
+                                                }}
+                                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+                                            >
+                                                <Edit2 className="w-4 h-4" />
+                                                Edit
+                                            </button>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setSubfolderToDelete(subfolder);
+                                                    setOpenSubfolderMenuId(null);
+                                                }}
+                                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                                Delete
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
-                            </button>
+                            </div>
                         ))}
                     </div>
                 </div>
@@ -453,6 +554,25 @@ export function FolderContentsPage() {
                 title="Delete Folder"
                 message={`Are you sure you want to delete "${folder.name}"? ${subfolders.length > 0 ? "Subfolders will be promoted to the parent level. " : ""}Items in this folder will be moved to the root level, not deleted.`}
                 confirmText={isDeleting ? "Deleting..." : "Delete"}
+                variant="danger"
+            />
+
+            {/* Edit Subfolder Dialog */}
+            <CreateFolderDialog
+                isOpen={!!subfolderToEdit}
+                onClose={() => setSubfolderToEdit(null)}
+                onSubmit={handleEditSubfolder}
+                folder={subfolderToEdit}
+            />
+
+            {/* Delete Subfolder Confirmation Dialog */}
+            <ConfirmDialog
+                isOpen={!!subfolderToDelete}
+                onClose={() => setSubfolderToDelete(null)}
+                onConfirm={handleDeleteSubfolder}
+                title="Delete Subfolder"
+                message={`Are you sure you want to delete "${subfolderToDelete?.name}"? Items in this subfolder will be moved to the parent folder, not deleted.`}
+                confirmText={isDeletingSubfolder ? "Deleting..." : "Delete"}
                 variant="danger"
             />
         </div>
