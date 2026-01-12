@@ -125,6 +125,8 @@ export function FolderContentsPage() {
         await createFolder({ name, color, parentId: folderId });
         // Refresh folder contents to show new subfolder and update sidebar
         await Promise.all([fetchFolderContents(folderId), refreshFolders()]);
+        // Automatically show subfolders section so the newly created subfolder is visible
+        setShowSubfolders(true);
     };
 
     const handleSubfolderClick = (subfolderId: string) => {
