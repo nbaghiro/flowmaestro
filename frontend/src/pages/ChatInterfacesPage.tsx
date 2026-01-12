@@ -40,6 +40,7 @@ import {
 import { logger } from "../lib/logger";
 import { createDragPreview } from "../lib/utils";
 import { buildFolderTree } from "../stores/folderStore";
+import { useUIPreferencesStore } from "../stores/uiPreferencesStore";
 
 // Convert ChatInterface to ChatInterfaceSummary for card components
 function toChatInterfaceSummary(ci: ChatInterface): ChatInterfaceSummary {
@@ -88,7 +89,7 @@ export function ChatInterfacesPage() {
     // Selection state
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [isBatchDeleting, setIsBatchDeleting] = useState(false);
-    const [showFoldersSection, setShowFoldersSection] = useState(false);
+    const { showFoldersSection, setShowFoldersSection } = useUIPreferencesStore();
     const [contextMenu, setContextMenu] = useState<{
         isOpen: boolean;
         position: { x: number; y: number };

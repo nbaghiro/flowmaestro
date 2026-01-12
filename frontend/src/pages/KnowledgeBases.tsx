@@ -34,6 +34,7 @@ import { logger } from "../lib/logger";
 import { createDragPreview } from "../lib/utils";
 import { buildFolderTree } from "../stores/folderStore";
 import { useKnowledgeBaseStore } from "../stores/knowledgeBaseStore";
+import { useUIPreferencesStore } from "../stores/uiPreferencesStore";
 
 // Convert KnowledgeBase + stats to KnowledgeBaseSummary for card components
 function toKnowledgeBaseSummary(
@@ -71,7 +72,7 @@ export function KnowledgeBases() {
         type: "kb" | "folder";
     }>({ isOpen: false, position: { x: 0, y: 0 }, type: "kb" });
     const [isBatchDeleting, setIsBatchDeleting] = useState(false);
-    const [showFoldersSection, setShowFoldersSection] = useState(false);
+    const { showFoldersSection, setShowFoldersSection } = useUIPreferencesStore();
 
     // Folder state
     const [folders, setFolders] = useState<FolderWithCounts[]>([]);

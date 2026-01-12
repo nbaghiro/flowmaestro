@@ -40,6 +40,7 @@ import {
 import { logger } from "../lib/logger";
 import { createDragPreview } from "../lib/utils";
 import { buildFolderTree } from "../stores/folderStore";
+import { useUIPreferencesStore } from "../stores/uiPreferencesStore";
 
 // Convert FormInterface to FormInterfaceSummary for card components
 function toFormInterfaceSummary(fi: FormInterface): FormInterfaceSummary {
@@ -87,7 +88,7 @@ export function FormInterfaces() {
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [selectedFolderIds, setSelectedFolderIds] = useState<Set<string>>(new Set());
     const [isBatchDeleting, setIsBatchDeleting] = useState(false);
-    const [showFoldersSection, setShowFoldersSection] = useState(false);
+    const { showFoldersSection, setShowFoldersSection } = useUIPreferencesStore();
     const [contextMenu, setContextMenu] = useState<{
         isOpen: boolean;
         position: { x: number; y: number };

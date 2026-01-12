@@ -33,6 +33,7 @@ import { logger } from "../lib/logger";
 import { createDragPreview } from "../lib/utils";
 import { useAgentStore } from "../stores/agentStore";
 import { buildFolderTree } from "../stores/folderStore";
+import { useUIPreferencesStore } from "../stores/uiPreferencesStore";
 import type { Agent } from "../lib/api";
 
 // Convert local Agent to AgentSummary for card components
@@ -69,7 +70,7 @@ export function Agents() {
         type: "agent" | "folder";
     }>({ isOpen: false, position: { x: 0, y: 0 }, type: "agent" });
     const [isBatchDeleting, setIsBatchDeleting] = useState(false);
-    const [showFoldersSection, setShowFoldersSection] = useState(false);
+    const { showFoldersSection, setShowFoldersSection } = useUIPreferencesStore();
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
     const [isCreateFolderDialogOpen, setIsCreateFolderDialogOpen] = useState(false);
     const [isMoveDialogOpen, setIsMoveDialogOpen] = useState(false);
