@@ -1,7 +1,12 @@
 import { Plus, Bot, Trash2, FolderInput, FolderMinus, Search } from "lucide-react";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import type { Folder, FolderWithCounts, AgentSummary } from "@flowmaestro/shared";
+import type {
+    Folder,
+    FolderWithCounts,
+    AgentSummary,
+    FolderResourceType
+} from "@flowmaestro/shared";
 import { AgentCard } from "../components/cards";
 import { Alert } from "../components/common/Alert";
 import { Button } from "../components/common/Button";
@@ -21,18 +26,11 @@ import {
 } from "../components/folders";
 import { useSearch } from "../hooks/useSearch";
 import { useSort, AGENT_SORT_FIELDS } from "../hooks/useSort";
-import {
-    getFolders,
-    createFolder,
-    updateFolder,
-    deleteFolder,
-    moveItemsToFolder,
-    removeItemsFromFolder
-} from "../lib/api";
+import { getFolders, updateFolder, removeItemsFromFolder } from "../lib/api";
 import { logger } from "../lib/logger";
 import { createDragPreview } from "../lib/utils";
 import { useAgentStore } from "../stores/agentStore";
-import { buildFolderTree } from "../stores/folderStore";
+import { useFolderStore, buildFolderTree } from "../stores/folderStore";
 import { useUIPreferencesStore } from "../stores/uiPreferencesStore";
 import type { Agent } from "../lib/api";
 
@@ -54,6 +52,14 @@ export function Agents() {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const currentFolderId = searchParams.get("folder");
+
+    // Folder store
+    const {
+        createFolder: createFolderStore,
+        moveItemsToFolder: moveItemsToFolderStore,
+        deleteFolder: deleteFolderStore,
+        folders: storeFolders
+    } = useFolderStore();
 
     const { agents, isLoading, error, fetchAgents, deleteAgent } = useAgentStore();
     const [folders, setFolders] = useState<FolderWithCounts[]>([]);
@@ -111,6 +117,13 @@ export function Agents() {
         loadFolders();
     }, []);
 
+    // Sync folders when store folders change (e.g., when folder is created from sidebar)
+    useEffect(() => {
+        if (storeFolders.length > 0 && folders.length !== storeFolders.length) {
+            loadFolders();
+        }
+    }, [storeFolders]);
+
     // Load agents when folder changes
     useEffect(() => {
         const folderId = currentFolderId || undefined;
@@ -160,7 +173,8 @@ export function Agents() {
 
     // Folder handlers
     const handleCreateFolder = async (name: string, color: string) => {
-        await createFolder({ name, color });
+        await createFolderStore({ name, color });
+        // Store's createFolder already refreshes folders, so sidebar will update
         await loadFolders();
     };
 
@@ -175,7 +189,8 @@ export function Agents() {
         if (!folderToDelete) return;
         setIsDeleting(true);
         try {
-            await deleteFolder(folderToDelete.id);
+            await deleteFolderStore(folderToDelete.id);
+            // Store's deleteFolder already refreshes folders, so sidebar will update
             await loadFolders();
             const folderId = currentFolderId || undefined;
             await fetchAgents({ folderId });
@@ -235,8 +250,9 @@ export function Agents() {
 
         setIsBatchDeleting(true);
         try {
-            const deletePromises = Array.from(selectedFolderIds).map((id) => deleteFolder(id));
+            const deletePromises = Array.from(selectedFolderIds).map((id) => deleteFolderStore(id));
             await Promise.all(deletePromises);
+            // Store's deleteFolder already refreshes folders, so sidebar will update
 
             await loadFolders();
             const folderId = currentFolderId || undefined;
@@ -258,11 +274,8 @@ export function Agents() {
         if (!folderId) {
             throw new Error("Folder ID is required");
         }
-        await moveItemsToFolder({
-            itemIds: Array.from(selectedIds),
-            itemType: "agent",
-            folderId
-        });
+        await moveItemsToFolderStore(folderId, Array.from(selectedIds), "agent");
+        // Store's moveItemsToFolder already refreshes folders, so sidebar will update
         const currentFolderIdParam = currentFolderId || undefined;
         await fetchAgents({ folderId: currentFolderIdParam });
         await loadFolders();
@@ -310,7 +323,8 @@ export function Agents() {
         async (folderId: string, itemIds: string[], itemType: string) => {
             if (itemType !== "agent") return;
             try {
-                await moveItemsToFolder({ itemIds, itemType, folderId });
+                await moveItemsToFolderStore(folderId, itemIds, itemType as FolderResourceType);
+                // Store's moveItemsToFolder already refreshes folders, so sidebar will update
                 const currentFolderIdParam = currentFolderId || undefined;
                 await fetchAgents({ folderId: currentFolderIdParam });
                 await loadFolders();
@@ -319,7 +333,7 @@ export function Agents() {
                 logger.error("Failed to move items to folder", err);
             }
         },
-        [currentFolderId, fetchAgents]
+        [currentFolderId, fetchAgents, moveItemsToFolderStore]
     );
 
     // Selection handlers for batch operations

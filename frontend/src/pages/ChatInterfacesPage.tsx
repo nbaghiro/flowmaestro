@@ -5,7 +5,8 @@ import type {
     ChatInterface,
     Folder,
     FolderWithCounts,
-    ChatInterfaceSummary
+    ChatInterfaceSummary,
+    FolderResourceType
 } from "@flowmaestro/shared";
 import { ChatInterfaceCard } from "../components/cards";
 import { CreateChatInterfaceDialog } from "../components/chat/builder/CreateChatInterfaceDialog";
@@ -31,15 +32,12 @@ import {
     deleteChatInterface,
     duplicateChatInterface,
     getFolders,
-    createFolder,
     updateFolder,
-    deleteFolder,
-    moveItemsToFolder,
     removeItemsFromFolder
 } from "../lib/api";
 import { logger } from "../lib/logger";
 import { createDragPreview } from "../lib/utils";
-import { buildFolderTree } from "../stores/folderStore";
+import { buildFolderTree, useFolderStore } from "../stores/folderStore";
 import { useUIPreferencesStore } from "../stores/uiPreferencesStore";
 
 // Convert ChatInterface to ChatInterfaceSummary for card components
@@ -65,6 +63,14 @@ export function ChatInterfacesPage() {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const currentFolderId = searchParams.get("folder");
+
+    // Folder store
+    const {
+        createFolder: createFolderStore,
+        moveItemsToFolder: moveItemsToFolderStore,
+        deleteFolder: deleteFolderStore,
+        folders: storeFolders
+    } = useFolderStore();
 
     // State
     const [chatInterfaces, setChatInterfaces] = useState<ChatInterface[]>([]);
@@ -130,6 +136,13 @@ export function ChatInterfacesPage() {
     useEffect(() => {
         loadFolders();
     }, []);
+
+    // Sync folders when store folders change (e.g., when folder is created from sidebar)
+    useEffect(() => {
+        if (storeFolders.length > 0 && folders.length !== storeFolders.length) {
+            loadFolders();
+        }
+    }, [storeFolders]);
 
     // Load chat interfaces when folder changes
     useEffect(() => {
@@ -222,7 +235,8 @@ export function ChatInterfacesPage() {
 
     // Folder handlers
     const handleCreateFolder = async (name: string, color: string) => {
-        await createFolder({ name, color });
+        await createFolderStore({ name, color });
+        // Store's createFolder already refreshes folders, so sidebar will update
         await loadFolders();
     };
 
@@ -237,7 +251,8 @@ export function ChatInterfacesPage() {
         if (!folderToDelete) return;
         setIsBatchDeleting(true);
         try {
-            await deleteFolder(folderToDelete.id);
+            await deleteFolderStore(folderToDelete.id);
+            // Store's deleteFolder already refreshes folders, so sidebar will update
             await loadFolders();
             const folderId = currentFolderId || undefined;
             await loadChatInterfaces(folderId);
@@ -297,8 +312,9 @@ export function ChatInterfacesPage() {
 
         setIsBatchDeleting(true);
         try {
-            const deletePromises = Array.from(selectedFolderIds).map((id) => deleteFolder(id));
+            const deletePromises = Array.from(selectedFolderIds).map((id) => deleteFolderStore(id));
             await Promise.all(deletePromises);
+            // Store's deleteFolder already refreshes folders, so sidebar will update
 
             await loadFolders();
             const folderId = currentFolderId || undefined;
@@ -338,7 +354,8 @@ export function ChatInterfacesPage() {
         async (folderId: string, itemIds: string[], itemType: string) => {
             if (itemType !== "chat-interface") return;
             try {
-                await moveItemsToFolder({ itemIds, itemType, folderId });
+                await moveItemsToFolderStore(folderId, itemIds, itemType as FolderResourceType);
+                // Store's moveItemsToFolder already refreshes folders, so sidebar will update
                 const currentFolderIdParam = currentFolderId || undefined;
                 await loadChatInterfaces(currentFolderIdParam);
                 await loadFolders();
@@ -347,18 +364,15 @@ export function ChatInterfacesPage() {
                 logger.error("Failed to move items to folder", err);
             }
         },
-        [currentFolderId]
+        [currentFolderId, moveItemsToFolderStore]
     );
 
     const handleMoveToFolder = async (folderId: string | null) => {
         if (!folderId) {
             throw new Error("Folder ID is required");
         }
-        await moveItemsToFolder({
-            itemIds: Array.from(selectedIds),
-            itemType: "chat-interface",
-            folderId
-        });
+        await moveItemsToFolderStore(folderId, Array.from(selectedIds), "chat-interface");
+        // Store's moveItemsToFolder already refreshes folders, so sidebar will update
         const currentFolderIdParam = currentFolderId || undefined;
         await loadChatInterfaces(currentFolderIdParam);
         await loadFolders();

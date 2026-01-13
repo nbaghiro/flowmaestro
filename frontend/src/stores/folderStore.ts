@@ -247,22 +247,13 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
                 throw new Error("Failed to create folder: no data returned");
             }
 
-            // Add to local state with default counts
-            const folderWithCounts: FolderWithCounts = {
-                ...newFolder,
-                itemCounts: {
-                    workflows: 0,
-                    agents: 0,
-                    formInterfaces: 0,
-                    chatInterfaces: 0,
-                    knowledgeBases: 0,
-                    total: 0
-                }
-            };
-
-            set((state) => ({
-                folders: [...state.folders, folderWithCounts]
-            }));
+            // Refresh folders to get accurate counts and tree structure
+            const foldersResponse = await getFolders();
+            const folderData = foldersResponse.data ?? [];
+            set({
+                folders: folderData,
+                folderTree: buildFolderTree(folderData)
+            });
 
             logger.info("Folder created", { folderId: newFolder.id, name: newFolder.name });
             return newFolder;
@@ -282,9 +273,12 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
                 throw new Error("Failed to update folder: no data returned");
             }
 
-            // Update in local state
+            // Refresh folders to get accurate tree structure
+            const foldersResponse = await getFolders();
+            const folderData = foldersResponse.data ?? [];
             set((state) => ({
-                folders: state.folders.map((f) => (f.id === id ? { ...f, ...updatedFolder } : f)),
+                folders: folderData,
+                folderTree: buildFolderTree(folderData),
                 // Also update current folder contents if viewing this folder
                 currentFolderContents:
                     state.currentFolderContents?.folder.id === id

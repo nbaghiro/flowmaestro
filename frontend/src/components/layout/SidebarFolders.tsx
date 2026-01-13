@@ -33,7 +33,6 @@ export function SidebarFolders({ isCollapsed }: SidebarFoldersProps) {
         isFoldersSectionExpanded,
         expandedFolderIds,
         fetchFolders,
-        refreshFolders,
         toggleFoldersSection,
         toggleFolderExpanded,
         createFolder,
@@ -109,13 +108,15 @@ export function SidebarFolders({ isCollapsed }: SidebarFoldersProps) {
 
     const handleCreateSubmit = async (name: string, color: string) => {
         await createFolder({ name, color });
+        // Folder store's createFolder already refreshes folders, but ensure it's reflected
+        setIsCreateDialogOpen(false);
     };
 
     const handleCreateSubfolderSubmit = async (name: string, color: string) => {
         if (parentFolderForSubfolder) {
             await createFolder({ name, color, parentId: parentFolderForSubfolder.id });
-            // Refresh folders to update the tree structure
-            await refreshFolders();
+            // Folder store's createFolder already refreshes folders
+            setParentFolderForSubfolder(null);
         }
     };
 

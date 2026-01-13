@@ -5,7 +5,8 @@ import type {
     FormInterface,
     Folder,
     FolderWithCounts,
-    FormInterfaceSummary
+    FormInterfaceSummary,
+    FolderResourceType
 } from "@flowmaestro/shared";
 import { FormInterfaceCard } from "../components/cards";
 import { Button } from "../components/common/Button";
@@ -31,15 +32,12 @@ import {
     deleteFormInterface,
     duplicateFormInterface,
     getFolders,
-    createFolder,
     updateFolder,
-    deleteFolder,
-    moveItemsToFolder,
     removeItemsFromFolder
 } from "../lib/api";
 import { logger } from "../lib/logger";
 import { createDragPreview } from "../lib/utils";
-import { buildFolderTree } from "../stores/folderStore";
+import { buildFolderTree, useFolderStore } from "../stores/folderStore";
 import { useUIPreferencesStore } from "../stores/uiPreferencesStore";
 
 // Convert FormInterface to FormInterfaceSummary for card components
@@ -64,6 +62,14 @@ export function FormInterfaces() {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const currentFolderId = searchParams.get("folder");
+
+    // Folder store
+    const {
+        createFolder: createFolderStore,
+        moveItemsToFolder: moveItemsToFolderStore,
+        deleteFolder: deleteFolderStore,
+        folders: storeFolders
+    } = useFolderStore();
 
     // State
     const [formInterfaces, setFormInterfaces] = useState<FormInterface[]>([]);
@@ -129,6 +135,13 @@ export function FormInterfaces() {
     useEffect(() => {
         loadFolders();
     }, []);
+
+    // Sync folders when store folders change (e.g., when folder is created from sidebar)
+    useEffect(() => {
+        if (storeFolders.length > 0 && folders.length !== storeFolders.length) {
+            loadFolders();
+        }
+    }, [storeFolders]);
 
     // Load form interfaces when folder changes
     useEffect(() => {
@@ -221,7 +234,8 @@ export function FormInterfaces() {
 
     // Folder handlers
     const handleCreateFolder = async (name: string, color: string) => {
-        await createFolder({ name, color });
+        await createFolderStore({ name, color });
+        // Store's createFolder already refreshes folders, so sidebar will update
         await loadFolders();
     };
 
@@ -236,7 +250,8 @@ export function FormInterfaces() {
         if (!folderToDelete) return;
         setIsBatchDeleting(true);
         try {
-            await deleteFolder(folderToDelete.id);
+            await deleteFolderStore(folderToDelete.id);
+            // Store's deleteFolder already refreshes folders, so sidebar will update
             await loadFolders();
             const folderId = currentFolderId || undefined;
             await loadFormInterfaces(folderId);
@@ -296,8 +311,9 @@ export function FormInterfaces() {
 
         setIsBatchDeleting(true);
         try {
-            const deletePromises = Array.from(selectedFolderIds).map((id) => deleteFolder(id));
+            const deletePromises = Array.from(selectedFolderIds).map((id) => deleteFolderStore(id));
             await Promise.all(deletePromises);
+            // Store's deleteFolder already refreshes folders, so sidebar will update
 
             await loadFolders();
             const folderId = currentFolderId || undefined;
@@ -319,11 +335,8 @@ export function FormInterfaces() {
         if (!folderId) {
             throw new Error("Folder ID is required");
         }
-        await moveItemsToFolder({
-            itemIds: Array.from(selectedIds),
-            itemType: "form-interface",
-            folderId
-        });
+        await moveItemsToFolderStore(folderId, Array.from(selectedIds), "form-interface");
+        // Store's moveItemsToFolder already refreshes folders, so sidebar will update
         const currentFolderIdParam = currentFolderId || undefined;
         await loadFormInterfaces(currentFolderIdParam);
         await loadFolders();
@@ -371,7 +384,8 @@ export function FormInterfaces() {
         async (folderId: string, itemIds: string[], itemType: string) => {
             if (itemType !== "form-interface") return;
             try {
-                await moveItemsToFolder({ itemIds, itemType, folderId });
+                await moveItemsToFolderStore(folderId, itemIds, itemType as FolderResourceType);
+                // Store's moveItemsToFolder already refreshes folders, so sidebar will update
                 const currentFolderIdParam = currentFolderId || undefined;
                 await loadFormInterfaces(currentFolderIdParam);
                 await loadFolders();
@@ -380,7 +394,7 @@ export function FormInterfaces() {
                 logger.error("Failed to move items to folder", err);
             }
         },
-        [currentFolderId]
+        [currentFolderId, moveItemsToFolderStore]
     );
 
     // Selection handlers for batch operations
