@@ -6,6 +6,7 @@ export interface WorkflowModel {
     description: string | null;
     definition: WorkflowDefinition;
     user_id: string;
+    workspace_id: string;
     version: number;
     ai_generated: boolean;
     ai_prompt: string | null;
@@ -19,6 +20,7 @@ export interface CreateWorkflowInput {
     description?: string;
     definition: WorkflowDefinition;
     user_id: string;
+    workspace_id: string;
     ai_generated?: boolean;
     ai_prompt?: string;
 }

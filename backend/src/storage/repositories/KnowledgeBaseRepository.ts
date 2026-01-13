@@ -18,6 +18,7 @@ const DEFAULT_CONFIG: KnowledgeBaseConfig = {
 interface KnowledgeBaseRow {
     id: string;
     user_id: string;
+    workspace_id: string;
     name: string;
     description: string | null;
     config: string | KnowledgeBaseConfig;
@@ -30,13 +31,14 @@ export class KnowledgeBaseRepository {
         const config = { ...DEFAULT_CONFIG, ...input.config };
 
         const query = `
-            INSERT INTO flowmaestro.knowledge_bases (user_id, name, description, config)
-            VALUES ($1, $2, $3, $4)
+            INSERT INTO flowmaestro.knowledge_bases (user_id, workspace_id, name, description, config)
+            VALUES ($1, $2, $3, $4, $5)
             RETURNING *
         `;
 
         const values = [
             input.user_id,
+            input.workspace_id,
             input.name,
             input.description || null,
             JSON.stringify(config)
@@ -56,6 +58,71 @@ export class KnowledgeBaseRepository {
         return result.rows.length > 0 ? this.mapRow(result.rows[0] as KnowledgeBaseRow) : null;
     }
 
+    async findByIdAndWorkspaceId(
+        id: string,
+        workspaceId: string
+    ): Promise<KnowledgeBaseModel | null> {
+        const query = `
+            SELECT * FROM flowmaestro.knowledge_bases
+            WHERE id = $1 AND workspace_id = $2
+        `;
+
+        const result = await db.query<KnowledgeBaseRow>(query, [id, workspaceId]);
+        return result.rows.length > 0 ? this.mapRow(result.rows[0] as KnowledgeBaseRow) : null;
+    }
+
+    async findByWorkspaceId(
+        workspaceId: string,
+        options: { limit?: number; offset?: number; folderId?: string | null } = {}
+    ): Promise<{ knowledgeBases: KnowledgeBaseModel[]; total: number }> {
+        const limit = options.limit || 50;
+        const offset = options.offset || 0;
+
+        // Build folder filter using folder_ids array
+        let folderFilter = "";
+        const countParams: unknown[] = [workspaceId];
+        const queryParams: unknown[] = [workspaceId];
+
+        if (options.folderId === null) {
+            folderFilter = " AND (folder_ids IS NULL OR folder_ids = ARRAY[]::UUID[])";
+        } else if (options.folderId !== undefined) {
+            folderFilter = " AND $2 = ANY(COALESCE(folder_ids, ARRAY[]::UUID[]))";
+            countParams.push(options.folderId);
+            queryParams.push(options.folderId);
+        }
+
+        const countQuery = `
+            SELECT COUNT(*) as count
+            FROM flowmaestro.knowledge_bases
+            WHERE workspace_id = $1${folderFilter}
+        `;
+
+        const limitParamIndex = queryParams.length + 1;
+        const offsetParamIndex = queryParams.length + 2;
+        const query = `
+            SELECT *
+            FROM flowmaestro.knowledge_bases
+            WHERE workspace_id = $1${folderFilter}
+            ORDER BY created_at DESC
+            LIMIT $${limitParamIndex} OFFSET $${offsetParamIndex}
+        `;
+
+        queryParams.push(limit, offset);
+
+        const [countResult, kbResult] = await Promise.all([
+            db.query<{ count: string }>(countQuery, countParams),
+            db.query<KnowledgeBaseRow>(query, queryParams)
+        ]);
+
+        return {
+            knowledgeBases: kbResult.rows.map((row) => this.mapRow(row as KnowledgeBaseRow)),
+            total: parseInt(countResult.rows[0].count)
+        };
+    }
+
+    /**
+     * @deprecated Use findByWorkspaceId instead. Kept for backward compatibility.
+     */
     async findByUserId(
         userId: string,
         options: { limit?: number; offset?: number; folderId?: string | null } = {}
@@ -196,7 +263,11 @@ export class KnowledgeBaseRepository {
 
     private mapRow(row: KnowledgeBaseRow): KnowledgeBaseModel {
         return {
-            ...row,
+            id: row.id,
+            user_id: row.user_id,
+            workspace_id: row.workspace_id,
+            name: row.name,
+            description: row.description,
             config: typeof row.config === "string" ? JSON.parse(row.config) : row.config,
             created_at: new Date(row.created_at),
             updated_at: new Date(row.updated_at)

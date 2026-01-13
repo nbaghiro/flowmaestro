@@ -3,6 +3,7 @@ import { createServiceLogger } from "../../../core/logging";
 import { getUploadsStorageService } from "../../../services/GCSStorageService";
 import { FormInterfaceRepository } from "../../../storage/repositories/FormInterfaceRepository";
 import { authMiddleware } from "../../middleware";
+import { workspaceContextMiddleware } from "../../middleware/workspace-context";
 
 const logger = createServiceLogger("FormInterfaceRoutes");
 
@@ -13,16 +14,17 @@ export async function uploadFormInterfaceAssetRoute(fastify: FastifyInstance) {
     fastify.post(
         "/:id/assets",
         {
-            preHandler: [authMiddleware]
+            preHandler: [authMiddleware, workspaceContextMiddleware]
         },
         async (request, reply) => {
             const formInterfaceRepo = new FormInterfaceRepository();
             const { id } = request.params as { id: string };
             const userId = request.user!.id;
+            const workspaceId = request.workspace!.id;
 
             try {
                 // Check if form interface exists
-                const existing = await formInterfaceRepo.findById(id, userId);
+                const existing = await formInterfaceRepo.findByIdAndWorkspaceId(id, workspaceId);
                 if (!existing) {
                     return reply.status(404).send({
                         success: false,
@@ -78,10 +80,14 @@ export async function uploadFormInterfaceAssetRoute(fastify: FastifyInstance) {
                     updateData = { iconUrl: publicUrl };
                 }
 
-                const formInterface = await formInterfaceRepo.update(id, userId, updateData);
+                const formInterface = await formInterfaceRepo.updateByWorkspaceId(
+                    id,
+                    workspaceId,
+                    updateData
+                );
 
                 logger.info(
-                    { formInterfaceId: id, assetType, userId },
+                    { formInterfaceId: id, assetType, workspaceId },
                     "Form interface asset uploaded"
                 );
 
@@ -94,7 +100,7 @@ export async function uploadFormInterfaceAssetRoute(fastify: FastifyInstance) {
                     }
                 });
             } catch (error) {
-                logger.error({ id, userId, error }, "Error uploading form interface asset");
+                logger.error({ id, workspaceId, error }, "Error uploading form interface asset");
                 return reply.status(500).send({
                     success: false,
                     error: error instanceof Error ? error.message : String(error)

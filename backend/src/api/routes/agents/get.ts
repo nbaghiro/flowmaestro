@@ -8,11 +8,11 @@ const getAgentParamsSchema = z.object({
 });
 
 export async function getAgentHandler(request: FastifyRequest, reply: FastifyReply): Promise<void> {
-    const userId = request.user!.id;
+    const workspaceId = request.workspace!.id;
     const { id } = getAgentParamsSchema.parse(request.params);
 
     const agentRepo = new AgentRepository();
-    const agent = await agentRepo.findByIdAndUserId(id, userId);
+    const agent = await agentRepo.findByIdAndWorkspaceId(id, workspaceId);
 
     if (!agent) {
         throw new NotFoundError("Agent not found");

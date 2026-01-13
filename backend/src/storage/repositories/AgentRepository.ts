@@ -13,6 +13,7 @@ import type { SafetyConfig } from "../../core/safety/types";
 interface AgentRow {
     id: string;
     user_id: string;
+    workspace_id: string;
     name: string;
     description: string | null;
     model: string;
@@ -35,16 +36,17 @@ export class AgentRepository {
     async create(input: CreateAgentInput): Promise<AgentModel> {
         const query = `
             INSERT INTO flowmaestro.agents (
-                user_id, name, description, model, provider, connection_id,
+                user_id, workspace_id, name, description, model, provider, connection_id,
                 system_prompt, temperature, max_tokens, max_iterations,
                 available_tools, memory_config, metadata
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
             RETURNING *
         `;
 
         const values = [
             input.user_id,
+            input.workspace_id,
             input.name,
             input.description || null,
             input.model,
@@ -73,6 +75,19 @@ export class AgentRepository {
         return result.rows.length > 0 ? this.mapRow(result.rows[0] as AgentRow) : null;
     }
 
+    async findByIdAndWorkspaceId(id: string, workspaceId: string): Promise<AgentModel | null> {
+        const query = `
+            SELECT * FROM flowmaestro.agents
+            WHERE id = $1 AND workspace_id = $2 AND deleted_at IS NULL
+        `;
+
+        const result = await db.query(query, [id, workspaceId]);
+        return result.rows.length > 0 ? this.mapRow(result.rows[0] as AgentRow) : null;
+    }
+
+    /**
+     * @deprecated Use findByIdAndWorkspaceId instead. Kept for backward compatibility.
+     */
     async findByIdAndUserId(id: string, userId: string): Promise<AgentModel | null> {
         const query = `
             SELECT * FROM flowmaestro.agents
@@ -83,6 +98,58 @@ export class AgentRepository {
         return result.rows.length > 0 ? this.mapRow(result.rows[0] as AgentRow) : null;
     }
 
+    async findByWorkspaceId(
+        workspaceId: string,
+        options: { limit?: number; offset?: number; folderId?: string | null } = {}
+    ): Promise<{ agents: AgentModel[]; total: number }> {
+        const limit = options.limit || 50;
+        const offset = options.offset || 0;
+
+        // Build folder filter using folder_ids array
+        let folderFilter = "";
+        const countParams: unknown[] = [workspaceId];
+        const queryParams: unknown[] = [workspaceId];
+
+        if (options.folderId === null) {
+            folderFilter = " AND (folder_ids IS NULL OR folder_ids = ARRAY[]::UUID[])";
+        } else if (options.folderId !== undefined) {
+            folderFilter = " AND $2 = ANY(COALESCE(folder_ids, ARRAY[]::UUID[]))";
+            countParams.push(options.folderId);
+            queryParams.push(options.folderId);
+        }
+
+        const countQuery = `
+            SELECT COUNT(*) as count
+            FROM flowmaestro.agents
+            WHERE workspace_id = $1 AND deleted_at IS NULL${folderFilter}
+        `;
+
+        const limitParamIndex = queryParams.length + 1;
+        const offsetParamIndex = queryParams.length + 2;
+        const query = `
+            SELECT *
+            FROM flowmaestro.agents
+            WHERE workspace_id = $1 AND deleted_at IS NULL${folderFilter}
+            ORDER BY created_at DESC
+            LIMIT $${limitParamIndex} OFFSET $${offsetParamIndex}
+        `;
+
+        queryParams.push(limit, offset);
+
+        const [countResult, agentsResult] = await Promise.all([
+            db.query<{ count: string }>(countQuery, countParams),
+            db.query(query, queryParams)
+        ]);
+
+        return {
+            agents: agentsResult.rows.map((row) => this.mapRow(row as AgentRow)),
+            total: parseInt(countResult.rows[0].count)
+        };
+    }
+
+    /**
+     * @deprecated Use findByWorkspaceId instead. Kept for backward compatibility.
+     */
     async findByUserId(
         userId: string,
         options: { limit?: number; offset?: number; folderId?: string | null } = {}
@@ -238,6 +305,7 @@ export class AgentRepository {
         return {
             id: row.id,
             user_id: row.user_id,
+            workspace_id: row.workspace_id,
             name: row.name,
             description: row.description,
             model: row.model,

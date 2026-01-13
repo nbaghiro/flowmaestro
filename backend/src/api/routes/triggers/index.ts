@@ -1,4 +1,5 @@
 import { FastifyInstance } from "fastify";
+import { authMiddleware, workspaceContextMiddleware } from "../../middleware";
 import { createTriggerRoute } from "./create";
 import { deleteTriggerRoute } from "./delete";
 import { executeTriggerRoute } from "./execute";
@@ -17,9 +18,13 @@ export async function triggerRoutes(fastify: FastifyInstance) {
         { prefix: "/webhooks" }
     );
 
-    // Trigger management routes (requires auth)
+    // Trigger management routes (requires auth and workspace context)
     fastify.register(
         async (instance) => {
+            // Add auth and workspace context middleware to all routes in this scope
+            instance.addHook("preHandler", authMiddleware);
+            instance.addHook("preHandler", workspaceContextMiddleware);
+
             instance.register(createTriggerRoute);
             instance.register(listTriggersRoute);
             instance.register(getTriggerRoute);

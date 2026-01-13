@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { AppLayout } from "./components/layout/AppLayout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { ThemeProvider } from "./components/ThemeProvider";
+import { AcceptInvitation } from "./pages/AcceptInvitation";
 import { Account } from "./pages/Account";
 import { AgentBuilder } from "./pages/AgentBuilder";
 import { Agents } from "./pages/Agents";
@@ -30,6 +31,7 @@ import { Templates } from "./pages/Templates";
 import { VerifyEmail } from "./pages/VerifyEmail";
 import { Workflows } from "./pages/Workflows";
 import { Workspace } from "./pages/Workspace";
+import { WorkspaceSettings } from "./pages/WorkspaceSettings";
 
 function App() {
     return (
@@ -41,6 +43,7 @@ function App() {
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/verify-email" element={<VerifyEmail />} />
+                <Route path="/accept-invitation" element={<AcceptInvitation />} />
 
                 {/* Protected routes with sidebar layout */}
                 <Route
@@ -66,6 +69,7 @@ function App() {
                     <Route path="settings" element={<Settings />} />
                     <Route path="account" element={<Account />} />
                     <Route path="workspace" element={<Workspace />} />
+                    <Route path="workspace/settings" element={<WorkspaceSettings />} />
                     <Route path="folders/:folderId" element={<FolderContentsPage />} />
                 </Route>
 

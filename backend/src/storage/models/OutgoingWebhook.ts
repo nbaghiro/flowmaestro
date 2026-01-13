@@ -37,6 +37,7 @@ export const WEBHOOK_EVENT_TYPES: WebhookEventType[] = [
 export interface OutgoingWebhookModel {
     id: string;
     user_id: string;
+    workspace_id: string;
     name: string;
     url: string;
     secret: string;
@@ -53,6 +54,7 @@ export interface OutgoingWebhookModel {
  */
 export interface CreateOutgoingWebhookInput {
     user_id: string;
+    workspace_id: string;
     name: string;
     url: string;
     events: WebhookEventType[];

@@ -2,6 +2,7 @@ import { FastifyInstance } from "fastify";
 import { createServiceLogger } from "../../../core/logging";
 import { FormInterfaceRepository } from "../../../storage/repositories/FormInterfaceRepository";
 import { authMiddleware } from "../../middleware";
+import { workspaceContextMiddleware } from "../../middleware/workspace-context";
 
 const logger = createServiceLogger("FormInterfaceRoutes");
 
@@ -9,16 +10,16 @@ export async function publishFormInterfaceRoute(fastify: FastifyInstance) {
     fastify.post(
         "/:id/publish",
         {
-            preHandler: [authMiddleware]
+            preHandler: [authMiddleware, workspaceContextMiddleware]
         },
         async (request, reply) => {
             const formInterfaceRepo = new FormInterfaceRepository();
             const { id } = request.params as { id: string };
-            const userId = request.user!.id;
+            const workspaceId = request.workspace!.id;
 
             try {
                 // Check if form interface exists
-                const existing = await formInterfaceRepo.findById(id, userId);
+                const existing = await formInterfaceRepo.findByIdAndWorkspaceId(id, workspaceId);
                 if (!existing) {
                     return reply.status(404).send({
                         success: false,
@@ -43,7 +44,7 @@ export async function publishFormInterfaceRoute(fastify: FastifyInstance) {
                     });
                 }
 
-                const formInterface = await formInterfaceRepo.publish(id, userId);
+                const formInterface = await formInterfaceRepo.publishByWorkspaceId(id, workspaceId);
 
                 if (!formInterface) {
                     return reply.status(500).send({
@@ -52,14 +53,14 @@ export async function publishFormInterfaceRoute(fastify: FastifyInstance) {
                     });
                 }
 
-                logger.info({ formInterfaceId: id, userId }, "Form interface published");
+                logger.info({ formInterfaceId: id, workspaceId }, "Form interface published");
 
                 return reply.send({
                     success: true,
                     data: formInterface
                 });
             } catch (error) {
-                logger.error({ id, userId, error }, "Error publishing form interface");
+                logger.error({ id, workspaceId, error }, "Error publishing form interface");
                 return reply.status(500).send({
                     success: false,
                     error: error instanceof Error ? error.message : String(error)

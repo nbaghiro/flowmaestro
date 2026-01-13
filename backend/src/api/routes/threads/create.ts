@@ -16,11 +16,12 @@ export async function createThreadHandler(
     reply: FastifyReply
 ): Promise<void> {
     const userId = request.user!.id;
+    const workspaceId = request.workspace!.id;
     const { agent_id, title, status, metadata } = request.body;
 
-    // Validate agent exists and user has access
+    // Validate agent exists and workspace has access
     const agentRepo = new AgentRepository();
-    const agent = await agentRepo.findByIdAndUserId(agent_id, userId);
+    const agent = await agentRepo.findByIdAndWorkspaceId(agent_id, workspaceId);
 
     if (!agent) {
         return reply.code(404).send({
@@ -33,6 +34,7 @@ export async function createThreadHandler(
     const threadRepo = new ThreadRepository();
     const thread = await threadRepo.create({
         user_id: userId,
+        workspace_id: workspaceId,
         agent_id,
         title,
         status,

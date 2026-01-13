@@ -1,12 +1,13 @@
 import { FastifyInstance } from "fastify";
 import { KnowledgeBaseRepository } from "../../../storage/repositories";
 import { authMiddleware } from "../../middleware";
+import { workspaceContextMiddleware } from "../../middleware/workspace-context";
 
 export async function listKnowledgeBasesRoute(fastify: FastifyInstance) {
     fastify.get(
         "/",
         {
-            preHandler: [authMiddleware]
+            preHandler: [authMiddleware, workspaceContextMiddleware]
         },
         async (request, reply) => {
             const kbRepository = new KnowledgeBaseRepository();
@@ -23,7 +24,7 @@ export async function listKnowledgeBasesRoute(fastify: FastifyInstance) {
                 folderId = query.folderId;
             }
 
-            const result = await kbRepository.findByUserId(request.user!.id, {
+            const result = await kbRepository.findByWorkspaceId(request.workspace!.id, {
                 limit,
                 offset,
                 folderId
