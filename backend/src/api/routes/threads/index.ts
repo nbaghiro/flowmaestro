@@ -1,5 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { authMiddleware } from "../../middleware/auth";
+import { workspaceContextMiddleware } from "../../middleware/workspace-context";
 import { archiveThreadHandler, unarchiveThreadHandler } from "./archive";
 import { createThreadHandler } from "./create";
 import { deleteThreadHandler } from "./delete";
@@ -10,8 +11,9 @@ import { streamThreadHandler } from "./stream";
 import { updateThreadHandler } from "./update";
 
 export async function threadRoutes(fastify: FastifyInstance) {
-    // All thread routes require authentication
+    // All thread routes require authentication and workspace context
     fastify.addHook("preHandler", authMiddleware);
+    fastify.addHook("preHandler", workspaceContextMiddleware);
 
     // CRUD operations
     fastify.post("/", createThreadHandler);

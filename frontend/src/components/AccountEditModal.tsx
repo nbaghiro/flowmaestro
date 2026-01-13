@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useAuth } from "../contexts/AuthContext";
 import {
     updateUserName,
     updateUserEmail,
@@ -7,13 +6,14 @@ import {
     changeUserPassword,
     sendTwoFactorCode,
     verifyTwoFactorCode,
-    disableTwoFactor
+    disableTwoFactor,
+    type ApiUser
 } from "../lib/api";
 import { Alert } from "./common/Alert";
 import { Button } from "./common/Button";
 import { Dialog } from "./common/Dialog";
 
-type User = NonNullable<ReturnType<typeof useAuth>["user"]>;
+type User = ApiUser;
 
 interface AccountEditModalProps {
     isOpen: boolean;

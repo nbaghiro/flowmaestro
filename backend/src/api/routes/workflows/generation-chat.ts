@@ -11,6 +11,7 @@ import type { GenerationChatMessage, WorkflowPlan } from "@flowmaestro/shared";
 import { createServiceLogger } from "../../../core/logging";
 import { WorkflowGenerationChatService } from "../../../services/WorkflowGenerationChatService";
 import { authMiddleware, validateRequest } from "../../middleware";
+import { workspaceContextMiddleware } from "../../middleware/workspace-context";
 import { emitGenerationEvent } from "./generation-chat-stream";
 
 const logger = createServiceLogger("GenerationChatRoute");
@@ -193,16 +194,22 @@ export async function generationChatRoute(fastify: FastifyInstance) {
     fastify.post(
         "/generation/create",
         {
-            preHandler: [authMiddleware, validateRequest(createFromPlanRequestSchema)]
+            preHandler: [
+                authMiddleware,
+                workspaceContextMiddleware,
+                validateRequest(createFromPlanRequestSchema)
+            ]
         },
         async (request, reply) => {
             const body = request.body as CreateFromPlanRequest;
             const userId = request.user!.id;
+            const workspaceId = request.workspace!.id;
 
             try {
                 logger.info(
                     {
                         userId,
+                        workspaceId,
                         planName: body.plan.name,
                         nodeCount: body.plan.nodes.length
                     },
@@ -212,6 +219,7 @@ export async function generationChatRoute(fastify: FastifyInstance) {
                 const result = await generationChatService.createWorkflowFromPlan(
                     body.plan as WorkflowPlan,
                     userId,
+                    workspaceId,
                     body.folderId
                 );
 

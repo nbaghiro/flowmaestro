@@ -362,6 +362,12 @@ export const CommonConfigs = {
             inputData: inputVar,
             expression: "unused", // Required by schema but not used for parseXML
             outputVariable: outputVar
+        }),
+        passthrough: (inputVar: string, outputVar: string = "result") => ({
+            operation: "passthrough" as const,
+            inputData: inputVar,
+            expression: "", // Not used for passthrough
+            outputVariable: outputVar
         })
     },
 

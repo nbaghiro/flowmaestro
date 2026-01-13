@@ -2,6 +2,7 @@ import { FastifyInstance } from "fastify";
 import { createServiceLogger } from "../../../core/logging";
 import { FormInterfaceRepository } from "../../../storage/repositories/FormInterfaceRepository";
 import { authMiddleware } from "../../middleware";
+import { workspaceContextMiddleware } from "../../middleware/workspace-context";
 
 const logger = createServiceLogger("FormInterfaceRoutes");
 
@@ -9,11 +10,11 @@ export async function listFormInterfacesRoute(fastify: FastifyInstance) {
     fastify.get(
         "/",
         {
-            preHandler: [authMiddleware]
+            preHandler: [authMiddleware, workspaceContextMiddleware]
         },
         async (request, reply) => {
             const formInterfaceRepo = new FormInterfaceRepository();
-            const userId = request.user!.id;
+            const workspaceId = request.workspace!.id;
             const query = request.query as {
                 limit?: string;
                 offset?: string;
@@ -25,9 +26,9 @@ export async function listFormInterfacesRoute(fastify: FastifyInstance) {
             try {
                 // If filtering by workflow or agent, use specific method
                 if (query.workflowId) {
-                    const formInterfaces = await formInterfaceRepo.findByWorkflowId(
+                    const formInterfaces = await formInterfaceRepo.findByWorkflowIdAndWorkspaceId(
                         query.workflowId,
-                        userId
+                        workspaceId
                     );
                     return reply.send({
                         success: true,
@@ -42,9 +43,9 @@ export async function listFormInterfacesRoute(fastify: FastifyInstance) {
                 }
 
                 if (query.agentId) {
-                    const formInterfaces = await formInterfaceRepo.findByAgentId(
+                    const formInterfaces = await formInterfaceRepo.findByAgentIdAndWorkspaceId(
                         query.agentId,
-                        userId
+                        workspaceId
                     );
                     return reply.send({
                         success: true,
@@ -70,11 +71,14 @@ export async function listFormInterfacesRoute(fastify: FastifyInstance) {
                     folderId = query.folderId;
                 }
 
-                const { formInterfaces, total } = await formInterfaceRepo.findByUserId(userId, {
-                    limit,
-                    offset,
-                    folderId
-                });
+                const { formInterfaces, total } = await formInterfaceRepo.findByWorkspaceId(
+                    workspaceId,
+                    {
+                        limit,
+                        offset,
+                        folderId
+                    }
+                );
 
                 const page = Math.floor(offset / limit) + 1;
                 const hasMore = offset + formInterfaces.length < total;
@@ -90,7 +94,7 @@ export async function listFormInterfacesRoute(fastify: FastifyInstance) {
                     }
                 });
             } catch (error) {
-                logger.error({ userId, error }, "Error listing form interfaces");
+                logger.error({ workspaceId, error }, "Error listing form interfaces");
                 return reply.status(500).send({
                     success: false,
                     error: error instanceof Error ? error.message : String(error)

@@ -5,7 +5,7 @@ export async function listAgentsHandler(
     request: FastifyRequest<{ Querystring: { folderId?: string } }>,
     reply: FastifyReply
 ): Promise<void> {
-    const userId = request.user!.id;
+    const workspaceId = request.workspace!.id;
     const agentRepo = new AgentRepository();
 
     // Parse folderId: "null" string means root level (no folder), undefined means all
@@ -16,7 +16,7 @@ export async function listAgentsHandler(
         folderId = request.query.folderId;
     }
 
-    const result = await agentRepo.findByUserId(userId, { folderId });
+    const result = await agentRepo.findByWorkspaceId(workspaceId, { folderId });
 
     reply.send({
         success: true,

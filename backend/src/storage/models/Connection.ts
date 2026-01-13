@@ -53,6 +53,7 @@ export {
 export interface ConnectionModel {
     id: string;
     user_id: string;
+    workspace_id: string;
     name: string;
     connection_method: ConnectionMethod;
     provider: string;
@@ -77,6 +78,7 @@ export interface ConnectionWithData extends Omit<ConnectionModel, "encrypted_dat
  */
 export interface CreateConnectionInput {
     user_id: string;
+    workspace_id: string;
     name: string;
     connection_method: ConnectionMethod;
     provider: string;

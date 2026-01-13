@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 import type { WorkflowNode } from "@flowmaestro/shared";
 import { AIGenerateDialog } from "../components/AIGenerateDialog";
 import { CreateWorkflowDialog } from "../components/CreateWorkflowDialog";
-import { useAuth } from "../contexts/AuthContext";
 import {
     getWorkflows,
     createWorkflow,
@@ -14,6 +13,7 @@ import {
 } from "../lib/api";
 import { logger } from "../lib/logger";
 import { convertToReactFlowFormat } from "../lib/workflowLayout";
+import { useAuthStore } from "../stores/authStore";
 
 interface Workflow {
     id: string;
@@ -28,7 +28,7 @@ export function WorkflowLibrary() {
     const [isLoading, setIsLoading] = useState(true);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [isAIDialogOpen, setIsAIDialogOpen] = useState(false);
-    const { user, logout } = useAuth();
+    const { user, logout } = useAuthStore();
     const navigate = useNavigate();
 
     useEffect(() => {

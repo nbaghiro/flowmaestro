@@ -39,6 +39,7 @@ export async function createAgentHandler(
     reply: FastifyReply
 ): Promise<void> {
     const userId = request.user!.id;
+    const workspaceId = request.workspace!.id;
     const body = createAgentSchema.parse(request.body);
 
     const agentRepo = new AgentRepository();
@@ -46,6 +47,7 @@ export async function createAgentHandler(
     try {
         const agent = await agentRepo.create({
             user_id: userId,
+            workspace_id: workspaceId,
             name: body.name,
             description: body.description,
             model: body.model,

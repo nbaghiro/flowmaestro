@@ -1,30 +1,27 @@
 import { FastifyInstance } from "fastify";
 import { KnowledgeBaseRepository } from "../../../storage/repositories";
 import { authMiddleware } from "../../middleware";
+import { workspaceContextMiddleware } from "../../middleware/workspace-context";
 
 export async function deleteKnowledgeBaseRoute(fastify: FastifyInstance) {
     fastify.delete(
         "/:id",
         {
-            preHandler: [authMiddleware]
+            preHandler: [authMiddleware, workspaceContextMiddleware]
         },
         async (request, reply) => {
             const kbRepository = new KnowledgeBaseRepository();
             const params = request.params as { id: string };
 
-            // Verify ownership
-            const existing = await kbRepository.findById(params.id);
+            // Verify workspace ownership
+            const existing = await kbRepository.findByIdAndWorkspaceId(
+                params.id,
+                request.workspace!.id
+            );
             if (!existing) {
                 return reply.status(404).send({
                     success: false,
                     error: "Knowledge base not found"
-                });
-            }
-
-            if (existing.user_id !== request.user!.id) {
-                return reply.status(403).send({
-                    success: false,
-                    error: "Access denied"
                 });
             }
 

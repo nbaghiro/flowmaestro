@@ -2,6 +2,7 @@ import { FastifyInstance } from "fastify";
 import { TemplateRepository, WorkflowRepository } from "../../../storage/repositories";
 import { authMiddleware, validateParams, validateRequest } from "../../middleware";
 import { NotFoundError } from "../../middleware/error-handler";
+import { workspaceContextMiddleware } from "../../middleware/workspace-context";
 import {
     templateIdParamSchema,
     copyTemplateBodySchema,
@@ -15,6 +16,7 @@ export async function copyTemplateRoute(fastify: FastifyInstance) {
         {
             preHandler: [
                 authMiddleware,
+                workspaceContextMiddleware,
                 validateParams(templateIdParamSchema),
                 validateRequest(copyTemplateBodySchema)
             ]
@@ -63,6 +65,7 @@ export async function copyTemplateRoute(fastify: FastifyInstance) {
                 description: template.description || undefined,
                 definition,
                 user_id: request.user!.id,
+                workspace_id: request.workspace!.id,
                 ai_generated: false
             });
 
