@@ -23,6 +23,13 @@ export interface TestUser {
     twoFactorEnabled?: boolean;
 }
 
+export interface TestWorkspace {
+    id: string;
+    name: string;
+    type: "personal" | "team";
+    ownerId: string;
+}
+
 export interface TestServerOptions {
     /** Skip route registration (for unit testing middleware) */
     skipRoutes?: boolean;
@@ -38,6 +45,10 @@ export interface InjectOptions {
     payload?: Record<string, unknown>;
     headers?: Record<string, string>;
     query?: Record<string, string>;
+    /** Optional workspace ID to use for this request. Defaults to DEFAULT_TEST_WORKSPACE_ID */
+    workspaceId?: string;
+    /** Set to true to skip the workspace header (for routes that don't require workspace context) */
+    skipWorkspaceHeader?: boolean;
 }
 
 export interface InjectResponse {
@@ -243,6 +254,56 @@ jest.mock("../../src/services/oauth/OAuthService", () => ({
     }
 }));
 
+// Mock WorkspaceRepository for workspace context middleware
+jest.mock("../../src/storage/repositories/WorkspaceRepository", () => ({
+    WorkspaceRepository: jest.fn().mockImplementation(() => ({
+        findById: jest.fn().mockImplementation((id: string) =>
+            Promise.resolve({
+                id,
+                name: "Test Workspace",
+                type: "personal",
+                owner_id: "test-owner-id",
+                max_workflows: 100,
+                max_agents: 50,
+                max_knowledge_bases: 20,
+                max_kb_chunks: 10000,
+                max_members: 10,
+                max_connections: 50,
+                created_at: new Date(),
+                updated_at: new Date(),
+                deleted_at: null
+            })
+        ),
+        findByOwnerId: jest.fn().mockResolvedValue([]),
+        create: jest.fn(),
+        update: jest.fn(),
+        delete: jest.fn()
+    }))
+}));
+
+// Mock WorkspaceMemberRepository for workspace context middleware
+jest.mock("../../src/storage/repositories/WorkspaceMemberRepository", () => ({
+    WorkspaceMemberRepository: jest.fn().mockImplementation(() => ({
+        findByWorkspaceAndUser: jest
+            .fn()
+            .mockImplementation((_workspaceId: string, _userId: string) =>
+                Promise.resolve({
+                    id: "test-member-id",
+                    workspace_id: _workspaceId,
+                    user_id: _userId,
+                    role: "owner",
+                    created_at: new Date(),
+                    updated_at: new Date()
+                })
+            ),
+        findByWorkspaceId: jest.fn().mockResolvedValue([]),
+        findByUserId: jest.fn().mockResolvedValue([]),
+        create: jest.fn(),
+        update: jest.fn(),
+        delete: jest.fn()
+    }))
+}));
+
 // ============================================================================
 // TEST SERVER FACTORY
 // ============================================================================
@@ -363,15 +424,33 @@ export function createTestUser(overrides: Partial<TestUser> = {}): TestUser {
 }
 
 /**
+ * Create a test workspace with default values
+ */
+export function createTestWorkspace(overrides: Partial<TestWorkspace> = {}): TestWorkspace {
+    return {
+        id: overrides.id || uuidv4(),
+        name: overrides.name || "Test Workspace",
+        type: overrides.type || "personal",
+        ownerId: overrides.ownerId || uuidv4()
+    };
+}
+
+/** Default test workspace ID used for authenticated requests */
+export const DEFAULT_TEST_WORKSPACE_ID = "test-workspace-id";
+
+/**
  * Create authenticated headers for a request
+ * Includes workspace ID header by default for routes that require workspace context
  */
 export function createAuthHeaders(
     fastify: FastifyInstance,
-    user: TestUser
+    user: TestUser,
+    workspaceId: string = DEFAULT_TEST_WORKSPACE_ID
 ): Record<string, string> {
     const token = createAuthToken(fastify, user);
     return {
-        Authorization: `Bearer ${token}`
+        Authorization: `Bearer ${token}`,
+        "X-Workspace-Id": workspaceId
     };
 }
 
@@ -381,14 +460,20 @@ export function createAuthHeaders(
 
 /**
  * Make an authenticated request to the test server
+ * Automatically includes workspace context header (can be disabled with skipWorkspaceHeader)
  */
 export async function authenticatedRequest(
     fastify: FastifyInstance,
     user: TestUser,
     options: InjectOptions
 ): Promise<InjectResponse> {
+    const workspaceId = options.workspaceId || DEFAULT_TEST_WORKSPACE_ID;
+    const authHeaders = options.skipWorkspaceHeader
+        ? { Authorization: `Bearer ${createAuthToken(fastify, user)}` }
+        : createAuthHeaders(fastify, user, workspaceId);
+
     const headers = {
-        ...createAuthHeaders(fastify, user),
+        ...authHeaders,
         ...options.headers
     };
 

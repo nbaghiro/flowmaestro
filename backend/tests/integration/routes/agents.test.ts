@@ -18,7 +18,9 @@ import { v4 as uuidv4 } from "uuid";
 // Mock agent repository
 const mockAgentRepo = {
     findByUserId: jest.fn(),
+    findByWorkspaceId: jest.fn(),
     findByIdAndUserId: jest.fn(),
+    findByIdAndWorkspaceId: jest.fn(),
     findById: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
@@ -47,7 +49,8 @@ import {
     expectErrorResponse,
     expectStatus,
     expectSuccessResponse,
-    unauthenticatedRequest
+    unauthenticatedRequest,
+    DEFAULT_TEST_WORKSPACE_ID
 } from "../../helpers/fastify-test-client";
 
 // ============================================================================
@@ -58,6 +61,7 @@ function createMockAgent(
     overrides: Partial<{
         id: string;
         user_id: string;
+        workspace_id: string;
         name: string;
         description: string;
         model: string;
@@ -75,6 +79,7 @@ function createMockAgent(
     return {
         id: overrides.id || uuidv4(),
         user_id: overrides.user_id || uuidv4(),
+        workspace_id: overrides.workspace_id || DEFAULT_TEST_WORKSPACE_ID,
         name: overrides.name || "Test Agent",
         description: overrides.description || "A test agent",
         model: overrides.model || "gpt-4",
@@ -97,8 +102,10 @@ function resetAllMocks() {
     jest.clearAllMocks();
 
     // Reset default behaviors
-    mockAgentRepo.findByUserId.mockResolvedValue([]);
-    mockAgentRepo.findByIdAndUserId.mockResolvedValue(null);
+    mockAgentRepo.findByWorkspaceId.mockResolvedValue([]);
+    mockAgentRepo.findByWorkspaceId.mockResolvedValue([]);
+    mockAgentRepo.findByIdAndWorkspaceId.mockResolvedValue(null);
+    mockAgentRepo.findByIdAndWorkspaceId.mockResolvedValue(null);
     mockAgentRepo.findById.mockResolvedValue(null);
     mockAgentRepo.create.mockImplementation((data) =>
         Promise.resolve(createMockAgent({ ...data, id: uuidv4() }))
@@ -139,7 +146,7 @@ describe("Agent Routes", () => {
                 createMockAgent({ user_id: testUser.id, name: "Agent 1" }),
                 createMockAgent({ user_id: testUser.id, name: "Agent 2" })
             ];
-            mockAgentRepo.findByUserId.mockResolvedValue(agents);
+            mockAgentRepo.findByWorkspaceId.mockResolvedValue(agents);
 
             const response = await authenticatedRequest(fastify, testUser, {
                 method: "GET",
@@ -153,7 +160,7 @@ describe("Agent Routes", () => {
 
         it("should return empty list for new user", async () => {
             const testUser = createTestUser();
-            mockAgentRepo.findByUserId.mockResolvedValue([]);
+            mockAgentRepo.findByWorkspaceId.mockResolvedValue([]);
 
             const response = await authenticatedRequest(fastify, testUser, {
                 method: "GET",
@@ -168,7 +175,7 @@ describe("Agent Routes", () => {
         it("should filter by folderId", async () => {
             const testUser = createTestUser();
             const folderId = uuidv4();
-            mockAgentRepo.findByUserId.mockResolvedValue([]);
+            mockAgentRepo.findByWorkspaceId.mockResolvedValue([]);
 
             await authenticatedRequest(fastify, testUser, {
                 method: "GET",
@@ -176,8 +183,8 @@ describe("Agent Routes", () => {
                 query: { folderId }
             });
 
-            expect(mockAgentRepo.findByUserId).toHaveBeenCalledWith(
-                testUser.id,
+            expect(mockAgentRepo.findByWorkspaceId).toHaveBeenCalledWith(
+                DEFAULT_TEST_WORKSPACE_ID,
                 expect.objectContaining({ folderId })
             );
         });
@@ -414,7 +421,7 @@ describe("Agent Routes", () => {
                 user_id: testUser.id,
                 name: "My Agent"
             });
-            mockAgentRepo.findByIdAndUserId.mockResolvedValue(agent);
+            mockAgentRepo.findByIdAndWorkspaceId.mockResolvedValue(agent);
 
             const response = await authenticatedRequest(fastify, testUser, {
                 method: "GET",
@@ -428,7 +435,7 @@ describe("Agent Routes", () => {
 
         it("should return 404 for non-existent agent", async () => {
             const testUser = createTestUser();
-            mockAgentRepo.findByIdAndUserId.mockResolvedValue(null);
+            mockAgentRepo.findByIdAndWorkspaceId.mockResolvedValue(null);
 
             const response = await authenticatedRequest(fastify, testUser, {
                 method: "GET",
@@ -463,7 +470,7 @@ describe("Agent Routes", () => {
                 user_id: testUser.id,
                 name: "Old Name"
             });
-            mockAgentRepo.findByIdAndUserId.mockResolvedValue(existingAgent);
+            mockAgentRepo.findByIdAndWorkspaceId.mockResolvedValue(existingAgent);
             mockAgentRepo.update.mockResolvedValue({
                 ...existingAgent,
                 name: "New Name"
@@ -488,7 +495,7 @@ describe("Agent Routes", () => {
                 user_id: testUser.id,
                 temperature: 0.7
             });
-            mockAgentRepo.findByIdAndUserId.mockResolvedValue(existingAgent);
+            mockAgentRepo.findByIdAndWorkspaceId.mockResolvedValue(existingAgent);
             mockAgentRepo.update.mockResolvedValue({
                 ...existingAgent,
                 temperature: 0.9
@@ -511,7 +518,7 @@ describe("Agent Routes", () => {
                 user_id: testUser.id,
                 provider: "openai"
             });
-            mockAgentRepo.findByIdAndUserId.mockResolvedValue(existingAgent);
+            mockAgentRepo.findByIdAndWorkspaceId.mockResolvedValue(existingAgent);
             mockAgentRepo.update.mockResolvedValue({
                 ...existingAgent,
                 provider: "anthropic"
@@ -528,7 +535,7 @@ describe("Agent Routes", () => {
 
         it("should return 404 for non-existent agent", async () => {
             const testUser = createTestUser();
-            mockAgentRepo.findByIdAndUserId.mockResolvedValue(null);
+            mockAgentRepo.findByIdAndWorkspaceId.mockResolvedValue(null);
 
             const response = await authenticatedRequest(fastify, testUser, {
                 method: "PUT",
@@ -546,7 +553,7 @@ describe("Agent Routes", () => {
                 id: agentId,
                 user_id: testUser.id
             });
-            mockAgentRepo.findByIdAndUserId.mockResolvedValue(existingAgent);
+            mockAgentRepo.findByIdAndWorkspaceId.mockResolvedValue(existingAgent);
 
             const response = await authenticatedRequest(fastify, testUser, {
                 method: "PUT",
@@ -570,7 +577,7 @@ describe("Agent Routes", () => {
                 id: agentId,
                 user_id: testUser.id
             });
-            mockAgentRepo.findByIdAndUserId.mockResolvedValue(agent);
+            mockAgentRepo.findByIdAndWorkspaceId.mockResolvedValue(agent);
 
             const response = await authenticatedRequest(fastify, testUser, {
                 method: "DELETE",
@@ -583,7 +590,7 @@ describe("Agent Routes", () => {
 
         it("should return 404 for non-existent agent", async () => {
             const testUser = createTestUser();
-            mockAgentRepo.findByIdAndUserId.mockResolvedValue(null);
+            mockAgentRepo.findByIdAndWorkspaceId.mockResolvedValue(null);
 
             const response = await authenticatedRequest(fastify, testUser, {
                 method: "DELETE",
@@ -596,7 +603,7 @@ describe("Agent Routes", () => {
         it("should not delete other user's agent (multi-tenant)", async () => {
             const testUser = createTestUser();
             // findByIdAndUserId returns null because user_id doesn't match
-            mockAgentRepo.findByIdAndUserId.mockResolvedValue(null);
+            mockAgentRepo.findByIdAndWorkspaceId.mockResolvedValue(null);
 
             const response = await authenticatedRequest(fastify, testUser, {
                 method: "DELETE",
@@ -616,7 +623,7 @@ describe("Agent Routes", () => {
         it("user A cannot access user B's agent", async () => {
             const userA = createTestUser({ id: uuidv4(), email: "usera@example.com" });
             // findByIdAndUserId enforces user ownership
-            mockAgentRepo.findByIdAndUserId.mockResolvedValue(null);
+            mockAgentRepo.findByIdAndWorkspaceId.mockResolvedValue(null);
 
             const response = await authenticatedRequest(fastify, userA, {
                 method: "GET",
@@ -626,22 +633,22 @@ describe("Agent Routes", () => {
             expectErrorResponse(response, 404);
         });
 
-        it("agents are listed only for authenticated user", async () => {
+        it("agents are listed only for current workspace", async () => {
             const testUser = createTestUser();
-            mockAgentRepo.findByUserId.mockResolvedValue([]);
+            mockAgentRepo.findByWorkspaceId.mockResolvedValue([]);
 
             await authenticatedRequest(fastify, testUser, {
                 method: "GET",
                 url: "/agents"
             });
 
-            expect(mockAgentRepo.findByUserId).toHaveBeenCalledWith(
-                testUser.id,
+            expect(mockAgentRepo.findByWorkspaceId).toHaveBeenCalledWith(
+                DEFAULT_TEST_WORKSPACE_ID,
                 expect.any(Object)
             );
         });
 
-        it("agents created are assigned to authenticated user", async () => {
+        it("agents created are assigned to authenticated user and workspace", async () => {
             const testUser = createTestUser();
             mockAgentRepo.create.mockImplementation((data) =>
                 Promise.resolve(createMockAgent(data))
@@ -654,7 +661,10 @@ describe("Agent Routes", () => {
             });
 
             expect(mockAgentRepo.create).toHaveBeenCalledWith(
-                expect.objectContaining({ user_id: testUser.id })
+                expect.objectContaining({
+                    user_id: testUser.id,
+                    workspace_id: DEFAULT_TEST_WORKSPACE_ID
+                })
             );
         });
     });

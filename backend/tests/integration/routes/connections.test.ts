@@ -19,7 +19,9 @@ import { v4 as uuidv4 } from "uuid";
 // Mock connection repository
 const mockConnectionRepo = {
     findByUserId: jest.fn(),
+    findByWorkspaceId: jest.fn(),
     findById: jest.fn(),
+    findByIdAndWorkspaceId: jest.fn(),
     getOwnerId: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
@@ -48,7 +50,8 @@ import {
     expectErrorResponse,
     expectStatus,
     expectSuccessResponse,
-    unauthenticatedRequest
+    unauthenticatedRequest,
+    DEFAULT_TEST_WORKSPACE_ID
 } from "../../helpers/fastify-test-client";
 
 // ============================================================================
@@ -59,6 +62,7 @@ function createMockConnection(
     overrides: Partial<{
         id: string;
         user_id: string;
+        workspace_id: string;
         name: string;
         provider: string;
         connection_method: string;
@@ -71,6 +75,7 @@ function createMockConnection(
     return {
         id: overrides.id || uuidv4(),
         user_id: overrides.user_id || uuidv4(),
+        workspace_id: overrides.workspace_id || DEFAULT_TEST_WORKSPACE_ID,
         name: overrides.name || "Test Connection",
         provider: overrides.provider || "openai",
         connection_method: overrides.connection_method || "api_key",
@@ -89,7 +94,9 @@ function resetAllMocks() {
 
     // Reset default behaviors
     mockConnectionRepo.findByUserId.mockResolvedValue({ connections: [], total: 0 });
+    mockConnectionRepo.findByWorkspaceId.mockResolvedValue({ connections: [], total: 0 });
     mockConnectionRepo.findById.mockResolvedValue(null);
+    mockConnectionRepo.findByIdAndWorkspaceId.mockResolvedValue(null);
     mockConnectionRepo.getOwnerId.mockResolvedValue(null);
     mockConnectionRepo.create.mockImplementation((data) =>
         Promise.resolve(createMockConnection({ ...data, id: uuidv4() }))
@@ -130,7 +137,7 @@ describe("Connection Routes", () => {
                 createMockConnection({ user_id: testUser.id, name: "Connection 1" }),
                 createMockConnection({ user_id: testUser.id, name: "Connection 2" })
             ];
-            mockConnectionRepo.findByUserId.mockResolvedValue({
+            mockConnectionRepo.findByWorkspaceId.mockResolvedValue({
                 connections,
                 total: 2
             });
@@ -147,7 +154,7 @@ describe("Connection Routes", () => {
 
         it("should return empty list for new user", async () => {
             const testUser = createTestUser();
-            mockConnectionRepo.findByUserId.mockResolvedValue({
+            mockConnectionRepo.findByWorkspaceId.mockResolvedValue({
                 connections: [],
                 total: 0
             });
@@ -164,7 +171,7 @@ describe("Connection Routes", () => {
 
         it("should filter by provider", async () => {
             const testUser = createTestUser();
-            mockConnectionRepo.findByUserId.mockResolvedValue({
+            mockConnectionRepo.findByWorkspaceId.mockResolvedValue({
                 connections: [],
                 total: 0
             });
@@ -175,15 +182,15 @@ describe("Connection Routes", () => {
                 query: { provider: "openai" }
             });
 
-            expect(mockConnectionRepo.findByUserId).toHaveBeenCalledWith(
-                testUser.id,
+            expect(mockConnectionRepo.findByWorkspaceId).toHaveBeenCalledWith(
+                DEFAULT_TEST_WORKSPACE_ID,
                 expect.objectContaining({ provider: "openai" })
             );
         });
 
         it("should filter by connection_method", async () => {
             const testUser = createTestUser();
-            mockConnectionRepo.findByUserId.mockResolvedValue({
+            mockConnectionRepo.findByWorkspaceId.mockResolvedValue({
                 connections: [],
                 total: 0
             });
@@ -194,15 +201,15 @@ describe("Connection Routes", () => {
                 query: { connection_method: "oauth2" }
             });
 
-            expect(mockConnectionRepo.findByUserId).toHaveBeenCalledWith(
-                testUser.id,
+            expect(mockConnectionRepo.findByWorkspaceId).toHaveBeenCalledWith(
+                DEFAULT_TEST_WORKSPACE_ID,
                 expect.objectContaining({ connection_method: "oauth2" })
             );
         });
 
         it("should filter by status", async () => {
             const testUser = createTestUser();
-            mockConnectionRepo.findByUserId.mockResolvedValue({
+            mockConnectionRepo.findByWorkspaceId.mockResolvedValue({
                 connections: [],
                 total: 0
             });
@@ -213,15 +220,15 @@ describe("Connection Routes", () => {
                 query: { status: "active" }
             });
 
-            expect(mockConnectionRepo.findByUserId).toHaveBeenCalledWith(
-                testUser.id,
+            expect(mockConnectionRepo.findByWorkspaceId).toHaveBeenCalledWith(
+                DEFAULT_TEST_WORKSPACE_ID,
                 expect.objectContaining({ status: "active" })
             );
         });
 
         it("should respect limit and offset", async () => {
             const testUser = createTestUser();
-            mockConnectionRepo.findByUserId.mockResolvedValue({
+            mockConnectionRepo.findByWorkspaceId.mockResolvedValue({
                 connections: [],
                 total: 0
             });
@@ -232,8 +239,8 @@ describe("Connection Routes", () => {
                 query: { limit: "10", offset: "5" }
             });
 
-            expect(mockConnectionRepo.findByUserId).toHaveBeenCalledWith(
-                testUser.id,
+            expect(mockConnectionRepo.findByWorkspaceId).toHaveBeenCalledWith(
+                DEFAULT_TEST_WORKSPACE_ID,
                 expect.objectContaining({ limit: 10, offset: 5 })
             );
         });
@@ -368,8 +375,7 @@ describe("Connection Routes", () => {
                 user_id: testUser.id,
                 name: "My Connection"
             });
-            mockConnectionRepo.findById.mockResolvedValue(connection);
-            mockConnectionRepo.getOwnerId.mockResolvedValue(testUser.id);
+            mockConnectionRepo.findByIdAndWorkspaceId.mockResolvedValue(connection);
 
             const response = await authenticatedRequest(fastify, testUser, {
                 method: "GET",
@@ -383,7 +389,7 @@ describe("Connection Routes", () => {
 
         it("should return 404 for non-existent connection", async () => {
             const testUser = createTestUser();
-            mockConnectionRepo.findById.mockResolvedValue(null);
+            mockConnectionRepo.findByIdAndWorkspaceId.mockResolvedValue(null);
 
             const response = await authenticatedRequest(fastify, testUser, {
                 method: "GET",
@@ -393,22 +399,18 @@ describe("Connection Routes", () => {
             expectStatus(response, 404);
         });
 
-        it("should return 403 for other user's connection", async () => {
+        it("should return 404 for other workspace's connection (multi-tenant isolation)", async () => {
             const testUser = createTestUser();
-            const otherUserId = uuidv4();
-            const connection = createMockConnection({
-                id: uuidv4(),
-                user_id: otherUserId
-            });
-            mockConnectionRepo.findById.mockResolvedValue(connection);
-            mockConnectionRepo.getOwnerId.mockResolvedValue(otherUserId);
+            // Connection exists but belongs to a different workspace
+            // findByIdAndWorkspaceId returns null because workspace doesn't match
+            mockConnectionRepo.findByIdAndWorkspaceId.mockResolvedValue(null);
 
             const response = await authenticatedRequest(fastify, testUser, {
                 method: "GET",
-                url: `/connections/${connection.id}`
+                url: `/connections/${uuidv4()}`
             });
 
-            expectStatus(response, 403);
+            expectStatus(response, 404);
         });
 
         it("should return 400 for invalid UUID format", async () => {
@@ -436,8 +438,7 @@ describe("Connection Routes", () => {
                 user_id: testUser.id,
                 name: "Old Name"
             });
-            mockConnectionRepo.findById.mockResolvedValue(existingConnection);
-            mockConnectionRepo.getOwnerId.mockResolvedValue(testUser.id);
+            mockConnectionRepo.findByIdAndWorkspaceId.mockResolvedValue(existingConnection);
             mockConnectionRepo.update.mockResolvedValue({
                 ...existingConnection,
                 name: "New Name"
@@ -462,8 +463,7 @@ describe("Connection Routes", () => {
                 user_id: testUser.id,
                 status: "active"
             });
-            mockConnectionRepo.findById.mockResolvedValue(existingConnection);
-            mockConnectionRepo.getOwnerId.mockResolvedValue(testUser.id);
+            mockConnectionRepo.findByIdAndWorkspaceId.mockResolvedValue(existingConnection);
             mockConnectionRepo.update.mockResolvedValue({
                 ...existingConnection,
                 status: "invalid"
@@ -478,10 +478,9 @@ describe("Connection Routes", () => {
             expectStatus(response, 200);
         });
 
-        it("should return 403 for non-existent connection (security: does not reveal existence)", async () => {
+        it("should return 404 for non-existent connection", async () => {
             const testUser = createTestUser();
-            mockConnectionRepo.findById.mockResolvedValue(null);
-            // getOwnerId returns null for non-existent connection (set in resetAllMocks)
+            mockConnectionRepo.findByIdAndWorkspaceId.mockResolvedValue(null);
 
             const response = await authenticatedRequest(fastify, testUser, {
                 method: "PUT",
@@ -489,8 +488,7 @@ describe("Connection Routes", () => {
                 payload: { name: "Updated" }
             });
 
-            // API returns 403 instead of 404 to not reveal if resource exists
-            expectStatus(response, 403);
+            expectStatus(response, 404);
         });
     });
 
@@ -506,8 +504,7 @@ describe("Connection Routes", () => {
                 id: connectionId,
                 user_id: testUser.id
             });
-            mockConnectionRepo.findById.mockResolvedValue(connection);
-            mockConnectionRepo.getOwnerId.mockResolvedValue(testUser.id);
+            mockConnectionRepo.findByIdAndWorkspaceId.mockResolvedValue(connection);
 
             const response = await authenticatedRequest(fastify, testUser, {
                 method: "DELETE",
@@ -518,37 +515,33 @@ describe("Connection Routes", () => {
             expect(mockConnectionRepo.delete).toHaveBeenCalledWith(connectionId);
         });
 
-        it("should return 403 for non-existent connection (security: does not reveal existence)", async () => {
+        it("should return 404 for non-existent connection", async () => {
             const testUser = createTestUser();
-            mockConnectionRepo.findById.mockResolvedValue(null);
-            // getOwnerId returns null for non-existent connection (set in resetAllMocks)
+            mockConnectionRepo.findByIdAndWorkspaceId.mockResolvedValue(null);
 
             const response = await authenticatedRequest(fastify, testUser, {
                 method: "DELETE",
                 url: `/connections/${uuidv4()}`
             });
 
-            // API returns 403 instead of 404 to not reveal if resource exists
-            expectStatus(response, 403);
+            expectStatus(response, 404);
         });
 
-        it("should return 403 for other user's connection", async () => {
+        it("should return 404 for other workspace's connection (multi-tenant isolation)", async () => {
             const testUser = createTestUser();
-            const otherUserId = uuidv4();
             const connectionId = uuidv4();
-            const connection = createMockConnection({
-                id: connectionId,
-                user_id: otherUserId
-            });
-            mockConnectionRepo.findById.mockResolvedValue(connection);
-            mockConnectionRepo.getOwnerId.mockResolvedValue(otherUserId);
+            // Connection exists but belongs to a different workspace
+            // findByIdAndWorkspaceId returns null because workspace doesn't match
+            mockConnectionRepo.findByIdAndWorkspaceId.mockResolvedValue(null);
 
             const response = await authenticatedRequest(fastify, testUser, {
                 method: "DELETE",
                 url: `/connections/${connectionId}`
             });
 
-            expectStatus(response, 403);
+            expectStatus(response, 404);
+            // Verify delete was NOT called
+            expect(mockConnectionRepo.delete).not.toHaveBeenCalled();
         });
     });
 
@@ -557,9 +550,9 @@ describe("Connection Routes", () => {
     // ========================================================================
 
     describe("Security", () => {
-        it("connections are filtered by authenticated user ID", async () => {
+        it("connections are filtered by workspace ID", async () => {
             const testUser = createTestUser();
-            mockConnectionRepo.findByUserId.mockResolvedValue({
+            mockConnectionRepo.findByWorkspaceId.mockResolvedValue({
                 connections: [],
                 total: 0
             });
@@ -569,13 +562,13 @@ describe("Connection Routes", () => {
                 url: "/connections"
             });
 
-            expect(mockConnectionRepo.findByUserId).toHaveBeenCalledWith(
-                testUser.id,
+            expect(mockConnectionRepo.findByWorkspaceId).toHaveBeenCalledWith(
+                DEFAULT_TEST_WORKSPACE_ID,
                 expect.any(Object)
             );
         });
 
-        it("connections created are assigned to authenticated user", async () => {
+        it("connections created are assigned to authenticated user and workspace", async () => {
             const testUser = createTestUser();
             mockConnectionRepo.create.mockImplementation((data) =>
                 Promise.resolve(createMockConnection(data))
@@ -588,7 +581,10 @@ describe("Connection Routes", () => {
             });
 
             expect(mockConnectionRepo.create).toHaveBeenCalledWith(
-                expect.objectContaining({ user_id: testUser.id })
+                expect.objectContaining({
+                    user_id: testUser.id,
+                    workspace_id: DEFAULT_TEST_WORKSPACE_ID
+                })
             );
         });
     });

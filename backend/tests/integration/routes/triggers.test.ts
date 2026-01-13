@@ -19,6 +19,8 @@ import { v4 as uuidv4 } from "uuid";
 // Mock trigger repository
 const mockTriggerRepo = {
     findById: jest.fn(),
+    findByWorkspaceId: jest.fn(),
+    findByIdAndWorkspaceId: jest.fn(),
     findByWorkflowId: jest.fn(),
     findByType: jest.fn(),
     findScheduledTriggersToProcess: jest.fn(),
@@ -31,7 +33,8 @@ const mockTriggerRepo = {
 
 // Mock workflow repository
 const mockWorkflowRepo = {
-    findById: jest.fn()
+    findById: jest.fn(),
+    findByIdAndWorkspaceId: jest.fn()
 };
 
 // Mock execution repository
@@ -117,7 +120,8 @@ import {
     expectErrorResponse,
     expectStatus,
     expectSuccessResponse,
-    unauthenticatedRequest
+    unauthenticatedRequest,
+    DEFAULT_TEST_WORKSPACE_ID
 } from "../../helpers/fastify-test-client";
 
 // ============================================================================
@@ -128,6 +132,7 @@ function createMockTrigger(
     overrides: Partial<{
         id: string;
         workflow_id: string;
+        workspace_id: string;
         name: string;
         trigger_type: string;
         config: object;
@@ -138,6 +143,7 @@ function createMockTrigger(
     return {
         id: overrides.id || uuidv4(),
         workflow_id: overrides.workflow_id || uuidv4(),
+        workspace_id: overrides.workspace_id || DEFAULT_TEST_WORKSPACE_ID,
         name: overrides.name || "Test Trigger",
         trigger_type: overrides.trigger_type || "schedule",
         config: overrides.config || { cron: "0 9 * * *", timezone: "UTC" },
@@ -154,6 +160,7 @@ function createMockWorkflow(
     overrides: Partial<{
         id: string;
         user_id: string;
+        workspace_id: string;
         name: string;
         definition: object;
     }> = {}
@@ -161,6 +168,7 @@ function createMockWorkflow(
     return {
         id: overrides.id || uuidv4(),
         user_id: overrides.user_id || uuidv4(),
+        workspace_id: overrides.workspace_id || DEFAULT_TEST_WORKSPACE_ID,
         name: overrides.name || "Test Workflow",
         definition: overrides.definition || {
             nodes: { input: { id: "input", type: "input" } },
@@ -176,7 +184,9 @@ function resetAllMocks() {
     jest.clearAllMocks();
 
     // Reset default behaviors
-    mockTriggerRepo.findById.mockResolvedValue(null);
+    mockTriggerRepo.findByIdAndWorkspaceId.mockResolvedValue(null);
+    mockTriggerRepo.findByWorkspaceId.mockResolvedValue([]);
+    mockTriggerRepo.findByIdAndWorkspaceId.mockResolvedValue(null);
     mockTriggerRepo.findByWorkflowId.mockResolvedValue([]);
     mockTriggerRepo.findByType.mockResolvedValue([]);
     mockTriggerRepo.findScheduledTriggersToProcess.mockResolvedValue([]);
@@ -191,6 +201,7 @@ function resetAllMocks() {
     mockTriggerRepo.recordTrigger.mockResolvedValue(undefined);
 
     mockWorkflowRepo.findById.mockResolvedValue(null);
+    mockWorkflowRepo.findByIdAndWorkspaceId.mockResolvedValue(null);
     mockExecutionRepo.create.mockResolvedValue({
         id: uuidv4(),
         status: "pending",
@@ -229,7 +240,7 @@ describe("Trigger Routes", () => {
                 createMockTrigger({ workflow_id: workflowId, name: "Trigger 1" }),
                 createMockTrigger({ workflow_id: workflowId, name: "Trigger 2" })
             ];
-            mockTriggerRepo.findByWorkflowId.mockResolvedValue(triggers);
+            mockTriggerRepo.findByWorkspaceId.mockResolvedValue(triggers);
 
             const response = await authenticatedRequest(fastify, testUser, {
                 method: "GET",
@@ -245,7 +256,7 @@ describe("Trigger Routes", () => {
         it("should filter triggers by type", async () => {
             const testUser = createTestUser();
             const triggers = [createMockTrigger({ trigger_type: "schedule" })];
-            mockTriggerRepo.findByType.mockResolvedValue(triggers);
+            mockTriggerRepo.findByWorkspaceId.mockResolvedValue(triggers);
 
             const response = await authenticatedRequest(fastify, testUser, {
                 method: "GET",
@@ -254,12 +265,15 @@ describe("Trigger Routes", () => {
             });
 
             expectStatus(response, 200);
-            expect(mockTriggerRepo.findByType).toHaveBeenCalledWith("schedule", undefined);
+            expect(mockTriggerRepo.findByWorkspaceId).toHaveBeenCalledWith(
+                DEFAULT_TEST_WORKSPACE_ID,
+                expect.objectContaining({ type: "schedule" })
+            );
         });
 
         it("should filter by enabled status", async () => {
             const testUser = createTestUser();
-            mockTriggerRepo.findByType.mockResolvedValue([]);
+            mockTriggerRepo.findByWorkspaceId.mockResolvedValue([]);
 
             await authenticatedRequest(fastify, testUser, {
                 method: "GET",
@@ -267,19 +281,25 @@ describe("Trigger Routes", () => {
                 query: { type: "schedule", enabled: "true" }
             });
 
-            expect(mockTriggerRepo.findByType).toHaveBeenCalledWith("schedule", true);
+            expect(mockTriggerRepo.findByWorkspaceId).toHaveBeenCalledWith(
+                DEFAULT_TEST_WORKSPACE_ID,
+                expect.objectContaining({ type: "schedule", enabled: true })
+            );
         });
 
-        it("should return scheduled triggers by default", async () => {
+        it("should return triggers for workspace", async () => {
             const testUser = createTestUser();
-            mockTriggerRepo.findScheduledTriggersToProcess.mockResolvedValue([]);
+            mockTriggerRepo.findByWorkspaceId.mockResolvedValue([]);
 
             await authenticatedRequest(fastify, testUser, {
                 method: "GET",
                 url: "/triggers"
             });
 
-            expect(mockTriggerRepo.findScheduledTriggersToProcess).toHaveBeenCalled();
+            expect(mockTriggerRepo.findByWorkspaceId).toHaveBeenCalledWith(
+                DEFAULT_TEST_WORKSPACE_ID,
+                expect.any(Object)
+            );
         });
 
         it("should return 401 without authentication", async () => {
@@ -309,6 +329,11 @@ describe("Trigger Routes", () => {
                     timezone: "America/New_York"
                 }
             };
+
+            // Mock workflow exists in workspace
+            mockWorkflowRepo.findByIdAndWorkspaceId.mockResolvedValue(
+                createMockWorkflow({ id: workflowId })
+            );
 
             const createdTrigger = createMockTrigger({
                 workflow_id: workflowId,
@@ -340,6 +365,11 @@ describe("Trigger Routes", () => {
                 }
             };
 
+            // Mock workflow exists in workspace
+            mockWorkflowRepo.findByIdAndWorkspaceId.mockResolvedValue(
+                createMockWorkflow({ id: workflowId })
+            );
+
             const createdTrigger = createMockTrigger({
                 workflow_id: workflowId,
                 trigger_type: "webhook"
@@ -369,6 +399,11 @@ describe("Trigger Routes", () => {
                 }
             };
 
+            // Mock workflow exists in workspace
+            mockWorkflowRepo.findByIdAndWorkspaceId.mockResolvedValue(
+                createMockWorkflow({ id: workflowId })
+            );
+
             const createdTrigger = createMockTrigger({
                 workflow_id: workflowId,
                 trigger_type: "manual"
@@ -386,14 +421,19 @@ describe("Trigger Routes", () => {
 
         it("should create disabled trigger when enabled=false", async () => {
             const testUser = createTestUser();
+            const workflowId = uuidv4();
             const triggerData = {
-                workflowId: uuidv4(),
+                workflowId,
                 name: "Disabled Trigger",
                 triggerType: "schedule",
                 config: { cron: "0 * * * *" },
                 enabled: false
             };
 
+            // Mock workflow exists in workspace
+            mockWorkflowRepo.findByIdAndWorkspaceId.mockResolvedValue(
+                createMockWorkflow({ id: workflowId })
+            );
             mockTriggerRepo.create.mockResolvedValue(createMockTrigger({ enabled: false }));
 
             const response = await authenticatedRequest(fastify, testUser, {
@@ -432,7 +472,7 @@ describe("Trigger Routes", () => {
                 id: uuidv4(),
                 name: "My Trigger"
             });
-            mockTriggerRepo.findById.mockResolvedValue(trigger);
+            mockTriggerRepo.findByIdAndWorkspaceId.mockResolvedValue(trigger);
 
             const response = await authenticatedRequest(fastify, testUser, {
                 method: "GET",
@@ -450,7 +490,7 @@ describe("Trigger Routes", () => {
                 trigger_type: "schedule",
                 temporal_schedule_id: "schedule-123"
             });
-            mockTriggerRepo.findById.mockResolvedValue(trigger);
+            mockTriggerRepo.findByIdAndWorkspaceId.mockResolvedValue(trigger);
             mockSchedulerService.getScheduleInfo.mockResolvedValue({
                 nextRunTime: new Date(),
                 paused: false
@@ -468,7 +508,7 @@ describe("Trigger Routes", () => {
 
         it("should return 404 for non-existent trigger", async () => {
             const testUser = createTestUser();
-            mockTriggerRepo.findById.mockResolvedValue(null);
+            mockTriggerRepo.findByIdAndWorkspaceId.mockResolvedValue(null);
 
             const response = await authenticatedRequest(fastify, testUser, {
                 method: "GET",
@@ -487,7 +527,7 @@ describe("Trigger Routes", () => {
         it("should delete trigger", async () => {
             const testUser = createTestUser();
             const trigger = createMockTrigger({ id: uuidv4() });
-            mockTriggerRepo.findById.mockResolvedValue(trigger);
+            mockTriggerRepo.findByIdAndWorkspaceId.mockResolvedValue(trigger);
 
             const response = await authenticatedRequest(fastify, testUser, {
                 method: "DELETE",
@@ -504,7 +544,7 @@ describe("Trigger Routes", () => {
                 trigger_type: "schedule",
                 temporal_schedule_id: "schedule-123"
             });
-            mockTriggerRepo.findById.mockResolvedValue(trigger);
+            mockTriggerRepo.findByIdAndWorkspaceId.mockResolvedValue(trigger);
 
             await authenticatedRequest(fastify, testUser, {
                 method: "DELETE",
@@ -516,7 +556,7 @@ describe("Trigger Routes", () => {
 
         it("should return 404 for non-existent trigger", async () => {
             const testUser = createTestUser();
-            mockTriggerRepo.findById.mockResolvedValue(null);
+            mockTriggerRepo.findByIdAndWorkspaceId.mockResolvedValue(null);
 
             const response = await authenticatedRequest(fastify, testUser, {
                 method: "DELETE",
@@ -541,7 +581,7 @@ describe("Trigger Routes", () => {
                 enabled: true
             });
 
-            mockTriggerRepo.findById.mockResolvedValue(trigger);
+            mockTriggerRepo.findByIdAndWorkspaceId.mockResolvedValue(trigger);
             mockWorkflowRepo.findById.mockResolvedValue(workflow);
 
             const response = await authenticatedRequest(fastify, testUser, {
@@ -563,7 +603,7 @@ describe("Trigger Routes", () => {
                 enabled: false
             });
 
-            mockTriggerRepo.findById.mockResolvedValue(trigger);
+            mockTriggerRepo.findByIdAndWorkspaceId.mockResolvedValue(trigger);
             mockWorkflowRepo.findById.mockResolvedValue(workflow);
 
             const response = await authenticatedRequest(fastify, testUser, {
@@ -576,7 +616,7 @@ describe("Trigger Routes", () => {
 
         it("should return 404 for non-existent trigger", async () => {
             const testUser = createTestUser();
-            mockTriggerRepo.findById.mockResolvedValue(null);
+            mockTriggerRepo.findByIdAndWorkspaceId.mockResolvedValue(null);
 
             const response = await authenticatedRequest(fastify, testUser, {
                 method: "POST",
@@ -589,7 +629,7 @@ describe("Trigger Routes", () => {
         it("should return 404 for non-existent workflow", async () => {
             const testUser = createTestUser();
             const trigger = createMockTrigger({ enabled: true });
-            mockTriggerRepo.findById.mockResolvedValue(trigger);
+            mockTriggerRepo.findByIdAndWorkspaceId.mockResolvedValue(trigger);
             mockWorkflowRepo.findById.mockResolvedValue(null);
 
             const response = await authenticatedRequest(fastify, testUser, {
@@ -671,8 +711,9 @@ describe("Trigger Routes", () => {
     describe("Edge Cases", () => {
         it("should handle trigger with complex cron expression", async () => {
             const testUser = createTestUser();
+            const workflowId = uuidv4();
             const triggerData = {
-                workflowId: uuidv4(),
+                workflowId,
                 name: "Complex Schedule",
                 triggerType: "schedule",
                 config: {
@@ -681,6 +722,10 @@ describe("Trigger Routes", () => {
                 }
             };
 
+            // Mock workflow exists in workspace
+            mockWorkflowRepo.findByIdAndWorkspaceId.mockResolvedValue(
+                createMockWorkflow({ id: workflowId })
+            );
             mockTriggerRepo.create.mockResolvedValue(
                 createMockTrigger({ config: triggerData.config })
             );
@@ -703,7 +748,7 @@ describe("Trigger Routes", () => {
                 enabled: true
             });
 
-            mockTriggerRepo.findById.mockResolvedValue(trigger);
+            mockTriggerRepo.findByIdAndWorkspaceId.mockResolvedValue(trigger);
             mockWorkflowRepo.findById.mockResolvedValue(workflow);
 
             const response = await authenticatedRequest(fastify, testUser, {

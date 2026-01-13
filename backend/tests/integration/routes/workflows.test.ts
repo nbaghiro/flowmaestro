@@ -18,6 +18,7 @@ import { v4 as uuidv4 } from "uuid";
 // Mock workflow repository
 const mockWorkflowRepo = {
     findByUserId: jest.fn(),
+    findByWorkspaceId: jest.fn(),
     findById: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
@@ -75,7 +76,8 @@ import {
     expectErrorResponse,
     expectStatus,
     expectSuccessResponse,
-    unauthenticatedRequest
+    unauthenticatedRequest,
+    DEFAULT_TEST_WORKSPACE_ID
 } from "../../helpers/fastify-test-client";
 
 // ============================================================================
@@ -86,6 +88,7 @@ function createMockWorkflow(
     overrides: Partial<{
         id: string;
         user_id: string;
+        workspace_id: string;
         name: string;
         description: string;
         definition: object;
@@ -97,6 +100,7 @@ function createMockWorkflow(
     return {
         id: overrides.id || uuidv4(),
         user_id: overrides.user_id || uuidv4(),
+        workspace_id: overrides.workspace_id || DEFAULT_TEST_WORKSPACE_ID,
         name: overrides.name || "Test Workflow",
         description: overrides.description || "A test workflow",
         definition: overrides.definition || createTestWorkflowDefinition(),
@@ -114,6 +118,7 @@ function resetAllMocks() {
 
     // Reset default behaviors
     mockWorkflowRepo.findByUserId.mockResolvedValue({ workflows: [], total: 0 });
+    mockWorkflowRepo.findByWorkspaceId.mockResolvedValue({ workflows: [], total: 0 });
     mockWorkflowRepo.findById.mockResolvedValue(null);
     mockWorkflowRepo.create.mockImplementation((data) =>
         Promise.resolve(createMockWorkflow({ ...data, id: uuidv4() }))
@@ -154,7 +159,7 @@ describe("Workflow Routes", () => {
                 createMockWorkflow({ user_id: testUser.id, name: "Workflow 1" }),
                 createMockWorkflow({ user_id: testUser.id, name: "Workflow 2" })
             ];
-            mockWorkflowRepo.findByUserId.mockResolvedValue({
+            mockWorkflowRepo.findByWorkspaceId.mockResolvedValue({
                 workflows,
                 total: 2
             });
@@ -178,7 +183,7 @@ describe("Workflow Routes", () => {
 
         it("should return empty list for new user", async () => {
             const testUser = createTestUser();
-            mockWorkflowRepo.findByUserId.mockResolvedValue({
+            mockWorkflowRepo.findByWorkspaceId.mockResolvedValue({
                 workflows: [],
                 total: 0
             });
@@ -197,7 +202,7 @@ describe("Workflow Routes", () => {
         it("should respect limit and offset parameters", async () => {
             const testUser = createTestUser();
             const workflows = [createMockWorkflow({ user_id: testUser.id, name: "Workflow 3" })];
-            mockWorkflowRepo.findByUserId.mockResolvedValue({
+            mockWorkflowRepo.findByWorkspaceId.mockResolvedValue({
                 workflows,
                 total: 10
             });
@@ -209,8 +214,8 @@ describe("Workflow Routes", () => {
             });
 
             expectStatus(response, 200);
-            expect(mockWorkflowRepo.findByUserId).toHaveBeenCalledWith(
-                testUser.id,
+            expect(mockWorkflowRepo.findByWorkspaceId).toHaveBeenCalledWith(
+                DEFAULT_TEST_WORKSPACE_ID,
                 expect.objectContaining({ limit: 1, offset: 2 })
             );
         });
@@ -218,7 +223,7 @@ describe("Workflow Routes", () => {
         it("should filter by folderId", async () => {
             const testUser = createTestUser();
             const folderId = uuidv4();
-            mockWorkflowRepo.findByUserId.mockResolvedValue({
+            mockWorkflowRepo.findByWorkspaceId.mockResolvedValue({
                 workflows: [],
                 total: 0
             });
@@ -229,15 +234,15 @@ describe("Workflow Routes", () => {
                 query: { folderId }
             });
 
-            expect(mockWorkflowRepo.findByUserId).toHaveBeenCalledWith(
-                testUser.id,
+            expect(mockWorkflowRepo.findByWorkspaceId).toHaveBeenCalledWith(
+                DEFAULT_TEST_WORKSPACE_ID,
                 expect.objectContaining({ folderId })
             );
         });
 
         it("should filter root-level workflows with folderId=null", async () => {
             const testUser = createTestUser();
-            mockWorkflowRepo.findByUserId.mockResolvedValue({
+            mockWorkflowRepo.findByWorkspaceId.mockResolvedValue({
                 workflows: [],
                 total: 0
             });
@@ -248,8 +253,8 @@ describe("Workflow Routes", () => {
                 query: { folderId: "null" }
             });
 
-            expect(mockWorkflowRepo.findByUserId).toHaveBeenCalledWith(
-                testUser.id,
+            expect(mockWorkflowRepo.findByWorkspaceId).toHaveBeenCalledWith(
+                DEFAULT_TEST_WORKSPACE_ID,
                 expect.objectContaining({ folderId: null })
             );
         });
@@ -391,13 +396,13 @@ describe("Workflow Routes", () => {
             expectErrorResponse(response, 404);
         });
 
-        it("should return 404 for other user's workflow (multi-tenant isolation)", async () => {
+        it("should return 404 for other workspace's workflow (multi-tenant isolation)", async () => {
             const testUser = createTestUser();
-            const otherUserId = uuidv4();
+            const otherWorkspaceId = uuidv4();
             const workflow = createMockWorkflow({
                 id: uuidv4(),
-                user_id: otherUserId, // Different user
-                name: "Other User's Workflow"
+                workspace_id: otherWorkspaceId, // Different workspace
+                name: "Other Workspace's Workflow"
             });
             mockWorkflowRepo.findById.mockResolvedValue(workflow);
 
@@ -491,13 +496,13 @@ describe("Workflow Routes", () => {
             expectErrorResponse(response, 404);
         });
 
-        it("should return 404 for other user's workflow (multi-tenant isolation)", async () => {
+        it("should return 404 for other workspace's workflow (multi-tenant isolation)", async () => {
             const testUser = createTestUser();
-            const otherUserId = uuidv4();
+            const otherWorkspaceId = uuidv4();
             const workflowId = uuidv4();
             const workflow = createMockWorkflow({
                 id: workflowId,
-                user_id: otherUserId
+                workspace_id: otherWorkspaceId
             });
             mockWorkflowRepo.findById.mockResolvedValue(workflow);
 
@@ -522,6 +527,7 @@ describe("Workflow Routes", () => {
             const workflow = createMockWorkflow({
                 id: workflowId,
                 user_id: testUser.id
+                // workspace_id defaults to DEFAULT_TEST_WORKSPACE_ID
             });
             mockWorkflowRepo.findById.mockResolvedValue(workflow);
 
@@ -546,13 +552,13 @@ describe("Workflow Routes", () => {
             expectErrorResponse(response, 404);
         });
 
-        it("should return 404 for other user's workflow (multi-tenant isolation)", async () => {
+        it("should return 404 for other workspace's workflow (multi-tenant isolation)", async () => {
             const testUser = createTestUser();
-            const otherUserId = uuidv4();
+            const otherWorkspaceId = uuidv4();
             const workflowId = uuidv4();
             const workflow = createMockWorkflow({
                 id: workflowId,
-                user_id: otherUserId
+                workspace_id: otherWorkspaceId
             });
             mockWorkflowRepo.findById.mockResolvedValue(workflow);
 
@@ -629,24 +635,24 @@ describe("Workflow Routes", () => {
     // ========================================================================
 
     describe("Multi-tenant Isolation", () => {
-        it("user A cannot list user B's workflows", async () => {
+        it("workflows are filtered by workspace ID", async () => {
             const userA = createTestUser({ id: uuidv4(), email: "usera@example.com" });
 
-            mockWorkflowRepo.findByUserId.mockResolvedValue({ workflows: [], total: 0 });
+            mockWorkflowRepo.findByWorkspaceId.mockResolvedValue({ workflows: [], total: 0 });
 
             await authenticatedRequest(fastify, userA, {
                 method: "GET",
                 url: "/workflows"
             });
 
-            // Verify the query was filtered by user A's ID
-            expect(mockWorkflowRepo.findByUserId).toHaveBeenCalledWith(
-                userA.id,
+            // Verify the query was filtered by workspace ID
+            expect(mockWorkflowRepo.findByWorkspaceId).toHaveBeenCalledWith(
+                DEFAULT_TEST_WORKSPACE_ID,
                 expect.any(Object)
             );
         });
 
-        it("workflows created are assigned to authenticated user", async () => {
+        it("workflows created are assigned to authenticated user and workspace", async () => {
             const testUser = createTestUser();
             mockWorkflowRepo.create.mockImplementation((data) =>
                 Promise.resolve(createMockWorkflow(data))
@@ -662,7 +668,10 @@ describe("Workflow Routes", () => {
             });
 
             expect(mockWorkflowRepo.create).toHaveBeenCalledWith(
-                expect.objectContaining({ user_id: testUser.id })
+                expect.objectContaining({
+                    user_id: testUser.id,
+                    workspace_id: DEFAULT_TEST_WORKSPACE_ID
+                })
             );
         });
     });
