@@ -94,8 +94,27 @@ export function FolderContentsPage() {
         return undefined;
     }, [isSubfolderDropdownOpen, openSubfolderMenuId]);
 
+    // Map sourceItemType to the correct route
+    const getRootRoute = (): string => {
+        switch (sourceItemType) {
+            case "workflow":
+                return "/";
+            case "agent":
+                return "/agents";
+            case "form-interface":
+                return "/form-interfaces";
+            case "chat-interface":
+                return "/chat-interfaces";
+            case "knowledge-base":
+                return "/knowledge-bases";
+            default:
+                return "/"; // Default to workflows
+        }
+    };
+
     const handleBack = () => {
-        navigate(-1);
+        const rootRoute = getRootRoute();
+        navigate(rootRoute);
     };
 
     const handleEditSubmit = async (name: string, color: string) => {
@@ -233,7 +252,7 @@ export function FolderContentsPage() {
             {/* Breadcrumb Navigation */}
             <nav className="flex items-center gap-1.5 text-sm mb-6">
                 <Link
-                    to="/"
+                    to={getRootRoute()}
                     className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
                 >
                     <Home className="w-4 h-4" />
