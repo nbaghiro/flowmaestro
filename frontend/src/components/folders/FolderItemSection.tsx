@@ -33,6 +33,9 @@ interface FolderItemSectionProps<T extends ItemType> {
     onRemoveFromFolder?: (itemId: string, itemType: FolderResourceType) => void;
     onMoveToFolder?: (itemId: string, itemType: FolderResourceType) => void;
     onDelete?: (itemId: string, itemType: FolderResourceType) => void;
+    selectedIds?: Set<string>;
+    onItemClick?: (e: React.MouseEvent, itemId: string, itemType: FolderResourceType) => void;
+    onItemContextMenu?: (e: React.MouseEvent, itemId: string, itemType: FolderResourceType) => void;
 }
 
 // Type guards
@@ -80,7 +83,10 @@ export function FolderItemSection<T extends ItemType>({
     folderId,
     onRemoveFromFolder,
     onMoveToFolder,
-    onDelete
+    onDelete,
+    selectedIds = new Set(),
+    onItemClick,
+    onItemContextMenu
 }: FolderItemSectionProps<T>) {
     const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed);
     const navigate = useNavigate();
@@ -89,14 +95,33 @@ export function FolderItemSection<T extends ItemType>({
         return null; // Don't render empty sections
     }
 
-    const handleItemClick = (item: T) => {
+    const handleItemClick = (e: React.MouseEvent, item: T) => {
+        if (onItemClick) {
+            onItemClick(e, item.id, itemType);
+        } else {
+            // Default behavior: navigate to item
+            navigate(getItemPath(itemType, item.id), { state: { fromFolderId: folderId } });
+        }
+    };
+
+    const handleItemEdit = (item: T) => {
+        // For edit actions, navigate directly without event
         navigate(getItemPath(itemType, item.id), { state: { fromFolderId: folderId } });
     };
 
+    const handleItemContextMenu = (e: React.MouseEvent, item: T) => {
+        if (onItemContextMenu) {
+            onItemContextMenu(e, item.id, itemType);
+        }
+    };
+
     const renderCard = (item: T) => {
+        const isSelected = selectedIds.has(item.id);
         const commonProps = {
             key: item.id,
-            onClick: () => handleItemClick(item),
+            isSelected,
+            onClick: (e: React.MouseEvent) => handleItemClick(e, item),
+            onContextMenu: (e: React.MouseEvent) => handleItemContextMenu(e, item),
             onMoveToFolder: onMoveToFolder ? () => onMoveToFolder(item.id, itemType) : undefined,
             onRemoveFromFolder: onRemoveFromFolder
                 ? () => onRemoveFromFolder(item.id, itemType)
@@ -117,7 +142,7 @@ export function FolderItemSection<T extends ItemType>({
                         <AgentCard
                             {...commonProps}
                             agent={item}
-                            onEdit={() => handleItemClick(item)}
+                            onEdit={() => handleItemEdit(item)}
                         />
                     );
                 }
@@ -128,7 +153,7 @@ export function FolderItemSection<T extends ItemType>({
                         <FormInterfaceCard
                             {...commonProps}
                             formInterface={item}
-                            onEdit={() => handleItemClick(item)}
+                            onEdit={() => handleItemEdit(item)}
                             onViewLive={
                                 item.status === "published" && item.slug
                                     ? () => window.open(`/i/${item.slug}`, "_blank")
@@ -147,7 +172,7 @@ export function FolderItemSection<T extends ItemType>({
                         <ChatInterfaceCard
                             {...commonProps}
                             chatInterface={item}
-                            onEdit={() => handleItemClick(item)}
+                            onEdit={() => handleItemEdit(item)}
                             onViewLive={
                                 item.status === "published" && item.slug
                                     ? () => window.open(`/c/${item.slug}`, "_blank")
@@ -164,7 +189,7 @@ export function FolderItemSection<T extends ItemType>({
                         <KnowledgeBaseCard
                             {...commonProps}
                             knowledgeBase={item}
-                            onEdit={() => handleItemClick(item)}
+                            onEdit={() => handleItemEdit(item)}
                         />
                     );
                 }
