@@ -148,8 +148,8 @@ export function FolderContentsPage() {
                 itemType,
                 folderId
             });
-            // Refresh folder contents
-            await fetchFolderContents(folderId);
+            // Refresh folder contents and sidebar counts
+            await Promise.all([fetchFolderContents(folderId), refreshFolders()]);
         } catch (_error) {
             // Error logged in API call
         }
