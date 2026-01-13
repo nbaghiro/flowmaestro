@@ -417,10 +417,11 @@ export const TransformNodeConfigSchema = z.object({
         "extract",
         "custom",
         "parseXML",
-        "parseJSON"
+        "parseJSON",
+        "passthrough"
     ]),
     inputData: z.string().min(1, "Input data reference is required"),
-    expression: z.string().min(1, "Expression is required"),
+    expression: z.string().optional().default(""),
     outputVariable: z.string().min(1, "Output variable is required")
 });
 

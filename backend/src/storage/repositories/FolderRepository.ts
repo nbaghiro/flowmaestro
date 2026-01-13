@@ -18,6 +18,7 @@ import { FolderModel, CreateFolderInput, UpdateFolderInput } from "../models/Fol
 interface FolderRow {
     id: string;
     user_id: string;
+    workspace_id: string;
     name: string;
     color: string;
     position: number;
@@ -41,7 +42,7 @@ export class FolderRepository {
     async create(input: CreateFolderInput): Promise<FolderModel> {
         // Validate parent exists and check depth limit if parent_id provided
         if (input.parent_id) {
-            const parent = await this.findByIdAndUserId(input.parent_id, input.user_id);
+            const parent = await this.findByIdAndWorkspaceId(input.parent_id, input.workspace_id);
             if (!parent) {
                 throw new Error("Parent folder not found");
             }
@@ -52,24 +53,25 @@ export class FolderRepository {
             }
         }
 
-        // Get next position for this user's folders within the same parent
+        // Get next position for folders within the same parent in the workspace
         const positionResult = await db.query<{ max_position: number | null }>(
             `SELECT MAX(position) as max_position FROM flowmaestro.folders
-             WHERE user_id = $1
+             WHERE workspace_id = $1
              AND COALESCE(parent_id, '00000000-0000-0000-0000-000000000000') = COALESCE($2, '00000000-0000-0000-0000-000000000000')::UUID
              AND deleted_at IS NULL`,
-            [input.user_id, input.parent_id || null]
+            [input.workspace_id, input.parent_id || null]
         );
         const nextPosition = (positionResult.rows[0]?.max_position ?? -1) + 1;
 
         const query = `
-            INSERT INTO flowmaestro.folders (user_id, name, color, position, parent_id)
-            VALUES ($1, $2, $3, $4, $5)
+            INSERT INTO flowmaestro.folders (user_id, workspace_id, name, color, position, parent_id)
+            VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING *
         `;
 
         const values = [
             input.user_id,
+            input.workspace_id,
             input.name,
             input.color || "#6366f1",
             nextPosition,
@@ -90,6 +92,19 @@ export class FolderRepository {
         return result.rows.length > 0 ? this.mapRow(result.rows[0]) : null;
     }
 
+    async findByIdAndWorkspaceId(id: string, workspaceId: string): Promise<FolderModel | null> {
+        const query = `
+            SELECT * FROM flowmaestro.folders
+            WHERE id = $1 AND workspace_id = $2 AND deleted_at IS NULL
+        `;
+
+        const result = await db.query<FolderRow>(query, [id, workspaceId]);
+        return result.rows.length > 0 ? this.mapRow(result.rows[0]) : null;
+    }
+
+    /**
+     * @deprecated Use findByIdAndWorkspaceId instead. Kept for backward compatibility.
+     */
     async findByIdAndUserId(id: string, userId: string): Promise<FolderModel | null> {
         const query = `
             SELECT * FROM flowmaestro.folders
@@ -100,6 +115,20 @@ export class FolderRepository {
         return result.rows.length > 0 ? this.mapRow(result.rows[0]) : null;
     }
 
+    async findByWorkspaceId(workspaceId: string): Promise<FolderModel[]> {
+        const query = `
+            SELECT * FROM flowmaestro.folders
+            WHERE workspace_id = $1 AND deleted_at IS NULL
+            ORDER BY position ASC, created_at ASC
+        `;
+
+        const result = await db.query<FolderRow>(query, [workspaceId]);
+        return result.rows.map((row) => this.mapRow(row));
+    }
+
+    /**
+     * @deprecated Use findByWorkspaceId instead. Kept for backward compatibility.
+     */
     async findByUserId(userId: string): Promise<FolderModel[]> {
         const query = `
             SELECT * FROM flowmaestro.folders
@@ -111,6 +140,32 @@ export class FolderRepository {
         return result.rows.map((row) => this.mapRow(row));
     }
 
+    async findByWorkspaceIdWithCounts(workspaceId: string): Promise<FolderWithCounts[]> {
+        const query = `
+            SELECT
+                f.*,
+                (SELECT COUNT(*) FROM flowmaestro.workflows
+                 WHERE f.id = ANY(COALESCE(folder_ids, ARRAY[]::UUID[])) AND deleted_at IS NULL) as workflow_count,
+                (SELECT COUNT(*) FROM flowmaestro.agents
+                 WHERE f.id = ANY(COALESCE(folder_ids, ARRAY[]::UUID[])) AND deleted_at IS NULL) as agent_count,
+                (SELECT COUNT(*) FROM flowmaestro.form_interfaces
+                 WHERE f.id = ANY(COALESCE(folder_ids, ARRAY[]::UUID[])) AND deleted_at IS NULL) as form_interface_count,
+                (SELECT COUNT(*) FROM flowmaestro.chat_interfaces
+                 WHERE f.id = ANY(COALESCE(folder_ids, ARRAY[]::UUID[])) AND deleted_at IS NULL) as chat_interface_count,
+                (SELECT COUNT(*) FROM flowmaestro.knowledge_bases
+                 WHERE f.id = ANY(COALESCE(folder_ids, ARRAY[]::UUID[]))) as knowledge_base_count
+            FROM flowmaestro.folders f
+            WHERE f.workspace_id = $1 AND f.deleted_at IS NULL
+            ORDER BY f.position ASC, f.created_at ASC
+        `;
+
+        const result = await db.query<FolderWithCountsRow>(query, [workspaceId]);
+        return result.rows.map((row) => this.mapRowWithCounts(row));
+    }
+
+    /**
+     * @deprecated Use findByWorkspaceIdWithCounts instead. Kept for backward compatibility.
+     */
     async findByUserIdWithCounts(userId: string): Promise<FolderWithCounts[]> {
         const query = `
             SELECT
@@ -148,6 +203,50 @@ export class FolderRepository {
                 this.getChatInterfacesInFolder(id),
                 this.getKnowledgeBasesInFolder(id),
                 this.getChildren(id, userId)
+            ]);
+
+        const itemCounts: FolderItemCounts = {
+            workflows: workflows.length,
+            agents: agents.length,
+            formInterfaces: formInterfaces.length,
+            chatInterfaces: chatInterfaces.length,
+            knowledgeBases: knowledgeBases.length,
+            total:
+                workflows.length +
+                agents.length +
+                formInterfaces.length +
+                chatInterfaces.length +
+                knowledgeBases.length
+        };
+
+        return {
+            folder: folderWithAncestors,
+            items: {
+                workflows,
+                agents,
+                formInterfaces,
+                chatInterfaces,
+                knowledgeBases
+            },
+            itemCounts,
+            subfolders
+        };
+    }
+
+    async getContentsInWorkspace(id: string, workspaceId: string): Promise<FolderContents | null> {
+        // Get folder with ancestors for breadcrumbs
+        const folderWithAncestors = await this.findByIdWithAncestorsInWorkspace(id, workspaceId);
+        if (!folderWithAncestors) return null;
+
+        // Fetch all items and subfolders in parallel
+        const [workflows, agents, formInterfaces, chatInterfaces, knowledgeBases, subfolders] =
+            await Promise.all([
+                this.getWorkflowsInFolder(id),
+                this.getAgentsInFolder(id),
+                this.getFormInterfacesInFolder(id),
+                this.getChatInterfacesInFolder(id),
+                this.getKnowledgeBasesInFolder(id),
+                this.getChildrenInWorkspace(id, workspaceId)
             ]);
 
         const itemCounts: FolderItemCounts = {
@@ -260,6 +359,46 @@ export class FolderRepository {
         return result.rows.length > 0 ? this.mapRow(result.rows[0]) : null;
     }
 
+    async updateInWorkspace(
+        id: string,
+        workspaceId: string,
+        input: UpdateFolderInput
+    ): Promise<FolderModel | null> {
+        const updates: string[] = [];
+        const values: unknown[] = [];
+        let paramIndex = 1;
+
+        if (input.name !== undefined) {
+            updates.push(`name = $${paramIndex++}`);
+            values.push(input.name);
+        }
+
+        if (input.color !== undefined) {
+            updates.push(`color = $${paramIndex++}`);
+            values.push(input.color);
+        }
+
+        if (input.position !== undefined) {
+            updates.push(`position = $${paramIndex++}`);
+            values.push(input.position);
+        }
+
+        if (updates.length === 0) {
+            return this.findByIdAndWorkspaceId(id, workspaceId);
+        }
+
+        values.push(id, workspaceId);
+        const query = `
+            UPDATE flowmaestro.folders
+            SET ${updates.join(", ")}, updated_at = CURRENT_TIMESTAMP
+            WHERE id = $${paramIndex++} AND workspace_id = $${paramIndex} AND deleted_at IS NULL
+            RETURNING *
+        `;
+
+        const result = await db.query<FolderRow>(query, values);
+        return result.rows.length > 0 ? this.mapRow(result.rows[0]) : null;
+    }
+
     async delete(id: string, userId: string): Promise<boolean> {
         // Get the folder to find its parent
         const folder = await this.findByIdAndUserId(id, userId);
@@ -286,6 +425,32 @@ export class FolderRepository {
         return (result.rowCount || 0) > 0;
     }
 
+    async deleteInWorkspace(id: string, workspaceId: string): Promise<boolean> {
+        // Get the folder to find its parent
+        const folder = await this.findByIdAndWorkspaceId(id, workspaceId);
+        if (!folder) return false;
+
+        // Promote child folders to the deleted folder's parent
+        await db.query(
+            `UPDATE flowmaestro.folders
+             SET parent_id = $1, updated_at = CURRENT_TIMESTAMP
+             WHERE parent_id = $2 AND deleted_at IS NULL`,
+            [folder.parent_id, id]
+        );
+
+        // Clear folder_id from all items when folder is deleted
+        await this.clearFolderIdFromItems(id);
+
+        const query = `
+            UPDATE flowmaestro.folders
+            SET deleted_at = CURRENT_TIMESTAMP
+            WHERE id = $1 AND workspace_id = $2 AND deleted_at IS NULL
+        `;
+
+        const result = await db.query(query, [id, workspaceId]);
+        return (result.rowCount || 0) > 0;
+    }
+
     async isNameAvailable(
         name: string,
         userId: string,
@@ -307,6 +472,33 @@ export class FolderRepository {
                AND deleted_at IS NULL`;
 
         const params = excludeId ? [name, userId, parentId, excludeId] : [name, userId, parentId];
+        const result = await db.query(query, params);
+        return result.rowCount === 0;
+    }
+
+    async isNameAvailableInWorkspace(
+        name: string,
+        workspaceId: string,
+        parentId: string | null = null,
+        excludeId?: string
+    ): Promise<boolean> {
+        // Check name uniqueness within the same parent folder in the workspace
+        const query = excludeId
+            ? `SELECT 1 FROM flowmaestro.folders
+               WHERE LOWER(name) = LOWER($1)
+               AND workspace_id = $2
+               AND COALESCE(parent_id, '00000000-0000-0000-0000-000000000000') = COALESCE($3, '00000000-0000-0000-0000-000000000000')::UUID
+               AND id != $4
+               AND deleted_at IS NULL`
+            : `SELECT 1 FROM flowmaestro.folders
+               WHERE LOWER(name) = LOWER($1)
+               AND workspace_id = $2
+               AND COALESCE(parent_id, '00000000-0000-0000-0000-000000000000') = COALESCE($3, '00000000-0000-0000-0000-000000000000')::UUID
+               AND deleted_at IS NULL`;
+
+        const params = excludeId
+            ? [name, workspaceId, parentId, excludeId]
+            : [name, workspaceId, parentId];
         const result = await db.query(query, params);
         return result.rowCount === 0;
     }
@@ -518,6 +710,7 @@ export class FolderRepository {
         return {
             id: row.id,
             user_id: row.user_id,
+            workspace_id: row.workspace_id,
             name: row.name,
             color: row.color,
             position: row.position,
@@ -604,9 +797,45 @@ export class FolderRepository {
         };
     }
 
+    // Get folder with ancestor chain (for breadcrumbs) in workspace
+    async findByIdWithAncestorsInWorkspace(
+        id: string,
+        workspaceId: string
+    ): Promise<FolderWithAncestors | null> {
+        const folder = await this.findByIdAndWorkspaceId(id, workspaceId);
+        if (!folder) return null;
+
+        // Get ancestors using recursive CTE
+        const ancestorsQuery = `
+            WITH RECURSIVE ancestors AS (
+                SELECT id, user_id, name, color, position, parent_id, depth, path, created_at, updated_at
+                FROM flowmaestro.folders
+                WHERE id = $1 AND deleted_at IS NULL
+                UNION ALL
+                SELECT f.id, f.user_id, f.name, f.color, f.position, f.parent_id, f.depth, f.path, f.created_at, f.updated_at
+                FROM flowmaestro.folders f
+                INNER JOIN ancestors a ON f.id = a.parent_id
+                WHERE f.deleted_at IS NULL
+            )
+            SELECT * FROM ancestors WHERE id != $1 ORDER BY depth ASC
+        `;
+        const ancestorsResult = await db.query<FolderRow>(ancestorsQuery, [id]);
+
+        return {
+            ...this.mapModelToShared(folder),
+            ancestors: ancestorsResult.rows.map((row) => this.mapModelToShared(this.mapRow(row)))
+        };
+    }
+
     // Get all folders as a tree structure
     async getFolderTree(userId: string): Promise<FolderTreeNode[]> {
         const folders = await this.findByUserIdWithCounts(userId);
+        return this.buildTree(folders);
+    }
+
+    // Get all folders as a tree structure by workspace
+    async getFolderTreeByWorkspace(workspaceId: string): Promise<FolderTreeNode[]> {
+        const folders = await this.findByWorkspaceIdWithCounts(workspaceId);
         return this.buildTree(folders);
     }
 
@@ -668,6 +897,35 @@ export class FolderRepository {
             ORDER BY f.position ASC, f.created_at ASC
         `;
         const params = parentId ? [userId, parentId] : [userId];
+        const result = await db.query<FolderWithCountsRow>(query, params);
+        return result.rows.map((row) => this.mapRowWithCounts(row));
+    }
+
+    // Get direct children of a folder in workspace
+    async getChildrenInWorkspace(
+        parentId: string | null,
+        workspaceId: string
+    ): Promise<FolderWithCounts[]> {
+        const query = `
+            SELECT
+                f.*,
+                (SELECT COUNT(*) FROM flowmaestro.workflows
+                 WHERE f.id = ANY(COALESCE(folder_ids, ARRAY[]::UUID[])) AND deleted_at IS NULL) as workflow_count,
+                (SELECT COUNT(*) FROM flowmaestro.agents
+                 WHERE f.id = ANY(COALESCE(folder_ids, ARRAY[]::UUID[])) AND deleted_at IS NULL) as agent_count,
+                (SELECT COUNT(*) FROM flowmaestro.form_interfaces
+                 WHERE f.id = ANY(COALESCE(folder_ids, ARRAY[]::UUID[])) AND deleted_at IS NULL) as form_interface_count,
+                (SELECT COUNT(*) FROM flowmaestro.chat_interfaces
+                 WHERE f.id = ANY(COALESCE(folder_ids, ARRAY[]::UUID[])) AND deleted_at IS NULL) as chat_interface_count,
+                (SELECT COUNT(*) FROM flowmaestro.knowledge_bases
+                 WHERE f.id = ANY(COALESCE(folder_ids, ARRAY[]::UUID[]))) as knowledge_base_count
+            FROM flowmaestro.folders f
+            WHERE f.workspace_id = $1
+            AND ${parentId ? "f.parent_id = $2" : "f.parent_id IS NULL"}
+            AND f.deleted_at IS NULL
+            ORDER BY f.position ASC, f.created_at ASC
+        `;
+        const params = parentId ? [workspaceId, parentId] : [workspaceId];
         const result = await db.query<FolderWithCountsRow>(query, params);
         return result.rows.map((row) => this.mapRowWithCounts(row));
     }
@@ -748,6 +1006,69 @@ export class FolderRepository {
             nextPosition,
             id,
             userId
+        ]);
+        return result.rows.length > 0 ? this.mapRow(result.rows[0]) : null;
+    }
+
+    // Move folder to a new parent within workspace
+    async moveFolderInWorkspace(
+        id: string,
+        workspaceId: string,
+        newParentId: string | null
+    ): Promise<FolderModel | null> {
+        // Validate ownership
+        const folder = await this.findByIdAndWorkspaceId(id, workspaceId);
+        if (!folder) return null;
+
+        // If moving to same parent, no-op
+        if (folder.parent_id === newParentId) {
+            return folder;
+        }
+
+        // Validate new parent if provided
+        if (newParentId) {
+            const newParent = await this.findByIdAndWorkspaceId(newParentId, workspaceId);
+            if (!newParent) {
+                throw new Error("Target folder not found");
+            }
+
+            // Check depth constraint (folder + its descendants must fit)
+            const descendants = await this.getDescendantIds(id);
+            const maxDescendantDepth =
+                descendants.length > 0 ? await this.getMaxDescendantDepth(id) : 0;
+            const requiredDepth = newParent.depth + 1 + maxDescendantDepth;
+            if (requiredDepth >= MAX_FOLDER_DEPTH) {
+                throw new Error("Maximum folder nesting depth exceeded");
+            }
+
+            // Check for cycle (moving into own descendant)
+            if (descendants.includes(newParentId)) {
+                throw new Error("Cannot move folder into its own descendant");
+            }
+        }
+
+        // Get next position in new parent
+        const positionResult = await db.query<{ max_position: number | null }>(
+            `SELECT MAX(position) as max_position FROM flowmaestro.folders
+             WHERE workspace_id = $1
+             AND COALESCE(parent_id, '00000000-0000-0000-0000-000000000000') = COALESCE($2, '00000000-0000-0000-0000-000000000000')::UUID
+             AND deleted_at IS NULL`,
+            [workspaceId, newParentId || null]
+        );
+        const nextPosition = (positionResult.rows[0]?.max_position ?? -1) + 1;
+
+        // Update folder (triggers will handle path/depth updates)
+        const updateQuery = `
+            UPDATE flowmaestro.folders
+            SET parent_id = $1, position = $2, updated_at = CURRENT_TIMESTAMP
+            WHERE id = $3 AND workspace_id = $4 AND deleted_at IS NULL
+            RETURNING *
+        `;
+        const result = await db.query<FolderRow>(updateQuery, [
+            newParentId,
+            nextPosition,
+            id,
+            workspaceId
         ]);
         return result.rows.length > 0 ? this.mapRow(result.rows[0]) : null;
     }

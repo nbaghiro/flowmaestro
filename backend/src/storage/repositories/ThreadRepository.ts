@@ -12,6 +12,7 @@ import {
 interface ThreadRow {
     id: string;
     user_id: string;
+    workspace_id: string;
     agent_id: string;
     title: string | null;
     status: ThreadStatus;
@@ -30,14 +31,15 @@ export class ThreadRepository {
     async create(input: CreateThreadInput): Promise<ThreadModel> {
         const query = `
             INSERT INTO flowmaestro.threads (
-                user_id, agent_id, title, status, metadata
+                user_id, workspace_id, agent_id, title, status, metadata
             )
-            VALUES ($1, $2, $3, $4, $5)
+            VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING *
         `;
 
         const values = [
             input.user_id,
+            input.workspace_id,
             input.agent_id,
             input.title || null,
             input.status || "active",
@@ -62,7 +64,20 @@ export class ThreadRepository {
     }
 
     /**
-     * Find thread by ID and user ID (for access control)
+     * Find thread by ID and workspace ID (for access control)
+     */
+    async findByIdAndWorkspaceId(id: string, workspaceId: string): Promise<ThreadModel | null> {
+        const query = `
+            SELECT * FROM flowmaestro.threads
+            WHERE id = $1 AND workspace_id = $2 AND deleted_at IS NULL
+        `;
+
+        const result = await db.query(query, [id, workspaceId]);
+        return result.rows.length > 0 ? this.mapRow(result.rows[0] as ThreadRow) : null;
+    }
+
+    /**
+     * @deprecated Use findByIdAndWorkspaceId instead. Kept for backward compatibility.
      */
     async findByIdAndUserId(id: string, userId: string): Promise<ThreadModel | null> {
         const query = `
@@ -75,15 +90,15 @@ export class ThreadRepository {
     }
 
     /**
-     * List threads with filtering and pagination
+     * List threads with filtering and pagination by workspace
      */
     async list(filter: ThreadListFilter): Promise<{ threads: ThreadModel[]; total: number }> {
         const limit = filter.limit || 50;
         const offset = filter.offset || 0;
 
         // Build where clause
-        const whereClauses: string[] = ["deleted_at IS NULL", "user_id = $1"];
-        const params: unknown[] = [filter.user_id];
+        const whereClauses: string[] = ["deleted_at IS NULL", "workspace_id = $1"];
+        const params: unknown[] = [filter.workspace_id];
         let paramIndex = 2;
 
         if (filter.agent_id) {
@@ -132,15 +147,31 @@ export class ThreadRepository {
     }
 
     /**
-     * Get threads for a specific agent and user
+     * Find threads by workspace ID
      */
-    async findByAgentAndUser(
+    async findByWorkspaceId(
+        workspaceId: string,
+        options: { limit?: number; offset?: number; agentId?: string; status?: ThreadStatus } = {}
+    ): Promise<{ threads: ThreadModel[]; total: number }> {
+        return this.list({
+            workspace_id: workspaceId,
+            agent_id: options.agentId,
+            status: options.status,
+            limit: options.limit,
+            offset: options.offset
+        });
+    }
+
+    /**
+     * Get threads for a specific agent and workspace
+     */
+    async findByAgentAndWorkspace(
         agentId: string,
-        userId: string,
+        workspaceId: string,
         options: { limit?: number; offset?: number; status?: ThreadStatus } = {}
     ): Promise<{ threads: ThreadModel[]; total: number }> {
         return this.list({
-            user_id: userId,
+            workspace_id: workspaceId,
             agent_id: agentId,
             status: options.status,
             limit: options.limit,
@@ -149,7 +180,76 @@ export class ThreadRepository {
     }
 
     /**
-     * Get most recent active thread for agent and user
+     * @deprecated Use findByAgentAndWorkspace instead. Kept for backward compatibility.
+     */
+    async findByAgentAndUser(
+        agentId: string,
+        userId: string,
+        options: { limit?: number; offset?: number; status?: ThreadStatus } = {}
+    ): Promise<{ threads: ThreadModel[]; total: number }> {
+        const limit = options.limit || 50;
+        const offset = options.offset || 0;
+
+        const whereClauses: string[] = ["deleted_at IS NULL", "user_id = $1", "agent_id = $2"];
+        const params: unknown[] = [userId, agentId];
+        let paramIndex = 3;
+
+        if (options.status) {
+            whereClauses.push(`status = $${paramIndex++}`);
+            params.push(options.status);
+        }
+
+        const whereClause = whereClauses.join(" AND ");
+
+        const countQuery = `
+            SELECT COUNT(*) as count
+            FROM flowmaestro.threads
+            WHERE ${whereClause}
+        `;
+
+        const dataQuery = `
+            SELECT * FROM flowmaestro.threads
+            WHERE ${whereClause}
+            ORDER BY created_at DESC
+            LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+        `;
+
+        const dataParams = [...params, limit, offset];
+
+        const [countResult, dataResult] = await Promise.all([
+            db.query<{ count: string }>(countQuery, params),
+            db.query(dataQuery, dataParams)
+        ]);
+
+        return {
+            threads: dataResult.rows.map((row) => this.mapRow(row as ThreadRow)),
+            total: parseInt(countResult.rows[0].count)
+        };
+    }
+
+    /**
+     * Get most recent active thread for agent and workspace
+     */
+    async findMostRecentActiveByWorkspace(
+        agentId: string,
+        workspaceId: string
+    ): Promise<ThreadModel | null> {
+        const query = `
+            SELECT * FROM flowmaestro.threads
+            WHERE agent_id = $1
+              AND workspace_id = $2
+              AND status = 'active'
+              AND deleted_at IS NULL
+            ORDER BY created_at DESC
+            LIMIT 1
+        `;
+
+        const result = await db.query(query, [agentId, workspaceId]);
+        return result.rows.length > 0 ? this.mapRow(result.rows[0] as ThreadRow) : null;
+    }
+
+    /**
+     * @deprecated Use findMostRecentActiveByWorkspace instead. Kept for backward compatibility.
      */
     async findMostRecentActive(agentId: string, userId: string): Promise<ThreadModel | null> {
         const query = `
@@ -317,6 +417,7 @@ export class ThreadRepository {
         return {
             id: row.id,
             user_id: row.user_id,
+            workspace_id: row.workspace_id,
             agent_id: row.agent_id,
             title: row.title,
             status: row.status,

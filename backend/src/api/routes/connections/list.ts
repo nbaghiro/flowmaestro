@@ -1,19 +1,24 @@
 import { FastifyInstance } from "fastify";
 import { ConnectionRepository } from "../../../storage/repositories/ConnectionRepository";
 import { authMiddleware, validateQuery } from "../../middleware";
+import { workspaceContextMiddleware } from "../../middleware/workspace-context";
 import { listConnectionsQuerySchema, ListConnectionsQuery } from "../../schemas/connection-schemas";
 
 export async function listConnectionsRoute(fastify: FastifyInstance) {
     fastify.get(
         "/",
         {
-            preHandler: [authMiddleware, validateQuery(listConnectionsQuerySchema)]
+            preHandler: [
+                authMiddleware,
+                workspaceContextMiddleware,
+                validateQuery(listConnectionsQuerySchema)
+            ]
         },
         async (request, reply) => {
             const connectionRepository = new ConnectionRepository();
             const query = request.query as ListConnectionsQuery;
 
-            const result = await connectionRepository.findByUserId(request.user!.id, {
+            const result = await connectionRepository.findByWorkspaceId(request.workspace!.id, {
                 limit: query.limit,
                 offset: query.offset,
                 provider: query.provider,

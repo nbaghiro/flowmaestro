@@ -5,6 +5,7 @@ export type ThreadStatus = "active" | "archived" | "deleted";
 export interface ThreadModel {
     id: string;
     user_id: string;
+    workspace_id: string;
     agent_id: string;
     title: string | null;
     status: ThreadStatus;
@@ -18,6 +19,7 @@ export interface ThreadModel {
 
 export interface CreateThreadInput {
     user_id: string;
+    workspace_id: string;
     agent_id: string;
     title?: string;
     status?: ThreadStatus;
@@ -33,10 +35,22 @@ export interface UpdateThreadInput {
 }
 
 export interface ThreadListFilter {
-    user_id: string;
+    workspace_id: string;
     agent_id?: string;
     status?: ThreadStatus;
     limit?: number;
     offset?: number;
     search?: string; // Search in title
+}
+
+/**
+ * @deprecated Use ThreadListFilter with workspace_id instead. Kept for backward compatibility.
+ */
+export interface ThreadListFilterByUser {
+    user_id: string;
+    agent_id?: string;
+    status?: ThreadStatus;
+    limit?: number;
+    offset?: number;
+    search?: string;
 }

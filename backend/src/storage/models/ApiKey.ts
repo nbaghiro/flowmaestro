@@ -76,6 +76,7 @@ export type ScopeBundleName = keyof typeof SCOPE_BUNDLES;
 export interface ApiKeyModel {
     id: string;
     user_id: string;
+    workspace_id: string;
     name: string;
     key_prefix: string;
     key_hash: string;
@@ -103,6 +104,7 @@ export interface ApiKeyWithSecret extends ApiKeyModel {
  */
 export interface CreateApiKeyInput {
     user_id: string;
+    workspace_id: string;
     name: string;
     scopes: ApiKeyScope[];
     rate_limit_per_minute?: number;

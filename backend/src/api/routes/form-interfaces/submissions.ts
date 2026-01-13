@@ -3,6 +3,7 @@ import { createServiceLogger } from "../../../core/logging";
 import { FormInterfaceRepository } from "../../../storage/repositories/FormInterfaceRepository";
 import { FormInterfaceSubmissionRepository } from "../../../storage/repositories/FormInterfaceSubmissionRepository";
 import { authMiddleware } from "../../middleware";
+import { workspaceContextMiddleware } from "../../middleware/workspace-context";
 
 const logger = createServiceLogger("FormInterfaceRoutes");
 
@@ -10,18 +11,21 @@ export async function listFormInterfaceSubmissionsRoute(fastify: FastifyInstance
     fastify.get(
         "/:id/submissions",
         {
-            preHandler: [authMiddleware]
+            preHandler: [authMiddleware, workspaceContextMiddleware]
         },
         async (request, reply) => {
             const formInterfaceRepo = new FormInterfaceRepository();
             const submissionRepo = new FormInterfaceSubmissionRepository();
             const { id } = request.params as { id: string };
-            const userId = request.user!.id;
+            const workspaceId = request.workspace!.id;
             const query = request.query as { limit?: string; offset?: string };
 
             try {
-                // Check if form interface exists and belongs to user
-                const formInterface = await formInterfaceRepo.findById(id, userId);
+                // Check if form interface exists and belongs to workspace
+                const formInterface = await formInterfaceRepo.findByIdAndWorkspaceId(
+                    id,
+                    workspaceId
+                );
                 if (!formInterface) {
                     return reply.status(404).send({
                         success: false,
@@ -51,7 +55,10 @@ export async function listFormInterfaceSubmissionsRoute(fastify: FastifyInstance
                     }
                 });
             } catch (error) {
-                logger.error({ id, userId, error }, "Error listing form interface submissions");
+                logger.error(
+                    { id, workspaceId, error },
+                    "Error listing form interface submissions"
+                );
                 return reply.status(500).send({
                     success: false,
                     error: error instanceof Error ? error.message : String(error)

@@ -1,13 +1,22 @@
 import { FastifyInstance } from "fastify";
 import { WorkflowRepository } from "../../../storage/repositories";
-import { authMiddleware, validateParams, NotFoundError } from "../../middleware";
+import {
+    authMiddleware,
+    workspaceContextMiddleware,
+    validateParams,
+    NotFoundError
+} from "../../middleware";
 import { workflowIdParamSchema } from "../../schemas/workflow-schemas";
 
 export async function getWorkflowRoute(fastify: FastifyInstance) {
     fastify.get(
         "/:id",
         {
-            preHandler: [authMiddleware, validateParams(workflowIdParamSchema)]
+            preHandler: [
+                authMiddleware,
+                workspaceContextMiddleware,
+                validateParams(workflowIdParamSchema)
+            ]
         },
         async (request, reply) => {
             const workflowRepository = new WorkflowRepository();
@@ -19,8 +28,8 @@ export async function getWorkflowRoute(fastify: FastifyInstance) {
                 throw new NotFoundError("Workflow not found");
             }
 
-            // Check if user owns this workflow
-            if (workflow.user_id !== request.user!.id) {
+            // Check if workflow belongs to this workspace
+            if (workflow.workspace_id !== request.workspace!.id) {
                 throw new NotFoundError("Workflow not found");
             }
 

@@ -23,6 +23,7 @@ export async function executeAgentHandler(
     reply: FastifyReply
 ): Promise<void> {
     const userId = request.user!.id;
+    const workspaceId = request.workspace!.id;
     const { id: agentId } = executeAgentParamsSchema.parse(request.params);
     const { message, thread_id, connection_id, model } = executeAgentSchema.parse(request.body);
 
@@ -30,8 +31,8 @@ export async function executeAgentHandler(
     const executionRepo = new AgentExecutionRepository();
     const threadRepo = new ThreadRepository();
 
-    // Check if agent exists and belongs to user
-    const agent = await agentRepo.findByIdAndUserId(agentId, userId);
+    // Check if agent exists and belongs to workspace
+    const agent = await agentRepo.findByIdAndWorkspaceId(agentId, workspaceId);
     if (!agent) {
         throw new NotFoundError("Agent not found");
     }
@@ -41,8 +42,8 @@ export async function executeAgentHandler(
         let threadId: string;
 
         if (thread_id) {
-            // Use existing thread - verify it exists and belongs to user
-            const existingThread = await threadRepo.findByIdAndUserId(thread_id, userId);
+            // Use existing thread - verify it exists and belongs to workspace
+            const existingThread = await threadRepo.findByIdAndWorkspaceId(thread_id, workspaceId);
             if (!existingThread) {
                 throw new NotFoundError("Thread not found");
             }
@@ -55,6 +56,7 @@ export async function executeAgentHandler(
             // Create new thread
             const newThread = await threadRepo.create({
                 user_id: userId,
+                workspace_id: workspaceId,
                 agent_id: agentId,
                 title: new Date().toLocaleString() // Auto-generated timestamp as title
             });

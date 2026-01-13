@@ -1,5 +1,7 @@
+import * as Popover from "@radix-ui/react-popover";
 import { ChevronDown, ChevronUp, Folder, Edit2, Trash2, Plus } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import type {
     FolderWithCounts,
     Folder as FolderType,
@@ -167,18 +169,83 @@ export function SidebarFolders({ isCollapsed }: SidebarFoldersProps) {
         [expandedFolderIds, handleDropOnFolder, handleToggleExpand]
     );
 
-    // Collapsed sidebar: show folder icon that opens popover
+    const navigate = useNavigate();
+    const [isCollapsedPopoverOpen, setIsCollapsedPopoverOpen] = useState(false);
+
+    // Collapsed sidebar: show folder icon that opens popover with folder list
     if (isCollapsed) {
         return (
             <div className="px-2 py-2 border-t border-border">
-                <Tooltip content="Folders" delay={200} position="right">
-                    <button
-                        onClick={() => setIsCreateDialogOpen(true)}
-                        className="w-full p-2 text-muted-foreground hover:bg-muted hover:text-foreground rounded-md transition-colors"
-                    >
-                        <Folder className="w-5 h-5 mx-auto" />
-                    </button>
-                </Tooltip>
+                <Popover.Root
+                    open={isCollapsedPopoverOpen}
+                    onOpenChange={setIsCollapsedPopoverOpen}
+                >
+                    <Popover.Trigger asChild>
+                        <button className="w-full p-2 text-muted-foreground hover:bg-muted hover:text-foreground rounded-md transition-colors">
+                            <Folder className="w-5 h-5 mx-auto" />
+                        </button>
+                    </Popover.Trigger>
+                    <Popover.Portal>
+                        <Popover.Content
+                            side="right"
+                            align="start"
+                            sideOffset={8}
+                            className="z-50 w-56 bg-popover border border-border rounded-lg shadow-lg overflow-hidden"
+                        >
+                            <div className="p-2 border-b border-border">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm font-medium text-foreground">
+                                        Folders
+                                    </span>
+                                    <button
+                                        onClick={() => {
+                                            setIsCollapsedPopoverOpen(false);
+                                            setIsCreateDialogOpen(true);
+                                        }}
+                                        className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
+                                    >
+                                        <Plus className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="max-h-64 overflow-y-auto">
+                                {isLoadingFolders ? (
+                                    <div className="px-3 py-2 text-sm text-muted-foreground">
+                                        Loading...
+                                    </div>
+                                ) : !folders || folders.length === 0 ? (
+                                    <div className="px-3 py-4 text-sm text-muted-foreground text-center">
+                                        No folders yet
+                                    </div>
+                                ) : (
+                                    <div className="py-1">
+                                        {folders.map((folder) => (
+                                            <button
+                                                key={folder.id}
+                                                onClick={() => {
+                                                    setIsCollapsedPopoverOpen(false);
+                                                    navigate(`/folders/${folder.id}`);
+                                                }}
+                                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+                                            >
+                                                <div
+                                                    className="w-3 h-3 rounded-sm flex-shrink-0"
+                                                    style={{ backgroundColor: folder.color }}
+                                                />
+                                                <span className="truncate">{folder.name}</span>
+                                                {folder.itemCounts.total > 0 && (
+                                                    <span className="ml-auto text-xs text-muted-foreground">
+                                                        {folder.itemCounts.total}
+                                                    </span>
+                                                )}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </Popover.Content>
+                    </Popover.Portal>
+                </Popover.Root>
 
                 {/* Create Folder Dialog */}
                 <CreateFolderDialog
@@ -197,7 +264,7 @@ export function SidebarFolders({ isCollapsed }: SidebarFoldersProps) {
                 <div className="flex items-center justify-between px-3 py-3">
                     <button
                         onClick={toggleFoldersSection}
-                        className="flex items-center gap-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
+                        className="flex items-center gap-3 text-xs font-semibold text-muted-foreground tracking-wider hover:text-foreground transition-colors"
                     >
                         <Folder className="w-5 h-5" />
                         <span>Folders</span>

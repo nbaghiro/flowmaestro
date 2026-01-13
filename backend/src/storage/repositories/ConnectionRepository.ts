@@ -16,6 +16,7 @@ import {
 interface ConnectionRow {
     id: string;
     user_id: string;
+    workspace_id: string;
     name: string;
     connection_method: ConnectionMethod;
     provider: string;
@@ -41,6 +42,7 @@ export class ConnectionRepository {
         const query = `
             INSERT INTO flowmaestro.connections (
                 user_id,
+                workspace_id,
                 name,
                 connection_method,
                 provider,
@@ -49,12 +51,13 @@ export class ConnectionRepository {
                 status,
                 capabilities
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             RETURNING *
         `;
 
         const values = [
             input.user_id,
+            input.workspace_id,
             input.name,
             input.connection_method,
             input.provider,
@@ -100,7 +103,91 @@ export class ConnectionRepository {
     }
 
     /**
-     * Find connections by user ID
+     * Find connection by ID and workspace ID
+     */
+    async findByIdAndWorkspaceId(
+        id: string,
+        workspaceId: string
+    ): Promise<ConnectionSummary | null> {
+        const query = `
+            SELECT * FROM flowmaestro.connections
+            WHERE id = $1 AND workspace_id = $2
+        `;
+
+        const result = await db.query(query, [id, workspaceId]);
+        return result.rows.length > 0 ? this.mapToSummary(result.rows[0] as ConnectionRow) : null;
+    }
+
+    /**
+     * Find connections by workspace ID
+     */
+    async findByWorkspaceId(
+        workspaceId: string,
+        options: {
+            limit?: number;
+            offset?: number;
+            provider?: string;
+            connection_method?: ConnectionMethod;
+            status?: ConnectionStatus;
+        } = {}
+    ): Promise<{ connections: ConnectionSummary[]; total: number }> {
+        const limit = options.limit || 50;
+        const offset = options.offset || 0;
+
+        let countQuery = `
+            SELECT COUNT(*) as count
+            FROM flowmaestro.connections
+            WHERE workspace_id = $1
+        `;
+
+        let query = `
+            SELECT * FROM flowmaestro.connections
+            WHERE workspace_id = $1
+        `;
+
+        const countParams: unknown[] = [workspaceId];
+        const queryParams: unknown[] = [workspaceId];
+
+        // Add filters
+        if (options.provider) {
+            countQuery += ` AND provider = $${countParams.length + 1}`;
+            query += ` AND provider = $${queryParams.length + 1}`;
+            countParams.push(options.provider);
+            queryParams.push(options.provider);
+        }
+
+        if (options.connection_method) {
+            countQuery += ` AND connection_method = $${countParams.length + 1}`;
+            query += ` AND connection_method = $${queryParams.length + 1}`;
+            countParams.push(options.connection_method);
+            queryParams.push(options.connection_method);
+        }
+
+        if (options.status) {
+            countQuery += ` AND status = $${countParams.length + 1}`;
+            query += ` AND status = $${queryParams.length + 1}`;
+            countParams.push(options.status);
+            queryParams.push(options.status);
+        }
+
+        query += ` ORDER BY created_at DESC LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}`;
+        queryParams.push(limit, offset);
+
+        const [countResult, connectionsResult] = await Promise.all([
+            db.query<{ count: string }>(countQuery, countParams),
+            db.query(query, queryParams)
+        ]);
+
+        return {
+            connections: connectionsResult.rows.map((row) =>
+                this.mapToSummary(row as ConnectionRow)
+            ),
+            total: parseInt(countResult.rows[0].count)
+        };
+    }
+
+    /**
+     * @deprecated Use findByWorkspaceId instead. Kept for backward compatibility.
      */
     async findByUserId(
         userId: string,
@@ -168,7 +255,24 @@ export class ConnectionRepository {
     }
 
     /**
-     * Find connections by provider
+     * Find connections by provider in a workspace
+     */
+    async findByProviderInWorkspace(
+        workspaceId: string,
+        provider: string
+    ): Promise<ConnectionSummary[]> {
+        const query = `
+            SELECT * FROM flowmaestro.connections
+            WHERE workspace_id = $1 AND provider = $2 AND status = 'active'
+            ORDER BY created_at DESC
+        `;
+
+        const result = await db.query(query, [workspaceId, provider]);
+        return result.rows.map((row) => this.mapToSummary(row as ConnectionRow));
+    }
+
+    /**
+     * @deprecated Use findByProviderInWorkspace instead. Kept for backward compatibility.
      */
     async findByProvider(userId: string, provider: string): Promise<ConnectionSummary[]> {
         const query = `
@@ -182,7 +286,24 @@ export class ConnectionRepository {
     }
 
     /**
-     * Find connections by connection method
+     * Find connections by connection method in a workspace
+     */
+    async findByMethodInWorkspace(
+        workspaceId: string,
+        method: ConnectionMethod
+    ): Promise<ConnectionSummary[]> {
+        const query = `
+            SELECT * FROM flowmaestro.connections
+            WHERE workspace_id = $1 AND connection_method = $2 AND status = 'active'
+            ORDER BY created_at DESC
+        `;
+
+        const result = await db.query(query, [workspaceId, method]);
+        return result.rows.map((row) => this.mapToSummary(row as ConnectionRow));
+    }
+
+    /**
+     * @deprecated Use findByMethodInWorkspace instead. Kept for backward compatibility.
      */
     async findByMethod(userId: string, method: ConnectionMethod): Promise<ConnectionSummary[]> {
         const query = `
@@ -425,6 +546,7 @@ export class ConnectionRepository {
         return {
             ...summary,
             user_id: row.user_id,
+            workspace_id: row.workspace_id,
             data
         };
     }
