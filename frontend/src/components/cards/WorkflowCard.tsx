@@ -111,7 +111,10 @@ export function WorkflowCard({
                         </Badge>
 
                         {/* Menu Button */}
-                        {(onDuplicate || onMoveToFolder || onDelete) && (
+                        {(onDuplicate ||
+                            onMoveToFolder ||
+                            onDelete ||
+                            (onRemoveFromFolder && currentFolderId)) && (
                             <div className="relative" ref={menuRef}>
                                 <button
                                     onClick={(e) => {
