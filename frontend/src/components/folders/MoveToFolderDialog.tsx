@@ -20,6 +20,8 @@ interface MoveToFolderDialogProps {
     onCreateFolder: () => void;
     /** When moving a folder, pass its ID to disable it and its descendants */
     movingFolderId?: string;
+    /** When true, show total item counts instead of type-specific counts */
+    showTotalCounts?: boolean;
 }
 
 export function MoveToFolderDialog({
@@ -33,7 +35,8 @@ export function MoveToFolderDialog({
     currentFolderId,
     onMove,
     onCreateFolder,
-    movingFolderId
+    movingFolderId,
+    showTotalCounts = false
 }: MoveToFolderDialogProps) {
     const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
     const [isMoving, setIsMoving] = useState(false);
@@ -151,6 +154,9 @@ export function MoveToFolderDialog({
 
     // Get count for the current item type in a folder
     const getItemTypeCount = (folder: FolderWithCounts): number => {
+        if (showTotalCounts) {
+            return folder.itemCounts.total;
+        }
         switch (itemType) {
             case "workflow":
                 return folder.itemCounts.workflows;
@@ -170,6 +176,9 @@ export function MoveToFolderDialog({
     // Get display label for item type count
     const getItemTypeCountLabel = (count: number): string => {
         if (count === 0) return "Empty";
+        if (showTotalCounts) {
+            return `${count} ${count === 1 ? "item" : "items"}`;
+        }
         const typeLabel = getItemTypeDisplay();
         return `${count} ${typeLabel}`;
     };
@@ -253,7 +262,9 @@ export function MoveToFolderDialog({
     const dialogTitle = isMovingFolder ? "Move Folder" : "Move to Folder";
     const dialogDescription = isMovingFolder
         ? "Select a new parent folder"
-        : `Select a destination for ${selectedItemCount} ${getItemTypeDisplay()}`;
+        : showTotalCounts
+          ? `Select a destination for ${selectedItemCount} ${selectedItemCount === 1 ? "item" : "items"}`
+          : `Select a destination for ${selectedItemCount} ${getItemTypeDisplay()}`;
 
     return (
         <Dialog
