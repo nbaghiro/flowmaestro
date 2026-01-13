@@ -14,6 +14,7 @@ interface TransformNodeConfigProps {
 }
 
 const operations = [
+    { value: "passthrough", label: "Passthrough (no transformation)" },
     { value: "map", label: "Map (transform each item)" },
     { value: "filter", label: "Filter (select items)" },
     { value: "reduce", label: "Reduce (aggregate)" },
@@ -52,6 +53,8 @@ export function TransformNodeConfig({
 
     const getPlaceholder = () => {
         switch (operation) {
+            case "passthrough":
+                return "";
             case "map":
                 return "item => ({ ...item, newField: item.oldField * 2 })";
             case "filter":
@@ -73,6 +76,8 @@ export function TransformNodeConfig({
 
     const getDescription = () => {
         switch (operation) {
+            case "passthrough":
+                return "Pass input data through unchanged to the output variable";
             case "map":
                 return "Transform each item in an array";
             case "filter":
@@ -116,44 +121,46 @@ export function TransformNodeConfig({
                 </FormField>
             </FormSection>
 
-            <FormSection title="Transformation">
-                <FormField
-                    label={operation === "custom" ? "JSONata Expression" : "Expression"}
-                    description={
-                        operation === "custom"
-                            ? "JSONata query"
-                            : "JavaScript expression or function"
-                    }
-                >
-                    <CodeInput
-                        value={expression}
-                        onChange={setExpression}
-                        language={operation === "custom" ? "jsonata" : "javascript"}
-                        placeholder={getPlaceholder()}
-                        rows={operation === "custom" ? 8 : 6}
-                    />
-                </FormField>
+            {operation !== "passthrough" && (
+                <FormSection title="Transformation">
+                    <FormField
+                        label={operation === "custom" ? "JSONata Expression" : "Expression"}
+                        description={
+                            operation === "custom"
+                                ? "JSONata query"
+                                : "JavaScript expression or function"
+                        }
+                    >
+                        <CodeInput
+                            value={expression}
+                            onChange={setExpression}
+                            language={operation === "custom" ? "jsonata" : "javascript"}
+                            placeholder={getPlaceholder()}
+                            rows={operation === "custom" ? 8 : 6}
+                        />
+                    </FormField>
 
-                {operation === "custom" && (
-                    <div className="px-3 py-2 bg-muted rounded-lg">
-                        <p className="text-xs text-muted-foreground mb-2">
-                            <strong>JSONata Examples:</strong>
-                        </p>
-                        <code className="text-xs block mb-1">
-                            $map(items, function($i) {"{"}$i.name{"}"}){" "}
-                            <span className="text-muted-foreground">// Extract names</span>
-                        </code>
-                        <code className="text-xs block mb-1">
-                            items[price &gt; 100]{" "}
-                            <span className="text-muted-foreground">// Filter by price</span>
-                        </code>
-                        <code className="text-xs block">
-                            $sum(items.price){" "}
-                            <span className="text-muted-foreground">// Sum prices</span>
-                        </code>
-                    </div>
-                )}
-            </FormSection>
+                    {operation === "custom" && (
+                        <div className="px-3 py-2 bg-muted rounded-lg">
+                            <p className="text-xs text-muted-foreground mb-2">
+                                <strong>JSONata Examples:</strong>
+                            </p>
+                            <code className="text-xs block mb-1">
+                                $map(items, function($i) {"{"}$i.name{"}"}){" "}
+                                <span className="text-muted-foreground">// Extract names</span>
+                            </code>
+                            <code className="text-xs block mb-1">
+                                items[price &gt; 100]{" "}
+                                <span className="text-muted-foreground">// Filter by price</span>
+                            </code>
+                            <code className="text-xs block">
+                                $sum(items.price){" "}
+                                <span className="text-muted-foreground">// Sum prices</span>
+                            </code>
+                        </div>
+                    )}
+                </FormSection>
+            )}
 
             <FormSection title="Output Settings">
                 <OutputSettingsSection

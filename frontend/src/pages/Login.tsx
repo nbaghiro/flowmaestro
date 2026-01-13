@@ -6,9 +6,9 @@ import { Button } from "../components/common/Button";
 import { Input } from "../components/common/Input";
 import { Logo } from "../components/common/Logo";
 import { Divider } from "../components/common/Separator";
-import { useAuth } from "../contexts/AuthContext";
 import { useGoogleAuth } from "../hooks/useGoogleAuth";
 import { useMicrosoftAuth } from "../hooks/useMicrosoftAuth";
+import { useAuthStore } from "../stores/authStore";
 
 export function Login() {
     const [email, setEmail] = useState("");
@@ -19,7 +19,7 @@ export function Login() {
     const [useBackupCode, setUseBackupCode] = useState(false);
     const [error, setError] = useState("");
     const [isLoading, setIsLoading] = useState(false);
-    const { login } = useAuth();
+    const { login } = useAuthStore();
     const { loginWithGoogle, isLoading: isGoogleLoading } = useGoogleAuth();
     const { loginWithMicrosoft, isLoading: isMicrosoftLoading } = useMicrosoftAuth();
     const navigate = useNavigate();

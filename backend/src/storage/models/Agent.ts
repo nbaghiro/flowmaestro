@@ -43,6 +43,7 @@ export interface MemoryConfig {
 export interface AgentModel {
     id: string;
     user_id: string;
+    workspace_id: string;
     name: string;
     description: string | null;
     model: string;
@@ -63,6 +64,7 @@ export interface AgentModel {
 
 export interface CreateAgentInput {
     user_id: string;
+    workspace_id: string;
     name: string;
     description?: string;
     model: string;

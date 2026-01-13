@@ -1,4 +1,6 @@
 import { FastifyInstance } from "fastify";
+import { authMiddleware } from "../../middleware";
+import { workspaceContextMiddleware } from "../../middleware/workspace-context";
 import { createChatInterfaceRoute } from "./create";
 import { deleteChatInterfaceRoute } from "./delete";
 import { duplicateChatInterfaceRoute } from "./duplicate";
@@ -11,9 +13,13 @@ import { updateChatInterfaceRoute } from "./update";
 import { uploadChatInterfaceAssetRoute } from "./upload-assets";
 
 export async function chatInterfaceRoutes(fastify: FastifyInstance) {
-    // Chat interface management routes (requires auth)
+    // Chat interface management routes (requires auth and workspace context)
     fastify.register(
         async (instance) => {
+            // Add auth and workspace middleware to all routes in this scope
+            instance.addHook("preHandler", authMiddleware);
+            instance.addHook("preHandler", workspaceContextMiddleware);
+
             instance.register(createChatInterfaceRoute);
             instance.register(listChatInterfacesRoute);
             instance.register(getChatInterfaceRoute);

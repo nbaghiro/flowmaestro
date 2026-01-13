@@ -37,6 +37,7 @@ import { publicApiV1Routes } from "./routes/v1";
 import { webhookRoutes } from "./routes/webhooks";
 import { websocketRoutes } from "./routes/websocket";
 import { workflowRoutes } from "./routes/workflows";
+import { workspaceRoutes } from "./routes/workspaces";
 
 export async function buildServer() {
     // Initialize centralized logger
@@ -166,6 +167,7 @@ export async function buildServer() {
     await fastify.register(chatInterfaceRoutes);
     await fastify.register(webhookRoutes, { prefix: "/webhooks" });
     await fastify.register(websocketRoutes);
+    await fastify.register(workspaceRoutes);
 
     // Public routes (widgets and public API - CORS allows any origin via dynamic origin check)
     await fastify.register(publicFormInterfaceRoutes, { prefix: "/public/form-interfaces" });

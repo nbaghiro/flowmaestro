@@ -1,10 +1,10 @@
 import { AlertCircle, CheckCircle2, Loader2, Mail, X } from "lucide-react";
 import { useState } from "react";
-import { useAuth } from "../contexts/AuthContext";
 import { resendVerificationEmail } from "../lib/api";
+import { useAuthStore } from "../stores/authStore";
 
 export function EmailVerificationBanner() {
-    const { user } = useAuth();
+    const { user } = useAuthStore();
     const [isResending, setIsResending] = useState(false);
     const [resendSuccess, setResendSuccess] = useState(false);
     const [resendError, setResendError] = useState("");

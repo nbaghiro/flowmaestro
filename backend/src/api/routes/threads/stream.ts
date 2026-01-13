@@ -27,16 +27,16 @@ export async function streamThreadHandler(
     request: FastifyRequest,
     reply: FastifyReply
 ): Promise<void> {
-    const userId = request.user!.id;
+    const workspaceId = request.workspace!.id;
     const { id: threadId } = streamParamsSchema.parse(request.params);
 
-    logger.info({ threadId, userId }, "Stream request received");
+    logger.info({ threadId, workspaceId }, "Stream request received");
 
     const threadRepo = new ThreadRepository();
 
-    // Verify thread exists and belongs to user
-    const thread = await threadRepo.findById(threadId);
-    if (!thread || thread.user_id !== userId) {
+    // Verify thread exists and belongs to workspace
+    const thread = await threadRepo.findByIdAndWorkspaceId(threadId, workspaceId);
+    if (!thread) {
         throw new NotFoundError("Thread not found");
     }
 

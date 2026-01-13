@@ -1,5 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { authMiddleware } from "../../middleware/auth";
+import { workspaceContextMiddleware } from "../../middleware/workspace-context";
 import { addToolHandler } from "./add-tool";
 import { addToolsBatchHandler } from "./add-tools-batch";
 import { createAgentHandler } from "./create";
@@ -15,8 +16,9 @@ import { streamAgentHandler } from "./stream";
 import { updateAgentHandler } from "./update";
 
 export async function agentRoutes(fastify: FastifyInstance) {
-    // All agent routes require authentication
+    // All agent routes require authentication and workspace context
     fastify.addHook("preHandler", authMiddleware);
+    fastify.addHook("preHandler", workspaceContextMiddleware);
 
     // CRUD operations
     fastify.post("/", createAgentHandler);

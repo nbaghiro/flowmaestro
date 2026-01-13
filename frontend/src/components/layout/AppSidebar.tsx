@@ -11,12 +11,15 @@ import {
     ChevronLeft,
     ChevronRight,
     Sun,
-    Moon
+    Moon,
+    Zap
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { WORKSPACE_LIMITS } from "@flowmaestro/shared";
 import { cn } from "../../lib/utils";
 import { useThemeStore } from "../../stores/themeStore";
+import { useWorkspaceStore } from "../../stores/workspaceStore";
 import { Logo } from "../common/Logo";
 import { Tooltip } from "../common/Tooltip";
 import { WorkspaceSwitcher } from "../workspace/WorkspaceSwitcher";
@@ -29,6 +32,91 @@ interface NavItem {
     path: string;
     badge?: string;
     section?: "primary" | "settings";
+}
+
+function CreditProgressBar({ isCollapsed }: { isCollapsed: boolean }) {
+    const { currentWorkspace, creditBalance, fetchCredits } = useWorkspaceStore();
+
+    useEffect(() => {
+        if (currentWorkspace && !creditBalance) {
+            fetchCredits();
+        }
+    }, [currentWorkspace, creditBalance, fetchCredits]);
+
+    if (!currentWorkspace || !creditBalance) {
+        return null;
+    }
+
+    const planLimits = WORKSPACE_LIMITS[currentWorkspace.type];
+    const monthlyCredits = planLimits.monthly_credits;
+    const availableCredits = creditBalance.available;
+    const usedCredits = creditBalance.usedThisMonth;
+
+    // Calculate percentage remaining (capped at 100%)
+    const percentageUsed = Math.min((usedCredits / monthlyCredits) * 100, 100);
+    const percentageRemaining = 100 - percentageUsed;
+
+    // Determine color based on remaining percentage
+    const getProgressColor = () => {
+        if (percentageRemaining > 50) return "bg-primary/70";
+        if (percentageRemaining > 20) return "bg-amber-500/70";
+        return "bg-red-500/70";
+    };
+
+    const getProgressBg = () => {
+        if (percentageRemaining > 50) return "bg-primary/20";
+        if (percentageRemaining > 20) return "bg-amber-500/20";
+        return "bg-red-500/20";
+    };
+
+    if (isCollapsed) {
+        return (
+            <div className="px-2 py-2">
+                <Tooltip
+                    content={`${availableCredits.toLocaleString()} / ${monthlyCredits.toLocaleString()} credits`}
+                    delay={200}
+                    position="right"
+                >
+                    <div className="flex flex-col items-center gap-1 px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors cursor-default">
+                        <Zap className="w-5 h-5" />
+                        <div
+                            className={cn("w-6 h-1 rounded-full overflow-hidden", getProgressBg())}
+                        >
+                            <div
+                                className={cn(
+                                    "h-full rounded-full transition-all",
+                                    getProgressColor()
+                                )}
+                                style={{ width: `${percentageRemaining}%` }}
+                            />
+                        </div>
+                    </div>
+                </Tooltip>
+            </div>
+        );
+    }
+
+    return (
+        <div className="px-2 py-2">
+            <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors cursor-default">
+                <Zap className="w-5 h-5 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm font-medium">Credits</span>
+                        <span className="text-xs tabular-nums">
+                            {availableCredits.toLocaleString()} / {monthlyCredits.toLocaleString()}
+                        </span>
+                    </div>
+                    <div className={cn("w-full h-1 rounded-full overflow-hidden", getProgressBg())}>
+                        <div
+                            className={cn("h-full rounded-full transition-all", getProgressColor())}
+                            style={{ width: `${percentageRemaining}%` }}
+                        />
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
 }
 
 const navItems: NavItem[] = [
@@ -190,7 +278,12 @@ export function AppSidebar() {
                     <SidebarFolders isCollapsed={isCollapsed} />
                 </div>
 
-                {/* Section 3: Settings Navigation */}
+                {/* Section 3: Credit Progress Bar */}
+                <div className="border-t border-border">
+                    <CreditProgressBar isCollapsed={isCollapsed} />
+                </div>
+
+                {/* Section 4: Settings Navigation */}
                 <div className="border-t border-border py-4 flex-shrink-0">
                     <div className="px-2 space-y-1">
                         {settingsItems.map((item) => {

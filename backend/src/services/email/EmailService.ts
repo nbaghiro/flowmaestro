@@ -7,6 +7,7 @@ import { PasswordChangedEmail } from "./templates/PasswordChangedEmail";
 import { PasswordResetEmail } from "./templates/PasswordResetEmail";
 import { TwoFactorDisabledEmail } from "./templates/TwoFactorDisabledEmail";
 import { TwoFactorEnabledEmail } from "./templates/TwoFactorEnabledEmail";
+import { WorkspaceInvitationEmail } from "./templates/WorkspaceInvitationEmail";
 
 const DEFAULT_FROM_EMAIL = "FlowMaestro <noreply@flowmaestro.ai>";
 
@@ -126,6 +127,35 @@ export class EmailService {
             to: email,
             subject: "Two-factor authentication disabled",
             react: TwoFactorDisabledEmail()
+        });
+    }
+
+    async sendWorkspaceInvitation(
+        email: string,
+        token: string,
+        workspaceName: string,
+        inviterName: string,
+        inviterEmail: string,
+        role: string,
+        recipientName?: string,
+        message?: string,
+        from?: string
+    ): Promise<void> {
+        const inviteUrl = `${config.appUrl}/accept-invitation?token=${token}`;
+
+        await this.resend.emails.send({
+            from: from || DEFAULT_FROM_EMAIL,
+            to: email,
+            subject: `You're invited to join ${workspaceName} on FlowMaestro`,
+            react: WorkspaceInvitationEmail({
+                inviteUrl,
+                workspaceName,
+                inviterName,
+                inviterEmail,
+                role,
+                recipientName,
+                message
+            })
         });
     }
 }

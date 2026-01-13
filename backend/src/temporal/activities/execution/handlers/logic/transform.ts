@@ -255,6 +255,9 @@ export async function executeTransformNode(
             }
             result = parseJSON(inputData);
             break;
+        case "passthrough":
+            result = inputData;
+            break;
         default:
             throw new Error(`Unsupported transform operation: ${validatedConfig.operation}`);
     }
