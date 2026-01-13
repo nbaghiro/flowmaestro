@@ -52,6 +52,9 @@ export function SidebarFolderItem({
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault();
         e.dataTransfer.dropEffect = "move";
+        if (!isDragOver) {
+            setIsDragOver(true);
+        }
     };
 
     const handleDragEnter = (e: React.DragEvent) => {
@@ -61,7 +64,7 @@ export function SidebarFolderItem({
 
     const handleDragLeave = (e: React.DragEvent) => {
         e.preventDefault();
-        // Only set to false if we're leaving the button element itself
+        // Only set to false if we're leaving the container element itself
         const relatedTarget = e.relatedTarget as Node | null;
         if (!e.currentTarget.contains(relatedTarget)) {
             setIsDragOver(false);
@@ -93,7 +96,7 @@ export function SidebarFolderItem({
     const paddingLeft = isCollapsed ? undefined : `${20 + depth * 16}px`;
 
     const content = (
-        <div>
+        <div className="rounded-lg">
             <button
                 onClick={handleClick}
                 onContextMenu={handleContextMenu}
@@ -101,6 +104,7 @@ export function SidebarFolderItem({
                 onDragEnter={handleDragEnter}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
+                draggable={false}
                 className={cn(
                     "w-full flex items-center gap-2 py-2 pr-3 rounded-lg text-sm transition-all relative group",
                     isActive
