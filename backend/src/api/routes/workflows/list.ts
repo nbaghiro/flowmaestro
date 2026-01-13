@@ -1,13 +1,17 @@
 import { FastifyInstance } from "fastify";
 import { WorkflowRepository } from "../../../storage/repositories";
-import { authMiddleware, validateQuery } from "../../middleware";
+import { authMiddleware, validateQuery, workspaceContextMiddleware } from "../../middleware";
 import { listWorkflowsQuerySchema } from "../../schemas/workflow-schemas";
 
 export async function listWorkflowsRoute(fastify: FastifyInstance) {
     fastify.get(
         "/",
         {
-            preHandler: [authMiddleware, validateQuery(listWorkflowsQuerySchema)]
+            preHandler: [
+                authMiddleware,
+                workspaceContextMiddleware,
+                validateQuery(listWorkflowsQuerySchema)
+            ]
         },
         async (request, reply) => {
             const workflowRepository = new WorkflowRepository();
@@ -26,11 +30,14 @@ export async function listWorkflowsRoute(fastify: FastifyInstance) {
             }
             // If folderId is undefined, all workflows are returned (no folder filter)
 
-            const { workflows, total } = await workflowRepository.findByUserId(request.user!.id, {
-                limit: query.limit || 50,
-                offset: query.offset || 0,
-                folderId
-            });
+            const { workflows, total } = await workflowRepository.findByWorkspaceId(
+                request.workspace!.id,
+                {
+                    limit: query.limit || 50,
+                    offset: query.offset || 0,
+                    folderId
+                }
+            );
 
             const limit = query.limit || 50;
             const offset = query.offset || 0;

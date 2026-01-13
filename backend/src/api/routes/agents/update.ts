@@ -39,14 +39,14 @@ export async function updateAgentHandler(
     request: FastifyRequest,
     reply: FastifyReply
 ): Promise<void> {
-    const userId = request.user!.id;
+    const workspaceId = request.workspace!.id;
     const { id } = updateAgentParamsSchema.parse(request.params);
     const body = updateAgentSchema.parse(request.body);
 
     const agentRepo = new AgentRepository();
 
-    // Check if agent exists and belongs to user
-    const existingAgent = await agentRepo.findByIdAndUserId(id, userId);
+    // Check if agent exists and belongs to workspace
+    const existingAgent = await agentRepo.findByIdAndWorkspaceId(id, workspaceId);
     if (!existingAgent) {
         throw new NotFoundError("Agent not found");
     }

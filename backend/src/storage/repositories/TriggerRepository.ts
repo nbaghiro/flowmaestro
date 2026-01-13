@@ -100,6 +100,20 @@ export class TriggerRepository {
     }
 
     /**
+     * Find trigger by ID and workspace ID (through workflow relationship)
+     */
+    async findByIdAndWorkspaceId(id: string, workspaceId: string): Promise<WorkflowTrigger | null> {
+        const query = `
+            SELECT t.* FROM flowmaestro.workflow_triggers t
+            INNER JOIN flowmaestro.workflows w ON t.workflow_id = w.id
+            WHERE t.id = $1 AND w.workspace_id = $2 AND t.deleted_at IS NULL AND w.deleted_at IS NULL
+        `;
+
+        const result = await db.query(query, [id, workspaceId]);
+        return result.rows.length > 0 ? this.mapTriggerRow(result.rows[0] as TriggerRow) : null;
+    }
+
+    /**
      * Find all triggers for a workflow
      */
     async findByWorkflowId(workflowId: string): Promise<WorkflowTrigger[]> {
@@ -110,6 +124,42 @@ export class TriggerRepository {
         `;
 
         const result = await db.query(query, [workflowId]);
+        return result.rows.map((row) => this.mapTriggerRow(row as TriggerRow));
+    }
+
+    /**
+     * Find all triggers for a workspace (through workflow relationship)
+     */
+    async findByWorkspaceId(
+        workspaceId: string,
+        options: { workflowId?: string; type?: TriggerType; enabled?: boolean } = {}
+    ): Promise<WorkflowTrigger[]> {
+        let query = `
+            SELECT t.* FROM flowmaestro.workflow_triggers t
+            INNER JOIN flowmaestro.workflows w ON t.workflow_id = w.id
+            WHERE w.workspace_id = $1 AND t.deleted_at IS NULL AND w.deleted_at IS NULL
+        `;
+        const values: unknown[] = [workspaceId];
+        let paramIndex = 2;
+
+        if (options.workflowId) {
+            query += ` AND t.workflow_id = $${paramIndex++}`;
+            values.push(options.workflowId);
+        }
+
+        if (options.type) {
+            query += ` AND t.trigger_type = $${paramIndex++}`;
+            values.push(options.type);
+        }
+
+        if (options.enabled !== undefined) {
+            query += ` AND t.enabled = $${paramIndex++}`;
+            values.push(options.enabled);
+        }
+
+        query += " ORDER BY t.created_at DESC";
+
+        const result = await db.query(query, values);
         return result.rows.map((row) => this.mapTriggerRow(row as TriggerRow));
     }
 

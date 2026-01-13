@@ -13,12 +13,12 @@ export async function getThreadHandler(
     request: FastifyRequest<{ Params: GetThreadParams; Querystring: GetThreadQuery }>,
     reply: FastifyReply
 ): Promise<void> {
-    const userId = request.user!.id;
+    const workspaceId = request.workspace!.id;
     const { id } = request.params;
     const { include_stats } = request.query;
 
     const threadRepo = new ThreadRepository();
-    const thread = await threadRepo.findByIdAndUserId(id, userId);
+    const thread = await threadRepo.findByIdAndWorkspaceId(id, workspaceId);
 
     if (!thread) {
         return reply.code(404).send({

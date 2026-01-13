@@ -1,9 +1,10 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import React from "react";
+import React, { useEffect, ReactNode } from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App";
-import { AuthProvider } from "./contexts/AuthContext";
+import { useAuthStore } from "./stores/authStore";
+import { useWorkspaceStore } from "./stores/workspaceStore";
 import "./App.css";
 
 // Create a client for TanStack Query
@@ -17,13 +18,35 @@ const queryClient = new QueryClient({
     }
 });
 
+// Initialize auth and workspace stores on app mount
+function StoreInitializer({ children }: { children: ReactNode }) {
+    const initializeAuth = useAuthStore((state) => state.initialize);
+    const isAuthInitialized = useAuthStore((state) => state.isInitialized);
+    const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+    const initializeWorkspace = useWorkspaceStore((state) => state.initialize);
+
+    // Initialize auth first
+    useEffect(() => {
+        initializeAuth();
+    }, [initializeAuth]);
+
+    // Initialize workspace after auth is done and user is authenticated
+    useEffect(() => {
+        if (isAuthInitialized && isAuthenticated) {
+            initializeWorkspace();
+        }
+    }, [isAuthInitialized, isAuthenticated, initializeWorkspace]);
+
+    return <>{children}</>;
+}
+
 ReactDOM.createRoot(document.getElementById("root")!).render(
     <React.StrictMode>
         <BrowserRouter>
             <QueryClientProvider client={queryClient}>
-                <AuthProvider>
+                <StoreInitializer>
                     <App />
-                </AuthProvider>
+                </StoreInitializer>
             </QueryClientProvider>
         </BrowserRouter>
     </React.StrictMode>

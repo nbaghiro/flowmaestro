@@ -1,24 +1,32 @@
 import { FastifyInstance } from "fastify";
 import { ConnectionRepository } from "../../../storage/repositories/ConnectionRepository";
 import { authMiddleware, validateParams } from "../../middleware";
+import { workspaceContextMiddleware } from "../../middleware/workspace-context";
 import { connectionIdParamSchema, ConnectionIdParam } from "../../schemas/connection-schemas";
 
 export async function deleteConnectionRoute(fastify: FastifyInstance) {
     fastify.delete(
         "/:id",
         {
-            preHandler: [authMiddleware, validateParams(connectionIdParamSchema)]
+            preHandler: [
+                authMiddleware,
+                workspaceContextMiddleware,
+                validateParams(connectionIdParamSchema)
+            ]
         },
         async (request, reply) => {
             const connectionRepository = new ConnectionRepository();
             const params = request.params as ConnectionIdParam;
 
-            // Verify ownership
-            const ownerId = await connectionRepository.getOwnerId(params.id);
-            if (ownerId !== request.user!.id) {
-                return reply.status(403).send({
+            // Verify ownership by checking workspace
+            const existing = await connectionRepository.findByIdAndWorkspaceId(
+                params.id,
+                request.workspace!.id
+            );
+            if (!existing) {
+                return reply.status(404).send({
                     success: false,
-                    error: "You do not have permission to delete this connection"
+                    error: "Connection not found"
                 });
             }
 

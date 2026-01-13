@@ -48,8 +48,20 @@ import type {
     GenerationChatMessage,
     GenerationChatRequest,
     GenerationChatResponse,
-    WorkflowPlan
+    WorkflowPlan,
+    Workspace,
+    WorkspaceWithStats,
+    WorkspaceMember,
+    WorkspaceMemberWithUser,
+    WorkspaceRole,
+    GetWorkspacesResponse,
+    CreateWorkspaceInput,
+    UpdateWorkspaceInput,
+    InviteMemberInput,
+    CreditBalance,
+    CreditTransaction
 } from "@flowmaestro/shared";
+import { getCurrentWorkspaceId } from "../stores/workspaceStore";
 import { logger } from "./logger";
 
 // Re-export types for use in components
@@ -66,6 +78,12 @@ async function apiFetch(url: string, options?: RequestInit): Promise<Response> {
     const headers = new Headers(options?.headers);
     if (!headers.has("X-Session-ID")) {
         headers.set("X-Session-ID", sessionId);
+    }
+
+    // Add workspace ID header for workspace context
+    const workspaceId = getCurrentWorkspaceId();
+    if (workspaceId && !headers.has("X-Workspace-Id")) {
+        headers.set("X-Workspace-Id", workspaceId);
     }
 
     const response = await fetch(url, {
@@ -5200,3 +5218,403 @@ export async function createWorkflowFromPlan(
 
 // Re-export generation chat types for convenience
 export type { GenerationChatMessage, GenerationChatRequest, GenerationChatResponse, WorkflowPlan };
+
+// ===== Workspace API =====
+
+// Re-export workspace types
+export type {
+    Workspace,
+    WorkspaceWithStats,
+    WorkspaceMember,
+    WorkspaceMemberWithUser,
+    WorkspaceRole,
+    GetWorkspacesResponse,
+    CreditBalance,
+    CreditTransaction
+};
+
+/**
+ * Get all workspaces for the current user (owned and member)
+ */
+export async function getWorkspaces(): Promise<ApiResponse<GetWorkspacesResponse>> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/workspaces`, {
+        method: "GET",
+        headers: {
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Get a single workspace by ID
+ */
+export async function getWorkspace(
+    workspaceId: string
+): Promise<ApiResponse<{ workspace: WorkspaceWithStats; role: WorkspaceRole; isOwner: boolean }>> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/workspaces/${workspaceId}`, {
+        method: "GET",
+        headers: {
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Create a new workspace
+ */
+export async function createWorkspace(
+    input: CreateWorkspaceInput
+): Promise<ApiResponse<Workspace>> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/workspaces`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` })
+        },
+        body: JSON.stringify(input)
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Update a workspace
+ */
+export async function updateWorkspace(
+    workspaceId: string,
+    input: UpdateWorkspaceInput
+): Promise<ApiResponse<Workspace>> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/workspaces/${workspaceId}`, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` })
+        },
+        body: JSON.stringify(input)
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Delete a workspace
+ */
+export async function deleteWorkspace(workspaceId: string): Promise<ApiResponse<void>> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/workspaces/${workspaceId}`, {
+        method: "DELETE",
+        headers: {
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Get workspace members
+ */
+export async function getWorkspaceMembers(
+    workspaceId: string
+): Promise<ApiResponse<WorkspaceMemberWithUser[]>> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/workspaces/${workspaceId}/members`, {
+        method: "GET",
+        headers: {
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Invite a member to workspace
+ */
+export async function inviteWorkspaceMember(
+    workspaceId: string,
+    input: InviteMemberInput
+): Promise<ApiResponse<{ id: string; email: string; role: WorkspaceRole }>> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/workspaces/${workspaceId}/members/invite`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` })
+        },
+        body: JSON.stringify(input)
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Remove a member from workspace
+ */
+export async function removeWorkspaceMember(
+    workspaceId: string,
+    userId: string
+): Promise<ApiResponse<void>> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/workspaces/${workspaceId}/members/${userId}`, {
+        method: "DELETE",
+        headers: {
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Update member role
+ */
+export async function updateMemberRole(
+    workspaceId: string,
+    userId: string,
+    role: WorkspaceRole
+): Promise<ApiResponse<WorkspaceMember>> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(
+        `${API_BASE_URL}/workspaces/${workspaceId}/members/${userId}/role`,
+        {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                ...(token && { Authorization: `Bearer ${token}` })
+            },
+            body: JSON.stringify({ role })
+        }
+    );
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Get credits balance
+ */
+export async function getCreditsBalance(workspaceId: string): Promise<ApiResponse<CreditBalance>> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/workspaces/${workspaceId}/credits/balance`, {
+        method: "GET",
+        headers: {
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Get credit transactions
+ */
+export async function getCreditsTransactions(
+    workspaceId: string,
+    options?: { limit?: number; offset?: number }
+): Promise<ApiResponse<CreditTransaction[]>> {
+    const token = getAuthToken();
+    const params = new URLSearchParams();
+    if (options?.limit) params.set("limit", options.limit.toString());
+    if (options?.offset) params.set("offset", options.offset.toString());
+
+    const url = `${API_BASE_URL}/workspaces/${workspaceId}/credits/transactions${params.toString() ? `?${params}` : ""}`;
+
+    const response = await apiFetch(url, {
+        method: "GET",
+        headers: {
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Get invitation by token (public)
+ */
+export async function getInvitation(token: string): Promise<
+    ApiResponse<{
+        id: string;
+        email: string;
+        role: WorkspaceRole;
+        message: string | null;
+        expiresAt: string;
+        workspace: { id: string; name: string; slug: string };
+        inviter: { id: string; name: string | null; email: string };
+    }>
+> {
+    const response = await apiFetch(`${API_BASE_URL}/workspaces/invitations/${token}`, {
+        method: "GET"
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Accept invitation
+ */
+export async function acceptInvitation(
+    invitationToken: string
+): Promise<ApiResponse<{ workspaceId: string; role: WorkspaceRole }>> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(
+        `${API_BASE_URL}/workspaces/invitations/${invitationToken}/accept`,
+        {
+            method: "POST",
+            headers: {
+                ...(token && { Authorization: `Bearer ${token}` })
+            }
+        }
+    );
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Decline invitation
+ */
+export async function declineInvitation(invitationToken: string): Promise<ApiResponse<void>> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(
+        `${API_BASE_URL}/workspaces/invitations/${invitationToken}/decline`,
+        {
+            method: "POST",
+            headers: {
+                ...(token && { Authorization: `Bearer ${token}` })
+            }
+        }
+    );
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Upgrade workspace plan
+ */
+export async function upgradeWorkspace(
+    workspaceId: string,
+    plan: "free" | "pro" | "team"
+): Promise<
+    ApiResponse<{
+        id: string;
+        name: string;
+        type: string;
+        limits: {
+            maxWorkflows: number;
+            maxAgents: number;
+            maxKnowledgeBases: number;
+            maxKbChunks: number;
+            maxMembers: number;
+            maxConnections: number;
+            executionHistoryDays: number;
+        };
+    }>
+> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/workspaces/${workspaceId}/upgrade`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` })
+        },
+        body: JSON.stringify({ plan })
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}

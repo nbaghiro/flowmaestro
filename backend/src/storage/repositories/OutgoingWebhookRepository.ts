@@ -15,6 +15,7 @@ import type {
 interface OutgoingWebhookRow {
     id: string;
     user_id: string;
+    workspace_id: string;
     name: string;
     url: string;
     secret: string;
@@ -58,14 +59,15 @@ export class OutgoingWebhookRepository {
 
         const query = `
             INSERT INTO flowmaestro.outgoing_webhooks (
-                user_id, name, url, secret, events, headers
+                user_id, workspace_id, name, url, secret, events, headers
             )
-            VALUES ($1, $2, $3, $4, $5, $6)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
             RETURNING *
         `;
 
         const values = [
             input.user_id,
+            input.workspace_id,
             input.name,
             input.url,
             secret,
@@ -91,7 +93,23 @@ export class OutgoingWebhookRepository {
     }
 
     /**
-     * Find a webhook by ID and user ID (for ownership verification).
+     * Find a webhook by ID and workspace ID (for ownership verification).
+     */
+    async findByIdAndWorkspaceId(
+        id: string,
+        workspaceId: string
+    ): Promise<OutgoingWebhookModel | null> {
+        const query = `
+            SELECT * FROM flowmaestro.outgoing_webhooks
+            WHERE id = $1 AND workspace_id = $2 AND deleted_at IS NULL
+        `;
+
+        const result = await db.query<OutgoingWebhookRow>(query, [id, workspaceId]);
+        return result.rows.length > 0 ? this.mapRow(result.rows[0]) : null;
+    }
+
+    /**
+     * @deprecated Use findByIdAndWorkspaceId instead. Kept for backward compatibility.
      */
     async findByIdAndUserId(id: string, userId: string): Promise<OutgoingWebhookModel | null> {
         const query = `
@@ -104,7 +122,41 @@ export class OutgoingWebhookRepository {
     }
 
     /**
-     * List all webhooks for a user.
+     * List all webhooks for a workspace.
+     */
+    async findByWorkspaceId(
+        workspaceId: string,
+        options: { limit?: number; offset?: number } = {}
+    ): Promise<{ webhooks: OutgoingWebhookListItem[]; total: number }> {
+        const limit = options.limit || 50;
+        const offset = options.offset || 0;
+
+        const countQuery = `
+            SELECT COUNT(*) as count
+            FROM flowmaestro.outgoing_webhooks
+            WHERE workspace_id = $1 AND deleted_at IS NULL
+        `;
+
+        const query = `
+            SELECT * FROM flowmaestro.outgoing_webhooks
+            WHERE workspace_id = $1 AND deleted_at IS NULL
+            ORDER BY created_at DESC
+            LIMIT $2 OFFSET $3
+        `;
+
+        const [countResult, webhooksResult] = await Promise.all([
+            db.query<{ count: string }>(countQuery, [workspaceId]),
+            db.query<OutgoingWebhookRow>(query, [workspaceId, limit, offset])
+        ]);
+
+        return {
+            webhooks: webhooksResult.rows.map((row) => this.mapToListItem(row)),
+            total: parseInt(countResult.rows[0].count)
+        };
+    }
+
+    /**
+     * @deprecated Use findByWorkspaceId instead. Kept for backward compatibility.
      */
     async findByUserId(
         userId: string,
@@ -138,7 +190,26 @@ export class OutgoingWebhookRepository {
     }
 
     /**
-     * Find all active webhooks for a user subscribed to a specific event.
+     * Find all active webhooks for a workspace subscribed to a specific event.
+     */
+    async findByWorkspaceAndEvent(
+        workspaceId: string,
+        event: WebhookEventType
+    ): Promise<OutgoingWebhookModel[]> {
+        const query = `
+            SELECT * FROM flowmaestro.outgoing_webhooks
+            WHERE workspace_id = $1
+              AND is_active = true
+              AND deleted_at IS NULL
+              AND $2 = ANY(events)
+        `;
+
+        const result = await db.query<OutgoingWebhookRow>(query, [workspaceId, event]);
+        return result.rows.map((row) => this.mapRow(row));
+    }
+
+    /**
+     * @deprecated Use findByWorkspaceAndEvent instead. Kept for backward compatibility.
      */
     async findByUserAndEvent(
         userId: string,
@@ -157,7 +228,60 @@ export class OutgoingWebhookRepository {
     }
 
     /**
-     * Update a webhook.
+     * Update a webhook by workspace.
+     */
+    async updateByWorkspace(
+        id: string,
+        workspaceId: string,
+        input: UpdateOutgoingWebhookInput
+    ): Promise<OutgoingWebhookModel | null> {
+        const updates: string[] = [];
+        const values: unknown[] = [];
+        let paramIndex = 1;
+
+        if (input.name !== undefined) {
+            updates.push(`name = $${paramIndex++}`);
+            values.push(input.name);
+        }
+
+        if (input.url !== undefined) {
+            updates.push(`url = $${paramIndex++}`);
+            values.push(input.url);
+        }
+
+        if (input.events !== undefined) {
+            updates.push(`events = $${paramIndex++}`);
+            values.push(input.events);
+        }
+
+        if (input.headers !== undefined) {
+            updates.push(`headers = $${paramIndex++}`);
+            values.push(input.headers ? JSON.stringify(input.headers) : null);
+        }
+
+        if (input.is_active !== undefined) {
+            updates.push(`is_active = $${paramIndex++}`);
+            values.push(input.is_active);
+        }
+
+        if (updates.length === 0) {
+            return this.findByIdAndWorkspaceId(id, workspaceId);
+        }
+
+        values.push(id, workspaceId);
+        const query = `
+            UPDATE flowmaestro.outgoing_webhooks
+            SET ${updates.join(", ")}
+            WHERE id = $${paramIndex++} AND workspace_id = $${paramIndex} AND deleted_at IS NULL
+            RETURNING *
+        `;
+
+        const result = await db.query<OutgoingWebhookRow>(query, values);
+        return result.rows.length > 0 ? this.mapRow(result.rows[0]) : null;
+    }
+
+    /**
+     * @deprecated Use updateByWorkspace instead. Kept for backward compatibility.
      */
     async update(
         id: string,
@@ -210,7 +334,24 @@ export class OutgoingWebhookRepository {
     }
 
     /**
-     * Regenerate the webhook secret.
+     * Regenerate the webhook secret by workspace.
+     */
+    async regenerateSecretByWorkspace(id: string, workspaceId: string): Promise<string | null> {
+        const newSecret = this.generateSecret();
+
+        const query = `
+            UPDATE flowmaestro.outgoing_webhooks
+            SET secret = $3
+            WHERE id = $1 AND workspace_id = $2 AND deleted_at IS NULL
+            RETURNING secret
+        `;
+
+        const result = await db.query<{ secret: string }>(query, [id, workspaceId, newSecret]);
+        return result.rows.length > 0 ? result.rows[0].secret : null;
+    }
+
+    /**
+     * @deprecated Use regenerateSecretByWorkspace instead. Kept for backward compatibility.
      */
     async regenerateSecret(id: string, userId: string): Promise<string | null> {
         const newSecret = this.generateSecret();
@@ -227,7 +368,21 @@ export class OutgoingWebhookRepository {
     }
 
     /**
-     * Soft delete a webhook.
+     * Soft delete a webhook by workspace.
+     */
+    async deleteByWorkspace(id: string, workspaceId: string): Promise<boolean> {
+        const query = `
+            UPDATE flowmaestro.outgoing_webhooks
+            SET deleted_at = CURRENT_TIMESTAMP, is_active = false
+            WHERE id = $1 AND workspace_id = $2 AND deleted_at IS NULL
+        `;
+
+        const result = await db.query(query, [id, workspaceId]);
+        return (result.rowCount || 0) > 0;
+    }
+
+    /**
+     * @deprecated Use deleteByWorkspace instead. Kept for backward compatibility.
      */
     async delete(id: string, userId: string): Promise<boolean> {
         const query = `
@@ -244,6 +399,7 @@ export class OutgoingWebhookRepository {
         return {
             id: row.id,
             user_id: row.user_id,
+            workspace_id: row.workspace_id,
             name: row.name,
             url: row.url,
             secret: row.secret,
