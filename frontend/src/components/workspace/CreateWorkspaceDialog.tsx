@@ -46,7 +46,12 @@ export function CreateWorkspaceDialog({ isOpen, onClose, onSuccess }: CreateWork
 
         setIsSubmitting(true);
         try {
-            const workspace = await createWorkspace(trimmedName, description.trim() || undefined);
+            // New workspaces are always team workspaces (personal workspace is auto-created on signup)
+            const workspace = await createWorkspace(
+                trimmedName,
+                description.trim() || undefined,
+                "team"
+            );
 
             // Switch to the new workspace
             await switchWorkspace(workspace.id);

@@ -52,7 +52,11 @@ interface WorkspaceStore {
     fetchWorkspaces: () => Promise<void>;
 
     // Actions - Workspace CRUD
-    createWorkspace: (name: string, description?: string) => Promise<WorkspaceWithStats>;
+    createWorkspace: (
+        name: string,
+        description?: string,
+        category?: "personal" | "team"
+    ) => Promise<WorkspaceWithStats>;
     updateWorkspace: (
         workspaceId: string,
         data: { name?: string; description?: string }
@@ -209,8 +213,8 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     },
 
     // Create workspace
-    createWorkspace: async (name: string, description?: string) => {
-        const response = await createWorkspace({ name, description });
+    createWorkspace: async (name: string, description?: string, category?: "personal" | "team") => {
+        const response = await createWorkspace({ name, description, category });
         const newWorkspace = response.data as WorkspaceWithStats;
 
         // Add to owned workspaces

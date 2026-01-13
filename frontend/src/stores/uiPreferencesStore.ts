@@ -1,68 +1,37 @@
 import { create } from "zustand";
-import { logger } from "../lib/logger";
+import { persist } from "zustand/middleware";
 
 interface UIPreferencesStore {
+    // Folder grid section on item list pages (Workflows, Agents, etc.)
     showFoldersSection: boolean;
     setShowFoldersSection: (show: boolean) => void;
-    initializePreferences: () => void;
+
+    // Sidebar folders section expand/collapse
+    sidebarFoldersExpanded: boolean;
+    setSidebarFoldersExpanded: (expanded: boolean) => void;
+    toggleSidebarFoldersExpanded: () => void;
 }
 
-const STORAGE_KEY = "ui_preferences";
+export const useUIPreferencesStore = create<UIPreferencesStore>()(
+    persist(
+        (set) => ({
+            showFoldersSection: false,
+            sidebarFoldersExpanded: false,
 
-interface StoredPreferences {
-    showFoldersSection: boolean;
-}
+            setShowFoldersSection: (show: boolean) => {
+                set({ showFoldersSection: show });
+            },
 
-const defaultPreferences: StoredPreferences = {
-    showFoldersSection: false
-};
+            setSidebarFoldersExpanded: (expanded: boolean) => {
+                set({ sidebarFoldersExpanded: expanded });
+            },
 
-export const useUIPreferencesStore = create<UIPreferencesStore>((set) => ({
-    showFoldersSection: false,
-
-    setShowFoldersSection: (show: boolean) => {
-        // Save to localStorage
-        const stored = getStoredPreferences();
-        const updated: StoredPreferences = {
-            ...stored,
-            showFoldersSection: show
-        };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-
-        // Update state
-        set({ showFoldersSection: show });
-    },
-
-    initializePreferences: () => {
-        // Load from localStorage or use defaults
-        const stored = getStoredPreferences();
-
-        // Update state
-        set({
-            showFoldersSection: stored.showFoldersSection
-        });
-    }
-}));
-
-// Helper to get stored preferences
-function getStoredPreferences(): StoredPreferences {
-    if (typeof window === "undefined") {
-        return defaultPreferences;
-    }
-
-    try {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) {
-            const parsed = JSON.parse(stored) as Partial<StoredPreferences>;
-            return {
-                ...defaultPreferences,
-                ...parsed
-            };
+            toggleSidebarFoldersExpanded: () => {
+                set((state) => ({ sidebarFoldersExpanded: !state.sidebarFoldersExpanded }));
+            }
+        }),
+        {
+            name: "ui_preferences"
         }
-    } catch (error) {
-        // If parsing fails, return defaults
-        logger.error("Failed to parse stored UI preferences", error);
-    }
-
-    return defaultPreferences;
-}
+    )
+);

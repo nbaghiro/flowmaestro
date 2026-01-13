@@ -21,10 +21,10 @@ import { SortDropdown } from "../components/common/SortDropdown";
 import { LoadingState } from "../components/common/Spinner";
 import { CreateWorkflowDialog } from "../components/CreateWorkflowDialog";
 import {
-    FolderCard,
     CreateFolderDialog,
     MoveToFolderDialog,
-    FolderBreadcrumb
+    FolderBreadcrumb,
+    FolderGridSection
 } from "../components/folders";
 import { WorkflowGenerationChatPanel } from "../components/WorkflowGenerationChatPanel";
 import { useSearch } from "../hooks/useSearch";
@@ -808,111 +808,22 @@ export function Workflows() {
             ) : (
                 <>
                     {/* Folders Section */}
-                    {showFoldersSection && canShowFoldersSection && (
-                        <>
-                            <div className="mb-4">
-                                <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                                    Folders
-                                </h2>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                                {rootFolders.map((folder) => {
-                                    const children = getFolderChildren(folder.id);
-                                    const hasChildren = children.length > 0;
-                                    const isExpanded = expandedFolderIds.has(folder.id);
-                                    const subfolders = isExpanded ? children : [];
-
-                                    return (
-                                        <div key={folder.id} className="contents">
-                                            <div>
-                                                <FolderCard
-                                                    folder={folder}
-                                                    onClick={(e) => handleFolderClick(e, folder)}
-                                                    onEdit={() => setFolderToEdit(folder)}
-                                                    onDelete={() => setFolderToDelete(folder)}
-                                                    isSelected={selectedFolderIds.has(folder.id)}
-                                                    onContextMenu={(e) =>
-                                                        handleFolderContextMenu(e, folder)
-                                                    }
-                                                    onDrop={(itemIds, itemType) =>
-                                                        handleDropOnFolder(
-                                                            folder.id,
-                                                            itemIds,
-                                                            itemType
-                                                        )
-                                                    }
-                                                    displayItemType="workflow"
-                                                    hasChildren={hasChildren}
-                                                    isExpanded={isExpanded}
-                                                    onToggleExpand={(e) => {
-                                                        e.stopPropagation();
-                                                        handleToggleFolderExpand(folder.id);
-                                                    }}
-                                                />
-                                                {/* Render subfolders when expanded - below parent */}
-                                                {isExpanded && subfolders.length > 0 && (
-                                                    <div className="mt-2 flex flex-col gap-2">
-                                                        {subfolders.map((subfolder) => (
-                                                            <FolderCard
-                                                                key={subfolder.id}
-                                                                folder={subfolder}
-                                                                onClick={(e) =>
-                                                                    handleFolderClick(e, subfolder)
-                                                                }
-                                                                onEdit={() =>
-                                                                    setFolderToEdit(subfolder)
-                                                                }
-                                                                onDelete={() =>
-                                                                    setFolderToDelete(subfolder)
-                                                                }
-                                                                isSelected={selectedFolderIds.has(
-                                                                    subfolder.id
-                                                                )}
-                                                                onContextMenu={(e) =>
-                                                                    handleFolderContextMenu(
-                                                                        e,
-                                                                        subfolder
-                                                                    )
-                                                                }
-                                                                onDrop={(itemIds, itemType) =>
-                                                                    handleDropOnFolder(
-                                                                        subfolder.id,
-                                                                        itemIds,
-                                                                        itemType
-                                                                    )
-                                                                }
-                                                                displayItemType="workflow"
-                                                                isSubfolder={true}
-                                                                hasChildren={
-                                                                    getFolderChildren(subfolder.id)
-                                                                        .length > 0
-                                                                }
-                                                                isExpanded={expandedFolderIds.has(
-                                                                    subfolder.id
-                                                                )}
-                                                                onToggleExpand={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleToggleFolderExpand(
-                                                                        subfolder.id
-                                                                    );
-                                                                }}
-                                                            />
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                            <div className="border-t border-border my-6" />
-                            <div className="mb-4">
-                                <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                                    Workflows
-                                </h2>
-                            </div>
-                        </>
-                    )}
+                    <FolderGridSection
+                        showFoldersSection={showFoldersSection}
+                        canShowFoldersSection={canShowFoldersSection}
+                        rootFolders={rootFolders}
+                        expandedFolderIds={expandedFolderIds}
+                        selectedFolderIds={selectedFolderIds}
+                        displayItemType="workflow"
+                        itemsLabel="Workflows"
+                        onFolderClick={handleFolderClick}
+                        onFolderEdit={setFolderToEdit}
+                        onFolderDelete={setFolderToDelete}
+                        onFolderContextMenu={handleFolderContextMenu}
+                        onDropOnFolder={handleDropOnFolder}
+                        onToggleFolderExpand={handleToggleFolderExpand}
+                        getFolderChildren={getFolderChildren}
+                    />
 
                     {/* Workflows Grid */}
                     {filteredWorkflows.length === 0 && isSearchActive ? (

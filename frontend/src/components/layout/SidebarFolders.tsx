@@ -10,6 +10,7 @@ import type {
 } from "@flowmaestro/shared";
 import { MAX_FOLDER_DEPTH } from "@flowmaestro/shared";
 import { useFolderStore } from "../../stores/folderStore";
+import { useUIPreferencesStore } from "../../stores/uiPreferencesStore";
 import { ConfirmDialog } from "../common/ConfirmDialog";
 import { Tooltip } from "../common/Tooltip";
 import { CreateFolderDialog } from "../folders/CreateFolderDialog";
@@ -30,16 +31,16 @@ export function SidebarFolders({ isCollapsed }: SidebarFoldersProps) {
         folders,
         folderTree,
         isLoadingFolders,
-        isFoldersSectionExpanded,
         expandedFolderIds,
         fetchFolders,
-        toggleFoldersSection,
         toggleFolderExpanded,
         createFolder,
         updateFolder,
         deleteFolder,
         moveItemsToFolder
     } = useFolderStore();
+
+    const { sidebarFoldersExpanded, toggleSidebarFoldersExpanded } = useUIPreferencesStore();
 
     // Dialog states
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -263,12 +264,12 @@ export function SidebarFolders({ isCollapsed }: SidebarFoldersProps) {
             <div className="px-2">
                 <div className="flex items-center justify-between px-3 py-3">
                     <button
-                        onClick={toggleFoldersSection}
+                        onClick={toggleSidebarFoldersExpanded}
                         className="flex items-center gap-3 text-xs font-semibold text-muted-foreground tracking-wider hover:text-foreground transition-colors"
                     >
                         <Folder className="w-5 h-5" />
                         <span>Folders</span>
-                        {isFoldersSectionExpanded ? (
+                        {sidebarFoldersExpanded ? (
                             <ChevronUp className="w-4 h-4" />
                         ) : (
                             <ChevronDown className="w-4 h-4" />
@@ -289,7 +290,7 @@ export function SidebarFolders({ isCollapsed }: SidebarFoldersProps) {
             </div>
 
             {/* Folder List */}
-            {isFoldersSectionExpanded && (
+            {sidebarFoldersExpanded && (
                 <div className="px-2 pb-3">
                     {isLoadingFolders ? (
                         <div className="px-3 py-2 text-sm text-muted-foreground">Loading...</div>

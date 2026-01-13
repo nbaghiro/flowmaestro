@@ -36,7 +36,6 @@ interface FolderStore {
     contentsError: string | null;
 
     // UI state
-    isFoldersSectionExpanded: boolean;
     showAllFolders: boolean;
     expandedFolderIds: Set<string>;
 
@@ -68,7 +67,6 @@ interface FolderStore {
     moveFolder: (folderId: string, newParentId: string | null) => Promise<Folder>;
 
     // Actions - UI state
-    toggleFoldersSection: () => void;
     toggleShowAllFolders: () => void;
     setShowAllFolders: (show: boolean) => void;
     toggleFolderExpanded: (folderId: string) => void;
@@ -86,7 +84,6 @@ const initialState = {
     currentFolderContents: null as FolderContents | null,
     isLoadingContents: false,
     contentsError: null as string | null,
-    isFoldersSectionExpanded: false,
     showAllFolders: false,
     expandedFolderIds: new Set<string>()
 };
@@ -381,11 +378,6 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
             logger.error("Failed to move folder", error, { folderId, newParentId });
             throw error;
         }
-    },
-
-    // Toggle folders section expanded/collapsed
-    toggleFoldersSection: () => {
-        set((state) => ({ isFoldersSectionExpanded: !state.isFoldersSectionExpanded }));
     },
 
     // Toggle show all folders
