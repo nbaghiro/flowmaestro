@@ -32,9 +32,15 @@ import {
     type KnowledgeBaseStats,
     type KnowledgeBase
 } from "../lib/api";
+import { useDuplicateItemWarning } from "../lib/duplicateItemDialogUtils";
+import { checkItemsInFolder } from "../lib/folderUtils";
 import { logger } from "../lib/logger";
 import { createDragPreview } from "../lib/utils";
-import { useFolderStore, buildFolderTree } from "../stores/folderStore";
+import {
+    useFolderStore,
+    buildFolderTree,
+    getFolderCountIncludingSubfolders
+} from "../stores/folderStore";
 import { useKnowledgeBaseStore } from "../stores/knowledgeBaseStore";
 import { useUIPreferencesStore } from "../stores/uiPreferencesStore";
 
@@ -84,6 +90,7 @@ export function KnowledgeBases() {
     const [isBatchDeleting, setIsBatchDeleting] = useState(false);
     const { showFoldersSection, setShowFoldersSection } = useUIPreferencesStore();
     const [expandedFolderIds, setExpandedFolderIds] = useState<Set<string>>(new Set());
+    const { showDuplicateItemWarning } = useDuplicateItemWarning();
 
     // Folder state
     const [folders, setFolders] = useState<FolderWithCounts[]>([]);
@@ -423,21 +430,85 @@ export function KnowledgeBases() {
         [selectedIds]
     );
 
+    const performDrop = useCallback(
+        async (folderId: string, itemIds: string[], itemType: FolderResourceType) => {
+            await moveItemsToFolderStore(folderId, itemIds, itemType);
+            // Store's moveItemsToFolder already refreshes folders, so sidebar will update
+            const currentFolderIdParam = currentFolderId || undefined;
+            await fetchKnowledgeBases({ folderId: currentFolderIdParam });
+            await loadFolders();
+            setSelectedIds(new Set());
+        },
+        [currentFolderId, moveItemsToFolderStore, fetchKnowledgeBases, loadFolders]
+    );
+
     const handleDropOnFolder = useCallback(
         async (folderId: string, itemIds: string[], itemType: string) => {
             if (itemType !== "knowledge-base") return;
+
+            // Check if items are already in the target folder BEFORE moving
+            const {
+                found,
+                folderName,
+                folderId: sourceFolderId,
+                isInMainFolder
+            } = await checkItemsInFolder(folderId, itemIds, itemType as FolderResourceType);
+
+            if (found) {
+                // Get item names from knowledgeBases array
+                const itemNames = itemIds.map((id) => {
+                    const kb = knowledgeBases.find((k) => k.id === id);
+                    return kb?.name || "Unknown";
+                });
+
+                // Show global warning dialog
+                showDuplicateItemWarning({
+                    folderId,
+                    itemIds,
+                    itemNames,
+                    itemType: itemType as FolderResourceType,
+                    folderName,
+                    sourceFolderId,
+                    isInMainFolder,
+                    onConfirm: async () => {
+                        // If item is in main folder, don't proceed with move
+                        if (isInMainFolder) {
+                            return;
+                        }
+
+                        // Remove items from the source folder before moving
+                        if (sourceFolderId && sourceFolderId !== folderId) {
+                            try {
+                                await removeItemsFromFolder({
+                                    itemIds,
+                                    itemType: itemType as FolderResourceType,
+                                    folderId: sourceFolderId
+                                });
+                            } catch (err) {
+                                logger.error("Failed to remove items from source folder", err);
+                            }
+                        }
+
+                        // Proceed with move to target folder
+                        try {
+                            await performDrop(folderId, itemIds, itemType as FolderResourceType);
+                        } catch (err) {
+                            logger.error("Failed to move items to folder", err);
+                        }
+                    }
+                });
+                // Return early to prevent move
+                return;
+            }
+
+            // No items found, proceed with move
             try {
-                await moveItemsToFolderStore(folderId, itemIds, itemType as FolderResourceType);
-                // Store's moveItemsToFolder already refreshes folders, so sidebar will update
-                const currentFolderIdParam = currentFolderId || undefined;
-                await fetchKnowledgeBases({ folderId: currentFolderIdParam });
-                await loadFolders();
-                setSelectedIds(new Set());
+                await performDrop(folderId, itemIds, itemType as FolderResourceType);
             } catch (err) {
                 logger.error("Failed to move items to folder", err);
             }
         },
-        [currentFolderId, fetchKnowledgeBases, moveItemsToFolderStore]
+        [performDrop, knowledgeBases, showDuplicateItemWarning]
     );
 
     const kbContextMenuItems: ContextMenuItem[] = [
@@ -502,6 +573,14 @@ export function KnowledgeBases() {
         };
         return findInTree(folderTree);
     };
+
+    // Helper to calculate total count for a folder including all subfolders recursively
+    const getFolderCountIncludingSubfoldersMemo = useCallback(
+        (folder: FolderWithCounts, itemType: FolderResourceType): number => {
+            return getFolderCountIncludingSubfolders(folder, itemType, getFolderChildren);
+        },
+        [getFolderChildren]
+    );
 
     // Toggle folder expansion
     const handleToggleFolderExpand = (folderId: string) => {
@@ -644,6 +723,7 @@ export function KnowledgeBases() {
                         onDropOnFolder={handleDropOnFolder}
                         onToggleFolderExpand={handleToggleFolderExpand}
                         getFolderChildren={getFolderChildren}
+                        getFolderCountIncludingSubfolders={getFolderCountIncludingSubfoldersMemo}
                     />
 
                     {/* Knowledge Bases Grid */}

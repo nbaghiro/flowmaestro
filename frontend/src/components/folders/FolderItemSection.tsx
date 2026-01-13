@@ -36,6 +36,7 @@ interface FolderItemSectionProps<T extends ItemType> {
     selectedIds?: Set<string>;
     onItemClick?: (e: React.MouseEvent, itemId: string, itemType: FolderResourceType) => void;
     onItemContextMenu?: (e: React.MouseEvent, itemId: string, itemType: FolderResourceType) => void;
+    onDragStart?: (e: React.DragEvent, itemId: string, itemType: FolderResourceType) => void;
 }
 
 // Type guards
@@ -86,7 +87,8 @@ export function FolderItemSection<T extends ItemType>({
     onDelete,
     selectedIds = new Set(),
     onItemClick,
-    onItemContextMenu
+    onItemContextMenu,
+    onDragStart
 }: FolderItemSectionProps<T>) {
     const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed);
     const navigate = useNavigate();
@@ -118,10 +120,12 @@ export function FolderItemSection<T extends ItemType>({
     const renderCard = (item: T) => {
         const isSelected = selectedIds.has(item.id);
         const commonProps = {
-            key: item.id,
             isSelected,
             onClick: (e: React.MouseEvent) => handleItemClick(e, item),
             onContextMenu: (e: React.MouseEvent) => handleItemContextMenu(e, item),
+            onDragStart: onDragStart
+                ? (e: React.DragEvent) => onDragStart(e, item.id, itemType)
+                : undefined,
             onMoveToFolder: onMoveToFolder ? () => onMoveToFolder(item.id, itemType) : undefined,
             onRemoveFromFolder: onRemoveFromFolder
                 ? () => onRemoveFromFolder(item.id, itemType)
@@ -133,13 +137,14 @@ export function FolderItemSection<T extends ItemType>({
         switch (itemType) {
             case "workflow":
                 if (isWorkflow(item)) {
-                    return <WorkflowCard {...commonProps} workflow={item} />;
+                    return <WorkflowCard key={item.id} {...commonProps} workflow={item} />;
                 }
                 break;
             case "agent":
                 if (isAgent(item)) {
                     return (
                         <AgentCard
+                            key={item.id}
                             {...commonProps}
                             agent={item}
                             onEdit={() => handleItemEdit(item)}
@@ -151,6 +156,7 @@ export function FolderItemSection<T extends ItemType>({
                 if (isFormInterface(item)) {
                     return (
                         <FormInterfaceCard
+                            key={item.id}
                             {...commonProps}
                             formInterface={item}
                             onEdit={() => handleItemEdit(item)}
@@ -170,6 +176,7 @@ export function FolderItemSection<T extends ItemType>({
                 if (isChatInterface(item)) {
                     return (
                         <ChatInterfaceCard
+                            key={item.id}
                             {...commonProps}
                             chatInterface={item}
                             onEdit={() => handleItemEdit(item)}
@@ -187,6 +194,7 @@ export function FolderItemSection<T extends ItemType>({
                 if (isKnowledgeBase(item)) {
                     return (
                         <KnowledgeBaseCard
+                            key={item.id}
                             {...commonProps}
                             knowledgeBase={item}
                             onEdit={() => handleItemEdit(item)}

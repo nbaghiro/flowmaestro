@@ -434,3 +434,34 @@ export const useIsFoldersLoading = () => useFolderStore((state) => state.isLoadi
 export const useExpandedFolderIds = () => useFolderStore((state) => state.expandedFolderIds);
 export const useIsFolderExpanded = (id: string) =>
     useFolderStore((state) => state.expandedFolderIds.has(id));
+
+export function getFolderCountIncludingSubfolders(
+    folder: FolderWithCounts,
+    itemType: FolderResourceType,
+    getFolderChildren: (folderId: string) => FolderWithCounts[]
+): number {
+    const getCountForType = (f: FolderWithCounts): number => {
+        switch (itemType) {
+            case "workflow":
+                return f.itemCounts.workflows;
+            case "agent":
+                return f.itemCounts.agents;
+            case "form-interface":
+                return f.itemCounts.formInterfaces;
+            case "chat-interface":
+                return f.itemCounts.chatInterfaces;
+            case "knowledge-base":
+                return f.itemCounts.knowledgeBases;
+        }
+    };
+
+    let total = getCountForType(folder);
+
+    // Recursively add counts from all subfolders
+    const children = getFolderChildren(folder.id);
+    for (const child of children) {
+        total += getFolderCountIncludingSubfolders(child, itemType, getFolderChildren);
+    }
+
+    return total;
+}

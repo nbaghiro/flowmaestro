@@ -41,10 +41,16 @@ import {
     removeItemsFromFolder,
     type WorkflowDefinition
 } from "../lib/api";
+import { useDuplicateItemWarning } from "../lib/duplicateItemDialogUtils";
+import { checkItemsInFolder } from "../lib/folderUtils";
 import { logger } from "../lib/logger";
 import { createDragPreview } from "../lib/utils";
 import { convertToReactFlowFormat } from "../lib/workflowLayout";
-import { buildFolderTree, useFolderStore } from "../stores/folderStore";
+import {
+    buildFolderTree,
+    useFolderStore,
+    getFolderCountIncludingSubfolders
+} from "../stores/folderStore";
 import { useUIPreferencesStore } from "../stores/uiPreferencesStore";
 import { useWorkflowGenerationChatStore } from "../stores/workflowGenerationChatStore";
 
@@ -129,6 +135,9 @@ export function Workflows() {
     const { showFoldersSection, setShowFoldersSection } = useUIPreferencesStore();
     const [expandedFolderIds, setExpandedFolderIds] = useState<Set<string>>(new Set());
     const navigate = useNavigate();
+
+    // Global dialog for duplicate item warnings
+    const { showDuplicateItemWarning } = useDuplicateItemWarning();
 
     // Search functionality
     const {
@@ -529,20 +538,86 @@ export function Workflows() {
         [selectedIds]
     );
 
+    // Check if items are already in a folder (recursively checking subfolders)
+
+    const performDrop = useCallback(
+        async (folderId: string, itemIds: string[], itemType: FolderResourceType) => {
+            await moveItemsToFolderStore(folderId, itemIds, itemType);
+            // Store's moveItemsToFolder already refreshes folders, so sidebar will update
+            await loadWorkflows();
+            await loadFolders();
+            setSelectedIds(new Set());
+        },
+        [moveItemsToFolderStore, loadWorkflows, loadFolders]
+    );
+
     const handleDropOnFolder = useCallback(
         async (folderId: string, itemIds: string[], itemType: string) => {
             if (itemType !== "workflow") return;
+
+            // Check if items are already in the target folder
+            const {
+                found,
+                folderName,
+                folderId: sourceFolderId,
+                isInMainFolder
+            } = await checkItemsInFolder(folderId, itemIds, itemType as FolderResourceType);
+
+            if (found) {
+                // Get item names from workflows array
+                const itemNames = itemIds.map((id) => {
+                    const workflow = workflows.find((w) => w.id === id);
+                    return workflow?.name || "Unknown";
+                });
+
+                // Show global warning dialog
+                showDuplicateItemWarning({
+                    folderId,
+                    itemIds,
+                    itemNames,
+                    itemType: itemType as FolderResourceType,
+                    folderName,
+                    sourceFolderId,
+                    isInMainFolder,
+                    onConfirm: async () => {
+                        // If item is in main folder, don't proceed with move
+                        if (isInMainFolder) {
+                            return;
+                        }
+
+                        // Remove items from the source folder before moving
+                        if (sourceFolderId && sourceFolderId !== folderId) {
+                            try {
+                                await removeItemsFromFolder({
+                                    itemIds,
+                                    itemType: itemType as FolderResourceType,
+                                    folderId: sourceFolderId
+                                });
+                            } catch (err) {
+                                logger.error("Failed to remove items from source folder", err);
+                            }
+                        }
+
+                        // Proceed with move to target folder
+                        try {
+                            await performDrop(folderId, itemIds, itemType as FolderResourceType);
+                        } catch (err) {
+                            logger.error("Failed to move items to folder", err);
+                        }
+                    }
+                });
+                // Stop the operation - don't move items
+                return;
+            }
+
+            // No items found, proceed with move
             try {
-                await moveItemsToFolderStore(folderId, itemIds, itemType as FolderResourceType);
-                // Store's moveItemsToFolder already refreshes folders, so sidebar will update
-                await loadWorkflows();
-                await loadFolders();
-                setSelectedIds(new Set());
+                await performDrop(folderId, itemIds, itemType as FolderResourceType);
             } catch (err) {
                 logger.error("Failed to move items to folder", err);
             }
         },
-        []
+        [performDrop, workflows, showDuplicateItemWarning]
     );
 
     // Selection handlers for batch operations
@@ -678,6 +753,14 @@ export function Workflows() {
         };
         return findInTree(folderTree);
     };
+
+    // Helper to calculate total count for a folder including all subfolders recursively
+    const getFolderCountIncludingSubfoldersMemo = useCallback(
+        (folder: FolderWithCounts, itemType: FolderResourceType): number => {
+            return getFolderCountIncludingSubfolders(folder, itemType, getFolderChildren);
+        },
+        [getFolderChildren]
+    );
 
     // Toggle folder expansion
     const handleToggleFolderExpand = (folderId: string) => {
@@ -823,6 +906,7 @@ export function Workflows() {
                         onDropOnFolder={handleDropOnFolder}
                         onToggleFolderExpand={handleToggleFolderExpand}
                         getFolderChildren={getFolderChildren}
+                        getFolderCountIncludingSubfolders={getFolderCountIncludingSubfoldersMemo}
                     />
 
                     {/* Workflows Grid */}

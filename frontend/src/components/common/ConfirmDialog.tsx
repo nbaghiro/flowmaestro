@@ -4,9 +4,9 @@ import { Dialog } from "./Dialog";
 interface ConfirmDialogProps {
     isOpen: boolean;
     onClose: () => void;
-    onConfirm: () => void;
+    onConfirm?: () => void;
     title: string;
-    message: string;
+    message: string | React.ReactNode;
     confirmText?: string;
     cancelText?: string;
     variant?: "danger" | "default";
@@ -28,7 +28,9 @@ export function ConfirmDialog({
     variant = "default"
 }: ConfirmDialogProps) {
     const handleConfirm = () => {
-        onConfirm();
+        if (onConfirm) {
+            onConfirm();
+        }
         onClose();
     };
 
@@ -45,26 +47,32 @@ export function ConfirmDialog({
                 )}
 
                 {/* Message */}
-                <p className="text-sm text-muted-foreground text-center">{message}</p>
+                <p className="text-sm text-muted-foreground text-center">
+                    {typeof message === "string" ? message : message}
+                </p>
 
                 {/* Actions */}
-                <div className="flex gap-3 pt-2">
+                <div className={`flex gap-3 pt-2 ${onConfirm ? "" : "justify-center"}`}>
                     <button
                         onClick={onClose}
-                        className="flex-1 px-4 py-2 text-sm font-medium text-foreground bg-card border border-border rounded-lg hover:bg-muted/30 transition-colors"
+                        className={`px-4 py-2 text-sm font-medium text-foreground bg-card border border-border rounded-lg hover:bg-muted/30 transition-colors ${
+                            onConfirm ? "flex-1" : "min-w-[100px]"
+                        }`}
                     >
                         {cancelText}
                     </button>
-                    <button
-                        onClick={handleConfirm}
-                        className={`flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                            variant === "danger"
-                                ? "bg-red-600 hover:bg-red-700 text-white"
-                                : "bg-primary hover:bg-primary/90 text-primary-foreground"
-                        }`}
-                    >
-                        {confirmText}
-                    </button>
+                    {onConfirm && (
+                        <button
+                            onClick={handleConfirm}
+                            className={`flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                                variant === "danger"
+                                    ? "bg-red-600 hover:bg-red-700 text-white"
+                                    : "bg-primary hover:bg-primary/90 text-primary-foreground"
+                            }`}
+                        >
+                            {confirmText}
+                        </button>
+                    )}
                 </div>
             </div>
         </Dialog>

@@ -37,7 +37,7 @@ export function SidebarFolderItem({
         navigate(`/folders/${folder.id}`);
     };
 
-    const handleChevronClick = (e: React.MouseEvent) => {
+    const handleChevronClick = (e: React.MouseEvent | React.KeyboardEvent) => {
         e.stopPropagation();
         if (onToggleExpand) {
             onToggleExpand(folder.id);
@@ -133,9 +133,17 @@ export function SidebarFolderItem({
                         </span>
                         {/* Expand/Collapse chevron for folders with children */}
                         {hasChildren && (
-                            <button
+                            <div
                                 onClick={handleChevronClick}
-                                className="p-0.5 hover:bg-muted rounded transition-colors"
+                                className="p-0.5 hover:bg-muted rounded transition-colors cursor-pointer"
+                                role="button"
+                                tabIndex={0}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter" || e.key === " ") {
+                                        e.preventDefault();
+                                        handleChevronClick(e);
+                                    }
+                                }}
                             >
                                 <ChevronRight
                                     className={cn(
@@ -143,7 +151,7 @@ export function SidebarFolderItem({
                                         isExpanded && "rotate-90"
                                     )}
                                 />
-                            </button>
+                            </div>
                         )}
                     </>
                 )}

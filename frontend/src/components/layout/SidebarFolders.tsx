@@ -1,7 +1,7 @@
 import * as Popover from "@radix-ui/react-popover";
 import { ChevronDown, ChevronUp, Folder, Edit2, Trash2, Plus } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import type {
     FolderWithCounts,
     Folder as FolderType,
@@ -9,6 +9,10 @@ import type {
     FolderTreeNode
 } from "@flowmaestro/shared";
 import { MAX_FOLDER_DEPTH } from "@flowmaestro/shared";
+import { removeItemsFromFolder } from "../../lib/api";
+import { useDuplicateItemWarning } from "../../lib/duplicateItemDialogUtils";
+import { checkItemsInFolder } from "../../lib/folderUtils";
+import { logger } from "../../lib/logger";
 import { useFolderStore } from "../../stores/folderStore";
 import { useUIPreferencesStore } from "../../stores/uiPreferencesStore";
 import { ConfirmDialog } from "../common/ConfirmDialog";
@@ -27,12 +31,17 @@ interface ContextMenuState {
 }
 
 export function SidebarFolders({ isCollapsed }: SidebarFoldersProps) {
+    const location = useLocation();
+    const [searchParams] = useSearchParams();
+
     const {
         folders,
         folderTree,
         isLoadingFolders,
         expandedFolderIds,
         fetchFolders,
+        refreshFolders,
+        fetchFolderContents,
         toggleFolderExpanded,
         createFolder,
         updateFolder,
@@ -42,12 +51,22 @@ export function SidebarFolders({ isCollapsed }: SidebarFoldersProps) {
 
     const { sidebarFoldersExpanded, toggleSidebarFoldersExpanded } = useUIPreferencesStore();
 
+    // Get current folder ID from URL (if viewing a folder)
+    const currentFolderIdFromPath = location.pathname.startsWith("/folders/")
+        ? location.pathname.split("/folders/")[1]?.split("/")[0]
+        : null;
+    const currentFolderIdFromParams = searchParams.get("folder");
+    const sourceFolderId = currentFolderIdFromPath || currentFolderIdFromParams;
+
     // Dialog states
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
     const [folderToEdit, setFolderToEdit] = useState<FolderType | null>(null);
     const [folderToDelete, setFolderToDelete] = useState<FolderWithCounts | null>(null);
     const [parentFolderForSubfolder, setParentFolderForSubfolder] =
         useState<FolderWithCounts | null>(null);
+
+    // Global dialog for duplicate item warnings
+    const { showDuplicateItemWarning } = useDuplicateItemWarning();
 
     // Context menu state
     const [contextMenu, setContextMenu] = useState<ContextMenuState>({
@@ -134,11 +153,93 @@ export function SidebarFolders({ isCollapsed }: SidebarFoldersProps) {
         }
     };
 
+    const performDrop = useCallback(
+        async (folderId: string, itemIds: string[], itemType: FolderResourceType) => {
+            // Move items to target folder
+            await moveItemsToFolder(folderId, itemIds, itemType);
+
+            // If dragging from within a folder, remove items from source folder
+            if (sourceFolderId && sourceFolderId !== folderId) {
+                try {
+                    await removeItemsFromFolder({
+                        itemIds,
+                        itemType,
+                        folderId: sourceFolderId
+                    });
+                    // Refresh folders to update counts and refresh current folder contents if viewing it
+                    await Promise.all([
+                        refreshFolders(),
+                        sourceFolderId ? fetchFolderContents(sourceFolderId) : Promise.resolve()
+                    ]);
+                } catch (err) {
+                    logger.error(
+                        "Failed to remove items from source folder or refresh folders",
+                        err
+                    );
+                }
+            } else {
+                // Even if not from a folder, refresh folders to update counts
+                await refreshFolders();
+            }
+        },
+        [moveItemsToFolder, sourceFolderId, refreshFolders, fetchFolderContents]
+    );
+
     const handleDropOnFolder = useCallback(
         async (folderId: string, itemIds: string[], itemType: FolderResourceType) => {
-            await moveItemsToFolder(folderId, itemIds, itemType);
+            // Check if items are already in the target folder BEFORE moving
+            const {
+                found,
+                folderName,
+                folderId: sourceFolderId,
+                isInMainFolder
+            } = await checkItemsInFolder(folderId, itemIds, itemType);
+
+            if (found) {
+                // For sidebar drops, we don't have direct access to item names
+                // The global dialog will handle generic "item" names appropriately
+                const itemNames = itemIds.map(() => "item");
+
+                // Show global warning dialog
+                showDuplicateItemWarning({
+                    folderId,
+                    itemIds,
+                    itemNames,
+                    itemType,
+                    folderName,
+                    sourceFolderId,
+                    isInMainFolder,
+                    onConfirm: async () => {
+                        // If item is in main folder, don't proceed with move
+                        if (isInMainFolder) {
+                            return;
+                        }
+
+                        // Remove items from the source folder before moving
+                        if (sourceFolderId && sourceFolderId !== folderId) {
+                            try {
+                                await removeItemsFromFolder({
+                                    itemIds,
+                                    itemType,
+                                    folderId: sourceFolderId
+                                });
+                            } catch (err) {
+                                logger.error("Failed to remove items from source folder", err);
+                            }
+                        }
+
+                        // Proceed with move to target folder
+                        await performDrop(folderId, itemIds, itemType);
+                    }
+                });
+                // Return early to prevent move - this stops the operation
+                return;
+            }
+
+            // No items found, proceed with move
+            await performDrop(folderId, itemIds, itemType);
         },
-        [moveItemsToFolder]
+        [performDrop]
     );
 
     const handleToggleExpand = useCallback(

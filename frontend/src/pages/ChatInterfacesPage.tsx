@@ -35,9 +35,15 @@ import {
     updateFolder,
     removeItemsFromFolder
 } from "../lib/api";
+import { useDuplicateItemWarning } from "../lib/duplicateItemDialogUtils";
+import { checkItemsInFolder } from "../lib/folderUtils";
 import { logger } from "../lib/logger";
 import { createDragPreview } from "../lib/utils";
-import { buildFolderTree, useFolderStore } from "../stores/folderStore";
+import {
+    buildFolderTree,
+    useFolderStore,
+    getFolderCountIncludingSubfolders
+} from "../stores/folderStore";
 import { useUIPreferencesStore } from "../stores/uiPreferencesStore";
 
 // Convert ChatInterface to ChatInterfaceSummary for card components
@@ -97,6 +103,7 @@ export function ChatInterfacesPage() {
     const [isBatchDeleting, setIsBatchDeleting] = useState(false);
     const { showFoldersSection, setShowFoldersSection } = useUIPreferencesStore();
     const [expandedFolderIds, setExpandedFolderIds] = useState<Set<string>>(new Set());
+    const { showDuplicateItemWarning } = useDuplicateItemWarning();
     const [contextMenu, setContextMenu] = useState<{
         isOpen: boolean;
         position: { x: number; y: number };
@@ -350,21 +357,85 @@ export function ChatInterfacesPage() {
         [selectedIds]
     );
 
+    const performDrop = useCallback(
+        async (folderId: string, itemIds: string[], itemType: FolderResourceType) => {
+            await moveItemsToFolderStore(folderId, itemIds, itemType);
+            // Store's moveItemsToFolder already refreshes folders, so sidebar will update
+            const currentFolderIdParam = currentFolderId || undefined;
+            await loadChatInterfaces(currentFolderIdParam);
+            await loadFolders();
+            setSelectedIds(new Set());
+        },
+        [currentFolderId, moveItemsToFolderStore, loadChatInterfaces, loadFolders]
+    );
+
     const handleDropOnFolder = useCallback(
         async (folderId: string, itemIds: string[], itemType: string) => {
             if (itemType !== "chat-interface") return;
+
+            //Check if items are already in the target folder BEFORE moving
+            const {
+                found,
+                folderName,
+                folderId: sourceFolderId,
+                isInMainFolder
+            } = await checkItemsInFolder(folderId, itemIds, itemType as FolderResourceType);
+
+            if (found) {
+                // Get item names from chatInterfaces array
+                const itemNames = itemIds.map((id) => {
+                    const chatInterface = chatInterfaces.find((ci) => ci.id === id);
+                    return chatInterface?.title || chatInterface?.name || "Unknown";
+                });
+
+                // Show global warning dialog
+                showDuplicateItemWarning({
+                    folderId,
+                    itemIds,
+                    itemNames,
+                    itemType: itemType as FolderResourceType,
+                    folderName,
+                    sourceFolderId,
+                    isInMainFolder,
+                    onConfirm: async () => {
+                        // If item is in main folder, don't proceed with move
+                        if (isInMainFolder) {
+                            return;
+                        }
+
+                        // Remove items from the source folder before moving
+                        if (sourceFolderId && sourceFolderId !== folderId) {
+                            try {
+                                await removeItemsFromFolder({
+                                    itemIds,
+                                    itemType: itemType as FolderResourceType,
+                                    folderId: sourceFolderId
+                                });
+                            } catch (err) {
+                                logger.error("Failed to remove items from source folder", err);
+                            }
+                        }
+
+                        // Proceed with move to target folder
+                        try {
+                            await performDrop(folderId, itemIds, itemType as FolderResourceType);
+                        } catch (err) {
+                            logger.error("Failed to move items to folder", err);
+                        }
+                    }
+                });
+                // Return early to prevent move
+                return;
+            }
+
+            // No items found, proceed with move
             try {
-                await moveItemsToFolderStore(folderId, itemIds, itemType as FolderResourceType);
-                // Store's moveItemsToFolder already refreshes folders, so sidebar will update
-                const currentFolderIdParam = currentFolderId || undefined;
-                await loadChatInterfaces(currentFolderIdParam);
-                await loadFolders();
-                setSelectedIds(new Set());
+                await performDrop(folderId, itemIds, itemType as FolderResourceType);
             } catch (err) {
                 logger.error("Failed to move items to folder", err);
             }
         },
-        [currentFolderId, moveItemsToFolderStore]
+        [performDrop, chatInterfaces, showDuplicateItemWarning]
     );
 
     const handleMoveToFolder = async (folderId: string | null) => {
@@ -536,6 +607,14 @@ export function ChatInterfacesPage() {
         return findInTree(folderTree);
     };
 
+    // Helper to calculate total count for a folder including all subfolders recursively
+    const getFolderCountIncludingSubfoldersMemo = useCallback(
+        (folder: FolderWithCounts, itemType: FolderResourceType): number => {
+            return getFolderCountIncludingSubfolders(folder, itemType, getFolderChildren);
+        },
+        [getFolderChildren]
+    );
+
     // Toggle folder expansion
     const handleToggleFolderExpand = (folderId: string) => {
         setExpandedFolderIds((prev) => {
@@ -678,6 +757,7 @@ export function ChatInterfacesPage() {
                 onDropOnFolder={handleDropOnFolder}
                 onToggleFolderExpand={handleToggleFolderExpand}
                 getFolderChildren={getFolderChildren}
+                getFolderCountIncludingSubfolders={getFolderCountIncludingSubfoldersMemo}
             />
 
             {filteredChatInterfaces.length === 0 && isSearchActive ? (
