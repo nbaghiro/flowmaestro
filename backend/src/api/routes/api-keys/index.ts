@@ -3,6 +3,7 @@ import { createServiceLogger } from "../../../core/logging";
 import { SCOPE_BUNDLES } from "../../../storage/models/ApiKey";
 import { ApiKeyRepository } from "../../../storage/repositories/ApiKeyRepository";
 import { authMiddleware } from "../../middleware/auth";
+import { workspaceContextMiddleware } from "../../middleware/workspace-context";
 import type {
     ApiKeyScope,
     ScopeBundleName,
@@ -51,12 +52,13 @@ interface UpdateApiKeyBody {
  * These routes are used by the dashboard for managing API keys.
  */
 export async function apiKeyRoutes(fastify: FastifyInstance): Promise<void> {
-    // Apply JWT authentication to all routes
+    // Apply JWT authentication and workspace context to all routes
     fastify.addHook("preHandler", authMiddleware);
+    fastify.addHook("preHandler", workspaceContextMiddleware);
 
-    // GET /api-keys - List user's API keys
+    // GET /api-keys - List workspace's API keys
     fastify.get("/", async (request: FastifyRequest, reply: FastifyReply) => {
-        const userId = request.user.id;
+        const workspaceId = request.workspace!.id;
         const query = request.query as {
             page?: string;
             per_page?: string;
@@ -69,7 +71,7 @@ export async function apiKeyRoutes(fastify: FastifyInstance): Promise<void> {
         const offset = (page - 1) * perPage;
 
         const apiKeyRepo = new ApiKeyRepository();
-        const { keys, total } = await apiKeyRepo.findByUserId(userId, {
+        const { keys, total } = await apiKeyRepo.findByWorkspaceId(workspaceId, {
             limit: perPage,
             offset,
             includeRevoked
@@ -106,11 +108,11 @@ export async function apiKeyRoutes(fastify: FastifyInstance): Promise<void> {
     fastify.get<{ Params: { id: string } }>(
         "/:id",
         async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
-            const userId = request.user.id;
+            const workspaceId = request.workspace!.id;
             const keyId = request.params.id;
 
             const apiKeyRepo = new ApiKeyRepository();
-            const apiKey = await apiKeyRepo.findByIdAndUserId(keyId, userId);
+            const apiKey = await apiKeyRepo.findByIdAndWorkspaceId(keyId, workspaceId);
 
             if (!apiKey) {
                 return reply.status(404).send({
@@ -148,6 +150,7 @@ export async function apiKeyRoutes(fastify: FastifyInstance): Promise<void> {
         "/",
         async (request: FastifyRequest<{ Body: CreateApiKeyBody }>, reply: FastifyReply) => {
             const userId = request.user.id;
+            const workspaceId = request.workspace!.id;
             const body = request.body || {};
 
             // Validate name
@@ -219,6 +222,7 @@ export async function apiKeyRoutes(fastify: FastifyInstance): Promise<void> {
                 const apiKeyRepo = new ApiKeyRepository();
                 const createInput: CreateApiKeyInput = {
                     user_id: userId,
+                    workspace_id: workspaceId,
                     name: body.name.trim(),
                     scopes,
                     rate_limit_per_minute: body.rate_limit_per_minute,
@@ -267,7 +271,7 @@ export async function apiKeyRoutes(fastify: FastifyInstance): Promise<void> {
             request: FastifyRequest<{ Params: { id: string }; Body: UpdateApiKeyBody }>,
             reply: FastifyReply
         ) => {
-            const userId = request.user.id;
+            const workspaceId = request.workspace!.id;
             const keyId = request.params.id;
             const body = request.body || {};
 
@@ -318,7 +322,7 @@ export async function apiKeyRoutes(fastify: FastifyInstance): Promise<void> {
 
             try {
                 const apiKeyRepo = new ApiKeyRepository();
-                const updated = await apiKeyRepo.update(keyId, userId, {
+                const updated = await apiKeyRepo.updateByWorkspaceId(keyId, workspaceId, {
                     name: body.name?.trim(),
                     scopes: body.scopes,
                     rate_limit_per_minute: body.rate_limit_per_minute,
@@ -336,7 +340,7 @@ export async function apiKeyRoutes(fastify: FastifyInstance): Promise<void> {
                     });
                 }
 
-                logger.info({ keyId, userId }, "API key updated");
+                logger.info({ keyId, workspaceId }, "API key updated");
 
                 return reply.send({
                     success: true,
@@ -352,7 +356,7 @@ export async function apiKeyRoutes(fastify: FastifyInstance): Promise<void> {
                     }
                 });
             } catch (error) {
-                logger.error({ error, keyId, userId }, "Failed to update API key");
+                logger.error({ error, keyId, workspaceId }, "Failed to update API key");
                 return reply.status(500).send({
                     success: false,
                     error: {
@@ -369,11 +373,12 @@ export async function apiKeyRoutes(fastify: FastifyInstance): Promise<void> {
         "/:id/rotate",
         async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
             const userId = request.user.id;
+            const workspaceId = request.workspace!.id;
             const keyId = request.params.id;
 
             try {
                 const apiKeyRepo = new ApiKeyRepository();
-                const newKey = await apiKeyRepo.rotate(keyId, userId);
+                const newKey = await apiKeyRepo.rotateByWorkspaceId(keyId, workspaceId, userId);
 
                 if (!newKey) {
                     return reply.status(404).send({
@@ -385,7 +390,10 @@ export async function apiKeyRoutes(fastify: FastifyInstance): Promise<void> {
                     });
                 }
 
-                logger.info({ oldKeyId: keyId, newKeyId: newKey.id, userId }, "API key rotated");
+                logger.info(
+                    { oldKeyId: keyId, newKeyId: newKey.id, workspaceId },
+                    "API key rotated"
+                );
 
                 return reply.send({
                     success: true,
@@ -405,7 +413,7 @@ export async function apiKeyRoutes(fastify: FastifyInstance): Promise<void> {
                         "API key rotated. The old key has been revoked. Store this new key securely."
                 });
             } catch (error) {
-                logger.error({ error, keyId, userId }, "Failed to rotate API key");
+                logger.error({ error, keyId, workspaceId }, "Failed to rotate API key");
                 return reply.status(500).send({
                     success: false,
                     error: {
@@ -421,12 +429,12 @@ export async function apiKeyRoutes(fastify: FastifyInstance): Promise<void> {
     fastify.delete<{ Params: { id: string } }>(
         "/:id",
         async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
-            const userId = request.user.id;
+            const workspaceId = request.workspace!.id;
             const keyId = request.params.id;
 
             try {
                 const apiKeyRepo = new ApiKeyRepository();
-                const revoked = await apiKeyRepo.revoke(keyId, userId);
+                const revoked = await apiKeyRepo.revokeByWorkspaceId(keyId, workspaceId);
 
                 if (!revoked) {
                     return reply.status(404).send({
@@ -438,7 +446,7 @@ export async function apiKeyRoutes(fastify: FastifyInstance): Promise<void> {
                     });
                 }
 
-                logger.info({ keyId, userId }, "API key revoked");
+                logger.info({ keyId, workspaceId }, "API key revoked");
 
                 return reply.send({
                     success: true,
@@ -448,7 +456,7 @@ export async function apiKeyRoutes(fastify: FastifyInstance): Promise<void> {
                     }
                 });
             } catch (error) {
-                logger.error({ error, keyId, userId }, "Failed to revoke API key");
+                logger.error({ error, keyId, workspaceId }, "Failed to revoke API key");
                 return reply.status(500).send({
                     success: false,
                     error: {

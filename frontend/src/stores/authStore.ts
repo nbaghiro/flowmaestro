@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { create } from "zustand";
 import {
     login as apiLogin,
     register as apiRegister,
@@ -9,10 +9,14 @@ import {
 import { logger } from "../lib/logger";
 import type { ApiUser } from "../lib/api";
 
-interface AuthContextType {
+interface AuthStore {
     user: ApiUser | null;
     isAuthenticated: boolean;
     isLoading: boolean;
+    isInitialized: boolean;
+
+    // Actions
+    initialize: () => Promise<void>;
     login: (
         email: string,
         password: string,
@@ -21,15 +25,19 @@ interface AuthContextType {
     register: (email: string, password: string, name?: string) => Promise<void>;
     logout: () => void;
     refreshUser: () => Promise<void>;
+    setUser: (user: ApiUser | null) => void;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const useAuthStore = create<AuthStore>((set, get) => ({
+    user: null,
+    isAuthenticated: false,
+    isLoading: true,
+    isInitialized: false,
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-    const [user, setUser] = useState<ApiUser | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
+    initialize: async () => {
+        // Prevent double initialization
+        if (get().isInitialized) return;
 
-    useEffect(() => {
         // Check for OAuth callback with token in URL hash
         const hash = window.location.hash;
         if (hash.includes("auth_token=")) {
@@ -46,10 +54,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 if (userData) {
                     try {
                         const user = JSON.parse(decodeURIComponent(userData));
-                        setUser(user);
-                        setIsLoading(false);
+                        set({ user, isAuthenticated: true, isLoading: false, isInitialized: true });
                         // Refresh to ensure we have the latest fields (including 2FA status)
-                        void refreshUser();
+                        void get().refreshUser();
 
                         // Clear hash from URL
                         window.history.replaceState(null, "", window.location.pathname);
@@ -77,8 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (storedUser) {
                 try {
                     const user = JSON.parse(storedUser);
-                    setUser(user);
-                    setIsLoading(false);
+                    set({ user, isAuthenticated: true, isLoading: false, isInitialized: true });
                     return;
                 } catch (error) {
                     logger.error("Failed to parse stored user", error);
@@ -89,29 +95,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (token) {
             // Validate token and restore user session
-            getCurrentUser()
-                .then((response) => {
-                    if (response.success && response.data) {
-                        setUser(response.data.user);
-                    } else {
-                        // Token is invalid, clear it
-                        clearAuthToken();
-                    }
-                })
-                .catch((error) => {
-                    // Token is invalid or expired, clear it
-                    logger.error("Failed to validate token", error);
+            try {
+                const response = await getCurrentUser();
+                if (response.success && response.data) {
+                    set({
+                        user: response.data.user,
+                        isAuthenticated: true,
+                        isLoading: false,
+                        isInitialized: true
+                    });
+                } else {
+                    // Token is invalid, clear it
                     clearAuthToken();
-                })
-                .finally(() => {
-                    setIsLoading(false);
-                });
+                    set({
+                        user: null,
+                        isAuthenticated: false,
+                        isLoading: false,
+                        isInitialized: true
+                    });
+                }
+            } catch (error) {
+                // Token is invalid or expired, clear it
+                logger.error("Failed to validate token", error);
+                clearAuthToken();
+                set({ user: null, isAuthenticated: false, isLoading: false, isInitialized: true });
+            }
         } else {
-            setIsLoading(false);
+            set({ isLoading: false, isInitialized: true });
         }
-    }, []);
+    },
 
-    const login = async (email: string, password: string, code?: string) => {
+    login: async (email: string, password: string, code?: string) => {
         try {
             const response = await apiLogin(email, password, code);
             if (response.success && response.data && "two_factor_required" in response.data) {
@@ -123,7 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             if (response.success && response.data && "token" in response.data) {
                 setAuthToken(response.data.token);
-                setUser(response.data.user);
+                set({ user: response.data.user, isAuthenticated: true });
                 return { twoFactorRequired: false };
             }
 
@@ -132,14 +146,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             logger.error("Login failed", error);
             throw error;
         }
-    };
+    },
 
-    const register = async (email: string, password: string, name?: string) => {
+    register: async (email: string, password: string, name?: string) => {
         try {
             const response = await apiRegister(email, password, name);
             if (response.success && response.data) {
                 setAuthToken(response.data.token);
-                setUser(response.data.user);
+                set({ user: response.data.user, isAuthenticated: true });
             } else {
                 throw new Error(response.error || "Registration failed");
             }
@@ -147,41 +161,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             logger.error("Registration failed", error);
             throw error;
         }
-    };
+    },
 
-    const logout = () => {
+    logout: () => {
         clearAuthToken();
-        setUser(null);
-    };
+        set({ user: null, isAuthenticated: false });
+    },
 
-    const refreshUser = async () => {
+    refreshUser: async () => {
         try {
             const response = await getCurrentUser();
             if (response.success && response.data) {
-                setUser(response.data.user);
+                set({ user: response.data.user });
             }
         } catch (error) {
             logger.error("Failed to refresh user", error);
         }
-    };
+    },
 
-    const value = {
-        user,
-        isAuthenticated: !!user || !!localStorage.getItem("auth_token"),
-        isLoading,
-        login,
-        register,
-        logout,
-        refreshUser
-    };
-
-    return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
-export function useAuth() {
-    const context = useContext(AuthContext);
-    if (context === undefined) {
-        throw new Error("useAuth must be used within an AuthProvider");
+    setUser: (user: ApiUser | null) => {
+        set({ user, isAuthenticated: !!user });
     }
-    return context;
+}));
+
+// Helper to get auth state outside of React components
+export function getAuthState() {
+    return useAuthStore.getState();
 }

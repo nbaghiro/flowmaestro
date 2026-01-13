@@ -9,6 +9,7 @@ export interface KnowledgeBaseConfig {
 export interface KnowledgeBaseModel {
     id: string;
     user_id: string;
+    workspace_id: string;
     name: string;
     description: string | null;
     config: KnowledgeBaseConfig;
@@ -18,6 +19,7 @@ export interface KnowledgeBaseModel {
 
 export interface CreateKnowledgeBaseInput {
     user_id: string;
+    workspace_id: string;
     name: string;
     description?: string;
     config?: Partial<KnowledgeBaseConfig>; // Allow partial config, will use defaults

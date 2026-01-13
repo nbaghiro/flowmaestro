@@ -15,6 +15,7 @@ import { db } from "../database";
 interface ChatInterfaceRow {
     id: string;
     user_id: string;
+    workspace_id: string;
     name: string;
     slug: string;
     agent_id: string;
@@ -57,17 +58,22 @@ export class ChatInterfaceRepository {
     /**
      * Create a new chat interface
      */
-    async create(userId: string, input: CreateChatInterfaceInput): Promise<ChatInterface> {
+    async create(
+        userId: string,
+        workspaceId: string,
+        input: CreateChatInterfaceInput
+    ): Promise<ChatInterface> {
         const query = `
             INSERT INTO flowmaestro.chat_interfaces
-                (user_id, name, slug, agent_id, title, description,
+                (user_id, workspace_id, name, slug, agent_id, title, description,
                  cover_type, cover_value, primary_color, welcome_message, suggested_prompts)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
             RETURNING *
         `;
 
         const values = [
             userId,
+            workspaceId,
             input.name,
             input.slug,
             input.agentId,
@@ -85,7 +91,22 @@ export class ChatInterfaceRepository {
     }
 
     /**
-     * Find chat interface by ID (requires userId for ownership check)
+     * Find chat interface by ID and workspace ID
+     */
+    async findByIdAndWorkspaceId(id: string, workspaceId: string): Promise<ChatInterface | null> {
+        const query = `
+            SELECT ci.*, a.name as agent_name
+            FROM flowmaestro.chat_interfaces ci
+            LEFT JOIN flowmaestro.agents a ON ci.agent_id = a.id
+            WHERE ci.id = $1 AND ci.workspace_id = $2 AND ci.deleted_at IS NULL
+        `;
+
+        const result = await db.query(query, [id, workspaceId]);
+        return result.rows.length > 0 ? this.mapRow(result.rows[0] as ChatInterfaceRow) : null;
+    }
+
+    /**
+     * @deprecated Use findByIdAndWorkspaceId instead. Kept for backward compatibility.
      */
     async findById(id: string, userId: string): Promise<ChatInterface | null> {
         const query = `
@@ -128,7 +149,62 @@ export class ChatInterfaceRepository {
     }
 
     /**
-     * Find all chat interfaces for a user
+     * Find all chat interfaces for a workspace
+     */
+    async findByWorkspaceId(
+        workspaceId: string,
+        options: { limit?: number; offset?: number; folderId?: string | null } = {}
+    ): Promise<{ chatInterfaces: ChatInterface[]; total: number }> {
+        const limit = options.limit || 50;
+        const offset = options.offset || 0;
+
+        // Build folder filter using folder_ids array
+        let folderFilter = "";
+        const countParams: unknown[] = [workspaceId];
+        const queryParams: unknown[] = [workspaceId];
+
+        if (options.folderId === null) {
+            folderFilter = " AND (ci.folder_ids IS NULL OR ci.folder_ids = ARRAY[]::UUID[])";
+        } else if (options.folderId !== undefined) {
+            folderFilter = " AND $2 = ANY(COALESCE(ci.folder_ids, ARRAY[]::UUID[]))";
+            countParams.push(options.folderId);
+            queryParams.push(options.folderId);
+        }
+
+        const countQuery = `
+            SELECT COUNT(*) as count
+            FROM flowmaestro.chat_interfaces ci
+            WHERE ci.workspace_id = $1 AND ci.deleted_at IS NULL${folderFilter}
+        `;
+
+        const limitParamIndex = queryParams.length + 1;
+        const offsetParamIndex = queryParams.length + 2;
+        const query = `
+            SELECT ci.*, a.name as agent_name
+            FROM flowmaestro.chat_interfaces ci
+            LEFT JOIN flowmaestro.agents a ON ci.agent_id = a.id
+            WHERE ci.workspace_id = $1 AND ci.deleted_at IS NULL${folderFilter}
+            ORDER BY ci.updated_at DESC
+            LIMIT $${limitParamIndex} OFFSET $${offsetParamIndex}
+        `;
+
+        queryParams.push(limit, offset);
+
+        const [countResult, chatInterfacesResult] = await Promise.all([
+            db.query<{ count: string }>(countQuery, countParams),
+            db.query(query, queryParams)
+        ]);
+
+        return {
+            chatInterfaces: chatInterfacesResult.rows.map((row) =>
+                this.mapRow(row as ChatInterfaceRow)
+            ),
+            total: parseInt(countResult.rows[0].count)
+        };
+    }
+
+    /**
+     * @deprecated Use findByWorkspaceId instead. Kept for backward compatibility.
      */
     async findByUserId(
         userId: string,
@@ -183,7 +259,24 @@ export class ChatInterfaceRepository {
     }
 
     /**
-     * Find chat interfaces linked to an agent
+     * Find chat interfaces linked to an agent by workspace
+     */
+    async findByAgentIdAndWorkspaceId(
+        agentId: string,
+        workspaceId: string
+    ): Promise<ChatInterface[]> {
+        const query = `
+            SELECT * FROM flowmaestro.chat_interfaces
+            WHERE agent_id = $1 AND workspace_id = $2 AND deleted_at IS NULL
+            ORDER BY updated_at DESC
+        `;
+
+        const result = await db.query(query, [agentId, workspaceId]);
+        return result.rows.map((row) => this.mapRow(row as ChatInterfaceRow));
+    }
+
+    /**
+     * @deprecated Use findByAgentIdAndWorkspaceId instead. Kept for backward compatibility.
      */
     async findByAgentId(agentId: string, userId: string): Promise<ChatInterface[]> {
         const query = `
@@ -197,7 +290,76 @@ export class ChatInterfaceRepository {
     }
 
     /**
-     * Update a chat interface
+     * Update a chat interface by workspace ID
+     */
+    async updateByWorkspaceId(
+        id: string,
+        workspaceId: string,
+        input: UpdateChatInterfaceInput
+    ): Promise<ChatInterface | null> {
+        const updates: string[] = [];
+        const values: unknown[] = [];
+        let paramIndex = 1;
+
+        // Build dynamic update query
+        const fieldMappings: Array<{ key: keyof UpdateChatInterfaceInput; column: string }> = [
+            { key: "name", column: "name" },
+            { key: "slug", column: "slug" },
+            { key: "title", column: "title" },
+            { key: "description", column: "description" },
+            { key: "coverType", column: "cover_type" },
+            { key: "coverValue", column: "cover_value" },
+            { key: "iconUrl", column: "icon_url" },
+            { key: "primaryColor", column: "primary_color" },
+            { key: "fontFamily", column: "font_family" },
+            { key: "borderRadius", column: "border_radius" },
+            { key: "welcomeMessage", column: "welcome_message" },
+            { key: "placeholderText", column: "placeholder_text" },
+            { key: "allowFileUpload", column: "allow_file_upload" },
+            { key: "maxFiles", column: "max_files" },
+            { key: "maxFileSizeMb", column: "max_file_size_mb" },
+            { key: "allowedFileTypes", column: "allowed_file_types" },
+            { key: "persistenceType", column: "persistence_type" },
+            { key: "sessionTimeoutMinutes", column: "session_timeout_minutes" },
+            { key: "widgetPosition", column: "widget_position" },
+            { key: "widgetButtonIcon", column: "widget_button_icon" },
+            { key: "widgetButtonText", column: "widget_button_text" },
+            { key: "widgetInitialState", column: "widget_initial_state" },
+            { key: "rateLimitMessages", column: "rate_limit_messages" },
+            { key: "rateLimitWindowSeconds", column: "rate_limit_window_seconds" }
+        ];
+
+        for (const { key, column } of fieldMappings) {
+            if (input[key] !== undefined) {
+                updates.push(`${column} = $${paramIndex++}`);
+                values.push(input[key]);
+            }
+        }
+
+        // Handle suggestedPrompts separately (needs JSON stringify)
+        if (input.suggestedPrompts !== undefined) {
+            updates.push(`suggested_prompts = $${paramIndex++}`);
+            values.push(JSON.stringify(input.suggestedPrompts));
+        }
+
+        if (updates.length === 0) {
+            return this.findByIdAndWorkspaceId(id, workspaceId);
+        }
+
+        values.push(id, workspaceId);
+        const query = `
+            UPDATE flowmaestro.chat_interfaces
+            SET ${updates.join(", ")}
+            WHERE id = $${paramIndex++} AND workspace_id = $${paramIndex} AND deleted_at IS NULL
+            RETURNING *
+        `;
+
+        const result = await db.query(query, values);
+        return result.rows.length > 0 ? this.mapRow(result.rows[0] as ChatInterfaceRow) : null;
+    }
+
+    /**
+     * @deprecated Use updateByWorkspaceId instead. Kept for backward compatibility.
      */
     async update(
         id: string,
@@ -266,7 +428,22 @@ export class ChatInterfaceRepository {
     }
 
     /**
-     * Publish a chat interface
+     * Publish a chat interface by workspace ID
+     */
+    async publishByWorkspaceId(id: string, workspaceId: string): Promise<ChatInterface | null> {
+        const query = `
+            UPDATE flowmaestro.chat_interfaces
+            SET status = 'published', published_at = CURRENT_TIMESTAMP
+            WHERE id = $1 AND workspace_id = $2 AND deleted_at IS NULL
+            RETURNING *
+        `;
+
+        const result = await db.query(query, [id, workspaceId]);
+        return result.rows.length > 0 ? this.mapRow(result.rows[0] as ChatInterfaceRow) : null;
+    }
+
+    /**
+     * @deprecated Use publishByWorkspaceId instead. Kept for backward compatibility.
      */
     async publish(id: string, userId: string): Promise<ChatInterface | null> {
         const query = `
@@ -281,7 +458,22 @@ export class ChatInterfaceRepository {
     }
 
     /**
-     * Unpublish a chat interface
+     * Unpublish a chat interface by workspace ID
+     */
+    async unpublishByWorkspaceId(id: string, workspaceId: string): Promise<ChatInterface | null> {
+        const query = `
+            UPDATE flowmaestro.chat_interfaces
+            SET status = 'draft', published_at = NULL
+            WHERE id = $1 AND workspace_id = $2 AND deleted_at IS NULL
+            RETURNING *
+        `;
+
+        const result = await db.query(query, [id, workspaceId]);
+        return result.rows.length > 0 ? this.mapRow(result.rows[0] as ChatInterfaceRow) : null;
+    }
+
+    /**
+     * @deprecated Use unpublishByWorkspaceId instead. Kept for backward compatibility.
      */
     async unpublish(id: string, userId: string): Promise<ChatInterface | null> {
         const query = `
@@ -296,7 +488,21 @@ export class ChatInterfaceRepository {
     }
 
     /**
-     * Soft delete a chat interface
+     * Soft delete a chat interface by workspace ID
+     */
+    async softDeleteByWorkspaceId(id: string, workspaceId: string): Promise<boolean> {
+        const query = `
+            UPDATE flowmaestro.chat_interfaces
+            SET deleted_at = CURRENT_TIMESTAMP
+            WHERE id = $1 AND workspace_id = $2 AND deleted_at IS NULL
+        `;
+
+        const result = await db.query(query, [id, workspaceId]);
+        return (result.rowCount || 0) > 0;
+    }
+
+    /**
+     * @deprecated Use softDeleteByWorkspaceId instead. Kept for backward compatibility.
      */
     async softDelete(id: string, userId: string): Promise<boolean> {
         const query = `
@@ -310,7 +516,30 @@ export class ChatInterfaceRepository {
     }
 
     /**
-     * Check if a slug is available for a user
+     * Check if a slug is available within a workspace
+     */
+    async isSlugAvailableInWorkspace(
+        slug: string,
+        workspaceId: string,
+        excludeId?: string
+    ): Promise<boolean> {
+        let query = `
+            SELECT 1 FROM flowmaestro.chat_interfaces
+            WHERE slug = $1 AND workspace_id = $2 AND deleted_at IS NULL
+        `;
+        const values: unknown[] = [slug, workspaceId];
+
+        if (excludeId) {
+            query += " AND id != $3";
+            values.push(excludeId);
+        }
+
+        const result = await db.query(query, values);
+        return result.rowCount === 0;
+    }
+
+    /**
+     * @deprecated Use isSlugAvailableInWorkspace instead. Kept for backward compatibility.
      */
     async isSlugAvailable(slug: string, userId: string, excludeId?: string): Promise<boolean> {
         let query = `
@@ -329,7 +558,57 @@ export class ChatInterfaceRepository {
     }
 
     /**
-     * Duplicate a chat interface
+     * Duplicate a chat interface by workspace ID
+     */
+    async duplicateByWorkspaceId(id: string, workspaceId: string): Promise<ChatInterface | null> {
+        // First, get the existing chat interface
+        const existing = await this.findByIdAndWorkspaceId(id, workspaceId);
+        if (!existing) {
+            return null;
+        }
+
+        // Generate a unique slug
+        let newSlug = `${existing.slug}-copy`;
+        let slugSuffix = 1;
+        while (!(await this.isSlugAvailableInWorkspace(newSlug, workspaceId))) {
+            newSlug = `${existing.slug}-copy-${slugSuffix}`;
+            slugSuffix++;
+        }
+
+        const query = `
+            INSERT INTO flowmaestro.chat_interfaces (
+                user_id, workspace_id, name, slug, agent_id, title, description,
+                cover_type, cover_value, icon_url,
+                primary_color, font_family, border_radius,
+                welcome_message, placeholder_text, suggested_prompts,
+                allow_file_upload, max_files, max_file_size_mb, allowed_file_types,
+                persistence_type, session_timeout_minutes,
+                widget_position, widget_button_icon, widget_button_text, widget_initial_state,
+                rate_limit_messages, rate_limit_window_seconds,
+                status
+            )
+            SELECT
+                user_id, workspace_id, $1, $2, agent_id, title, description,
+                cover_type, cover_value, icon_url,
+                primary_color, font_family, border_radius,
+                welcome_message, placeholder_text, suggested_prompts,
+                allow_file_upload, max_files, max_file_size_mb, allowed_file_types,
+                persistence_type, session_timeout_minutes,
+                widget_position, widget_button_icon, widget_button_text, widget_initial_state,
+                rate_limit_messages, rate_limit_window_seconds,
+                'draft'
+            FROM flowmaestro.chat_interfaces
+            WHERE id = $3 AND workspace_id = $4 AND deleted_at IS NULL
+            RETURNING *
+        `;
+
+        const result = await db.query(query, [`${existing.name} (Copy)`, newSlug, id, workspaceId]);
+
+        return result.rows.length > 0 ? this.mapRow(result.rows[0] as ChatInterfaceRow) : null;
+    }
+
+    /**
+     * @deprecated Use duplicateByWorkspaceId instead. Kept for backward compatibility.
      */
     async duplicate(id: string, userId: string): Promise<ChatInterface | null> {
         // First, get the existing chat interface

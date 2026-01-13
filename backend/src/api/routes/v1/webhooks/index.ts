@@ -44,13 +44,13 @@ export async function webhooksV1Routes(fastify: FastifyInstance): Promise<void> 
             preHandler: [requireScopes("webhooks:read")]
         },
         async (request: FastifyRequest, reply: FastifyReply) => {
-            const userId = request.apiKeyUserId!;
+            const workspaceId = request.apiKeyWorkspaceId!;
             const { page, per_page, offset } = parsePaginationQuery(
                 request.query as Record<string, unknown>
             );
 
             const webhookRepo = new OutgoingWebhookRepository();
-            const { webhooks, total } = await webhookRepo.findByUserId(userId, {
+            const { webhooks, total } = await webhookRepo.findByWorkspaceId(workspaceId, {
                 limit: per_page,
                 offset
             });
@@ -70,11 +70,11 @@ export async function webhooksV1Routes(fastify: FastifyInstance): Promise<void> 
             preHandler: [requireScopes("webhooks:read")]
         },
         async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
-            const userId = request.apiKeyUserId!;
+            const workspaceId = request.apiKeyWorkspaceId!;
             const webhookId = request.params.id;
 
             const webhookRepo = new OutgoingWebhookRepository();
-            const webhook = await webhookRepo.findByIdAndUserId(webhookId, userId);
+            const webhook = await webhookRepo.findByIdAndWorkspaceId(webhookId, workspaceId);
 
             if (!webhook) {
                 return sendNotFound(reply, "Webhook", webhookId);
@@ -102,6 +102,7 @@ export async function webhooksV1Routes(fastify: FastifyInstance): Promise<void> 
         },
         async (request: FastifyRequest<{ Body: CreateWebhookBody }>, reply: FastifyReply) => {
             const userId = request.apiKeyUserId!;
+            const workspaceId = request.apiKeyWorkspaceId!;
             const { name, url, events, headers } = request.body || {};
 
             // Validate required fields
@@ -137,13 +138,17 @@ export async function webhooksV1Routes(fastify: FastifyInstance): Promise<void> 
                 const webhookRepo = new OutgoingWebhookRepository();
                 const webhook = await webhookRepo.create({
                     user_id: userId,
+                    workspace_id: workspaceId,
                     name,
                     url,
                     events,
                     headers
                 });
 
-                logger.info({ webhookId: webhook.id, userId }, "Webhook created via public API");
+                logger.info(
+                    { webhookId: webhook.id, workspaceId },
+                    "Webhook created via public API"
+                );
 
                 // Return with secret (only time it's shown)
                 return sendSuccess(
@@ -163,7 +168,7 @@ export async function webhooksV1Routes(fastify: FastifyInstance): Promise<void> 
             } catch (error: unknown) {
                 const errorMsg =
                     error instanceof Error ? error.message : "Failed to create webhook";
-                logger.error({ error, userId }, "Failed to create webhook");
+                logger.error({ error, workspaceId }, "Failed to create webhook");
                 return sendError(reply, 500, "internal_error", errorMsg);
             }
         }
@@ -179,12 +184,12 @@ export async function webhooksV1Routes(fastify: FastifyInstance): Promise<void> 
             request: FastifyRequest<{ Params: { id: string }; Body: UpdateWebhookBody }>,
             reply: FastifyReply
         ) => {
-            const userId = request.apiKeyUserId!;
+            const workspaceId = request.apiKeyWorkspaceId!;
             const webhookId = request.params.id;
             const body = request.body || {};
 
             const webhookRepo = new OutgoingWebhookRepository();
-            const existing = await webhookRepo.findByIdAndUserId(webhookId, userId);
+            const existing = await webhookRepo.findByIdAndWorkspaceId(webhookId, workspaceId);
 
             if (!existing) {
                 return sendNotFound(reply, "Webhook", webhookId);
@@ -211,13 +216,13 @@ export async function webhooksV1Routes(fastify: FastifyInstance): Promise<void> 
             }
 
             try {
-                const updated = await webhookRepo.update(webhookId, userId, body);
+                const updated = await webhookRepo.updateByWorkspace(webhookId, workspaceId, body);
 
                 if (!updated) {
                     return sendNotFound(reply, "Webhook", webhookId);
                 }
 
-                logger.info({ webhookId, userId }, "Webhook updated via public API");
+                logger.info({ webhookId, workspaceId }, "Webhook updated via public API");
 
                 return sendSuccess(reply, {
                     id: updated.id,
@@ -231,7 +236,7 @@ export async function webhooksV1Routes(fastify: FastifyInstance): Promise<void> 
             } catch (error: unknown) {
                 const errorMsg =
                     error instanceof Error ? error.message : "Failed to update webhook";
-                logger.error({ error, webhookId, userId }, "Failed to update webhook");
+                logger.error({ error, webhookId, workspaceId }, "Failed to update webhook");
                 return sendError(reply, 500, "internal_error", errorMsg);
             }
         }
@@ -244,17 +249,17 @@ export async function webhooksV1Routes(fastify: FastifyInstance): Promise<void> 
             preHandler: [requireScopes("webhooks:write")]
         },
         async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
-            const userId = request.apiKeyUserId!;
+            const workspaceId = request.apiKeyWorkspaceId!;
             const webhookId = request.params.id;
 
             const webhookRepo = new OutgoingWebhookRepository();
-            const deleted = await webhookRepo.delete(webhookId, userId);
+            const deleted = await webhookRepo.deleteByWorkspace(webhookId, workspaceId);
 
             if (!deleted) {
                 return sendNotFound(reply, "Webhook", webhookId);
             }
 
-            logger.info({ webhookId, userId }, "Webhook deleted via public API");
+            logger.info({ webhookId, workspaceId }, "Webhook deleted via public API");
 
             return sendSuccess(reply, { id: webhookId, deleted: true });
         }
@@ -267,11 +272,11 @@ export async function webhooksV1Routes(fastify: FastifyInstance): Promise<void> 
             preHandler: [requireScopes("webhooks:write")]
         },
         async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
-            const userId = request.apiKeyUserId!;
+            const workspaceId = request.apiKeyWorkspaceId!;
             const webhookId = request.params.id;
 
             const webhookRepo = new OutgoingWebhookRepository();
-            const webhook = await webhookRepo.findByIdAndUserId(webhookId, userId);
+            const webhook = await webhookRepo.findByIdAndWorkspaceId(webhookId, workspaceId);
 
             if (!webhook) {
                 return sendNotFound(reply, "Webhook", webhookId);
@@ -309,7 +314,10 @@ export async function webhooksV1Routes(fastify: FastifyInstance): Promise<void> 
                     signal: AbortSignal.timeout(10000)
                 });
 
-                logger.info({ webhookId, userId, status: response.status }, "Test webhook sent");
+                logger.info(
+                    { webhookId, workspaceId, status: response.status },
+                    "Test webhook sent"
+                );
 
                 return sendSuccess(reply, {
                     success: response.ok,
@@ -321,7 +329,7 @@ export async function webhooksV1Routes(fastify: FastifyInstance): Promise<void> 
             } catch (error: unknown) {
                 const errorMsg =
                     error instanceof Error ? error.message : "Failed to send test webhook";
-                logger.error({ error, webhookId, userId }, "Test webhook failed");
+                logger.error({ error, webhookId, workspaceId }, "Test webhook failed");
                 return sendSuccess(reply, {
                     success: false,
                     error: errorMsg,
@@ -338,14 +346,14 @@ export async function webhooksV1Routes(fastify: FastifyInstance): Promise<void> 
             preHandler: [requireScopes("webhooks:read")]
         },
         async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
-            const userId = request.apiKeyUserId!;
+            const workspaceId = request.apiKeyWorkspaceId!;
             const webhookId = request.params.id;
             const { page, per_page, offset } = parsePaginationQuery(
                 request.query as Record<string, unknown>
             );
 
             const webhookRepo = new OutgoingWebhookRepository();
-            const webhook = await webhookRepo.findByIdAndUserId(webhookId, userId);
+            const webhook = await webhookRepo.findByIdAndWorkspaceId(webhookId, workspaceId);
 
             if (!webhook) {
                 return sendNotFound(reply, "Webhook", webhookId);

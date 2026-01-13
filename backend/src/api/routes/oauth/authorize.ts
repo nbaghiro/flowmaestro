@@ -1,6 +1,7 @@
 import { FastifyInstance } from "fastify";
 import { oauthService } from "../../../services/oauth/OAuthService";
 import { authMiddleware } from "../../middleware";
+import { workspaceContextMiddleware } from "../../middleware/workspace-context";
 
 interface AuthorizeParams {
     provider: string;
@@ -20,18 +21,19 @@ interface AuthorizeQuerystring {
  * Query parameters can include provider-specific settings:
  * - subdomain: Required for Zendesk (e.g., ?subdomain=mycompany)
  *
- * Requires authentication.
+ * Requires authentication and workspace context.
  */
 export async function authorizeRoute(fastify: FastifyInstance) {
     fastify.get<{ Params: AuthorizeParams; Querystring: AuthorizeQuerystring }>(
         "/:provider/authorize",
         {
-            preHandler: [authMiddleware]
+            preHandler: [authMiddleware, workspaceContextMiddleware]
         },
         async (request, reply) => {
             const { provider } = request.params;
             const { subdomain } = request.query;
             const userId = request.user!.id;
+            const workspaceId = request.workspace!.id;
 
             try {
                 // Build options object from query params
@@ -43,6 +45,7 @@ export async function authorizeRoute(fastify: FastifyInstance) {
                 const authUrl = oauthService.generateAuthUrl(
                     provider,
                     userId,
+                    workspaceId,
                     Object.keys(options).length > 0 ? options : undefined
                 );
 

@@ -6,7 +6,15 @@ import { BaseNode } from "./BaseNode";
 interface TransformNodeData {
     label: string;
     status?: "idle" | "pending" | "running" | "success" | "error";
-    operation?: "map" | "filter" | "reduce" | "sort" | "merge" | "extract" | "custom";
+    operation?:
+        | "map"
+        | "filter"
+        | "reduce"
+        | "sort"
+        | "merge"
+        | "extract"
+        | "custom"
+        | "passthrough";
     inputData?: string;
     expression?: string;
 }
@@ -18,6 +26,8 @@ function TransformNode({ data, selected }: NodeProps<TransformNodeData>) {
 
     const getOperationLabel = () => {
         switch (operation) {
+            case "passthrough":
+                return "Passthrough";
             case "map":
                 return "Map";
             case "filter":
