@@ -3,6 +3,7 @@ import type { CreateFormInterfaceInput } from "@flowmaestro/shared";
 import { createServiceLogger } from "../../../core/logging";
 import { FormInterfaceRepository } from "../../../storage/repositories/FormInterfaceRepository";
 import { authMiddleware } from "../../middleware";
+import { workspaceContextMiddleware } from "../../middleware/workspace-context";
 
 const logger = createServiceLogger("FormInterfaceRoutes");
 
@@ -32,12 +33,13 @@ export async function createFormInterfaceRoute(fastify: FastifyInstance) {
     fastify.post(
         "/",
         {
-            preHandler: [authMiddleware]
+            preHandler: [authMiddleware, workspaceContextMiddleware]
         },
         async (request, reply) => {
             const formInterfaceRepo = new FormInterfaceRepository();
             const body = request.body as CreateFormInterfaceInput;
             const userId = request.user!.id;
+            const workspaceId = request.workspace!.id;
 
             try {
                 // Validate required fields
@@ -80,7 +82,10 @@ export async function createFormInterfaceRoute(fastify: FastifyInstance) {
                 }
 
                 // Check slug availability
-                const isAvailable = await formInterfaceRepo.isSlugAvailable(body.slug, userId);
+                const isAvailable = await formInterfaceRepo.isSlugAvailableInWorkspace(
+                    body.slug,
+                    workspaceId
+                );
                 if (!isAvailable) {
                     return reply.status(400).send({
                         success: false,
@@ -89,7 +94,7 @@ export async function createFormInterfaceRoute(fastify: FastifyInstance) {
                 }
 
                 // Create form interface
-                const formInterface = await formInterfaceRepo.create(userId, body);
+                const formInterface = await formInterfaceRepo.create(userId, workspaceId, body);
 
                 logger.info(
                     { formInterfaceId: formInterface.id, userId },

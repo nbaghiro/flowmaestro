@@ -8,6 +8,7 @@ interface WorkflowRow {
     description: string | null;
     definition: string | Record<string, JsonValue>;
     user_id: string;
+    workspace_id: string;
     version: number;
     ai_generated: boolean;
     ai_prompt: string | null;
@@ -19,8 +20,8 @@ interface WorkflowRow {
 export class WorkflowRepository {
     async create(input: CreateWorkflowInput): Promise<WorkflowModel> {
         const query = `
-            INSERT INTO flowmaestro.workflows (name, description, definition, user_id, ai_generated, ai_prompt)
-            VALUES ($1, $2, $3, $4, $5, $6)
+            INSERT INTO flowmaestro.workflows (name, description, definition, user_id, workspace_id, ai_generated, ai_prompt)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
             RETURNING *
         `;
 
@@ -29,6 +30,7 @@ export class WorkflowRepository {
             input.description || null,
             JSON.stringify(input.definition),
             input.user_id,
+            input.workspace_id,
             input.ai_generated || false,
             input.ai_prompt || null
         ];
@@ -47,8 +49,18 @@ export class WorkflowRepository {
         return result.rows.length > 0 ? this.mapRow(result.rows[0] as WorkflowRow) : null;
     }
 
-    async findByUserId(
-        userId: string,
+    async findByIdAndWorkspaceId(id: string, workspaceId: string): Promise<WorkflowModel | null> {
+        const query = `
+            SELECT * FROM flowmaestro.workflows
+            WHERE id = $1 AND workspace_id = $2 AND deleted_at IS NULL
+        `;
+
+        const result = await db.query<WorkflowRow>(query, [id, workspaceId]);
+        return result.rows.length > 0 ? this.mapRow(result.rows[0] as WorkflowRow) : null;
+    }
+
+    async findByWorkspaceId(
+        workspaceId: string,
         options: { limit?: number; offset?: number; folderId?: string | null } = {}
     ): Promise<{ workflows: WorkflowModel[]; total: number }> {
         const limit = options.limit || 50;
@@ -58,6 +70,57 @@ export class WorkflowRepository {
         // folderId = undefined: return all workflows (no filter)
         // folderId = null: return workflows not in any folder (folder_ids IS NULL OR folder_ids = ARRAY[]::UUID[])
         // folderId = 'uuid': return workflows in that folder ($2 = ANY(folder_ids))
+        let folderFilter = "";
+        const countParams: unknown[] = [workspaceId];
+        const queryParams: unknown[] = [workspaceId];
+
+        if (options.folderId === null) {
+            folderFilter = " AND (folder_ids IS NULL OR folder_ids = ARRAY[]::UUID[])";
+        } else if (options.folderId !== undefined) {
+            folderFilter = " AND $2 = ANY(COALESCE(folder_ids, ARRAY[]::UUID[]))";
+            countParams.push(options.folderId);
+            queryParams.push(options.folderId);
+        }
+
+        const countQuery = `
+            SELECT COUNT(*) as count
+            FROM flowmaestro.workflows
+            WHERE workspace_id = $1 AND deleted_at IS NULL${folderFilter}
+        `;
+
+        const limitParamIndex = queryParams.length + 1;
+        const offsetParamIndex = queryParams.length + 2;
+        const query = `
+            SELECT *
+            FROM flowmaestro.workflows
+            WHERE workspace_id = $1 AND deleted_at IS NULL${folderFilter}
+            ORDER BY created_at DESC
+            LIMIT $${limitParamIndex} OFFSET $${offsetParamIndex}
+        `;
+
+        queryParams.push(limit, offset);
+
+        const [countResult, workflowsResult] = await Promise.all([
+            db.query<{ count: string }>(countQuery, countParams),
+            db.query<WorkflowRow>(query, queryParams)
+        ]);
+
+        return {
+            workflows: workflowsResult.rows.map((row) => this.mapRow(row as WorkflowRow)),
+            total: parseInt(countResult.rows[0].count)
+        };
+    }
+
+    /**
+     * @deprecated Use findByWorkspaceId instead. Kept for backward compatibility.
+     */
+    async findByUserId(
+        userId: string,
+        options: { limit?: number; offset?: number; folderId?: string | null } = {}
+    ): Promise<{ workflows: WorkflowModel[]; total: number }> {
+        const limit = options.limit || 50;
+        const offset = options.offset || 0;
+
         let folderFilter = "";
         const countParams: unknown[] = [userId];
         const queryParams: unknown[] = [userId];
@@ -187,9 +250,16 @@ export class WorkflowRepository {
 
     private mapRow(row: WorkflowRow): WorkflowModel {
         return {
-            ...row,
+            id: row.id,
+            name: row.name,
+            description: row.description,
             definition:
                 typeof row.definition === "string" ? JSON.parse(row.definition) : row.definition,
+            user_id: row.user_id,
+            workspace_id: row.workspace_id,
+            version: row.version,
+            ai_generated: row.ai_generated,
+            ai_prompt: row.ai_prompt,
             created_at: new Date(row.created_at),
             updated_at: new Date(row.updated_at),
             deleted_at: row.deleted_at ? new Date(row.deleted_at) : null

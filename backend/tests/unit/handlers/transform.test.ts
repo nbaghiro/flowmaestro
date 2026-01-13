@@ -573,6 +573,101 @@ describe("TransformNodeHandler", () => {
         });
     });
 
+    describe("passthrough operation", () => {
+        it("passes through array unchanged", async () => {
+            const input = createHandlerInputWithUpstream({
+                nodeType: "transform",
+                nodeConfig: CommonConfigs.transform.passthrough(varRef("data", "items"), "result"),
+                upstreamOutputs: {
+                    data: { items: [1, 2, 3, 4, 5] }
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            assertSuccessOutput(output, ["result"]);
+            expect(output.result.result).toEqual([1, 2, 3, 4, 5]);
+        });
+
+        it("passes through object unchanged", async () => {
+            const input = createHandlerInputWithUpstream({
+                nodeType: "transform",
+                nodeConfig: CommonConfigs.transform.passthrough(varRef("data", "obj"), "result"),
+                upstreamOutputs: {
+                    data: { obj: { name: "Test", value: 42, nested: { a: 1 } } }
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            assertSuccessOutput(output, ["result"]);
+            expect(output.result.result).toEqual({ name: "Test", value: 42, nested: { a: 1 } });
+        });
+
+        it("passes through string unchanged", async () => {
+            const input = createHandlerInputWithUpstream({
+                nodeType: "transform",
+                nodeConfig: CommonConfigs.transform.passthrough(varRef("data", "text"), "result"),
+                upstreamOutputs: {
+                    data: { text: "Hello, World!" }
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            assertSuccessOutput(output, ["result"]);
+            expect(output.result.result).toBe("Hello, World!");
+        });
+
+        it("passes through number unchanged", async () => {
+            const input = createHandlerInputWithUpstream({
+                nodeType: "transform",
+                nodeConfig: CommonConfigs.transform.passthrough(varRef("data", "num"), "result"),
+                upstreamOutputs: {
+                    data: { num: 123.456 }
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            assertSuccessOutput(output, ["result"]);
+            expect(output.result.result).toBe(123.456);
+        });
+
+        it("passes through null unchanged", async () => {
+            const input = createHandlerInputWithUpstream({
+                nodeType: "transform",
+                nodeConfig: CommonConfigs.transform.passthrough(
+                    varRef("data", "nullValue"),
+                    "result"
+                ),
+                upstreamOutputs: {
+                    data: { nullValue: null }
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            assertSuccessOutput(output, ["result"]);
+            expect(output.result.result).toBeNull();
+        });
+
+        it("passes through boolean unchanged", async () => {
+            const input = createHandlerInputWithUpstream({
+                nodeType: "transform",
+                nodeConfig: CommonConfigs.transform.passthrough(varRef("data", "flag"), "result"),
+                upstreamOutputs: {
+                    data: { flag: true }
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            assertSuccessOutput(output, ["result"]);
+            expect(output.result.result).toBe(true);
+        });
+    });
+
     describe("metrics", () => {
         it("records execution duration", async () => {
             const input = createHandlerInputWithUpstream({

@@ -14,13 +14,13 @@ export async function listThreadsHandler(
     request: FastifyRequest<{ Querystring: ListThreadsQuery }>,
     reply: FastifyReply
 ): Promise<void> {
-    const userId = request.user!.id;
+    const workspaceId = request.workspace!.id;
     const { agent_id, status, limit, offset, search } = request.query;
 
     const threadRepo = new ThreadRepository();
 
     const result = await threadRepo.list({
-        user_id: userId,
+        workspace_id: workspaceId,
         agent_id,
         status,
         limit: limit ? parseInt(limit) : undefined,

@@ -10,6 +10,7 @@ const logger = createServiceLogger("OAuthService");
  */
 interface StateTokenData {
     userId: string;
+    workspaceId: string; // Workspace to create connection in
     provider: string; // Track which service initiated the OAuth flow
     expiresAt: number;
     codeVerifier?: string; // PKCE code verifier
@@ -32,6 +33,7 @@ interface OAuthToken {
  */
 export interface OAuthTokenResult {
     userId: string;
+    workspaceId: string; // Workspace to create connection in
     provider: string; // The actual provider that initiated the OAuth flow
     tokens: {
         access_token: string;
@@ -65,9 +67,15 @@ export class OAuthService {
      *
      * @param provider - The OAuth provider name
      * @param userId - The user ID initiating the OAuth flow
+     * @param workspaceId - The workspace ID to create the connection in
      * @param options - Optional parameters (e.g., subdomain for Zendesk)
      */
-    generateAuthUrl(provider: string, userId: string, options?: { subdomain?: string }): string {
+    generateAuthUrl(
+        provider: string,
+        userId: string,
+        workspaceId: string,
+        options?: { subdomain?: string }
+    ): string {
         const config = getOAuthProvider(provider);
 
         // Handle providers that require subdomain/shop (like Zendesk, Shopify)
@@ -96,7 +104,13 @@ export class OAuthService {
         }
 
         // Generate CSRF state token (store code_verifier and subdomain if using PKCE)
-        const state = this.generateStateToken(userId, provider, codeVerifier, options?.subdomain);
+        const state = this.generateStateToken(
+            userId,
+            workspaceId,
+            provider,
+            codeVerifier,
+            options?.subdomain
+        );
 
         // Build authorization URL with parameters
         const params = new URLSearchParams({
@@ -180,6 +194,7 @@ export class OAuthService {
 
             return {
                 userId: stateData.userId,
+                workspaceId: stateData.workspaceId,
                 provider: actualProvider, // Return the actual provider from state
                 tokens: {
                     access_token: tokenData.access_token,
@@ -377,6 +392,7 @@ export class OAuthService {
      */
     private generateStateToken(
         userId: string,
+        workspaceId: string,
         provider: string,
         codeVerifier?: string,
         subdomain?: string
@@ -385,6 +401,7 @@ export class OAuthService {
 
         this.stateStore.set(state, {
             userId,
+            workspaceId, // Store workspace to create connection in
             provider, // Store which service initiated the flow
             expiresAt: Date.now() + 5 * 60 * 1000, // 5 minutes expiry
             codeVerifier, // Store PKCE verifier if using PKCE

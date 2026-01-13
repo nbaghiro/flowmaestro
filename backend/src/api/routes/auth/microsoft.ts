@@ -15,8 +15,14 @@ export async function microsoftAuthRoutes(fastify: FastifyInstance) {
      */
     fastify.get("/microsoft", async (_request, reply) => {
         try {
-            // Use "PENDING_AUTH" as userId since user doesn't exist yet
-            const authUrl = oauthService.generateAuthUrl("microsoft-auth", "PENDING_AUTH");
+            // Use "PENDING_AUTH" as userId/workspaceId since user doesn't exist yet
+            // For auth flows (microsoft-auth), the workspaceId in state is not used since
+            // the callback handles auth differently (creates user, not connection)
+            const authUrl = oauthService.generateAuthUrl(
+                "microsoft-auth",
+                "PENDING_AUTH",
+                "PENDING_AUTH"
+            );
             return reply.redirect(authUrl);
         } catch (error: unknown) {
             const errorMsg = error instanceof Error ? error.message : "Unknown error";

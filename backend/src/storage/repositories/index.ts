@@ -12,3 +12,7 @@ export * from "./TemplateRepository";
 export * from "./AgentTemplateRepository";
 export * from "./AgentRepository";
 export * from "./AgentExecutionRepository";
+export * from "./WorkspaceRepository";
+export * from "./WorkspaceMemberRepository";
+export * from "./WorkspaceInvitationRepository";
+export * from "./WorkspaceCreditRepository";

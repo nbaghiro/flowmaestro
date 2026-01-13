@@ -1,6 +1,7 @@
 import { FastifyInstance } from "fastify";
 import { ConnectionRepository } from "../../../storage/repositories/ConnectionRepository";
 import { authMiddleware, validateParams, validateBody } from "../../middleware";
+import { workspaceContextMiddleware } from "../../middleware/workspace-context";
 import {
     connectionIdParamSchema,
     ConnectionIdParam,
@@ -14,6 +15,7 @@ export async function updateConnectionRoute(fastify: FastifyInstance) {
         {
             preHandler: [
                 authMiddleware,
+                workspaceContextMiddleware,
                 validateParams(connectionIdParamSchema),
                 validateBody(updateConnectionSchema)
             ]
@@ -23,12 +25,15 @@ export async function updateConnectionRoute(fastify: FastifyInstance) {
             const params = request.params as ConnectionIdParam;
             const body = request.body as UpdateConnectionRequest;
 
-            // Verify ownership
-            const ownerId = await connectionRepository.getOwnerId(params.id);
-            if (ownerId !== request.user!.id) {
-                return reply.status(403).send({
+            // Verify ownership by checking workspace
+            const existing = await connectionRepository.findByIdAndWorkspaceId(
+                params.id,
+                request.workspace!.id
+            );
+            if (!existing) {
+                return reply.status(404).send({
                     success: false,
-                    error: "You do not have permission to update this connection"
+                    error: "Connection not found"
                 });
             }
 

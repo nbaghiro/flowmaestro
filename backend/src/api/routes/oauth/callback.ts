@@ -311,6 +311,7 @@ export async function callbackRoute(fastify: FastifyInstance) {
                 const accountInfo = result.accountInfo as Record<string, unknown> | undefined;
                 const connection = await connectionRepo.create({
                     user_id: result.userId,
+                    workspace_id: result.workspaceId,
                     name: `${actualProvider} - ${
                         (accountInfo?.email as string) ||
                         (accountInfo?.workspace as string) ||

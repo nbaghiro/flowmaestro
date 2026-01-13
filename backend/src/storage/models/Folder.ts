@@ -1,6 +1,7 @@
 export interface FolderModel {
     id: string;
     user_id: string;
+    workspace_id: string;
     name: string;
     color: string;
     position: number;
@@ -14,6 +15,7 @@ export interface FolderModel {
 
 export interface CreateFolderInput {
     user_id: string;
+    workspace_id: string;
     name: string;
     color?: string;
     parent_id?: string | null; // Optional parent folder ID

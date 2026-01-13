@@ -15,6 +15,7 @@ const KEY_LENGTH = 32; // 32 bytes = 256 bits
 interface ApiKeyRow {
     id: string;
     user_id: string;
+    workspace_id: string;
     name: string;
     key_prefix: string;
     key_hash: string;
@@ -86,15 +87,16 @@ export class ApiKeyRepository {
 
         const query = `
             INSERT INTO flowmaestro.api_keys (
-                user_id, name, key_prefix, key_hash, scopes,
+                user_id, workspace_id, name, key_prefix, key_hash, scopes,
                 rate_limit_per_minute, rate_limit_per_day, expires_at
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             RETURNING *
         `;
 
         const values = [
             input.user_id,
+            input.workspace_id,
             input.name,
             keyPrefix,
             keyHash,
@@ -161,6 +163,19 @@ export class ApiKeyRepository {
     }
 
     /**
+     * Find an API key by ID and workspace ID (for workspace-based access control).
+     */
+    async findByIdAndWorkspaceId(id: string, workspaceId: string): Promise<ApiKeyModel | null> {
+        const query = `
+            SELECT * FROM flowmaestro.api_keys
+            WHERE id = $1 AND workspace_id = $2
+        `;
+
+        const result = await db.query<ApiKeyRow>(query, [id, workspaceId]);
+        return result.rows.length > 0 ? this.mapRow(result.rows[0]) : null;
+    }
+
+    /**
      * List all API keys for a user.
      */
     async findByUserId(
@@ -200,7 +215,46 @@ export class ApiKeyRepository {
     }
 
     /**
-     * Update an API key.
+     * List all API keys for a workspace.
+     */
+    async findByWorkspaceId(
+        workspaceId: string,
+        options: { limit?: number; offset?: number; includeRevoked?: boolean } = {}
+    ): Promise<{ keys: ApiKeyListItem[]; total: number }> {
+        const limit = options.limit || 50;
+        const offset = options.offset || 0;
+        const includeRevoked = options.includeRevoked || false;
+
+        const whereClause = includeRevoked
+            ? "WHERE workspace_id = $1"
+            : "WHERE workspace_id = $1 AND revoked_at IS NULL";
+
+        const countQuery = `
+            SELECT COUNT(*) as count
+            FROM flowmaestro.api_keys
+            ${whereClause}
+        `;
+
+        const query = `
+            SELECT * FROM flowmaestro.api_keys
+            ${whereClause}
+            ORDER BY created_at DESC
+            LIMIT $2 OFFSET $3
+        `;
+
+        const [countResult, keysResult] = await Promise.all([
+            db.query<{ count: string }>(countQuery, [workspaceId]),
+            db.query<ApiKeyRow>(query, [workspaceId, limit, offset])
+        ]);
+
+        return {
+            keys: keysResult.rows.map((row) => this.mapToListItem(row)),
+            total: parseInt(countResult.rows[0].count)
+        };
+    }
+
+    /**
+     * Update an API key by user ID.
      */
     async update(
         id: string,
@@ -258,6 +312,64 @@ export class ApiKeyRepository {
     }
 
     /**
+     * Update an API key by workspace ID.
+     */
+    async updateByWorkspaceId(
+        id: string,
+        workspaceId: string,
+        input: UpdateApiKeyInput
+    ): Promise<ApiKeyModel | null> {
+        const updates: string[] = [];
+        const values: unknown[] = [];
+        let paramIndex = 1;
+
+        if (input.name !== undefined) {
+            updates.push(`name = $${paramIndex++}`);
+            values.push(input.name);
+        }
+
+        if (input.scopes !== undefined) {
+            updates.push(`scopes = $${paramIndex++}`);
+            values.push(input.scopes);
+        }
+
+        if (input.rate_limit_per_minute !== undefined) {
+            updates.push(`rate_limit_per_minute = $${paramIndex++}`);
+            values.push(input.rate_limit_per_minute);
+        }
+
+        if (input.rate_limit_per_day !== undefined) {
+            updates.push(`rate_limit_per_day = $${paramIndex++}`);
+            values.push(input.rate_limit_per_day);
+        }
+
+        if (input.expires_at !== undefined) {
+            updates.push(`expires_at = $${paramIndex++}`);
+            values.push(input.expires_at);
+        }
+
+        if (input.is_active !== undefined) {
+            updates.push(`is_active = $${paramIndex++}`);
+            values.push(input.is_active);
+        }
+
+        if (updates.length === 0) {
+            return this.findByIdAndWorkspaceId(id, workspaceId);
+        }
+
+        values.push(id, workspaceId);
+        const query = `
+            UPDATE flowmaestro.api_keys
+            SET ${updates.join(", ")}
+            WHERE id = $${paramIndex++} AND workspace_id = $${paramIndex} AND revoked_at IS NULL
+            RETURNING *
+        `;
+
+        const result = await db.query<ApiKeyRow>(query, values);
+        return result.rows.length > 0 ? this.mapRow(result.rows[0]) : null;
+    }
+
+    /**
      * Update last used timestamp and IP (non-blocking, for tracking).
      */
     async updateLastUsed(id: string, ip: string | null): Promise<void> {
@@ -271,7 +383,7 @@ export class ApiKeyRepository {
     }
 
     /**
-     * Revoke an API key.
+     * Revoke an API key by user ID.
      */
     async revoke(id: string, userId: string): Promise<boolean> {
         const query = `
@@ -285,7 +397,21 @@ export class ApiKeyRepository {
     }
 
     /**
-     * Rotate an API key (revoke old, create new with same settings).
+     * Revoke an API key by workspace ID.
+     */
+    async revokeByWorkspaceId(id: string, workspaceId: string): Promise<boolean> {
+        const query = `
+            UPDATE flowmaestro.api_keys
+            SET revoked_at = CURRENT_TIMESTAMP, is_active = false
+            WHERE id = $1 AND workspace_id = $2 AND revoked_at IS NULL
+        `;
+
+        const result = await db.query(query, [id, workspaceId]);
+        return (result.rowCount || 0) > 0;
+    }
+
+    /**
+     * Rotate an API key by user ID (revoke old, create new with same settings).
      */
     async rotate(id: string, userId: string): Promise<ApiKeyWithSecret | null> {
         const existingKey = await this.findByIdAndUserId(id, userId);
@@ -299,6 +425,35 @@ export class ApiKeyRepository {
         // Create a new key with the same settings
         return this.create({
             user_id: userId,
+            workspace_id: existingKey.workspace_id,
+            name: existingKey.name,
+            scopes: existingKey.scopes,
+            rate_limit_per_minute: existingKey.rate_limit_per_minute,
+            rate_limit_per_day: existingKey.rate_limit_per_day,
+            expires_at: existingKey.expires_at
+        });
+    }
+
+    /**
+     * Rotate an API key by workspace ID (revoke old, create new with same settings).
+     */
+    async rotateByWorkspaceId(
+        id: string,
+        workspaceId: string,
+        userId: string
+    ): Promise<ApiKeyWithSecret | null> {
+        const existingKey = await this.findByIdAndWorkspaceId(id, workspaceId);
+        if (!existingKey || existingKey.revoked_at) {
+            return null;
+        }
+
+        // Revoke the old key
+        await this.revokeByWorkspaceId(id, workspaceId);
+
+        // Create a new key with the same settings
+        return this.create({
+            user_id: userId,
+            workspace_id: workspaceId,
             name: existingKey.name,
             scopes: existingKey.scopes,
             rate_limit_per_minute: existingKey.rate_limit_per_minute,
@@ -335,6 +490,7 @@ export class ApiKeyRepository {
         return {
             id: row.id,
             user_id: row.user_id,
+            workspace_id: row.workspace_id,
             name: row.name,
             key_prefix: row.key_prefix,
             key_hash: row.key_hash,

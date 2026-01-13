@@ -11,6 +11,7 @@ declare module "fastify" {
         apiKey?: ApiKeyModel;
         apiKeyScopes?: Set<ApiKeyScope>;
         apiKeyUserId?: string;
+        apiKeyWorkspaceId?: string;
     }
 }
 
@@ -164,6 +165,7 @@ export async function apiKeyAuthMiddleware(
     request.apiKey = apiKey;
     request.apiKeyScopes = new Set(apiKey.scopes);
     request.apiKeyUserId = apiKey.user_id;
+    request.apiKeyWorkspaceId = apiKey.workspace_id;
 
     // Update last used (async, non-blocking)
     const clientIp = request.ip || null;
@@ -213,6 +215,7 @@ export async function optionalApiKeyAuthMiddleware(
         request.apiKey = apiKey;
         request.apiKeyScopes = new Set(apiKey.scopes);
         request.apiKeyUserId = apiKey.user_id;
+        request.apiKeyWorkspaceId = apiKey.workspace_id;
 
         const clientIp = request.ip || null;
         apiKeyRepo.updateLastUsed(apiKey.id, clientIp).catch(() => {});

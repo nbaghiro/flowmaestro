@@ -2,7 +2,6 @@ import { User, Lock, Bell, CheckCircle2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { ConfirmDialog } from "../components/common/ConfirmDialog";
 import { PageHeader } from "../components/common/PageHeader";
-import { useAuth } from "../contexts/AuthContext";
 import {
     getGoogleAuthUrl,
     getMicrosoftAuthUrl,
@@ -10,6 +9,7 @@ import {
     unlinkMicrosoftAccount
 } from "../lib/api";
 import { logger } from "../lib/logger";
+import { useAuthStore } from "../stores/authStore";
 import type { LucideIcon } from "lucide-react";
 import { AccountEditModal } from "@/components/AccountEditModal";
 
@@ -21,7 +21,7 @@ interface AccountSection {
 }
 
 export function Account() {
-    const { user, refreshUser } = useAuth();
+    const { user, refreshUser } = useAuthStore();
     const [isUnlinkGoogleDialogOpen, setIsUnlinkGoogleDialogOpen] = useState(false);
     const [isUnlinkMicrosoftDialogOpen, setIsUnlinkMicrosoftDialogOpen] = useState(false);
     const [isUnlinking, setIsUnlinking] = useState(false);

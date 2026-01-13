@@ -1,6 +1,7 @@
 import { FastifyInstance } from "fastify";
 import { KnowledgeBaseRepository } from "../../../storage/repositories";
 import { authMiddleware } from "../../middleware";
+import { workspaceContextMiddleware } from "../../middleware/workspace-context";
 
 interface CreateKnowledgeBaseBody {
     name: string;
@@ -14,7 +15,7 @@ export async function createKnowledgeBaseRoute(fastify: FastifyInstance) {
     fastify.post<{ Body: CreateKnowledgeBaseBody }>(
         "/",
         {
-            preHandler: [authMiddleware]
+            preHandler: [authMiddleware, workspaceContextMiddleware]
         },
         async (request, reply) => {
             const kbRepository = new KnowledgeBaseRepository();
@@ -22,6 +23,7 @@ export async function createKnowledgeBaseRoute(fastify: FastifyInstance) {
 
             const knowledgeBase = await kbRepository.create({
                 user_id: request.user!.id,
+                workspace_id: request.workspace!.id,
                 name: body.name,
                 description: body.description,
                 config: body.config
