@@ -16,7 +16,7 @@ import { MAX_FOLDER_DEPTH } from "@flowmaestro/shared";
 import { Button } from "../components/common/Button";
 import { ConfirmDialog } from "../components/common/ConfirmDialog";
 import { LoadingState } from "../components/common/Spinner";
-import { CreateFolderDialog, FolderItemSection } from "../components/folders";
+import { CreateFolderDialog, FolderItemSection, MoveToFolderDialog } from "../components/folders";
 import { removeItemsFromFolder } from "../lib/api";
 import { cn } from "../lib/utils";
 import { useFolderStore } from "../stores/folderStore";
@@ -39,7 +39,11 @@ export function FolderContentsPage() {
         updateFolder,
         deleteFolder,
         createFolder,
-        refreshFolders
+        refreshFolders,
+        moveItemsToFolder,
+        folders,
+        folderTree,
+        isLoadingFolders
     } = useFolderStore();
 
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -54,6 +58,9 @@ export function FolderContentsPage() {
     const [isDeletingSubfolder, setIsDeletingSubfolder] = useState(false);
     const [openSubfolderMenuId, setOpenSubfolderMenuId] = useState<string | null>(null);
     const subfolderMenuRefs = useRef<Record<string, HTMLDivElement>>({});
+    const [isMoveDialogOpen, setIsMoveDialogOpen] = useState(false);
+    const [movingItemId, setMovingItemId] = useState<string | null>(null);
+    const [movingItemType, setMovingItemType] = useState<FolderResourceType | null>(null);
 
     // Fetch folder contents on mount or when folderId changes
     useEffect(() => {
@@ -153,6 +160,30 @@ export function FolderContentsPage() {
         } catch (_error) {
             // Error logged in API call
         }
+    };
+
+    const handleMoveToFolder = async (targetFolderId: string | null) => {
+        if (!folderId || !movingItemId || !movingItemType || !targetFolderId) {
+            throw new Error("Missing required information for move operation");
+        }
+        // Move item to target folder
+        await moveItemsToFolder(targetFolderId, [movingItemId], movingItemType);
+        // Explicitly remove from current folder (backend move only adds, doesn't remove)
+        await removeItemsFromFolder({
+            itemIds: [movingItemId],
+            itemType: movingItemType,
+            folderId
+        });
+        // Refresh folder contents and sidebar counts
+        await Promise.all([fetchFolderContents(folderId), refreshFolders()]);
+        setMovingItemId(null);
+        setMovingItemType(null);
+    };
+
+    const handleMoveToFolderClick = (itemId: string, itemType: FolderResourceType) => {
+        setMovingItemId(itemId);
+        setMovingItemType(itemType);
+        setIsMoveDialogOpen(true);
     };
 
     const handleCreateSubfolder = async (name: string, color: string) => {
@@ -498,6 +529,7 @@ export function FolderContentsPage() {
                         items={items.workflows}
                         folderId={folder.id}
                         onRemoveFromFolder={handleRemoveFromFolder}
+                        onMoveToFolder={handleMoveToFolderClick}
                         defaultCollapsed={
                             sourceItemType !== undefined && sourceItemType !== "workflow"
                         }
@@ -509,6 +541,7 @@ export function FolderContentsPage() {
                         items={items.agents}
                         folderId={folder.id}
                         onRemoveFromFolder={handleRemoveFromFolder}
+                        onMoveToFolder={handleMoveToFolderClick}
                         defaultCollapsed={
                             sourceItemType !== undefined && sourceItemType !== "agent"
                         }
@@ -520,6 +553,7 @@ export function FolderContentsPage() {
                         items={items.formInterfaces}
                         folderId={folder.id}
                         onRemoveFromFolder={handleRemoveFromFolder}
+                        onMoveToFolder={handleMoveToFolderClick}
                         defaultCollapsed={
                             sourceItemType !== undefined && sourceItemType !== "form-interface"
                         }
@@ -531,6 +565,7 @@ export function FolderContentsPage() {
                         items={items.chatInterfaces}
                         folderId={folder.id}
                         onRemoveFromFolder={handleRemoveFromFolder}
+                        onMoveToFolder={handleMoveToFolderClick}
                         defaultCollapsed={
                             sourceItemType !== undefined && sourceItemType !== "chat-interface"
                         }
@@ -542,6 +577,7 @@ export function FolderContentsPage() {
                         items={items.knowledgeBases}
                         folderId={folder.id}
                         onRemoveFromFolder={handleRemoveFromFolder}
+                        onMoveToFolder={handleMoveToFolderClick}
                         defaultCollapsed={
                             sourceItemType !== undefined && sourceItemType !== "knowledge-base"
                         }
@@ -593,6 +629,27 @@ export function FolderContentsPage() {
                 message={`Are you sure you want to delete "${subfolderToDelete?.name}"? Items in this subfolder will be moved to the parent folder, not deleted.`}
                 confirmText={isDeletingSubfolder ? "Deleting..." : "Delete"}
                 variant="danger"
+            />
+
+            {/* Move to Folder Dialog */}
+            <MoveToFolderDialog
+                isOpen={isMoveDialogOpen}
+                onClose={() => {
+                    setIsMoveDialogOpen(false);
+                    setMovingItemId(null);
+                    setMovingItemType(null);
+                }}
+                folders={folders}
+                folderTree={folderTree}
+                isLoadingFolders={isLoadingFolders}
+                selectedItemCount={1}
+                itemType={movingItemType || "workflow"}
+                currentFolderId={folderId || null}
+                onMove={handleMoveToFolder}
+                onCreateFolder={() => {
+                    setIsMoveDialogOpen(false);
+                    setIsCreateSubfolderDialogOpen(true);
+                }}
             />
         </div>
     );
