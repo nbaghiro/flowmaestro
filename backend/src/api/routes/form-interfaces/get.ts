@@ -2,6 +2,7 @@ import { FastifyInstance } from "fastify";
 import { createServiceLogger } from "../../../core/logging";
 import { FormInterfaceRepository } from "../../../storage/repositories/FormInterfaceRepository";
 import { authMiddleware } from "../../middleware";
+import { workspaceContextMiddleware } from "../../middleware/workspace-context";
 
 const logger = createServiceLogger("FormInterfaceRoutes");
 
@@ -9,15 +10,18 @@ export async function getFormInterfaceRoute(fastify: FastifyInstance) {
     fastify.get(
         "/:id",
         {
-            preHandler: [authMiddleware]
+            preHandler: [authMiddleware, workspaceContextMiddleware]
         },
         async (request, reply) => {
             const formInterfaceRepo = new FormInterfaceRepository();
             const { id } = request.params as { id: string };
-            const userId = request.user!.id;
+            const workspaceId = request.workspace!.id;
 
             try {
-                const formInterface = await formInterfaceRepo.findById(id, userId);
+                const formInterface = await formInterfaceRepo.findByIdAndWorkspaceId(
+                    id,
+                    workspaceId
+                );
 
                 if (!formInterface) {
                     return reply.status(404).send({
@@ -31,7 +35,7 @@ export async function getFormInterfaceRoute(fastify: FastifyInstance) {
                     data: formInterface
                 });
             } catch (error) {
-                logger.error({ id, userId, error }, "Error fetching form interface");
+                logger.error({ id, workspaceId, error }, "Error fetching form interface");
                 return reply.status(500).send({
                     success: false,
                     error: error instanceof Error ? error.message : String(error)

@@ -1,13 +1,18 @@
 import { FastifyInstance } from "fastify";
 import { ConnectionRepository } from "../../../storage/repositories/ConnectionRepository";
 import { authMiddleware, validateBody } from "../../middleware";
+import { workspaceContextMiddleware } from "../../middleware/workspace-context";
 import { createConnectionSchema, CreateConnectionRequest } from "../../schemas/connection-schemas";
 
 export async function createConnectionRoute(fastify: FastifyInstance) {
     fastify.post(
         "/",
         {
-            preHandler: [authMiddleware, validateBody(createConnectionSchema)]
+            preHandler: [
+                authMiddleware,
+                workspaceContextMiddleware,
+                validateBody(createConnectionSchema)
+            ]
         },
         async (request, reply) => {
             const connectionRepository = new ConnectionRepository();
@@ -15,7 +20,8 @@ export async function createConnectionRoute(fastify: FastifyInstance) {
 
             const connection = await connectionRepository.create({
                 ...body,
-                user_id: request.user!.id
+                user_id: request.user!.id,
+                workspace_id: request.workspace!.id
             });
 
             return reply.status(201).send({

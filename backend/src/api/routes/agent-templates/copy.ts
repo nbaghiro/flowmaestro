@@ -2,6 +2,7 @@ import { FastifyInstance } from "fastify";
 import { AgentTemplateRepository, AgentRepository } from "../../../storage/repositories";
 import { authMiddleware, validateParams, validateRequest } from "../../middleware";
 import { NotFoundError } from "../../middleware/error-handler";
+import { workspaceContextMiddleware } from "../../middleware/workspace-context";
 import {
     agentTemplateIdParamSchema,
     copyAgentTemplateBodySchema,
@@ -15,6 +16,7 @@ export async function copyAgentTemplateRoute(fastify: FastifyInstance) {
         {
             preHandler: [
                 authMiddleware,
+                workspaceContextMiddleware,
                 validateParams(agentTemplateIdParamSchema),
                 validateRequest(copyAgentTemplateBodySchema)
             ]
@@ -39,6 +41,7 @@ export async function copyAgentTemplateRoute(fastify: FastifyInstance) {
             // The template's available_tools shows what tools are recommended but requires user-specific connections
             const agent = await agentRepository.create({
                 user_id: request.user!.id,
+                workspace_id: request.workspace!.id,
                 name: agentName,
                 description: template.description || undefined,
                 system_prompt: template.system_prompt,

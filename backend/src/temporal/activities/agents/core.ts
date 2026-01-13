@@ -1964,13 +1964,22 @@ async function executeAgentTool(input: ExecuteAgentToolInput): Promise<JsonObjec
     const agentExecutionId = `agent-tool-${Date.now()}-${Math.random().toString(36).substring(7)}`;
 
     try {
-        // Import ThreadRepository
+        // Import repositories
         const { ThreadRepository } = await import("../../../storage/repositories/ThreadRepository");
+        const { AgentRepository } = await import("../../../storage/repositories/AgentRepository");
         const threadRepo = new ThreadRepository();
+        const agentRepo = new AgentRepository();
+
+        // Get the agent to retrieve its workspace_id
+        const agent = await agentRepo.findById(tool.config.agentId);
+        if (!agent) {
+            throw new Error(`Agent ${tool.config.agentId} not found`);
+        }
 
         // Create a thread for this agent execution
         const thread = await threadRepo.create({
             user_id: userId,
+            workspace_id: agent.workspace_id,
             agent_id: tool.config.agentId,
             title: `Agent Tool Call: ${agentInput.substring(0, 50)}...`
         });

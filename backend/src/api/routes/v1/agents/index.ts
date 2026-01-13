@@ -96,12 +96,13 @@ export async function agentsV1Routes(fastify: FastifyInstance): Promise<void> {
         },
         async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
             const userId = request.apiKeyUserId!;
+            const workspaceId = request.apiKeyWorkspaceId!;
             const agentId = request.params.id;
 
             const agentRepo = new AgentRepository();
-            const agent = await agentRepo.findById(agentId);
+            const agent = await agentRepo.findByIdAndWorkspaceId(agentId, workspaceId);
 
-            if (!agent || agent.user_id !== userId) {
+            if (!agent) {
                 return sendNotFound(reply, "Agent", agentId);
             }
 
@@ -113,6 +114,7 @@ export async function agentsV1Routes(fastify: FastifyInstance): Promise<void> {
 
             const thread = await threadRepo.create({
                 user_id: userId,
+                workspace_id: workspaceId,
                 agent_id: agentId
             });
 

@@ -12,11 +12,11 @@ export async function getThreadMessagesHandler(
     request: FastifyRequest<{ Params: z.infer<typeof getThreadMessagesParamsSchema> }>,
     reply: FastifyReply
 ): Promise<void> {
-    const userId = request.user!.id;
+    const workspaceId = request.workspace!.id;
     const { id: threadId } = getThreadMessagesParamsSchema.parse(request.params);
 
     const threadRepo = new ThreadRepository();
-    const thread = await threadRepo.findByIdAndUserId(threadId, userId);
+    const thread = await threadRepo.findByIdAndWorkspaceId(threadId, workspaceId);
 
     if (!thread) {
         throw new NotFoundError("Thread not found");

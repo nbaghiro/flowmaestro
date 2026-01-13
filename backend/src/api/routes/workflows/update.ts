@@ -1,7 +1,13 @@
 import { FastifyInstance } from "fastify";
 import { WorkflowDefinition } from "@flowmaestro/shared";
 import { WorkflowRepository } from "../../../storage/repositories";
-import { authMiddleware, validateRequest, validateParams, NotFoundError } from "../../middleware";
+import {
+    authMiddleware,
+    workspaceContextMiddleware,
+    validateRequest,
+    validateParams,
+    NotFoundError
+} from "../../middleware";
 import { updateWorkflowSchema, workflowIdParamSchema } from "../../schemas/workflow-schemas";
 
 export async function updateWorkflowRoute(fastify: FastifyInstance) {
@@ -10,6 +16,7 @@ export async function updateWorkflowRoute(fastify: FastifyInstance) {
         {
             preHandler: [
                 authMiddleware,
+                workspaceContextMiddleware,
                 validateParams(workflowIdParamSchema),
                 validateRequest(updateWorkflowSchema)
             ]
@@ -25,13 +32,13 @@ export async function updateWorkflowRoute(fastify: FastifyInstance) {
                 aiPrompt?: string;
             };
 
-            // Check if workflow exists and user owns it
+            // Check if workflow exists and belongs to this workspace
             const existingWorkflow = await workflowRepository.findById(id);
             if (!existingWorkflow) {
                 throw new NotFoundError("Workflow not found");
             }
 
-            if (existingWorkflow.user_id !== request.user!.id) {
+            if (existingWorkflow.workspace_id !== request.workspace!.id) {
                 throw new NotFoundError("Workflow not found");
             }
 

@@ -1,13 +1,13 @@
 import { User, Settings, LogOut, ChevronDown } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../contexts/AuthContext";
 import { cn } from "../../lib/utils";
+import { useAuthStore } from "../../stores/authStore";
 
 export function UserDropdown() {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
-    const { user, logout } = useAuth();
+    const { user, logout } = useAuthStore();
     const navigate = useNavigate();
 
     // Close dropdown when clicking outside

@@ -19,3 +19,4 @@ export * from "./form-interface";
 export * from "./chat-interface";
 export * from "./folder";
 export * from "./workflow-generation-chat";
+export * from "./workspace";

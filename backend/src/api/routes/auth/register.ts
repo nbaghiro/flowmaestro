@@ -2,6 +2,7 @@ import { FastifyInstance } from "fastify";
 import { PasswordUtils } from "../../../core/utils/password";
 import { TokenUtils } from "../../../core/utils/token";
 import { emailService } from "../../../services/email/EmailService";
+import { workspaceService } from "../../../services/workspace";
 import { UserRepository } from "../../../storage/repositories";
 import { EmailVerificationTokenRepository } from "../../../storage/repositories/EmailVerificationTokenRepository";
 import { validateRequest, ValidationError } from "../../middleware";
@@ -50,6 +51,24 @@ export async function registerRoute(fastify: FastifyInstance) {
                     password_hash: passwordHash,
                     name: body.name
                 });
+
+                // Create personal workspace for new user
+                try {
+                    const workspace = await workspaceService.createPersonalWorkspace(
+                        user.id,
+                        user.name || null
+                    );
+                    fastify.log.info(
+                        { userId: user.id, workspaceId: workspace.id },
+                        "Personal workspace created for new user"
+                    );
+                } catch (error) {
+                    const errorMsg = error instanceof Error ? error.message : String(error);
+                    fastify.log.error(
+                        `Failed to create personal workspace for ${user.email}: ${errorMsg}`
+                    );
+                    // Don't fail registration if workspace creation fails
+                }
 
                 // Generate verification token for new local users
                 const verificationToken = TokenUtils.generate();

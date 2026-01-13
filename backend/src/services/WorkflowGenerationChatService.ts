@@ -251,6 +251,7 @@ export class WorkflowGenerationChatService {
     async createWorkflowFromPlan(
         plan: WorkflowPlan,
         userId: string,
+        workspaceId: string,
         _folderId?: string // TODO: Add folder support to workflow creation
     ): Promise<{ workflowId: string; name: string }> {
         logger.info(
@@ -383,6 +384,7 @@ export class WorkflowGenerationChatService {
         // Create the workflow in the database
         const workflow = await this.workflowRepo.create({
             user_id: userId,
+            workspace_id: workspaceId,
             name: plan.name,
             description: plan.description,
             definition: workflowDefinition
