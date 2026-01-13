@@ -1,5 +1,6 @@
 import { Folder, MoreVertical, Trash2, Edit2, ChevronRight } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import type { FolderWithCounts, FolderResourceType } from "@flowmaestro/shared";
 
 interface FolderCardProps {
@@ -40,38 +41,45 @@ export function FolderCard({
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isDragOver, setIsDragOver] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
+    const buttonRef = useRef<HTMLButtonElement>(null);
+    const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
 
-    // Close menu when clicking outside
+    // Calculate menu position and close menu when clicking outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
-            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-                setIsMenuOpen(false);
+            const target = event.target as Node;
+            // Don't close if clicking on the button or inside the menu
+            if (buttonRef.current?.contains(target) || menuRef.current?.contains(target)) {
+                return;
+            }
+            setIsMenuOpen(false);
+        };
+
+        const updateMenuPosition = () => {
+            if (buttonRef.current && isMenuOpen) {
+                const rect = buttonRef.current.getBoundingClientRect();
+                setMenuPosition({
+                    top: rect.bottom + 4,
+                    left: rect.right - 144
+                });
             }
         };
 
         if (isMenuOpen) {
+            updateMenuPosition();
+            window.addEventListener("resize", updateMenuPosition);
+            window.addEventListener("scroll", updateMenuPosition, true);
             document.addEventListener("mousedown", handleClickOutside);
-            return () => document.removeEventListener("mousedown", handleClickOutside);
+            return () => {
+                window.removeEventListener("resize", updateMenuPosition);
+                window.removeEventListener("scroll", updateMenuPosition, true);
+                document.removeEventListener("mousedown", handleClickOutside);
+            };
+        } else {
+            setMenuPosition(null);
         }
         return undefined;
     }, [isMenuOpen]);
-
-    const handleMenuClick = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        setIsMenuOpen(!isMenuOpen);
-    };
-
-    const handleEdit = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        setIsMenuOpen(false);
-        onEdit();
-    };
-
-    const handleDelete = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        setIsMenuOpen(false);
-        onDelete();
-    };
 
     // Format item count display
     const getItemCountDisplay = () => {
@@ -189,34 +197,58 @@ export function FolderCard({
                 <div className="flex-1" />
 
                 {/* Menu Button */}
-                <div className="relative flex-shrink-0" ref={isMenuOpen ? menuRef : null}>
+                <div className="relative flex-shrink-0">
                     <button
-                        onClick={handleMenuClick}
+                        ref={buttonRef}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            setIsMenuOpen((prev) => !prev);
+                        }}
                         className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors opacity-0 group-hover:opacity-100"
                         title="More options"
                     >
                         <MoreVertical className="w-4 h-4" />
                     </button>
 
-                    {/* Dropdown Menu */}
-                    {isMenuOpen && (
-                        <div className="absolute right-0 mt-1 w-36 bg-card border border-border rounded-lg shadow-lg py-1 z-50">
-                            <button
-                                onClick={handleEdit}
-                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+                    {/* Dropdown Menu - Rendered via Portal to avoid overflow clipping */}
+                    {isMenuOpen &&
+                        menuPosition &&
+                        createPortal(
+                            <div
+                                ref={menuRef}
+                                className="fixed w-36 bg-card border border-border rounded-lg shadow-lg py-1 z-50"
+                                style={{
+                                    top: `${menuPosition.top}px`,
+                                    left: `${menuPosition.left}px`
+                                }}
+                                onClick={(e) => e.stopPropagation()}
                             >
-                                <Edit2 className="w-4 h-4" />
-                                Edit
-                            </button>
-                            <button
-                                onClick={handleDelete}
-                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors"
-                            >
-                                <Trash2 className="w-4 h-4" />
-                                Delete
-                            </button>
-                        </div>
-                    )}
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setIsMenuOpen(false);
+                                        onEdit();
+                                    }}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+                                >
+                                    <Edit2 className="w-4 h-4" />
+                                    Edit
+                                </button>
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setIsMenuOpen(false);
+                                        onDelete();
+                                    }}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                    Delete
+                                </button>
+                            </div>,
+                            document.body
+                        )}
                 </div>
 
                 {/* Expand/Collapse chevron for folders with children */}
