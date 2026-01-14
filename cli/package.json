@@ -1,0 +1,47 @@
+{
+    "name": "@flowmaestro/cli",
+    "version": "1.0.0",
+    "description": "FlowMaestro command-line interface",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "bin": {
+        "fm": "./bin/fm.js"
+    },
+    "scripts": {
+        "build": "tsc",
+        "dev": "tsc --watch",
+        "clean": "rm -rf dist",
+        "typecheck": "tsc --noEmit",
+        "test": "jest",
+        "lint": "eslint src --ext .ts"
+    },
+    "keywords": [
+        "flowmaestro",
+        "cli",
+        "workflow",
+        "automation",
+        "ai"
+    ],
+    "author": "FlowMaestro Team",
+    "license": "MIT",
+    "dependencies": {
+        "@flowmaestro/shared": "*",
+        "chalk": "^5.4.1",
+        "cli-table3": "^0.6.5",
+        "commander": "^13.1.0",
+        "eventsource": "^3.0.6",
+        "inquirer": "^12.4.2",
+        "open": "^10.1.0",
+        "ora": "^8.2.0",
+        "yaml": "^2.7.0"
+    },
+    "devDependencies": {
+        "@types/eventsource": "^3.0.0",
+        "@types/inquirer": "^9.0.7",
+        "@types/node": "^22.15.29",
+        "typescript": "^5.3.3"
+    },
+    "engines": {
+        "node": ">=22.0.0"
+    }
+}

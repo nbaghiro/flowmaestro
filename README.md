@@ -33,6 +33,7 @@ Built for TypeScript developers who need both visual workflow orchestration and 
 ### Public API & SDKs
 
 - **[Public API](./.docs/public-api.md)** - RESTful API for programmatic access to workflows, agents, and knowledge bases
+- **[CLI](./.docs/cli.md)** - Command-line interface with OAuth device flow, interactive agent chat, and execution monitoring
 - **[JavaScript SDK](/sdks/javascript)** - Official TypeScript/JavaScript SDK with streaming support
 - **[Python SDK](/sdks/python)** - Official Python SDK with sync and async clients
 
@@ -100,6 +101,7 @@ Comprehensive documentation is available in the `.docs/` directory:
 - **[Temporal Workflows](./.docs/temporal-workflows.md)** - Durable workflow execution
 - **[Integration System](./.docs/integrations-system.md)** - Provider SDK and external connections
 - **[Public API & SDKs](./.docs/public-api.md)** - REST API reference and SDK documentation
+- **[CLI](./.docs/cli.md)** - Command-line interface guide
 
 ### Infrastructure & Operations
 
@@ -121,6 +123,7 @@ flowmaestro/
 ├── frontend/         # React + Vite SPA (workflow canvas, agent builder)
 ├── backend/          # Fastify API + Temporal workers
 ├── shared/           # Shared TypeScript types and utilities
+├── cli/              # Command-line interface (@flowmaestro/cli)
 ├── sdks/             # Official client SDKs
 │   ├── javascript/   # TypeScript/JavaScript SDK (@flowmaestro/sdk)
 │   └── python/       # Python SDK (flowmaestro)
