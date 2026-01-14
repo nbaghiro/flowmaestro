@@ -202,7 +202,7 @@ export function CreateFolderDialog({
 
                             {/* Color Picker Popup - opens above to avoid dialog cutoff */}
                             {showCustomColorPicker && (
-                                <div className="absolute bottom-full right-0 mb-2 p-3 bg-card border border-border rounded-lg shadow-lg z-50">
+                                <div className="absolute bottom-full left-0 md:left-auto md:right-0 mb-2 p-3 bg-card border border-border rounded-lg shadow-lg z-50">
                                     <label className="block text-xs text-muted-foreground mb-2">
                                         Custom Color
                                     </label>

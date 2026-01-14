@@ -252,16 +252,17 @@ export function ApiKeysSection() {
             )}
 
             {/* Header with create button */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm text-muted-foreground">
                     API keys allow external applications to access your FlowMaestro resources.
                 </p>
                 <button
                     onClick={() => setShowCreateDialog(true)}
-                    className="flex items-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium"
+                    className="flex items-center justify-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium flex-shrink-0"
                 >
                     <Plus className="w-4 h-4" />
-                    Create API Key
+                    <span className="hidden sm:inline">Create API Key</span>
+                    <span className="sm:hidden">Create Key</span>
                 </button>
             </div>
 
@@ -277,22 +278,24 @@ export function ApiKeysSection() {
                     {apiKeys.map((key) => (
                         <div
                             key={key.id}
-                            className="flex items-center justify-between p-4 bg-muted/50 rounded-lg border border-border"
+                            className="flex flex-col gap-3 p-4 bg-muted/50 rounded-lg border border-border sm:flex-row sm:items-center sm:justify-between"
                         >
                             <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1">
+                                <div className="flex items-center flex-wrap gap-2 mb-1">
                                     <span className="font-medium text-foreground">{key.name}</span>
                                     {!key.is_active && <Badge variant="error">Revoked</Badge>}
                                     {key.expires_at && new Date(key.expires_at) < new Date() && (
                                         <Badge variant="warning">Expired</Badge>
                                     )}
                                 </div>
-                                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                    <code className="bg-muted px-2 py-0.5 rounded font-mono text-xs">
+                                <div className="flex flex-col gap-1 text-sm text-muted-foreground sm:flex-row sm:items-center sm:gap-4">
+                                    <code className="bg-muted px-2 py-0.5 rounded font-mono text-xs w-fit">
                                         {key.key_prefix}...
                                     </code>
-                                    <span>Created {formatDate(key.created_at)}</span>
-                                    <span>Last used {formatDate(key.last_used_at)}</span>
+                                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs sm:text-sm">
+                                        <span>Created {formatDate(key.created_at)}</span>
+                                        <span>Last used {formatDate(key.last_used_at)}</span>
+                                    </div>
                                 </div>
                                 <div className="flex flex-wrap gap-1 mt-2">
                                     {key.scopes.slice(0, 3).map((scope) => (

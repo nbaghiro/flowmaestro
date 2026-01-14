@@ -165,7 +165,7 @@ export function Templates() {
     const templateCount = templates.length;
 
     return (
-        <div className="max-w-7xl mx-auto px-6 py-8">
+        <div className="max-w-7xl mx-auto px-4 py-6 md:px-6 md:py-8">
             <PageHeader
                 title="Templates"
                 description="Browse and use pre-built workflow and agent templates to get started quickly"

@@ -26,6 +26,7 @@ import { Button } from "../components/common/Button";
 import { ConfirmDialog } from "../components/common/ConfirmDialog";
 import { Dialog } from "../components/common/Dialog";
 import { Input } from "../components/common/Input";
+import { MobileBuilderGuard } from "../components/common/MobileBuilderGuard";
 import { Select } from "../components/common/Select";
 import { Textarea } from "../components/common/Textarea";
 import { Tooltip } from "../components/common/Tooltip";
@@ -736,570 +737,585 @@ export function AgentBuilder() {
     ];
 
     return (
-        <div className="h-screen flex flex-col bg-background">
-            {/* Top Header */}
-            <div className="h-16 border-b border-border bg-card flex items-center justify-between px-6 flex-shrink-0">
-                <div className="flex items-center gap-4">
-                    <button
-                        onClick={handleBack}
-                        className="p-2 hover:bg-muted rounded-lg transition-colors"
-                    >
-                        <ArrowLeft className="w-5 h-5" />
-                    </button>
+        <MobileBuilderGuard
+            title="Agent Builder"
+            description="The agent builder requires a larger screen. Please continue on a desktop or laptop computer to configure your agents."
+            backUrl={getBackUrl()}
+        >
+            <div className="h-screen flex flex-col bg-background">
+                {/* Top Header */}
+                <div className="h-16 border-b border-border bg-card flex items-center justify-between px-6 flex-shrink-0">
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={handleBack}
+                            className="p-2 hover:bg-muted rounded-lg transition-colors"
+                        >
+                            <ArrowLeft className="w-5 h-5" />
+                        </button>
+                        <div className="flex items-center gap-2">
+                            {isEditingName ? (
+                                <input
+                                    ref={nameInputRef}
+                                    type="text"
+                                    value={editedName}
+                                    onChange={(e) => setEditedName(e.target.value)}
+                                    onBlur={handleSaveNameEdit}
+                                    onKeyDown={handleNameKeyDown}
+                                    className={cn(
+                                        "text-lg font-semibold text-foreground",
+                                        "bg-background border border-primary rounded px-2 py-1",
+                                        "focus:outline-none focus:ring-2 focus:ring-primary"
+                                    )}
+                                />
+                            ) : (
+                                <button
+                                    onClick={handleStartEditingName}
+                                    disabled={isNewAgent}
+                                    className={cn(
+                                        "flex items-center gap-2 group",
+                                        !isNewAgent &&
+                                            "hover:bg-muted rounded px-2 py-1 transition-colors"
+                                    )}
+                                >
+                                    <h1 className="text-lg font-semibold text-foreground">
+                                        {isNewAgent
+                                            ? "New Agent"
+                                            : currentAgent?.name || "Loading..."}
+                                    </h1>
+                                    {!isNewAgent && (
+                                        <Pencil className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    )}
+                                </button>
+                            )}
+                        </div>
+                    </div>
                     <div className="flex items-center gap-2">
-                        {isEditingName ? (
-                            <input
-                                ref={nameInputRef}
-                                type="text"
-                                value={editedName}
-                                onChange={(e) => setEditedName(e.target.value)}
-                                onBlur={handleSaveNameEdit}
-                                onKeyDown={handleNameKeyDown}
-                                className={cn(
-                                    "text-lg font-semibold text-foreground",
-                                    "bg-background border border-primary rounded px-2 py-1",
-                                    "focus:outline-none focus:ring-2 focus:ring-primary"
-                                )}
-                            />
-                        ) : (
-                            <button
-                                onClick={handleStartEditingName}
-                                disabled={isNewAgent}
-                                className={cn(
-                                    "flex items-center gap-2 group",
-                                    !isNewAgent &&
-                                        "hover:bg-muted rounded px-2 py-1 transition-colors"
-                                )}
-                            >
-                                <h1 className="text-lg font-semibold text-foreground">
-                                    {isNewAgent ? "New Agent" : currentAgent?.name || "Loading..."}
-                                </h1>
-                                {!isNewAgent && (
-                                    <Pencil className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                                )}
-                            </button>
+                        {!isNewAgent && agentId && (
+                            <>
+                                <Tooltip content="Form Interface" position="bottom">
+                                    <button
+                                        onClick={() => setIsFormInterfaceDialogOpen(true)}
+                                        className={cn(
+                                            "flex items-center gap-2 px-3 py-2 rounded-lg",
+                                            "text-sm font-medium text-foreground",
+                                            "border border-border hover:bg-muted transition-colors"
+                                        )}
+                                    >
+                                        <FileText className="w-4 h-4" />
+                                    </button>
+                                </Tooltip>
+                                <Tooltip content="Chat Interface" position="bottom">
+                                    <button
+                                        onClick={() => setIsChatInterfaceDialogOpen(true)}
+                                        className={cn(
+                                            "flex items-center gap-2 px-3 py-2 rounded-lg",
+                                            "text-sm font-medium text-foreground",
+                                            "border border-border hover:bg-muted transition-colors"
+                                        )}
+                                    >
+                                        <MessageSquare className="w-4 h-4" />
+                                    </button>
+                                </Tooltip>
+                            </>
                         )}
+                        <button
+                            onClick={handleSave}
+                            disabled={isSaving}
+                            className={cn(
+                                "flex items-center gap-2 px-4 py-2 rounded-lg",
+                                "bg-primary text-primary-foreground",
+                                "hover:bg-primary/90 transition-colors",
+                                "text-sm font-medium disabled:opacity-50"
+                            )}
+                        >
+                            {isSaving ? (
+                                <>
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    Saving...
+                                </>
+                            ) : (
+                                <>
+                                    <Save className="w-4 h-4" />
+                                    Save
+                                </>
+                            )}
+                        </button>
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    {!isNewAgent && agentId && (
-                        <>
-                            <Tooltip content="Form Interface" position="bottom">
-                                <button
-                                    onClick={() => setIsFormInterfaceDialogOpen(true)}
-                                    className={cn(
-                                        "flex items-center gap-2 px-3 py-2 rounded-lg",
-                                        "text-sm font-medium text-foreground",
-                                        "border border-border hover:bg-muted transition-colors"
-                                    )}
-                                >
-                                    <FileText className="w-4 h-4" />
-                                </button>
-                            </Tooltip>
-                            <Tooltip content="Chat Interface" position="bottom">
-                                <button
-                                    onClick={() => setIsChatInterfaceDialogOpen(true)}
-                                    className={cn(
-                                        "flex items-center gap-2 px-3 py-2 rounded-lg",
-                                        "text-sm font-medium text-foreground",
-                                        "border border-border hover:bg-muted transition-colors"
-                                    )}
-                                >
-                                    <MessageSquare className="w-4 h-4" />
-                                </button>
-                            </Tooltip>
-                        </>
-                    )}
-                    <button
-                        onClick={handleSave}
-                        disabled={isSaving}
-                        className={cn(
-                            "flex items-center gap-2 px-4 py-2 rounded-lg",
-                            "bg-primary text-primary-foreground",
-                            "hover:bg-primary/90 transition-colors",
-                            "text-sm font-medium disabled:opacity-50"
-                        )}
-                    >
-                        {isSaving ? (
-                            <>
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                                Saving...
-                            </>
-                        ) : (
-                            <>
-                                <Save className="w-4 h-4" />
-                                Save
-                            </>
-                        )}
-                    </button>
-                </div>
-            </div>
 
-            {/* Error message */}
-            {error && (
-                <div className="mx-6 mt-4 p-4 bg-destructive/10 border border-destructive/20 rounded-lg flex-shrink-0">
-                    <p className="text-sm text-destructive">{error}</p>
-                </div>
-            )}
+                {/* Error message */}
+                {error && (
+                    <div className="mx-6 mt-4 p-4 bg-destructive/10 border border-destructive/20 rounded-lg flex-shrink-0">
+                        <p className="text-sm text-destructive">{error}</p>
+                    </div>
+                )}
 
-            {/* Main content area */}
-            <div className="flex-1 flex overflow-hidden">
-                {/* Left sidebar navigation */}
-                <div className="w-64 border-r border-border bg-card flex-shrink-0">
-                    <nav className="p-4 space-y-1">
-                        {tabs.map((tab) => {
-                            const Icon = tab.icon;
-                            const isActive = activeTab === tab.id;
-                            return (
-                                <button
-                                    key={tab.id}
-                                    onClick={() => !tab.comingSoon && setActiveTab(tab.id)}
-                                    disabled={tab.comingSoon}
-                                    className={cn(
-                                        "w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors",
-                                        isActive
-                                            ? "bg-primary/10 text-primary"
-                                            : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                                        tab.comingSoon && "opacity-50 cursor-not-allowed"
-                                    )}
-                                >
-                                    <Icon className="w-5 h-5" />
-                                    <span className="flex-1 text-left">{tab.label}</span>
-                                    {tab.comingSoon && (
-                                        <span className="text-xs bg-muted px-2 py-0.5 rounded">
-                                            Soon
-                                        </span>
-                                    )}
-                                </button>
-                            );
-                        })}
-                    </nav>
-                </div>
-
-                {/* Main content panel */}
+                {/* Main content area */}
                 <div className="flex-1 flex overflow-hidden">
-                    {activeTab === "build" && (
-                        <>
-                            {/* Left panel: Configuration (scrollable) */}
-                            <div className="w-[500px] border-r border-border bg-card overflow-auto flex-shrink-0">
-                                <div className="p-6 space-y-6">
-                                    {/* AI Model Selection */}
-                                    <AgentBuilderConnectionSelector
-                                        connections={llmConnections}
-                                        selectedConnectionId={connectionId}
-                                        selectedModel={model}
-                                        onConnectionChange={async (
-                                            connId,
-                                            connProvider,
-                                            connModel
-                                        ) => {
-                                            setConnectionId(connId);
-                                            setProvider(
-                                                connProvider as
-                                                    | "openai"
-                                                    | "anthropic"
-                                                    | "google"
-                                                    | "cohere"
-                                                    | "huggingface"
-                                            );
-                                            setModel(connModel);
+                    {/* Left sidebar navigation */}
+                    <div className="w-64 border-r border-border bg-card flex-shrink-0">
+                        <nav className="p-4 space-y-1">
+                            {tabs.map((tab) => {
+                                const Icon = tab.icon;
+                                const isActive = activeTab === tab.id;
+                                return (
+                                    <button
+                                        key={tab.id}
+                                        onClick={() => !tab.comingSoon && setActiveTab(tab.id)}
+                                        disabled={tab.comingSoon}
+                                        className={cn(
+                                            "w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors",
+                                            isActive
+                                                ? "bg-primary/10 text-primary"
+                                                : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                                            tab.comingSoon && "opacity-50 cursor-not-allowed"
+                                        )}
+                                    >
+                                        <Icon className="w-5 h-5" />
+                                        <span className="flex-1 text-left">{tab.label}</span>
+                                        {tab.comingSoon && (
+                                            <span className="text-xs bg-muted px-2 py-0.5 rounded">
+                                                Soon
+                                            </span>
+                                        )}
+                                    </button>
+                                );
+                            })}
+                        </nav>
+                    </div>
 
-                                            // Auto-save to agent if not a new agent
-                                            if (!isNewAgent && agentId) {
-                                                try {
-                                                    await updateAgent(agentId, {
-                                                        connection_id: connId,
-                                                        provider: connProvider as
-                                                            | "openai"
-                                                            | "anthropic"
-                                                            | "google"
-                                                            | "cohere"
-                                                            | "huggingface",
-                                                        model: connModel
-                                                    });
-                                                } catch (err) {
-                                                    logger.error(
-                                                        "Failed to update agent model",
-                                                        err
-                                                    );
+                    {/* Main content panel */}
+                    <div className="flex-1 flex overflow-hidden">
+                        {activeTab === "build" && (
+                            <>
+                                {/* Left panel: Configuration (scrollable) */}
+                                <div className="w-[500px] border-r border-border bg-card overflow-auto flex-shrink-0">
+                                    <div className="p-6 space-y-6">
+                                        {/* AI Model Selection */}
+                                        <AgentBuilderConnectionSelector
+                                            connections={llmConnections}
+                                            selectedConnectionId={connectionId}
+                                            selectedModel={model}
+                                            onConnectionChange={async (
+                                                connId,
+                                                connProvider,
+                                                connModel
+                                            ) => {
+                                                setConnectionId(connId);
+                                                setProvider(
+                                                    connProvider as
+                                                        | "openai"
+                                                        | "anthropic"
+                                                        | "google"
+                                                        | "cohere"
+                                                        | "huggingface"
+                                                );
+                                                setModel(connModel);
+
+                                                // Auto-save to agent if not a new agent
+                                                if (!isNewAgent && agentId) {
+                                                    try {
+                                                        await updateAgent(agentId, {
+                                                            connection_id: connId,
+                                                            provider: connProvider as
+                                                                | "openai"
+                                                                | "anthropic"
+                                                                | "google"
+                                                                | "cohere"
+                                                                | "huggingface",
+                                                            model: connModel
+                                                        });
+                                                    } catch (err) {
+                                                        logger.error(
+                                                            "Failed to update agent model",
+                                                            err
+                                                        );
+                                                    }
                                                 }
-                                            }
+                                            }}
+                                        />
+
+                                        {/* Instructions */}
+                                        <div>
+                                            <label className="block text-sm font-medium text-foreground mb-2">
+                                                Instructions
+                                            </label>
+                                            <Textarea
+                                                value={systemPrompt}
+                                                onChange={(
+                                                    e: React.ChangeEvent<HTMLTextAreaElement>
+                                                ) => setSystemPrompt(e.target.value)}
+                                                placeholder="Add instructions for the agent..."
+                                                className={cn(
+                                                    "w-full px-3 py-2 rounded-lg",
+                                                    "bg-muted border border-border",
+                                                    "text-foreground placeholder:text-muted-foreground",
+                                                    "focus:outline-none focus:ring-2 focus:ring-primary",
+                                                    "font-mono text-sm resize-y"
+                                                )}
+                                                style={{ minHeight: "300px" }}
+                                            />
+                                        </div>
+
+                                        {/* Tools Section */}
+                                        <div>
+                                            <label className="block text-sm font-medium text-foreground mb-2">
+                                                Tools
+                                            </label>
+                                            <p className="text-sm text-muted-foreground mb-3">
+                                                Select the integrations and flows the agent can
+                                                access
+                                            </p>
+
+                                            {/* Connected Tools List */}
+                                            <ToolsList
+                                                tools={tools}
+                                                onRemove={handleRemoveTool}
+                                                isRemoving={removingToolId}
+                                            />
+
+                                            {/* Add Tool Buttons */}
+                                            <div className="space-y-2">
+                                                <button
+                                                    onClick={() => setIsWorkflowDialogOpen(true)}
+                                                    className={cn(
+                                                        "w-full px-4 py-3 rounded-lg border border-dashed border-border",
+                                                        "text-sm text-muted-foreground text-left",
+                                                        "hover:border-primary/50 hover:bg-muted transition-colors"
+                                                    )}
+                                                >
+                                                    + Add a workflow
+                                                </button>
+                                                <button
+                                                    onClick={() =>
+                                                        setIsKnowledgeBaseDialogOpen(true)
+                                                    }
+                                                    className={cn(
+                                                        "w-full px-4 py-3 rounded-lg border border-dashed border-border",
+                                                        "text-sm text-muted-foreground text-left",
+                                                        "hover:border-primary/50 hover:bg-muted transition-colors"
+                                                    )}
+                                                >
+                                                    + Add a knowledge base
+                                                </button>
+                                                <button
+                                                    onClick={() => setIsMCPDialogOpen(true)}
+                                                    className={cn(
+                                                        "w-full px-4 py-3 rounded-lg border border-dashed border-border",
+                                                        "text-sm text-muted-foreground text-left",
+                                                        "hover:border-primary/50 hover:bg-muted transition-colors"
+                                                    )}
+                                                >
+                                                    + Add an MCP integration
+                                                </button>
+                                                <button
+                                                    onClick={() => setIsCustomMCPDialogOpen(true)}
+                                                    className={cn(
+                                                        "w-full px-4 py-3 rounded-lg border border-dashed border-border",
+                                                        "text-sm text-muted-foreground text-left",
+                                                        "hover:border-primary/50 hover:bg-muted transition-colors"
+                                                    )}
+                                                >
+                                                    + Connect your own MCP server
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Right panel: Chat interface (fixed height, internal scroll) */}
+                                <div className="flex-1 bg-background min-w-0">
+                                    {currentAgent && !isNewAgent ? (
+                                        <AgentChat agent={currentAgent} />
+                                    ) : (
+                                        <div className="h-full flex items-center justify-center text-muted-foreground">
+                                            <div className="text-center">
+                                                <p className="mb-2">
+                                                    Save your agent to start testing
+                                                </p>
+                                                <p className="text-sm">
+                                                    You'll be able to chat with your agent here
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </>
+                        )}
+
+                        {activeTab === "threads" && (
+                            <>
+                                {/* Left panel: Thread List */}
+                                <div className="w-80 flex-shrink-0 h-full">
+                                    <ThreadList
+                                        threads={threads}
+                                        currentThread={currentThread}
+                                        onThreadSelect={handleSelectThread}
+                                        onNewThread={handleNewThread}
+                                        onUpdateTitle={updateThreadTitle}
+                                        onArchiveThread={handleArchiveThread}
+                                        onDeleteThread={async (threadId) => {
+                                            const thread = threads.find((t) => t.id === threadId);
+                                            setThreadToDelete({
+                                                id: threadId,
+                                                title:
+                                                    thread?.title ||
+                                                    `Thread ${threadId.slice(0, 8)}`
+                                            });
                                         }}
                                     />
+                                </div>
 
-                                    {/* Instructions */}
+                                {/* Right panel: Thread Chat */}
+                                <div className="flex-1 bg-background min-w-0">
+                                    {currentAgent && currentThread ? (
+                                        <ThreadChat agent={currentAgent} thread={currentThread} />
+                                    ) : (
+                                        <div className="h-full flex items-center justify-center text-muted-foreground">
+                                            <div className="text-center">
+                                                <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                                                <p>
+                                                    {threads.length === 0
+                                                        ? "Start a new thread"
+                                                        : "Select a thread to continue"}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </>
+                        )}
+
+                        {activeTab === "slack" && (
+                            <div className="flex-1 flex items-center justify-center bg-card">
+                                <div className="text-center text-muted-foreground">
+                                    <Slack className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                                    <p className="text-sm">Connect your agent to Slack</p>
+                                    <p className="text-xs mt-2">Coming soon</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === "settings" && (
+                            <div className="flex-1 bg-card overflow-auto">
+                                <div className="max-w-3xl p-6 space-y-6">
+                                    {/* Agent Name */}
                                     <div>
                                         <label className="block text-sm font-medium text-foreground mb-2">
-                                            Instructions
+                                            Agent Name
+                                        </label>
+                                        <Input
+                                            type="text"
+                                            value={name}
+                                            onChange={(e) => setName(e.target.value)}
+                                            placeholder="My Assistant"
+                                            className={cn(
+                                                "w-full px-3 py-2 rounded-lg",
+                                                "bg-muted border border-border",
+                                                "text-foreground placeholder:text-muted-foreground",
+                                                "focus:outline-none focus:ring-2 focus:ring-primary"
+                                            )}
+                                        />
+                                    </div>
+
+                                    {/* Description */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-foreground mb-2">
+                                            Description (optional)
                                         </label>
                                         <Textarea
-                                            value={systemPrompt}
+                                            value={description}
                                             onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                                                setSystemPrompt(e.target.value)
+                                                setDescription(e.target.value)
                                             }
-                                            placeholder="Add instructions for the agent..."
+                                            placeholder="What does this agent do?"
+                                            rows={2}
                                             className={cn(
                                                 "w-full px-3 py-2 rounded-lg",
                                                 "bg-muted border border-border",
                                                 "text-foreground placeholder:text-muted-foreground",
                                                 "focus:outline-none focus:ring-2 focus:ring-primary",
-                                                "font-mono text-sm resize-y"
+                                                "resize-y"
                                             )}
-                                            style={{ minHeight: "300px" }}
                                         />
                                     </div>
 
-                                    {/* Tools Section */}
+                                    {/* Connection (optional) */}
                                     <div>
                                         <label className="block text-sm font-medium text-foreground mb-2">
-                                            Tools
+                                            API Connection (optional)
                                         </label>
-                                        <p className="text-sm text-muted-foreground mb-3">
-                                            Select the integrations and flows the agent can access
-                                        </p>
-
-                                        {/* Connected Tools List */}
-                                        <ToolsList
-                                            tools={tools}
-                                            onRemove={handleRemoveTool}
-                                            isRemoving={removingToolId}
+                                        <Select
+                                            value={connectionId}
+                                            onChange={setConnectionId}
+                                            placeholder="Use environment variables"
+                                            options={llmConnections.map((conn) => ({
+                                                value: conn.id,
+                                                label: conn.name
+                                            }))}
                                         />
-
-                                        {/* Add Tool Buttons */}
-                                        <div className="space-y-2">
-                                            <button
-                                                onClick={() => setIsWorkflowDialogOpen(true)}
-                                                className={cn(
-                                                    "w-full px-4 py-3 rounded-lg border border-dashed border-border",
-                                                    "text-sm text-muted-foreground text-left",
-                                                    "hover:border-primary/50 hover:bg-muted transition-colors"
-                                                )}
-                                            >
-                                                + Add a workflow
-                                            </button>
-                                            <button
-                                                onClick={() => setIsKnowledgeBaseDialogOpen(true)}
-                                                className={cn(
-                                                    "w-full px-4 py-3 rounded-lg border border-dashed border-border",
-                                                    "text-sm text-muted-foreground text-left",
-                                                    "hover:border-primary/50 hover:bg-muted transition-colors"
-                                                )}
-                                            >
-                                                + Add a knowledge base
-                                            </button>
-                                            <button
-                                                onClick={() => setIsMCPDialogOpen(true)}
-                                                className={cn(
-                                                    "w-full px-4 py-3 rounded-lg border border-dashed border-border",
-                                                    "text-sm text-muted-foreground text-left",
-                                                    "hover:border-primary/50 hover:bg-muted transition-colors"
-                                                )}
-                                            >
-                                                + Add an MCP integration
-                                            </button>
-                                            <button
-                                                onClick={() => setIsCustomMCPDialogOpen(true)}
-                                                className={cn(
-                                                    "w-full px-4 py-3 rounded-lg border border-dashed border-border",
-                                                    "text-sm text-muted-foreground text-left",
-                                                    "hover:border-primary/50 hover:bg-muted transition-colors"
-                                                )}
-                                            >
-                                                + Connect your own MCP server
-                                            </button>
-                                        </div>
                                     </div>
-                                </div>
-                            </div>
 
-                            {/* Right panel: Chat interface (fixed height, internal scroll) */}
-                            <div className="flex-1 bg-background min-w-0">
-                                {currentAgent && !isNewAgent ? (
-                                    <AgentChat agent={currentAgent} />
-                                ) : (
-                                    <div className="h-full flex items-center justify-center text-muted-foreground">
-                                        <div className="text-center">
-                                            <p className="mb-2">Save your agent to start testing</p>
-                                            <p className="text-sm">
-                                                You'll be able to chat with your agent here
-                                            </p>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </>
-                    )}
-
-                    {activeTab === "threads" && (
-                        <>
-                            {/* Left panel: Thread List */}
-                            <div className="w-80 flex-shrink-0 h-full">
-                                <ThreadList
-                                    threads={threads}
-                                    currentThread={currentThread}
-                                    onThreadSelect={handleSelectThread}
-                                    onNewThread={handleNewThread}
-                                    onUpdateTitle={updateThreadTitle}
-                                    onArchiveThread={handleArchiveThread}
-                                    onDeleteThread={async (threadId) => {
-                                        const thread = threads.find((t) => t.id === threadId);
-                                        setThreadToDelete({
-                                            id: threadId,
-                                            title: thread?.title || `Thread ${threadId.slice(0, 8)}`
-                                        });
-                                    }}
-                                />
-                            </div>
-
-                            {/* Right panel: Thread Chat */}
-                            <div className="flex-1 bg-background min-w-0">
-                                {currentAgent && currentThread ? (
-                                    <ThreadChat agent={currentAgent} thread={currentThread} />
-                                ) : (
-                                    <div className="h-full flex items-center justify-center text-muted-foreground">
-                                        <div className="text-center">
-                                            <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                                            <p>
-                                                {threads.length === 0
-                                                    ? "Start a new thread"
-                                                    : "Select a thread to continue"}
-                                            </p>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </>
-                    )}
-
-                    {activeTab === "slack" && (
-                        <div className="flex-1 flex items-center justify-center bg-card">
-                            <div className="text-center text-muted-foreground">
-                                <Slack className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                                <p className="text-sm">Connect your agent to Slack</p>
-                                <p className="text-xs mt-2">Coming soon</p>
-                            </div>
-                        </div>
-                    )}
-
-                    {activeTab === "settings" && (
-                        <div className="flex-1 bg-card overflow-auto">
-                            <div className="max-w-3xl p-6 space-y-6">
-                                {/* Agent Name */}
-                                <div>
-                                    <label className="block text-sm font-medium text-foreground mb-2">
-                                        Agent Name
-                                    </label>
-                                    <Input
-                                        type="text"
-                                        value={name}
-                                        onChange={(e) => setName(e.target.value)}
-                                        placeholder="My Assistant"
-                                        className={cn(
-                                            "w-full px-3 py-2 rounded-lg",
-                                            "bg-muted border border-border",
-                                            "text-foreground placeholder:text-muted-foreground",
-                                            "focus:outline-none focus:ring-2 focus:ring-primary"
-                                        )}
-                                    />
-                                </div>
-
-                                {/* Description */}
-                                <div>
-                                    <label className="block text-sm font-medium text-foreground mb-2">
-                                        Description (optional)
-                                    </label>
-                                    <Textarea
-                                        value={description}
-                                        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                                            setDescription(e.target.value)
-                                        }
-                                        placeholder="What does this agent do?"
-                                        rows={2}
-                                        className={cn(
-                                            "w-full px-3 py-2 rounded-lg",
-                                            "bg-muted border border-border",
-                                            "text-foreground placeholder:text-muted-foreground",
-                                            "focus:outline-none focus:ring-2 focus:ring-primary",
-                                            "resize-y"
-                                        )}
-                                    />
-                                </div>
-
-                                {/* Connection (optional) */}
-                                <div>
-                                    <label className="block text-sm font-medium text-foreground mb-2">
-                                        API Connection (optional)
-                                    </label>
-                                    <Select
-                                        value={connectionId}
-                                        onChange={setConnectionId}
-                                        placeholder="Use environment variables"
-                                        options={llmConnections.map((conn) => ({
-                                            value: conn.id,
-                                            label: conn.name
-                                        }))}
-                                    />
-                                </div>
-
-                                {/* Advanced Settings */}
-                                <div>
-                                    <h3 className="text-base font-semibold text-foreground mb-4">
-                                        Advanced Settings
-                                    </h3>
-                                    <div className="space-y-4">
-                                        {/* Temperature */}
-                                        <div>
-                                            <div className="flex items-center justify-between mb-2">
-                                                <span className="text-sm text-muted-foreground">
-                                                    Temperature
-                                                </span>
-                                                <span className="text-sm font-medium">
-                                                    {temperature}
-                                                </span>
+                                    {/* Advanced Settings */}
+                                    <div>
+                                        <h3 className="text-base font-semibold text-foreground mb-4">
+                                            Advanced Settings
+                                        </h3>
+                                        <div className="space-y-4">
+                                            {/* Temperature */}
+                                            <div>
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <span className="text-sm text-muted-foreground">
+                                                        Temperature
+                                                    </span>
+                                                    <span className="text-sm font-medium">
+                                                        {temperature}
+                                                    </span>
+                                                </div>
+                                                <Input
+                                                    type="range"
+                                                    min="0"
+                                                    max="2"
+                                                    step="0.1"
+                                                    value={temperature}
+                                                    onChange={(e) =>
+                                                        setTemperature(parseFloat(e.target.value))
+                                                    }
+                                                    className="w-full"
+                                                />
                                             </div>
-                                            <Input
-                                                type="range"
-                                                min="0"
-                                                max="2"
-                                                step="0.1"
-                                                value={temperature}
-                                                onChange={(e) =>
-                                                    setTemperature(parseFloat(e.target.value))
-                                                }
-                                                className="w-full"
-                                            />
-                                        </div>
 
-                                        {/* Max Tokens */}
-                                        <div>
-                                            <div className="flex items-center justify-between mb-2">
-                                                <span className="text-sm text-muted-foreground">
-                                                    Max Tokens
-                                                </span>
-                                                <span className="text-sm font-medium">
-                                                    {maxTokens}
-                                                </span>
+                                            {/* Max Tokens */}
+                                            <div>
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <span className="text-sm text-muted-foreground">
+                                                        Max Tokens
+                                                    </span>
+                                                    <span className="text-sm font-medium">
+                                                        {maxTokens}
+                                                    </span>
+                                                </div>
+                                                <Input
+                                                    type="number"
+                                                    min="100"
+                                                    max="100000"
+                                                    step="100"
+                                                    value={maxTokens}
+                                                    onChange={(e) =>
+                                                        setMaxTokens(parseInt(e.target.value))
+                                                    }
+                                                    className={cn(
+                                                        "w-full px-3 py-2 rounded-lg",
+                                                        "bg-muted border border-border",
+                                                        "text-foreground",
+                                                        "focus:outline-none focus:ring-2 focus:ring-primary"
+                                                    )}
+                                                />
                                             </div>
-                                            <Input
-                                                type="number"
-                                                min="100"
-                                                max="100000"
-                                                step="100"
-                                                value={maxTokens}
-                                                onChange={(e) =>
-                                                    setMaxTokens(parseInt(e.target.value))
-                                                }
-                                                className={cn(
-                                                    "w-full px-3 py-2 rounded-lg",
-                                                    "bg-muted border border-border",
-                                                    "text-foreground",
-                                                    "focus:outline-none focus:ring-2 focus:ring-primary"
-                                                )}
-                                            />
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* Tool Dialogs */}
-            <AddWorkflowDialog
-                isOpen={isWorkflowDialogOpen}
-                onClose={() => setIsWorkflowDialogOpen(false)}
-                onAdd={handleAddWorkflows}
-                existingToolIds={tools.filter((t) => t.type === "workflow").map((t) => t.id)}
-            />
-
-            <AddMCPIntegrationDialog
-                isOpen={isMCPDialogOpen}
-                onClose={() => setIsMCPDialogOpen(false)}
-                onAddTools={handleAddMCPTools}
-                existingToolNames={tools.map((t) => t.name)}
-            />
-
-            <AddCustomMCPDialog
-                isOpen={isCustomMCPDialogOpen}
-                onClose={() => setIsCustomMCPDialogOpen(false)}
-                onAdd={handleAddCustomMCP}
-            />
-
-            <AddKnowledgeBaseDialog
-                isOpen={isKnowledgeBaseDialogOpen}
-                onClose={() => setIsKnowledgeBaseDialogOpen(false)}
-                onAdd={handleAddKnowledgeBases}
-                existingKnowledgeBaseIds={tools
-                    .filter((t) => t.type === "knowledge_base")
-                    .map((t) => t.config.knowledgeBaseId as string)}
-            />
-
-            {/* Delete Thread Confirmation Dialog */}
-            <ConfirmDialog
-                isOpen={threadToDelete !== null}
-                onClose={() => setThreadToDelete(null)}
-                onConfirm={handleDeleteThread}
-                title="Delete Thread"
-                message={`Are you sure you want to delete "${threadToDelete?.title}"? This will permanently delete the thread and all its messages.`}
-                confirmText="Delete"
-                cancelText="Cancel"
-                variant="danger"
-            />
-
-            {/* Unsaved Changes Dialog */}
-            <Dialog
-                isOpen={showUnsavedDialog}
-                onClose={() => setShowUnsavedDialog(false)}
-                title="Unsaved Changes"
-            >
-                <p className="text-muted-foreground mb-6">
-                    You have unsaved changes. Would you like to save them before leaving?
-                </p>
-                <div className="flex justify-end gap-3">
-                    <Button variant="ghost" onClick={() => setShowUnsavedDialog(false)}>
-                        Cancel
-                    </Button>
-                    <Button variant="destructive" onClick={handleDiscardChanges}>
-                        Discard Changes
-                    </Button>
-                    <Button variant="primary" onClick={handleSaveAndLeave} disabled={isSaving}>
-                        {isSaving ? (
-                            <>
-                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                Saving...
-                            </>
-                        ) : (
-                            <>
-                                <Save className="w-4 h-4 mr-2" />
-                                Save & Leave
-                            </>
                         )}
-                    </Button>
+                    </div>
                 </div>
-            </Dialog>
 
-            {/* Create Form Interface Dialog */}
-            <CreateFormInterfaceDialog
-                isOpen={isFormInterfaceDialogOpen}
-                onClose={() => setIsFormInterfaceDialogOpen(false)}
-                onCreated={(formInterface) => {
-                    setIsFormInterfaceDialogOpen(false);
-                    navigate(`/form-interfaces/${formInterface.id}/edit`);
-                }}
-                initialAgentId={!isNewAgent ? agentId : undefined}
-            />
+                {/* Tool Dialogs */}
+                <AddWorkflowDialog
+                    isOpen={isWorkflowDialogOpen}
+                    onClose={() => setIsWorkflowDialogOpen(false)}
+                    onAdd={handleAddWorkflows}
+                    existingToolIds={tools.filter((t) => t.type === "workflow").map((t) => t.id)}
+                />
 
-            {/* Create Chat Interface Dialog */}
-            <CreateChatInterfaceDialog
-                isOpen={isChatInterfaceDialogOpen}
-                onClose={() => setIsChatInterfaceDialogOpen(false)}
-                onCreated={(chatInterface) => {
-                    setIsChatInterfaceDialogOpen(false);
-                    navigate(`/chat-interfaces/${chatInterface.id}/edit`);
-                }}
-                initialAgentId={!isNewAgent ? agentId : undefined}
-            />
-        </div>
+                <AddMCPIntegrationDialog
+                    isOpen={isMCPDialogOpen}
+                    onClose={() => setIsMCPDialogOpen(false)}
+                    onAddTools={handleAddMCPTools}
+                    existingToolNames={tools.map((t) => t.name)}
+                />
+
+                <AddCustomMCPDialog
+                    isOpen={isCustomMCPDialogOpen}
+                    onClose={() => setIsCustomMCPDialogOpen(false)}
+                    onAdd={handleAddCustomMCP}
+                />
+
+                <AddKnowledgeBaseDialog
+                    isOpen={isKnowledgeBaseDialogOpen}
+                    onClose={() => setIsKnowledgeBaseDialogOpen(false)}
+                    onAdd={handleAddKnowledgeBases}
+                    existingKnowledgeBaseIds={tools
+                        .filter((t) => t.type === "knowledge_base")
+                        .map((t) => t.config.knowledgeBaseId as string)}
+                />
+
+                {/* Delete Thread Confirmation Dialog */}
+                <ConfirmDialog
+                    isOpen={threadToDelete !== null}
+                    onClose={() => setThreadToDelete(null)}
+                    onConfirm={handleDeleteThread}
+                    title="Delete Thread"
+                    message={`Are you sure you want to delete "${threadToDelete?.title}"? This will permanently delete the thread and all its messages.`}
+                    confirmText="Delete"
+                    cancelText="Cancel"
+                    variant="danger"
+                />
+
+                {/* Unsaved Changes Dialog */}
+                <Dialog
+                    isOpen={showUnsavedDialog}
+                    onClose={() => setShowUnsavedDialog(false)}
+                    title="Unsaved Changes"
+                >
+                    <p className="text-muted-foreground mb-6">
+                        You have unsaved changes. Would you like to save them before leaving?
+                    </p>
+                    <div className="flex justify-end gap-3">
+                        <Button variant="ghost" onClick={() => setShowUnsavedDialog(false)}>
+                            Cancel
+                        </Button>
+                        <Button variant="destructive" onClick={handleDiscardChanges}>
+                            Discard Changes
+                        </Button>
+                        <Button variant="primary" onClick={handleSaveAndLeave} disabled={isSaving}>
+                            {isSaving ? (
+                                <>
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    Saving...
+                                </>
+                            ) : (
+                                <>
+                                    <Save className="w-4 h-4 mr-2" />
+                                    Save & Leave
+                                </>
+                            )}
+                        </Button>
+                    </div>
+                </Dialog>
+
+                {/* Create Form Interface Dialog */}
+                <CreateFormInterfaceDialog
+                    isOpen={isFormInterfaceDialogOpen}
+                    onClose={() => setIsFormInterfaceDialogOpen(false)}
+                    onCreated={(formInterface) => {
+                        setIsFormInterfaceDialogOpen(false);
+                        navigate(`/form-interfaces/${formInterface.id}/edit`);
+                    }}
+                    initialAgentId={!isNewAgent ? agentId : undefined}
+                />
+
+                {/* Create Chat Interface Dialog */}
+                <CreateChatInterfaceDialog
+                    isOpen={isChatInterfaceDialogOpen}
+                    onClose={() => setIsChatInterfaceDialogOpen(false)}
+                    onCreated={(chatInterface) => {
+                        setIsChatInterfaceDialogOpen(false);
+                        navigate(`/chat-interfaces/${chatInterface.id}/edit`);
+                    }}
+                    initialAgentId={!isNewAgent ? agentId : undefined}
+                />
+            </div>
+        </MobileBuilderGuard>
     );
 }

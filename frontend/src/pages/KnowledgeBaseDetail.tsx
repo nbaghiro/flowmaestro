@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { MobileBuilderGuard } from "../components/common/MobileBuilderGuard";
 import {
     AddUrlModal,
     DeleteDocumentModal,
@@ -289,193 +290,195 @@ export function KnowledgeBaseDetail() {
     }
 
     return (
-        <div className="h-screen flex flex-col bg-background">
-            {/* Header */}
-            <div className="h-16 border-b border-border bg-card flex items-center justify-between px-6 flex-shrink-0">
-                {/* Left: Back + Title */}
-                <div className="flex items-center gap-4">
+        <MobileBuilderGuard backUrl="/knowledge-bases">
+            <div className="h-screen flex flex-col bg-background">
+                {/* Header */}
+                <div className="h-16 border-b border-border bg-card flex items-center justify-between px-6 flex-shrink-0">
+                    {/* Left: Back + Title */}
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={() => navigate("/knowledge-bases")}
+                            className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
+                            title="Back to Knowledge Bases"
+                        >
+                            <ArrowLeft className="w-4 h-4" />
+                        </button>
+                        <div className="flex items-center gap-2">
+                            <BookOpen className="w-5 h-5 text-primary" />
+                            {isEditingName ? (
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        ref={nameInputRef}
+                                        type="text"
+                                        value={editedName}
+                                        onChange={(e) => setEditedName(e.target.value)}
+                                        onKeyDown={handleNameKeyDown}
+                                        onBlur={handleSaveName}
+                                        className="text-lg font-semibold text-foreground bg-muted border border-border rounded px-2 py-0.5 outline-none focus:border-primary"
+                                        disabled={isSavingName}
+                                    />
+                                    <button
+                                        onClick={handleSaveName}
+                                        disabled={isSavingName}
+                                        className="p-1 text-green-600 hover:bg-green-50 rounded transition-colors disabled:opacity-50"
+                                        title="Save"
+                                    >
+                                        {isSavingName ? (
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                        ) : (
+                                            <Check className="w-4 h-4" />
+                                        )}
+                                    </button>
+                                    <button
+                                        onClick={handleCancelEditName}
+                                        disabled={isSavingName}
+                                        className="p-1 text-muted-foreground hover:bg-muted rounded transition-colors disabled:opacity-50"
+                                        title="Cancel"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            ) : (
+                                <button
+                                    onClick={handleStartEditName}
+                                    className="flex items-center gap-2 group"
+                                    title="Click to edit name"
+                                >
+                                    <h1 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
+                                        {currentKB.name}
+                                    </h1>
+                                    <Pencil className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Center: Stats badges */}
+                    {currentStats && (
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground bg-background border border-border px-2.5 py-1 rounded-md">
+                                {currentStats.document_count} docs
+                            </span>
+                            <span className="text-xs text-muted-foreground bg-background border border-border px-2.5 py-1 rounded-md">
+                                {currentStats.chunk_count} chunks
+                            </span>
+                            <span className="text-xs text-muted-foreground bg-background border border-border px-2.5 py-1 rounded-md">
+                                {formatFileSize(currentStats.total_size_bytes)}
+                            </span>
+                        </div>
+                    )}
+
+                    {/* Right: Delete */}
                     <button
-                        onClick={() => navigate("/knowledge-bases")}
-                        className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
-                        title="Back to Knowledge Bases"
+                        onClick={() => setShowDeleteKBModal(true)}
+                        className="p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+                        title="Delete knowledge base"
                     >
-                        <ArrowLeft className="w-4 h-4" />
+                        <Trash2 className="w-4 h-4" />
                     </button>
-                    <div className="flex items-center gap-2">
-                        <BookOpen className="w-5 h-5 text-primary" />
-                        {isEditingName ? (
-                            <div className="flex items-center gap-2">
-                                <input
-                                    ref={nameInputRef}
-                                    type="text"
-                                    value={editedName}
-                                    onChange={(e) => setEditedName(e.target.value)}
-                                    onKeyDown={handleNameKeyDown}
-                                    onBlur={handleSaveName}
-                                    className="text-lg font-semibold text-foreground bg-muted border border-border rounded px-2 py-0.5 outline-none focus:border-primary"
-                                    disabled={isSavingName}
-                                />
-                                <button
-                                    onClick={handleSaveName}
-                                    disabled={isSavingName}
-                                    className="p-1 text-green-600 hover:bg-green-50 rounded transition-colors disabled:opacity-50"
-                                    title="Save"
-                                >
-                                    {isSavingName ? (
-                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                    ) : (
-                                        <Check className="w-4 h-4" />
-                                    )}
-                                </button>
-                                <button
-                                    onClick={handleCancelEditName}
-                                    disabled={isSavingName}
-                                    className="p-1 text-muted-foreground hover:bg-muted rounded transition-colors disabled:opacity-50"
-                                    title="Cancel"
-                                >
-                                    <X className="w-4 h-4" />
-                                </button>
-                            </div>
-                        ) : (
-                            <button
-                                onClick={handleStartEditName}
-                                className="flex items-center gap-2 group"
-                                title="Click to edit name"
-                            >
-                                <h1 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
-                                    {currentKB.name}
-                                </h1>
-                                <Pencil className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                            </button>
-                        )}
-                    </div>
                 </div>
 
-                {/* Center: Stats badges */}
-                {currentStats && (
-                    <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground bg-background border border-border px-2.5 py-1 rounded-md">
-                            {currentStats.document_count} docs
-                        </span>
-                        <span className="text-xs text-muted-foreground bg-background border border-border px-2.5 py-1 rounded-md">
-                            {currentStats.chunk_count} chunks
-                        </span>
-                        <span className="text-xs text-muted-foreground bg-background border border-border px-2.5 py-1 rounded-md">
-                            {formatFileSize(currentStats.total_size_bytes)}
-                        </span>
+                {/* Main Content */}
+                <div className="flex-1 flex overflow-hidden">
+                    {/* Left Sidebar */}
+                    <div className="w-56 border-r border-border bg-card flex-shrink-0">
+                        <nav className="p-4 space-y-1">
+                            {tabs.map((tab) => {
+                                const Icon = tab.icon;
+                                return (
+                                    <button
+                                        key={tab.id}
+                                        onClick={() => setActiveTab(tab.id)}
+                                        className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded-lg transition-colors ${
+                                            activeTab === tab.id
+                                                ? "bg-primary/10 text-primary font-medium"
+                                                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                                        }`}
+                                    >
+                                        <Icon className="w-4 h-4" />
+                                        {tab.label}
+                                    </button>
+                                );
+                            })}
+                        </nav>
                     </div>
-                )}
 
-                {/* Right: Delete */}
-                <button
-                    onClick={() => setShowDeleteKBModal(true)}
-                    className="p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
-                    title="Delete knowledge base"
-                >
-                    <Trash2 className="w-4 h-4" />
-                </button>
-            </div>
+                    {/* Center Panel */}
+                    <div className="flex-1 overflow-auto bg-muted/30">
+                        <div className="max-w-4xl mx-auto p-6">
+                            {activeTab === "documents" && (
+                                <div className="space-y-6">
+                                    <UploadSection
+                                        onFileUpload={handleFileUpload}
+                                        onAddUrlClick={() => setShowUrlModal(true)}
+                                        isUploading={uploading}
+                                    />
+                                    <DocumentList
+                                        documents={currentDocuments}
+                                        onDeleteClick={setDeleteConfirmDocId}
+                                        onReprocess={handleReprocessDocument}
+                                        processingDocId={processingDocId}
+                                        onDocumentClick={handleDocumentClick}
+                                        selectedDocumentId={selectedDocument?.id}
+                                    />
+                                </div>
+                            )}
 
-            {/* Main Content */}
-            <div className="flex-1 flex overflow-hidden">
-                {/* Left Sidebar */}
-                <div className="w-56 border-r border-border bg-card flex-shrink-0">
-                    <nav className="p-4 space-y-1">
-                        {tabs.map((tab) => {
-                            const Icon = tab.icon;
-                            return (
-                                <button
-                                    key={tab.id}
-                                    onClick={() => setActiveTab(tab.id)}
-                                    className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded-lg transition-colors ${
-                                        activeTab === tab.id
-                                            ? "bg-primary/10 text-primary font-medium"
-                                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                                    }`}
-                                >
-                                    <Icon className="w-4 h-4" />
-                                    {tab.label}
-                                </button>
-                            );
-                        })}
-                    </nav>
-                </div>
-
-                {/* Center Panel */}
-                <div className="flex-1 overflow-auto bg-muted/30">
-                    <div className="max-w-4xl mx-auto p-6">
-                        {activeTab === "documents" && (
-                            <div className="space-y-6">
-                                <UploadSection
-                                    onFileUpload={handleFileUpload}
-                                    onAddUrlClick={() => setShowUrlModal(true)}
-                                    isUploading={uploading}
-                                />
-                                <DocumentList
+                            {activeTab === "search" && (
+                                <SearchSection
+                                    knowledgeBaseId={id || ""}
                                     documents={currentDocuments}
-                                    onDeleteClick={setDeleteConfirmDocId}
-                                    onReprocess={handleReprocessDocument}
-                                    processingDocId={processingDocId}
-                                    onDocumentClick={handleDocumentClick}
-                                    selectedDocumentId={selectedDocument?.id}
+                                    onSearch={handleSearch}
                                 />
-                            </div>
-                        )}
+                            )}
 
-                        {activeTab === "search" && (
-                            <SearchSection
-                                knowledgeBaseId={id || ""}
-                                documents={currentDocuments}
-                                onSearch={handleSearch}
-                            />
-                        )}
-
-                        {activeTab === "settings" && (
-                            <KBSettingsSection
-                                kb={currentKB}
-                                onUpdate={async (input) => {
-                                    if (id) {
-                                        await updateKB(id, input);
-                                    }
-                                }}
-                            />
-                        )}
+                            {activeTab === "settings" && (
+                                <KBSettingsSection
+                                    kb={currentKB}
+                                    onUpdate={async (input) => {
+                                        if (id) {
+                                            await updateKB(id, input);
+                                        }
+                                    }}
+                                />
+                            )}
+                        </div>
                     </div>
+
+                    {/* Document Viewer Panel */}
+                    <DocumentViewerPanel
+                        doc={selectedDocument}
+                        knowledgeBaseId={id || ""}
+                        isOpen={selectedDocument !== null}
+                        onClose={handleCloseViewer}
+                        width={viewerWidth}
+                        onWidthChange={setViewerWidth}
+                    />
                 </div>
 
-                {/* Document Viewer Panel */}
-                <DocumentViewerPanel
-                    doc={selectedDocument}
-                    knowledgeBaseId={id || ""}
-                    isOpen={selectedDocument !== null}
-                    onClose={handleCloseViewer}
-                    width={viewerWidth}
-                    onWidthChange={setViewerWidth}
+                {/* Modals */}
+                <AddUrlModal
+                    isOpen={showUrlModal}
+                    onClose={() => setShowUrlModal(false)}
+                    onSubmit={handleAddUrl}
+                    isLoading={uploading}
+                />
+
+                <DeleteDocumentModal
+                    isOpen={deleteConfirmDocId !== null}
+                    onClose={() => setDeleteConfirmDocId(null)}
+                    onConfirm={handleDeleteDocument}
+                    isLoading={processingDocId === deleteConfirmDocId}
+                />
+
+                <DeleteKnowledgeBaseModal
+                    isOpen={showDeleteKBModal}
+                    onClose={() => setShowDeleteKBModal(false)}
+                    onConfirm={handleDeleteKnowledgeBase}
+                    isLoading={deletingKB}
+                    knowledgeBaseName={currentKB.name}
                 />
             </div>
-
-            {/* Modals */}
-            <AddUrlModal
-                isOpen={showUrlModal}
-                onClose={() => setShowUrlModal(false)}
-                onSubmit={handleAddUrl}
-                isLoading={uploading}
-            />
-
-            <DeleteDocumentModal
-                isOpen={deleteConfirmDocId !== null}
-                onClose={() => setDeleteConfirmDocId(null)}
-                onConfirm={handleDeleteDocument}
-                isLoading={processingDocId === deleteConfirmDocId}
-            />
-
-            <DeleteKnowledgeBaseModal
-                isOpen={showDeleteKBModal}
-                onClose={() => setShowDeleteKBModal(false)}
-                onConfirm={handleDeleteKnowledgeBase}
-                isLoading={deletingKB}
-                knowledgeBaseName={currentKB.name}
-            />
-        </div>
+        </MobileBuilderGuard>
     );
 }

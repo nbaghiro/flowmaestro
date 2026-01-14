@@ -540,7 +540,7 @@ export function WorkspaceSettings() {
 
     if (isLoading && !currentWorkspace) {
         return (
-            <div className="max-w-4xl mx-auto px-6 py-8 flex items-center justify-center min-h-[400px]">
+            <div className="max-w-4xl mx-auto px-4 py-6 md:px-6 md:py-8 flex items-center justify-center min-h-[400px]">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
         );
@@ -548,14 +548,14 @@ export function WorkspaceSettings() {
 
     if (!currentWorkspace) {
         return (
-            <div className="max-w-4xl mx-auto px-6 py-8">
+            <div className="max-w-4xl mx-auto px-4 py-6 md:px-6 md:py-8">
                 <Alert variant="error">No workspace selected</Alert>
             </div>
         );
     }
 
     return (
-        <div className="max-w-4xl mx-auto px-6 py-8">
+        <div className="max-w-4xl mx-auto px-4 py-6 md:px-6 md:py-8">
             <PageHeader
                 title="Workspace Settings"
                 description={`Manage settings for ${currentWorkspace.name}`}

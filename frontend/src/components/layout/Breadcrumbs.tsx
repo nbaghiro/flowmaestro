@@ -11,6 +11,17 @@ const routeLabels: Record<string, string> = {
     "/workspace": "Workspace"
 };
 
+// Check if a string looks like a UUID
+const isUUID = (str: string): boolean => {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(str);
+};
+
+// Truncate UUID to show only first 8 characters
+const truncateUUID = (uuid: string): string => {
+    return uuid.slice(0, 8) + "...";
+};
+
 export function Breadcrumbs() {
     const location = useLocation();
     const pathSegments = location.pathname.split("/").filter(Boolean);
@@ -28,8 +39,14 @@ export function Breadcrumbs() {
         let currentPath = "";
         pathSegments.forEach((segment, index) => {
             currentPath += `/${segment}`;
-            const label =
+            let label =
                 routeLabels[currentPath] || segment.charAt(0).toUpperCase() + segment.slice(1);
+
+            // Truncate UUIDs for cleaner display
+            if (isUUID(segment)) {
+                label = truncateUUID(segment);
+            }
+
             const isLast = index === pathSegments.length - 1;
             breadcrumbs.push({ label, path: currentPath, isLast });
         });
