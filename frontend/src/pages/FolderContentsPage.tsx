@@ -308,86 +308,49 @@ export function FolderContentsPage() {
             itemsToMoveCount: itemsToMove.length
         });
 
-        // PRIORITY CHECK: Check if any items are already in the target folder BEFORE moving
+        // Check if any items are already in the target folder
+        // When using "Move to folder" dialog, we should move directly without showing another dialog
+        // Only skip if item is already in the exact same target folder
+        const sourceFolderMap = new Map<string, string>(); // itemId -> sourceFolderId
+
         for (const { itemIds, itemType } of itemsToMove) {
             try {
-                const {
-                    found,
-                    folderName,
-                    folderId: sourceFolderId,
-                    isInMainFolder
-                } = await checkItemsInFolder(targetFolderId, itemIds, itemType);
+                const { found, folderId: sourceFolderId } = await checkItemsInFolder(
+                    targetFolderId,
+                    itemIds,
+                    itemType
+                );
 
                 if (found) {
-                    // Get item names from currentFolderContents
-                    const itemNames = itemIds.map((id) => {
-                        if (!currentFolderContents) return "Unknown";
-                        switch (itemType) {
-                            case "workflow": {
-                                const workflow = currentFolderContents.items.workflows.find(
-                                    (w) => w.id === id
-                                );
-                                return workflow?.name || "Unknown";
-                            }
-                            case "agent": {
-                                const agent = currentFolderContents.items.agents.find(
-                                    (a) => a.id === id
-                                );
-                                return agent?.name || "Unknown";
-                            }
-                            case "form-interface": {
-                                const formInterface =
-                                    currentFolderContents.items.formInterfaces.find(
-                                        (fi) => fi.id === id
-                                    );
-                                return formInterface?.title || formInterface?.name || "Unknown";
-                            }
-                            case "chat-interface": {
-                                const chatInterface =
-                                    currentFolderContents.items.chatInterfaces.find(
-                                        (ci) => ci.id === id
-                                    );
-                                return chatInterface?.title || chatInterface?.name || "Unknown";
-                            }
-                            case "knowledge-base": {
-                                const kb = currentFolderContents.items.knowledgeBases.find(
-                                    (k) => k.id === id
-                                );
-                                return kb?.name || "Unknown";
-                            }
-                            default:
-                                return "Unknown";
+                    // If item is already in the target folder (same folder), do nothing
+                    const isSameFolder = sourceFolderId === targetFolderId;
+                    if (isSameFolder) {
+                        // Item is already in the target folder, just close the dialog
+                        setIsMoveDialogOpen(false);
+                        setMovingItemId(null);
+                        setMovingItemType(null);
+                        return;
+                    }
+                    // Track source folder for each item (in case items are in different folders)
+                    itemIds.forEach((id) => {
+                        if (sourceFolderId) {
+                            sourceFolderMap.set(id, sourceFolderId);
                         }
                     });
-
-                    // Set warning dialog state
-                    setItemsAlreadyInFolder({
-                        itemIds,
-                        itemNames,
-                        itemType,
-                        folderName,
-                        sourceFolderId,
-                        isInMainFolder
-                    });
-                    setPendingMoveTarget(targetFolderId);
-                    setIsWarningDialogOpen(true);
-                    // Close move dialog
-                    setIsMoveDialogOpen(false);
-                    // CRITICAL: Return early to prevent move
-                    return;
                 }
             } catch (error) {
                 logger.error("Error checking if items are already in target folder", error);
             }
         }
 
-        // No items found in target folder, proceed with move
-        await performMove(targetFolderId, itemsToMove);
+        // Proceed with move (will handle removing from source and adding to target)
+        await performMove(targetFolderId, itemsToMove, sourceFolderMap);
     };
 
     const performMove = async (
         targetFolderId: string,
-        itemsToMove: { itemIds: string[]; itemType: FolderResourceType }[]
+        itemsToMove: { itemIds: string[]; itemType: FolderResourceType }[],
+        sourceFolderMap?: Map<string, string>
     ) => {
         if (!folderId) return;
 
@@ -395,12 +358,38 @@ export function FolderContentsPage() {
         for (const { itemIds, itemType } of itemsToMove) {
             // Move items to target folder
             await moveItemsToFolder(targetFolderId, itemIds, itemType);
-            // Explicitly remove from current folder
-            await removeItemsFromFolder({
-                itemIds,
-                itemType,
-                folderId
-            });
+
+            // Remove from source folder(s)
+            // If sourceFolderMap is provided, use it to remove from the correct source folder
+            // Otherwise, remove from current folder (default behavior)
+            if (sourceFolderMap && sourceFolderMap.size > 0) {
+                // Group items by source folder
+                const itemsBySource = new Map<string, string[]>();
+                itemIds.forEach((id) => {
+                    const sourceId = sourceFolderMap.get(id) || folderId;
+                    if (!itemsBySource.has(sourceId)) {
+                        itemsBySource.set(sourceId, []);
+                    }
+                    itemsBySource.get(sourceId)!.push(id);
+                });
+
+                // Remove from each source folder
+                for (const [sourceId, ids] of itemsBySource) {
+                    await removeItemsFromFolder({
+                        itemIds: ids,
+                        itemType,
+                        folderId: sourceId
+                    });
+                }
+            } else {
+                // Default: remove from current folder
+                await removeItemsFromFolder({
+                    itemIds,
+                    itemType,
+                    folderId
+                });
+            }
+
             // Clear selection for this type
             if (!movingItemId) {
                 setSelectedIds(itemType, new Set());
@@ -578,6 +567,50 @@ export function FolderContentsPage() {
             } = await checkItemsInFolder(subfolderId, itemIds, itemTypeEnum);
 
             if (found) {
+                // Check if item is in the same folder (same folder or same subfolder)
+                const isSameFolder = sourceFolderId === subfolderId;
+
+                // Auto-move logic: If moving from current folder to subfolder while inside a folder page
+                // Conditions:
+                // 1. We're on a folder page (folderId exists)
+                // 2. Item is in the folder we're viewing (sourceFolderId matches folderId)
+                // 3. Moving to a different folder (not the same folder)
+                // 4. Item is in the main folder (isInMainFolder is true)
+                const hasCurrentFolder = Boolean(folderId);
+                const itemInCurrentFolder = Boolean(
+                    sourceFolderId &&
+                        folderId &&
+                        String(sourceFolderId).trim() === String(folderId).trim()
+                );
+                const movingToDifferentFolder = !isSameFolder && subfolderId !== sourceFolderId;
+                const itemInMainFolder = isInMainFolder === true;
+
+                const shouldAutoMove =
+                    hasCurrentFolder &&
+                    itemInCurrentFolder &&
+                    movingToDifferentFolder &&
+                    itemInMainFolder;
+
+                if (shouldAutoMove) {
+                    try {
+                        // Remove items from the main folder (source)
+                        await removeItemsFromFolder({
+                            itemIds,
+                            itemType: itemTypeEnum,
+                            folderId: sourceFolderId!
+                        });
+                        // Proceed with move to target subfolder
+                        await performDropOnSubfolder(subfolderId, itemIds, itemTypeEnum);
+                    } catch (err) {
+                        logger.error(
+                            "Failed to automatically move items from main to subfolder",
+                            err
+                        );
+                    }
+                    // Return early - move completed automatically
+                    return;
+                }
+
                 // Get item names from currentFolderContents
                 const itemNames = itemIds.map((id) => {
                     if (!currentFolderContents) return "Unknown";
@@ -1577,17 +1610,17 @@ export function FolderContentsPage() {
                             <>
                                 {itemsAlreadyInFolder.itemNames.length === 1 ? (
                                     <>
-                                        "{itemsAlreadyInFolder.itemNames[0]}" is already in the
-                                        folder <strong>{itemsAlreadyInFolder.folderName}</strong>.
+                                        This file "{itemsAlreadyInFolder.itemNames[0]}" already
+                                        exists in the folder{" "}
+                                        <strong>{itemsAlreadyInFolder.folderName}</strong>.
                                     </>
                                 ) : (
                                     <>
                                         The following{" "}
                                         {itemsAlreadyInFolder.itemNames.length === 1
-                                            ? "item"
-                                            : "items"}{" "}
-                                        {itemsAlreadyInFolder.itemNames.length === 1 ? "is" : "are"}{" "}
-                                        already in the folder{" "}
+                                            ? "file"
+                                            : "files"}{" "}
+                                        already exist in the folder{" "}
                                         <strong>{itemsAlreadyInFolder.folderName}</strong>:{" "}
                                         {itemsAlreadyInFolder.itemNames.map((name, idx) => (
                                             <span key={idx}>
@@ -1652,7 +1685,7 @@ export function FolderContentsPage() {
                     )
                 }
                 confirmText={itemsAlreadyInFolder?.isInMainFolder ? "Close" : "Move file"}
-                cancelText={itemsAlreadyInFolder?.isInMainFolder ? "Close" : "Cancel"}
+                cancelText={itemsAlreadyInFolder?.isInMainFolder ? undefined : "Cancel"}
                 variant="default"
             />
         </div>

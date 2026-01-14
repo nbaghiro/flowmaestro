@@ -77,25 +77,52 @@ export function DuplicateItemWarningDialog({ warning, onClose }: DuplicateItemWa
 
     const isSingle = itemNames.length === 1;
     const itemTypeLabel = getItemTypeLabel(warning.itemType, !isSingle);
+    const isSameFolder = warning.sourceFolderId === warning.folderId;
+    const isMovingFromMainToSubfolder = isInMainFolder && !isSameFolder;
 
     return (
         <ConfirmDialog
             isOpen={true}
             onClose={handleClose}
-            onConfirm={isInMainFolder ? handleClose : handleConfirm}
-            title={isInMainFolder ? "Item already in folder" : "Item already in subfolder"}
+            onConfirm={isSameFolder ? handleClose : handleConfirm}
+            title={
+                isSameFolder
+                    ? "Item already in folder"
+                    : isMovingFromMainToSubfolder
+                      ? "Move item to subfolder?"
+                      : "Item already in subfolder"
+            }
             message={
-                isInMainFolder ? (
+                isSameFolder ? (
                     <>
                         {isSingle ? (
                             <>
-                                {formatItemNames()} is already in the folder{" "}
+                                This file {formatItemNames()} already exists in the folder{" "}
                                 <strong>{folderName}</strong>.
                             </>
                         ) : (
                             <>
-                                The following {itemTypeLabel} are already in the folder{" "}
+                                The following {itemTypeLabel} already exist in the folder{" "}
                                 <strong>{folderName}</strong>: {formatItemNames()}.
+                            </>
+                        )}
+                    </>
+                ) : isMovingFromMainToSubfolder ? (
+                    <>
+                        {isSingle ? (
+                            <>
+                                {formatItemNames()} is already in the folder{" "}
+                                <strong>{folderName}</strong>. Do you want to move it to this
+                                subfolder? This will move the{" "}
+                                {getItemTypeLabel(warning.itemType, false)} from the folder to the
+                                from the folder to the subfolder.
+                            </>
+                        ) : (
+                            <>
+                                The following {itemTypeLabel} are already in the folder{" "}
+                                <strong>{folderName}</strong>: {formatItemNames()}. Do you want to
+                                move them to this subfolder? This will move the {itemTypeLabel} from
+                                the folder to the subfolder.
                             </>
                         )}
                     </>
@@ -119,8 +146,8 @@ export function DuplicateItemWarningDialog({ warning, onClose }: DuplicateItemWa
                     </>
                 )
             }
-            confirmText={isInMainFolder ? "Close" : "Move file"}
-            cancelText="Cancel"
+            confirmText={isSameFolder ? "Close" : "Move"}
+            cancelText={isSameFolder ? undefined : "Cancel"}
             variant="default"
         />
     );

@@ -19,6 +19,7 @@ import {
     moveFolder as apiMoveFolder
 } from "../lib/api";
 import { logger } from "../lib/logger";
+import { queryClient } from "../main";
 
 // Constants
 const MAX_VISIBLE_FOLDERS = 6;
@@ -252,6 +253,9 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
                 folderTree: buildFolderTree(folderData)
             });
 
+            // Invalidate folder contents queries after mutation
+            queryClient.invalidateQueries({ queryKey: ["folderContents"] });
+
             logger.info("Folder created", { folderId: newFolder.id, name: newFolder.name });
             return newFolder;
         } catch (error) {
@@ -286,6 +290,9 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
                         : state.currentFolderContents
             }));
 
+            // Invalidate folder contents queries after mutation
+            queryClient.invalidateQueries({ queryKey: ["folderContents", id] });
+
             logger.info("Folder updated", { folderId: id, updates: input });
             return updatedFolder;
         } catch (error) {
@@ -315,6 +322,9 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
                 folderTree: buildFolderTree(folderData)
             });
 
+            // Invalidate folder contents queries after mutation
+            queryClient.invalidateQueries({ queryKey: ["folderContents", id] });
+
             logger.info("Folder deleted", { folderId: id });
         } catch (error) {
             logger.error("Failed to delete folder", error, { folderId: id });
@@ -338,6 +348,9 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
                 folders: folderData,
                 folderTree: buildFolderTree(folderData)
             });
+
+            // Invalidate folder contents queries after mutation
+            queryClient.invalidateQueries({ queryKey: ["folderContents", folderId] });
 
             logger.info("Items moved to folder", {
                 folderId,

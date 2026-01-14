@@ -4869,12 +4869,10 @@ export async function getFolder(id: string): Promise<ApiResponse<Folder>> {
 export async function getFolderContents(id: string): Promise<ApiResponse<FolderContents>> {
     const token = getAuthToken();
 
-    const url = `${API_BASE_URL}/folders/${id}/contents?t=${Date.now()}`;
-    const response = await apiFetch(url, {
+    const response = await apiFetch(`${API_BASE_URL}/folders/${id}/contents`, {
         method: "GET",
         headers: {
             "Content-Type": "application/json",
-            "Cache-Control": "no-cache",
             ...(token && { Authorization: `Bearer ${token}` })
         }
     });

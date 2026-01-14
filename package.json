@@ -72,6 +72,8 @@
     "author": "FlowMaestro Team",
     "license": "MIT",
     "dependencies": {
-        "@swc/core": "^1.15.7"
+        "@swc/core": "^1.15.7",
+        "eventsource": "^4.1.0",
+        "inquirer": "^13.2.0"
     }
 }

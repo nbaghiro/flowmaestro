@@ -3,6 +3,66 @@ import { getFolderContents } from "./api";
 import { logger } from "./logger";
 
 /**
+ * Helper function to extract item IDs by type from folder items
+ */
+function getItemsForType(
+    items: {
+        workflows?: Array<{ id: string }>;
+        agents?: Array<{ id: string }>;
+        formInterfaces?: Array<{ id: string }>;
+        chatInterfaces?: Array<{ id: string }>;
+        knowledgeBases?: Array<{ id: string }>;
+    },
+    itemType: FolderResourceType
+): string[] {
+    switch (itemType) {
+        case "workflow":
+            return items.workflows?.map((w) => w.id) || [];
+        case "agent":
+            return items.agents?.map((a) => a.id) || [];
+        case "form-interface":
+            return items.formInterfaces?.map((f) => f.id) || [];
+        case "chat-interface":
+            return items.chatInterfaces?.map((c) => c.id) || [];
+        case "knowledge-base":
+            return items.knowledgeBases?.map((k) => k.id) || [];
+        default:
+            return [];
+    }
+}
+
+/**
+ * Helper function to check if items exist in a folder's items (not subfolders)
+ */
+function checkItemsInFolderOnly(
+    items: {
+        workflows?: Array<{ id: string }>;
+        agents?: Array<{ id: string }>;
+        formInterfaces?: Array<{ id: string }>;
+        chatInterfaces?: Array<{ id: string }>;
+        knowledgeBases?: Array<{ id: string }>;
+    },
+    itemIds: string[],
+    itemType: FolderResourceType,
+    folderName: string,
+    folderId: string
+): { found: boolean; folderName: string; folderId: string; isInMainFolder: boolean } {
+    const folderItemIds = getItemsForType(items, itemType);
+    const foundInFolder = itemIds.some((id) => folderItemIds.includes(id));
+
+    if (foundInFolder) {
+        return {
+            found: true,
+            folderName,
+            folderId,
+            isInMainFolder: true
+        };
+    }
+
+    return { found: false, folderName: "", folderId: "", isInMainFolder: false };
+}
+
+/**
  * Check if items are already in a folder (recursively checking subfolders)
  * This is a PRIORITY check that runs BEFORE any move operation
  */
@@ -25,34 +85,17 @@ export async function checkItemsInFolder(
         }
 
         // Check items in the main folder
-        const getItemsForType = (): string[] => {
-            switch (itemType) {
-                case "workflow":
-                    return items.workflows?.map((w) => w.id) || [];
-                case "agent":
-                    return items.agents?.map((a) => a.id) || [];
-                case "form-interface":
-                    return items.formInterfaces?.map((f) => f.id) || [];
-                case "chat-interface":
-                    return items.chatInterfaces?.map((c) => c.id) || [];
-                case "knowledge-base":
-                    return items.knowledgeBases?.map((k) => k.id) || [];
-                default:
-                    return [];
-            }
-        };
+        const folderCheck = checkItemsInFolderOnly(
+            items,
+            itemIds,
+            itemType,
+            folder.name || "Unknown",
+            folder.id
+        );
 
-        const folderItemIds = getItemsForType();
-        const foundInFolder = itemIds.some((id) => folderItemIds.includes(id));
-
-        if (foundInFolder) {
+        if (folderCheck.found) {
             // Item found in the main folder (not in a subfolder)
-            return {
-                found: true,
-                folderName: folder.name || "Unknown",
-                folderId: folder.id,
-                isInMainFolder: true
-            };
+            return folderCheck;
         }
 
         // Recursively check subfolders
@@ -68,8 +111,8 @@ export async function checkItemsInFolder(
             }
         }
 
-        // Also check sibling subfolders (if this folder has a parent)
-        // This prevents moving an item from one subfolder to another sibling subfolder
+        // Also check parent folder and sibling subfolders (if this folder has a parent)
+        // This prevents moving an item from the main folder to a subfolder, or from one subfolder to another sibling subfolder
         // We check siblings recursively but avoid checking siblings of siblings to prevent loops
         if ("ancestors" in folder && folder.ancestors && folder.ancestors.length > 0) {
             const parentFolder = folder.ancestors[folder.ancestors.length - 1];
@@ -77,9 +120,28 @@ export async function checkItemsInFolder(
                 try {
                     const parentResponse = await getFolderContents(parentFolder.id);
                     if (parentResponse.data && parentResponse.success) {
-                        const parentSubfolders = parentResponse.data.subfolders || [];
-                        // Check all sibling subfolders (excluding the target folder itself)
+                        const { items: parentItems, folder: parentFolderData } =
+                            parentResponse.data;
+
+                        // First, check if items exist in the parent folder itself (main folder)
+                        if (parentItems) {
+                            const parentCheck = checkItemsInFolderOnly(
+                                parentItems,
+                                itemIds,
+                                itemType,
+                                parentFolderData?.name || "Unknown",
+                                parentFolder.id
+                            );
+
+                            if (parentCheck.found) {
+                                // Item found in the parent folder (main folder)
+                                return parentCheck;
+                            }
+                        }
+
+                        // Then check all sibling subfolders (excluding the target folder itself)
                         // Use a helper function that checks recursively but doesn't check siblings again
+                        const parentSubfolders = parentResponse.data.subfolders || [];
                         for (const sibling of parentSubfolders) {
                             if (sibling && sibling.id && sibling.id !== targetFolderId) {
                                 const siblingResult = await checkItemsInFolderWithoutSiblings(
@@ -95,8 +157,8 @@ export async function checkItemsInFolder(
                         }
                     }
                 } catch (error) {
-                    // If we can't check siblings, continue (don't block the operation)
-                    logger.error("Error checking sibling folders", error);
+                    // If we can't check parent/siblings, continue (don't block the operation)
+                    logger.error("Error checking parent and sibling folders", error);
                 }
             }
         }
@@ -131,34 +193,17 @@ async function checkItemsInFolderWithoutSiblings(
         }
 
         // Check items in the main folder
-        const getItemsForType = (): string[] => {
-            switch (itemType) {
-                case "workflow":
-                    return items.workflows?.map((w) => w.id) || [];
-                case "agent":
-                    return items.agents?.map((a) => a.id) || [];
-                case "form-interface":
-                    return items.formInterfaces?.map((f) => f.id) || [];
-                case "chat-interface":
-                    return items.chatInterfaces?.map((c) => c.id) || [];
-                case "knowledge-base":
-                    return items.knowledgeBases?.map((k) => k.id) || [];
-                default:
-                    return [];
-            }
-        };
+        const folderCheck = checkItemsInFolderOnly(
+            items,
+            itemIds,
+            itemType,
+            folder.name || "Unknown",
+            folder.id
+        );
 
-        const folderItemIds = getItemsForType();
-        const foundInFolder = itemIds.some((id) => folderItemIds.includes(id));
-
-        if (foundInFolder) {
+        if (folderCheck.found) {
             // Item found in the main folder
-            return {
-                found: true,
-                folderName: folder.name || "Unknown",
-                folderId: folder.id,
-                isInMainFolder: true
-            };
+            return folderCheck;
         }
 
         // Recursively check subfolders (but NOT siblings)

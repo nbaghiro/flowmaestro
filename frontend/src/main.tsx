@@ -8,7 +8,7 @@ import { useWorkspaceStore } from "./stores/workspaceStore";
 import "./App.css";
 
 // Create a client for TanStack Query
-const queryClient = new QueryClient({
+export const queryClient = new QueryClient({
     defaultOptions: {
         queries: {
             retry: 1,

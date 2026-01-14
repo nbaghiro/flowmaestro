@@ -1,9 +1,8 @@
 import { Plus, FileText, Sparkles, Trash2, FolderInput, FolderMinus, Search } from "lucide-react";
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import type {
     WorkflowNode,
-    Folder,
     FolderWithCounts,
     WorkflowSummary,
     FolderResourceType
@@ -28,6 +27,7 @@ import {
 } from "../components/folders";
 import { DuplicateItemWarningDialog } from "../components/folders/DuplicateItemWarningDialog";
 import { WorkflowGenerationChatPanel } from "../components/WorkflowGenerationChatPanel";
+import { useFolderManagement } from "../hooks/useFolderManagement";
 import { useSearch } from "../hooks/useSearch";
 import { useSort, WORKFLOW_SORT_FIELDS } from "../hooks/useSort";
 import {
@@ -37,19 +37,14 @@ import {
     updateWorkflow,
     deleteWorkflow,
     getWorkflow,
-    getFolders,
-    updateFolder,
-    removeItemsFromFolder,
     type WorkflowDefinition
 } from "../lib/api";
-import { checkItemsInFolder, getFolderCountIncludingSubfolders } from "../lib/folderUtils";
+import { getFolderCountIncludingSubfolders } from "../lib/folderUtils";
 import { logger } from "../lib/logger";
 import { createDragPreview } from "../lib/utils";
 import { convertToReactFlowFormat } from "../lib/workflowLayout";
-import { buildFolderTree, useFolderStore } from "../stores/folderStore";
-import { useUIPreferencesStore } from "../stores/uiPreferencesStore";
+import { useFolderStore } from "../stores/folderStore";
 import { useWorkflowGenerationChatStore } from "../stores/workflowGenerationChatStore";
-import type { DuplicateItemWarning } from "../components/folders/DuplicateItemWarningDialog";
 
 // Local workflow type that maps to API response (snake_case) and WorkflowSummary (camelCase)
 interface Workflow {
@@ -92,51 +87,79 @@ function toWorkflowSummary(workflow: Workflow): WorkflowSummary {
 }
 
 export function Workflows() {
-    const [searchParams, setSearchParams] = useSearchParams();
-    const currentFolderId = searchParams.get("folder");
+    const navigate = useNavigate();
 
     // Workflow generation chat panel
     const { openPanel: openGenerationPanel } = useWorkflowGenerationChatStore();
 
-    // Folder store
     const {
-        createFolder: createFolderStore,
         moveItemsToFolder: moveItemsToFolderStore,
-        deleteFolder: deleteFolderStore,
-        folders: storeFolders
+        folderTree: storeFolderTree,
+        refreshFolders
     } = useFolderStore();
-
     const [workflows, setWorkflows] = useState<Workflow[]>([]);
-    const [folders, setFolders] = useState<FolderWithCounts[]>([]);
-    const folderTree = useMemo(() => buildFolderTree(folders), [folders]);
-    const [currentFolder, setCurrentFolder] = useState<Folder | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [isLoadingFolders, setIsLoadingFolders] = useState(true);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [isAIDialogOpen, setIsAIDialogOpen] = useState(false);
-    const [isCreateFolderDialogOpen, setIsCreateFolderDialogOpen] = useState(false);
     const [isMoveDialogOpen, setIsMoveDialogOpen] = useState(false);
-    const [folderToEdit, setFolderToEdit] = useState<Folder | null>(null);
-    const [folderToDelete, setFolderToDelete] = useState<FolderWithCounts | null>(null);
     const [workflowToDelete, setWorkflowToDelete] = useState<Workflow | null>(null);
     const [_isDeleting, setIsDeleting] = useState(false);
     const [error, setError] = useState<{ title: string; message: string } | null>(null);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-    const [selectedFolderIds, setSelectedFolderIds] = useState<Set<string>>(new Set());
     const [contextMenu, setContextMenu] = useState<{
         isOpen: boolean;
         position: { x: number; y: number };
         type: "workflow" | "folder";
     }>({ isOpen: false, position: { x: 0, y: 0 }, type: "workflow" });
     const [isBatchDeleting, setIsBatchDeleting] = useState(false);
-    const { showFoldersSection, setShowFoldersSection } = useUIPreferencesStore();
-    const [expandedFolderIds, setExpandedFolderIds] = useState<Set<string>>(new Set());
-    const navigate = useNavigate();
 
-    // Local state for duplicate item warning dialog
-    const [duplicateItemWarning, setDuplicateItemWarning] = useState<DuplicateItemWarning | null>(
-        null
-    );
+    // Use folder management hook
+    const {
+        folders,
+        currentFolder,
+        currentFolderId,
+        isLoadingFolders,
+        selectedFolderIds,
+        setSelectedFolderIds,
+        isCreateFolderDialogOpen,
+        setIsCreateFolderDialogOpen,
+        folderToEdit,
+        setFolderToEdit,
+        folderToDelete,
+        setFolderToDelete,
+        isBatchDeleting: isBatchDeletingFolders,
+        showFoldersSection,
+        setShowFoldersSection,
+        expandedFolderIds,
+        rootFolders,
+        canShowFoldersSection,
+        duplicateItemWarning,
+        setDuplicateItemWarning,
+        handleCreateFolder,
+        handleEditFolder,
+        handleDeleteFolder,
+        handleFolderClick,
+        handleFolderContextMenu,
+        handleBatchDeleteFolders,
+        handleNavigateToRoot,
+        handleRemoveFromFolder,
+        handleDropOnFolder,
+        handleToggleFolderExpand,
+        getFolderChildren
+    } = useFolderManagement({
+        itemType: "workflow",
+        onReloadItems: async () => {
+            await loadWorkflows();
+        },
+        sourceItemType: "workflow",
+        getItemNames: (itemIds: string[]) => {
+            return itemIds.map((id) => {
+                const workflow = workflows.find((w) => w.id === id);
+                return workflow?.name || "Unknown";
+            });
+        },
+        onClearSelection: () => setSelectedIds(new Set())
+    });
 
     // Search functionality
     const {
@@ -165,46 +188,10 @@ export function Workflows() {
         availableFields: WORKFLOW_SORT_FIELDS
     });
 
-    // Load folders on mount
-    useEffect(() => {
-        loadFolders();
-    }, []);
-
-    // Sync folders when store folders change (e.g., when folder is created from sidebar)
-    useEffect(() => {
-        if (storeFolders.length > 0 && folders.length !== storeFolders.length) {
-            loadFolders();
-        }
-    }, [storeFolders]);
-
     // Load workflows when folder changes
     useEffect(() => {
         loadWorkflows();
     }, [currentFolderId]);
-
-    // Update current folder when folderId changes
-    useEffect(() => {
-        if (currentFolderId) {
-            const folder = folders.find((f) => f.id === currentFolderId);
-            setCurrentFolder(folder || null);
-        } else {
-            setCurrentFolder(null);
-        }
-    }, [currentFolderId, folders]);
-
-    const loadFolders = async () => {
-        setIsLoadingFolders(true);
-        try {
-            const response = await getFolders();
-            if (response.success && response.data) {
-                setFolders(response.data);
-            }
-        } catch (err) {
-            logger.error("Failed to load folders", err);
-        } finally {
-            setIsLoadingFolders(false);
-        }
-    };
 
     const loadWorkflows = async () => {
         setIsLoading(true);
@@ -320,7 +307,7 @@ export function Workflows() {
             await deleteWorkflow(workflowToDelete.id);
             // Refresh the workflow list
             await loadWorkflows();
-            await loadFolders(); // Refresh folder counts
+            await refreshFolders(); // Refresh folder counts
             setWorkflowToDelete(null);
         } catch (err: unknown) {
             logger.error("Failed to delete workflow", err);
@@ -383,140 +370,40 @@ export function Workflows() {
         }
     };
 
-    // Folder handlers
-    const handleCreateFolder = async (name: string, color: string) => {
-        await createFolderStore({ name, color });
-        // Store's createFolder already refreshes folders, so sidebar will update
-        await loadFolders();
-    };
-
-    const handleEditFolder = async (name: string, color: string) => {
-        if (!folderToEdit) return;
-        await updateFolder(folderToEdit.id, { name, color });
-        await loadFolders();
-        setFolderToEdit(null);
-    };
-
-    const handleDeleteFolder = async () => {
-        if (!folderToDelete) return;
-        setIsDeleting(true);
-        try {
-            await deleteFolderStore(folderToDelete.id);
-            // Store's deleteFolder already refreshes folders, so sidebar will update
-            await loadFolders();
-            await loadWorkflows(); // Items moved to root
-            setFolderToDelete(null);
-            // If we were viewing the deleted folder, go back to root
-            if (currentFolderId === folderToDelete.id) {
-                setSearchParams({});
-            }
-        } catch (err: unknown) {
-            const error = err as { message?: string };
-            setError({
-                title: "Delete Failed",
-                message: error.message || "Failed to delete folder. Please try again."
-            });
-        } finally {
-            setIsDeleting(false);
-        }
-    };
-
-    const handleFolderClick = useCallback(
+    // Override handleFolderContextMenu to also set context menu state
+    const handleFolderContextMenuWithState = useCallback(
         (e: React.MouseEvent, folder: FolderWithCounts) => {
-            if (e.shiftKey) {
-                e.preventDefault();
-                setSelectedFolderIds((prev) => {
-                    const newSet = new Set(prev);
-                    if (newSet.has(folder.id)) {
-                        newSet.delete(folder.id);
-                    } else {
-                        newSet.add(folder.id);
-                    }
-                    return newSet;
-                });
-            } else if (selectedFolderIds.size === 0) {
-                // Navigate to unified folder contents page with source type for auto-collapse
-                navigate(`/folders/${folder.id}`, {
-                    state: { sourceItemType: "workflow" }
-                });
-            } else {
-                // Clear selection on normal click when folders are selected
-                setSelectedFolderIds(new Set());
-            }
-        },
-        [navigate, selectedFolderIds.size]
-    );
-
-    const handleFolderContextMenu = useCallback(
-        (e: React.MouseEvent, folder: FolderWithCounts) => {
-            e.preventDefault();
-            // If right-clicking on an unselected folder, select only that folder
-            if (!selectedFolderIds.has(folder.id)) {
-                setSelectedFolderIds(new Set([folder.id]));
-            }
+            handleFolderContextMenu(e, folder);
             setContextMenu({
                 isOpen: true,
                 position: { x: e.clientX, y: e.clientY },
                 type: "folder"
             });
         },
-        [selectedFolderIds]
+        [handleFolderContextMenu]
     );
 
-    const handleBatchDeleteFolders = async () => {
-        if (selectedFolderIds.size === 0) return;
-
-        setIsBatchDeleting(true);
+    // Override handleBatchDeleteFolders to also clear context menu and handle errors
+    const handleBatchDeleteFoldersWithState = useCallback(async () => {
         try {
-            const deletePromises = Array.from(selectedFolderIds).map((id) => deleteFolderStore(id));
-            await Promise.all(deletePromises);
-
-            await loadFolders();
-            await loadWorkflows();
-            setSelectedFolderIds(new Set());
+            await handleBatchDeleteFolders();
             setContextMenu({ isOpen: false, position: { x: 0, y: 0 }, type: "workflow" });
         } catch (err: unknown) {
-            logger.error("Failed to delete folders", err);
             const error = err as { message?: string };
             setError({
                 title: "Delete Failed",
                 message: error.message || "Failed to delete some folders. Please try again."
             });
-        } finally {
-            setIsBatchDeleting(false);
         }
-    };
-
-    const handleNavigateToRoot = () => {
-        setSearchParams({});
-    };
+    }, [handleBatchDeleteFolders]);
 
     const handleMoveToFolder = async (folderId: string | null) => {
         if (!folderId) {
             throw new Error("Folder ID is required");
         }
         await moveItemsToFolderStore(folderId, Array.from(selectedIds), "workflow");
-        // Store's moveItemsToFolder already refreshes folders, so sidebar will update
         await loadWorkflows();
-        await loadFolders();
         setSelectedIds(new Set());
-    };
-
-    const handleRemoveFromFolder = async (workflowIds: string | string[]) => {
-        if (!currentFolderId) return; // Can only remove when viewing inside a folder
-        const ids = Array.isArray(workflowIds) ? workflowIds : [workflowIds];
-        if (ids.length === 0) return;
-        try {
-            await removeItemsFromFolder({
-                itemIds: ids,
-                itemType: "workflow",
-                folderId: currentFolderId
-            });
-            await loadWorkflows();
-            await loadFolders();
-        } catch (err) {
-            logger.error("Failed to remove workflow from folder", err);
-        }
     };
 
     // Drag and drop handlers
@@ -535,88 +422,6 @@ export function Workflows() {
             createDragPreview(e, itemIds.length, "workflow");
         },
         [selectedIds]
-    );
-
-    // Check if items are already in a folder (recursively checking subfolders)
-
-    const performDrop = useCallback(
-        async (folderId: string, itemIds: string[], itemType: FolderResourceType) => {
-            await moveItemsToFolderStore(folderId, itemIds, itemType);
-            // Store's moveItemsToFolder already refreshes folders, so sidebar will update
-            await loadWorkflows();
-            await loadFolders();
-            setSelectedIds(new Set());
-        },
-        [moveItemsToFolderStore, loadWorkflows, loadFolders]
-    );
-
-    const handleDropOnFolder = useCallback(
-        async (folderId: string, itemIds: string[], itemType: string) => {
-            if (itemType !== "workflow") return;
-
-            // Check if items are already in the target folder
-            const {
-                found,
-                folderName,
-                folderId: sourceFolderId,
-                isInMainFolder
-            } = await checkItemsInFolder(folderId, itemIds, itemType as FolderResourceType);
-
-            if (found) {
-                // Get item names from workflows array
-                const itemNames = itemIds.map((id) => {
-                    const workflow = workflows.find((w) => w.id === id);
-                    return workflow?.name || "Unknown";
-                });
-
-                // Show warning dialog
-                setDuplicateItemWarning({
-                    folderId,
-                    itemIds,
-                    itemNames,
-                    itemType: itemType as FolderResourceType,
-                    folderName,
-                    sourceFolderId,
-                    isInMainFolder,
-                    onConfirm: async () => {
-                        // If item is in main folder, don't proceed with move
-                        if (isInMainFolder) {
-                            return;
-                        }
-
-                        // Remove items from the source folder before moving
-                        if (sourceFolderId && sourceFolderId !== folderId) {
-                            try {
-                                await removeItemsFromFolder({
-                                    itemIds,
-                                    itemType: itemType as FolderResourceType,
-                                    folderId: sourceFolderId
-                                });
-                            } catch (err) {
-                                logger.error("Failed to remove items from source folder", err);
-                            }
-                        }
-
-                        // Proceed with move to target folder
-                        try {
-                            await performDrop(folderId, itemIds, itemType as FolderResourceType);
-                        } catch (err) {
-                            logger.error("Failed to move items to folder", err);
-                        }
-                    }
-                });
-                // Stop the operation - don't move items
-                return;
-            }
-
-            // No items found, proceed with move
-            try {
-                await performDrop(folderId, itemIds, itemType as FolderResourceType);
-            } catch (err) {
-                logger.error("Failed to move items to folder", err);
-            }
-        },
-        [performDrop, workflows]
     );
 
     // Selection handlers for batch operations
@@ -672,7 +477,7 @@ export function Workflows() {
 
             // Refresh the workflow list and clear selection
             await loadWorkflows();
-            await loadFolders();
+            await refreshFolders();
             setSelectedIds(new Set());
             setContextMenu({ isOpen: false, position: { x: 0, y: 0 }, type: "workflow" });
         } catch (err: unknown) {
@@ -728,30 +533,11 @@ export function Workflows() {
         {
             label: `Delete ${selectedFolderIds.size} folder${selectedFolderIds.size !== 1 ? "s" : ""}`,
             icon: <Trash2 className="w-4 h-4" />,
-            onClick: handleBatchDeleteFolders,
+            onClick: handleBatchDeleteFoldersWithState,
             variant: "danger",
-            disabled: isBatchDeleting
+            disabled: isBatchDeletingFolders
         }
     ];
-
-    // Filter folders to show only root folders (depth 0) when at root
-    const rootFolders = currentFolderId ? [] : folders.filter((f) => f.depth === 0);
-    const canShowFoldersSection = !currentFolderId && rootFolders.length > 0;
-
-    // Helper to get children of a folder from the tree
-    const getFolderChildren = (folderId: string): FolderWithCounts[] => {
-        const findInTree = (nodes: typeof folderTree): FolderWithCounts[] => {
-            for (const node of nodes) {
-                if (node.id === folderId) {
-                    return node.children;
-                }
-                const found = findInTree(node.children);
-                if (found.length > 0) return found;
-            }
-            return [];
-        };
-        return findInTree(folderTree);
-    };
 
     // Helper to calculate total count for a folder including all subfolders recursively
     const getFolderCountIncludingSubfoldersMemo = useCallback(
@@ -760,19 +546,6 @@ export function Workflows() {
         },
         [getFolderChildren]
     );
-
-    // Toggle folder expansion
-    const handleToggleFolderExpand = (folderId: string) => {
-        setExpandedFolderIds((prev) => {
-            const next = new Set(prev);
-            if (next.has(folderId)) {
-                next.delete(folderId);
-            } else {
-                next.add(folderId);
-            }
-            return next;
-        });
-    };
 
     return (
         <div className="max-w-7xl mx-auto px-4 py-6 md:px-6 md:py-8">
@@ -797,11 +570,11 @@ export function Workflows() {
                             </Button>
                             <Button
                                 variant="destructive"
-                                onClick={handleBatchDeleteFolders}
-                                disabled={isBatchDeleting}
-                                loading={isBatchDeleting}
+                                onClick={handleBatchDeleteFoldersWithState}
+                                disabled={isBatchDeletingFolders}
+                                loading={isBatchDeletingFolders}
                             >
-                                {!isBatchDeleting && <Trash2 className="w-4 h-4" />}
+                                {!isBatchDeletingFolders && <Trash2 className="w-4 h-4" />}
                                 Delete folders
                             </Button>
                         </div>
@@ -906,7 +679,7 @@ export function Workflows() {
                         onFolderClick={handleFolderClick}
                         onFolderEdit={setFolderToEdit}
                         onFolderDelete={setFolderToDelete}
-                        onFolderContextMenu={handleFolderContextMenu}
+                        onFolderContextMenu={handleFolderContextMenuWithState}
                         onDropOnFolder={handleDropOnFolder}
                         onToggleFolderExpand={handleToggleFolderExpand}
                         getFolderChildren={getFolderChildren}
@@ -1006,7 +779,7 @@ export function Workflows() {
                 isOpen={isMoveDialogOpen}
                 onClose={() => setIsMoveDialogOpen(false)}
                 folders={folders}
-                folderTree={folderTree}
+                folderTree={storeFolderTree}
                 isLoadingFolders={isLoadingFolders}
                 selectedItemCount={selectedIds.size}
                 itemType="workflow"

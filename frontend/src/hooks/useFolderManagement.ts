@@ -6,12 +6,15 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import type { Folder, FolderWithCounts, FolderResourceType } from "@flowmaestro/shared";
 import { getFolders, updateFolder, removeItemsFromFolder } from "../lib/api";
+import { checkItemsInFolder } from "../lib/folderUtils";
 import { logger } from "../lib/logger";
+import { queryClient } from "../main";
 import { buildFolderTree, useFolderStore } from "../stores/folderStore";
 import { useUIPreferencesStore } from "../stores/uiPreferencesStore";
+import type { DuplicateItemWarning } from "../components/folders/DuplicateItemWarningDialog";
 
 export interface UseFolderManagementOptions {
     /** The item type this folder management is for */
@@ -20,6 +23,10 @@ export interface UseFolderManagementOptions {
     onReloadItems: () => Promise<void>;
     /** Source item type for folder navigation state */
     sourceItemType?: string;
+    /** Callback to get item names from item IDs for duplicate warning dialog */
+    getItemNames?: (itemIds: string[]) => string[];
+    /** Optional callback to clear selected items after drop (e.g., clear selection) */
+    onClearSelection?: () => void;
 }
 
 export interface UseFolderManagementReturn {
@@ -39,6 +46,7 @@ export interface UseFolderManagementReturn {
     expandedFolderIds: Set<string>;
     rootFolders: FolderWithCounts[];
     canShowFoldersSection: boolean;
+    duplicateItemWarning: DuplicateItemWarning | null;
 
     // Setters
     setSelectedFolderIds: React.Dispatch<React.SetStateAction<Set<string>>>;
@@ -47,6 +55,7 @@ export interface UseFolderManagementReturn {
     setFolderToEdit: React.Dispatch<React.SetStateAction<Folder | null>>;
     setFolderToDelete: React.Dispatch<React.SetStateAction<FolderWithCounts | null>>;
     setShowFoldersSection: (show: boolean) => void;
+    setDuplicateItemWarning: React.Dispatch<React.SetStateAction<DuplicateItemWarning | null>>;
 
     // Handlers
     loadFolders: () => Promise<void>;
@@ -70,11 +79,19 @@ export interface UseFolderManagementReturn {
 export function useFolderManagement({
     itemType,
     onReloadItems,
-    sourceItemType
+    sourceItemType,
+    getItemNames,
+    onClearSelection
 }: UseFolderManagementOptions): UseFolderManagementReturn {
     const navigate = useNavigate();
+    const location = useLocation();
     const [searchParams, setSearchParams] = useSearchParams();
-    const currentFolderId = searchParams.get("folder");
+    // Get current folder ID from either URL path (/folders/:folderId) or search params (?folder=id)
+    const currentFolderIdFromPath = location.pathname.startsWith("/folders/")
+        ? location.pathname.split("/folders/")[1]?.split("/")[0] || null
+        : null;
+    const currentFolderIdFromParams = searchParams.get("folder");
+    const currentFolderId = currentFolderIdFromPath || currentFolderIdFromParams;
 
     // Folder store
     const {
@@ -98,6 +115,9 @@ export function useFolderManagement({
     const { showFoldersSection, setShowFoldersSection } = useUIPreferencesStore();
     const [expandedFolderIds, setExpandedFolderIds] = useState<Set<string>>(new Set());
     const [_folderContextMenuOpen, setFolderContextMenuOpen] = useState(false);
+    const [duplicateItemWarning, setDuplicateItemWarning] = useState<DuplicateItemWarning | null>(
+        null
+    );
 
     // Computed values
     const rootFolders = currentFolderId ? [] : folders.filter((f) => f.depth === 0);
@@ -298,6 +318,8 @@ export function useFolderManagement({
                     itemType,
                     folderId: currentFolderId
                 });
+                // Invalidate folder contents queries after mutation
+                queryClient.invalidateQueries({ queryKey: ["folderContents", currentFolderId] });
                 await onReloadItems();
                 await loadFolders();
             } catch (err) {
@@ -307,22 +329,137 @@ export function useFolderManagement({
         [currentFolderId, itemType, onReloadItems, loadFolders]
     );
 
+    // Internal function to perform the actual drop operation
+    const performDrop = useCallback(
+        async (folderId: string, itemIds: string[], droppedItemType: FolderResourceType) => {
+            await moveItemsToFolderStore(folderId, itemIds, droppedItemType);
+            await onReloadItems();
+            await loadFolders();
+            if (onClearSelection) {
+                onClearSelection();
+            }
+        },
+        [moveItemsToFolderStore, onReloadItems, loadFolders, onClearSelection]
+    );
+
     const handleDropOnFolder = useCallback(
         async (folderId: string, itemIds: string[], droppedItemType: string) => {
             if (droppedItemType !== itemType) return;
-            try {
-                await moveItemsToFolderStore(
+
+            // Check if items are already in the target folder BEFORE moving
+            const {
+                found,
+                folderName,
+                folderId: duplicateFolderId,
+                isInMainFolder
+            } = await checkItemsInFolder(folderId, itemIds, itemType);
+
+            if (found) {
+                // Check if item is in the same folder (same folder or same subfolder)
+                const isSameFolder = duplicateFolderId === folderId;
+
+                // If moving from main folder to subfolder while inside a folder page, automatically move without dialog
+                // This allows users to organize items from the main folder into subfolders without confirmation
+                // Conditions:
+                // 1. We're inside a folder page (currentFolderId exists)
+                // 2. Item is in the folder we're viewing (duplicateFolderId matches currentFolderId)
+                // 3. Moving to a different folder (not the same folder)
+                // 4. Item is in the main folder (isInMainFolder is true)
+                const hasCurrentFolder = Boolean(currentFolderId);
+                const itemInCurrentFolder = Boolean(
+                    duplicateFolderId &&
+                        currentFolderId &&
+                        String(duplicateFolderId).trim() === String(currentFolderId).trim()
+                );
+                const movingToDifferentFolder = !isSameFolder && folderId !== duplicateFolderId;
+                const itemInMainFolder = isInMainFolder === true;
+
+                const shouldAutoMove =
+                    hasCurrentFolder &&
+                    itemInCurrentFolder &&
+                    movingToDifferentFolder &&
+                    itemInMainFolder;
+
+                if (shouldAutoMove) {
+                    try {
+                        // Remove items from the main folder (source)
+                        await removeItemsFromFolder({
+                            itemIds,
+                            itemType,
+                            folderId: duplicateFolderId!
+                        });
+                        // Invalidate folder contents queries after mutation
+                        queryClient.invalidateQueries({
+                            queryKey: ["folderContents", duplicateFolderId]
+                        });
+
+                        // Proceed with move to target subfolder
+                        await performDrop(folderId, itemIds, itemType);
+                    } catch (err) {
+                        logger.error(
+                            "Failed to automatically move items from main to subfolder",
+                            err
+                        );
+                    }
+                    // Return early - move completed automatically
+                    return;
+                }
+
+                // Get item names - use callback if provided, otherwise use generic names
+                const itemNames = getItemNames ? getItemNames(itemIds) : itemIds.map(() => "item");
+
+                // Show duplicate warning dialog for other cases (same folder or subfolder to subfolder)
+                setDuplicateItemWarning({
                     folderId,
                     itemIds,
-                    droppedItemType as FolderResourceType
-                );
-                await onReloadItems();
-                await loadFolders();
+                    itemNames,
+                    itemType,
+                    folderName,
+                    sourceFolderId: duplicateFolderId,
+                    isInMainFolder: isSameFolder ? true : isInMainFolder, // If same folder, treat as "in main folder" for dialog display
+                    onConfirm: async () => {
+                        // If item is in the same folder, just close (no move)
+                        if (isSameFolder) {
+                            return;
+                        }
+
+                        // Remove items from the source folder before moving to target folder
+                        if (duplicateFolderId && duplicateFolderId !== folderId) {
+                            try {
+                                await removeItemsFromFolder({
+                                    itemIds,
+                                    itemType,
+                                    folderId: duplicateFolderId
+                                });
+                                // Invalidate folder contents queries after mutation
+                                queryClient.invalidateQueries({
+                                    queryKey: ["folderContents", duplicateFolderId]
+                                });
+                            } catch (err) {
+                                logger.error("Failed to remove items from source folder", err);
+                            }
+                        }
+
+                        // Proceed with move to target folder
+                        try {
+                            await performDrop(folderId, itemIds, itemType);
+                        } catch (err) {
+                            logger.error("Failed to move items to folder", err);
+                        }
+                    }
+                });
+                // Return early to prevent move
+                return;
+            }
+
+            // No items found, proceed with move
+            try {
+                await performDrop(folderId, itemIds, itemType);
             } catch (err) {
                 logger.error("Failed to move items to folder", err);
             }
         },
-        [itemType, moveItemsToFolderStore, onReloadItems, loadFolders]
+        [itemType, getItemNames, performDrop]
     );
 
     return {
@@ -342,6 +479,7 @@ export function useFolderManagement({
         expandedFolderIds,
         rootFolders,
         canShowFoldersSection,
+        duplicateItemWarning,
 
         // Setters
         setSelectedFolderIds,
@@ -350,6 +488,7 @@ export function useFolderManagement({
         setFolderToEdit,
         setFolderToDelete,
         setShowFoldersSection,
+        setDuplicateItemWarning,
 
         // Handlers
         loadFolders,
