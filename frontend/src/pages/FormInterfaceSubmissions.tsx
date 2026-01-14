@@ -65,7 +65,7 @@ export function FormInterfaceSubmissions() {
 
     if (isLoading) {
         return (
-            <div className="max-w-7xl mx-auto px-6 py-8">
+            <div className="max-w-7xl mx-auto px-4 py-6 md:px-6 md:py-8">
                 <LoadingState message="Loading submissions..." />
             </div>
         );
@@ -73,7 +73,7 @@ export function FormInterfaceSubmissions() {
 
     if (!formInterface) {
         return (
-            <div className="max-w-7xl mx-auto px-6 py-8">
+            <div className="max-w-7xl mx-auto px-4 py-6 md:px-6 md:py-8">
                 <div className="text-center py-12">
                     <p className="text-muted-foreground">Form interface not found</p>
                     <Button
@@ -89,7 +89,7 @@ export function FormInterfaceSubmissions() {
     }
 
     return (
-        <div className="max-w-7xl mx-auto px-6 py-8">
+        <div className="max-w-7xl mx-auto px-4 py-6 md:px-6 md:py-8">
             {/* Back Button */}
             <button
                 onClick={() => navigate("/form-interfaces")}

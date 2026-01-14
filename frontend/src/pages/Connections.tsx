@@ -200,7 +200,7 @@ export function Connections() {
     };
 
     return (
-        <div className="max-w-7xl mx-auto px-6 py-8">
+        <div className="max-w-7xl mx-auto px-4 py-6 md:px-6 md:py-8">
             <PageHeader
                 title="Connections"
                 description="Connect to external services to enhance your workflows"

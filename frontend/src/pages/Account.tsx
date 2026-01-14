@@ -193,7 +193,7 @@ export function Account() {
     ];
 
     return (
-        <div className="max-w-4xl mx-auto px-6 py-8">
+        <div className="max-w-4xl mx-auto px-4 py-6 md:px-6 md:py-8">
             {showSuccess && (
                 <div className="mb-4 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
                     Changes saved successfully.

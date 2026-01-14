@@ -81,7 +81,8 @@
                 "frontend/src/lib/logger.ts",
                 "backend/src/temporal/shared/workflow-logger.ts",
                 "backend/src/temporal/shared/logger.ts",
-                "examples/**/*.ts"
+                "examples/**/*.ts",
+                "cli/src/**/*.ts"
             ],
             "rules": {
                 "no-console": "off"

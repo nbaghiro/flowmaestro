@@ -11,6 +11,7 @@ import { BuilderHeader } from "../components/BuilderHeader";
 import { CheckpointPanel } from "../components/CheckpointPanel";
 import { Button } from "../components/common/Button";
 import { Dialog } from "../components/common/Dialog";
+import { MobileBuilderGuard } from "../components/common/MobileBuilderGuard";
 import { Tooltip } from "../components/common/Tooltip";
 import { ExecutionPanel } from "../components/ExecutionPanel";
 import { CreateFormInterfaceDialog } from "../components/forms/CreateFormInterfaceDialog";
@@ -591,125 +592,131 @@ export function FlowBuilder() {
     const selectedNodeObj = nodes.find((n) => n.id === selectedNode);
     const selectedNodeType = selectedNodeObj?.type;
     return (
-        <ReactFlowProvider>
-            <div className="h-screen flex flex-col bg-background">
-                <BuilderHeader
-                    workflowId={workflowId}
-                    workflowName={workflowName}
-                    hasUnsavedChanges={hasUnsavedChanges}
-                    saveStatus={saveStatus}
-                    onSave={handleSave}
-                    onNameChange={handleNameChange}
-                    onOpenSettings={() => setIsSettingsOpen(true)}
-                    onOpenCheckpoints={() => setIsCheckpointOpen((prev) => !prev)}
-                    onOpenFormInterface={() => setIsFormInterfaceDialogOpen(true)}
-                    onBack={handleBack}
-                />
-
-                <WorkflowSettingsDialog
-                    open={isSettingsOpen}
-                    onOpenChange={setIsSettingsOpen}
-                    workflowName={workflowName}
-                    workflowDescription={workflowDescription}
-                    aiGenerated={aiGenerated}
-                    aiPrompt={aiPrompt}
-                    onSave={handleSettingsSave}
-                />
-
-                <div className="flex-1 flex overflow-hidden relative">
-                    <NodeLibrary
-                        isCollapsed={isSidebarCollapsed}
-                        onExpand={() => setIsSidebarCollapsed(false)}
-                        onCollapse={() => setIsSidebarCollapsed(true)}
-                        isPinned={isSidebarPinned}
-                        onPinToggle={() => setIsSidebarPinned(!isSidebarPinned)}
+        <MobileBuilderGuard
+            title="Workflow Builder"
+            description="The visual workflow builder requires a larger screen. Please continue on a desktop or laptop computer to design your workflows."
+            backUrl={getBackUrl()}
+        >
+            <ReactFlowProvider>
+                <div className="h-screen flex flex-col bg-background">
+                    <BuilderHeader
+                        workflowId={workflowId}
+                        workflowName={workflowName}
+                        hasUnsavedChanges={hasUnsavedChanges}
+                        saveStatus={saveStatus}
+                        onSave={handleSave}
+                        onNameChange={handleNameChange}
+                        onOpenSettings={() => setIsSettingsOpen(true)}
+                        onOpenCheckpoints={() => setIsCheckpointOpen((prev) => !prev)}
+                        onOpenFormInterface={() => setIsFormInterfaceDialogOpen(true)}
+                        onBack={handleBack}
                     />
-                    <div className="flex-1">
-                        <WorkflowCanvas
-                            onInit={(instance) => (reactFlowInstanceRef.current = instance)}
+
+                    <WorkflowSettingsDialog
+                        open={isSettingsOpen}
+                        onOpenChange={setIsSettingsOpen}
+                        workflowName={workflowName}
+                        workflowDescription={workflowDescription}
+                        aiGenerated={aiGenerated}
+                        aiPrompt={aiPrompt}
+                        onSave={handleSettingsSave}
+                    />
+
+                    <div className="flex-1 flex overflow-hidden relative">
+                        <NodeLibrary
+                            isCollapsed={isSidebarCollapsed}
+                            onExpand={() => setIsSidebarCollapsed(false)}
+                            onCollapse={() => setIsSidebarCollapsed(true)}
+                            isPinned={isSidebarPinned}
+                            onPinToggle={() => setIsSidebarPinned(!isSidebarPinned)}
+                        />
+                        <div className="flex-1">
+                            <WorkflowCanvas
+                                onInit={(instance) => (reactFlowInstanceRef.current = instance)}
+                            />
+                        </div>
+                        {selectedNode && selectedNodeType !== "comment" && <NodeInspector />}
+
+                        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40">
+                            <div className="flex items-center gap-2">
+                                <AIAskButton />
+                                <Tooltip content="Auto-layout nodes (Shift+L)" position="top">
+                                    <button
+                                        onClick={handleAutoLayout}
+                                        className="px-4 py-2 border rounded-lg shadow-lg transition-colors bg-card border-border hover:bg-muted"
+                                    >
+                                        <LayoutGrid className="w-4 h-4" />
+                                    </button>
+                                </Tooltip>
+                                {workflowId && (
+                                    <ExecutionPanel workflowId={workflowId} renderButtonOnly />
+                                )}
+                            </div>
+                        </div>
+
+                        {workflowId && <ExecutionPanel workflowId={workflowId} renderPanelOnly />}
+                        <AIChatPanel workflowId={workflowId} />
+                        <CheckpointPanel
+                            open={isCheckpointOpen}
+                            onClose={() => setIsCheckpointOpen(false)}
+                            checkpoints={checkpoints}
+                            onRestore={handleRestoreCheckpoint}
+                            onDelete={handleDeleteCheckpoint}
+                            onRename={handleRenameCheckpoint}
+                            onCreate={handleCreateCheckpoint}
+                            onCheckChanges={checkForSignificantChanges}
+                            showMinorChangesDialog={showMinorChangesDialog}
+                            onShowMinorChangesDialog={() => setShowMinorChangesDialog(true)}
+                            onCloseMinorChangesDialog={() => setShowMinorChangesDialog(false)}
+                        />
+                        <CreateFormInterfaceDialog
+                            isOpen={isFormInterfaceDialogOpen}
+                            onClose={() => setIsFormInterfaceDialogOpen(false)}
+                            onCreated={(formInterface) => {
+                                setIsFormInterfaceDialogOpen(false);
+                                navigate(`/form-interfaces/${formInterface.id}/edit`);
+                            }}
+                            initialWorkflowId={workflowId}
                         />
                     </div>
-                    {selectedNode && selectedNodeType !== "comment" && <NodeInspector />}
 
-                    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40">
-                        <div className="flex items-center gap-2">
-                            <AIAskButton />
-                            <Tooltip content="Auto-layout nodes (Shift+L)" position="top">
-                                <button
-                                    onClick={handleAutoLayout}
-                                    className="px-4 py-2 border rounded-lg shadow-lg transition-colors bg-card border-border hover:bg-muted"
-                                >
-                                    <LayoutGrid className="w-4 h-4" />
-                                </button>
-                            </Tooltip>
-                            {workflowId && (
-                                <ExecutionPanel workflowId={workflowId} renderButtonOnly />
-                            )}
+                    {/* Unsaved Changes Dialog */}
+                    <Dialog
+                        isOpen={showUnsavedDialog}
+                        onClose={() => setShowUnsavedDialog(false)}
+                        title="Unsaved Changes"
+                    >
+                        <p className="text-muted-foreground mb-6">
+                            You have unsaved changes. Would you like to save them before leaving?
+                        </p>
+                        <div className="flex justify-end gap-3">
+                            <Button variant="ghost" onClick={() => setShowUnsavedDialog(false)}>
+                                Cancel
+                            </Button>
+                            <Button variant="destructive" onClick={handleDiscardChanges}>
+                                Discard Changes
+                            </Button>
+                            <Button
+                                variant="primary"
+                                onClick={handleSaveAndLeave}
+                                disabled={saveStatus === "saving"}
+                            >
+                                {saveStatus === "saving" ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                        Saving...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Save className="w-4 h-4 mr-2" />
+                                        Save & Leave
+                                    </>
+                                )}
+                            </Button>
                         </div>
-                    </div>
-
-                    {workflowId && <ExecutionPanel workflowId={workflowId} renderPanelOnly />}
-                    <AIChatPanel workflowId={workflowId} />
-                    <CheckpointPanel
-                        open={isCheckpointOpen}
-                        onClose={() => setIsCheckpointOpen(false)}
-                        checkpoints={checkpoints}
-                        onRestore={handleRestoreCheckpoint}
-                        onDelete={handleDeleteCheckpoint}
-                        onRename={handleRenameCheckpoint}
-                        onCreate={handleCreateCheckpoint}
-                        onCheckChanges={checkForSignificantChanges}
-                        showMinorChangesDialog={showMinorChangesDialog}
-                        onShowMinorChangesDialog={() => setShowMinorChangesDialog(true)}
-                        onCloseMinorChangesDialog={() => setShowMinorChangesDialog(false)}
-                    />
-                    <CreateFormInterfaceDialog
-                        isOpen={isFormInterfaceDialogOpen}
-                        onClose={() => setIsFormInterfaceDialogOpen(false)}
-                        onCreated={(formInterface) => {
-                            setIsFormInterfaceDialogOpen(false);
-                            navigate(`/form-interfaces/${formInterface.id}/edit`);
-                        }}
-                        initialWorkflowId={workflowId}
-                    />
+                    </Dialog>
                 </div>
-
-                {/* Unsaved Changes Dialog */}
-                <Dialog
-                    isOpen={showUnsavedDialog}
-                    onClose={() => setShowUnsavedDialog(false)}
-                    title="Unsaved Changes"
-                >
-                    <p className="text-muted-foreground mb-6">
-                        You have unsaved changes. Would you like to save them before leaving?
-                    </p>
-                    <div className="flex justify-end gap-3">
-                        <Button variant="ghost" onClick={() => setShowUnsavedDialog(false)}>
-                            Cancel
-                        </Button>
-                        <Button variant="destructive" onClick={handleDiscardChanges}>
-                            Discard Changes
-                        </Button>
-                        <Button
-                            variant="primary"
-                            onClick={handleSaveAndLeave}
-                            disabled={saveStatus === "saving"}
-                        >
-                            {saveStatus === "saving" ? (
-                                <>
-                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                    Saving...
-                                </>
-                            ) : (
-                                <>
-                                    <Save className="w-4 h-4 mr-2" />
-                                    Save & Leave
-                                </>
-                            )}
-                        </Button>
-                    </div>
-                </Dialog>
-            </div>
-        </ReactFlowProvider>
+            </ReactFlowProvider>
+        </MobileBuilderGuard>
     );
 }

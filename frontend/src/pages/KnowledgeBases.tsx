@@ -595,7 +595,7 @@ export function KnowledgeBases() {
     };
 
     return (
-        <div className="max-w-7xl mx-auto px-6 py-8">
+        <div className="max-w-7xl mx-auto px-4 py-6 md:px-6 md:py-8">
             <PageHeader
                 title="Knowledge Bases"
                 description={
@@ -659,7 +659,7 @@ export function KnowledgeBases() {
                             </Button>
                         </div>
                     ) : (
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1 flex-wrap">
                             <ExpandableSearch
                                 value={searchQuery}
                                 onChange={setSearchQuery}
@@ -674,7 +674,7 @@ export function KnowledgeBases() {
                             />
                             <Button variant="primary" onClick={() => setShowCreateModal(true)}>
                                 <Plus className="w-4 h-4" />
-                                New Knowledge Base
+                                <span className="hidden md:inline">New Knowledge Base</span>
                             </Button>
                         </div>
                     )

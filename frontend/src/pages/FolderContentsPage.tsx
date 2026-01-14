@@ -916,7 +916,7 @@ export function FolderContentsPage() {
     // Loading state
     if (isLoadingContents) {
         return (
-            <div className="max-w-7xl mx-auto px-6 py-8">
+            <div className="max-w-7xl mx-auto px-4 py-6 md:px-6 md:py-8">
                 <LoadingState message="Loading folder contents..." />
             </div>
         );
@@ -925,7 +925,7 @@ export function FolderContentsPage() {
     // Error state
     if (contentsError) {
         return (
-            <div className="max-w-7xl mx-auto px-6 py-8">
+            <div className="max-w-7xl mx-auto px-4 py-6 md:px-6 md:py-8">
                 <div className="text-center py-12">
                     <Folder className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-foreground mb-2">
@@ -944,7 +944,7 @@ export function FolderContentsPage() {
     // No folder found
     if (!currentFolderContents) {
         return (
-            <div className="max-w-7xl mx-auto px-6 py-8">
+            <div className="max-w-7xl mx-auto px-4 py-6 md:px-6 md:py-8">
                 <div className="text-center py-12">
                     <Folder className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-foreground mb-2">Folder not found</h3>
@@ -966,38 +966,40 @@ export function FolderContentsPage() {
     const canCreateSubfolder = folder.depth < MAX_FOLDER_DEPTH - 1;
 
     return (
-        <div className="max-w-7xl mx-auto px-6 py-8">
+        <div className="max-w-7xl mx-auto px-4 py-6 md:px-6 md:py-8">
             {/* Breadcrumb Navigation */}
-            <nav className="flex items-center gap-1.5 text-sm mb-6">
+            <nav className="flex items-center gap-1.5 text-sm mb-6 overflow-x-auto">
                 <Link
                     to={getRootRoute()}
-                    className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
+                    className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
                 >
                     <Home className="w-4 h-4" />
-                    <span>Home</span>
+                    <span className="hidden sm:inline">Home</span>
                 </Link>
                 {ancestors.map((ancestor: FolderType) => (
-                    <div key={ancestor.id} className="flex items-center gap-1.5">
-                        <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                    <div key={ancestor.id} className="flex items-center gap-1.5 flex-shrink-0">
+                        <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                         <Link
                             to={`/folders/${ancestor.id}`}
                             className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
                         >
                             <div
-                                className="w-2 h-2 rounded-full"
+                                className="w-2 h-2 rounded-full flex-shrink-0"
                                 style={{ backgroundColor: ancestor.color }}
                             />
-                            <span>{ancestor.name}</span>
+                            <span className="truncate max-w-[80px] sm:max-w-none">
+                                {ancestor.name}
+                            </span>
                         </Link>
                     </div>
                 ))}
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                <div className="flex items-center gap-1.5 text-foreground font-medium">
+                <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                <div className="flex items-center gap-1.5 text-foreground font-medium flex-shrink-0">
                     <div
-                        className="w-2 h-2 rounded-full"
+                        className="w-2 h-2 rounded-full flex-shrink-0"
                         style={{ backgroundColor: folder.color }}
                     />
-                    <span>{folder.name}</span>
+                    <span className="truncate max-w-[120px] sm:max-w-none">{folder.name}</span>
                 </div>
             </nav>
 
@@ -1125,18 +1127,20 @@ export function FolderContentsPage() {
                                         variant="ghost"
                                         size="sm"
                                         onClick={() => setIsEditDialogOpen(true)}
+                                        title="Edit folder"
                                     >
-                                        <Edit2 className="w-4 h-4 mr-1" />
-                                        Edit
+                                        <Edit2 className="w-4 h-4 md:mr-1" />
+                                        <span className="hidden md:inline">Edit</span>
                                     </Button>
                                     <Button
                                         variant="ghost"
                                         size="sm"
                                         onClick={() => setIsDeleteDialogOpen(true)}
                                         className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                        title="Delete folder"
                                     >
-                                        <Trash2 className="w-4 h-4 mr-1" />
-                                        Delete
+                                        <Trash2 className="w-4 h-4 md:mr-1" />
+                                        <span className="hidden md:inline">Delete</span>
                                     </Button>
                                 </>
                             );

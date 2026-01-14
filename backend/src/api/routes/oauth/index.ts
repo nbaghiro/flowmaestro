@@ -2,6 +2,7 @@ import { FastifyInstance } from "fastify";
 import { authMiddleware } from "../../middleware/auth";
 import { authorizeRoute } from "./authorize";
 import { callbackRoute } from "./callback";
+import { deviceFlowRoutes } from "./device";
 import { listProvidersRoute } from "./list-providers";
 import { refreshRoute } from "./refresh";
 import { revokeRoute } from "./revoke";
@@ -26,6 +27,12 @@ import {
  * - GET  /oauth/scheduler/status               - Get scheduler status (admin)
  * - POST /oauth/scheduler/refresh              - Trigger manual refresh (admin)
  * - POST /oauth/scheduler/reset-circuit        - Reset circuit breaker (admin)
+ *
+ * Device Authorization Flow (RFC 8628) for CLI:
+ * - POST /oauth/device/code                    - Generate device code for CLI
+ * - POST /oauth/device/token                   - Poll for token (CLI polling)
+ * - GET  /oauth/device/verify                  - User verification page
+ * - POST /oauth/device/verify                  - Authorize/deny device
  */
 export async function oauthRoutes(fastify: FastifyInstance) {
     await listProvidersRoute(fastify);
@@ -33,6 +40,7 @@ export async function oauthRoutes(fastify: FastifyInstance) {
     await callbackRoute(fastify);
     await refreshRoute(fastify);
     await revokeRoute(fastify);
+    await deviceFlowRoutes(fastify);
 
     // Admin endpoints for scheduler monitoring
     fastify.get("/oauth/scheduler/status", { preHandler: [authMiddleware] }, getSchedulerStatus);
