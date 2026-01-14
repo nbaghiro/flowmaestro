@@ -25,6 +25,7 @@ import {
     FolderBreadcrumb,
     FolderGridSection
 } from "../components/folders";
+import { DuplicateItemWarningDialog } from "../components/folders/DuplicateItemWarningDialog";
 import { useSearch } from "../hooks/useSearch";
 import { useSort, CHAT_INTERFACE_SORT_FIELDS } from "../hooks/useSort";
 import {
@@ -35,16 +36,12 @@ import {
     updateFolder,
     removeItemsFromFolder
 } from "../lib/api";
-import { useDuplicateItemWarning } from "../lib/duplicateItemDialogUtils";
-import { checkItemsInFolder } from "../lib/folderUtils";
+import { checkItemsInFolder, getFolderCountIncludingSubfolders } from "../lib/folderUtils";
 import { logger } from "../lib/logger";
 import { createDragPreview } from "../lib/utils";
-import {
-    buildFolderTree,
-    useFolderStore,
-    getFolderCountIncludingSubfolders
-} from "../stores/folderStore";
+import { buildFolderTree, useFolderStore } from "../stores/folderStore";
 import { useUIPreferencesStore } from "../stores/uiPreferencesStore";
+import type { DuplicateItemWarning } from "../components/folders/DuplicateItemWarningDialog";
 
 // Convert ChatInterface to ChatInterfaceSummary for card components
 function toChatInterfaceSummary(ci: ChatInterface): ChatInterfaceSummary {
@@ -103,7 +100,9 @@ export function ChatInterfacesPage() {
     const [isBatchDeleting, setIsBatchDeleting] = useState(false);
     const { showFoldersSection, setShowFoldersSection } = useUIPreferencesStore();
     const [expandedFolderIds, setExpandedFolderIds] = useState<Set<string>>(new Set());
-    const { showDuplicateItemWarning } = useDuplicateItemWarning();
+    const [duplicateItemWarning, setDuplicateItemWarning] = useState<DuplicateItemWarning | null>(
+        null
+    );
     const [contextMenu, setContextMenu] = useState<{
         isOpen: boolean;
         position: { x: number; y: number };
@@ -389,7 +388,7 @@ export function ChatInterfacesPage() {
                 });
 
                 // Show global warning dialog
-                showDuplicateItemWarning({
+                setDuplicateItemWarning({
                     folderId,
                     itemIds,
                     itemNames,
@@ -435,7 +434,7 @@ export function ChatInterfacesPage() {
                 logger.error("Failed to move items to folder", err);
             }
         },
-        [performDrop, chatInterfaces, showDuplicateItemWarning]
+        [performDrop, chatInterfaces]
     );
 
     const handleMoveToFolder = async (folderId: string | null) => {
@@ -904,6 +903,12 @@ export function ChatInterfacesPage() {
                 message={`Are you sure you want to delete the folder "${folderToDelete?.name}"? Items in this folder will be moved to the root level.`}
                 confirmText="Delete"
                 variant="danger"
+            />
+
+            {/* Duplicate Item Warning Dialog */}
+            <DuplicateItemWarningDialog
+                warning={duplicateItemWarning}
+                onClose={() => setDuplicateItemWarning(null)}
             />
         </div>
     );

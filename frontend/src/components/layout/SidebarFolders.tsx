@@ -10,7 +10,6 @@ import type {
 } from "@flowmaestro/shared";
 import { MAX_FOLDER_DEPTH } from "@flowmaestro/shared";
 import { removeItemsFromFolder } from "../../lib/api";
-import { useDuplicateItemWarning } from "../../lib/duplicateItemDialogUtils";
 import { checkItemsInFolder } from "../../lib/folderUtils";
 import { logger } from "../../lib/logger";
 import { useFolderStore } from "../../stores/folderStore";
@@ -18,7 +17,9 @@ import { useUIPreferencesStore } from "../../stores/uiPreferencesStore";
 import { ConfirmDialog } from "../common/ConfirmDialog";
 import { Tooltip } from "../common/Tooltip";
 import { CreateFolderDialog } from "../folders/CreateFolderDialog";
+import { DuplicateItemWarningDialog } from "../folders/DuplicateItemWarningDialog";
 import { SidebarFolderItem } from "./SidebarFolderItem";
+import type { DuplicateItemWarning } from "../folders/DuplicateItemWarningDialog";
 
 interface SidebarFoldersProps {
     isCollapsed: boolean;
@@ -65,8 +66,10 @@ export function SidebarFolders({ isCollapsed }: SidebarFoldersProps) {
     const [parentFolderForSubfolder, setParentFolderForSubfolder] =
         useState<FolderWithCounts | null>(null);
 
-    // Global dialog for duplicate item warnings
-    const { showDuplicateItemWarning } = useDuplicateItemWarning();
+    // Local state for duplicate item warning dialog
+    const [duplicateItemWarning, setDuplicateItemWarning] = useState<DuplicateItemWarning | null>(
+        null
+    );
 
     // Context menu state
     const [contextMenu, setContextMenu] = useState<ContextMenuState>({
@@ -201,7 +204,7 @@ export function SidebarFolders({ isCollapsed }: SidebarFoldersProps) {
                 const itemNames = itemIds.map(() => "item");
 
                 // Show global warning dialog
-                showDuplicateItemWarning({
+                setDuplicateItemWarning({
                     folderId,
                     itemIds,
                     itemNames,
@@ -477,6 +480,12 @@ export function SidebarFolders({ isCollapsed }: SidebarFoldersProps) {
                 message={`Are you sure you want to delete "${folderToDelete?.name}"? Items in this folder will be moved to the root level.`}
                 confirmText="Delete"
                 variant="danger"
+            />
+
+            {/* Duplicate Item Warning Dialog */}
+            <DuplicateItemWarningDialog
+                warning={duplicateItemWarning}
+                onClose={() => setDuplicateItemWarning(null)}
             />
         </div>
     );

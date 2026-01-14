@@ -24,20 +24,17 @@ import {
     FolderBreadcrumb,
     FolderGridSection
 } from "../components/folders";
+import { DuplicateItemWarningDialog } from "../components/folders/DuplicateItemWarningDialog";
 import { useSearch } from "../hooks/useSearch";
 import { useSort, AGENT_SORT_FIELDS } from "../hooks/useSort";
 import { getFolders, updateFolder, removeItemsFromFolder } from "../lib/api";
-import { useDuplicateItemWarning } from "../lib/duplicateItemDialogUtils";
-import { checkItemsInFolder } from "../lib/folderUtils";
+import { checkItemsInFolder, getFolderCountIncludingSubfolders } from "../lib/folderUtils";
 import { logger } from "../lib/logger";
 import { createDragPreview } from "../lib/utils";
 import { useAgentStore } from "../stores/agentStore";
-import {
-    useFolderStore,
-    buildFolderTree,
-    getFolderCountIncludingSubfolders
-} from "../stores/folderStore";
+import { useFolderStore, buildFolderTree } from "../stores/folderStore";
 import { useUIPreferencesStore } from "../stores/uiPreferencesStore";
+import type { DuplicateItemWarning } from "../components/folders/DuplicateItemWarningDialog";
 import type { Agent } from "../lib/api";
 
 // Convert local Agent to AgentSummary for card components
@@ -84,7 +81,9 @@ export function Agents() {
     const [isBatchDeleting, setIsBatchDeleting] = useState(false);
     const { showFoldersSection, setShowFoldersSection } = useUIPreferencesStore();
     const [expandedFolderIds, setExpandedFolderIds] = useState<Set<string>>(new Set());
-    const { showDuplicateItemWarning } = useDuplicateItemWarning();
+    const [duplicateItemWarning, setDuplicateItemWarning] = useState<DuplicateItemWarning | null>(
+        null
+    );
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
     const [isCreateFolderDialogOpen, setIsCreateFolderDialogOpen] = useState(false);
     const [isMoveDialogOpen, setIsMoveDialogOpen] = useState(false);
@@ -358,7 +357,7 @@ export function Agents() {
                 });
 
                 // Show global warning dialog
-                showDuplicateItemWarning({
+                setDuplicateItemWarning({
                     folderId,
                     itemIds,
                     itemNames,
@@ -404,7 +403,7 @@ export function Agents() {
                 logger.error("Failed to move items to folder", err);
             }
         },
-        [performDrop, agents, showDuplicateItemWarning]
+        [performDrop, agents]
     );
 
     // Selection handlers for batch operations
@@ -853,6 +852,12 @@ export function Agents() {
                 message={`Are you sure you want to delete the folder "${folderToDelete?.name}"? Items in this folder will be moved to the root level.`}
                 confirmText="Delete"
                 variant="danger"
+            />
+
+            {/* Duplicate Item Warning Dialog */}
+            <DuplicateItemWarningDialog
+                warning={duplicateItemWarning}
+                onClose={() => setDuplicateItemWarning(null)}
             />
         </div>
     );

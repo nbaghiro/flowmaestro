@@ -1,32 +1,47 @@
-import { useDuplicateItemDialogStore } from "../../stores/duplicateItemDialogStore";
-import { ConfirmDialog } from "./ConfirmDialog";
+import type { FolderResourceType } from "@flowmaestro/shared";
+import { ConfirmDialog } from "../common/ConfirmDialog";
+
+export interface DuplicateItemWarning {
+    folderId: string;
+    itemIds: string[];
+    itemNames: string[];
+    itemType: FolderResourceType;
+    folderName: string;
+    sourceFolderId: string;
+    isInMainFolder: boolean;
+    onConfirm?: () => void;
+    onCancel?: () => void;
+}
+
+interface DuplicateItemWarningDialogProps {
+    warning: DuplicateItemWarning | null;
+    onClose: () => void;
+}
 
 /**
  * Duplicate Item Warning Dialog Component
  *
  * Renders the duplicate item warning dialog when moving items to folders.
  */
-export function DuplicateItemWarningDialog() {
-    const { duplicateItemWarning, hideDuplicateItemWarning } = useDuplicateItemDialogStore();
-
-    if (!duplicateItemWarning) {
+export function DuplicateItemWarningDialog({ warning, onClose }: DuplicateItemWarningDialogProps) {
+    if (!warning) {
         return null;
     }
 
-    const { itemNames, folderName, isInMainFolder, onConfirm, onCancel } = duplicateItemWarning;
+    const { itemNames, folderName, isInMainFolder, onConfirm, onCancel } = warning;
 
     const handleClose = () => {
         if (onCancel) {
             onCancel();
         }
-        hideDuplicateItemWarning();
+        onClose();
     };
 
     const handleConfirm = () => {
         if (onConfirm) {
             onConfirm();
         }
-        hideDuplicateItemWarning();
+        onClose();
     };
 
     // Format item names for display
@@ -61,13 +76,13 @@ export function DuplicateItemWarningDialog() {
     };
 
     const isSingle = itemNames.length === 1;
-    const itemTypeLabel = getItemTypeLabel(duplicateItemWarning.itemType, !isSingle);
+    const itemTypeLabel = getItemTypeLabel(warning.itemType, !isSingle);
 
     return (
         <ConfirmDialog
             isOpen={true}
             onClose={handleClose}
-            onConfirm={isInMainFolder ? undefined : handleConfirm}
+            onConfirm={isInMainFolder ? handleClose : handleConfirm}
             title={isInMainFolder ? "Item already in folder" : "Item already in subfolder"}
             message={
                 isInMainFolder ? (
@@ -90,8 +105,7 @@ export function DuplicateItemWarningDialog() {
                             <>
                                 {formatItemNames()} is already in a subfolder of{" "}
                                 <strong>{folderName}</strong>. Do you want to move it anyway? This
-                                will move the{" "}
-                                {getItemTypeLabel(duplicateItemWarning.itemType, false)} from the
+                                will move the {getItemTypeLabel(warning.itemType, false)} from the
                                 subfolder to the selected folder.
                             </>
                         ) : (
@@ -105,8 +119,8 @@ export function DuplicateItemWarningDialog() {
                     </>
                 )
             }
-            confirmText={isInMainFolder ? undefined : "Move file"}
-            cancelText={isInMainFolder ? "Close" : "Cancel"}
+            confirmText={isInMainFolder ? "Close" : "Move file"}
+            cancelText="Cancel"
             variant="default"
         />
     );

@@ -1,4 +1,4 @@
-import type { FolderResourceType } from "@flowmaestro/shared";
+import type { FolderResourceType, FolderWithCounts } from "@flowmaestro/shared";
 import { getFolderContents } from "./api";
 import { logger } from "./logger";
 
@@ -183,4 +183,39 @@ async function checkItemsInFolderWithoutSiblings(
         logger.error("Error checking if items are in folder (without siblings)", error);
         return { found: false, folderName: "", folderId: "", isInMainFolder: false };
     }
+}
+
+/**
+ * Calculate the total count of items of a specific type in a folder,
+ * including all items in subfolders recursively.
+ */
+export function getFolderCountIncludingSubfolders(
+    folder: FolderWithCounts,
+    itemType: FolderResourceType,
+    getFolderChildren: (folderId: string) => FolderWithCounts[]
+): number {
+    const getCountForType = (f: FolderWithCounts): number => {
+        switch (itemType) {
+            case "workflow":
+                return f.itemCounts.workflows;
+            case "agent":
+                return f.itemCounts.agents;
+            case "form-interface":
+                return f.itemCounts.formInterfaces;
+            case "chat-interface":
+                return f.itemCounts.chatInterfaces;
+            case "knowledge-base":
+                return f.itemCounts.knowledgeBases;
+        }
+    };
+
+    let total = getCountForType(folder);
+
+    // Recursively add counts from all subfolders
+    const children = getFolderChildren(folder.id);
+    for (const child of children) {
+        total += getFolderCountIncludingSubfolders(child, itemType, getFolderChildren);
+    }
+
+    return total;
 }

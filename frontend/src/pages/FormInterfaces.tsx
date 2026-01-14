@@ -24,6 +24,7 @@ import {
     FolderBreadcrumb,
     FolderGridSection
 } from "../components/folders";
+import { DuplicateItemWarningDialog } from "../components/folders/DuplicateItemWarningDialog";
 import { CreateFormInterfaceDialog } from "../components/forms/CreateFormInterfaceDialog";
 import { useSearch } from "../hooks/useSearch";
 import { useSort, FORM_INTERFACE_SORT_FIELDS } from "../hooks/useSort";
@@ -35,16 +36,12 @@ import {
     updateFolder,
     removeItemsFromFolder
 } from "../lib/api";
-import { useDuplicateItemWarning } from "../lib/duplicateItemDialogUtils";
-import { checkItemsInFolder } from "../lib/folderUtils";
+import { checkItemsInFolder, getFolderCountIncludingSubfolders } from "../lib/folderUtils";
 import { logger } from "../lib/logger";
 import { createDragPreview } from "../lib/utils";
-import {
-    buildFolderTree,
-    useFolderStore,
-    getFolderCountIncludingSubfolders
-} from "../stores/folderStore";
+import { buildFolderTree, useFolderStore } from "../stores/folderStore";
 import { useUIPreferencesStore } from "../stores/uiPreferencesStore";
+import type { DuplicateItemWarning } from "../components/folders/DuplicateItemWarningDialog";
 
 // Convert FormInterface to FormInterfaceSummary for card components
 function toFormInterfaceSummary(fi: FormInterface): FormInterfaceSummary {
@@ -102,7 +99,9 @@ export function FormInterfaces() {
     const [isBatchDeleting, setIsBatchDeleting] = useState(false);
     const { showFoldersSection, setShowFoldersSection } = useUIPreferencesStore();
     const [expandedFolderIds, setExpandedFolderIds] = useState<Set<string>>(new Set());
-    const { showDuplicateItemWarning } = useDuplicateItemWarning();
+    const [duplicateItemWarning, setDuplicateItemWarning] = useState<DuplicateItemWarning | null>(
+        null
+    );
     const [contextMenu, setContextMenu] = useState<{
         isOpen: boolean;
         position: { x: number; y: number };
@@ -419,7 +418,7 @@ export function FormInterfaces() {
                 });
 
                 // Show global warning dialog
-                showDuplicateItemWarning({
+                setDuplicateItemWarning({
                     folderId,
                     itemIds,
                     itemNames,
@@ -465,7 +464,7 @@ export function FormInterfaces() {
                 logger.error("Failed to move items to folder", err);
             }
         },
-        [performDrop, formInterfaces, showDuplicateItemWarning]
+        [performDrop, formInterfaces]
     );
 
     // Selection handlers for batch operations
@@ -904,6 +903,12 @@ export function FormInterfaces() {
                 message={`Are you sure you want to delete the folder "${folderToDelete?.name}"? Items in this folder will be moved to the root level.`}
                 confirmText="Delete"
                 variant="danger"
+            />
+
+            {/* Duplicate Item Warning Dialog */}
+            <DuplicateItemWarningDialog
+                warning={duplicateItemWarning}
+                onClose={() => setDuplicateItemWarning(null)}
             />
         </div>
     );

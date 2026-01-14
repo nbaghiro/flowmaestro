@@ -1,5 +1,4 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import { DuplicateItemWarningDialog } from "./components/common/DuplicateItemWarningDialog";
 import { AppLayout } from "./components/layout/AppLayout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { ThemeProvider } from "./components/ThemeProvider";
@@ -37,7 +36,6 @@ import { WorkspaceSettings } from "./pages/WorkspaceSettings";
 function App() {
     return (
         <ThemeProvider>
-            <DuplicateItemWarningDialog />
             <Routes>
                 {/* Auth routes */}
                 <Route path="/login" element={<Login />} />

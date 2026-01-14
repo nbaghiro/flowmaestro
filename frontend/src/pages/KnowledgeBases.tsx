@@ -22,6 +22,7 @@ import {
     FolderBreadcrumb,
     FolderGridSection
 } from "../components/folders";
+import { DuplicateItemWarningDialog } from "../components/folders/DuplicateItemWarningDialog";
 import { CreateKnowledgeBaseModal } from "../components/knowledgebases";
 import { useSearch } from "../hooks/useSearch";
 import {
@@ -32,17 +33,13 @@ import {
     type KnowledgeBaseStats,
     type KnowledgeBase
 } from "../lib/api";
-import { useDuplicateItemWarning } from "../lib/duplicateItemDialogUtils";
-import { checkItemsInFolder } from "../lib/folderUtils";
+import { checkItemsInFolder, getFolderCountIncludingSubfolders } from "../lib/folderUtils";
 import { logger } from "../lib/logger";
 import { createDragPreview } from "../lib/utils";
-import {
-    useFolderStore,
-    buildFolderTree,
-    getFolderCountIncludingSubfolders
-} from "../stores/folderStore";
+import { useFolderStore, buildFolderTree } from "../stores/folderStore";
 import { useKnowledgeBaseStore } from "../stores/knowledgeBaseStore";
 import { useUIPreferencesStore } from "../stores/uiPreferencesStore";
+import type { DuplicateItemWarning } from "../components/folders/DuplicateItemWarningDialog";
 
 // Convert KnowledgeBase + stats to KnowledgeBaseSummary for card components
 function toKnowledgeBaseSummary(
@@ -90,7 +87,9 @@ export function KnowledgeBases() {
     const [isBatchDeleting, setIsBatchDeleting] = useState(false);
     const { showFoldersSection, setShowFoldersSection } = useUIPreferencesStore();
     const [expandedFolderIds, setExpandedFolderIds] = useState<Set<string>>(new Set());
-    const { showDuplicateItemWarning } = useDuplicateItemWarning();
+    const [duplicateItemWarning, setDuplicateItemWarning] = useState<DuplicateItemWarning | null>(
+        null
+    );
 
     // Folder state
     const [folders, setFolders] = useState<FolderWithCounts[]>([]);
@@ -462,7 +461,7 @@ export function KnowledgeBases() {
                 });
 
                 // Show global warning dialog
-                showDuplicateItemWarning({
+                setDuplicateItemWarning({
                     folderId,
                     itemIds,
                     itemNames,
@@ -508,7 +507,7 @@ export function KnowledgeBases() {
                 logger.error("Failed to move items to folder", err);
             }
         },
-        [performDrop, knowledgeBases, showDuplicateItemWarning]
+        [performDrop, knowledgeBases]
     );
 
     const kbContextMenuItems: ContextMenuItem[] = [
@@ -878,6 +877,12 @@ export function KnowledgeBases() {
                 message={`Are you sure you want to delete the folder "${folderToDelete?.name}"? Items in this folder will be moved to the root level.`}
                 confirmText="Delete"
                 variant="danger"
+            />
+
+            {/* Duplicate Item Warning Dialog */}
+            <DuplicateItemWarningDialog
+                warning={duplicateItemWarning}
+                onClose={() => setDuplicateItemWarning(null)}
             />
         </div>
     );

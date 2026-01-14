@@ -25,14 +25,10 @@ import { ContextMenu, type ContextMenuItem } from "../components/common/ContextM
 import { LoadingState } from "../components/common/Spinner";
 import { CreateFolderDialog, FolderItemSection, MoveToFolderDialog } from "../components/folders";
 import { removeItemsFromFolder } from "../lib/api";
-import { checkItemsInFolder } from "../lib/folderUtils";
+import { checkItemsInFolder, getFolderCountIncludingSubfolders } from "../lib/folderUtils";
 import { logger } from "../lib/logger";
 import { createDragPreview, cn } from "../lib/utils";
-import {
-    useFolderStore,
-    buildFolderTree,
-    getFolderCountIncludingSubfolders
-} from "../stores/folderStore";
+import { useFolderStore, buildFolderTree } from "../stores/folderStore";
 
 export function FolderContentsPage() {
     const { folderId } = useParams<{ folderId: string }>();
@@ -1558,7 +1554,14 @@ export function FolderContentsPage() {
                     setMovingItemId(null);
                     setMovingItemType(null);
                 }}
-                onConfirm={itemsAlreadyInFolder?.isInMainFolder ? undefined : handleConfirmMove}
+                onConfirm={
+                    itemsAlreadyInFolder?.isInMainFolder
+                        ? () => {
+                              setIsWarningDialogOpen(false);
+                              setItemsAlreadyInFolder(null);
+                          }
+                        : handleConfirmMove
+                }
                 title={
                     itemsAlreadyInFolder?.isInMainFolder
                         ? "Item already in folder"
@@ -1644,7 +1647,7 @@ export function FolderContentsPage() {
                         ""
                     )
                 }
-                confirmText={itemsAlreadyInFolder?.isInMainFolder ? undefined : "Move file"}
+                confirmText={itemsAlreadyInFolder?.isInMainFolder ? "Close" : "Move file"}
                 cancelText={itemsAlreadyInFolder?.isInMainFolder ? "Close" : "Cancel"}
                 variant="default"
             />

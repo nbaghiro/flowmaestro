@@ -4,7 +4,7 @@ import { Dialog } from "./Dialog";
 interface ConfirmDialogProps {
     isOpen: boolean;
     onClose: () => void;
-    onConfirm?: () => void;
+    onConfirm: () => void;
     title: string;
     message: string | React.ReactNode;
     confirmText?: string;
@@ -28,9 +28,7 @@ export function ConfirmDialog({
     variant = "default"
 }: ConfirmDialogProps) {
     const handleConfirm = () => {
-        if (onConfirm) {
-            onConfirm();
-        }
+        onConfirm();
         onClose();
     };
 
@@ -52,27 +50,23 @@ export function ConfirmDialog({
                 </p>
 
                 {/* Actions */}
-                <div className={`flex gap-3 pt-2 ${onConfirm ? "" : "justify-center"}`}>
+                <div className="flex gap-3 pt-2">
                     <button
                         onClick={onClose}
-                        className={`px-4 py-2 text-sm font-medium text-foreground bg-card border border-border rounded-lg hover:bg-muted/30 transition-colors ${
-                            onConfirm ? "flex-1" : "min-w-[100px]"
-                        }`}
+                        className="flex-1 px-4 py-2 text-sm font-medium text-foreground bg-card border border-border rounded-lg hover:bg-muted/30 transition-colors"
                     >
                         {cancelText}
                     </button>
-                    {onConfirm && (
-                        <button
-                            onClick={handleConfirm}
-                            className={`flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                                variant === "danger"
-                                    ? "bg-red-600 hover:bg-red-700 text-white"
-                                    : "bg-primary hover:bg-primary/90 text-primary-foreground"
-                            }`}
-                        >
-                            {confirmText}
-                        </button>
-                    )}
+                    <button
+                        onClick={handleConfirm}
+                        className={`flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                            variant === "danger"
+                                ? "bg-red-600 hover:bg-red-700 text-white"
+                                : "bg-primary hover:bg-primary/90 text-primary-foreground"
+                        }`}
+                    >
+                        {confirmText}
+                    </button>
                 </div>
             </div>
         </Dialog>

@@ -26,6 +26,7 @@ import {
     FolderBreadcrumb,
     FolderGridSection
 } from "../components/folders";
+import { DuplicateItemWarningDialog } from "../components/folders/DuplicateItemWarningDialog";
 import { WorkflowGenerationChatPanel } from "../components/WorkflowGenerationChatPanel";
 import { useSearch } from "../hooks/useSearch";
 import { useSort, WORKFLOW_SORT_FIELDS } from "../hooks/useSort";
@@ -41,18 +42,14 @@ import {
     removeItemsFromFolder,
     type WorkflowDefinition
 } from "../lib/api";
-import { useDuplicateItemWarning } from "../lib/duplicateItemDialogUtils";
-import { checkItemsInFolder } from "../lib/folderUtils";
+import { checkItemsInFolder, getFolderCountIncludingSubfolders } from "../lib/folderUtils";
 import { logger } from "../lib/logger";
 import { createDragPreview } from "../lib/utils";
 import { convertToReactFlowFormat } from "../lib/workflowLayout";
-import {
-    buildFolderTree,
-    useFolderStore,
-    getFolderCountIncludingSubfolders
-} from "../stores/folderStore";
+import { buildFolderTree, useFolderStore } from "../stores/folderStore";
 import { useUIPreferencesStore } from "../stores/uiPreferencesStore";
 import { useWorkflowGenerationChatStore } from "../stores/workflowGenerationChatStore";
+import type { DuplicateItemWarning } from "../components/folders/DuplicateItemWarningDialog";
 
 // Local workflow type that maps to API response (snake_case) and WorkflowSummary (camelCase)
 interface Workflow {
@@ -136,8 +133,10 @@ export function Workflows() {
     const [expandedFolderIds, setExpandedFolderIds] = useState<Set<string>>(new Set());
     const navigate = useNavigate();
 
-    // Global dialog for duplicate item warnings
-    const { showDuplicateItemWarning } = useDuplicateItemWarning();
+    // Local state for duplicate item warning dialog
+    const [duplicateItemWarning, setDuplicateItemWarning] = useState<DuplicateItemWarning | null>(
+        null
+    );
 
     // Search functionality
     const {
@@ -570,8 +569,8 @@ export function Workflows() {
                     return workflow?.name || "Unknown";
                 });
 
-                // Show global warning dialog
-                showDuplicateItemWarning({
+                // Show warning dialog
+                setDuplicateItemWarning({
                     folderId,
                     itemIds,
                     itemNames,
@@ -617,7 +616,7 @@ export function Workflows() {
                 logger.error("Failed to move items to folder", err);
             }
         },
-        [performDrop, workflows, showDuplicateItemWarning]
+        [performDrop, workflows]
     );
 
     // Selection handlers for batch operations
@@ -1042,6 +1041,12 @@ export function Workflows() {
                 title={error?.title || "Error"}
                 message={error?.message || "An error occurred"}
                 onClose={() => setError(null)}
+            />
+
+            {/* Duplicate Item Warning Dialog */}
+            <DuplicateItemWarningDialog
+                warning={duplicateItemWarning}
+                onClose={() => setDuplicateItemWarning(null)}
             />
 
             {/* Context Menu for batch operations */}
