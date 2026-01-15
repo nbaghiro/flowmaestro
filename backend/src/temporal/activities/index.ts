@@ -51,6 +51,28 @@ export {
     type TriggerExecutionResult
 } from "./triggers";
 
+// Credit activities
+export {
+    checkCredits,
+    shouldAllowExecution,
+    getCreditsBalance,
+    reserveCredits,
+    releaseCredits,
+    finalizeCredits,
+    calculateLLMCredits,
+    calculateNodeCredits,
+    estimateWorkflowCredits,
+    type CheckCreditsInput,
+    type ShouldAllowExecutionInput,
+    type GetBalanceInput,
+    type ReserveCreditsInput,
+    type ReleaseCreditsInput,
+    type FinalizeCreditsInput,
+    type CalculateLLMCreditsInput,
+    type CalculateNodeCreditsInput,
+    type EstimateWorkflowCreditsInput
+} from "./credits";
+
 // Agent activities
 export {
     // Core

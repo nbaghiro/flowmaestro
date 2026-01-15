@@ -11,33 +11,16 @@
  */
 
 // Create mock functions before any imports
-const mockOpenAIEmbeddingsCreate = jest.fn();
-const mockCohereEmbed = jest.fn();
-const mockGoogleEmbedContent = jest.fn();
+const mockEmbeddingGenerate = jest.fn();
 
-// Mock OpenAI SDK - using a class that can be instantiated with `new`
-jest.mock("openai", () => {
-    return jest.fn().mockImplementation(() => ({
-        embeddings: {
-            create: mockOpenAIEmbeddingsCreate
+// Mock the unified AI SDK
+jest.mock("../../../src/services/ai", () => ({
+    getAIClient: jest.fn(() => ({
+        embedding: {
+            generate: mockEmbeddingGenerate
         }
-    }));
-});
-
-// Mock Cohere SDK
-jest.mock("cohere-ai", () => ({
-    CohereClient: jest.fn().mockImplementation(() => ({
-        embed: mockCohereEmbed
-    }))
-}));
-
-// Mock Google Generative AI SDK
-jest.mock("@google/generative-ai", () => ({
-    GoogleGenerativeAI: jest.fn().mockImplementation(() => ({
-        getGenerativeModel: jest.fn().mockReturnValue({
-            embedContent: mockGoogleEmbedContent
-        })
-    }))
+    })),
+    resetAIClient: jest.fn()
 }));
 
 // Mock modules before any imports that use them
@@ -70,19 +53,24 @@ function createMockEmbedding(dimensions: number = 1536): number[] {
         .map(() => Math.random() * 2 - 1);
 }
 
-// Helper to create OpenAI embeddings response
-function createOpenAIResponse(embeddings: number[][], model: string = "text-embedding-3-small") {
+// Helper to create unified SDK embeddings response
+function createEmbeddingResponse(
+    embeddings: number[][],
+    model: string = "text-embedding-3-small",
+    provider: string = "openai"
+) {
+    const dimensions = embeddings[0]?.length ?? 1536;
     return {
-        object: "list",
-        data: embeddings.map((embedding, index) => ({
-            object: "embedding",
-            embedding,
-            index
-        })),
-        model,
-        usage: {
-            prompt_tokens: embeddings.length * 10,
-            total_tokens: embeddings.length * 10
+        embeddings,
+        dimensions,
+        metadata: {
+            processingTimeMs: 100,
+            provider,
+            model,
+            inputCount: embeddings.length,
+            usage: {
+                totalTokens: embeddings.length * 10
+            }
         }
     };
 }
@@ -133,8 +121,8 @@ describe("EmbeddingsNodeHandler", () => {
         it("generates embeddings for single text", async () => {
             const mockEmbedding = createMockEmbedding(1536);
 
-            mockOpenAIEmbeddingsCreate.mockResolvedValue(
-                createOpenAIResponse([mockEmbedding], "text-embedding-3-small")
+            mockEmbeddingGenerate.mockResolvedValue(
+                createEmbeddingResponse([mockEmbedding], "text-embedding-3-small")
             );
 
             const input = createHandlerInput({
@@ -158,8 +146,8 @@ describe("EmbeddingsNodeHandler", () => {
         it("interpolates text from context", async () => {
             const mockEmbedding = createMockEmbedding(1536);
 
-            mockOpenAIEmbeddingsCreate.mockResolvedValue(
-                createOpenAIResponse([mockEmbedding], "text-embedding-3-small")
+            mockEmbeddingGenerate.mockResolvedValue(
+                createEmbeddingResponse([mockEmbedding], "text-embedding-3-small")
             );
 
             const context = createTestContext({
@@ -181,7 +169,7 @@ describe("EmbeddingsNodeHandler", () => {
             await handler.execute(input);
 
             // Verify the SDK was called with interpolated text
-            expect(mockOpenAIEmbeddingsCreate).toHaveBeenCalledWith(
+            expect(mockEmbeddingGenerate).toHaveBeenCalledWith(
                 expect.objectContaining({
                     input: ["Dynamic text content"]
                 })
@@ -191,8 +179,8 @@ describe("EmbeddingsNodeHandler", () => {
         it("uses specified model", async () => {
             const mockEmbedding = createMockEmbedding(3072);
 
-            mockOpenAIEmbeddingsCreate.mockResolvedValue(
-                createOpenAIResponse([mockEmbedding], "text-embedding-3-large")
+            mockEmbeddingGenerate.mockResolvedValue(
+                createEmbeddingResponse([mockEmbedding], "text-embedding-3-large")
             );
 
             const input = createHandlerInput({
@@ -206,7 +194,7 @@ describe("EmbeddingsNodeHandler", () => {
 
             await handler.execute(input);
 
-            expect(mockOpenAIEmbeddingsCreate).toHaveBeenCalledWith(
+            expect(mockEmbeddingGenerate).toHaveBeenCalledWith(
                 expect.objectContaining({
                     model: "text-embedding-3-large"
                 })
@@ -216,8 +204,8 @@ describe("EmbeddingsNodeHandler", () => {
         it("uses default model when not specified", async () => {
             const mockEmbedding = createMockEmbedding(1536);
 
-            mockOpenAIEmbeddingsCreate.mockResolvedValue(
-                createOpenAIResponse([mockEmbedding], "text-embedding-3-small")
+            mockEmbeddingGenerate.mockResolvedValue(
+                createEmbeddingResponse([mockEmbedding], "text-embedding-3-small")
             );
 
             const input = createHandlerInput({
@@ -230,7 +218,7 @@ describe("EmbeddingsNodeHandler", () => {
 
             await handler.execute(input);
 
-            expect(mockOpenAIEmbeddingsCreate).toHaveBeenCalledWith(
+            expect(mockEmbeddingGenerate).toHaveBeenCalledWith(
                 expect.objectContaining({
                     model: "text-embedding-3-small"
                 })
@@ -246,8 +234,8 @@ describe("EmbeddingsNodeHandler", () => {
                 createMockEmbedding(1536)
             ];
 
-            mockOpenAIEmbeddingsCreate.mockResolvedValue(
-                createOpenAIResponse(mockEmbeddings, "text-embedding-3-small")
+            mockEmbeddingGenerate.mockResolvedValue(
+                createEmbeddingResponse(mockEmbeddings, "text-embedding-3-small")
             );
 
             const input = createHandlerInput({
@@ -274,8 +262,8 @@ describe("EmbeddingsNodeHandler", () => {
                 Array(1536).fill(0.9)
             ];
 
-            mockOpenAIEmbeddingsCreate.mockResolvedValue(
-                createOpenAIResponse(mockEmbeddings, "text-embedding-3-small")
+            mockEmbeddingGenerate.mockResolvedValue(
+                createEmbeddingResponse(mockEmbeddings, "text-embedding-3-small")
             );
 
             const input = createHandlerInput({
@@ -301,9 +289,9 @@ describe("EmbeddingsNodeHandler", () => {
         it("generates embeddings using Cohere provider", async () => {
             const mockEmbedding = createMockEmbedding(1024);
 
-            mockCohereEmbed.mockResolvedValue({
-                embeddings: [mockEmbedding]
-            });
+            mockEmbeddingGenerate.mockResolvedValue(
+                createEmbeddingResponse([mockEmbedding], "embed-english-v3.0", "cohere")
+            );
 
             const input = createHandlerInput({
                 nodeType: "embeddings",
@@ -324,9 +312,9 @@ describe("EmbeddingsNodeHandler", () => {
         it("uses task type for Cohere", async () => {
             const mockEmbedding = createMockEmbedding(1024);
 
-            mockCohereEmbed.mockResolvedValue({
-                embeddings: [mockEmbedding]
-            });
+            mockEmbeddingGenerate.mockResolvedValue(
+                createEmbeddingResponse([mockEmbedding], "embed-english-v3.0", "cohere")
+            );
 
             const input = createHandlerInput({
                 nodeType: "embeddings",
@@ -340,9 +328,9 @@ describe("EmbeddingsNodeHandler", () => {
 
             await handler.execute(input);
 
-            expect(mockCohereEmbed).toHaveBeenCalledWith(
+            expect(mockEmbeddingGenerate).toHaveBeenCalledWith(
                 expect.objectContaining({
-                    inputType: "search_query"
+                    taskType: "search_query"
                 })
             );
         });
@@ -352,15 +340,15 @@ describe("EmbeddingsNodeHandler", () => {
         it("generates embeddings using Google provider", async () => {
             const mockEmbedding = createMockEmbedding(768);
 
-            mockGoogleEmbedContent.mockResolvedValue({
-                embedding: { values: mockEmbedding }
-            });
+            mockEmbeddingGenerate.mockResolvedValue(
+                createEmbeddingResponse([mockEmbedding], "text-embedding-004", "google")
+            );
 
             const input = createHandlerInput({
                 nodeType: "embeddings",
                 nodeConfig: {
                     provider: "google",
-                    model: "embedding-001",
+                    model: "text-embedding-004",
                     input: "Test text"
                 }
             });
@@ -368,7 +356,7 @@ describe("EmbeddingsNodeHandler", () => {
             const output = await handler.execute(input);
 
             expect(output.result.provider).toBe("google");
-            expect(output.result.model).toBe("embedding-001");
+            expect(output.result.model).toBe("text-embedding-004");
             expect(output.result.embeddings).toBeDefined();
         });
     });
@@ -377,8 +365,8 @@ describe("EmbeddingsNodeHandler", () => {
         it("includes provider in output", async () => {
             const mockEmbedding = createMockEmbedding(1536);
 
-            mockOpenAIEmbeddingsCreate.mockResolvedValue(
-                createOpenAIResponse([mockEmbedding], "text-embedding-3-small")
+            mockEmbeddingGenerate.mockResolvedValue(
+                createEmbeddingResponse([mockEmbedding], "text-embedding-3-small")
             );
 
             const input = createHandlerInput({
@@ -398,8 +386,8 @@ describe("EmbeddingsNodeHandler", () => {
         it("includes model in output", async () => {
             const mockEmbedding = createMockEmbedding(1536);
 
-            mockOpenAIEmbeddingsCreate.mockResolvedValue(
-                createOpenAIResponse([mockEmbedding], "text-embedding-3-small")
+            mockEmbeddingGenerate.mockResolvedValue(
+                createEmbeddingResponse([mockEmbedding], "text-embedding-3-small")
             );
 
             const input = createHandlerInput({
@@ -419,8 +407,8 @@ describe("EmbeddingsNodeHandler", () => {
         it("includes dimensions info", async () => {
             const mockEmbedding = createMockEmbedding(1536);
 
-            mockOpenAIEmbeddingsCreate.mockResolvedValue(
-                createOpenAIResponse([mockEmbedding], "text-embedding-3-small")
+            mockEmbeddingGenerate.mockResolvedValue(
+                createEmbeddingResponse([mockEmbedding], "text-embedding-3-small")
             );
 
             const input = createHandlerInput({
@@ -441,8 +429,8 @@ describe("EmbeddingsNodeHandler", () => {
         it("wraps result in outputVariable when specified", async () => {
             const mockEmbedding = createMockEmbedding(1536);
 
-            mockOpenAIEmbeddingsCreate.mockResolvedValue(
-                createOpenAIResponse([mockEmbedding], "text-embedding-3-small")
+            mockEmbeddingGenerate.mockResolvedValue(
+                createEmbeddingResponse([mockEmbedding], "text-embedding-3-small")
             );
 
             const input = createHandlerInput({
@@ -465,7 +453,7 @@ describe("EmbeddingsNodeHandler", () => {
 
     describe("error handling", () => {
         it("handles API errors gracefully", async () => {
-            mockOpenAIEmbeddingsCreate.mockRejectedValue(new Error("Internal server error"));
+            mockEmbeddingGenerate.mockRejectedValue(new Error("Internal server error"));
 
             const input = createHandlerInput({
                 nodeType: "embeddings",
@@ -482,7 +470,7 @@ describe("EmbeddingsNodeHandler", () => {
         it("handles rate limit errors", async () => {
             const rateLimitError = new Error("Rate limit exceeded");
             (rateLimitError as Error & { status: number }).status = 429;
-            mockOpenAIEmbeddingsCreate.mockRejectedValue(rateLimitError);
+            mockEmbeddingGenerate.mockRejectedValue(rateLimitError);
 
             const input = createHandlerInput({
                 nodeType: "embeddings",
@@ -499,7 +487,7 @@ describe("EmbeddingsNodeHandler", () => {
         it("handles authentication errors", async () => {
             const authError = new Error("Invalid API key");
             (authError as Error & { status: number }).status = 401;
-            mockOpenAIEmbeddingsCreate.mockRejectedValue(authError);
+            mockEmbeddingGenerate.mockRejectedValue(authError);
 
             const input = createHandlerInput({
                 nodeType: "embeddings",
@@ -518,8 +506,8 @@ describe("EmbeddingsNodeHandler", () => {
         it("records execution duration", async () => {
             const mockEmbedding = createMockEmbedding(1536);
 
-            mockOpenAIEmbeddingsCreate.mockResolvedValue(
-                createOpenAIResponse([mockEmbedding], "text-embedding-3-small")
+            mockEmbeddingGenerate.mockResolvedValue(
+                createEmbeddingResponse([mockEmbedding], "text-embedding-3-small")
             );
 
             const input = createHandlerInput({
@@ -540,11 +528,16 @@ describe("EmbeddingsNodeHandler", () => {
         it("records token usage", async () => {
             const mockEmbedding = createMockEmbedding(1536);
 
-            mockOpenAIEmbeddingsCreate.mockResolvedValue({
-                object: "list",
-                data: [{ object: "embedding", embedding: mockEmbedding, index: 0 }],
-                model: "text-embedding-3-small",
-                usage: { prompt_tokens: 10, total_tokens: 10 }
+            mockEmbeddingGenerate.mockResolvedValue({
+                embeddings: [mockEmbedding],
+                dimensions: 1536,
+                metadata: {
+                    processingTimeMs: 50,
+                    provider: "openai",
+                    model: "text-embedding-3-small",
+                    inputCount: 1,
+                    usage: { totalTokens: 10 }
+                }
             });
 
             const input = createHandlerInput({
@@ -567,8 +560,8 @@ describe("EmbeddingsNodeHandler", () => {
             const longText = "word ".repeat(5000);
             const mockEmbedding = createMockEmbedding(1536);
 
-            mockOpenAIEmbeddingsCreate.mockResolvedValue(
-                createOpenAIResponse([mockEmbedding], "text-embedding-3-small")
+            mockEmbeddingGenerate.mockResolvedValue(
+                createEmbeddingResponse([mockEmbedding], "text-embedding-3-small")
             );
 
             const input = createHandlerInput({
@@ -588,8 +581,8 @@ describe("EmbeddingsNodeHandler", () => {
         it("handles special characters", async () => {
             const mockEmbedding = createMockEmbedding(1536);
 
-            mockOpenAIEmbeddingsCreate.mockResolvedValue(
-                createOpenAIResponse([mockEmbedding], "text-embedding-3-small")
+            mockEmbeddingGenerate.mockResolvedValue(
+                createEmbeddingResponse([mockEmbedding], "text-embedding-3-small")
             );
 
             const input = createHandlerInput({
@@ -609,8 +602,8 @@ describe("EmbeddingsNodeHandler", () => {
         it("handles multiline text", async () => {
             const mockEmbedding = createMockEmbedding(1536);
 
-            mockOpenAIEmbeddingsCreate.mockResolvedValue(
-                createOpenAIResponse([mockEmbedding], "text-embedding-3-small")
+            mockEmbeddingGenerate.mockResolvedValue(
+                createEmbeddingResponse([mockEmbedding], "text-embedding-3-small")
             );
 
             const input = createHandlerInput({

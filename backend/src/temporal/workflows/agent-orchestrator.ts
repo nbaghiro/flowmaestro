@@ -53,6 +53,15 @@ const {
     }
 });
 
+// Credit activities
+const { shouldAllowExecution, reserveCredits, finalizeCredits, calculateLLMCredits } =
+    proxyActivities<typeof activities>({
+        startToCloseTimeout: "30 seconds",
+        retry: {
+            maximumAttempts: 3
+        }
+    });
+
 // Signal for receiving user messages
 export const userMessageSignal = defineSignal<[string]>("userMessage");
 
@@ -68,6 +77,14 @@ export interface AgentOrchestratorInput {
     // For continue-as-new with ThreadManager
     serializedThread?: SerializedThread;
     iterations?: number;
+    /** Workspace ID for credit tracking and multi-tenancy */
+    workspaceId?: string;
+    /** Skip credit check (for system/internal executions) */
+    skipCreditCheck?: boolean;
+    /** Accumulated credits from previous continue-as-new cycles */
+    accumulatedCredits?: number;
+    /** Reserved credits for this execution */
+    reservedCredits?: number;
 }
 
 export interface AgentOrchestratorResult {
@@ -159,8 +176,16 @@ export async function agentOrchestratorWorkflow(
         threadId,
         initialMessage,
         serializedThread,
-        iterations = 0
+        iterations = 0,
+        workspaceId,
+        skipCreditCheck,
+        accumulatedCredits: previousCredits = 0,
+        reservedCredits: previousReserved = 0
     } = input;
+
+    // Credit tracking state
+    let reservedCredits = previousReserved;
+    let accumulatedCredits = previousCredits;
 
     // Create workflow logger
     const logger = createWorkflowLogger({
@@ -173,6 +198,51 @@ export async function agentOrchestratorWorkflow(
 
     // Load agent configuration
     const agent = await getAgentConfig({ agentId, userId });
+
+    // Credit check and reservation (only on first run)
+    if (iterations === 0 && !skipCreditCheck && workspaceId) {
+        logger.info("Checking credits for agent execution");
+
+        // Estimate credits: ~50 credits per iteration * max_iterations
+        const estimatedCredits = Math.ceil(agent.max_iterations * 50 * 1.2);
+
+        const allowed = await shouldAllowExecution({
+            workspaceId,
+            estimatedCredits
+        });
+
+        if (!allowed) {
+            const errorMessage = `Insufficient credits for agent execution. Estimated need: ${estimatedCredits} credits`;
+            logger.warn("Insufficient credits", { estimatedCredits });
+
+            return {
+                success: false,
+                serializedThread: { messages: [], savedMessageIds: [], metadata: {} },
+                iterations: 0,
+                error: errorMessage
+            };
+        }
+
+        const reserved = await reserveCredits({
+            workspaceId,
+            estimatedCredits
+        });
+
+        if (!reserved) {
+            const errorMessage = "Failed to reserve credits for agent execution";
+            logger.error("Credit reservation failed");
+
+            return {
+                success: false,
+                serializedThread: { messages: [], savedMessageIds: [], metadata: {} },
+                iterations: 0,
+                error: errorMessage
+            };
+        }
+
+        reservedCredits = estimatedCredits;
+        logger.info("Credits reserved for agent", { reservedCredits });
+    }
 
     // Create AGENT_RUN span for entire execution (only on first run, not continue-as-new)
     let agentRunSpanId: string | undefined = undefined;
@@ -347,7 +417,12 @@ export async function agentOrchestratorWorkflow(
                 iterations: currentIterations,
                 // Preserve override values across continue-as-new
                 ...(input.connectionId && { connectionId: input.connectionId }),
-                ...(input.model && { model: input.model })
+                ...(input.model && { model: input.model }),
+                // Preserve credit state across continue-as-new
+                workspaceId,
+                skipCreditCheck,
+                accumulatedCredits,
+                reservedCredits
             });
         }
 
@@ -430,6 +505,20 @@ export async function agentOrchestratorWorkflow(
                     error instanceof Error ? error : new Error(String(error))
                 );
             }
+
+            // Track credit usage for this LLM call
+            if (!skipCreditCheck && workspaceId && llmResponse.usage) {
+                const callCredits = await calculateLLMCredits({
+                    model: input.model || agent.model,
+                    inputTokens: llmResponse.usage.promptTokens,
+                    outputTokens: llmResponse.usage.completionTokens
+                });
+                accumulatedCredits += callCredits;
+                logger.debug("Credits accumulated", {
+                    callCredits,
+                    totalAccumulated: accumulatedCredits
+                });
+            }
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : "Unknown LLM error";
             logger.error(
@@ -465,6 +554,26 @@ export async function agentOrchestratorWorkflow(
                     error: error instanceof Error ? error : new Error(errorMessage),
                     attributes: {
                         totalIterations: currentIterations,
+                        failureReason: "llm_call_failed"
+                    }
+                });
+            }
+
+            // Finalize credits with partial usage
+            if (!skipCreditCheck && workspaceId && reservedCredits > 0) {
+                await finalizeCredits({
+                    workspaceId,
+                    userId,
+                    reservedAmount: reservedCredits,
+                    actualAmount: accumulatedCredits,
+                    operationType: "agent_execution",
+                    operationId: executionId,
+                    description: `Agent: ${agent.name} (LLM call failed)`,
+                    metadata: {
+                        agentId,
+                        agentName: agent.name,
+                        threadId,
+                        iterations: currentIterations,
                         failureReason: "llm_call_failed"
                     }
                 });
@@ -575,6 +684,26 @@ export async function agentOrchestratorWorkflow(
                         });
                     }
 
+                    // Finalize credits with partial usage
+                    if (!skipCreditCheck && workspaceId && reservedCredits > 0) {
+                        await finalizeCredits({
+                            workspaceId,
+                            userId,
+                            reservedAmount: reservedCredits,
+                            actualAmount: accumulatedCredits,
+                            operationType: "agent_execution",
+                            operationId: executionId,
+                            description: `Agent: ${agent.name} (user input timeout)`,
+                            metadata: {
+                                agentId,
+                                agentName: agent.name,
+                                threadId,
+                                iterations: currentIterations,
+                                failureReason: "user_input_timeout"
+                            }
+                        });
+                    }
+
                     return {
                         success: false,
                         serializedThread: messageState,
@@ -626,6 +755,26 @@ export async function agentOrchestratorWorkflow(
                             error: new Error(`Safety check blocked user message: ${blockReasons}`),
                             attributes: {
                                 totalIterations: currentIterations,
+                                failureReason: "safety_check_blocked"
+                            }
+                        });
+                    }
+
+                    // Finalize credits with partial usage
+                    if (!skipCreditCheck && workspaceId && reservedCredits > 0) {
+                        await finalizeCredits({
+                            workspaceId,
+                            userId,
+                            reservedAmount: reservedCredits,
+                            actualAmount: accumulatedCredits,
+                            operationType: "agent_execution",
+                            operationId: executionId,
+                            description: `Agent: ${agent.name} (safety check blocked)`,
+                            metadata: {
+                                agentId,
+                                agentName: agent.name,
+                                threadId,
+                                iterations: currentIterations,
                                 failureReason: "safety_check_blocked"
                             }
                         });
@@ -727,6 +876,26 @@ export async function agentOrchestratorWorkflow(
                     attributes: {
                         totalIterations: currentIterations,
                         messageCount: messageState.messages.length
+                    }
+                });
+            }
+
+            // Finalize credits with actual usage
+            if (!skipCreditCheck && workspaceId && reservedCredits > 0) {
+                await finalizeCredits({
+                    workspaceId,
+                    userId,
+                    reservedAmount: reservedCredits,
+                    actualAmount: accumulatedCredits,
+                    operationType: "agent_execution",
+                    operationId: executionId,
+                    description: `Agent: ${agent.name}`,
+                    metadata: {
+                        agentId,
+                        agentName: agent.name,
+                        threadId,
+                        iterations: currentIterations,
+                        success: true
                     }
                 });
             }
@@ -899,6 +1068,26 @@ export async function agentOrchestratorWorkflow(
             error: new Error(maxIterError),
             attributes: {
                 totalIterations: currentIterations,
+                failureReason: "max_iterations_reached"
+            }
+        });
+    }
+
+    // Finalize credits with partial usage
+    if (!skipCreditCheck && workspaceId && reservedCredits > 0) {
+        await finalizeCredits({
+            workspaceId,
+            userId,
+            reservedAmount: reservedCredits,
+            actualAmount: accumulatedCredits,
+            operationType: "agent_execution",
+            operationId: executionId,
+            description: `Agent: ${agent.name} (max iterations)`,
+            metadata: {
+                agentId,
+                agentName: agent.name,
+                threadId,
+                iterations: currentIterations,
                 failureReason: "max_iterations_reached"
             }
         });

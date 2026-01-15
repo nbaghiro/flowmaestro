@@ -106,6 +106,7 @@ export async function createTestEnvironment(
         emitExecutionProgress: jest.fn().mockResolvedValue(undefined),
         emitExecutionCompleted: jest.fn().mockResolvedValue(undefined),
         emitExecutionFailed: jest.fn().mockResolvedValue(undefined),
+        emitExecutionPaused: jest.fn().mockResolvedValue(undefined),
         emitNodeStarted: jest.fn().mockResolvedValue(undefined),
         emitNodeCompleted: jest.fn().mockResolvedValue(undefined),
         emitNodeFailed: jest.fn().mockResolvedValue(undefined),
@@ -116,7 +117,30 @@ export async function createTestEnvironment(
             .mockResolvedValue({ spanId: "test-span-id", traceId: "test-trace-id" }),
         endSpan: jest.fn().mockResolvedValue(undefined),
         endSpanWithError: jest.fn().mockResolvedValue(undefined),
-        setSpanAttributes: jest.fn().mockResolvedValue(undefined)
+        setSpanAttributes: jest.fn().mockResolvedValue(undefined),
+
+        // Credit activities (default: allow all, track nothing)
+        shouldAllowExecution: jest.fn().mockResolvedValue(true),
+        reserveCredits: jest.fn().mockResolvedValue(true),
+        releaseCredits: jest.fn().mockResolvedValue(undefined),
+        finalizeCredits: jest.fn().mockResolvedValue(undefined),
+        calculateLLMCredits: jest.fn().mockResolvedValue(10),
+        calculateNodeCredits: jest.fn().mockResolvedValue(1),
+        estimateWorkflowCredits: jest.fn().mockResolvedValue({
+            totalCredits: 100,
+            breakdown: [],
+            confidence: "estimate"
+        }),
+        getCreditsBalance: jest.fn().mockResolvedValue({
+            available: 1000,
+            subscription: 500,
+            purchased: 500,
+            bonus: 0,
+            reserved: 0,
+            subscriptionExpiresAt: null,
+            usedThisMonth: 0,
+            usedAllTime: 0
+        })
     };
 
     const worker = await Worker.create({

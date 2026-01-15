@@ -31,7 +31,7 @@ const logger = createActivityLogger({ nodeType: "Embeddings" });
 
 export interface EmbeddingsNodeConfig {
     provider: "openai" | "cohere" | "google";
-    model: string;
+    model?: string;
     input: string | string[];
     inputTruncate?: "start" | "end" | "none";
     taskType?: "search_document" | "search_query" | "classification" | "clustering";
@@ -39,6 +39,15 @@ export interface EmbeddingsNodeConfig {
     outputVariable?: string;
     connectionId?: string;
 }
+
+/**
+ * Default models by provider
+ */
+const DEFAULT_MODELS: Record<string, string> = {
+    openai: "text-embedding-3-small",
+    cohere: "embed-english-v3.0",
+    google: "text-embedding-004"
+};
 
 export interface EmbeddingsNodeResult {
     embeddings: number[][];
@@ -72,13 +81,16 @@ export async function executeEmbeddingsNode(
         const ai = getAIClient();
         const provider = config.provider as AIProvider;
 
+        // Use default model if not specified
+        const model = config.model ?? DEFAULT_MODELS[config.provider];
+
         // Prepare inputs
         const inputs = Array.isArray(config.input) ? config.input : [config.input];
         const interpolatedInputs = inputs.map((text) => interpolateVariables(text, context));
 
         logger.debug("Embeddings request", {
             provider: config.provider,
-            model: config.model,
+            model,
             inputCount: interpolatedInputs.length
         });
 
@@ -99,7 +111,7 @@ export async function executeEmbeddingsNode(
         // Generate embeddings using unified SDK
         const response = await ai.embedding.generate({
             provider,
-            model: config.model,
+            model,
             input: interpolatedInputs,
             taskType: config.taskType,
             truncate: config.inputTruncate,
@@ -111,7 +123,7 @@ export async function executeEmbeddingsNode(
 
         const result: JsonObject = {
             embeddings: response.embeddings,
-            model: config.model,
+            model,
             provider: config.provider,
             metadata: {
                 dimensions: response.dimensions,

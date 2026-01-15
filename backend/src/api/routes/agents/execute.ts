@@ -101,6 +101,7 @@ export async function executeAgentHandler(
                     userId,
                     threadId,
                     initialMessage: message,
+                    workspaceId,
                     ...(connection_id && { connectionId: connection_id }),
                     ...(model && { model })
                 }

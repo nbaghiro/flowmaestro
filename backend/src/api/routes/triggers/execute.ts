@@ -129,7 +129,8 @@ export async function executeTriggerRoute(fastify: FastifyInstance) {
                         executionId: execution.id,
                         workflowDefinition: backendWorkflowDef,
                         inputs,
-                        userId
+                        userId,
+                        workspaceId
                     }
                 ]
             });

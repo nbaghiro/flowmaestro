@@ -13,6 +13,7 @@
  */
 
 import nock from "nock";
+import { AuthenticationError, resetAIClient } from "../../../src/services/ai";
 import {
     LLMNodeHandler,
     createLLMNodeHandler
@@ -56,6 +57,8 @@ describe("LLMNodeHandler", () => {
         clearHttpMocks();
         // Reset environment
         process.env = { ...originalEnv };
+        // Reset the AI client singleton so it picks up env changes
+        resetAIClient();
     });
 
     afterEach(() => {
@@ -444,7 +447,23 @@ describe("LLMNodeHandler", () => {
 
     describe("API key handling", () => {
         it("throws error when no API key available", async () => {
-            delete process.env.OPENAI_API_KEY;
+            // Reset client to clear any cached config
+            resetAIClient();
+
+            // Mock getAIClient to return a client that throws AuthenticationError
+            const mockComplete = jest
+                .fn()
+                .mockRejectedValue(
+                    new AuthenticationError(
+                        "openai",
+                        "No API key available for openai. Set the OPENAI_API_KEY environment variable."
+                    )
+                );
+
+            // eslint-disable-next-line @typescript-eslint/no-require-imports
+            jest.spyOn(require("../../../src/services/ai"), "getAIClient").mockReturnValue({
+                text: { complete: mockComplete, stream: jest.fn() }
+            });
 
             const input = createHandlerInput({
                 nodeType: "llm",
@@ -456,6 +475,9 @@ describe("LLMNodeHandler", () => {
             });
 
             await expect(handler.execute(input)).rejects.toThrow(/OPENAI_API_KEY/);
+
+            // Restore
+            jest.restoreAllMocks();
         });
     });
 
