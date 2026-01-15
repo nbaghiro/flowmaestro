@@ -1,4 +1,5 @@
 import * as Popover from "@radix-ui/react-popover";
+import { useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, ChevronUp, Folder, Edit2, Trash2, Plus } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
@@ -12,7 +13,6 @@ import { MAX_FOLDER_DEPTH } from "@flowmaestro/shared";
 import { removeItemsFromFolder } from "../../lib/api";
 import { checkItemsInFolder } from "../../lib/folderUtils";
 import { logger } from "../../lib/logger";
-import { queryClient } from "../../main";
 import { useFolderStore } from "../../stores/folderStore";
 import { useUIPreferencesStore } from "../../stores/uiPreferencesStore";
 import { ConfirmDialog } from "../common/ConfirmDialog";
@@ -35,6 +35,7 @@ interface ContextMenuState {
 export function SidebarFolders({ isCollapsed }: SidebarFoldersProps) {
     const location = useLocation();
     const [searchParams] = useSearchParams();
+    const queryClient = useQueryClient();
 
     const {
         folders,

@@ -135,7 +135,6 @@ export function FolderGridSection({
                                                     }
                                                     displayItemType={displayItemType}
                                                     calculatedCount={subfolderCalculatedCount}
-                                                    isSubfolder={subfolder.parentId !== null}
                                                     hasChildren={
                                                         getFolderChildren(subfolder.id).length > 0
                                                     }

@@ -115,7 +115,7 @@ export function DuplicateItemWarningDialog({ warning, onClose }: DuplicateItemWa
                                 <strong>{folderName}</strong>. Do you want to move it to this
                                 subfolder? This will move the{" "}
                                 {getItemTypeLabel(warning.itemType, false)} from the folder to the
-                                from the folder to the subfolder.
+                                subfolder.
                             </>
                         ) : (
                             <>

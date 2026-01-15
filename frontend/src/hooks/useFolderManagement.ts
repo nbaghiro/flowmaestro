@@ -5,13 +5,13 @@
  * Eliminates duplication of folder-related state and handlers.
  */
 
+import { useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import type { Folder, FolderWithCounts, FolderResourceType } from "@flowmaestro/shared";
 import { getFolders, updateFolder, removeItemsFromFolder } from "../lib/api";
 import { checkItemsInFolder } from "../lib/folderUtils";
 import { logger } from "../lib/logger";
-import { queryClient } from "../main";
 import { buildFolderTree, useFolderStore } from "../stores/folderStore";
 import { useUIPreferencesStore } from "../stores/uiPreferencesStore";
 import type { DuplicateItemWarning } from "../components/folders/DuplicateItemWarningDialog";
@@ -86,6 +86,7 @@ export function useFolderManagement({
     const navigate = useNavigate();
     const location = useLocation();
     const [searchParams, setSearchParams] = useSearchParams();
+    const queryClient = useQueryClient();
     // Get current folder ID from either URL path (/folders/:folderId) or search params (?folder=id)
     const currentFolderIdFromPath = location.pathname.startsWith("/folders/")
         ? location.pathname.split("/folders/")[1]?.split("/")[0] || null
@@ -196,8 +197,9 @@ export function useFolderManagement({
         async (name: string, color: string) => {
             await createFolderStore({ name, color });
             await loadFolders();
+            queryClient.invalidateQueries({ queryKey: ["folderContents"] });
         },
-        [createFolderStore, loadFolders]
+        [createFolderStore, loadFolders, queryClient]
     );
 
     const handleEditFolder = useCallback(
@@ -205,9 +207,10 @@ export function useFolderManagement({
             if (!folderToEdit) return;
             await updateFolder(folderToEdit.id, { name, color });
             await loadFolders();
+            queryClient.invalidateQueries({ queryKey: ["folderContents", folderToEdit.id] });
             setFolderToEdit(null);
         },
-        [folderToEdit, loadFolders]
+        [folderToEdit, loadFolders, queryClient]
     );
 
     const handleDeleteFolder = useCallback(async () => {
@@ -216,6 +219,7 @@ export function useFolderManagement({
             await deleteFolderStore(folderToDelete.id);
             await loadFolders();
             await onReloadItems();
+            queryClient.invalidateQueries({ queryKey: ["folderContents", folderToDelete.id] });
             setFolderToDelete(null);
             // If we were viewing the deleted folder, go back to root
             if (currentFolderId === folderToDelete.id) {
@@ -231,7 +235,8 @@ export function useFolderManagement({
         loadFolders,
         onReloadItems,
         currentFolderId,
-        setSearchParams
+        setSearchParams,
+        queryClient
     ]);
 
     const handleFolderClick = useCallback(
@@ -286,6 +291,10 @@ export function useFolderManagement({
 
             await loadFolders();
             await onReloadItems();
+            // Invalidate queries for all deleted folders
+            selectedFolderIds.forEach((id) => {
+                queryClient.invalidateQueries({ queryKey: ["folderContents", id] });
+            });
             setSelectedFolderIds(new Set());
         } catch (err) {
             logger.error("Failed to delete folders", err);
@@ -293,7 +302,7 @@ export function useFolderManagement({
         } finally {
             setIsBatchDeleting(false);
         }
-    }, [selectedFolderIds, deleteFolderStore, loadFolders, onReloadItems]);
+    }, [selectedFolderIds, deleteFolderStore, loadFolders, onReloadItems, queryClient]);
 
     const handleNavigateToRoot = useCallback(() => {
         setSearchParams({});
@@ -335,11 +344,12 @@ export function useFolderManagement({
             await moveItemsToFolderStore(folderId, itemIds, droppedItemType);
             await onReloadItems();
             await loadFolders();
+            queryClient.invalidateQueries({ queryKey: ["folderContents", folderId] });
             if (onClearSelection) {
                 onClearSelection();
             }
         },
-        [moveItemsToFolderStore, onReloadItems, loadFolders, onClearSelection]
+        [moveItemsToFolderStore, onReloadItems, loadFolders, queryClient, onClearSelection]
     );
 
     const handleDropOnFolder = useCallback(
@@ -459,7 +469,16 @@ export function useFolderManagement({
                 logger.error("Failed to move items to folder", err);
             }
         },
-        [itemType, getItemNames, performDrop]
+        [
+            itemType,
+            getItemNames,
+            performDrop,
+            currentFolderId,
+            checkItemsInFolder,
+            removeItemsFromFolder,
+            setDuplicateItemWarning,
+            queryClient
+        ]
     );
 
     return {

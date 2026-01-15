@@ -16,8 +16,6 @@ interface FolderCardProps {
     displayItemType?: FolderResourceType;
     /** Optional calculated count including subfolders (overrides folder.itemCounts) */
     calculatedCount?: number;
-    /** Whether this is a subfolder (for visual distinction) */
-    isSubfolder?: boolean;
     /** Whether this folder has children (subfolders) */
     hasChildren?: boolean;
     /** Whether this folder is expanded (showing children) */
@@ -36,11 +34,12 @@ export function FolderCard({
     onDrop,
     displayItemType,
     calculatedCount,
-    isSubfolder = false,
     hasChildren = false,
     isExpanded = false,
     onToggleExpand
 }: FolderCardProps) {
+    // Derive isSubfolder from folder data
+    const isSubfolder = folder.parentId !== null;
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isDragOver, setIsDragOver] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
