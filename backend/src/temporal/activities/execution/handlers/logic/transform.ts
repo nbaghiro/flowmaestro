@@ -268,6 +268,11 @@ export async function executeTransformNode(
         arrayLength: Array.isArray(result) ? (result as JsonArray).length : undefined
     });
 
+    // For passthrough with no outputVariable, return empty object (data flows through unchanged)
+    if (!validatedConfig.outputVariable) {
+        return {} as JsonObject;
+    }
+
     return {
         [validatedConfig.outputVariable]: result
     } as unknown as JsonObject;

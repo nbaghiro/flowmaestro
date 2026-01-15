@@ -17,6 +17,7 @@ import EmbeddingsNode from "./nodes/EmbeddingsNode";
 import FilesNode from "./nodes/FilesNode";
 import HTTPNode from "./nodes/HTTPNode";
 import HumanReviewNode from "./nodes/HumanReviewNode";
+import ImageGenerationNode from "./nodes/ImageGenerationNode";
 import InputNode from "./nodes/InputNode";
 import IntegrationNode from "./nodes/IntegrationNode";
 import KnowledgeBaseQueryNode from "./nodes/KnowledgeBaseQueryNode";
@@ -30,6 +31,7 @@ import TemplateOutputNode from "./nodes/TemplateOutputNode";
 import TransformNode from "./nodes/TransformNode";
 import TriggerNode from "./nodes/TriggerNode";
 import URLNode from "./nodes/URLNode";
+import VideoGenerationNode from "./nodes/VideoGenerationNode";
 import VisionNode from "./nodes/VisionNode";
 import WaitNode from "./nodes/WaitNode";
 import type { ComponentType } from "react";
@@ -77,6 +79,9 @@ export const nodeTypes: Record<string, NodeComponent> = {
     database: DatabaseNode,
     integration: IntegrationNode,
     knowledgeBaseQuery: KnowledgeBaseQueryNode,
+    // AI generation nodes
+    imageGeneration: ImageGenerationNode,
+    videoGeneration: VideoGenerationNode,
     // Dedicated input/output nodes
     files: FilesNode,
     url: URLNode,
@@ -132,6 +137,8 @@ export const previewNodeTypes: Record<string, NodeComponent> = {
     database: DatabaseNode,
     integration: IntegrationNode,
     knowledgeBaseQuery: KnowledgeBaseQueryNode,
+    imageGeneration: ImageGenerationNode,
+    videoGeneration: VideoGenerationNode,
     files: FilesNode,
     url: URLNode,
     audioInput: AudioInputNode,

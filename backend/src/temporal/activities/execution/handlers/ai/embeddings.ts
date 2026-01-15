@@ -3,20 +3,19 @@
  *
  * Complete execution logic and handler for embedding generation nodes.
  * Supports OpenAI, Cohere, and Google embedding models.
+ *
+ * Uses the unified @flowmaestro/ai SDK for all provider integrations.
  */
 
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import { CohereClient } from "cohere-ai";
-import OpenAI from "openai";
-import type { JsonObject, JsonValue } from "@flowmaestro/shared";
-import { config as appConfig } from "../../../../../core/config";
+import type { JsonObject } from "@flowmaestro/shared";
+import { getAIClient, type AIProvider } from "../../../../../services/ai";
 import {
-    ConfigurationError,
     ValidationError,
     withHeartbeat,
-    type HeartbeatOperations
+    createActivityLogger,
+    interpolateVariables,
+    getExecutionContext
 } from "../../../../core";
-import { createActivityLogger, interpolateVariables, getExecutionContext } from "../../../../core";
 import {
     BaseNodeHandler,
     type NodeHandlerInput,
@@ -38,6 +37,7 @@ export interface EmbeddingsNodeConfig {
     taskType?: "search_document" | "search_query" | "classification" | "clustering";
     batchSize?: number;
     outputVariable?: string;
+    connectionId?: string;
 }
 
 export interface EmbeddingsNodeResult {
@@ -53,203 +53,11 @@ export interface EmbeddingsNodeResult {
 }
 
 // ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
-
-function mapTaskTypeToInputType(
-    taskType?: string
-): "search_document" | "search_query" | "classification" | "clustering" {
-    switch (taskType) {
-        case "search_document":
-            return "search_document";
-        case "search_query":
-            return "search_query";
-        case "classification":
-            return "classification";
-        case "clustering":
-            return "clustering";
-        default:
-            return "search_document";
-    }
-}
-
-// ============================================================================
-// PROVIDER IMPLEMENTATIONS
-// ============================================================================
-
-async function executeOpenAI(
-    config: EmbeddingsNodeConfig,
-    context: JsonObject,
-    heartbeat: HeartbeatOperations
-): Promise<JsonObject> {
-    const apiKey = appConfig.ai.openai.apiKey;
-    if (!apiKey) {
-        throw new ConfigurationError(
-            "OPENAI_API_KEY environment variable is not set",
-            "OPENAI_API_KEY"
-        );
-    }
-
-    const openai = new OpenAI({ apiKey });
-
-    const inputs = Array.isArray(config.input) ? config.input : [config.input];
-    const interpolatedInputs = inputs.map((text) => interpolateVariables(text, context));
-
-    logger.debug("OpenAI embeddings request", { inputCount: interpolatedInputs.length });
-
-    const batchSize = config.batchSize || 2048;
-    const allEmbeddings: number[][] = [];
-    let totalTokens = 0;
-
-    for (let i = 0; i < interpolatedInputs.length; i += batchSize) {
-        const batch = interpolatedInputs.slice(i, i + batchSize);
-
-        heartbeat.update({
-            step: "processing_batch",
-            itemsProcessed: i,
-            totalItems: interpolatedInputs.length,
-            percentComplete: Math.round((i / interpolatedInputs.length) * 100)
-        });
-
-        const response = await openai.embeddings.create({
-            model: config.model || "text-embedding-3-small",
-            input: batch
-        });
-
-        const embeddings = response.data.map((item) => item.embedding);
-        allEmbeddings.push(...embeddings);
-
-        if (response.usage) {
-            totalTokens += response.usage.total_tokens;
-        }
-
-        logger.debug("OpenAI batch processed", {
-            batch: Math.floor(i / batchSize) + 1,
-            embeddingsCount: embeddings.length
-        });
-    }
-
-    const dimensions = allEmbeddings[0]?.length || 0;
-
-    return {
-        embeddings: allEmbeddings,
-        model: config.model || "text-embedding-3-small",
-        provider: "openai",
-        metadata: {
-            dimensions,
-            inputCount: interpolatedInputs.length,
-            tokensUsed: totalTokens,
-            processingTime: 0
-        }
-    } as unknown as JsonObject;
-}
-
-async function executeCohere(
-    config: EmbeddingsNodeConfig,
-    context: JsonObject,
-    _heartbeat: HeartbeatOperations
-): Promise<JsonObject> {
-    const apiKey = appConfig.ai.cohere.apiKey;
-    if (!apiKey) {
-        throw new ConfigurationError(
-            "COHERE_API_KEY environment variable is not set",
-            "COHERE_API_KEY"
-        );
-    }
-
-    const cohere = new CohereClient({ token: apiKey });
-
-    const inputs = Array.isArray(config.input) ? config.input : [config.input];
-    const interpolatedInputs = inputs.map((text) => interpolateVariables(text, context));
-
-    logger.debug("Cohere embeddings request", { inputCount: interpolatedInputs.length });
-
-    const truncateValue =
-        config.inputTruncate === "start"
-            ? "START"
-            : config.inputTruncate === "end"
-              ? "END"
-              : "NONE";
-
-    const response = await cohere.embed({
-        texts: interpolatedInputs,
-        model: config.model || "embed-english-v3.0",
-        inputType: mapTaskTypeToInputType(config.taskType),
-        truncate: truncateValue
-    });
-
-    const embeddings = Array.isArray(response.embeddings) ? response.embeddings : [];
-    const dimensions = (embeddings[0] as number[])?.length || 0;
-
-    return {
-        embeddings,
-        model: config.model || "embed-english-v3.0",
-        provider: "cohere",
-        metadata: {
-            dimensions,
-            inputCount: interpolatedInputs.length,
-            processingTime: 0
-        }
-    } as unknown as JsonObject;
-}
-
-async function executeGoogle(
-    config: EmbeddingsNodeConfig,
-    context: JsonObject,
-    heartbeat: HeartbeatOperations
-): Promise<JsonObject> {
-    const apiKey = appConfig.ai.google.apiKey;
-    if (!apiKey) {
-        throw new ConfigurationError(
-            "GOOGLE_API_KEY environment variable is not set",
-            "GOOGLE_API_KEY"
-        );
-    }
-
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({
-        model: config.model || "embedding-001"
-    });
-
-    const inputs = Array.isArray(config.input) ? config.input : [config.input];
-    const interpolatedInputs = inputs.map((text) => interpolateVariables(text, context));
-
-    logger.debug("Google embeddings request", { inputCount: interpolatedInputs.length });
-
-    const embeddings: number[][] = [];
-
-    for (let i = 0; i < interpolatedInputs.length; i++) {
-        heartbeat.update({
-            step: "processing_input",
-            itemsProcessed: i,
-            totalItems: interpolatedInputs.length,
-            percentComplete: Math.round((i / interpolatedInputs.length) * 100)
-        });
-
-        const result = await model.embedContent(interpolatedInputs[i]);
-        embeddings.push(result.embedding.values);
-    }
-
-    const dimensions = embeddings[0]?.length || 0;
-
-    return {
-        embeddings,
-        model: config.model || "embedding-001",
-        provider: "google",
-        metadata: {
-            dimensions,
-            inputCount: interpolatedInputs.length,
-            processingTime: 0
-        }
-    } as unknown as JsonObject;
-}
-
-// ============================================================================
 // EXECUTOR FUNCTION
 // ============================================================================
 
 /**
- * Execute Embeddings node - generate vector embeddings for text
+ * Execute Embeddings node - generate vector embeddings for text via unified AI SDK
  */
 export async function executeEmbeddingsNode(
     config: EmbeddingsNodeConfig,
@@ -259,42 +67,64 @@ export async function executeEmbeddingsNode(
         const startTime = Date.now();
 
         heartbeat.update({ step: "initializing", provider: config.provider });
-        logger.info("Generating embeddings", { provider: config.provider });
+        logger.info("Generating embeddings via unified AI SDK", { provider: config.provider });
 
-        let result: JsonObject;
+        const ai = getAIClient();
+        const provider = config.provider as AIProvider;
 
-        switch (config.provider) {
-            case "openai":
-                heartbeat.update({ step: "calling_openai" });
-                result = await executeOpenAI(config, context, heartbeat);
-                break;
+        // Prepare inputs
+        const inputs = Array.isArray(config.input) ? config.input : [config.input];
+        const interpolatedInputs = inputs.map((text) => interpolateVariables(text, context));
 
-            case "cohere":
-                heartbeat.update({ step: "calling_cohere" });
-                result = await executeCohere(config, context, heartbeat);
-                break;
+        logger.debug("Embeddings request", {
+            provider: config.provider,
+            model: config.model,
+            inputCount: interpolatedInputs.length
+        });
 
-            case "google":
-                heartbeat.update({ step: "calling_google" });
-                result = await executeGoogle(config, context, heartbeat);
-                break;
+        heartbeat.update({
+            step: "generating_embeddings",
+            provider: config.provider,
+            inputCount: interpolatedInputs.length
+        });
 
-            default:
-                throw new ValidationError(
-                    `Unsupported embeddings provider: ${config.provider}`,
-                    "provider"
-                );
+        // Validate provider is supported
+        if (!["openai", "cohere", "google"].includes(config.provider)) {
+            throw new ValidationError(
+                `Unsupported embeddings provider: ${config.provider}`,
+                "provider"
+            );
         }
 
+        // Generate embeddings using unified SDK
+        const response = await ai.embedding.generate({
+            provider,
+            model: config.model,
+            input: interpolatedInputs,
+            taskType: config.taskType,
+            truncate: config.inputTruncate,
+            batchSize: config.batchSize,
+            connectionId: config.connectionId
+        });
+
         const processingTime = Date.now() - startTime;
-        result.metadata = {
-            ...(result.metadata as JsonObject),
-            processingTime
-        };
+
+        const result: JsonObject = {
+            embeddings: response.embeddings,
+            model: config.model,
+            provider: config.provider,
+            metadata: {
+                dimensions: response.dimensions,
+                inputCount: response.metadata.inputCount,
+                tokensUsed: response.metadata.usage?.totalTokens,
+                processingTime
+            }
+        } as unknown as JsonObject;
 
         heartbeat.update({ step: "completed", percentComplete: 100 });
-        logger.info("Embeddings generated", {
-            count: (result.embeddings as JsonValue[])?.length || 0,
+        logger.info("Embeddings generated via unified SDK", {
+            count: response.embeddings.length,
+            dimensions: response.dimensions,
             processingTime
         });
 
@@ -302,7 +132,7 @@ export async function executeEmbeddingsNode(
             return { [config.outputVariable]: result } as unknown as JsonObject;
         }
 
-        return result as unknown as JsonObject;
+        return result;
     });
 }
 

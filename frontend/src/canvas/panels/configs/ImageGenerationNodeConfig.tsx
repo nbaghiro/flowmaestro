@@ -11,6 +11,9 @@ import {
     IMAGE_ASPECT_RATIO_OPTIONS,
     IMAGE_OUTPUT_FORMAT_OPTIONS,
     ALL_PROVIDERS,
+    getOperationsForProvider,
+    UPSCALE_FACTOR_OPTIONS,
+    type ImageEditingOperation,
     type ValidationError
 } from "@flowmaestro/shared";
 import { FormField, FormSection } from "../../../components/common/FormField";
@@ -22,6 +25,7 @@ import { OutputSettingsSection } from "../../../components/OutputSettingsSection
 import { useConnectionStore } from "../../../stores/connectionStore";
 
 interface ImageGenerationNodeConfigProps {
+    nodeId: string;
     data: Record<string, unknown>;
     onUpdate: (config: unknown) => void;
     errors?: ValidationError[];
@@ -38,6 +42,17 @@ export function ImageGenerationNodeConfig({
     const [provider, setProvider] = useState<string>((data.provider as string) || "");
     const [model, setModel] = useState<string>((data.model as string) || "");
     const [connectionId, setConnectionId] = useState<string>((data.connectionId as string) || "");
+    const [operation, setOperation] = useState<ImageEditingOperation>(
+        (data.operation as ImageEditingOperation) || "generate"
+    );
+
+    // Editing operation fields
+    const [sourceImage, setSourceImage] = useState<string>((data.sourceImage as string) || "");
+    const [mask, setMask] = useState<string>((data.mask as string) || "");
+    const [styleReference, setStyleReference] = useState<string>(
+        (data.styleReference as string) || ""
+    );
+    const [scaleFactor, setScaleFactor] = useState<number>((data.scaleFactor as number) || 2);
 
     // Generation settings
     const [prompt, setPrompt] = useState<string>((data.prompt as string) || "");
@@ -79,8 +94,13 @@ export function ImageGenerationNodeConfig({
             provider,
             model,
             connectionId,
+            operation,
             prompt,
             negativePrompt,
+            sourceImage,
+            mask,
+            styleReference,
+            scaleFactor,
             size,
             aspectRatio,
             quality,
@@ -93,8 +113,13 @@ export function ImageGenerationNodeConfig({
         provider,
         model,
         connectionId,
+        operation,
         prompt,
         negativePrompt,
+        sourceImage,
+        mask,
+        styleReference,
+        scaleFactor,
         size,
         aspectRatio,
         quality,
@@ -127,9 +152,20 @@ export function ImageGenerationNodeConfig({
     const isOpenAI = provider === "openai";
     const isStabilityAI = provider === "stabilityai";
     const isReplicate = provider === "replicate";
+    const isFAL = provider === "fal";
     const showNegativePrompt = modelInfo?.supportsNegativePrompt ?? false;
     const showDallEOptions = isOpenAI && model === "dall-e-3";
-    const showAspectRatio = isStabilityAI || isReplicate;
+    const showAspectRatio = isStabilityAI || isReplicate || isFAL;
+
+    // Get available operations for the selected provider
+    const availableOperations = provider ? getOperationsForProvider(provider) : [];
+
+    // Operation-specific field visibility
+    const isEditingOperation = operation !== "generate";
+    const showSourceImage = isEditingOperation;
+    const showMask = operation === "inpaint" || operation === "outpaint";
+    const showStyleReference = operation === "styleTransfer";
+    const showScaleFactor = operation === "upscale";
 
     // Compatible providers for image generation
     const compatibleProviders = IMAGE_GENERATION_PROVIDERS.map((p) => p.value);
@@ -193,9 +229,83 @@ export function ImageGenerationNodeConfig({
                         />
                     </FormField>
                 )}
+
+                {provider && availableOperations.length > 1 && (
+                    <FormField
+                        label="Operation"
+                        description="Choose between generating new images or editing existing ones"
+                    >
+                        <Select
+                            value={operation}
+                            onChange={(val) => setOperation(val as ImageEditingOperation)}
+                            options={availableOperations.map((op) => ({
+                                value: op.value,
+                                label: op.label
+                            }))}
+                        />
+                    </FormField>
+                )}
             </FormSection>
 
-            <FormSection title="Image Generation">
+            {/* Source Image Section - for editing operations */}
+            {showSourceImage && (
+                <FormSection title="Source Image">
+                    <FormField
+                        label="Source Image"
+                        description="URL or variable reference to the image to edit. Use {{variableName}} for dynamic values."
+                        error={getError("sourceImage")}
+                    >
+                        <Input
+                            value={sourceImage}
+                            onChange={(e) => setSourceImage(e.target.value)}
+                            placeholder="https://example.com/image.png or {{imageUrl}}"
+                        />
+                    </FormField>
+
+                    {showMask && (
+                        <FormField
+                            label="Mask"
+                            description="URL or variable reference to the mask image. White areas will be edited, black areas preserved."
+                            error={getError("mask")}
+                        >
+                            <Input
+                                value={mask}
+                                onChange={(e) => setMask(e.target.value)}
+                                placeholder="https://example.com/mask.png or {{maskUrl}}"
+                            />
+                        </FormField>
+                    )}
+
+                    {showStyleReference && (
+                        <FormField
+                            label="Style Reference"
+                            description="URL or variable reference to the style reference image"
+                            error={getError("styleReference")}
+                        >
+                            <Input
+                                value={styleReference}
+                                onChange={(e) => setStyleReference(e.target.value)}
+                                placeholder="https://example.com/style.png or {{styleUrl}}"
+                            />
+                        </FormField>
+                    )}
+
+                    {showScaleFactor && (
+                        <FormField label="Scale Factor" description="Upscale multiplier">
+                            <Select
+                                value={scaleFactor.toString()}
+                                onChange={(val) => setScaleFactor(parseInt(val))}
+                                options={UPSCALE_FACTOR_OPTIONS.map((opt) => ({
+                                    value: opt.value.toString(),
+                                    label: opt.label
+                                }))}
+                            />
+                        </FormField>
+                    )}
+                </FormSection>
+            )}
+
+            <FormSection title={isEditingOperation ? "Edit Settings" : "Image Generation"}>
                 <FormField
                     label="Prompt"
                     description="Describe the image you want to generate. Use {{variableName}} for dynamic values."

@@ -2,6 +2,7 @@ import { Send, Paperclip, Link, X, Loader2, Copy, Download, Check } from "lucide
 import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import type { PublicFormInterface, SubmitFormInterfaceInput } from "@flowmaestro/shared";
+import { MediaOutput, hasMediaContent } from "../components/common/MediaOutput";
 import { getPublicFormInterface, submitPublicFormInterface } from "../lib/api";
 import { logger } from "../lib/logger";
 
@@ -21,6 +22,7 @@ export function PublicFormInterfacePage() {
     // Submission state
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [output, setOutput] = useState<string | null>(null);
+    const [outputData, setOutputData] = useState<unknown>(null);
     const [isOutputEditable, setIsOutputEditable] = useState(false);
     const [editedOutput, setEditedOutput] = useState("");
     const [copied, setCopied] = useState(false);
@@ -113,13 +115,26 @@ export function PublicFormInterfacePage() {
             const response = await submitPublicFormInterface(slug!, submitData);
 
             if (response.success && response.data) {
-                // Phase 1: Show placeholder output
-                setOutput(
-                    "Thank you for your submission! Your request has been received and is being processed."
-                );
-                setEditedOutput(
-                    "Thank you for your submission! Your request has been received and is being processed."
-                );
+                // Extract output from response
+                const responseData = response.data as { output?: unknown };
+                const workflowOutput = responseData.output;
+
+                // Store raw output data for media detection
+                setOutputData(workflowOutput);
+
+                // Format output for display
+                let displayOutput: string;
+                if (typeof workflowOutput === "string") {
+                    displayOutput = workflowOutput;
+                } else if (workflowOutput) {
+                    displayOutput = JSON.stringify(workflowOutput, null, 2);
+                } else {
+                    displayOutput =
+                        "Thank you for your submission! Your request has been received.";
+                }
+
+                setOutput(displayOutput);
+                setEditedOutput(displayOutput);
 
                 // Clear form
                 setMessage("");
@@ -441,6 +456,14 @@ export function PublicFormInterfacePage() {
                                         }
                                     }}
                                 >
+                                    {/* Check for media content in output data */}
+                                    {outputData && hasMediaContent(outputData) ? (
+                                        <MediaOutput
+                                            data={outputData}
+                                            showJson={false}
+                                            className="mb-4"
+                                        />
+                                    ) : null}
                                     {output}
                                 </div>
                             )}

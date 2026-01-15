@@ -422,7 +422,8 @@ export const TransformNodeConfigSchema = z.object({
     ]),
     inputData: z.string().min(1, "Input data reference is required"),
     expression: z.string().optional().default(""),
-    outputVariable: z.string().min(1, "Output variable is required")
+    // outputVariable is optional for passthrough - data flows through unchanged
+    outputVariable: z.string().optional().default("")
 });
 
 export type TransformNodeConfig = z.infer<typeof TransformNodeConfigSchema>;

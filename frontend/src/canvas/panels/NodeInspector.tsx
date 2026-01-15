@@ -34,6 +34,7 @@ import { EmbeddingsNodeConfig } from "./configs/EmbeddingsNodeConfig";
 import { FilesNodeConfig } from "./configs/FilesNodeConfig";
 import { HTTPNodeConfig } from "./configs/HTTPNodeConfig";
 import { HumanReviewNodeConfig } from "./configs/HumanReviewNodeConfig";
+import { ImageGenerationNodeConfig } from "./configs/ImageGenerationNodeConfig";
 import { InputNodeConfig } from "./configs/InputNodeConfig";
 import { IntegrationNodeConfig } from "./configs/IntegrationNodeConfig";
 import { KnowledgeBaseQueryNodeConfig } from "./configs/KnowledgeBaseQueryNodeConfig";
@@ -47,6 +48,7 @@ import { TemplateOutputNodeConfig } from "./configs/TemplateOutputNodeConfig";
 import { TransformNodeConfig } from "./configs/TransformNodeConfig";
 import { TriggerNodeConfig } from "./configs/TriggerNodeConfig";
 import { URLNodeConfig } from "./configs/URLNodeConfig";
+import { VideoGenerationNodeConfig } from "./configs/VideoGenerationNodeConfig";
 import { VisionNodeConfig } from "./configs/VisionNodeConfig";
 import { WaitNodeConfig } from "./configs/WaitNodeConfig";
 
@@ -190,6 +192,24 @@ export function NodeInspector() {
             case "router":
                 return (
                     <RouterNodeConfig
+                        nodeId={node.id}
+                        data={node.data}
+                        onUpdate={handleUpdate}
+                        errors={validationErrors}
+                    />
+                );
+            case "imageGeneration":
+                return (
+                    <ImageGenerationNodeConfig
+                        nodeId={node.id}
+                        data={node.data}
+                        onUpdate={handleUpdate}
+                        errors={validationErrors}
+                    />
+                );
+            case "videoGeneration":
+                return (
+                    <VideoGenerationNodeConfig
                         nodeId={node.id}
                         data={node.data}
                         onUpdate={handleUpdate}

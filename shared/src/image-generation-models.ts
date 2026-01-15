@@ -23,7 +23,8 @@ export interface ImageGenerationProviderDefinition {
 export const IMAGE_GENERATION_PROVIDERS: ImageGenerationProviderDefinition[] = [
     { value: "openai", label: "OpenAI" },
     { value: "replicate", label: "Replicate" },
-    { value: "stabilityai", label: "Stability AI" }
+    { value: "stabilityai", label: "Stability AI" },
+    { value: "fal", label: "FAL.ai" }
 ];
 
 /**
@@ -122,6 +123,64 @@ export const IMAGE_GENERATION_MODELS_BY_PROVIDER: Record<string, ImageGeneration
                 label: "SDXL 1.0",
                 provider: "stabilityai",
                 maxResolution: "1024x1024",
+                supportsNegativePrompt: true
+            }
+        ],
+        fal: [
+            {
+                value: "fal-ai/flux-pro/v1.1-ultra",
+                label: "Flux 1.1 Pro Ultra (4MP)",
+                provider: "fal",
+                maxResolution: "4096x4096",
+                supportsNegativePrompt: false
+            },
+            {
+                value: "fal-ai/flux-pro/v1.1",
+                label: "Flux 1.1 Pro",
+                provider: "fal",
+                maxResolution: "2048x2048",
+                supportsNegativePrompt: false
+            },
+            {
+                value: "fal-ai/flux-pro",
+                label: "Flux Pro",
+                provider: "fal",
+                maxResolution: "2048x2048",
+                supportsNegativePrompt: false
+            },
+            {
+                value: "fal-ai/flux/dev",
+                label: "Flux Dev (Open-weight)",
+                provider: "fal",
+                maxResolution: "2048x2048",
+                supportsNegativePrompt: false
+            },
+            {
+                value: "fal-ai/flux/schnell",
+                label: "Flux Schnell (Fast)",
+                provider: "fal",
+                maxResolution: "2048x2048",
+                supportsNegativePrompt: false
+            },
+            {
+                value: "fal-ai/flux-lora",
+                label: "Flux LoRA",
+                provider: "fal",
+                maxResolution: "2048x2048",
+                supportsNegativePrompt: false
+            },
+            {
+                value: "fal-ai/recraft-v3",
+                label: "Recraft V3",
+                provider: "fal",
+                maxResolution: "2048x2048",
+                supportsNegativePrompt: false
+            },
+            {
+                value: "fal-ai/ideogram/v2",
+                label: "Ideogram V2 (Text-in-Image)",
+                provider: "fal",
+                maxResolution: "2048x2048",
                 supportsNegativePrompt: true
             }
         ]

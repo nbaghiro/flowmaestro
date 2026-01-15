@@ -26,7 +26,8 @@ export const VIDEO_GENERATION_PROVIDERS: VideoGenerationProviderDefinition[] = [
     { value: "replicate", label: "Replicate" },
     { value: "runway", label: "Runway" },
     { value: "luma", label: "Luma AI" },
-    { value: "stabilityai", label: "Stability AI" }
+    { value: "stabilityai", label: "Stability AI" },
+    { value: "fal", label: "FAL.ai" }
 ];
 
 /**
@@ -151,6 +152,71 @@ export const VIDEO_GENERATION_MODELS_BY_PROVIDER: Record<string, VideoGeneration
                 provider: "stabilityai",
                 maxDuration: 4,
                 supportsImageInput: true
+            }
+        ],
+        fal: [
+            {
+                value: "fal-ai/kling-video/v2/master/text-to-video",
+                label: "Kling v2 T2V (Best Quality)",
+                provider: "fal",
+                maxDuration: 10,
+                maxResolution: "1080p",
+                supportsImageInput: false,
+                supportsAudio: false
+            },
+            {
+                value: "fal-ai/kling-video/v2/master/image-to-video",
+                label: "Kling v2 I2V",
+                provider: "fal",
+                maxDuration: 10,
+                maxResolution: "1080p",
+                supportsImageInput: true,
+                supportsAudio: false
+            },
+            {
+                value: "fal-ai/minimax-video/video-01-live/text-to-video",
+                label: "MiniMax Video-01 T2V",
+                provider: "fal",
+                maxDuration: 6,
+                maxResolution: "720p",
+                supportsImageInput: false,
+                supportsAudio: false
+            },
+            {
+                value: "fal-ai/minimax-video/video-01-live/image-to-video",
+                label: "MiniMax Video-01 I2V",
+                provider: "fal",
+                maxDuration: 6,
+                maxResolution: "720p",
+                supportsImageInput: true,
+                supportsAudio: false
+            },
+            {
+                value: "fal-ai/mochi-v1",
+                label: "Mochi v1 (Open Source)",
+                provider: "fal",
+                maxDuration: 5,
+                maxResolution: "720p",
+                supportsImageInput: false,
+                supportsAudio: false
+            },
+            {
+                value: "fal-ai/luma-dream-machine",
+                label: "Luma Dream Machine",
+                provider: "fal",
+                maxDuration: 5,
+                maxResolution: "1080p",
+                supportsImageInput: true,
+                supportsAudio: false
+            },
+            {
+                value: "fal-ai/hunyuan-video",
+                label: "Hunyuan Video",
+                provider: "fal",
+                maxDuration: 5,
+                maxResolution: "720p",
+                supportsImageInput: false,
+                supportsAudio: false
             }
         ]
     };

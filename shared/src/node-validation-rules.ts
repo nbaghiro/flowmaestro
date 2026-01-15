@@ -164,8 +164,18 @@ const waitRules: NodeValidationRule[] = [
 const transformRules: NodeValidationRule[] = [
     requiredField("operation", "Select a transform operation"),
     requiredField("inputData", "Enter input data or variable"),
-    requiredField("expression", "Enter a transform expression"),
-    requiredIdentifier("outputVariable", "Enter an output variable name")
+    // Expression is not needed for passthrough - it just passes data through unchanged
+    conditionalRule(
+        "expression",
+        (config) => config.operation !== "passthrough",
+        "Enter a transform expression"
+    ),
+    // Output variable is not needed for passthrough - data flows through with original variable
+    conditionalRule(
+        "outputVariable",
+        (config) => config.operation !== "passthrough",
+        "Enter an output variable name"
+    )
 ];
 
 const sharedMemoryRules: NodeValidationRule[] = [

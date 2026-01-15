@@ -96,7 +96,12 @@ export const PROVIDER_LOGO_DOMAINS: Record<string, string> = {
     anthropic: "anthropic.com",
     google: "google.com",
     cohere: "cohere.com",
-    apollo: "apollo.io"
+    apollo: "apollo.io",
+    fal: "fal.ai",
+    replicate: "replicate.com",
+    stabilityai: "stability.ai",
+    runway: "runwayml.com",
+    luma: "lumalabs.ai"
 };
 
 /**
@@ -143,6 +148,14 @@ export const ALL_PROVIDERS: Provider[] = [
         displayName: "Hugging Face",
         description: "Access thousands of open-source AI models including Llama, Qwen, and Mistral",
         logoUrl: getBrandLogo("huggingface.co"),
+        category: "AI & ML",
+        methods: ["api_key"]
+    },
+    {
+        provider: "fal",
+        displayName: "FAL.ai",
+        description: "Fast inference for Flux image generation, video models, and AI tools",
+        logoUrl: getBrandLogo("fal.ai"),
         category: "AI & ML",
         methods: ["api_key"]
     },
@@ -1631,11 +1644,26 @@ export const ALL_PROVIDERS: Provider[] = [
     {
         provider: "stabilityai",
         displayName: "Stability AI",
-        description: "Image generation AI",
+        description: "Stable Diffusion image generation, upscaling, and editing",
         logoUrl: getBrandLogo("stability.ai"),
         category: "AI & ML",
-        methods: ["api_key"],
-        comingSoon: true
+        methods: ["api_key"]
+    },
+    {
+        provider: "runway",
+        displayName: "Runway",
+        description: "Gen-3 Alpha video generation and creative AI tools",
+        logoUrl: getBrandLogo("runwayml.com"),
+        category: "AI & ML",
+        methods: ["api_key"]
+    },
+    {
+        provider: "luma",
+        displayName: "Luma AI",
+        description: "Dream Machine video generation and 3D capture",
+        logoUrl: getBrandLogo("lumalabs.ai"),
+        category: "AI & ML",
+        methods: ["api_key"]
     },
     {
         provider: "elevenlabs",
