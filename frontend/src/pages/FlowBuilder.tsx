@@ -2,6 +2,7 @@ import { Loader2, Save, LayoutGrid } from "lucide-react";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { ReactFlowProvider, useReactFlow, Node } from "reactflow";
+import { autoLayoutWorkflow } from "@flowmaestro/shared";
 import { NodeInspector } from "../canvas/panels/NodeInspector";
 import { NodeLibrary } from "../canvas/panels/NodeLibrary";
 import { WorkflowCanvas } from "../canvas/WorkflowCanvas";
@@ -28,7 +29,6 @@ import {
 } from "../lib/api";
 import { logger } from "../lib/logger";
 import { generateId } from "../lib/utils";
-import { autoLayoutWorkflow } from "../lib/workflowLayout";
 import {
     createWorkflowSnapshot,
     transformNodesToBackendMap,

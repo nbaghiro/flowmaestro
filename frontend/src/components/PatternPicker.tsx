@@ -16,14 +16,21 @@ import {
     Mail,
     Bug,
     Share2,
+    Languages,
+    ShoppingCart,
+    FileStack,
+    Route,
+    Database,
+    ClipboardCheck,
+    BookOpen,
     type LucideIcon
 } from "lucide-react";
 import { useMemo } from "react";
 import Flow, { Background, BackgroundVariant, type Edge, type Node } from "reactflow";
 import "reactflow/dist/style.css";
+import type { WorkflowPattern } from "@flowmaestro/shared";
 import { previewNodeTypes } from "../canvas/nodeTypes";
 import { cn } from "../lib/utils";
-import type { WorkflowPattern } from "../lib/workflowPatterns";
 
 // Icon mapping
 const iconMap: Record<string, LucideIcon> = {
@@ -43,7 +50,14 @@ const iconMap: Record<string, LucideIcon> = {
     Plus,
     Mail,
     Bug,
-    Share2
+    Share2,
+    Languages,
+    ShoppingCart,
+    FileStack,
+    Route,
+    Database,
+    ClipboardCheck,
+    BookOpen
 };
 
 interface PatternPickerProps {
@@ -79,7 +93,9 @@ function PatternCard({ pattern, isSelected, onClick }: PatternCardProps) {
                 label: (node as { name: string }).name || (node as { type: string }).type,
                 ...(node as { config?: Record<string, unknown> }).config,
                 status: "idle"
-            }
+            },
+            // Set fixed dimensions for preview - prevents content from expanding nodes
+            style: { width: 260, height: 160 }
         }));
 
         const flowEdges: Edge[] = (def.edges || []).map((edge) => ({

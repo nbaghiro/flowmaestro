@@ -1,11 +1,14 @@
 import { Node, Edge, NodeChange, EdgeChange, applyNodeChanges, applyEdgeChanges } from "reactflow";
 import { create } from "zustand";
-import type { JsonValue, JsonObject, ValidationResult } from "@flowmaestro/shared";
 import {
+    type JsonValue,
+    type JsonObject,
+    type ValidationResult,
     getErrorMessage,
     validateNodeConfig,
     nodeValidationRules,
-    ALL_PROVIDERS
+    ALL_PROVIDERS,
+    convertToReactFlowFormat
 } from "@flowmaestro/shared";
 
 // Set of provider IDs that should use "integration" validation rules
@@ -32,7 +35,6 @@ function getValidationRuleKey(nodeType: string): string {
 
 import { executeWorkflow as executeWorkflowAPI, generateWorkflow } from "../lib/api";
 import { logger } from "../lib/logger";
-import { convertToReactFlowFormat } from "../lib/workflowLayout";
 
 export const INITIAL_NODE_WIDTH = 260;
 export const INITIAL_NODE_HEIGHT = 160;

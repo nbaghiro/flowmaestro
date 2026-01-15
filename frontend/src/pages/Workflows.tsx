@@ -1,11 +1,12 @@
 import { Plus, FileText, Sparkles, Trash2, FolderInput, FolderMinus, Search } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import type {
-    WorkflowNode,
-    FolderWithCounts,
-    WorkflowSummary,
-    FolderResourceType
+import {
+    type WorkflowNode,
+    type FolderWithCounts,
+    type WorkflowSummary,
+    type FolderResourceType,
+    convertToReactFlowFormat
 } from "@flowmaestro/shared";
 import { AIGenerateDialog } from "../components/AIGenerateDialog";
 import { WorkflowCard } from "../components/cards";
@@ -42,7 +43,6 @@ import {
 import { getFolderCountIncludingSubfolders } from "../lib/folderUtils";
 import { logger } from "../lib/logger";
 import { createDragPreview } from "../lib/utils";
-import { convertToReactFlowFormat } from "../lib/workflowLayout";
 import { useFolderStore } from "../stores/folderStore";
 import { useWorkflowGenerationChatStore } from "../stores/workflowGenerationChatStore";
 

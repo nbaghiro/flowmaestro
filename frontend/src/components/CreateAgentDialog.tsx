@@ -16,8 +16,11 @@ import {
     type LucideIcon
 } from "lucide-react";
 import { useState, FormEvent } from "react";
-import { getAdvancedAgentPatterns } from "../lib/advancedAgentPatterns";
-import { getAllAgentPatterns, type AgentPattern } from "../lib/agentPatterns";
+import {
+    getAdvancedAgentPatterns,
+    getAllAgentPatterns,
+    type AgentPattern
+} from "@flowmaestro/shared";
 import { cn } from "../lib/utils";
 import { AgentPatternPicker } from "./AgentPatternPicker";
 import { Alert } from "./common/Alert";

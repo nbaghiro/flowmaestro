@@ -77,7 +77,9 @@ export function WorkflowCanvasPreview({
                 ...node.data,
                 ...node.config,
                 status: "idle"
-            }
+            },
+            // Set fixed dimensions for preview - prevents content from expanding nodes
+            style: { width: 260, height: 160 }
         }));
 
         const flowEdges: Edge[] = (definition.edges || []).map((edge) => ({

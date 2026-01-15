@@ -82,7 +82,9 @@ export function TemplateCard({ template, onClick }: TemplateCardProps) {
                 label: node.data?.label || node.type,
                 ...node.data,
                 status: "idle"
-            }
+            },
+            // Set fixed dimensions for preview - prevents content from expanding nodes
+            style: { width: 260, height: 160 }
         }));
 
         const flowEdges: Edge[] = (def.edges || []).map((edge) => ({
