@@ -61,13 +61,16 @@ function MobileCreditProgressBar() {
         return null;
     }
 
-    const planLimits = WORKSPACE_LIMITS[currentWorkspace.type];
-    const monthlyCredits = planLimits.monthly_credits;
+    // Total credits = current balances + what's been used (original allocation)
+    const totalCredits =
+        creditBalance.subscription +
+        creditBalance.purchased +
+        creditBalance.bonus +
+        creditBalance.usedAllTime;
     const availableCredits = creditBalance.available;
-    const usedCredits = creditBalance.usedThisMonth;
 
-    const percentageUsed = Math.min((usedCredits / monthlyCredits) * 100, 100);
-    const percentageRemaining = 100 - percentageUsed;
+    // Calculate percentage remaining based on available vs total
+    const percentageRemaining = totalCredits > 0 ? (availableCredits / totalCredits) * 100 : 0;
 
     const getProgressColor = () => {
         if (percentageRemaining > 50) return "bg-primary/70";
@@ -89,7 +92,7 @@ function MobileCreditProgressBar() {
                     <div className="flex items-center justify-between mb-1">
                         <span className="text-sm font-medium">Credits</span>
                         <span className="text-xs tabular-nums">
-                            {availableCredits.toLocaleString()} / {monthlyCredits.toLocaleString()}
+                            {availableCredits.toLocaleString()} / {totalCredits.toLocaleString()}
                         </span>
                     </div>
                     <div
@@ -97,8 +100,51 @@ function MobileCreditProgressBar() {
                     >
                         <div
                             className={cn("h-full rounded-full transition-all", getProgressColor())}
-                            style={{ width: `${percentageRemaining}%` }}
+                            style={{ width: `${Math.min(percentageRemaining, 100)}%` }}
                         />
+                    </div>
+                    {/* Credit breakdown */}
+                    <div className="mt-2 text-xs space-y-0.5">
+                        <div className="flex justify-between">
+                            <span className="text-muted-foreground">Subscription:</span>
+                            <span>
+                                {WORKSPACE_LIMITS[
+                                    currentWorkspace.type
+                                ].monthly_credits.toLocaleString()}
+                            </span>
+                        </div>
+                        {(() => {
+                            const monthlySubscription =
+                                WORKSPACE_LIMITS[currentWorkspace.type].monthly_credits;
+                            const originalBonus =
+                                totalCredits - monthlySubscription - creditBalance.purchased;
+                            return originalBonus > 0 ? (
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Bonus:</span>
+                                    <span>{originalBonus.toLocaleString()}</span>
+                                </div>
+                            ) : null;
+                        })()}
+                        {creditBalance.purchased > 0 && (
+                            <div className="flex justify-between">
+                                <span className="text-muted-foreground">Purchased:</span>
+                                <span>{creditBalance.purchased.toLocaleString()}</span>
+                            </div>
+                        )}
+                        {creditBalance.reserved > 0 && (
+                            <div className="flex justify-between text-amber-500">
+                                <span>Reserved:</span>
+                                <span>-{creditBalance.reserved.toLocaleString()}</span>
+                            </div>
+                        )}
+                        <div className="flex justify-between border-t border-border pt-1 mt-1">
+                            <span className="text-muted-foreground">Used this month:</span>
+                            <span>{creditBalance.usedThisMonth.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-muted-foreground">Remaining:</span>
+                            <span>{availableCredits.toLocaleString()}</span>
+                        </div>
                     </div>
                 </div>
             </div>

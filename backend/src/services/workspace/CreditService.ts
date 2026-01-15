@@ -136,27 +136,28 @@ export class CreditService {
         operationId?: string,
         description?: string
     ): Promise<void> {
-        // Release the reservation
-        await this.creditRepo.releaseReservation(workspaceId, reservedAmount);
-
-        // Get current balance for transaction record
-        const balance = await this.creditRepo.getBalance(workspaceId);
-        if (!balance) {
+        // Get balance BEFORE releasing reservation (for accurate transaction log)
+        const balanceBefore = await this.creditRepo.getBalance(workspaceId);
+        if (!balanceBefore) {
             throw new Error("Workspace credits not found");
         }
 
-        const balanceBefore = balance.available + reservedAmount;
+        // Release the reservation
+        await this.creditRepo.releaseReservation(workspaceId, reservedAmount);
 
         // Deduct actual credits
         await this.creditRepo.deductCredits(workspaceId, actualAmount);
 
-        // Record transaction
+        // Get balance AFTER all operations
+        const balanceAfter = await this.creditRepo.getBalance(workspaceId);
+
+        // Record transaction with accurate before/after values
         await this.creditRepo.createTransaction({
             workspace_id: workspaceId,
             user_id: userId || undefined,
             amount: -actualAmount,
-            balance_before: balanceBefore,
-            balance_after: balanceBefore - actualAmount,
+            balance_before: balanceBefore.available,
+            balance_after: balanceAfter?.available ?? balanceBefore.available - actualAmount,
             transaction_type: "usage",
             operation_type: operationType,
             operation_id: operationId,

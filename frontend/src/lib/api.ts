@@ -2290,8 +2290,14 @@ export function streamAgentExecution(
         return () => {}; // Return no-op cleanup function
     }
 
-    // EventSource doesn't support custom headers, so we pass token as query param
-    const url = `${API_BASE_URL}/agents/${agentId}/executions/${executionId}/stream?token=${encodeURIComponent(token)}`;
+    const workspaceId = getCurrentWorkspaceId();
+    if (!workspaceId) {
+        callbacks.onError?.("Workspace context required");
+        return () => {}; // Return no-op cleanup function
+    }
+
+    // EventSource doesn't support custom headers, so we pass token and workspaceId as query params
+    const url = `${API_BASE_URL}/agents/${agentId}/executions/${executionId}/stream?token=${encodeURIComponent(token)}&workspaceId=${encodeURIComponent(workspaceId)}`;
 
     const eventSource = new EventSource(url, {
         withCredentials: true

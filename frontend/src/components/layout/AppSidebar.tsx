@@ -47,14 +47,16 @@ function CreditProgressBar({ isCollapsed }: { isCollapsed: boolean }) {
         return null;
     }
 
-    const planLimits = WORKSPACE_LIMITS[currentWorkspace.type];
-    const monthlyCredits = planLimits.monthly_credits;
+    // Total credits = current balances + what's been used (original allocation)
+    const totalCredits =
+        creditBalance.subscription +
+        creditBalance.purchased +
+        creditBalance.bonus +
+        creditBalance.usedAllTime;
     const availableCredits = creditBalance.available;
-    const usedCredits = creditBalance.usedThisMonth;
 
-    // Calculate percentage remaining (capped at 100%)
-    const percentageUsed = Math.min((usedCredits / monthlyCredits) * 100, 100);
-    const percentageRemaining = 100 - percentageUsed;
+    // Calculate percentage remaining based on available vs total
+    const percentageRemaining = totalCredits > 0 ? (availableCredits / totalCredits) * 100 : 0;
 
     // Determine color based on remaining percentage
     const getProgressColor = () => {
@@ -69,14 +71,54 @@ function CreditProgressBar({ isCollapsed }: { isCollapsed: boolean }) {
         return "bg-red-500/20";
     };
 
+    // Get plan limits for subscription display
+    const planLimits = WORKSPACE_LIMITS[currentWorkspace.type];
+    const monthlySubscription = planLimits.monthly_credits;
+
+    // Calculate original bonus (total - subscription - purchased)
+    const originalBonus = totalCredits - monthlySubscription - creditBalance.purchased;
+
+    // Build tooltip content with breakdown
+    const tooltipContent = (
+        <div className="text-xs space-y-1 min-w-[180px]">
+            <div className="font-medium border-b border-border pb-1 mb-1">Credit Breakdown</div>
+            <div className="flex justify-between gap-4">
+                <span className="text-muted-foreground">Subscription:</span>
+                <span>{monthlySubscription.toLocaleString()}</span>
+            </div>
+            {originalBonus > 0 && (
+                <div className="flex justify-between gap-4">
+                    <span className="text-muted-foreground">Bonus:</span>
+                    <span>{originalBonus.toLocaleString()}</span>
+                </div>
+            )}
+            {creditBalance.purchased > 0 && (
+                <div className="flex justify-between gap-4">
+                    <span className="text-muted-foreground">Purchased:</span>
+                    <span>{creditBalance.purchased.toLocaleString()}</span>
+                </div>
+            )}
+            {creditBalance.reserved > 0 && (
+                <div className="flex justify-between gap-4 text-amber-500">
+                    <span>Reserved:</span>
+                    <span>-{creditBalance.reserved.toLocaleString()}</span>
+                </div>
+            )}
+            <div className="flex justify-between gap-4 border-t border-border pt-1 mt-1">
+                <span className="text-muted-foreground">Used this month:</span>
+                <span>{creditBalance.usedThisMonth.toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between gap-4">
+                <span className="text-muted-foreground">Remaining:</span>
+                <span>{availableCredits.toLocaleString()}</span>
+            </div>
+        </div>
+    );
+
     if (isCollapsed) {
         return (
             <div className="px-2 py-2">
-                <Tooltip
-                    content={`${availableCredits.toLocaleString()} / ${monthlyCredits.toLocaleString()} credits`}
-                    delay={200}
-                    position="right"
-                >
+                <Tooltip content={tooltipContent} delay={200} position="right">
                     <div className="flex flex-col items-center gap-1 px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors cursor-default">
                         <Zap className="w-5 h-5" />
                         <div
@@ -87,7 +129,7 @@ function CreditProgressBar({ isCollapsed }: { isCollapsed: boolean }) {
                                     "h-full rounded-full transition-all",
                                     getProgressColor()
                                 )}
-                                style={{ width: `${percentageRemaining}%` }}
+                                style={{ width: `${Math.min(percentageRemaining, 100)}%` }}
                             />
                         </div>
                     </div>
@@ -98,23 +140,34 @@ function CreditProgressBar({ isCollapsed }: { isCollapsed: boolean }) {
 
     return (
         <div className="px-2 py-2">
-            <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors cursor-default">
-                <Zap className="w-5 h-5 flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-medium">Credits</span>
-                        <span className="text-xs tabular-nums">
-                            {availableCredits.toLocaleString()} / {monthlyCredits.toLocaleString()}
-                        </span>
-                    </div>
-                    <div className={cn("w-full h-1 rounded-full overflow-hidden", getProgressBg())}>
+            <Tooltip content={tooltipContent} delay={200} position="right">
+                <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors cursor-default">
+                    <Zap className="w-5 h-5 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm font-medium">Credits</span>
+                            <span className="text-xs tabular-nums">
+                                {availableCredits.toLocaleString()} /{" "}
+                                {totalCredits.toLocaleString()}
+                            </span>
+                        </div>
                         <div
-                            className={cn("h-full rounded-full transition-all", getProgressColor())}
-                            style={{ width: `${percentageRemaining}%` }}
-                        />
+                            className={cn(
+                                "w-full h-1 rounded-full overflow-hidden",
+                                getProgressBg()
+                            )}
+                        >
+                            <div
+                                className={cn(
+                                    "h-full rounded-full transition-all",
+                                    getProgressColor()
+                                )}
+                                style={{ width: `${Math.min(percentageRemaining, 100)}%` }}
+                            />
+                        </div>
                     </div>
                 </div>
-            </div>
+            </Tooltip>
         </div>
     );
 }

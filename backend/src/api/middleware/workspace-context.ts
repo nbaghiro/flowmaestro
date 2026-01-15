@@ -17,6 +17,7 @@ declare module "fastify" {
  * Gets workspace ID from:
  * 1. Route param (:workspaceId)
  * 2. X-Workspace-Id header
+ * 3. Query param (workspaceId) - for SSE/EventSource which can't send headers
  *
  * Validates that:
  * - Workspace exists and is not deleted
@@ -28,10 +29,13 @@ export async function workspaceContextMiddleware(
     request: FastifyRequest,
     _reply: FastifyReply
 ): Promise<void> {
-    // Get workspace ID from route param or header
+    // Get workspace ID from route param, header, or query param
     const params = request.params as { workspaceId?: string };
+    const query = request.query as { workspaceId?: string };
     const workspaceId =
-        params.workspaceId || (request.headers["x-workspace-id"] as string | undefined);
+        params.workspaceId ||
+        (request.headers["x-workspace-id"] as string | undefined) ||
+        query.workspaceId;
 
     if (!workspaceId) {
         throw new BadRequestError("Workspace ID is required");

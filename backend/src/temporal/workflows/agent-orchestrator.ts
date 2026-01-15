@@ -203,8 +203,12 @@ export async function agentOrchestratorWorkflow(
     if (iterations === 0 && !skipCreditCheck && workspaceId) {
         logger.info("Checking credits for agent execution");
 
-        // Estimate credits: ~50 credits per iteration * max_iterations
-        const estimatedCredits = Math.ceil(agent.max_iterations * 50 * 1.2);
+        // Estimate credits for typical agent interaction:
+        // - Most chats use 1-5 iterations, not max_iterations
+        // - Each iteration ~5-10 credits (LLM call with ~1000-2000 tokens)
+        // Reserve for ~10 iterations with buffer, actual usage tracked per-call
+        const typicalIterations = Math.min(10, agent.max_iterations);
+        const estimatedCredits = Math.ceil(typicalIterations * 10 * 1.2);
 
         const allowed = await shouldAllowExecution({
             workspaceId,
