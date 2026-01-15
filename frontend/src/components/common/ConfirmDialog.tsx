@@ -6,7 +6,7 @@ interface ConfirmDialogProps {
     onClose: () => void;
     onConfirm: () => void;
     title: string;
-    message: string;
+    message: string | React.ReactNode;
     confirmText?: string;
     cancelText?: string;
     variant?: "danger" | "default";
@@ -24,7 +24,7 @@ export function ConfirmDialog({
     title,
     message,
     confirmText = "Confirm",
-    cancelText = "Cancel",
+    cancelText,
     variant = "default"
 }: ConfirmDialogProps) {
     const handleConfirm = () => {
@@ -48,16 +48,18 @@ export function ConfirmDialog({
                 <p className="text-sm text-muted-foreground text-center">{message}</p>
 
                 {/* Actions */}
-                <div className="flex gap-3 pt-2">
-                    <button
-                        onClick={onClose}
-                        className="flex-1 px-4 py-2 text-sm font-medium text-foreground bg-card border border-border rounded-lg hover:bg-muted/30 transition-colors"
-                    >
-                        {cancelText}
-                    </button>
+                <div className={`flex gap-3 pt-2 ${cancelText === undefined ? "justify-end" : ""}`}>
+                    {cancelText !== undefined && (
+                        <button
+                            onClick={onClose}
+                            className="flex-1 px-4 py-2 text-sm font-medium text-foreground bg-card border border-border rounded-lg hover:bg-muted/30 transition-colors"
+                        >
+                            {cancelText}
+                        </button>
+                    )}
                     <button
                         onClick={handleConfirm}
-                        className={`flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                        className={`${cancelText === undefined ? "w-full" : "flex-1"} px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
                             variant === "danger"
                                 ? "bg-red-600 hover:bg-red-700 text-white"
                                 : "bg-primary hover:bg-primary/90 text-primary-foreground"

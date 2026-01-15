@@ -37,6 +37,11 @@ export interface FolderGridSectionProps {
     onToggleFolderExpand: (folderId: string) => void;
     /** Function to get children of a folder */
     getFolderChildren: (folderId: string) => FolderWithCounts[];
+    /** Optional function to calculate count including subfolders */
+    getFolderCountIncludingSubfolders?: (
+        folder: FolderWithCounts,
+        itemType: FolderResourceType
+    ) => number;
 }
 
 export function FolderGridSection({
@@ -53,7 +58,8 @@ export function FolderGridSection({
     onFolderContextMenu,
     onDropOnFolder,
     onToggleFolderExpand,
-    getFolderChildren
+    getFolderChildren,
+    getFolderCountIncludingSubfolders
 }: FolderGridSectionProps) {
     if (!showFoldersSection || !canShowFoldersSection) {
         return null;
@@ -72,6 +78,9 @@ export function FolderGridSection({
                     const hasChildren = children.length > 0;
                     const isExpanded = expandedFolderIds.has(folder.id);
                     const subfolders = isExpanded ? children : [];
+                    const calculatedCount = getFolderCountIncludingSubfolders
+                        ? getFolderCountIncludingSubfolders(folder, displayItemType)
+                        : undefined;
 
                     return (
                         <div key={folder.id} className="contents">
@@ -87,6 +96,7 @@ export function FolderGridSection({
                                         onDropOnFolder(folder.id, itemIds, itemType)
                                     }
                                     displayItemType={displayItemType}
+                                    calculatedCount={calculatedCount}
                                     hasChildren={hasChildren}
                                     isExpanded={isExpanded}
                                     onToggleExpand={(e) => {
@@ -97,32 +107,45 @@ export function FolderGridSection({
                                 {/* Render subfolders when expanded - below parent */}
                                 {isExpanded && subfolders.length > 0 && (
                                     <div className="mt-2 flex flex-col gap-2">
-                                        {subfolders.map((subfolder) => (
-                                            <FolderCard
-                                                key={subfolder.id}
-                                                folder={subfolder}
-                                                onClick={(e) => onFolderClick(e, subfolder)}
-                                                onEdit={() => onFolderEdit(subfolder)}
-                                                onDelete={() => onFolderDelete(subfolder)}
-                                                isSelected={selectedFolderIds.has(subfolder.id)}
-                                                onContextMenu={(e) =>
-                                                    onFolderContextMenu(e, subfolder)
-                                                }
-                                                onDrop={(itemIds, itemType) =>
-                                                    onDropOnFolder(subfolder.id, itemIds, itemType)
-                                                }
-                                                displayItemType={displayItemType}
-                                                isSubfolder={true}
-                                                hasChildren={
-                                                    getFolderChildren(subfolder.id).length > 0
-                                                }
-                                                isExpanded={expandedFolderIds.has(subfolder.id)}
-                                                onToggleExpand={(e) => {
-                                                    e.stopPropagation();
-                                                    onToggleFolderExpand(subfolder.id);
-                                                }}
-                                            />
-                                        ))}
+                                        {subfolders.map((subfolder) => {
+                                            const subfolderCalculatedCount =
+                                                getFolderCountIncludingSubfolders
+                                                    ? getFolderCountIncludingSubfolders(
+                                                          subfolder,
+                                                          displayItemType
+                                                      )
+                                                    : undefined;
+                                            return (
+                                                <FolderCard
+                                                    key={subfolder.id}
+                                                    folder={subfolder}
+                                                    onClick={(e) => onFolderClick(e, subfolder)}
+                                                    onEdit={() => onFolderEdit(subfolder)}
+                                                    onDelete={() => onFolderDelete(subfolder)}
+                                                    isSelected={selectedFolderIds.has(subfolder.id)}
+                                                    onContextMenu={(e) =>
+                                                        onFolderContextMenu(e, subfolder)
+                                                    }
+                                                    onDrop={(itemIds, itemType) =>
+                                                        onDropOnFolder(
+                                                            subfolder.id,
+                                                            itemIds,
+                                                            itemType
+                                                        )
+                                                    }
+                                                    displayItemType={displayItemType}
+                                                    calculatedCount={subfolderCalculatedCount}
+                                                    hasChildren={
+                                                        getFolderChildren(subfolder.id).length > 0
+                                                    }
+                                                    isExpanded={expandedFolderIds.has(subfolder.id)}
+                                                    onToggleExpand={(e) => {
+                                                        e.stopPropagation();
+                                                        onToggleFolderExpand(subfolder.id);
+                                                    }}
+                                                />
+                                            );
+                                        })}
                                     </div>
                                 )}
                             </div>

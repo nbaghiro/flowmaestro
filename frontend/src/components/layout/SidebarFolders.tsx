@@ -1,7 +1,8 @@
 import * as Popover from "@radix-ui/react-popover";
+import { useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, ChevronUp, Folder, Edit2, Trash2, Plus } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import type {
     FolderWithCounts,
     Folder as FolderType,
@@ -9,12 +10,17 @@ import type {
     FolderTreeNode
 } from "@flowmaestro/shared";
 import { MAX_FOLDER_DEPTH } from "@flowmaestro/shared";
+import { removeItemsFromFolder } from "../../lib/api";
+import { checkItemsInFolder } from "../../lib/folderUtils";
+import { logger } from "../../lib/logger";
 import { useFolderStore } from "../../stores/folderStore";
 import { useUIPreferencesStore } from "../../stores/uiPreferencesStore";
 import { ConfirmDialog } from "../common/ConfirmDialog";
 import { Tooltip } from "../common/Tooltip";
 import { CreateFolderDialog } from "../folders/CreateFolderDialog";
+import { DuplicateItemWarningDialog } from "../folders/DuplicateItemWarningDialog";
 import { SidebarFolderItem } from "./SidebarFolderItem";
+import type { DuplicateItemWarning } from "../folders/DuplicateItemWarningDialog";
 
 interface SidebarFoldersProps {
     isCollapsed: boolean;
@@ -27,12 +33,18 @@ interface ContextMenuState {
 }
 
 export function SidebarFolders({ isCollapsed }: SidebarFoldersProps) {
+    const location = useLocation();
+    const [searchParams] = useSearchParams();
+    const queryClient = useQueryClient();
+
     const {
         folders,
         folderTree,
         isLoadingFolders,
         expandedFolderIds,
         fetchFolders,
+        refreshFolders,
+        fetchFolderContents,
         toggleFolderExpanded,
         createFolder,
         updateFolder,
@@ -42,12 +54,24 @@ export function SidebarFolders({ isCollapsed }: SidebarFoldersProps) {
 
     const { sidebarFoldersExpanded, toggleSidebarFoldersExpanded } = useUIPreferencesStore();
 
+    // Get current folder ID from URL (if viewing a folder)
+    const currentFolderIdFromPath = location.pathname.startsWith("/folders/")
+        ? location.pathname.split("/folders/")[1]?.split("/")[0]
+        : null;
+    const currentFolderIdFromParams = searchParams.get("folder");
+    const sourceFolderId = currentFolderIdFromPath || currentFolderIdFromParams;
+
     // Dialog states
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
     const [folderToEdit, setFolderToEdit] = useState<FolderType | null>(null);
     const [folderToDelete, setFolderToDelete] = useState<FolderWithCounts | null>(null);
     const [parentFolderForSubfolder, setParentFolderForSubfolder] =
         useState<FolderWithCounts | null>(null);
+
+    // Local state for duplicate item warning dialog
+    const [duplicateItemWarning, setDuplicateItemWarning] = useState<DuplicateItemWarning | null>(
+        null
+    );
 
     // Context menu state
     const [contextMenu, setContextMenu] = useState<ContextMenuState>({
@@ -136,9 +160,134 @@ export function SidebarFolders({ isCollapsed }: SidebarFoldersProps) {
 
     const handleDropOnFolder = useCallback(
         async (folderId: string, itemIds: string[], itemType: FolderResourceType) => {
+            // Check if items are already in the target folder BEFORE moving
+            const {
+                found,
+                folderName,
+                folderId: duplicateFolderId,
+                isInMainFolder
+            } = await checkItemsInFolder(folderId, itemIds, itemType);
+
+            if (found) {
+                // Check if item is in the same folder
+                const isSameFolder = duplicateFolderId === folderId;
+
+                // For sidebar drops, always show dialog (don't auto-move)
+                // Auto-move only happens when dragging within the same page (folder grid)
+                // For sidebar drops, we don't have direct access to item names
+                // The global dialog will handle generic "item" names appropriately
+                const itemNames = itemIds.map(() => "item");
+
+                // Show global warning dialog for other cases
+                setDuplicateItemWarning({
+                    folderId,
+                    itemIds,
+                    itemNames,
+                    itemType,
+                    folderName,
+                    sourceFolderId: duplicateFolderId,
+                    isInMainFolder: isSameFolder ? true : isInMainFolder,
+                    onConfirm: async () => {
+                        // If item is in the same folder, just close (no move)
+                        if (isSameFolder) {
+                            return;
+                        }
+
+                        // Remove items from the duplicate folder before moving
+                        if (duplicateFolderId && duplicateFolderId !== folderId) {
+                            try {
+                                await removeItemsFromFolder({
+                                    itemIds,
+                                    itemType,
+                                    folderId: duplicateFolderId
+                                });
+                                // Invalidate folder contents queries after mutation
+                                queryClient.invalidateQueries({
+                                    queryKey: ["folderContents", duplicateFolderId]
+                                });
+                            } catch (err) {
+                                logger.error("Failed to remove items from source folder", err);
+                            }
+                        }
+
+                        // Move items to target folder
+                        await moveItemsToFolder(folderId, itemIds, itemType);
+
+                        // If dragging from within a folder, remove items from source folder
+                        if (sourceFolderId && sourceFolderId !== folderId) {
+                            try {
+                                await removeItemsFromFolder({
+                                    itemIds,
+                                    itemType,
+                                    folderId: sourceFolderId
+                                });
+                                // Invalidate folder contents queries after mutation
+                                queryClient.invalidateQueries({
+                                    queryKey: ["folderContents", sourceFolderId]
+                                });
+                                // Refresh folders to update counts and refresh current folder contents if viewing it
+                                await Promise.all([
+                                    refreshFolders(),
+                                    sourceFolderId
+                                        ? fetchFolderContents(sourceFolderId)
+                                        : Promise.resolve()
+                                ]);
+                            } catch (err) {
+                                logger.error(
+                                    "Failed to remove items from source folder or refresh folders",
+                                    err
+                                );
+                            }
+                        } else {
+                            // Even if not from a folder, refresh folders to update counts
+                            await refreshFolders();
+                        }
+                    }
+                });
+                // Return early to prevent move - this stops the operation
+                return;
+            }
+
+            // No items found, proceed with move
+            // Move items to target folder
             await moveItemsToFolder(folderId, itemIds, itemType);
+
+            // If dragging from within a folder, remove items from source folder
+            if (sourceFolderId && sourceFolderId !== folderId) {
+                try {
+                    await removeItemsFromFolder({
+                        itemIds,
+                        itemType,
+                        folderId: sourceFolderId
+                    });
+                    // Invalidate folder contents queries after mutation
+                    queryClient.invalidateQueries({
+                        queryKey: ["folderContents", sourceFolderId]
+                    });
+                    // Refresh folders to update counts and refresh current folder contents if viewing it
+                    await Promise.all([
+                        refreshFolders(),
+                        sourceFolderId ? fetchFolderContents(sourceFolderId) : Promise.resolve()
+                    ]);
+                } catch (err) {
+                    logger.error(
+                        "Failed to remove items from source folder or refresh folders",
+                        err
+                    );
+                }
+            } else {
+                // Even if not from a folder, refresh folders to update counts
+                await refreshFolders();
+            }
         },
-        [moveItemsToFolder]
+        [
+            moveItemsToFolder,
+            sourceFolderId,
+            refreshFolders,
+            fetchFolderContents,
+            checkItemsInFolder,
+            setDuplicateItemWarning
+        ]
     );
 
     const handleToggleExpand = useCallback(
@@ -376,6 +525,12 @@ export function SidebarFolders({ isCollapsed }: SidebarFoldersProps) {
                 message={`Are you sure you want to delete "${folderToDelete?.name}"? Items in this folder will be moved to the root level.`}
                 confirmText="Delete"
                 variant="danger"
+            />
+
+            {/* Duplicate Item Warning Dialog */}
+            <DuplicateItemWarningDialog
+                warning={duplicateItemWarning}
+                onClose={() => setDuplicateItemWarning(null)}
             />
         </div>
     );

@@ -14,8 +14,8 @@ interface FolderCardProps {
     onDrop?: (itemIds: string[], itemType: string) => void;
     /** When set, shows count for this specific item type instead of total */
     displayItemType?: FolderResourceType;
-    /** Whether this is a subfolder (for visual distinction) */
-    isSubfolder?: boolean;
+    /** Optional calculated count including subfolders (overrides folder.itemCounts) */
+    calculatedCount?: number;
     /** Whether this folder has children (subfolders) */
     hasChildren?: boolean;
     /** Whether this folder is expanded (showing children) */
@@ -33,11 +33,13 @@ export function FolderCard({
     onContextMenu,
     onDrop,
     displayItemType,
-    isSubfolder = false,
+    calculatedCount,
     hasChildren = false,
     isExpanded = false,
     onToggleExpand
 }: FolderCardProps) {
+    // Derive isSubfolder from folder data
+    const isSubfolder = folder.parentId !== null;
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isDragOver, setIsDragOver] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
@@ -92,6 +94,7 @@ export function FolderCard({
                 "chat-interface": { singular: "chat", plural: "chats" },
                 "knowledge-base": { singular: "knowledge base", plural: "knowledge bases" }
             };
+            // Use calculated count if provided (includes subfolders), otherwise use folder's count
             const countMap: Record<FolderResourceType, number> = {
                 workflow: folder.itemCounts.workflows,
                 agent: folder.itemCounts.agents,
@@ -99,7 +102,8 @@ export function FolderCard({
                 "chat-interface": folder.itemCounts.chatInterfaces,
                 "knowledge-base": folder.itemCounts.knowledgeBases
             };
-            const count = countMap[displayItemType];
+            const count =
+                calculatedCount !== undefined ? calculatedCount : countMap[displayItemType];
             const label = typeLabels[displayItemType];
             if (count === 0) return "Empty";
             if (count === 1) return `1 ${label.singular}`;
@@ -108,9 +112,10 @@ export function FolderCard({
 
         // Default: show total count
         const { total } = folder.itemCounts;
-        if (total === 0) return "Empty";
-        if (total === 1) return "1 item";
-        return `${total} items`;
+        const displayTotal = calculatedCount !== undefined ? calculatedCount : total;
+        if (displayTotal === 0) return "Empty";
+        if (displayTotal === 1) return "1 item";
+        return `${displayTotal} items`;
     };
 
     // Drag and drop handlers

@@ -1,9 +1,8 @@
 import { MessageSquare, Plus, Trash2, FolderInput, FolderMinus, Search } from "lucide-react";
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import type {
     ChatInterface,
-    Folder,
     FolderWithCounts,
     ChatInterfaceSummary,
     FolderResourceType
@@ -25,20 +24,15 @@ import {
     FolderBreadcrumb,
     FolderGridSection
 } from "../components/folders";
+import { DuplicateItemWarningDialog } from "../components/folders/DuplicateItemWarningDialog";
+import { useFolderManagement } from "../hooks/useFolderManagement";
 import { useSearch } from "../hooks/useSearch";
 import { useSort, CHAT_INTERFACE_SORT_FIELDS } from "../hooks/useSort";
-import {
-    getChatInterfaces,
-    deleteChatInterface,
-    duplicateChatInterface,
-    getFolders,
-    updateFolder,
-    removeItemsFromFolder
-} from "../lib/api";
+import { getChatInterfaces, deleteChatInterface, duplicateChatInterface } from "../lib/api";
+import { getFolderCountIncludingSubfolders } from "../lib/folderUtils";
 import { logger } from "../lib/logger";
 import { createDragPreview } from "../lib/utils";
-import { buildFolderTree, useFolderStore } from "../stores/folderStore";
-import { useUIPreferencesStore } from "../stores/uiPreferencesStore";
+import { useFolderStore } from "../stores/folderStore";
 
 // Convert ChatInterface to ChatInterfaceSummary for card components
 function toChatInterfaceSummary(ci: ChatInterface): ChatInterfaceSummary {
@@ -61,47 +55,70 @@ function toChatInterfaceSummary(ci: ChatInterface): ChatInterfaceSummary {
 
 export function ChatInterfacesPage() {
     const navigate = useNavigate();
-    const [searchParams, setSearchParams] = useSearchParams();
-    const currentFolderId = searchParams.get("folder");
 
-    // Folder store
-    const {
-        createFolder: createFolderStore,
-        moveItemsToFolder: moveItemsToFolderStore,
-        deleteFolder: deleteFolderStore,
-        folders: storeFolders
-    } = useFolderStore();
-
-    // State
+    const { moveItemsToFolder: moveItemsToFolderStore, folderTree: storeFolderTree } =
+        useFolderStore();
     const [chatInterfaces, setChatInterfaces] = useState<ChatInterface[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<{ title: string; message: string } | null>(null);
-
-    // Folder state
-    const [folders, setFolders] = useState<FolderWithCounts[]>([]);
-    const folderTree = useMemo(() => buildFolderTree(folders), [folders]);
-    const [currentFolder, setCurrentFolder] = useState<Folder | null>(null);
-    const [isLoadingFolders, setIsLoadingFolders] = useState(true);
-    const [selectedFolderIds, setSelectedFolderIds] = useState<Set<string>>(new Set());
-    const [isCreateFolderDialogOpen, setIsCreateFolderDialogOpen] = useState(false);
-    const [isMoveDialogOpen, setIsMoveDialogOpen] = useState(false);
-    const [folderToEdit, setFolderToEdit] = useState<Folder | null>(null);
-    const [folderToDelete, setFolderToDelete] = useState<FolderWithCounts | null>(null);
-
-    // Dialog states
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+    const [isMoveDialogOpen, setIsMoveDialogOpen] = useState(false);
     const [deleteTarget, setDeleteTarget] = useState<ChatInterface | null>(null);
-
-    // Selection state
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [isBatchDeleting, setIsBatchDeleting] = useState(false);
-    const { showFoldersSection, setShowFoldersSection } = useUIPreferencesStore();
-    const [expandedFolderIds, setExpandedFolderIds] = useState<Set<string>>(new Set());
     const [contextMenu, setContextMenu] = useState<{
         isOpen: boolean;
         position: { x: number; y: number };
         type: "chat" | "folder";
     }>({ isOpen: false, position: { x: 0, y: 0 }, type: "chat" });
+
+    // Use folder management hook
+    const {
+        folders,
+        currentFolder,
+        currentFolderId,
+        isLoadingFolders,
+        selectedFolderIds,
+        setSelectedFolderIds,
+        isCreateFolderDialogOpen,
+        setIsCreateFolderDialogOpen,
+        folderToEdit,
+        setFolderToEdit,
+        folderToDelete,
+        setFolderToDelete,
+        isBatchDeleting: isBatchDeletingFolders,
+        showFoldersSection,
+        setShowFoldersSection,
+        expandedFolderIds,
+        rootFolders,
+        canShowFoldersSection,
+        duplicateItemWarning,
+        setDuplicateItemWarning,
+        handleCreateFolder,
+        handleEditFolder,
+        handleDeleteFolder,
+        handleFolderClick,
+        handleFolderContextMenu,
+        handleBatchDeleteFolders,
+        handleNavigateToRoot,
+        handleRemoveFromFolder,
+        handleDropOnFolder,
+        handleToggleFolderExpand,
+        getFolderChildren
+    } = useFolderManagement({
+        itemType: "chat-interface",
+        onReloadItems: async () => {
+            await loadChatInterfaces(currentFolderId || undefined);
+        },
+        sourceItemType: "chat-interface",
+        getItemNames: (itemIds: string[]) => {
+            return itemIds.map((id) => {
+                const chatInterface = chatInterfaces.find((ci) => ci.id === id);
+                return chatInterface?.name || "Unknown";
+            });
+        },
+        onClearSelection: () => setSelectedIds(new Set())
+    });
 
     // Search functionality
     const {
@@ -132,47 +149,11 @@ export function ChatInterfacesPage() {
         availableFields: CHAT_INTERFACE_SORT_FIELDS
     });
 
-    // Load folders on mount
-    useEffect(() => {
-        loadFolders();
-    }, []);
-
-    // Sync folders when store folders change (e.g., when folder is created from sidebar)
-    useEffect(() => {
-        if (storeFolders.length > 0 && folders.length !== storeFolders.length) {
-            loadFolders();
-        }
-    }, [storeFolders]);
-
     // Load chat interfaces when folder changes
     useEffect(() => {
         const folderId = currentFolderId || undefined;
         loadChatInterfaces(folderId);
     }, [currentFolderId]);
-
-    // Update current folder when folderId changes
-    useEffect(() => {
-        if (currentFolderId) {
-            const folder = folders.find((f) => f.id === currentFolderId);
-            setCurrentFolder(folder || null);
-        } else {
-            setCurrentFolder(null);
-        }
-    }, [currentFolderId, folders]);
-
-    const loadFolders = async () => {
-        setIsLoadingFolders(true);
-        try {
-            const response = await getFolders();
-            if (response.success && response.data) {
-                setFolders(response.data);
-            }
-        } catch (err) {
-            logger.error("Failed to load folders", err);
-        } finally {
-            setIsLoadingFolders(false);
-        }
-    };
 
     const loadChatInterfaces = async (folderId?: string) => {
         setIsLoading(true);
@@ -233,104 +214,24 @@ export function ChatInterfacesPage() {
         });
     };
 
-    // Folder handlers
-    const handleCreateFolder = async (name: string, color: string) => {
-        await createFolderStore({ name, color });
-        // Store's createFolder already refreshes folders, so sidebar will update
-        await loadFolders();
-    };
-
-    const handleEditFolder = async (name: string, color: string) => {
-        if (!folderToEdit) return;
-        await updateFolder(folderToEdit.id, { name, color });
-        await loadFolders();
-        setFolderToEdit(null);
-    };
-
-    const handleDeleteFolder = async () => {
-        if (!folderToDelete) return;
-        setIsBatchDeleting(true);
-        try {
-            await deleteFolderStore(folderToDelete.id);
-            // Store's deleteFolder already refreshes folders, so sidebar will update
-            await loadFolders();
-            const folderId = currentFolderId || undefined;
-            await loadChatInterfaces(folderId);
-            setFolderToDelete(null);
-            if (currentFolderId === folderToDelete.id) {
-                setSearchParams({});
-            }
-        } catch (err) {
-            logger.error("Failed to delete folder", err);
-        } finally {
-            setIsBatchDeleting(false);
-        }
-    };
-
-    const handleFolderClick = useCallback(
+    // Override handleFolderContextMenu to also set context menu state
+    const handleFolderContextMenuWithState = useCallback(
         (e: React.MouseEvent, folder: FolderWithCounts) => {
-            if (e.shiftKey) {
-                e.preventDefault();
-                setSelectedFolderIds((prev) => {
-                    const newSet = new Set(prev);
-                    if (newSet.has(folder.id)) {
-                        newSet.delete(folder.id);
-                    } else {
-                        newSet.add(folder.id);
-                    }
-                    return newSet;
-                });
-            } else if (selectedFolderIds.size === 0) {
-                // Navigate to unified folder contents page with source type for auto-collapse
-                navigate(`/folders/${folder.id}`, {
-                    state: { sourceItemType: "chat-interface" }
-                });
-            } else {
-                setSelectedFolderIds(new Set());
-            }
-        },
-        [navigate, selectedFolderIds.size]
-    );
-
-    const handleFolderContextMenu = useCallback(
-        (e: React.MouseEvent, folder: FolderWithCounts) => {
-            e.preventDefault();
-            if (!selectedFolderIds.has(folder.id)) {
-                setSelectedFolderIds(new Set([folder.id]));
-            }
+            handleFolderContextMenu(e, folder);
             setContextMenu({
                 isOpen: true,
                 position: { x: e.clientX, y: e.clientY },
                 type: "folder"
             });
         },
-        [selectedFolderIds]
+        [handleFolderContextMenu]
     );
 
-    const handleBatchDeleteFolders = async () => {
-        if (selectedFolderIds.size === 0) return;
-
-        setIsBatchDeleting(true);
-        try {
-            const deletePromises = Array.from(selectedFolderIds).map((id) => deleteFolderStore(id));
-            await Promise.all(deletePromises);
-            // Store's deleteFolder already refreshes folders, so sidebar will update
-
-            await loadFolders();
-            const folderId = currentFolderId || undefined;
-            await loadChatInterfaces(folderId);
-            setSelectedFolderIds(new Set());
-            setContextMenu({ isOpen: false, position: { x: 0, y: 0 }, type: "chat" });
-        } catch (err) {
-            logger.error("Failed to delete folders", err);
-        } finally {
-            setIsBatchDeleting(false);
-        }
-    };
-
-    const handleNavigateToRoot = () => {
-        setSearchParams({});
-    };
+    // Override handleBatchDeleteFolders to also clear context menu
+    const handleBatchDeleteFoldersWithState = useCallback(async () => {
+        await handleBatchDeleteFolders();
+        setContextMenu({ isOpen: false, position: { x: 0, y: 0 }, type: "chat" });
+    }, [handleBatchDeleteFolders]);
 
     // Drag and drop handlers
     const handleDragStart = useCallback(
@@ -350,52 +251,13 @@ export function ChatInterfacesPage() {
         [selectedIds]
     );
 
-    const handleDropOnFolder = useCallback(
-        async (folderId: string, itemIds: string[], itemType: string) => {
-            if (itemType !== "chat-interface") return;
-            try {
-                await moveItemsToFolderStore(folderId, itemIds, itemType as FolderResourceType);
-                // Store's moveItemsToFolder already refreshes folders, so sidebar will update
-                const currentFolderIdParam = currentFolderId || undefined;
-                await loadChatInterfaces(currentFolderIdParam);
-                await loadFolders();
-                setSelectedIds(new Set());
-            } catch (err) {
-                logger.error("Failed to move items to folder", err);
-            }
-        },
-        [currentFolderId, moveItemsToFolderStore]
-    );
-
     const handleMoveToFolder = async (folderId: string | null) => {
         if (!folderId) {
             throw new Error("Folder ID is required");
         }
         await moveItemsToFolderStore(folderId, Array.from(selectedIds), "chat-interface");
-        // Store's moveItemsToFolder already refreshes folders, so sidebar will update
-        const currentFolderIdParam = currentFolderId || undefined;
-        await loadChatInterfaces(currentFolderIdParam);
-        await loadFolders();
+        await loadChatInterfaces(currentFolderId || undefined);
         setSelectedIds(new Set());
-    };
-
-    const handleRemoveFromFolder = async (chatIds: string | string[]) => {
-        if (!currentFolderId) return; // Can only remove when viewing inside a folder
-        const ids = Array.isArray(chatIds) ? chatIds : [chatIds];
-        if (ids.length === 0) return;
-
-        try {
-            await removeItemsFromFolder({
-                itemIds: ids,
-                itemType: "chat-interface",
-                folderId: currentFolderId
-            });
-            const currentFolderIdParam = currentFolderId || undefined;
-            await loadChatInterfaces(currentFolderIdParam);
-            await loadFolders();
-        } catch (err) {
-            logger.error("Failed to remove chat interface from folder", err);
-        }
     };
 
     // Selection handlers for batch operations
@@ -452,7 +314,6 @@ export function ChatInterfacesPage() {
             // Refresh the list and clear selection
             const folderId = currentFolderId || undefined;
             await loadChatInterfaces(folderId);
-            await loadFolders();
             setSelectedIds(new Set());
             setContextMenu({ isOpen: false, position: { x: 0, y: 0 }, type: "chat" });
         } catch (err) {
@@ -510,44 +371,21 @@ export function ChatInterfacesPage() {
         {
             label: `Delete ${selectedFolderIds.size} folder${selectedFolderIds.size !== 1 ? "s" : ""}`,
             icon: <Trash2 className="w-4 h-4" />,
-            onClick: handleBatchDeleteFolders,
+            onClick: handleBatchDeleteFoldersWithState,
             variant: "danger",
-            disabled: isBatchDeleting
+            disabled: isBatchDeletingFolders
         }
     ];
 
     // Folders to show
     // Filter folders to show only root folders (depth 0) when at root
-    const rootFolders = currentFolderId ? [] : folders.filter((f) => f.depth === 0);
-    const canShowFoldersSection = !currentFolderId && rootFolders.length > 0;
-
-    // Helper to get children of a folder from the tree
-    const getFolderChildren = (folderId: string): FolderWithCounts[] => {
-        const findInTree = (nodes: typeof folderTree): FolderWithCounts[] => {
-            for (const node of nodes) {
-                if (node.id === folderId) {
-                    return node.children;
-                }
-                const found = findInTree(node.children);
-                if (found.length > 0) return found;
-            }
-            return [];
-        };
-        return findInTree(folderTree);
-    };
-
-    // Toggle folder expansion
-    const handleToggleFolderExpand = (folderId: string) => {
-        setExpandedFolderIds((prev) => {
-            const next = new Set(prev);
-            if (next.has(folderId)) {
-                next.delete(folderId);
-            } else {
-                next.add(folderId);
-            }
-            return next;
-        });
-    };
+    // Helper to calculate total count for a folder including all subfolders recursively
+    const getFolderCountIncludingSubfoldersMemo = useCallback(
+        (folder: FolderWithCounts, itemType: FolderResourceType): number => {
+            return getFolderCountIncludingSubfolders(folder, itemType, getFolderChildren);
+        },
+        [getFolderChildren]
+    );
 
     if (isLoading || isLoadingFolders) {
         return (
@@ -580,11 +418,11 @@ export function ChatInterfacesPage() {
                             </Button>
                             <Button
                                 variant="destructive"
-                                onClick={handleBatchDeleteFolders}
-                                disabled={isBatchDeleting}
-                                loading={isBatchDeleting}
+                                onClick={handleBatchDeleteFoldersWithState}
+                                disabled={isBatchDeletingFolders}
+                                loading={isBatchDeletingFolders}
                             >
-                                {!isBatchDeleting && <Trash2 className="w-4 h-4" />}
+                                {!isBatchDeletingFolders && <Trash2 className="w-4 h-4" />}
                                 Delete folders
                             </Button>
                         </div>
@@ -678,10 +516,11 @@ export function ChatInterfacesPage() {
                 onFolderClick={handleFolderClick}
                 onFolderEdit={setFolderToEdit}
                 onFolderDelete={setFolderToDelete}
-                onFolderContextMenu={handleFolderContextMenu}
+                onFolderContextMenu={handleFolderContextMenuWithState}
                 onDropOnFolder={handleDropOnFolder}
                 onToggleFolderExpand={handleToggleFolderExpand}
                 getFolderChildren={getFolderChildren}
+                getFolderCountIncludingSubfolders={getFolderCountIncludingSubfoldersMemo}
             />
 
             {filteredChatInterfaces.length === 0 && isSearchActive ? (
@@ -807,7 +646,7 @@ export function ChatInterfacesPage() {
                 isOpen={isMoveDialogOpen}
                 onClose={() => setIsMoveDialogOpen(false)}
                 folders={folders}
-                folderTree={folderTree}
+                folderTree={storeFolderTree}
                 isLoadingFolders={isLoadingFolders}
                 selectedItemCount={selectedIds.size}
                 itemType="chat-interface"
@@ -828,6 +667,12 @@ export function ChatInterfacesPage() {
                 message={`Are you sure you want to delete the folder "${folderToDelete?.name}"? Items in this folder will be moved to the root level.`}
                 confirmText="Delete"
                 variant="danger"
+            />
+
+            {/* Duplicate Item Warning Dialog */}
+            <DuplicateItemWarningDialog
+                warning={duplicateItemWarning}
+                onClose={() => setDuplicateItemWarning(null)}
             />
         </div>
     );

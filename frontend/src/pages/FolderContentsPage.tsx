@@ -13,7 +13,11 @@ import {
 } from "lucide-react";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useNavigate, Link, useLocation } from "react-router-dom";
-import type { FolderResourceType, Folder as FolderType } from "@flowmaestro/shared";
+import type {
+    FolderResourceType,
+    Folder as FolderType,
+    FolderWithCounts
+} from "@flowmaestro/shared";
 import { MAX_FOLDER_DEPTH } from "@flowmaestro/shared";
 import { Button } from "../components/common/Button";
 import { ConfirmDialog } from "../components/common/ConfirmDialog";
@@ -21,8 +25,10 @@ import { ContextMenu, type ContextMenuItem } from "../components/common/ContextM
 import { LoadingState } from "../components/common/Spinner";
 import { CreateFolderDialog, FolderItemSection, MoveToFolderDialog } from "../components/folders";
 import { removeItemsFromFolder } from "../lib/api";
-import { cn } from "../lib/utils";
-import { useFolderStore } from "../stores/folderStore";
+import { checkItemsInFolder, getFolderCountIncludingSubfolders } from "../lib/folderUtils";
+import { logger } from "../lib/logger";
+import { createDragPreview, cn } from "../lib/utils";
+import { useFolderStore, buildFolderTree } from "../stores/folderStore";
 
 export function FolderContentsPage() {
     const { folderId } = useParams<{ folderId: string }>();
@@ -62,8 +68,19 @@ export function FolderContentsPage() {
     const [openSubfolderMenuId, setOpenSubfolderMenuId] = useState<string | null>(null);
     const subfolderMenuRefs = useRef<Record<string, HTMLDivElement>>({});
     const [isMoveDialogOpen, setIsMoveDialogOpen] = useState(false);
+    const [dragOverSubfolderId, setDragOverSubfolderId] = useState<string | null>(null);
     const [movingItemId, setMovingItemId] = useState<string | null>(null);
     const [movingItemType, setMovingItemType] = useState<FolderResourceType | null>(null);
+    const [isWarningDialogOpen, setIsWarningDialogOpen] = useState(false);
+    const [pendingMoveTarget, setPendingMoveTarget] = useState<string | null>(null);
+    const [itemsAlreadyInFolder, setItemsAlreadyInFolder] = useState<{
+        itemIds: string[];
+        itemNames: string[];
+        itemType: FolderResourceType;
+        folderName: string;
+        sourceFolderId: string; // The folder where the item currently exists
+        isInMainFolder: boolean; // Whether the item is in the main folder (not subfolder)
+    } | null>(null);
 
     // Multi-select state for each item type
     const [selectedWorkflowIds, setSelectedWorkflowIds] = useState<Set<string>>(new Set());
@@ -95,6 +112,80 @@ export function FolderContentsPage() {
             clearFolderContents();
         };
     }, [folderId, fetchFolderContents, clearFolderContents]);
+
+    // Auto-expand subfolders if main folder has no items of current type but subfolders do
+    useEffect(() => {
+        if (!sourceItemType || !currentFolderContents || isLoadingFolders) {
+            return;
+        }
+
+        const { itemCounts, subfolders = [] } = currentFolderContents;
+
+        // Get count for current item type in main folder
+        const getMainFolderCount = (): number => {
+            switch (sourceItemType) {
+                case "workflow":
+                    return itemCounts.workflows;
+                case "agent":
+                    return itemCounts.agents;
+                case "form-interface":
+                    return itemCounts.formInterfaces;
+                case "chat-interface":
+                    return itemCounts.chatInterfaces;
+                case "knowledge-base":
+                    return itemCounts.knowledgeBases;
+            }
+        };
+
+        const mainFolderCount = getMainFolderCount();
+
+        // If main folder has items of this type, don't auto-expand
+        if (mainFolderCount > 0) {
+            return;
+        }
+
+        // Build folder tree to get all subfolders recursively
+        const tree = buildFolderTree(folders);
+
+        // Helper to find a folder node in the tree recursively
+        const findFolderNode = (nodes: typeof tree, folderId: string): (typeof tree)[0] | null => {
+            for (const node of nodes) {
+                if (node.id === folderId) {
+                    return node;
+                }
+                const found = findFolderNode(node.children, folderId);
+                if (found) return found;
+            }
+            return null;
+        };
+
+        const getFolderChildren = (parentId: string): FolderWithCounts[] => {
+            const node = findFolderNode(tree, parentId);
+            return node ? node.children : [];
+        };
+
+        // Check if any subfolder (recursively) has items of this type
+        const hasItemsInSubfolders = subfolders.some((subfolder) => {
+            const count = getFolderCountIncludingSubfolders(
+                subfolder,
+                sourceItemType,
+                getFolderChildren
+            );
+            return count > 0;
+        });
+
+        // Auto-expand if subfolders have items of this type
+        if (hasItemsInSubfolders && subfolders.length > 0) {
+            setShowSubfolders(true);
+        }
+    }, [
+        sourceItemType,
+        currentFolderContents,
+        folders,
+        isLoadingFolders,
+        buildFolderTree,
+        getFolderCountIncludingSubfolders
+    ]);
 
     // Close subfolder dropdown and menu when clicking outside
     useEffect(() => {
@@ -190,15 +281,12 @@ export function FolderContentsPage() {
             throw new Error("Missing required information for move operation");
         }
 
-        // Check if we're doing a batch move or single move
+        // Determine which items to move
+        let itemsToMove: { itemIds: string[]; itemType: FolderResourceType }[] = [];
+
         if (movingItemId && movingItemType) {
             // Single item move
-            await moveItemsToFolder(targetFolderId, [movingItemId], movingItemType);
-            await removeItemsFromFolder({
-                itemIds: [movingItemId],
-                itemType: movingItemType,
-                folderId
-            });
+            itemsToMove = [{ itemIds: [movingItemId], itemType: movingItemType }];
         } else {
             // Batch move - handle all selected types
             const { selectedTypes } = getTotalSelectedCount();
@@ -206,22 +294,105 @@ export function FolderContentsPage() {
                 throw new Error("No items selected for move operation");
             }
 
-            // Move items of each type separately
             for (const itemType of selectedTypes) {
                 const selected = getSelectedIds(itemType);
                 if (selected.size > 0) {
-                    const itemIds = Array.from(selected);
-                    // Move items to target folder
-                    await moveItemsToFolder(targetFolderId, itemIds, itemType);
-                    // Explicitly remove from current folder
-                    await removeItemsFromFolder({
-                        itemIds,
-                        itemType,
-                        folderId
-                    });
-                    // Clear selection for this type
-                    setSelectedIds(itemType, new Set());
+                    itemsToMove.push({ itemIds: Array.from(selected), itemType });
                 }
+            }
+        }
+
+        // Check if any items are already in the target folder
+        logger.info("handleMoveToFolder: Starting check for items in target folder", {
+            targetFolderId,
+            itemsToMoveCount: itemsToMove.length
+        });
+
+        // Check if any items are already in the target folder
+        // When using "Move to folder" dialog, we should move directly without showing another dialog
+        // Only skip if item is already in the exact same target folder
+        const sourceFolderMap = new Map<string, string>(); // itemId -> sourceFolderId
+
+        for (const { itemIds, itemType } of itemsToMove) {
+            try {
+                const { found, folderId: sourceFolderId } = await checkItemsInFolder(
+                    targetFolderId,
+                    itemIds,
+                    itemType
+                );
+
+                if (found) {
+                    // If item is already in the target folder (same folder), do nothing
+                    const isSameFolder = sourceFolderId === targetFolderId;
+                    if (isSameFolder) {
+                        // Item is already in the target folder, just close the dialog
+                        setIsMoveDialogOpen(false);
+                        setMovingItemId(null);
+                        setMovingItemType(null);
+                        return;
+                    }
+                    // Track source folder for each item (in case items are in different folders)
+                    itemIds.forEach((id) => {
+                        if (sourceFolderId) {
+                            sourceFolderMap.set(id, sourceFolderId);
+                        }
+                    });
+                }
+            } catch (error) {
+                logger.error("Error checking if items are already in target folder", error);
+            }
+        }
+
+        // Proceed with move (will handle removing from source and adding to target)
+        await performMove(targetFolderId, itemsToMove, sourceFolderMap);
+    };
+
+    const performMove = async (
+        targetFolderId: string,
+        itemsToMove: { itemIds: string[]; itemType: FolderResourceType }[],
+        sourceFolderMap?: Map<string, string>
+    ) => {
+        if (!folderId) return;
+
+        // Move items of each type separately
+        for (const { itemIds, itemType } of itemsToMove) {
+            // Move items to target folder
+            await moveItemsToFolder(targetFolderId, itemIds, itemType);
+
+            // Remove from source folder(s)
+            // If sourceFolderMap is provided, use it to remove from the correct source folder
+            // Otherwise, remove from current folder (default behavior)
+            if (sourceFolderMap && sourceFolderMap.size > 0) {
+                // Group items by source folder
+                const itemsBySource = new Map<string, string[]>();
+                itemIds.forEach((id) => {
+                    const sourceId = sourceFolderMap.get(id) || folderId;
+                    if (!itemsBySource.has(sourceId)) {
+                        itemsBySource.set(sourceId, []);
+                    }
+                    itemsBySource.get(sourceId)!.push(id);
+                });
+
+                // Remove from each source folder
+                for (const [sourceId, ids] of itemsBySource) {
+                    await removeItemsFromFolder({
+                        itemIds: ids,
+                        itemType,
+                        folderId: sourceId
+                    });
+                }
+            } else {
+                // Default: remove from current folder
+                await removeItemsFromFolder({
+                    itemIds,
+                    itemType,
+                    folderId
+                });
+            }
+
+            // Clear selection for this type
+            if (!movingItemId) {
+                setSelectedIds(itemType, new Set());
             }
         }
 
@@ -231,6 +402,56 @@ export function FolderContentsPage() {
         // Reset state
         setMovingItemId(null);
         setMovingItemType(null);
+    };
+
+    const handleConfirmMove = async () => {
+        if (!pendingMoveTarget || !itemsAlreadyInFolder) return;
+
+        // If item is in main folder, don't proceed with move (just close dialog)
+        if (itemsAlreadyInFolder.isInMainFolder) {
+            setIsWarningDialogOpen(false);
+            setItemsAlreadyInFolder(null);
+            setPendingMoveTarget(null);
+            return;
+        }
+
+        // Determine which items to move
+        let itemsToMove: { itemIds: string[]; itemType: FolderResourceType }[] = [];
+
+        if (movingItemId && movingItemType) {
+            itemsToMove = [{ itemIds: [movingItemId], itemType: movingItemType }];
+        } else {
+            const { selectedTypes } = getTotalSelectedCount();
+            for (const itemType of selectedTypes) {
+                const selected = getSelectedIds(itemType);
+                if (selected.size > 0) {
+                    itemsToMove.push({ itemIds: Array.from(selected), itemType });
+                }
+            }
+        }
+
+        // Remove items from the source folder (where they currently exist) before moving
+        const { sourceFolderId, itemIds, itemType } = itemsAlreadyInFolder;
+        if (sourceFolderId && sourceFolderId !== pendingMoveTarget) {
+            try {
+                await removeItemsFromFolder({
+                    itemIds,
+                    itemType,
+                    folderId: sourceFolderId
+                });
+            } catch (err) {
+                logger.error("Failed to remove items from source folder", err);
+            }
+        }
+
+        // Close warning dialog
+        setIsWarningDialogOpen(false);
+        setItemsAlreadyInFolder(null);
+        const targetId = pendingMoveTarget;
+        setPendingMoveTarget(null);
+
+        // Proceed with move
+        await performMove(targetId, itemsToMove);
     };
 
     const handleMoveToFolderClick = (itemId: string, itemType: FolderResourceType) => {
@@ -275,6 +496,184 @@ export function FolderContentsPage() {
                 break;
         }
     };
+
+    // Drag and drop handlers
+    const handleDragStart = useCallback(
+        (e: React.DragEvent, itemId: string, itemType: FolderResourceType) => {
+            const selected = getSelectedIds(itemType);
+            // If the dragged item is not selected, select only it
+            const itemIds = selected.has(itemId) ? Array.from(selected) : [itemId];
+
+            e.dataTransfer.setData("application/json", JSON.stringify({ itemIds, itemType }));
+            e.dataTransfer.effectAllowed = "move";
+
+            // Create custom drag preview
+            const itemTypeLabel =
+                itemType === "workflow"
+                    ? "workflow"
+                    : itemType === "agent"
+                      ? "agent"
+                      : itemType === "form-interface"
+                        ? "form interface"
+                        : itemType === "chat-interface"
+                          ? "chat interface"
+                          : "knowledge base";
+            createDragPreview(e, itemIds.length, itemTypeLabel);
+        },
+        [getSelectedIds]
+    );
+
+    const performDropOnSubfolder = useCallback(
+        async (subfolderId: string, itemIds: string[], itemType: FolderResourceType) => {
+            if (!folderId) return;
+            // Move items to subfolder
+            await moveItemsToFolder(subfolderId, itemIds, itemType);
+            // Explicitly remove from current folder (backend move only adds, doesn't remove)
+            await removeItemsFromFolder({
+                itemIds,
+                itemType,
+                folderId
+            });
+            // Refresh folder contents and sidebar counts
+            await Promise.all([fetchFolderContents(folderId), refreshFolders()]);
+            // Clear selection
+            const selected = getSelectedIds(itemType);
+            if (selected.size > 0) {
+                setSelectedIds(itemType, new Set());
+            }
+        },
+        [
+            folderId,
+            moveItemsToFolder,
+            fetchFolderContents,
+            refreshFolders,
+            getSelectedIds,
+            setSelectedIds
+        ]
+    );
+
+    const handleDropOnSubfolder = useCallback(
+        async (subfolderId: string, itemIds: string[], itemType: string) => {
+            if (!folderId) return;
+
+            const itemTypeEnum = itemType as FolderResourceType;
+
+            // Check if items are already in the target subfolder BEFORE moving
+            const {
+                found,
+                folderName,
+                folderId: sourceFolderId,
+                isInMainFolder
+            } = await checkItemsInFolder(subfolderId, itemIds, itemTypeEnum);
+
+            if (found) {
+                // Check if item is in the same folder (same folder or same subfolder)
+                const isSameFolder = sourceFolderId === subfolderId;
+
+                // Auto-move logic: If moving from current folder to subfolder while inside a folder page
+                // Conditions:
+                // 1. We're on a folder page (folderId exists)
+                // 2. Item is in the folder we're viewing (sourceFolderId matches folderId)
+                // 3. Moving to a different folder (not the same folder)
+                // 4. Item is in the main folder (isInMainFolder is true)
+                const hasCurrentFolder = Boolean(folderId);
+                const itemInCurrentFolder = Boolean(
+                    sourceFolderId &&
+                        folderId &&
+                        String(sourceFolderId).trim() === String(folderId).trim()
+                );
+                const movingToDifferentFolder = !isSameFolder && subfolderId !== sourceFolderId;
+                const itemInMainFolder = isInMainFolder === true;
+
+                const shouldAutoMove =
+                    hasCurrentFolder &&
+                    itemInCurrentFolder &&
+                    movingToDifferentFolder &&
+                    itemInMainFolder;
+
+                if (shouldAutoMove) {
+                    try {
+                        // Remove items from the main folder (source)
+                        await removeItemsFromFolder({
+                            itemIds,
+                            itemType: itemTypeEnum,
+                            folderId: sourceFolderId!
+                        });
+                        // Proceed with move to target subfolder
+                        await performDropOnSubfolder(subfolderId, itemIds, itemTypeEnum);
+                    } catch (err) {
+                        logger.error(
+                            "Failed to automatically move items from main to subfolder",
+                            err
+                        );
+                    }
+                    // Return early - move completed automatically
+                    return;
+                }
+
+                // Get item names from currentFolderContents
+                const itemNames = itemIds.map((id) => {
+                    if (!currentFolderContents) return "Unknown";
+                    switch (itemTypeEnum) {
+                        case "workflow": {
+                            const workflow = currentFolderContents.items.workflows.find(
+                                (w) => w.id === id
+                            );
+                            return workflow?.name || "Unknown";
+                        }
+                        case "agent": {
+                            const agent = currentFolderContents.items.agents.find(
+                                (a) => a.id === id
+                            );
+                            return agent?.name || "Unknown";
+                        }
+                        case "form-interface": {
+                            const formInterface = currentFolderContents.items.formInterfaces.find(
+                                (fi) => fi.id === id
+                            );
+                            return formInterface?.title || formInterface?.name || "Unknown";
+                        }
+                        case "chat-interface": {
+                            const chatInterface = currentFolderContents.items.chatInterfaces.find(
+                                (ci) => ci.id === id
+                            );
+                            return chatInterface?.title || chatInterface?.name || "Unknown";
+                        }
+                        case "knowledge-base": {
+                            const kb = currentFolderContents.items.knowledgeBases.find(
+                                (k) => k.id === id
+                            );
+                            return kb?.name || "Unknown";
+                        }
+                        default:
+                            return "Unknown";
+                    }
+                });
+
+                // Show warning dialog and STOP - do not proceed with move
+                setItemsAlreadyInFolder({
+                    itemIds,
+                    itemNames,
+                    itemType: itemTypeEnum,
+                    folderName,
+                    sourceFolderId,
+                    isInMainFolder
+                });
+                setPendingMoveTarget(subfolderId);
+                setIsWarningDialogOpen(true);
+                // Return early to prevent move
+                return;
+            }
+
+            // No items found, proceed with move
+            try {
+                await performDropOnSubfolder(subfolderId, itemIds, itemTypeEnum);
+            } catch (err) {
+                logger.error("Failed to move items to subfolder", err);
+            }
+        },
+        [folderId, performDropOnSubfolder]
+    );
 
     // Get navigation path based on item type
     const getItemPath = useCallback((itemType: FolderResourceType, itemId: string): string => {
@@ -515,7 +914,9 @@ export function FolderContentsPage() {
     };
 
     const handleSubfolderClick = (subfolderId: string) => {
-        navigate(`/folders/${subfolderId}`);
+        navigate(`/folders/${subfolderId}`, {
+            state: sourceItemType ? { sourceItemType } : undefined
+        });
     };
 
     const handleEditSubfolder = async (name: string, color: string) => {
@@ -788,88 +1189,183 @@ export function FolderContentsPage() {
                         Subfolders
                     </h2>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                        {subfolders.map((subfolder) => (
-                            <div
-                                key={subfolder.id}
-                                className={cn(
-                                    "relative flex items-center gap-3 p-3 rounded-lg border border-border",
-                                    "bg-card hover:shadow-md hover:border-primary transition-all group cursor-pointer"
-                                )}
-                            >
-                                <button
-                                    onClick={() => handleSubfolderClick(subfolder.id)}
-                                    className={cn(
-                                        "flex items-center gap-3 flex-1 text-left min-w-0",
-                                        "focus:outline-none focus:ring-2 focus:ring-primary/50 rounded"
-                                    )}
-                                >
-                                    <div
-                                        className="w-0.5 h-6 rounded-full flex-shrink-0"
-                                        style={{ backgroundColor: subfolder.color }}
-                                    />
-                                    <div className="min-w-0 flex-1">
-                                        <div className="font-medium text-foreground group-hover:text-primary transition-colors truncate">
-                                            {subfolder.name}
-                                        </div>
-                                        <div className="text-xs text-muted-foreground">
-                                            {subfolder.itemCounts.total} items
-                                        </div>
-                                    </div>
-                                </button>
-                                {/* Option Menu */}
-                                <div
-                                    className="relative flex-shrink-0"
-                                    ref={(el) => {
-                                        if (el) {
-                                            subfolderMenuRefs.current[subfolder.id] = el;
+                        {subfolders.map((subfolder) => {
+                            const isDragOver = dragOverSubfolderId === subfolder.id;
+
+                            const handleDragOver = (e: React.DragEvent) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setDragOverSubfolderId(subfolder.id);
+                            };
+
+                            const handleDragLeave = (e: React.DragEvent) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                // Only clear if we're actually leaving the element (not entering a child)
+                                const relatedTarget = e.relatedTarget as Node;
+                                if (!e.currentTarget.contains(relatedTarget)) {
+                                    setDragOverSubfolderId(null);
+                                }
+                            };
+
+                            const handleDrop = (e: React.DragEvent) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setDragOverSubfolderId(null);
+
+                                try {
+                                    const data = e.dataTransfer.getData("application/json");
+                                    if (data) {
+                                        const { itemIds, itemType } = JSON.parse(data);
+                                        if (itemIds && itemType) {
+                                            handleDropOnSubfolder(subfolder.id, itemIds, itemType);
                                         }
-                                    }}
+                                    }
+                                } catch {
+                                    // Invalid drag data, ignore
+                                }
+                            };
+
+                            // Calculate count for subfolder based on sourceItemType
+                            const getSubfolderCount = (): { count: number; label: string } => {
+                                if (sourceItemType) {
+                                    // Build folder tree to get recursive count
+                                    const tree = buildFolderTree(folders);
+                                    const findFolderNode = (
+                                        nodes: typeof tree,
+                                        folderId: string
+                                    ): (typeof tree)[0] | null => {
+                                        for (const node of nodes) {
+                                            if (node.id === folderId) {
+                                                return node;
+                                            }
+                                            const found = findFolderNode(node.children, folderId);
+                                            if (found) return found;
+                                        }
+                                        return null;
+                                    };
+                                    const getFolderChildren = (
+                                        parentId: string
+                                    ): FolderWithCounts[] => {
+                                        const node = findFolderNode(tree, parentId);
+                                        return node ? node.children : [];
+                                    };
+                                    const count = getFolderCountIncludingSubfolders(
+                                        subfolder,
+                                        sourceItemType,
+                                        getFolderChildren
+                                    );
+                                    const label =
+                                        sourceItemType === "workflow"
+                                            ? "workflow"
+                                            : sourceItemType === "agent"
+                                              ? "agent"
+                                              : sourceItemType === "form-interface"
+                                                ? "form interface"
+                                                : sourceItemType === "chat-interface"
+                                                  ? "chat interface"
+                                                  : "knowledge base";
+                                    return {
+                                        count,
+                                        label: count === 1 ? label : `${label}s`
+                                    };
+                                }
+                                return {
+                                    count: subfolder.itemCounts.total,
+                                    label: "item"
+                                };
+                            };
+
+                            const { count, label } = getSubfolderCount();
+
+                            return (
+                                <div
+                                    key={subfolder.id}
+                                    className={cn(
+                                        "relative flex items-center gap-3 p-3 rounded-lg border transition-all group cursor-pointer",
+                                        isDragOver
+                                            ? "border-primary ring-2 ring-primary bg-primary/10 scale-[1.02]"
+                                            : "border-border bg-card hover:shadow-md hover:border-primary"
+                                    )}
+                                    onDragOver={handleDragOver}
+                                    onDragLeave={handleDragLeave}
+                                    onDrop={handleDrop}
                                 >
                                     <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setOpenSubfolderMenuId(
-                                                openSubfolderMenuId === subfolder.id
-                                                    ? null
-                                                    : subfolder.id
-                                            );
-                                        }}
-                                        className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors opacity-0 group-hover:opacity-100"
-                                        title="More options"
+                                        onClick={() => handleSubfolderClick(subfolder.id)}
+                                        className={cn(
+                                            "flex items-center gap-3 flex-1 text-left min-w-0",
+                                            "focus:outline-none focus:ring-2 focus:ring-primary/50 rounded"
+                                        )}
                                     >
-                                        <MoreVertical className="w-4 h-4" />
-                                    </button>
-
-                                    {/* Dropdown Menu */}
-                                    {openSubfolderMenuId === subfolder.id && (
-                                        <div className="absolute right-0 mt-1 w-36 bg-card border border-border rounded-lg shadow-lg py-1 z-50">
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setSubfolderToEdit(subfolder);
-                                                    setOpenSubfolderMenuId(null);
-                                                }}
-                                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
-                                            >
-                                                <Edit2 className="w-4 h-4" />
-                                                Edit
-                                            </button>
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setSubfolderToDelete(subfolder);
-                                                    setOpenSubfolderMenuId(null);
-                                                }}
-                                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                                Delete
-                                            </button>
+                                        <div
+                                            className="w-0.5 h-6 rounded-full flex-shrink-0"
+                                            style={{ backgroundColor: subfolder.color }}
+                                        />
+                                        <div className="min-w-0 flex-1">
+                                            <div className="font-medium text-foreground group-hover:text-primary transition-colors truncate">
+                                                {subfolder.name}
+                                            </div>
+                                            <div className="text-xs text-muted-foreground">
+                                                {count} {label}
+                                            </div>
                                         </div>
-                                    )}
+                                    </button>
+                                    {/* Option Menu */}
+                                    <div
+                                        className="relative flex-shrink-0"
+                                        ref={(el) => {
+                                            if (el) {
+                                                subfolderMenuRefs.current[subfolder.id] = el;
+                                            }
+                                        }}
+                                    >
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setOpenSubfolderMenuId(
+                                                    openSubfolderMenuId === subfolder.id
+                                                        ? null
+                                                        : subfolder.id
+                                                );
+                                            }}
+                                            className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors opacity-0 group-hover:opacity-100"
+                                            title="More options"
+                                        >
+                                            <MoreVertical className="w-4 h-4" />
+                                        </button>
+
+                                        {/* Dropdown Menu */}
+                                        {openSubfolderMenuId === subfolder.id && (
+                                            <div className="absolute right-0 mt-1 w-36 bg-card border border-border rounded-lg shadow-lg py-1 z-50">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setSubfolderToEdit(subfolder);
+                                                        setOpenSubfolderMenuId(null);
+                                                    }}
+                                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+                                                >
+                                                    <Edit2 className="w-4 h-4" />
+                                                    Edit
+                                                </button>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setSubfolderToDelete(subfolder);
+                                                        setOpenSubfolderMenuId(null);
+                                                    }}
+                                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                    Delete
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
             )}
@@ -910,6 +1406,7 @@ export function FolderContentsPage() {
                         selectedIds={selectedWorkflowIds}
                         onItemClick={handleItemClick}
                         onItemContextMenu={handleItemContextMenu}
+                        onDragStart={handleDragStart}
                         defaultCollapsed={
                             sourceItemType !== undefined && sourceItemType !== "workflow"
                         }
@@ -925,6 +1422,7 @@ export function FolderContentsPage() {
                         selectedIds={selectedAgentIds}
                         onItemClick={handleItemClick}
                         onItemContextMenu={handleItemContextMenu}
+                        onDragStart={handleDragStart}
                         defaultCollapsed={
                             sourceItemType !== undefined && sourceItemType !== "agent"
                         }
@@ -940,6 +1438,7 @@ export function FolderContentsPage() {
                         selectedIds={selectedFormInterfaceIds}
                         onItemClick={handleItemClick}
                         onItemContextMenu={handleItemContextMenu}
+                        onDragStart={handleDragStart}
                         defaultCollapsed={
                             sourceItemType !== undefined && sourceItemType !== "form-interface"
                         }
@@ -955,6 +1454,7 @@ export function FolderContentsPage() {
                         selectedIds={selectedChatInterfaceIds}
                         onItemClick={handleItemClick}
                         onItemContextMenu={handleItemContextMenu}
+                        onDragStart={handleDragStart}
                         defaultCollapsed={
                             sourceItemType !== undefined && sourceItemType !== "chat-interface"
                         }
@@ -970,6 +1470,7 @@ export function FolderContentsPage() {
                         selectedIds={selectedKnowledgeBaseIds}
                         onItemClick={handleItemClick}
                         onItemContextMenu={handleItemContextMenu}
+                        onDragStart={handleDragStart}
                         defaultCollapsed={
                             sourceItemType !== undefined && sourceItemType !== "knowledge-base"
                         }
@@ -1025,7 +1526,7 @@ export function FolderContentsPage() {
 
             {/* Move to Folder Dialog */}
             <MoveToFolderDialog
-                isOpen={isMoveDialogOpen}
+                isOpen={isMoveDialogOpen && !isWarningDialogOpen}
                 onClose={() => {
                     setIsMoveDialogOpen(false);
                     setMovingItemId(null);
@@ -1077,6 +1578,115 @@ export function FolderContentsPage() {
                 position={contextMenu.position}
                 items={getContextMenuItems()}
                 onClose={closeContextMenu}
+            />
+
+            {/* Warning Dialog - Item Already in Folder */}
+            <ConfirmDialog
+                isOpen={isWarningDialogOpen && !!itemsAlreadyInFolder}
+                onClose={() => {
+                    setIsWarningDialogOpen(false);
+                    setItemsAlreadyInFolder(null);
+                    setPendingMoveTarget(null);
+                    // Reset move state when canceling
+                    setMovingItemId(null);
+                    setMovingItemType(null);
+                }}
+                onConfirm={
+                    itemsAlreadyInFolder?.isInMainFolder
+                        ? () => {
+                              setIsWarningDialogOpen(false);
+                              setItemsAlreadyInFolder(null);
+                          }
+                        : handleConfirmMove
+                }
+                title={
+                    itemsAlreadyInFolder?.isInMainFolder
+                        ? "Item already in folder"
+                        : "Item already in subfolder"
+                }
+                message={
+                    itemsAlreadyInFolder ? (
+                        itemsAlreadyInFolder.isInMainFolder ? (
+                            <>
+                                {itemsAlreadyInFolder.itemNames.length === 1 ? (
+                                    <>
+                                        This file "{itemsAlreadyInFolder.itemNames[0]}" already
+                                        exists in the folder{" "}
+                                        <strong>{itemsAlreadyInFolder.folderName}</strong>.
+                                    </>
+                                ) : (
+                                    <>
+                                        The following{" "}
+                                        {itemsAlreadyInFolder.itemNames.length === 1
+                                            ? "file"
+                                            : "files"}{" "}
+                                        already exist in the folder{" "}
+                                        <strong>{itemsAlreadyInFolder.folderName}</strong>:{" "}
+                                        {itemsAlreadyInFolder.itemNames.map((name, idx) => (
+                                            <span key={idx}>
+                                                "{name}"
+                                                {idx < itemsAlreadyInFolder.itemNames.length - 1
+                                                    ? idx ===
+                                                      itemsAlreadyInFolder.itemNames.length - 2
+                                                        ? " and "
+                                                        : ", "
+                                                    : ""}
+                                            </span>
+                                        ))}
+                                        .
+                                    </>
+                                )}
+                            </>
+                        ) : (
+                            <>
+                                {itemsAlreadyInFolder.itemNames.length === 1 ? (
+                                    <>
+                                        "{itemsAlreadyInFolder.itemNames[0]}" is already in a
+                                        subfolder of{" "}
+                                        <strong>{itemsAlreadyInFolder.folderName}</strong>. Do you
+                                        want to move it anyway? This will move the item from the
+                                        subfolder to the selected folder.
+                                    </>
+                                ) : (
+                                    <>
+                                        The following{" "}
+                                        {itemsAlreadyInFolder.itemNames.length === 1
+                                            ? "item"
+                                            : "items"}{" "}
+                                        {itemsAlreadyInFolder.itemNames.length === 1 ? "is" : "are"}{" "}
+                                        already in a subfolder of{" "}
+                                        <strong>{itemsAlreadyInFolder.folderName}</strong>:{" "}
+                                        {itemsAlreadyInFolder.itemNames.map((name, idx) => (
+                                            <span key={idx}>
+                                                "{name}"
+                                                {idx < itemsAlreadyInFolder.itemNames.length - 1
+                                                    ? idx ===
+                                                      itemsAlreadyInFolder.itemNames.length - 2
+                                                        ? " and "
+                                                        : ", "
+                                                    : ""}
+                                            </span>
+                                        ))}
+                                        . Do you want to move{" "}
+                                        {itemsAlreadyInFolder.itemNames.length === 1
+                                            ? "it"
+                                            : "them"}{" "}
+                                        anyway? This will move{" "}
+                                        {itemsAlreadyInFolder.itemNames.length === 1
+                                            ? "the item"
+                                            : "the items"}{" "}
+                                        from the subfolder to the selected folder.
+                                    </>
+                                )}
+                            </>
+                        )
+                    ) : (
+                        ""
+                    )
+                }
+                confirmText={itemsAlreadyInFolder?.isInMainFolder ? "Close" : "Move file"}
+                cancelText={itemsAlreadyInFolder?.isInMainFolder ? undefined : "Cancel"}
+                variant="default"
             />
         </div>
     );

@@ -1,8 +1,7 @@
 import { BookOpen, Plus, Trash2, FolderInput, FolderMinus, Search } from "lucide-react";
-import { useEffect, useState, useCallback, useMemo } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useEffect, useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import type {
-    Folder,
     FolderWithCounts,
     KnowledgeBaseSummary,
     FolderResourceType
@@ -22,21 +21,16 @@ import {
     FolderBreadcrumb,
     FolderGridSection
 } from "../components/folders";
+import { DuplicateItemWarningDialog } from "../components/folders/DuplicateItemWarningDialog";
 import { CreateKnowledgeBaseModal } from "../components/knowledgebases";
+import { useFolderManagement } from "../hooks/useFolderManagement";
 import { useSearch } from "../hooks/useSearch";
-import {
-    getKnowledgeBaseStats,
-    getFolders,
-    updateFolder,
-    removeItemsFromFolder,
-    type KnowledgeBaseStats,
-    type KnowledgeBase
-} from "../lib/api";
+import { getKnowledgeBaseStats, type KnowledgeBaseStats, type KnowledgeBase } from "../lib/api";
+import { getFolderCountIncludingSubfolders } from "../lib/folderUtils";
 import { logger } from "../lib/logger";
 import { createDragPreview } from "../lib/utils";
-import { useFolderStore, buildFolderTree } from "../stores/folderStore";
+import { useFolderStore } from "../stores/folderStore";
 import { useKnowledgeBaseStore } from "../stores/knowledgeBaseStore";
-import { useUIPreferencesStore } from "../stores/uiPreferencesStore";
 
 // Convert KnowledgeBase + stats to KnowledgeBaseSummary for card components
 function toKnowledgeBaseSummary(
@@ -58,17 +52,9 @@ function toKnowledgeBaseSummary(
 
 export function KnowledgeBases() {
     const navigate = useNavigate();
-    const [searchParams, setSearchParams] = useSearchParams();
-    const currentFolderId = searchParams.get("folder");
 
-    // Folder store
-    const {
-        createFolder: createFolderStore,
-        moveItemsToFolder: moveItemsToFolderStore,
-        deleteFolder: deleteFolderStore,
-        folders: storeFolders
-    } = useFolderStore();
-
+    const { moveItemsToFolder: moveItemsToFolderStore, folderTree: storeFolderTree } =
+        useFolderStore();
     const { knowledgeBases, loading, error, fetchKnowledgeBases, createKB, deleteKB } =
         useKnowledgeBaseStore();
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -82,19 +68,55 @@ export function KnowledgeBases() {
         type: "kb" | "folder";
     }>({ isOpen: false, position: { x: 0, y: 0 }, type: "kb" });
     const [isBatchDeleting, setIsBatchDeleting] = useState(false);
-    const { showFoldersSection, setShowFoldersSection } = useUIPreferencesStore();
-    const [expandedFolderIds, setExpandedFolderIds] = useState<Set<string>>(new Set());
-
-    // Folder state
-    const [folders, setFolders] = useState<FolderWithCounts[]>([]);
-    const folderTree = useMemo(() => buildFolderTree(folders), [folders]);
-    const [currentFolder, setCurrentFolder] = useState<Folder | null>(null);
-    const [isLoadingFolders, setIsLoadingFolders] = useState(true);
-    const [selectedFolderIds, setSelectedFolderIds] = useState<Set<string>>(new Set());
-    const [isCreateFolderDialogOpen, setIsCreateFolderDialogOpen] = useState(false);
     const [isMoveDialogOpen, setIsMoveDialogOpen] = useState(false);
-    const [folderToEdit, setFolderToEdit] = useState<Folder | null>(null);
-    const [folderToDelete, setFolderToDelete] = useState<FolderWithCounts | null>(null);
+
+    // Use folder management hook
+    const {
+        folders,
+        currentFolder,
+        currentFolderId,
+        isLoadingFolders,
+        selectedFolderIds,
+        setSelectedFolderIds,
+        isCreateFolderDialogOpen,
+        setIsCreateFolderDialogOpen,
+        folderToEdit,
+        setFolderToEdit,
+        folderToDelete,
+        setFolderToDelete,
+        isBatchDeleting: isBatchDeletingFolders,
+        showFoldersSection,
+        setShowFoldersSection,
+        expandedFolderIds,
+        rootFolders,
+        canShowFoldersSection,
+        duplicateItemWarning,
+        setDuplicateItemWarning,
+        handleCreateFolder,
+        handleEditFolder,
+        handleDeleteFolder,
+        handleFolderClick,
+        handleFolderContextMenu,
+        handleBatchDeleteFolders,
+        handleNavigateToRoot,
+        handleRemoveFromFolder,
+        handleDropOnFolder,
+        handleToggleFolderExpand,
+        getFolderChildren
+    } = useFolderManagement({
+        itemType: "knowledge-base",
+        onReloadItems: async () => {
+            await fetchKnowledgeBases({ folderId: currentFolderId || undefined });
+        },
+        sourceItemType: "knowledge-base",
+        getItemNames: (itemIds: string[]) => {
+            return itemIds.map((id) => {
+                const kb = knowledgeBases.find((k) => k.id === id);
+                return kb?.name || "Unknown";
+            });
+        },
+        onClearSelection: () => setSelectedIds(new Set())
+    });
 
     // Search functionality
     const {
@@ -107,33 +129,11 @@ export function KnowledgeBases() {
         searchFields: ["name", "description"]
     });
 
-    // Load folders on mount
-    useEffect(() => {
-        loadFolders();
-    }, []);
-
-    // Sync folders when store folders change (e.g., when folder is created from sidebar)
-    useEffect(() => {
-        if (storeFolders.length > 0 && folders.length !== storeFolders.length) {
-            loadFolders();
-        }
-    }, [storeFolders]);
-
     // Load knowledge bases when folder changes
     useEffect(() => {
         const folderId = currentFolderId || undefined;
         fetchKnowledgeBases({ folderId });
     }, [fetchKnowledgeBases, currentFolderId]);
-
-    // Update current folder when folderId changes
-    useEffect(() => {
-        if (currentFolderId) {
-            const folder = folders.find((f) => f.id === currentFolderId);
-            setCurrentFolder(folder || null);
-        } else {
-            setCurrentFolder(null);
-        }
-    }, [currentFolderId, folders]);
 
     // Fetch stats for all knowledge bases
     useEffect(() => {
@@ -165,20 +165,6 @@ export function KnowledgeBases() {
         }
     }, [knowledgeBases]);
 
-    const loadFolders = async () => {
-        setIsLoadingFolders(true);
-        try {
-            const response = await getFolders();
-            if (response.success && response.data) {
-                setFolders(response.data);
-            }
-        } catch (err) {
-            logger.error("Failed to load folders", err);
-        } finally {
-            setIsLoadingFolders(false);
-        }
-    };
-
     const handleCreate = async (name: string, description?: string) => {
         try {
             const kb = await createKB({
@@ -200,7 +186,6 @@ export function KnowledgeBases() {
             await deleteKB(kbToDelete.id);
             const folderId = currentFolderId || undefined;
             await fetchKnowledgeBases({ folderId });
-            await loadFolders();
             setKbToDelete(null);
         } catch (error) {
             logger.error("Failed to delete knowledge base", error);
@@ -209,134 +194,32 @@ export function KnowledgeBases() {
         }
     };
 
-    // Folder handlers
-    const handleCreateFolder = async (name: string, color: string) => {
-        await createFolderStore({ name, color });
-        // Store's createFolder already refreshes folders, so sidebar will update
-        await loadFolders();
-    };
-
-    const handleEditFolder = async (name: string, color: string) => {
-        if (!folderToEdit) return;
-        await updateFolder(folderToEdit.id, { name, color });
-        await loadFolders();
-        setFolderToEdit(null);
-    };
-
-    const handleDeleteFolder = async () => {
-        if (!folderToDelete) return;
-        setIsDeleting(true);
-        try {
-            await deleteFolderStore(folderToDelete.id);
-            // Store's deleteFolder already refreshes folders, so sidebar will update
-            await loadFolders();
-            const folderId = currentFolderId || undefined;
-            await fetchKnowledgeBases({ folderId });
-            setFolderToDelete(null);
-            if (currentFolderId === folderToDelete.id) {
-                setSearchParams({});
-            }
-        } catch (err) {
-            logger.error("Failed to delete folder", err);
-        } finally {
-            setIsDeleting(false);
-        }
-    };
-
-    const handleFolderClick = useCallback(
+    // Override handleFolderContextMenu to also set context menu state
+    const handleFolderContextMenuWithState = useCallback(
         (e: React.MouseEvent, folder: FolderWithCounts) => {
-            if (e.shiftKey) {
-                e.preventDefault();
-                setSelectedFolderIds((prev) => {
-                    const newSet = new Set(prev);
-                    if (newSet.has(folder.id)) {
-                        newSet.delete(folder.id);
-                    } else {
-                        newSet.add(folder.id);
-                    }
-                    return newSet;
-                });
-            } else if (selectedFolderIds.size === 0) {
-                // Navigate to unified folder contents page with source type for auto-collapse
-                navigate(`/folders/${folder.id}`, {
-                    state: { sourceItemType: "knowledge-base" }
-                });
-            } else {
-                setSelectedFolderIds(new Set());
-            }
-        },
-        [navigate, selectedFolderIds.size]
-    );
-
-    const handleFolderContextMenu = useCallback(
-        (e: React.MouseEvent, folder: FolderWithCounts) => {
-            e.preventDefault();
-            if (!selectedFolderIds.has(folder.id)) {
-                setSelectedFolderIds(new Set([folder.id]));
-            }
+            handleFolderContextMenu(e, folder);
             setContextMenu({
                 isOpen: true,
                 position: { x: e.clientX, y: e.clientY },
                 type: "folder"
             });
         },
-        [selectedFolderIds]
+        [handleFolderContextMenu]
     );
 
-    const handleBatchDeleteFolders = async () => {
-        if (selectedFolderIds.size === 0) return;
-
-        setIsBatchDeleting(true);
-        try {
-            const deletePromises = Array.from(selectedFolderIds).map((id) => deleteFolderStore(id));
-            await Promise.all(deletePromises);
-            // Store's deleteFolder already refreshes folders, so sidebar will update
-
-            await loadFolders();
-            const folderId = currentFolderId || undefined;
-            await fetchKnowledgeBases({ folderId });
-            setSelectedFolderIds(new Set());
-            setContextMenu({ isOpen: false, position: { x: 0, y: 0 }, type: "kb" });
-        } catch (err) {
-            logger.error("Failed to delete folders", err);
-        } finally {
-            setIsBatchDeleting(false);
-        }
-    };
-
-    const handleNavigateToRoot = () => {
-        setSearchParams({});
-    };
+    // Override handleBatchDeleteFolders to also clear context menu
+    const handleBatchDeleteFoldersWithState = useCallback(async () => {
+        await handleBatchDeleteFolders();
+        setContextMenu({ isOpen: false, position: { x: 0, y: 0 }, type: "kb" });
+    }, [handleBatchDeleteFolders]);
 
     const handleMoveToFolder = async (folderId: string | null) => {
         if (!folderId) {
             throw new Error("Folder ID is required");
         }
         await moveItemsToFolderStore(folderId, Array.from(selectedIds), "knowledge-base");
-        // Store's moveItemsToFolder already refreshes folders, so sidebar will update
-        const currentFolderIdParam = currentFolderId || undefined;
-        await fetchKnowledgeBases({ folderId: currentFolderIdParam });
-        await loadFolders();
+        await fetchKnowledgeBases({ folderId: currentFolderId || undefined });
         setSelectedIds(new Set());
-    };
-
-    const handleRemoveFromFolder = async (kbIds: string | string[]) => {
-        if (!currentFolderId) return; // Can only remove when viewing inside a folder
-        const ids = Array.isArray(kbIds) ? kbIds : [kbIds];
-        if (ids.length === 0) return;
-
-        try {
-            await removeItemsFromFolder({
-                itemIds: ids,
-                itemType: "knowledge-base",
-                folderId: currentFolderId
-            });
-            const currentFolderIdParam = currentFolderId || undefined;
-            await fetchKnowledgeBases({ folderId: currentFolderIdParam });
-            await loadFolders();
-        } catch (err) {
-            logger.error("Failed to remove knowledge base from folder", err);
-        }
     };
 
     // Selection handlers for batch operations
@@ -391,7 +274,6 @@ export function KnowledgeBases() {
             // Refresh the list and clear selection
             const folderId = currentFolderId || undefined;
             await fetchKnowledgeBases({ folderId });
-            await loadFolders();
             setSelectedIds(new Set());
             setContextMenu({ isOpen: false, position: { x: 0, y: 0 }, type: "kb" });
         } catch (error) {
@@ -421,23 +303,6 @@ export function KnowledgeBases() {
             createDragPreview(e, itemIds.length, "knowledge base");
         },
         [selectedIds]
-    );
-
-    const handleDropOnFolder = useCallback(
-        async (folderId: string, itemIds: string[], itemType: string) => {
-            if (itemType !== "knowledge-base") return;
-            try {
-                await moveItemsToFolderStore(folderId, itemIds, itemType as FolderResourceType);
-                // Store's moveItemsToFolder already refreshes folders, so sidebar will update
-                const currentFolderIdParam = currentFolderId || undefined;
-                await fetchKnowledgeBases({ folderId: currentFolderIdParam });
-                await loadFolders();
-                setSelectedIds(new Set());
-            } catch (err) {
-                logger.error("Failed to move items to folder", err);
-            }
-        },
-        [currentFolderId, fetchKnowledgeBases, moveItemsToFolderStore]
     );
 
     const kbContextMenuItems: ContextMenuItem[] = [
@@ -477,44 +342,21 @@ export function KnowledgeBases() {
         {
             label: `Delete ${selectedFolderIds.size} folder${selectedFolderIds.size !== 1 ? "s" : ""}`,
             icon: <Trash2 className="w-4 h-4" />,
-            onClick: handleBatchDeleteFolders,
+            onClick: handleBatchDeleteFoldersWithState,
             variant: "danger",
-            disabled: isBatchDeleting
+            disabled: isBatchDeletingFolders
         }
     ];
 
     // Folders to show
     // Filter folders to show only root folders (depth 0) when at root
-    const rootFolders = currentFolderId ? [] : folders.filter((f) => f.depth === 0);
-    const canShowFoldersSection = !currentFolderId && rootFolders.length > 0;
-
-    // Helper to get children of a folder from the tree
-    const getFolderChildren = (folderId: string): FolderWithCounts[] => {
-        const findInTree = (nodes: typeof folderTree): FolderWithCounts[] => {
-            for (const node of nodes) {
-                if (node.id === folderId) {
-                    return node.children;
-                }
-                const found = findInTree(node.children);
-                if (found.length > 0) return found;
-            }
-            return [];
-        };
-        return findInTree(folderTree);
-    };
-
-    // Toggle folder expansion
-    const handleToggleFolderExpand = (folderId: string) => {
-        setExpandedFolderIds((prev) => {
-            const next = new Set(prev);
-            if (next.has(folderId)) {
-                next.delete(folderId);
-            } else {
-                next.add(folderId);
-            }
-            return next;
-        });
-    };
+    // Helper to calculate total count for a folder including all subfolders recursively
+    const getFolderCountIncludingSubfoldersMemo = useCallback(
+        (folder: FolderWithCounts, itemType: FolderResourceType): number => {
+            return getFolderCountIncludingSubfolders(folder, itemType, getFolderChildren);
+        },
+        [getFolderChildren]
+    );
 
     return (
         <div className="max-w-7xl mx-auto px-4 py-6 md:px-6 md:py-8">
@@ -539,11 +381,11 @@ export function KnowledgeBases() {
                             </Button>
                             <Button
                                 variant="destructive"
-                                onClick={handleBatchDeleteFolders}
-                                disabled={isBatchDeleting}
-                                loading={isBatchDeleting}
+                                onClick={handleBatchDeleteFoldersWithState}
+                                disabled={isBatchDeletingFolders}
+                                loading={isBatchDeletingFolders}
                             >
-                                {!isBatchDeleting && <Trash2 className="w-4 h-4" />}
+                                {!isBatchDeletingFolders && <Trash2 className="w-4 h-4" />}
                                 Delete folders
                             </Button>
                         </div>
@@ -640,10 +482,11 @@ export function KnowledgeBases() {
                         onFolderClick={handleFolderClick}
                         onFolderEdit={setFolderToEdit}
                         onFolderDelete={setFolderToDelete}
-                        onFolderContextMenu={handleFolderContextMenu}
+                        onFolderContextMenu={handleFolderContextMenuWithState}
                         onDropOnFolder={handleDropOnFolder}
                         onToggleFolderExpand={handleToggleFolderExpand}
                         getFolderChildren={getFolderChildren}
+                        getFolderCountIncludingSubfolders={getFolderCountIncludingSubfoldersMemo}
                     />
 
                     {/* Knowledge Bases Grid */}
@@ -777,7 +620,7 @@ export function KnowledgeBases() {
                 isOpen={isMoveDialogOpen}
                 onClose={() => setIsMoveDialogOpen(false)}
                 folders={folders}
-                folderTree={folderTree}
+                folderTree={storeFolderTree}
                 isLoadingFolders={isLoadingFolders}
                 selectedItemCount={selectedIds.size}
                 itemType="knowledge-base"
@@ -798,6 +641,12 @@ export function KnowledgeBases() {
                 message={`Are you sure you want to delete the folder "${folderToDelete?.name}"? Items in this folder will be moved to the root level.`}
                 confirmText="Delete"
                 variant="danger"
+            />
+
+            {/* Duplicate Item Warning Dialog */}
+            <DuplicateItemWarningDialog
+                warning={duplicateItemWarning}
+                onClose={() => setDuplicateItemWarning(null)}
             />
         </div>
     );
