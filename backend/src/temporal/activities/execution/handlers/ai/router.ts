@@ -3,17 +3,13 @@
  *
  * LLM-based classification handler that routes workflow execution
  * to predefined branches based on content analysis.
+ *
+ * Uses the unified @flowmaestro/ai SDK for all provider integrations.
  */
 
-import Anthropic from "@anthropic-ai/sdk";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import OpenAI from "openai";
 import type { JsonObject } from "@flowmaestro/shared";
-import { ConnectionRepository } from "../../../../../storage/repositories/ConnectionRepository";
+import { getAIClient, type AIProvider } from "../../../../../services/ai";
 import {
-    ConfigurationError,
-    NotFoundError,
-    ValidationError,
     withHeartbeat,
     RouterNodeConfigSchema,
     validateOrThrow,
@@ -27,9 +23,6 @@ import {
     type NodeHandlerOutput,
     type TokenUsage
 } from "../../types";
-import type { ApiKeyData } from "../../../../../storage/models/Connection";
-
-const connectionRepository = new ConnectionRepository();
 
 // ============================================================================
 // TYPES
@@ -63,134 +56,6 @@ export interface RouterNodeResult {
     };
     model: string;
     provider: string;
-}
-
-// ============================================================================
-// RETRY LOGIC
-// ============================================================================
-
-const RETRY_CONFIG = {
-    maxRetries: 3,
-    initialDelayMs: 1000,
-    maxDelayMs: 10000,
-    backoffMultiplier: 2
-};
-
-function isRetryableError(error: unknown): boolean {
-    if (typeof error !== "object" || error === null) {
-        return false;
-    }
-
-    const err = error as Record<string, unknown>;
-    const retryableStatusCodes = [429, 503, 529];
-
-    if (typeof err.status === "number" && retryableStatusCodes.includes(err.status)) {
-        return true;
-    }
-
-    if (
-        typeof err.type === "string" &&
-        ["overloaded_error", "rate_limit_error"].includes(err.type)
-    ) {
-        return true;
-    }
-
-    if (typeof err.message === "string") {
-        const message = err.message.toLowerCase();
-        if (
-            message.includes("overloaded") ||
-            message.includes("rate limit") ||
-            message.includes("too many requests")
-        ) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-async function withRetry<T>(fn: () => Promise<T>, context: string): Promise<T> {
-    let lastError: unknown;
-
-    for (let attempt = 0; attempt <= RETRY_CONFIG.maxRetries; attempt++) {
-        try {
-            return await fn();
-        } catch (error: unknown) {
-            lastError = error;
-
-            if (!isRetryableError(error)) {
-                throw error;
-            }
-
-            if (attempt >= RETRY_CONFIG.maxRetries) {
-                activityLogger.error(
-                    "Max retries exceeded",
-                    error instanceof Error ? error : new Error(String(error)),
-                    { context, maxRetries: RETRY_CONFIG.maxRetries }
-                );
-                throw error;
-            }
-
-            const delay = Math.min(
-                RETRY_CONFIG.initialDelayMs * Math.pow(RETRY_CONFIG.backoffMultiplier, attempt),
-                RETRY_CONFIG.maxDelayMs
-            );
-
-            activityLogger.warn("Retryable error, retrying", {
-                context,
-                delayMs: delay,
-                attempt: attempt + 1,
-                maxRetries: RETRY_CONFIG.maxRetries
-            });
-
-            await new Promise((resolve) => setTimeout(resolve, delay));
-        }
-    }
-
-    throw lastError;
-}
-
-// ============================================================================
-// API KEY HELPER
-// ============================================================================
-
-async function getApiKey(
-    connectionId: string | undefined,
-    provider: string,
-    envVarName: string
-): Promise<string> {
-    if (connectionId) {
-        const connection = await connectionRepository.findByIdWithData(connectionId);
-        if (!connection) {
-            throw new NotFoundError("Connection", connectionId);
-        }
-        if (connection.provider !== provider) {
-            throw new ValidationError(
-                `expected ${provider}, got ${connection.provider}`,
-                "provider"
-            );
-        }
-        if (connection.status !== "active") {
-            throw new ValidationError(
-                `Connection is not active (status: ${connection.status})`,
-                "status"
-            );
-        }
-        const data = connection.data as ApiKeyData;
-        if (!data.api_key) {
-            throw new ConfigurationError("API key not found in connection data", "api_key");
-        }
-        return data.api_key;
-    }
-
-    const apiKey = process.env[envVarName];
-    if (!apiKey) {
-        throw new ConfigurationError(
-            `No connection provided and ${envVarName} environment variable is not set.`,
-            envVarName
-        );
-    }
-    return apiKey;
 }
 
 // ============================================================================
@@ -291,128 +156,44 @@ function parseClassificationResponse(
 }
 
 // ============================================================================
-// PROVIDER IMPLEMENTATIONS
+// CLASSIFICATION USING UNIFIED SDK
 // ============================================================================
 
-async function classifyWithOpenAI(
+async function classifyWithUnifiedSDK(
     config: RouterNodeConfig,
     classificationPrompt: string
 ): Promise<RouterNodeResult> {
-    const apiKey = await getApiKey(config.connectionId, "openai", "OPENAI_API_KEY");
-    const openai = new OpenAI({ apiKey });
+    const ai = getAIClient();
+    const provider = config.provider as AIProvider;
 
-    const messages: Array<{ role: "system" | "user"; content: string }> = [];
-    if (config.systemPrompt) {
-        messages.push({ role: "system", content: config.systemPrompt });
-    }
-    messages.push({ role: "user", content: classificationPrompt });
-
-    return withRetry(async () => {
-        const response = await openai.chat.completions.create({
-            model: config.model,
-            messages,
-            temperature: config.temperature ?? 0,
-            max_tokens: 500,
-            response_format: { type: "json_object" }
-        });
-
-        const text = response.choices[0]?.message?.content || "";
-        const parsed = parseClassificationResponse(text, config);
-        const usage = response.usage;
-
-        const route = config.routes.find((r) => r.value === parsed.selectedRoute);
-
-        return {
-            selectedRoute: parsed.selectedRoute,
-            routeLabel: route?.label,
-            confidence: parsed.confidence,
-            reasoning: parsed.reasoning,
-            usage: usage
-                ? {
-                      promptTokens: usage.prompt_tokens,
-                      completionTokens: usage.completion_tokens,
-                      totalTokens: usage.total_tokens
-                  }
-                : undefined,
-            model: config.model,
-            provider: "openai"
-        };
-    }, `OpenAI Router ${config.model}`);
-}
-
-async function classifyWithAnthropic(
-    config: RouterNodeConfig,
-    classificationPrompt: string
-): Promise<RouterNodeResult> {
-    const apiKey = await getApiKey(config.connectionId, "anthropic", "ANTHROPIC_API_KEY");
-    const anthropic = new Anthropic({ apiKey });
-
-    return withRetry(async () => {
-        const response = await anthropic.messages.create({
-            model: config.model,
-            max_tokens: 500,
-            temperature: config.temperature ?? 0,
-            system: config.systemPrompt,
-            messages: [{ role: "user", content: classificationPrompt }]
-        });
-
-        const text = response.content[0].type === "text" ? response.content[0].text : "";
-        const parsed = parseClassificationResponse(text, config);
-        const usage = response.usage;
-
-        const route = config.routes.find((r) => r.value === parsed.selectedRoute);
-
-        return {
-            selectedRoute: parsed.selectedRoute,
-            routeLabel: route?.label,
-            confidence: parsed.confidence,
-            reasoning: parsed.reasoning,
-            usage: {
-                promptTokens: usage.input_tokens,
-                completionTokens: usage.output_tokens,
-                totalTokens: usage.input_tokens + usage.output_tokens
-            },
-            model: config.model,
-            provider: "anthropic"
-        };
-    }, `Anthropic Router ${config.model}`);
-}
-
-async function classifyWithGoogle(
-    config: RouterNodeConfig,
-    classificationPrompt: string
-): Promise<RouterNodeResult> {
-    const apiKey = await getApiKey(config.connectionId, "google", "GOOGLE_API_KEY");
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({
+    const response = await ai.text.complete({
+        provider,
         model: config.model,
-        generationConfig: {
-            temperature: config.temperature ?? 0,
-            maxOutputTokens: 500
-        }
+        systemPrompt: config.systemPrompt,
+        prompt: classificationPrompt,
+        temperature: config.temperature ?? 0,
+        maxTokens: 500,
+        connectionId: config.connectionId
     });
 
-    const fullPrompt = config.systemPrompt
-        ? `${config.systemPrompt}\n\n${classificationPrompt}`
-        : classificationPrompt;
+    const parsed = parseClassificationResponse(response.text, config);
+    const route = config.routes.find((r) => r.value === parsed.selectedRoute);
 
-    return withRetry(async () => {
-        const result = await model.generateContent(fullPrompt);
-        const response = result.response;
-        const text = response.text();
-        const parsed = parseClassificationResponse(text, config);
-
-        const route = config.routes.find((r) => r.value === parsed.selectedRoute);
-
-        return {
-            selectedRoute: parsed.selectedRoute,
-            routeLabel: route?.label,
-            confidence: parsed.confidence,
-            reasoning: parsed.reasoning,
-            model: config.model,
-            provider: "google"
-        };
-    }, `Google Router ${config.model}`);
+    return {
+        selectedRoute: parsed.selectedRoute,
+        routeLabel: route?.label,
+        confidence: parsed.confidence,
+        reasoning: parsed.reasoning,
+        usage: response.metadata.usage
+            ? {
+                  promptTokens: response.metadata.usage.promptTokens ?? 0,
+                  completionTokens: response.metadata.usage.completionTokens ?? 0,
+                  totalTokens: response.metadata.usage.totalTokens ?? 0
+              }
+            : undefined,
+        model: config.model,
+        provider: config.provider
+    };
 }
 
 // ============================================================================
@@ -434,7 +215,7 @@ export async function executeRouterNode(
         interpolatedPrompt
     );
 
-    activityLogger.info("Calling LLM for classification", {
+    activityLogger.info("Calling LLM for classification via unified AI SDK", {
         provider: validatedConfig.provider,
         model: validatedConfig.model,
         routeCount: validatedConfig.routes.length
@@ -449,33 +230,10 @@ export async function executeRouterNode(
                 model: validatedConfig.model
             });
 
-            let result: RouterNodeResult;
-
-            switch (validatedConfig.provider) {
-                case "openai":
-                    result = await classifyWithOpenAI(
-                        validatedConfig as RouterNodeConfig,
-                        classificationPrompt
-                    );
-                    break;
-                case "anthropic":
-                    result = await classifyWithAnthropic(
-                        validatedConfig as RouterNodeConfig,
-                        classificationPrompt
-                    );
-                    break;
-                case "google":
-                    result = await classifyWithGoogle(
-                        validatedConfig as RouterNodeConfig,
-                        classificationPrompt
-                    );
-                    break;
-                default:
-                    throw new ValidationError(
-                        `Unsupported router provider: ${validatedConfig.provider}`,
-                        "provider"
-                    );
-            }
+            const result = await classifyWithUnifiedSDK(
+                validatedConfig as RouterNodeConfig,
+                classificationPrompt
+            );
 
             heartbeat.update({
                 step: "completed",

@@ -1,14 +1,20 @@
-import OpenAI from "openai";
-import { config } from "../../core/config";
+/**
+ * Embedding Service
+ *
+ * Service for generating text embeddings using the unified AI SDK.
+ * Supports multiple providers: OpenAI, Cohere, Google.
+ */
+
 import { getLogger } from "../../core/logging";
 import { ConnectionRepository } from "../../storage/repositories/ConnectionRepository";
+import { getAIClient, type AIProvider } from "../ai";
 
 const logger = getLogger();
 
 export interface EmbeddingConfig {
     model: string; // e.g., "text-embedding-3-small"
-    provider: string; // e.g., "openai"
-    dimensions?: number; // Optional: reduce dimensions
+    provider: string; // e.g., "openai", "cohere", "google"
+    dimensions?: number; // Optional: reduce dimensions (OpenAI only)
 }
 
 export interface EmbeddingResult {
@@ -47,84 +53,47 @@ export class EmbeddingService {
             };
         }
 
-        switch (config.provider.toLowerCase()) {
-            case "openai":
-                return this.generateOpenAIEmbeddings(texts, config, userId);
-            default:
-                throw new Error(`Unsupported embedding provider: ${config.provider}`);
-        }
-    }
+        // Get connection ID if user has one for this provider
+        const connectionId = await this.getConnectionId(userId, config.provider);
 
-    /**
-     * Generate embeddings using OpenAI
-     */
-    private async generateOpenAIEmbeddings(
-        texts: string[],
-        config: EmbeddingConfig,
-        userId?: string
-    ): Promise<EmbeddingResult> {
-        const apiKey = await this.getOpenAIApiKey(userId);
-        const client = new OpenAI({ apiKey });
+        const ai = getAIClient();
+        const provider = config.provider.toLowerCase() as AIProvider;
 
-        // OpenAI allows up to 2048 texts per request for text-embedding-3-small
-        // But we'll use a conservative batch size of 100
-        const batchSize = 100;
-        const batches = this.createBatches(texts, batchSize);
+        logger.info(
+            {
+                component: "EmbeddingService",
+                provider,
+                model: config.model,
+                textCount: texts.length
+            },
+            "Generating embeddings via unified AI SDK"
+        );
 
-        const allEmbeddings: number[][] = [];
-        let totalPromptTokens = 0;
-        let totalTokens = 0;
+        try {
+            const response = await ai.embedding.generate({
+                provider,
+                model: config.model,
+                input: texts,
+                dimensions: config.dimensions,
+                connectionId
+            });
 
-        for (const batch of batches) {
-            try {
-                const response = await client.embeddings.create({
-                    model: config.model,
-                    input: batch,
-                    dimensions: config.dimensions
-                });
-
-                // Extract embeddings in the same order as input
-                for (const embedding of response.data) {
-                    allEmbeddings.push(embedding.embedding);
+            return {
+                embeddings: response.embeddings,
+                model: config.model,
+                usage: {
+                    prompt_tokens: response.metadata.usage?.promptTokens ?? 0,
+                    total_tokens: response.metadata.usage?.totalTokens ?? 0
                 }
-
-                // Track usage
-                totalPromptTokens += response.usage.prompt_tokens;
-                totalTokens += response.usage.total_tokens;
-            } catch (error: unknown) {
-                // Handle rate limits with retry
-                const apiError = error as { status?: number };
-                if (apiError.status === 429) {
-                    // Wait and retry
-                    await this.sleep(1000);
-                    // Retry this batch
-                    const retryResponse = await client.embeddings.create({
-                        model: config.model,
-                        input: batch,
-                        dimensions: config.dimensions
-                    });
-
-                    for (const embedding of retryResponse.data) {
-                        allEmbeddings.push(embedding.embedding);
-                    }
-
-                    totalPromptTokens += retryResponse.usage.prompt_tokens;
-                    totalTokens += retryResponse.usage.total_tokens;
-                } else {
-                    const errorMsg = error instanceof Error ? error.message : "Unknown error";
-                    throw new Error(`OpenAI embedding error: ${errorMsg}`);
-                }
-            }
+            };
+        } catch (error) {
+            const errorMsg = error instanceof Error ? error.message : "Unknown error";
+            logger.error(
+                { component: "EmbeddingService", err: error, provider, model: config.model },
+                "Embedding generation failed"
+            );
+            throw new Error(`Embedding error (${config.provider}): ${errorMsg}`);
         }
-
-        return {
-            embeddings: allEmbeddings,
-            model: config.model,
-            usage: {
-                prompt_tokens: totalPromptTokens,
-                total_tokens: totalTokens
-            }
-        };
     }
 
     /**
@@ -140,74 +109,37 @@ export class EmbeddingService {
     }
 
     /**
-     * Get OpenAI API key from connections or environment
+     * Get connection ID for the user if they have an active connection for the provider
      */
-    private async getOpenAIApiKey(userId?: string): Promise<string> {
-        // First, try to get from user connections
-        if (userId) {
-            try {
-                const connections = await this.connectionRepository.findByProvider(
-                    userId,
-                    "openai"
-                );
-
-                if (connections.length > 0) {
-                    // Find active API key connection
-                    const apiKeyConnectionSummary = connections.find(
-                        (c) => c.connection_method === "api_key" && c.status === "active"
-                    );
-
-                    if (apiKeyConnectionSummary) {
-                        // Fetch full connection with decrypted data
-                        const apiKeyConnection = await this.connectionRepository.findByIdWithData(
-                            apiKeyConnectionSummary.id
-                        );
-
-                        if (
-                            apiKeyConnection &&
-                            apiKeyConnection.data &&
-                            "api_key" in apiKeyConnection.data
-                        ) {
-                            return apiKeyConnection.data.api_key as string;
-                        }
-                    }
-                }
-            } catch (error) {
-                // Fall through to environment variable
-                logger.warn(
-                    { component: "EmbeddingService", err: error },
-                    "Could not retrieve OpenAI connections from database"
-                );
-            }
+    private async getConnectionId(
+        userId: string | undefined,
+        provider: string
+    ): Promise<string | undefined> {
+        if (!userId) {
+            return undefined;
         }
 
-        // Fallback to environment variable
-        const envKey = config.ai.openai.apiKey;
-        if (!envKey) {
-            throw new Error(
-                "OpenAI API key not found. Please add it to your connections or set OPENAI_API_KEY environment variable."
+        try {
+            const connections = await this.connectionRepository.findByProvider(userId, provider);
+
+            if (connections.length > 0) {
+                // Find active API key connection
+                const apiKeyConnection = connections.find(
+                    (c) => c.connection_method === "api_key" && c.status === "active"
+                );
+
+                if (apiKeyConnection) {
+                    return apiKeyConnection.id;
+                }
+            }
+        } catch (error) {
+            logger.warn(
+                { component: "EmbeddingService", err: error, provider },
+                "Could not retrieve connections from database"
             );
         }
 
-        return envKey;
-    }
-
-    /**
-     * Create batches from array
-     */
-    private createBatches<T>(array: T[], batchSize: number): T[][] {
-        const batches: T[][] = [];
-        for (let i = 0; i < array.length; i += batchSize) {
-            batches.push(array.slice(i, i + batchSize));
-        }
-        return batches;
-    }
-
-    /**
-     * Sleep utility
-     */
-    private sleep(ms: number): Promise<void> {
-        return new Promise((resolve) => setTimeout(resolve, ms));
+        return undefined;
     }
 
     /**
@@ -227,7 +159,10 @@ export class EmbeddingService {
         const pricePerMillion: Record<string, number> = {
             "text-embedding-3-small": 0.02,
             "text-embedding-3-large": 0.13,
-            "text-embedding-ada-002": 0.1
+            "text-embedding-ada-002": 0.1,
+            "embed-english-v3.0": 0.1, // Cohere
+            "embed-multilingual-v3.0": 0.1, // Cohere
+            "text-embedding-004": 0.0 // Google (free tier)
         };
 
         const price = pricePerMillion[model] || 0.02;
