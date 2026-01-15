@@ -23,6 +23,8 @@ import {
     Pin,
     PinOff,
     UserCheck,
+    Image,
+    Video,
     // Category icons
     Download,
     Upload,
@@ -136,6 +138,20 @@ const nodeLibrary: NodeDefinition[] = [
         icon: Eye,
         category: "ai",
         description: "Image generation and analysis with AI models"
+    },
+    {
+        type: "imageGeneration",
+        label: "Image",
+        icon: Image,
+        category: "ai",
+        description: "Generate and edit images with AI (DALL-E, Flux, Stable Diffusion)"
+    },
+    {
+        type: "videoGeneration",
+        label: "Video",
+        icon: Video,
+        category: "ai",
+        description: "Generate videos with AI (Kling, MiniMax, Mochi, Runway)"
     },
     {
         type: "humanReview",

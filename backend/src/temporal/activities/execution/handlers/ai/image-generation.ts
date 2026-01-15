@@ -17,7 +17,7 @@ import { BaseNodeHandler, type NodeHandlerInput, type NodeHandlerOutput } from "
 // ============================================================================
 
 export interface ImageGenerationNodeConfig {
-    provider: "openai" | "replicate" | "stabilityai";
+    provider: "openai" | "replicate" | "stabilityai" | "fal";
     model: string;
     connectionId?: string;
     prompt: string;
@@ -29,6 +29,20 @@ export interface ImageGenerationNodeConfig {
     n?: number;
     outputFormat?: "url" | "base64";
     outputVariable?: string;
+    // Editing operations
+    operation?:
+        | "generate"
+        | "inpaint"
+        | "outpaint"
+        | "upscale"
+        | "removeBackground"
+        | "styleTransfer";
+    sourceImage?: string; // URL or base64 for editing operations
+    mask?: string; // Mask for inpaint/outpaint (white = edit, black = keep)
+    styleReference?: string; // Reference image for style transfer
+    scaleFactor?: 2 | 4; // Upscale factor
+    outpaintDirection?: "left" | "right" | "up" | "down" | "all";
+    outpaintPixels?: number;
 }
 
 export interface ImageGenerationNodeResult {
@@ -75,7 +89,8 @@ async function getProviderApiKey(provider: string, connectionId?: string): Promi
     const envMapping: Record<string, string> = {
         openai: appConfig.ai.openai.apiKey,
         replicate: appConfig.ai.replicate?.apiKey || "",
-        stabilityai: appConfig.ai.stabilityai?.apiKey || ""
+        stabilityai: appConfig.ai.stabilityai?.apiKey || "",
+        fal: appConfig.ai.fal?.apiKey || ""
     };
 
     const apiKey = envMapping[provider];
@@ -388,6 +403,509 @@ async function executeStabilityAIGeneration(
 }
 
 // ============================================================================
+// FAL.AI IMPLEMENTATIONS
+// ============================================================================
+
+async function executeFALGeneration(
+    config: ImageGenerationNodeConfig,
+    context: JsonObject
+): Promise<JsonObject> {
+    const apiKey = await getProviderApiKey("fal", config.connectionId);
+
+    const prompt = interpolateVariables(config.prompt || "", context);
+
+    activityLogger.info("FAL.ai generating image", {
+        model: config.model,
+        promptLength: prompt.length
+    });
+
+    // Map aspect ratio to dimensions for FAL.ai
+    const aspectRatioMap: Record<string, { width: number; height: number }> = {
+        "1:1": { width: 1024, height: 1024 },
+        "16:9": { width: 1344, height: 768 },
+        "9:16": { width: 768, height: 1344 },
+        "21:9": { width: 1536, height: 640 },
+        "9:21": { width: 640, height: 1536 },
+        "4:3": { width: 1152, height: 896 },
+        "3:4": { width: 896, height: 1152 },
+        "3:2": { width: 1216, height: 832 },
+        "2:3": { width: 832, height: 1216 }
+    };
+
+    const dimensions = aspectRatioMap[config.aspectRatio || "1:1"] || { width: 1024, height: 1024 };
+    const model = config.model || "fal-ai/flux-pro";
+
+    // FAL.ai synchronous request
+    const response = await fetch(`https://fal.run/${model}`, {
+        method: "POST",
+        headers: {
+            Authorization: `Key ${apiKey}`,
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            prompt,
+            image_size: {
+                width: dimensions.width,
+                height: dimensions.height
+            },
+            num_images: config.n || 1,
+            enable_safety_checker: true,
+            output_format: "jpeg"
+        })
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`FAL.ai API error: ${response.status} - ${errorText}`);
+    }
+
+    interface FALImage {
+        url: string;
+        content_type?: string;
+        width?: number;
+        height?: number;
+    }
+
+    interface FALResponse {
+        images: FALImage[];
+        seed?: number;
+        has_nsfw_concepts?: boolean[];
+    }
+
+    const data = (await response.json()) as FALResponse;
+
+    const images = data.images.map((img) => ({
+        url: img.url
+    }));
+
+    activityLogger.info("FAL.ai image generation complete", { imageCount: images.length });
+
+    return {
+        provider: "fal",
+        model,
+        images,
+        metadata: {
+            processingTime: 0,
+            seed: data.seed
+        }
+    } as unknown as JsonObject;
+}
+
+async function executeFALInpainting(
+    config: ImageGenerationNodeConfig,
+    context: JsonObject
+): Promise<JsonObject> {
+    const apiKey = await getProviderApiKey("fal", config.connectionId);
+
+    const prompt = interpolateVariables(config.prompt || "", context);
+    const sourceImage = interpolateVariables(config.sourceImage || "", context);
+    const mask = interpolateVariables(config.mask || "", context);
+
+    if (!sourceImage) {
+        throw new Error("sourceImage is required for inpainting");
+    }
+    if (!mask) {
+        throw new Error("mask is required for inpainting");
+    }
+
+    activityLogger.info("FAL.ai inpainting", { promptLength: prompt.length });
+
+    const response = await fetch("https://fal.run/fal-ai/flux-pro/v1/fill", {
+        method: "POST",
+        headers: {
+            Authorization: `Key ${apiKey}`,
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            prompt,
+            image_url: sourceImage,
+            mask_url: mask
+        })
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`FAL.ai inpainting error: ${response.status} - ${errorText}`);
+    }
+
+    interface FALFillResponse {
+        images: Array<{ url: string }>;
+        seed?: number;
+    }
+
+    const data = (await response.json()) as FALFillResponse;
+
+    const images = data.images.map((img) => ({
+        url: img.url
+    }));
+
+    return {
+        provider: "fal",
+        model: "fal-ai/flux-pro/v1/fill",
+        operation: "inpaint",
+        images,
+        metadata: {
+            processingTime: 0
+        }
+    } as unknown as JsonObject;
+}
+
+async function executeFALUpscale(
+    config: ImageGenerationNodeConfig,
+    context: JsonObject
+): Promise<JsonObject> {
+    const apiKey = await getProviderApiKey("fal", config.connectionId);
+    const sourceImage = interpolateVariables(config.sourceImage || "", context);
+
+    if (!sourceImage) {
+        throw new Error("sourceImage is required for upscaling");
+    }
+
+    activityLogger.info("FAL.ai upscaling");
+
+    const response = await fetch("https://fal.run/fal-ai/clarity-upscaler", {
+        method: "POST",
+        headers: {
+            Authorization: `Key ${apiKey}`,
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            image_url: sourceImage,
+            scale: config.scaleFactor || 2
+        })
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`FAL.ai upscale error: ${response.status} - ${errorText}`);
+    }
+
+    interface FALUpscaleResponse {
+        image: { url: string };
+    }
+
+    const data = (await response.json()) as FALUpscaleResponse;
+
+    return {
+        provider: "fal",
+        model: "fal-ai/clarity-upscaler",
+        operation: "upscale",
+        images: [{ url: data.image.url }],
+        metadata: {
+            processingTime: 0,
+            scaleFactor: config.scaleFactor || 2
+        }
+    } as unknown as JsonObject;
+}
+
+async function executeFALBackgroundRemoval(
+    config: ImageGenerationNodeConfig,
+    context: JsonObject
+): Promise<JsonObject> {
+    const apiKey = await getProviderApiKey("fal", config.connectionId);
+    const sourceImage = interpolateVariables(config.sourceImage || "", context);
+
+    if (!sourceImage) {
+        throw new Error("sourceImage is required for background removal");
+    }
+
+    activityLogger.info("FAL.ai background removal");
+
+    const response = await fetch("https://fal.run/fal-ai/birefnet", {
+        method: "POST",
+        headers: {
+            Authorization: `Key ${apiKey}`,
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            image_url: sourceImage
+        })
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`FAL.ai background removal error: ${response.status} - ${errorText}`);
+    }
+
+    interface FALBgRemovalResponse {
+        image: { url: string };
+    }
+
+    const data = (await response.json()) as FALBgRemovalResponse;
+
+    return {
+        provider: "fal",
+        model: "fal-ai/birefnet",
+        operation: "removeBackground",
+        images: [{ url: data.image.url }],
+        metadata: {
+            processingTime: 0
+        }
+    } as unknown as JsonObject;
+}
+
+async function executeFALStyleTransfer(
+    config: ImageGenerationNodeConfig,
+    context: JsonObject
+): Promise<JsonObject> {
+    const apiKey = await getProviderApiKey("fal", config.connectionId);
+    const prompt = interpolateVariables(config.prompt || "", context);
+    const sourceImage = interpolateVariables(config.sourceImage || "", context);
+    const styleReference = interpolateVariables(config.styleReference || "", context);
+
+    if (!sourceImage) {
+        throw new Error("sourceImage is required for style transfer");
+    }
+    if (!styleReference) {
+        throw new Error("styleReference is required for style transfer");
+    }
+
+    activityLogger.info("FAL.ai style transfer");
+
+    const response = await fetch("https://fal.run/fal-ai/flux-pro/v1/redux", {
+        method: "POST",
+        headers: {
+            Authorization: `Key ${apiKey}`,
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            prompt,
+            image_url: sourceImage,
+            redux_image_url: styleReference
+        })
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`FAL.ai style transfer error: ${response.status} - ${errorText}`);
+    }
+
+    interface FALStyleResponse {
+        images: Array<{ url: string }>;
+    }
+
+    const data = (await response.json()) as FALStyleResponse;
+
+    const images = data.images.map((img) => ({
+        url: img.url
+    }));
+
+    return {
+        provider: "fal",
+        model: "fal-ai/flux-pro/v1/redux",
+        operation: "styleTransfer",
+        images,
+        metadata: {
+            processingTime: 0
+        }
+    } as unknown as JsonObject;
+}
+
+// ============================================================================
+// STABILITY AI EDITING IMPLEMENTATIONS
+// ============================================================================
+
+async function executeStabilityAIInpainting(
+    config: ImageGenerationNodeConfig,
+    context: JsonObject
+): Promise<JsonObject> {
+    const apiKey = await getProviderApiKey("stabilityai", config.connectionId);
+    const prompt = interpolateVariables(config.prompt || "", context);
+    const sourceImage = interpolateVariables(config.sourceImage || "", context);
+    const mask = interpolateVariables(config.mask || "", context);
+
+    if (!sourceImage) {
+        throw new Error("sourceImage is required for inpainting");
+    }
+    if (!mask) {
+        throw new Error("mask is required for inpainting");
+    }
+
+    activityLogger.info("Stability AI inpainting");
+
+    // Stability AI requires form data for inpainting
+    const formData = new FormData();
+    formData.append("prompt", prompt);
+
+    // Handle image sources - could be URL or base64
+    if (sourceImage.startsWith("http")) {
+        const imageResponse = await fetch(sourceImage);
+        const imageBlob = await imageResponse.blob();
+        formData.append("image", imageBlob, "source.png");
+    } else {
+        // Base64 - convert to blob
+        const base64Data = sourceImage.replace(/^data:image\/\w+;base64,/, "");
+        const binaryData = Buffer.from(base64Data, "base64");
+        const blob = new Blob([binaryData], { type: "image/png" });
+        formData.append("image", blob, "source.png");
+    }
+
+    if (mask.startsWith("http")) {
+        const maskResponse = await fetch(mask);
+        const maskBlob = await maskResponse.blob();
+        formData.append("mask", maskBlob, "mask.png");
+    } else {
+        const base64Data = mask.replace(/^data:image\/\w+;base64,/, "");
+        const binaryData = Buffer.from(base64Data, "base64");
+        const blob = new Blob([binaryData], { type: "image/png" });
+        formData.append("mask", blob, "mask.png");
+    }
+
+    formData.append("output_format", "png");
+
+    const response = await fetch("https://api.stability.ai/v2beta/stable-image/edit/inpaint", {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${apiKey}`,
+            Accept: "application/json"
+        },
+        body: formData
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Stability AI inpainting error: ${response.status} - ${errorText}`);
+    }
+
+    interface StabilityInpaintResponse {
+        image: string; // base64
+    }
+
+    const data = (await response.json()) as StabilityInpaintResponse;
+
+    return {
+        provider: "stabilityai",
+        model: "stable-image-inpaint",
+        operation: "inpaint",
+        images: [{ base64: data.image }],
+        metadata: {
+            processingTime: 0
+        }
+    } as unknown as JsonObject;
+}
+
+async function executeStabilityAIUpscale(
+    config: ImageGenerationNodeConfig,
+    context: JsonObject
+): Promise<JsonObject> {
+    const apiKey = await getProviderApiKey("stabilityai", config.connectionId);
+    const sourceImage = interpolateVariables(config.sourceImage || "", context);
+
+    if (!sourceImage) {
+        throw new Error("sourceImage is required for upscaling");
+    }
+
+    activityLogger.info("Stability AI upscaling");
+
+    const formData = new FormData();
+
+    if (sourceImage.startsWith("http")) {
+        const imageResponse = await fetch(sourceImage);
+        const imageBlob = await imageResponse.blob();
+        formData.append("image", imageBlob, "source.png");
+    } else {
+        const base64Data = sourceImage.replace(/^data:image\/\w+;base64,/, "");
+        const binaryData = Buffer.from(base64Data, "base64");
+        const blob = new Blob([binaryData], { type: "image/png" });
+        formData.append("image", blob, "source.png");
+    }
+
+    formData.append("output_format", "png");
+
+    const response = await fetch("https://api.stability.ai/v2beta/stable-image/upscale/creative", {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${apiKey}`,
+            Accept: "application/json"
+        },
+        body: formData
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Stability AI upscale error: ${response.status} - ${errorText}`);
+    }
+
+    interface StabilityUpscaleResponse {
+        image: string;
+    }
+
+    const data = (await response.json()) as StabilityUpscaleResponse;
+
+    return {
+        provider: "stabilityai",
+        model: "stable-image-upscale",
+        operation: "upscale",
+        images: [{ base64: data.image }],
+        metadata: {
+            processingTime: 0
+        }
+    } as unknown as JsonObject;
+}
+
+async function executeStabilityAIBackgroundRemoval(
+    config: ImageGenerationNodeConfig,
+    context: JsonObject
+): Promise<JsonObject> {
+    const apiKey = await getProviderApiKey("stabilityai", config.connectionId);
+    const sourceImage = interpolateVariables(config.sourceImage || "", context);
+
+    if (!sourceImage) {
+        throw new Error("sourceImage is required for background removal");
+    }
+
+    activityLogger.info("Stability AI background removal");
+
+    const formData = new FormData();
+
+    if (sourceImage.startsWith("http")) {
+        const imageResponse = await fetch(sourceImage);
+        const imageBlob = await imageResponse.blob();
+        formData.append("image", imageBlob, "source.png");
+    } else {
+        const base64Data = sourceImage.replace(/^data:image\/\w+;base64,/, "");
+        const binaryData = Buffer.from(base64Data, "base64");
+        const blob = new Blob([binaryData], { type: "image/png" });
+        formData.append("image", blob, "source.png");
+    }
+
+    formData.append("output_format", "png");
+
+    const response = await fetch(
+        "https://api.stability.ai/v2beta/stable-image/edit/remove-background",
+        {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${apiKey}`,
+                Accept: "application/json"
+            },
+            body: formData
+        }
+    );
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Stability AI background removal error: ${response.status} - ${errorText}`);
+    }
+
+    interface StabilityBgRemovalResponse {
+        image: string;
+    }
+
+    const data = (await response.json()) as StabilityBgRemovalResponse;
+
+    return {
+        provider: "stabilityai",
+        model: "stable-image-remove-background",
+        operation: "removeBackground",
+        images: [{ base64: data.image }],
+        metadata: {
+            processingTime: 0
+        }
+    } as unknown as JsonObject;
+}
+
+// ============================================================================
 // EXECUTOR
 // ============================================================================
 
@@ -396,29 +914,41 @@ export async function executeImageGenerationNode(
     context: JsonObject
 ): Promise<JsonObject> {
     const startTime = Date.now();
+    const operation = config.operation || "generate";
 
     activityLogger.info("Executing image generation node", {
         provider: config.provider,
-        model: config.model
+        model: config.model,
+        operation
     });
 
     let result: JsonObject;
 
-    switch (config.provider) {
-        case "openai":
-            result = await executeOpenAIGeneration(config, context);
-            break;
+    // Route to editing operations if not generate
+    if (operation !== "generate") {
+        result = await executeEditingOperation(config, context, operation);
+    } else {
+        // Standard generation
+        switch (config.provider) {
+            case "openai":
+                result = await executeOpenAIGeneration(config, context);
+                break;
 
-        case "replicate":
-            result = await executeReplicateGeneration(config, context);
-            break;
+            case "replicate":
+                result = await executeReplicateGeneration(config, context);
+                break;
 
-        case "stabilityai":
-            result = await executeStabilityAIGeneration(config, context);
-            break;
+            case "stabilityai":
+                result = await executeStabilityAIGeneration(config, context);
+                break;
 
-        default:
-            throw new Error(`Unsupported image generation provider: ${config.provider}`);
+            case "fal":
+                result = await executeFALGeneration(config, context);
+                break;
+
+            default:
+                throw new Error(`Unsupported image generation provider: ${config.provider}`);
+        }
     }
 
     result.metadata = {
@@ -427,7 +957,8 @@ export async function executeImageGenerationNode(
     };
 
     activityLogger.info("Image generation node execution completed", {
-        processingTimeMs: (result.metadata as JsonObject)?.processingTime
+        processingTimeMs: (result.metadata as JsonObject)?.processingTime,
+        operation
     });
 
     if (config.outputVariable) {
@@ -435,6 +966,63 @@ export async function executeImageGenerationNode(
     }
 
     return result as unknown as JsonObject;
+}
+
+/**
+ * Route to the appropriate editing operation based on provider and operation type
+ */
+async function executeEditingOperation(
+    config: ImageGenerationNodeConfig,
+    context: JsonObject,
+    operation: string
+): Promise<JsonObject> {
+    switch (config.provider) {
+        case "fal":
+            switch (operation) {
+                case "inpaint":
+                case "outpaint":
+                    return executeFALInpainting(config, context);
+                case "upscale":
+                    return executeFALUpscale(config, context);
+                case "removeBackground":
+                    return executeFALBackgroundRemoval(config, context);
+                case "styleTransfer":
+                    return executeFALStyleTransfer(config, context);
+                default:
+                    throw new Error(`FAL.ai does not support operation: ${operation}`);
+            }
+
+        case "stabilityai":
+            switch (operation) {
+                case "inpaint":
+                case "outpaint":
+                    return executeStabilityAIInpainting(config, context);
+                case "upscale":
+                    return executeStabilityAIUpscale(config, context);
+                case "removeBackground":
+                    return executeStabilityAIBackgroundRemoval(config, context);
+                default:
+                    throw new Error(`Stability AI does not support operation: ${operation}`);
+            }
+
+        case "openai":
+            // OpenAI only supports inpainting via DALL-E 2 edit endpoint
+            if (operation === "inpaint") {
+                throw new Error(
+                    "OpenAI inpainting requires DALL-E 2 which is not yet implemented. Use FAL.ai or Stability AI."
+                );
+            }
+            throw new Error(`OpenAI does not support operation: ${operation}`);
+
+        case "replicate":
+            // Replicate can support editing via specific models
+            throw new Error(
+                `Replicate editing operations are not yet implemented. Use FAL.ai or Stability AI for ${operation}.`
+            );
+
+        default:
+            throw new Error(`Provider ${config.provider} does not support editing operations`);
+    }
 }
 
 // ============================================================================

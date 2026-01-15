@@ -5,6 +5,7 @@ export * from "./connections";
 export * from "./llm-models";
 export * from "./vision-models";
 export * from "./image-generation-models";
+export * from "./image-editing-capabilities";
 export * from "./video-generation-models";
 export * from "./providers";
 export * from "./request-context";

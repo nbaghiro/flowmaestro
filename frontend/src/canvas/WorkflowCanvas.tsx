@@ -256,6 +256,8 @@ function getDefaultLabel(type: string): string {
         embeddings: "Embeddings",
         audio: "Audio",
         router: "Router",
+        imageGeneration: "Image",
+        videoGeneration: "Video",
         conditional: "Conditional",
         switch: "Switch",
         loop: "Loop",

@@ -10,6 +10,7 @@ import { useAgentStore } from "../../stores/agentStore";
 import { Button } from "../common/Button";
 import { Dialog } from "../common/Dialog";
 import { Input } from "../common/Input";
+import { MediaOutput, hasMediaContent } from "../common/MediaOutput";
 import { AgentConnectionSelector } from "./AgentConnectionSelector";
 import type { Agent, ThreadMessage, JsonObject, ThreadTokenUsage } from "../../lib/api";
 
@@ -651,18 +652,34 @@ export function AgentChat({ agent }: AgentChatProps) {
                     title={`Tool Details - ${selectedToolError.toolName}`}
                 >
                     <div className="space-y-4">
-                        <div className="bg-muted border border-border rounded-lg p-4">
-                            <pre className="text-xs text-foreground whitespace-pre-wrap break-words max-h-96 overflow-y-auto font-mono">
-                                {(() => {
-                                    try {
-                                        const parsed = JSON.parse(selectedToolError.error);
-                                        return JSON.stringify(parsed, null, 2);
-                                    } catch {
-                                        return selectedToolError.error;
-                                    }
-                                })()}
-                            </pre>
-                        </div>
+                        {(() => {
+                            try {
+                                const parsed = JSON.parse(selectedToolError.error);
+                                // Check if the parsed result contains media
+                                if (hasMediaContent(parsed)) {
+                                    return (
+                                        <MediaOutput data={parsed} showJson={true} maxImages={4} />
+                                    );
+                                }
+                                // No media - show as JSON
+                                return (
+                                    <div className="bg-muted border border-border rounded-lg p-4">
+                                        <pre className="text-xs text-foreground whitespace-pre-wrap break-words max-h-96 overflow-y-auto font-mono">
+                                            {JSON.stringify(parsed, null, 2)}
+                                        </pre>
+                                    </div>
+                                );
+                            } catch {
+                                // Not JSON - show as plain text
+                                return (
+                                    <div className="bg-muted border border-border rounded-lg p-4">
+                                        <pre className="text-xs text-foreground whitespace-pre-wrap break-words max-h-96 overflow-y-auto font-mono">
+                                            {selectedToolError.error}
+                                        </pre>
+                                    </div>
+                                );
+                            }
+                        })()}
                         <div className="flex justify-end">
                             <Button variant="secondary" onClick={() => setSelectedToolError(null)}>
                                 Close

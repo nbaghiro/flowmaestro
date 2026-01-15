@@ -173,6 +173,9 @@ export const config = {
         },
         luma: {
             apiKey: process.env.LUMA_API_KEY || ""
+        },
+        fal: {
+            apiKey: process.env.FAL_API_KEY || ""
         }
     },
 
@@ -478,6 +481,11 @@ export function getAIProviderApiKey(
         | "huggingface"
         | "elevenlabs"
         | "deepgram"
+        | "stabilityai"
+        | "replicate"
+        | "runway"
+        | "luma"
+        | "fal"
 ): string {
     return config.ai[provider]?.apiKey || "";
 }

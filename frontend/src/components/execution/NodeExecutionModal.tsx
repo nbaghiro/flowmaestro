@@ -6,6 +6,7 @@
 import { X, CheckCircle2, XCircle, Clock, AlertCircle } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { NodeExecutionState } from "../../stores/workflowStore";
+import { MediaOutput, hasMediaContent } from "../common/MediaOutput";
 
 interface NodeExecutionModalProps {
     nodeId: string;
@@ -192,11 +193,19 @@ export function NodeExecutionModal({
                         {executionState.output && Object.keys(executionState.output).length > 0 && (
                             <div>
                                 <h5 className="font-medium mb-2 text-sm">Output</h5>
-                                <div className="bg-muted/50 rounded-lg p-3 max-h-40 overflow-y-auto">
-                                    <pre className="text-xs font-mono whitespace-pre-wrap">
-                                        {JSON.stringify(executionState.output, null, 2)}
-                                    </pre>
-                                </div>
+                                {hasMediaContent(executionState.output) ? (
+                                    <MediaOutput
+                                        data={executionState.output}
+                                        showJson={true}
+                                        maxImages={4}
+                                    />
+                                ) : (
+                                    <div className="bg-muted/50 rounded-lg p-3 max-h-40 overflow-y-auto">
+                                        <pre className="text-xs font-mono whitespace-pre-wrap">
+                                            {JSON.stringify(executionState.output, null, 2)}
+                                        </pre>
+                                    </div>
+                                )}
                             </div>
                         )}
 

@@ -16,7 +16,7 @@ import { BaseNodeHandler, type NodeHandlerInput, type NodeHandlerOutput } from "
 // ============================================================================
 
 export interface VideoGenerationNodeConfig {
-    provider: "google" | "replicate" | "runway" | "luma" | "stabilityai";
+    provider: "google" | "replicate" | "runway" | "luma" | "stabilityai" | "fal";
     model: string;
     connectionId?: string;
     prompt: string;
@@ -75,7 +75,8 @@ async function getProviderApiKey(provider: string, connectionId?: string): Promi
         replicate: appConfig.ai.replicate?.apiKey || "",
         runway: appConfig.ai.runway?.apiKey || "",
         luma: appConfig.ai.luma?.apiKey || "",
-        stabilityai: appConfig.ai.stabilityai?.apiKey || ""
+        stabilityai: appConfig.ai.stabilityai?.apiKey || "",
+        fal: appConfig.ai.fal?.apiKey || ""
     };
 
     const apiKey = envMapping[provider];
@@ -882,6 +883,160 @@ async function executeStabilityAIGeneration(
 }
 
 // ============================================================================
+// FAL.AI IMPLEMENTATION
+// ============================================================================
+
+async function executeFALVideoGeneration(
+    config: VideoGenerationNodeConfig,
+    context: JsonObject
+): Promise<JsonObject> {
+    const apiKey = await getProviderApiKey("fal", config.connectionId);
+    const prompt = interpolateVariables(config.prompt || "", context);
+    const imageInput = config.imageInput
+        ? interpolateVariables(config.imageInput, context)
+        : undefined;
+
+    const model = config.model || "fal-ai/kling-video/v2/master/text-to-video";
+
+    activityLogger.info("FAL.ai generating video", {
+        model,
+        promptLength: prompt.length,
+        hasImageInput: !!imageInput
+    });
+
+    // Determine if this is a text-to-video or image-to-video model
+    const isI2V =
+        model.includes("image-to-video") || model.includes("i2v") || model.includes("luma-dream");
+
+    if (isI2V && !imageInput) {
+        throw new Error(`Model ${model} requires an image input`);
+    }
+
+    // Build request body based on model type
+    interface FALVideoRequest {
+        prompt: string;
+        image_url?: string;
+        duration?: number;
+        aspect_ratio?: string;
+    }
+
+    const requestBody: FALVideoRequest = {
+        prompt
+    };
+
+    if (imageInput) {
+        requestBody.image_url = imageInput;
+    }
+
+    if (config.duration) {
+        requestBody.duration = config.duration;
+    }
+
+    if (config.aspectRatio) {
+        requestBody.aspect_ratio = config.aspectRatio;
+    }
+
+    // Submit the video generation request using FAL's queue API for long-running tasks
+    const submitResponse = await fetch(`https://queue.fal.run/${model}`, {
+        method: "POST",
+        headers: {
+            Authorization: `Key ${apiKey}`,
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(requestBody)
+    });
+
+    if (!submitResponse.ok) {
+        const errorText = await submitResponse.text();
+        throw new Error(`FAL.ai API error: ${submitResponse.status} - ${errorText}`);
+    }
+
+    interface FALQueueResponse {
+        request_id: string;
+        status_url?: string;
+        response_url?: string;
+    }
+
+    const queueData = (await submitResponse.json()) as FALQueueResponse;
+    const requestId = queueData.request_id;
+
+    activityLogger.info("FAL.ai video generation queued", { requestId });
+
+    // Poll for completion
+    const pollConfig = DEFAULT_POLL_CONFIG;
+    let currentInterval = pollConfig.intervalMs;
+
+    for (let attempt = 0; attempt < pollConfig.maxAttempts; attempt++) {
+        await sleep(currentInterval);
+
+        const statusResponse = await fetch(`https://queue.fal.run/${model}/requests/${requestId}`, {
+            headers: {
+                Authorization: `Key ${apiKey}`
+            }
+        });
+
+        if (!statusResponse.ok) {
+            const errorText = await statusResponse.text();
+            throw new Error(`FAL.ai status check error: ${statusResponse.status} - ${errorText}`);
+        }
+
+        interface FALStatusResponse {
+            status: "IN_QUEUE" | "IN_PROGRESS" | "COMPLETED" | "FAILED";
+            response?: {
+                video?: {
+                    url: string;
+                };
+            };
+            error?: string;
+        }
+
+        const statusData = (await statusResponse.json()) as FALStatusResponse;
+
+        if (statusData.status === "COMPLETED") {
+            activityLogger.info("FAL.ai video generation complete", { requestId });
+
+            const videoUrl = statusData.response?.video?.url;
+
+            if (!videoUrl) {
+                throw new Error("FAL.ai completed but no video URL in response");
+            }
+
+            return {
+                provider: "fal",
+                model,
+                video: {
+                    url: videoUrl
+                },
+                metadata: {
+                    processingTime: 0,
+                    taskId: requestId,
+                    duration: config.duration
+                }
+            } as unknown as JsonObject;
+        }
+
+        if (statusData.status === "FAILED") {
+            throw new Error(
+                `FAL.ai video generation failed: ${statusData.error || "Unknown error"}`
+            );
+        }
+
+        activityLogger.debug("FAL.ai video still processing", {
+            requestId,
+            status: statusData.status,
+            attempt
+        });
+
+        currentInterval = Math.min(
+            currentInterval * pollConfig.backoffMultiplier,
+            pollConfig.maxIntervalMs
+        );
+    }
+
+    throw new Error(`FAL.ai generation timed out after ${pollConfig.maxAttempts} polling attempts`);
+}
+
+// ============================================================================
 // EXECUTOR
 // ============================================================================
 
@@ -917,6 +1072,10 @@ export async function executeVideoGenerationNode(
 
         case "stabilityai":
             result = await executeStabilityAIGeneration(config, context);
+            break;
+
+        case "fal":
+            result = await executeFALVideoGeneration(config, context);
             break;
 
         default:
