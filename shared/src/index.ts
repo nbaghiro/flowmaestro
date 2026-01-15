@@ -21,3 +21,6 @@ export * from "./chat-interface";
 export * from "./folder";
 export * from "./workflow-generation-chat";
 export * from "./workspace";
+export * from "./workflow-patterns";
+export * from "./agent-patterns";
+export * from "./workflow-layout";

@@ -11,11 +11,14 @@
         "build": "tsc",
         "dev": "tsc --watch",
         "clean": "rm -rf dist",
-        "typecheck": "tsc --noEmit"
+        "typecheck": "tsc --noEmit",
+        "test": "vitest run",
+        "test:watch": "vitest"
     },
     "devDependencies": {
         "@types/uuid": "^10.0.0",
-        "typescript": "^5.3.3"
+        "typescript": "^5.3.3",
+        "vitest": "^1.2.0"
     },
     "dependencies": {
         "uuid": "^13.0.0"

@@ -19,9 +19,9 @@ import {
     HeartHandshake,
     type LucideIcon
 } from "lucide-react";
+import type { AgentPattern } from "@flowmaestro/shared";
 import { cn } from "../lib/utils";
 import { Badge } from "./common/Badge";
-import type { AgentPattern } from "../lib/agentPatterns";
 
 // Icon mapping for patterns
 const iconMap: Record<string, LucideIcon> = {

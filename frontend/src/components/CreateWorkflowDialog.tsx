@@ -18,12 +18,26 @@ import {
     Mail,
     Bug,
     Share2,
+    Languages,
+    ShoppingCart,
+    FileStack,
+    Route,
+    Database,
+    ClipboardCheck,
+    BookOpen,
+    MessageCircle,
+    GitPullRequest,
+    UserPlus,
     type LucideIcon
 } from "lucide-react";
 import { useState, FormEvent, useMemo } from "react";
-import { getAdvancedPatterns } from "../lib/advancedWorkflowPatterns";
+import {
+    getAdvancedPatterns,
+    getIntermediatePatterns,
+    getAllPatterns,
+    type WorkflowPattern
+} from "@flowmaestro/shared";
 import { cn } from "../lib/utils";
-import { getAllPatterns, type WorkflowPattern } from "../lib/workflowPatterns";
 import { Alert } from "./common/Alert";
 import { Button } from "./common/Button";
 import { Dialog } from "./common/Dialog";
@@ -47,7 +61,17 @@ const iconMap: Record<string, LucideIcon> = {
     Plus,
     Mail,
     Bug,
-    Share2
+    Share2,
+    Languages,
+    ShoppingCart,
+    FileStack,
+    Route,
+    Database,
+    ClipboardCheck,
+    BookOpen,
+    MessageCircle,
+    GitPullRequest,
+    UserPlus
 };
 
 interface CreateWorkflowDialogProps {
@@ -67,10 +91,11 @@ export function CreateWorkflowDialog({ isOpen, onClose, onCreate }: CreateWorkfl
     const [step, setStep] = useState<DialogStep>("pattern");
 
     // Tab state for pattern selection
-    const [activeTab, setActiveTab] = useState<"basic" | "advanced">("basic");
+    const [activeTab, setActiveTab] = useState<"basic" | "intermediate" | "advanced">("basic");
 
     // Get patterns for each tab
     const basicPatterns = useMemo(() => getAllPatterns(), []);
+    const intermediatePatterns = useMemo(() => getIntermediatePatterns(), []);
     const advancedPatterns = useMemo(() => getAdvancedPatterns(), []);
 
     // Pattern selection state
@@ -359,6 +384,18 @@ export function CreateWorkflowDialog({ isOpen, onClose, onCreate }: CreateWorkfl
                                     </button>
                                     <button
                                         type="button"
+                                        onClick={() => setActiveTab("intermediate")}
+                                        className={cn(
+                                            "px-3 py-1 text-sm font-medium rounded-md transition-colors",
+                                            activeTab === "intermediate"
+                                                ? "bg-card text-foreground shadow-sm"
+                                                : "text-muted-foreground hover:text-foreground"
+                                        )}
+                                    >
+                                        Intermediate
+                                    </button>
+                                    <button
+                                        type="button"
                                         onClick={() => setActiveTab("advanced")}
                                         className={cn(
                                             "px-3 py-1 text-sm font-medium rounded-md transition-colors",
@@ -374,7 +411,9 @@ export function CreateWorkflowDialog({ isOpen, onClose, onCreate }: CreateWorkfl
                             <span className="text-xs text-muted-foreground">
                                 {activeTab === "basic"
                                     ? basicPatterns.length
-                                    : advancedPatterns.length}{" "}
+                                    : activeTab === "intermediate"
+                                      ? intermediatePatterns.length
+                                      : advancedPatterns.length}{" "}
                                 templates
                             </span>
                         </div>
@@ -382,7 +421,13 @@ export function CreateWorkflowDialog({ isOpen, onClose, onCreate }: CreateWorkfl
                         {/* Scrollable grid area */}
                         <div className="max-h-[60vh] overflow-y-auto pr-2">
                             <PatternPicker
-                                patterns={activeTab === "basic" ? basicPatterns : advancedPatterns}
+                                patterns={
+                                    activeTab === "basic"
+                                        ? basicPatterns
+                                        : activeTab === "intermediate"
+                                          ? intermediatePatterns
+                                          : advancedPatterns
+                                }
                                 selectedPatternId={selectedPattern?.id || null}
                                 onSelect={handlePatternSelect}
                             />

@@ -4,7 +4,8 @@
  * Populates the workflow_templates table with 20 pre-built templates
  * across 5 categories: marketing, sales, operations, engineering, support
  *
- * Each template has proper left-to-right flow positioning for good visual display.
+ * Uses the autoLayoutWorkflow algorithm from @flowmaestro/shared to ensure
+ * consistent, visually appealing node positioning across all templates.
  *
  * Run with: npx tsx backend/scripts/seed-templates.ts
  */
@@ -12,6 +13,7 @@
 import * as path from "path";
 import * as dotenv from "dotenv";
 import { Pool } from "pg";
+import { autoLayoutWorkflow } from "@flowmaestro/shared";
 
 // Load .env from backend root
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
@@ -25,33 +27,19 @@ interface TemplateNode {
 }
 
 /**
- * Apply a wave effect to node positions to make linear layouts more visually interesting
+ * Apply auto-layout to template nodes using the shared autoLayoutWorkflow algorithm.
+ * This ensures consistent, visually appealing layouts across all templates.
  */
-function applyWaveToNodes(nodes: TemplateNode[]): void {
-    const WAVE_AMPLITUDE = 35;
-    const WAVE_THRESHOLD = 30;
+function applyAutoLayout(nodes: TemplateNode[], edges: TemplateEdge[]): void {
+    if (nodes.length === 0) return;
 
-    if (nodes.length < 3) return;
+    const positions = autoLayoutWorkflow(nodes, edges);
 
-    // Group nodes by Y position (horizontal lines)
-    const yGroups = new Map<number, Array<{ index: number; x: number; y: number }>>();
-    for (let i = 0; i < nodes.length; i++) {
-        const node = nodes[i];
-        const yKey = Math.round(node.position.y / WAVE_THRESHOLD) * WAVE_THRESHOLD;
-        const group = yGroups.get(yKey) || [];
-        group.push({ index: i, x: node.position.x, y: node.position.y });
-        yGroups.set(yKey, group);
-    }
-
-    // Apply wave to horizontal groups with 3+ nodes
-    for (const group of yGroups.values()) {
-        if (group.length >= 3) {
-            // Sort by x position
-            group.sort((a, b) => a.x - b.x);
-            for (let i = 0; i < group.length; i++) {
-                const waveOffset = Math.sin((i * Math.PI) / 2.5) * WAVE_AMPLITUDE;
-                nodes[group[i].index].position.y += waveOffset;
-            }
+    // Apply the computed positions back to the nodes
+    for (const node of nodes) {
+        const newPos = positions.get(node.id);
+        if (newPos) {
+            node.position = newPos;
         }
     }
 }
@@ -1480,8 +1468,8 @@ async function seedTemplates() {
                 // Deep clone the definition to avoid mutating original
                 const definition = JSON.parse(JSON.stringify(template.definition));
 
-                // Apply wave effect to make linear layouts more visually interesting
-                applyWaveToNodes(definition.nodes);
+                // Apply auto-layout to ensure consistent, visually appealing layouts
+                applyAutoLayout(definition.nodes, definition.edges);
 
                 await pool.query(
                     `INSERT INTO workflow_templates (
