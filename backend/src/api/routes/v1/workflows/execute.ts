@@ -124,6 +124,7 @@ export async function executeWorkflowHandler(fastify: FastifyInstance): Promise<
                             workflowDefinition: backendWorkflowDef,
                             inputs,
                             userId,
+                            workspaceId: workflow.workspace_id,
                             source: "public_api"
                         }
                     ]

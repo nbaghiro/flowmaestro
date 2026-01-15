@@ -261,3 +261,126 @@ export function mergeConfigs(...configs: MockActivityConfig[]): MockActivityConf
 
     return merged;
 }
+
+// ============================================================================
+// CREDIT ACTIVITY MOCKS
+// ============================================================================
+
+export interface MockCreditConfig {
+    /** Initial credit balance */
+    initialBalance?: number;
+    /** Should credit check pass? */
+    allowExecution?: boolean;
+    /** Should reservation succeed? */
+    allowReservation?: boolean;
+    /** Fixed credit cost per LLM call */
+    llmCreditCost?: number;
+    /** Fixed credit cost per node */
+    nodeCreditCost?: number;
+    /** Estimated total credits for workflow */
+    estimatedCredits?: number;
+}
+
+/**
+ * Create mock credit activities with configurable behavior
+ */
+export function createMockCreditActivities(config: MockCreditConfig = {}) {
+    const {
+        initialBalance = 1000,
+        allowExecution = true,
+        allowReservation = true,
+        llmCreditCost = 10,
+        nodeCreditCost = 1,
+        estimatedCredits = 100
+    } = config;
+
+    let balance = initialBalance;
+    let reserved = 0;
+    const transactions: Array<{
+        type: string;
+        amount: number;
+        timestamp: number;
+    }> = [];
+
+    return {
+        shouldAllowExecution: jest.fn().mockResolvedValue(allowExecution),
+
+        reserveCredits: jest.fn().mockImplementation(async ({ estimatedCredits: amount }) => {
+            if (!allowReservation) return false;
+            if (balance - reserved < amount) return false;
+            reserved += amount;
+            transactions.push({ type: "reserve", amount, timestamp: Date.now() });
+            return true;
+        }),
+
+        releaseCredits: jest.fn().mockImplementation(async ({ amount }) => {
+            reserved -= amount;
+            transactions.push({ type: "release", amount, timestamp: Date.now() });
+        }),
+
+        finalizeCredits: jest.fn().mockImplementation(async ({ reservedAmount, actualAmount }) => {
+            reserved -= reservedAmount;
+            balance -= actualAmount;
+            transactions.push({ type: "finalize", amount: actualAmount, timestamp: Date.now() });
+        }),
+
+        calculateLLMCredits: jest.fn().mockResolvedValue(llmCreditCost),
+
+        calculateNodeCredits: jest.fn().mockResolvedValue(nodeCreditCost),
+
+        estimateWorkflowCredits: jest.fn().mockResolvedValue({
+            totalCredits: estimatedCredits,
+            breakdown: [],
+            confidence: "estimate"
+        }),
+
+        getCreditsBalance: jest.fn().mockImplementation(async () => ({
+            available: balance - reserved,
+            subscription: Math.floor(balance * 0.5),
+            purchased: Math.floor(balance * 0.5),
+            bonus: 0,
+            reserved,
+            subscriptionExpiresAt: null,
+            usedThisMonth: 0,
+            usedAllTime: initialBalance - balance
+        })),
+
+        // Test utilities
+        getBalance: () => balance,
+        getReserved: () => reserved,
+        getTransactions: () => transactions,
+        reset: () => {
+            balance = initialBalance;
+            reserved = 0;
+            transactions.length = 0;
+        }
+    };
+}
+
+/**
+ * Create credit activities that deny all execution (insufficient credits)
+ */
+export function createInsufficientCreditActivities() {
+    return createMockCreditActivities({
+        initialBalance: 0,
+        allowExecution: false,
+        allowReservation: false
+    });
+}
+
+/**
+ * Create credit activities with a specific balance
+ */
+export function createCreditActivitiesWithBalance(balance: number) {
+    return createMockCreditActivities({ initialBalance: balance });
+}
+
+/**
+ * Create credit activities that fail on reservation (e.g., concurrent access)
+ */
+export function createFailingReservationActivities() {
+    return createMockCreditActivities({
+        allowExecution: true,
+        allowReservation: false
+    });
+}

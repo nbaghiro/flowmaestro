@@ -49,6 +49,22 @@ export class BadRequestError extends AppError {
     }
 }
 
+export class InsufficientCreditsError extends AppError {
+    public required: number;
+    public available: number;
+
+    constructor(required: number, available: number) {
+        super(402, `Insufficient credits: required ${required}, available ${available}`, {
+            required,
+            available,
+            shortfall: required - available
+        });
+        this.name = "InsufficientCreditsError";
+        this.required = required;
+        this.available = available;
+    }
+}
+
 export async function errorHandler(
     error: FastifyError | AppError | Error,
     request: FastifyRequest,

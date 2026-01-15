@@ -47,7 +47,9 @@ export async function executeWorkflowRoute(fastify: FastifyInstance) {
                     args: [
                         {
                             workflowDefinition: backendWorkflowDef,
-                            inputs: body.inputs || {}
+                            inputs: body.inputs || {},
+                            userId: request.user?.id,
+                            workspaceId: request.workspace?.id
                         }
                     ]
                 });

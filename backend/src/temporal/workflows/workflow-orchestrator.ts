@@ -58,11 +58,29 @@ const {
     retry: RETRY_POLICIES.NO_RETRY
 });
 
+// Credit activities (fast, with retry for database operations)
+const {
+    shouldAllowExecution,
+    reserveCredits,
+    releaseCredits,
+    finalizeCredits,
+    estimateWorkflowCredits,
+    calculateLLMCredits,
+    calculateNodeCredits
+} = proxyActivities<typeof activities>({
+    startToCloseTimeout: ACTIVITY_TIMEOUTS.VALIDATION,
+    retry: RETRY_POLICIES.DEFAULT
+});
+
 export interface OrchestratorInput {
     executionId: string;
     workflowDefinition: WorkflowDefinition;
     inputs?: JsonObject;
     userId?: string;
+    /** Workspace ID for credit tracking and multi-tenancy */
+    workspaceId?: string;
+    /** Skip credit check (for system/internal executions) */
+    skipCreditCheck?: boolean;
 }
 
 export interface OrchestratorResult {
@@ -83,7 +101,14 @@ export interface OrchestratorResult {
  * Then executes nodes in parallel batches using ExecutionQueue.
  */
 export async function orchestratorWorkflow(input: OrchestratorInput): Promise<OrchestratorResult> {
-    const { executionId, workflowDefinition, inputs = {}, userId } = input;
+    const {
+        executionId,
+        workflowDefinition,
+        inputs = {},
+        userId,
+        workspaceId,
+        skipCreditCheck
+    } = input;
 
     // Create workflow logger
     const logger = createWorkflowLogger({
@@ -93,6 +118,11 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
     });
 
     const workflowStartTime = Date.now();
+
+    // Credit tracking state
+    let reservedCredits = 0;
+    let accumulatedCredits = 0;
+    const nodeCredits: Map<string, number> = new Map();
 
     // Create WORKFLOW_RUN span for entire workflow execution
     const workflowRunContext = await createSpan({
@@ -115,6 +145,65 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
     const workflowRunSpanId = workflowRunContext.spanId;
 
     try {
+        // =========================================================================
+        // PHASE 0: CREDIT CHECK & RESERVATION
+        // =========================================================================
+        if (!skipCreditCheck && workspaceId) {
+            logger.info("Checking credits for workflow execution");
+
+            // Estimate credits needed
+            const estimate = await estimateWorkflowCredits({ workflowDefinition });
+            const estimatedCredits = Math.ceil(estimate.totalCredits * 1.2); // 20% buffer
+
+            logger.info("Credit estimate", {
+                totalCredits: estimate.totalCredits,
+                withBuffer: estimatedCredits
+            });
+
+            // Check if execution should be allowed (with grace period)
+            const allowed = await shouldAllowExecution({
+                workspaceId,
+                estimatedCredits
+            });
+
+            if (!allowed) {
+                const errorMessage = `Insufficient credits for workflow execution. Estimated need: ${estimatedCredits} credits`;
+                logger.warn("Insufficient credits", { estimatedCredits });
+
+                await emitExecutionFailed({ executionId, error: errorMessage });
+                await endSpan({
+                    spanId: workflowRunSpanId,
+                    error: new Error(errorMessage),
+                    attributes: { failureReason: "insufficient_credits" }
+                });
+
+                return { success: false, outputs: {}, error: errorMessage };
+            }
+
+            // Reserve credits
+            const reserved = await reserveCredits({
+                workspaceId,
+                estimatedCredits
+            });
+
+            if (!reserved) {
+                const errorMessage = "Failed to reserve credits for execution";
+                logger.error("Credit reservation failed");
+
+                await emitExecutionFailed({ executionId, error: errorMessage });
+                await endSpan({
+                    spanId: workflowRunSpanId,
+                    error: new Error(errorMessage),
+                    attributes: { failureReason: "credit_reservation_failed" }
+                });
+
+                return { success: false, outputs: {}, error: errorMessage };
+            }
+
+            reservedCredits = estimatedCredits;
+            logger.info("Credits reserved", { reservedCredits });
+        }
+
         // =========================================================================
         // PHASE 1: BUILD WORKFLOW
         // =========================================================================
@@ -289,6 +378,25 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
                         }
                     }
 
+                    // Track credit usage for this node
+                    if (!skipCreditCheck && workspaceId) {
+                        let nodeCredit = 0;
+
+                        // Calculate credits based on token usage (for LLM nodes) or flat rate
+                        if (result.metrics?.tokenUsage) {
+                            nodeCredit = await calculateLLMCredits({
+                                model: result.metrics.tokenUsage.model || "default",
+                                inputTokens: result.metrics.tokenUsage.promptTokens || 0,
+                                outputTokens: result.metrics.tokenUsage.completionTokens || 0
+                            });
+                        } else {
+                            nodeCredit = await calculateNodeCredits({ nodeType: result.nodeType });
+                        }
+
+                        nodeCredits.set(result.nodeId, nodeCredit);
+                        accumulatedCredits += nodeCredit;
+                    }
+
                     queueState = markCompleted(
                         queueState,
                         result.nodeId,
@@ -383,6 +491,36 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
             nodesCompleted: finalSummary.completed
         });
 
+        // Finalize credits on successful completion
+        if (!skipCreditCheck && workspaceId && reservedCredits > 0) {
+            await finalizeCredits({
+                workspaceId,
+                userId: userId || null,
+                reservedAmount: reservedCredits,
+                actualAmount: accumulatedCredits,
+                operationType: "workflow_execution",
+                operationId: executionId,
+                description: `Workflow: ${workflowDefinition.name || "Unnamed"}`,
+                metadata: {
+                    executionId,
+                    executionType: "workflow",
+                    workflowName: workflowDefinition.name,
+                    nodeBreakdown: Array.from(nodeCredits.entries()).map(([id, credits]) => ({
+                        nodeId: id,
+                        credits
+                    })),
+                    durationMs: workflowDuration,
+                    estimatedCredits: reservedCredits,
+                    actualCredits: accumulatedCredits
+                }
+            });
+            logger.info("Credits finalized", {
+                reserved: reservedCredits,
+                actual: accumulatedCredits,
+                delta: reservedCredits - accumulatedCredits
+            });
+        }
+
         return { success: true, outputs: finalOutputs };
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
@@ -395,6 +533,29 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
             attributes: { failureReason: "workflow_exception" }
         });
 
+        // Handle credits on failure
+        if (!skipCreditCheck && workspaceId && reservedCredits > 0) {
+            if (accumulatedCredits > 0) {
+                // Some work was done - finalize with partial usage
+                await finalizeCredits({
+                    workspaceId,
+                    userId: userId || null,
+                    reservedAmount: reservedCredits,
+                    actualAmount: accumulatedCredits,
+                    operationType: "workflow_execution",
+                    operationId: executionId,
+                    description: `Workflow (failed): ${workflowDefinition.name || "Unnamed"}`
+                });
+                logger.info("Credits finalized for partial execution", {
+                    actual: accumulatedCredits
+                });
+            } else {
+                // No work done - release full reservation
+                await releaseCredits({ workspaceId, amount: reservedCredits });
+                logger.info("Credits released due to failure", { released: reservedCredits });
+            }
+        }
+
         return { success: false, outputs: {}, error: errorMessage };
     }
 }
@@ -405,6 +566,7 @@ export async function orchestratorWorkflow(input: OrchestratorInput): Promise<Or
 
 interface NodeExecutionResult {
     nodeId: string;
+    nodeType: string;
     success: boolean;
     output: JsonObject;
     error: string;
@@ -425,6 +587,17 @@ interface NodeExecutionResult {
         placeholder?: string;
         validation?: JsonObject;
         required?: boolean;
+    };
+    // Metrics for credit calculation
+    metrics?: {
+        durationMs?: number;
+        tokenUsage?: {
+            promptTokens?: number;
+            completionTokens?: number;
+            totalTokens?: number;
+            model?: string;
+            provider?: string;
+        };
     };
 }
 
@@ -471,6 +644,7 @@ async function executeNodeWithContext(
     try {
         let output: JsonObject = {};
         let branchesToSkip: string[] | undefined;
+        let nodeMetrics: NodeExecutionResult["metrics"] | undefined;
 
         // Get merged context for node execution
         const execContext = getExecutionContext(context);
@@ -536,6 +710,7 @@ async function executeNodeWithContext(
 
                 // Handle new return format with signals
                 output = executionResult.result;
+                nodeMetrics = executionResult.metrics;
 
                 // Check for pause signal (human review node)
                 if (executionResult.signals?.pause) {
@@ -559,11 +734,13 @@ async function executeNodeWithContext(
 
                     return {
                         nodeId,
+                        nodeType: node.type,
                         success: true,
                         output,
                         error: "",
                         pause: true,
-                        pauseContext: executionResult.signals.pauseContext
+                        pauseContext: executionResult.signals.pauseContext,
+                        metrics: executionResult.metrics
                     };
                 }
 
@@ -591,7 +768,15 @@ async function executeNodeWithContext(
             attributes: { durationMs: nodeDuration }
         });
 
-        return { nodeId, success: true, output, error: "", branchesToSkip };
+        return {
+            nodeId,
+            nodeType: node.type,
+            success: true,
+            output,
+            error: "",
+            branchesToSkip,
+            metrics: nodeMetrics
+        };
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
         logger.error("Node failed", error instanceof Error ? error : new Error(errorMessage), {
@@ -612,7 +797,7 @@ async function executeNodeWithContext(
             error: errorMessage
         });
 
-        return { nodeId, success: false, output: {}, error: errorMessage };
+        return { nodeId, nodeType: node.type, success: false, output: {}, error: errorMessage };
     }
 }
 
