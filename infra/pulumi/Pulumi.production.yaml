@@ -106,5 +106,7 @@ config:
       {"name":"discord-bot-token","envVar":"DISCORD_BOT_TOKEN","category":"oauth","deployments":["api","worker"],"required":false,"description":"Discord bot token for server operations (send messages, manage webhooks)"},
       {"name":"twilio-account-sid","envVar":"TWILIO_ACCOUNT_SID","category":"service","deployments":["api"],"required":false,"description":"Twilio Account SID"},
       {"name":"twilio-auth-token","envVar":"TWILIO_AUTH_TOKEN","category":"service","deployments":["api"],"required":false,"description":"Twilio Auth Token"},
-      {"name":"twilio-phone-number","envVar":"TWILIO_PHONE_NUMBER","category":"service","deployments":["api"],"required":false,"description":"Twilio Phone Number"}
+      {"name":"twilio-phone-number","envVar":"TWILIO_PHONE_NUMBER","category":"service","deployments":["api"],"required":false,"description":"Twilio Phone Number"},
+      {"name":"pypi-api-token","envVar":"PYPI_API_TOKEN","category":"service","deployments":[],"required":false,"description":"PyPI API token for publishing Python SDK"},
+      {"name":"npm-token","envVar":"NPM_TOKEN","category":"service","deployments":[],"required":false,"description":"npm token for publishing JavaScript SDKs"}
     ]
