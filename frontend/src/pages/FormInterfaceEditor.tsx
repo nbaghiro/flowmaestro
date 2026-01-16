@@ -25,6 +25,7 @@ import { IconPicker } from "../components/common/IconPicker";
 import { Input } from "../components/common/Input";
 import { MobileBuilderGuard } from "../components/common/MobileBuilderGuard";
 import { LoadingState } from "../components/common/Spinner";
+import { ThemeToggle } from "../components/common/ThemeToggle";
 import { getFormInterface, uploadFormInterfaceAsset } from "../lib/api";
 import { logger } from "../lib/logger";
 import { useFormInterfaceBuilderStore } from "../stores/formInterfaceBuilderStore";
@@ -198,6 +199,7 @@ export function FormInterfaceEditor() {
                     </div>
 
                     <div className="flex items-center gap-3">
+                        <ThemeToggle />
                         {formInterface.status === "published" && (
                             <Button
                                 variant="ghost"

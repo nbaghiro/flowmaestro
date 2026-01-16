@@ -60,15 +60,15 @@ function CreditProgressBar({ isCollapsed }: { isCollapsed: boolean }) {
 
     // Determine color based on remaining percentage
     const getProgressColor = () => {
-        if (percentageRemaining > 50) return "bg-primary/70";
-        if (percentageRemaining > 20) return "bg-amber-500/70";
-        return "bg-red-500/70";
+        if (percentageRemaining > 50) return "bg-primary";
+        if (percentageRemaining > 20) return "bg-amber-500";
+        return "bg-red-500";
     };
 
     const getProgressBg = () => {
-        if (percentageRemaining > 50) return "bg-primary/20";
-        if (percentageRemaining > 20) return "bg-amber-500/20";
-        return "bg-red-500/20";
+        if (percentageRemaining > 50) return "bg-primary/30";
+        if (percentageRemaining > 20) return "bg-amber-500/30";
+        return "bg-red-500/30";
     };
 
     // Get plan limits for subscription display

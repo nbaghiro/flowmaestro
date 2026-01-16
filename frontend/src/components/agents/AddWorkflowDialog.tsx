@@ -1,24 +1,95 @@
-import { Search, FileText } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Search, FileText, Check } from "lucide-react";
+import { useState, useEffect, memo, useMemo } from "react";
+import type { WorkflowSummary } from "@flowmaestro/shared";
 import { getWorkflows } from "../../lib/api";
 import { cn } from "../../lib/utils";
+import { extractProvidersFromNodes } from "../../lib/workflowUtils";
 import { Button } from "../common/Button";
 import { Dialog } from "../common/Dialog";
 import { Input } from "../common/Input";
+import { ProviderIconList } from "../common/ProviderIconList";
 import { Spinner } from "../common/Spinner";
-
-interface Workflow {
-    id: string;
-    name: string;
-    description?: string;
-}
+import { WorkflowCanvasPreview } from "../common/WorkflowCanvasPreview";
 
 interface AddWorkflowDialogProps {
     isOpen: boolean;
     onClose: () => void;
-    onAdd: (workflows: Workflow[]) => void;
+    onAdd: (workflows: WorkflowSummary[]) => void;
     existingToolIds: string[];
 }
+
+// Memoized selectable card component
+const SelectableWorkflowCard = memo(function SelectableWorkflowCard({
+    workflow,
+    isSelected,
+    onToggle
+}: {
+    workflow: WorkflowSummary;
+    isSelected: boolean;
+    onToggle: () => void;
+}) {
+    const definition = workflow.definition as
+        | {
+              nodes?: Record<string, { type: string; config?: { provider?: string } }>;
+              edges?: Array<{ source: string; target: string }>;
+          }
+        | undefined;
+
+    const providers = useMemo(
+        () => extractProvidersFromNodes(definition?.nodes),
+        [definition?.nodes]
+    );
+
+    return (
+        <button
+            onClick={onToggle}
+            className={cn(
+                "relative bg-card border rounded-lg overflow-hidden text-left transition-all hover:shadow-md",
+                isSelected
+                    ? "border-primary ring-2 ring-primary/30 bg-primary/5"
+                    : "border-border hover:border-primary/50"
+            )}
+        >
+            {/* Canvas Preview */}
+            <div className="relative">
+                <WorkflowCanvasPreview
+                    definition={definition}
+                    height="h-28"
+                    className="border-b border-border"
+                />
+                {/* Selection indicator - top right corner */}
+                <div
+                    className={cn(
+                        "absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center shadow-sm transition-all",
+                        isSelected
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-background/80 border border-border"
+                    )}
+                >
+                    {isSelected && <Check className="w-4 h-4" />}
+                </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-3">
+                <h4 className="font-medium text-foreground text-sm line-clamp-1">
+                    {workflow.name}
+                </h4>
+                {workflow.description && (
+                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                        {workflow.description}
+                    </p>
+                )}
+                <ProviderIconList
+                    providers={providers}
+                    maxVisible={4}
+                    iconSize="sm"
+                    className="mt-2"
+                />
+            </div>
+        </button>
+    );
+});
 
 export function AddWorkflowDialog({
     isOpen,
@@ -26,7 +97,7 @@ export function AddWorkflowDialog({
     onAdd,
     existingToolIds
 }: AddWorkflowDialogProps) {
-    const [workflows, setWorkflows] = useState<Workflow[]>([]);
+    const [workflows, setWorkflows] = useState<WorkflowSummary[]>([]);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [searchQuery, setSearchQuery] = useState("");
     const [isLoading, setIsLoading] = useState(false);
@@ -91,7 +162,7 @@ export function AddWorkflowDialog({
             isOpen={isOpen}
             onClose={onClose}
             title="Add Workflows"
-            size="2xl"
+            size="4xl"
             maxHeight="80vh"
             footer={
                 <div className="flex items-center justify-between">
@@ -147,55 +218,14 @@ export function AddWorkflowDialog({
                         </p>
                     </div>
                 ) : (
-                    <div className="space-y-2">
+                    <div className="grid grid-cols-2 gap-4">
                         {filteredWorkflows.map((workflow) => (
-                            <button
+                            <SelectableWorkflowCard
                                 key={workflow.id}
-                                onClick={() => handleToggleWorkflow(workflow.id)}
-                                className={cn(
-                                    "w-full p-4 rounded-lg border text-left transition-all",
-                                    selectedIds.has(workflow.id)
-                                        ? "border-primary bg-primary/5"
-                                        : "border-border hover:border-primary/50 hover:bg-accent"
-                                )}
-                            >
-                                <div className="flex items-start gap-3">
-                                    <div
-                                        className={cn(
-                                            "w-5 h-5 mt-0.5 rounded border-2 flex items-center justify-center flex-shrink-0",
-                                            selectedIds.has(workflow.id)
-                                                ? "border-primary bg-primary"
-                                                : "border-muted-foreground/50"
-                                        )}
-                                    >
-                                        {selectedIds.has(workflow.id) && (
-                                            <svg
-                                                className="w-3 h-3 text-primary-foreground"
-                                                fill="none"
-                                                viewBox="0 0 24 24"
-                                                stroke="currentColor"
-                                            >
-                                                <path
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                    strokeWidth={3}
-                                                    d="M5 13l4 4L19 7"
-                                                />
-                                            </svg>
-                                        )}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="font-medium text-foreground">
-                                            {workflow.name}
-                                        </p>
-                                        {workflow.description && (
-                                            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                                                {workflow.description}
-                                            </p>
-                                        )}
-                                    </div>
-                                </div>
-                            </button>
+                                workflow={workflow}
+                                isSelected={selectedIds.has(workflow.id)}
+                                onToggle={() => handleToggleWorkflow(workflow.id)}
+                            />
                         ))}
                     </div>
                 )}

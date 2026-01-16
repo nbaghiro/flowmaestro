@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import type { AgentSummary } from "@flowmaestro/shared";
+import { AgentPromptPreview } from "../common/AgentPromptPreview";
 import { AgentToolIconList } from "../common/AgentToolIconList";
 import { Badge } from "../common/Badge";
 import type { Tool } from "../../lib/api";
@@ -69,7 +70,7 @@ export function AgentCard({
 
     return (
         <div
-            className={`bg-card border rounded-lg p-5 hover:shadow-md transition-all group relative cursor-pointer select-none flex flex-col ${
+            className={`bg-card border rounded-lg overflow-hidden hover:shadow-md transition-all group relative cursor-pointer select-none flex flex-col h-full ${
                 isSelected
                     ? "border-primary ring-2 ring-primary/30"
                     : "border-border hover:border-primary"
@@ -79,6 +80,13 @@ export function AgentCard({
             draggable={!!onDragStart}
             onDragStart={onDragStart}
         >
+            {/* DNA Preview */}
+            <AgentPromptPreview
+                systemPrompt={agent.systemPrompt}
+                temperature={agent.temperature}
+                height="h-32"
+            />
+
             {/* Drag Handle - visible on hover */}
             {onDragStart && (
                 <div
@@ -90,7 +98,7 @@ export function AgentCard({
             )}
 
             {/* Main Content */}
-            <div className="flex-1">
+            <div className="flex-1 px-5 pt-5">
                 <div className="flex items-center justify-between mb-3">
                     <Bot className="w-5 h-5 text-primary" />
                     <div className="flex items-center gap-1">
@@ -189,7 +197,7 @@ export function AgentCard({
             </div>
 
             {/* Footer - Always at bottom */}
-            <div className="mt-auto pt-3">
+            <div className="mt-auto px-5 pb-5">
                 {/* Tool Icons Row - only show if full Tool objects are provided */}
                 {tools && tools.length > 0 && (
                     <AgentToolIconList

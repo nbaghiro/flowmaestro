@@ -18,6 +18,7 @@ import { useTriggerStore } from "../stores/triggerStore";
 import { useWorkflowStore } from "../stores/workflowStore";
 import { Input } from "./common/Input";
 import { Logo } from "./common/Logo";
+import { ThemeToggle } from "./common/ThemeToggle";
 import { Tooltip } from "./common/Tooltip";
 
 interface BuilderHeaderProps {
@@ -201,6 +202,7 @@ export function BuilderHeader({
 
                 {/* Right: Action Buttons */}
                 <div className="flex items-center gap-2">
+                    <ThemeToggle />
                     <Tooltip content="Checkpoints (⌘.)" position="bottom">
                         <button
                             onClick={onOpenCheckpoints}

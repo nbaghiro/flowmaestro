@@ -29,6 +29,7 @@ import { Input } from "../components/common/Input";
 import { MobileBuilderGuard } from "../components/common/MobileBuilderGuard";
 import { Select, SelectItem } from "../components/common/Select";
 import { LoadingState } from "../components/common/Spinner";
+import { ThemeToggle } from "../components/common/ThemeToggle";
 import { getChatInterface, uploadChatInterfaceAsset } from "../lib/api";
 import { logger } from "../lib/logger";
 import { useChatInterfaceBuilderStore } from "../stores/chatInterfaceBuilderStore";
@@ -204,6 +205,7 @@ export function ChatInterfaceEditorPage() {
                     </div>
 
                     <div className="flex items-center gap-3">
+                        <ThemeToggle />
                         <Button
                             variant="ghost"
                             size="sm"

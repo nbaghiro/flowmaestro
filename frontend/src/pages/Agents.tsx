@@ -39,6 +39,8 @@ function toAgentSummary(agent: Agent): AgentSummary {
         provider: agent.provider,
         model: agent.model,
         availableTools: agent.available_tools?.map((t) => t.id) ?? [],
+        systemPrompt: agent.system_prompt?.slice(0, 200),
+        temperature: agent.temperature,
         createdAt: new Date(agent.created_at),
         updatedAt: new Date(agent.updated_at)
     };

@@ -83,6 +83,8 @@ export interface AgentSummary {
     provider: string;
     model: string;
     availableTools?: string[]; // For tool icon list
+    systemPrompt?: string; // First 200 chars for DNA preview
+    temperature?: number; // For color variation in preview
     createdAt: Date;
     updatedAt: Date;
 }
