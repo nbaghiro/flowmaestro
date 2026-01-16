@@ -335,6 +335,18 @@ export const config = {
             clientId: process.env.DISCORD_CLIENT_ID || "",
             clientSecret: process.env.DISCORD_CLIENT_SECRET || "",
             botToken: process.env.DISCORD_BOT_TOKEN || ""
+        },
+
+        // Asana
+        asana: {
+            clientId: process.env.ASANA_CLIENT_ID || "",
+            clientSecret: process.env.ASANA_CLIENT_SECRET || ""
+        },
+
+        // Monday.com
+        monday: {
+            clientId: process.env.MONDAY_CLIENT_ID || "",
+            clientSecret: process.env.MONDAY_CLIENT_SECRET || ""
         }
     }
 };
@@ -390,7 +402,9 @@ export function getOAuthRedirectUri(provider: string): string {
         twitter: "/oauth/twitter/callback",
         linkedin: "/oauth/linkedin/callback",
         reddit: "/oauth/reddit/callback",
-        discord: "/oauth/discord/callback"
+        discord: "/oauth/discord/callback",
+        asana: "/oauth/asana/callback",
+        monday: "/oauth/monday/callback"
     };
 
     const callbackPath = callbackPaths[provider] || `/oauth/${provider}/callback`;
@@ -444,7 +458,9 @@ export function getOAuthCredentials(provider: string): { clientId: string; clien
         twitter: "twitter",
         linkedin: "linkedin",
         reddit: "reddit",
-        discord: "discord"
+        discord: "discord",
+        asana: "asana",
+        monday: "monday"
     };
 
     const configKey = providerMap[provider];

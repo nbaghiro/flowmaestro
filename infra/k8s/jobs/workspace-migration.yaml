@@ -1,0 +1,99 @@
+# Workspace Migration Job
+# Creates personal workspaces for existing users who don't have one.
+# This job is created with a unique name per deployment.
+# The ${TIMESTAMP} and ${IMAGE_TAG} placeholders are replaced by sed during deployment.
+#
+# Usage:
+#   # From local script (migrate-workspaces.sh):
+#   TIMESTAMP=$(date +%s)
+#   sed "s/\${TIMESTAMP}/$TIMESTAMP/g; s/\${IMAGE_TAG}/latest/g" \
+#     infra/k8s/jobs/workspace-migration.yaml | kubectl apply -f -
+#
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: workspace-migration-${TIMESTAMP}
+  namespace: flowmaestro
+  labels:
+    app: flowmaestro
+    component: workspace-migration
+spec:
+  # Auto-delete job after 1 hour (keeps cluster clean)
+  ttlSecondsAfterFinished: 3600
+  # Only retry once on failure (migration is idempotent but we want to review failures)
+  backoffLimit: 1
+  # Only need 1 completion
+  completions: 1
+  parallelism: 1
+  template:
+    metadata:
+      labels:
+        app: flowmaestro
+        component: workspace-migration
+    spec:
+      serviceAccountName: flowmaestro-sa
+      # Never restart - let backoffLimit handle retries
+      restartPolicy: Never
+      containers:
+        - name: migration
+          image: us-central1-docker.pkg.dev/flowmaestro-prod/flowmaestro/migrations:${IMAGE_TAG}
+          imagePullPolicy: Always
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              echo "========================================"
+              echo "Starting workspace migration..."
+              echo "========================================"
+              echo ""
+              echo "This migration creates personal workspaces for"
+              echo "existing users who don't have one yet."
+              echo ""
+              npx tsx backend/scripts/migrate-workspaces.ts
+              echo ""
+              echo "========================================"
+              echo "Workspace migration completed successfully"
+              echo "========================================"
+          env:
+            # Database credentials
+            - name: POSTGRES_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: host
+            - name: POSTGRES_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: port
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: database
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: user
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: password
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1001
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop:
+                - ALL

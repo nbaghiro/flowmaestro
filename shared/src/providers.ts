@@ -65,6 +65,8 @@ export const PROVIDER_LOGO_DOMAINS: Record<string, string> = {
     discord: "discord.com",
     whatsapp: "whatsapp.com",
     airtable: "airtable.com",
+    asana: "asana.com",
+    monday: "monday.com",
     "google-sheets": "google.com",
     "google-calendar": "google.com",
     "google-drive": "google.com",
@@ -101,7 +103,8 @@ export const PROVIDER_LOGO_DOMAINS: Record<string, string> = {
     replicate: "replicate.com",
     stabilityai: "stability.ai",
     runway: "runwayml.com",
-    luma: "lumalabs.ai"
+    luma: "lumalabs.ai",
+    elevenlabs: "elevenlabs.io"
 };
 
 /**
@@ -304,11 +307,10 @@ export const ALL_PROVIDERS: Provider[] = [
     {
         provider: "asana",
         displayName: "Asana",
-        description: "Manage tasks and projects",
+        description: "Manage tasks, projects, sections, and collaborate with your team",
         logoUrl: getBrandLogo("asana.com"),
         category: "Project Management",
-        methods: ["api_key", "oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "trello",
@@ -322,11 +324,10 @@ export const ALL_PROVIDERS: Provider[] = [
     {
         provider: "monday",
         displayName: "Monday.com",
-        description: "Manage work boards",
+        description: "Manage boards, items, groups, and automate work management",
         logoUrl: getBrandLogo("monday.com"),
         category: "Project Management",
-        methods: ["api_key"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "clickup",
@@ -1671,8 +1672,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "AI voice generation",
         logoUrl: getBrandLogo("elevenlabs.io"),
         category: "AI & ML",
-        methods: ["api_key"],
-        comingSoon: true
+        methods: ["api_key"]
     },
 
     // ERP Systems

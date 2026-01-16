@@ -487,5 +487,33 @@ const discordEntry: ProviderRegistryEntry = {
 
 providerRegistry.register(discordEntry);
 
+// Register Asana provider
+const asanaEntry: ProviderRegistryEntry = {
+    name: "asana",
+    displayName: "Asana",
+    authMethod: "oauth2",
+    category: "project_management",
+    loader: async () => {
+        const { AsanaProvider } = await import("./providers/asana/AsanaProvider");
+        return new AsanaProvider();
+    }
+};
+
+providerRegistry.register(asanaEntry);
+
+// Register Monday.com provider
+const mondayEntry: ProviderRegistryEntry = {
+    name: "monday",
+    displayName: "Monday.com",
+    authMethod: "oauth2",
+    category: "project_management",
+    loader: async () => {
+        const { MondayProvider } = await import("./providers/monday/MondayProvider");
+        return new MondayProvider();
+    }
+};
+
+providerRegistry.register(mondayEntry);
+
 // Export for use in application
 export { providerRegistry };

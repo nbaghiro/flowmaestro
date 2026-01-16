@@ -7,11 +7,25 @@
  * 3. Initializes workspace credits (100 free credits)
  * 4. Assigns all user's existing resources to their workspace
  *
- * Run with: npx ts-node scripts/migrate-workspaces.ts
+ * Run with: npx tsx backend/scripts/migrate-workspaces.ts
  */
 
+import * as path from "path";
+import * as dotenv from "dotenv";
+import { Pool } from "pg";
 import { WORKSPACE_LIMITS } from "@flowmaestro/shared";
-import { db } from "../src/storage/database";
+
+// Load .env from backend root
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
+
+// Create database pool directly (avoids importing from src/ which isn't in migrations image)
+const pool = new Pool({
+    host: process.env.POSTGRES_HOST || "localhost",
+    port: parseInt(process.env.POSTGRES_PORT || "5432"),
+    database: process.env.POSTGRES_DB || "flowmaestro",
+    user: process.env.POSTGRES_USER || "flowmaestro",
+    password: process.env.POSTGRES_PASSWORD || "flowmaestro_dev_password"
+});
 
 interface UserRow {
     id: string;
@@ -40,7 +54,7 @@ async function migrateWorkspaces(): Promise<void> {
     console.log("Starting workspace migration...\n");
 
     // Get all users who don't have a workspace yet
-    const usersResult = await db.query<UserRow>(`
+    const usersResult = await pool.query<UserRow>(`
         SELECT u.id, u.email, u.name
         FROM flowmaestro.users u
         WHERE NOT EXISTS (
@@ -69,10 +83,10 @@ async function migrateWorkspaces(): Promise<void> {
         console.log(`Migrating user: ${user.email}`);
 
         try {
-            await db.query("BEGIN");
+            await pool.query("BEGIN");
 
             // 1. Create the personal workspace
-            const workspaceResult = await db.query<{ id: string }>(
+            const workspaceResult = await pool.query<{ id: string }>(
                 `
                 INSERT INTO flowmaestro.workspaces (
                     name, slug, description, category, type, owner_id,
@@ -100,7 +114,7 @@ async function migrateWorkspaces(): Promise<void> {
             const workspaceId = workspaceResult.rows[0].id;
 
             // 2. Create owner membership
-            await db.query(
+            await pool.query(
                 `
                 INSERT INTO flowmaestro.workspace_members (
                     workspace_id, user_id, role, accepted_at
@@ -111,7 +125,7 @@ async function migrateWorkspaces(): Promise<void> {
             );
 
             // 3. Initialize credits (100 free bonus credits)
-            await db.query(
+            await pool.query(
                 `
                 INSERT INTO flowmaestro.workspace_credits (
                     workspace_id, subscription_balance, purchased_balance, bonus_balance,
@@ -123,7 +137,7 @@ async function migrateWorkspaces(): Promise<void> {
             );
 
             // 4. Record the initial credit transaction
-            await db.query(
+            await pool.query(
                 `
                 INSERT INTO flowmaestro.credit_transactions (
                     workspace_id, user_id, amount, balance_before, balance_after,
@@ -150,7 +164,7 @@ async function migrateWorkspaces(): Promise<void> {
             ];
 
             for (const table of resourceTables) {
-                await db.query(
+                await pool.query(
                     `
                     UPDATE flowmaestro.${table}
                     SET workspace_id = $1
@@ -161,7 +175,7 @@ async function migrateWorkspaces(): Promise<void> {
             }
 
             // Update workflow_triggers (joins through workflows)
-            await db.query(
+            await pool.query(
                 `
                 UPDATE flowmaestro.workflow_triggers wt
                 SET workspace_id = $1
@@ -174,7 +188,7 @@ async function migrateWorkspaces(): Promise<void> {
             );
 
             // 6. Update user's default/last workspace
-            await db.query(
+            await pool.query(
                 `
                 UPDATE flowmaestro.users
                 SET default_workspace_id = $1, last_workspace_id = $1
@@ -183,12 +197,12 @@ async function migrateWorkspaces(): Promise<void> {
                 [workspaceId, user.id]
             );
 
-            await db.query("COMMIT");
+            await pool.query("COMMIT");
 
             successCount++;
             console.log(`  ✓ Created workspace: ${workspaceName} (${workspaceId})`);
         } catch (error) {
-            await db.query("ROLLBACK");
+            await pool.query("ROLLBACK");
             errorCount++;
             console.error(
                 `  ✗ Failed for ${user.email}:`,
@@ -204,7 +218,7 @@ async function migrateWorkspaces(): Promise<void> {
 
     // Verify resource counts
     console.log("\n--- Resource Assignment Verification ---");
-    const verifyResult = await db.query<ResourceCount>(`
+    const verifyResult = await pool.query<ResourceCount>(`
         SELECT 'workflows' as table_name, COUNT(*) as count FROM flowmaestro.workflows WHERE workspace_id IS NULL AND deleted_at IS NULL
         UNION ALL
         SELECT 'agents', COUNT(*) FROM flowmaestro.agents WHERE workspace_id IS NULL AND deleted_at IS NULL
@@ -224,11 +238,13 @@ async function migrateWorkspaces(): Promise<void> {
 
 // Run the migration
 migrateWorkspaces()
-    .then(() => {
+    .then(async () => {
         console.log("\nMigration complete!");
+        await pool.end();
         process.exit(0);
     })
-    .catch((error) => {
+    .catch(async (error) => {
         console.error("\nMigration failed:", error);
+        await pool.end();
         process.exit(1);
     });

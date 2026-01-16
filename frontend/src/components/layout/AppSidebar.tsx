@@ -342,12 +342,12 @@ export function AppSidebar() {
                         {settingsItems.map((item) => {
                             const Icon = item.icon;
                             const active = isActive(item.path);
-                            const isSettingsItem = item.path === "/settings";
+                            const isAccountItem = item.path === "/account";
                             const ThemeIcon = getThemeIcon();
 
-                            // Settings row with theme toggle
-                            if (isSettingsItem) {
-                                const settingsContent = (
+                            // Account row with theme toggle
+                            if (isAccountItem) {
+                                const accountContent = (
                                     <div className="flex items-center gap-1">
                                         <Link
                                             to={item.path}
@@ -420,11 +420,11 @@ export function AppSidebar() {
                                         </Tooltip>
                                     </div>
                                 ) : (
-                                    <div key={item.path}>{settingsContent}</div>
+                                    <div key={item.path}>{accountContent}</div>
                                 );
                             }
 
-                            // Regular items (Account, etc.)
+                            // Regular items (Settings, etc.)
                             const linkContent = (
                                 <Link
                                     to={item.path}
