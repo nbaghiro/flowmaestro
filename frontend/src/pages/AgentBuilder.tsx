@@ -1,26 +1,25 @@
-import {
-    ArrowLeft,
-    Save,
-    Loader2,
-    Settings,
-    MessageSquare,
-    Slack,
-    Wrench,
-    Pencil,
-    FileText
-} from "lucide-react";
+import { ArrowLeft, Save, Loader2, MessageSquare, Slack, Pencil, FileText } from "lucide-react";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { getDefaultModelForProvider } from "@flowmaestro/shared";
+import type { WorkflowSummary } from "@flowmaestro/shared";
+import {
+    AgentBuilderLayout,
+    NavigationPanel,
+    ConfigPanel,
+    ChatPanel,
+    ModelSection,
+    InstructionsSection,
+    ToolsSection,
+    LayoutPresetButtons
+} from "../components/agent-builder";
 import { AddCustomMCPDialog } from "../components/agents/AddCustomMCPDialog";
 import { AddKnowledgeBaseDialog } from "../components/agents/AddKnowledgeBaseDialog";
 import { AddMCPIntegrationDialog } from "../components/agents/AddMCPIntegrationDialog";
 import { AddWorkflowDialog } from "../components/agents/AddWorkflowDialog";
-import { AgentBuilderConnectionSelector } from "../components/agents/AgentBuilderConnectionSelector";
 import { AgentChat } from "../components/agents/AgentChat";
 import { ThreadChat } from "../components/agents/ThreadChat";
 import { ThreadList } from "../components/agents/ThreadList";
-import { ToolsList } from "../components/agents/ToolsList";
 import { CreateChatInterfaceDialog } from "../components/chat/builder/CreateChatInterfaceDialog";
 import { Button } from "../components/common/Button";
 import { ConfirmDialog } from "../components/common/ConfirmDialog";
@@ -29,12 +28,14 @@ import { Input } from "../components/common/Input";
 import { MobileBuilderGuard } from "../components/common/MobileBuilderGuard";
 import { Select } from "../components/common/Select";
 import { Textarea } from "../components/common/Textarea";
+import { ThemeToggle } from "../components/common/ThemeToggle";
 import { Tooltip } from "../components/common/Tooltip";
 import { CreateFormInterfaceDialog } from "../components/forms/CreateFormInterfaceDialog";
 import { logger } from "../lib/logger";
 import { cn } from "../lib/utils";
 import { useAgentStore } from "../stores/agentStore";
 import { useConnectionStore } from "../stores/connectionStore";
+import type { AgentTab } from "../components/agent-builder";
 import type { AgentPatternData } from "../components/CreateAgentDialog";
 import type {
     CreateAgentRequest,
@@ -43,8 +44,6 @@ import type {
     Tool,
     KnowledgeBase
 } from "../lib/api";
-
-type AgentTab = "build" | "threads" | "slack" | "settings";
 
 export function AgentBuilder() {
     const { agentId, threadId } = useParams<{ agentId: string; threadId?: string }>();
@@ -526,9 +525,7 @@ export function AgentBuilder() {
         }
     };
 
-    const handleAddWorkflows = async (
-        workflows: Array<{ id: string; name: string; description?: string }>
-    ) => {
+    const handleAddWorkflows = async (workflows: WorkflowSummary[]) => {
         if (!currentAgent) return;
 
         try {
@@ -729,13 +726,6 @@ export function AgentBuilder() {
         }
     };
 
-    const tabs = [
-        { id: "build" as AgentTab, label: "Build", icon: Wrench },
-        { id: "threads" as AgentTab, label: "Threads", icon: MessageSquare },
-        { id: "slack" as AgentTab, label: "Connect to Slack", icon: Slack, comingSoon: true },
-        { id: "settings" as AgentTab, label: "Settings", icon: Settings }
-    ];
-
     return (
         <MobileBuilderGuard
             title="Agent Builder"
@@ -744,7 +734,8 @@ export function AgentBuilder() {
         >
             <div className="h-screen flex flex-col bg-background">
                 {/* Top Header */}
-                <div className="h-16 border-b border-border bg-card flex items-center justify-between px-6 flex-shrink-0">
+                <div className="h-16 border-b border-border bg-card flex items-center px-6 flex-shrink-0 relative">
+                    {/* Left section */}
                     <div className="flex items-center gap-4">
                         <button
                             onClick={handleBack}
@@ -789,7 +780,15 @@ export function AgentBuilder() {
                             )}
                         </div>
                     </div>
-                    <div className="flex items-center gap-2">
+
+                    {/* Center section - Layout preset buttons */}
+                    <div className="absolute left-1/2 -translate-x-1/2">
+                        <LayoutPresetButtons onPresetApply={() => setActiveTab("build")} />
+                    </div>
+
+                    {/* Right section */}
+                    <div className="flex items-center gap-2 ml-auto">
+                        <ThemeToggle />
                         {!isNewAgent && agentId && (
                             <>
                                 <Tooltip content="Form Interface" position="bottom">
@@ -852,179 +851,75 @@ export function AgentBuilder() {
 
                 {/* Main content area */}
                 <div className="flex-1 flex overflow-hidden">
-                    {/* Left sidebar navigation */}
-                    <div className="w-64 border-r border-border bg-card flex-shrink-0">
-                        <nav className="p-4 space-y-1">
-                            {tabs.map((tab) => {
-                                const Icon = tab.icon;
-                                const isActive = activeTab === tab.id;
-                                return (
-                                    <button
-                                        key={tab.id}
-                                        onClick={() => !tab.comingSoon && setActiveTab(tab.id)}
-                                        disabled={tab.comingSoon}
-                                        className={cn(
-                                            "w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors",
-                                            isActive
-                                                ? "bg-primary/10 text-primary"
-                                                : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                                            tab.comingSoon && "opacity-50 cursor-not-allowed"
-                                        )}
-                                    >
-                                        <Icon className="w-5 h-5" />
-                                        <span className="flex-1 text-left">{tab.label}</span>
-                                        {tab.comingSoon && (
-                                            <span className="text-xs bg-muted px-2 py-0.5 rounded">
-                                                Soon
-                                            </span>
-                                        )}
-                                    </button>
-                                );
-                            })}
-                        </nav>
-                    </div>
+                    {/* Build tab uses the new flexible panel layout */}
+                    {activeTab === "build" && (
+                        <AgentBuilderLayout
+                            navigationPanel={
+                                <NavigationPanel activeTab={activeTab} onTabChange={setActiveTab} />
+                            }
+                            configPanel={
+                                <ConfigPanel>
+                                    <ModelSection
+                                        connections={llmConnections}
+                                        selectedConnectionId={connectionId}
+                                        selectedModel={model}
+                                        onConnectionChange={async (
+                                            connId,
+                                            connProvider,
+                                            connModel
+                                        ) => {
+                                            setConnectionId(connId);
+                                            setProvider(
+                                                connProvider as
+                                                    | "openai"
+                                                    | "anthropic"
+                                                    | "google"
+                                                    | "cohere"
+                                                    | "huggingface"
+                                            );
+                                            setModel(connModel);
 
-                    {/* Main content panel */}
-                    <div className="flex-1 flex overflow-hidden">
-                        {activeTab === "build" && (
-                            <>
-                                {/* Left panel: Configuration (scrollable) */}
-                                <div className="w-[500px] border-r border-border bg-card overflow-auto flex-shrink-0">
-                                    <div className="p-6 space-y-6">
-                                        {/* AI Model Selection */}
-                                        <AgentBuilderConnectionSelector
-                                            connections={llmConnections}
-                                            selectedConnectionId={connectionId}
-                                            selectedModel={model}
-                                            onConnectionChange={async (
-                                                connId,
-                                                connProvider,
-                                                connModel
-                                            ) => {
-                                                setConnectionId(connId);
-                                                setProvider(
-                                                    connProvider as
-                                                        | "openai"
-                                                        | "anthropic"
-                                                        | "google"
-                                                        | "cohere"
-                                                        | "huggingface"
-                                                );
-                                                setModel(connModel);
-
-                                                // Auto-save to agent if not a new agent
-                                                if (!isNewAgent && agentId) {
-                                                    try {
-                                                        await updateAgent(agentId, {
-                                                            connection_id: connId,
-                                                            provider: connProvider as
-                                                                | "openai"
-                                                                | "anthropic"
-                                                                | "google"
-                                                                | "cohere"
-                                                                | "huggingface",
-                                                            model: connModel
-                                                        });
-                                                    } catch (err) {
-                                                        logger.error(
-                                                            "Failed to update agent model",
-                                                            err
-                                                        );
-                                                    }
+                                            // Auto-save to agent if not a new agent
+                                            if (!isNewAgent && agentId) {
+                                                try {
+                                                    await updateAgent(agentId, {
+                                                        connection_id: connId,
+                                                        provider: connProvider as
+                                                            | "openai"
+                                                            | "anthropic"
+                                                            | "google"
+                                                            | "cohere"
+                                                            | "huggingface",
+                                                        model: connModel
+                                                    });
+                                                } catch (err) {
+                                                    logger.error(
+                                                        "Failed to update agent model",
+                                                        err
+                                                    );
                                                 }
-                                            }}
-                                        />
-
-                                        {/* Instructions */}
-                                        <div>
-                                            <label className="block text-sm font-medium text-foreground mb-2">
-                                                Instructions
-                                            </label>
-                                            <Textarea
-                                                value={systemPrompt}
-                                                onChange={(
-                                                    e: React.ChangeEvent<HTMLTextAreaElement>
-                                                ) => setSystemPrompt(e.target.value)}
-                                                placeholder="Add instructions for the agent..."
-                                                className={cn(
-                                                    "w-full px-3 py-2 rounded-lg",
-                                                    "bg-muted border border-border",
-                                                    "text-foreground placeholder:text-muted-foreground",
-                                                    "focus:outline-none focus:ring-2 focus:ring-primary",
-                                                    "font-mono text-sm resize-y"
-                                                )}
-                                                style={{ minHeight: "300px" }}
-                                            />
-                                        </div>
-
-                                        {/* Tools Section */}
-                                        <div>
-                                            <label className="block text-sm font-medium text-foreground mb-2">
-                                                Tools
-                                            </label>
-                                            <p className="text-sm text-muted-foreground mb-3">
-                                                Select the integrations and flows the agent can
-                                                access
-                                            </p>
-
-                                            {/* Connected Tools List */}
-                                            <ToolsList
-                                                tools={tools}
-                                                onRemove={handleRemoveTool}
-                                                isRemoving={removingToolId}
-                                            />
-
-                                            {/* Add Tool Buttons */}
-                                            <div className="space-y-2">
-                                                <button
-                                                    onClick={() => setIsWorkflowDialogOpen(true)}
-                                                    className={cn(
-                                                        "w-full px-4 py-3 rounded-lg border border-dashed border-border",
-                                                        "text-sm text-muted-foreground text-left",
-                                                        "hover:border-primary/50 hover:bg-muted transition-colors"
-                                                    )}
-                                                >
-                                                    + Add a workflow
-                                                </button>
-                                                <button
-                                                    onClick={() =>
-                                                        setIsKnowledgeBaseDialogOpen(true)
-                                                    }
-                                                    className={cn(
-                                                        "w-full px-4 py-3 rounded-lg border border-dashed border-border",
-                                                        "text-sm text-muted-foreground text-left",
-                                                        "hover:border-primary/50 hover:bg-muted transition-colors"
-                                                    )}
-                                                >
-                                                    + Add a knowledge base
-                                                </button>
-                                                <button
-                                                    onClick={() => setIsMCPDialogOpen(true)}
-                                                    className={cn(
-                                                        "w-full px-4 py-3 rounded-lg border border-dashed border-border",
-                                                        "text-sm text-muted-foreground text-left",
-                                                        "hover:border-primary/50 hover:bg-muted transition-colors"
-                                                    )}
-                                                >
-                                                    + Add an MCP integration
-                                                </button>
-                                                <button
-                                                    onClick={() => setIsCustomMCPDialogOpen(true)}
-                                                    className={cn(
-                                                        "w-full px-4 py-3 rounded-lg border border-dashed border-border",
-                                                        "text-sm text-muted-foreground text-left",
-                                                        "hover:border-primary/50 hover:bg-muted transition-colors"
-                                                    )}
-                                                >
-                                                    + Connect your own MCP server
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Right panel: Chat interface (fixed height, internal scroll) */}
-                                <div className="flex-1 bg-background min-w-0">
+                                            }
+                                        }}
+                                    />
+                                    <InstructionsSection
+                                        value={systemPrompt}
+                                        onChange={setSystemPrompt}
+                                    />
+                                    <ToolsSection
+                                        tools={tools}
+                                        onRemoveTool={handleRemoveTool}
+                                        removingToolId={removingToolId}
+                                        onAddWorkflow={() => setIsWorkflowDialogOpen(true)}
+                                        onAddKnowledgeBase={() =>
+                                            setIsKnowledgeBaseDialogOpen(true)
+                                        }
+                                        onAddMCP={() => setIsMCPDialogOpen(true)}
+                                        onAddCustomMCP={() => setIsCustomMCPDialogOpen(true)}
+                                    />
+                                </ConfigPanel>
+                            }
+                            chatPanel={
+                                <ChatPanel>
                                     {currentAgent && !isNewAgent ? (
                                         <AgentChat agent={currentAgent} />
                                     ) : (
@@ -1039,185 +934,205 @@ export function AgentBuilder() {
                                             </div>
                                         </div>
                                     )}
-                                </div>
-                            </>
-                        )}
+                                </ChatPanel>
+                            }
+                        />
+                    )}
 
-                        {activeTab === "threads" && (
-                            <>
-                                {/* Left panel: Thread List */}
-                                <div className="w-80 flex-shrink-0 h-full">
-                                    <ThreadList
-                                        threads={threads}
-                                        currentThread={currentThread}
-                                        onThreadSelect={handleSelectThread}
-                                        onNewThread={handleNewThread}
-                                        onUpdateTitle={updateThreadTitle}
-                                        onArchiveThread={handleArchiveThread}
-                                        onDeleteThread={async (threadId) => {
-                                            const thread = threads.find((t) => t.id === threadId);
-                                            setThreadToDelete({
-                                                id: threadId,
-                                                title:
-                                                    thread?.title ||
-                                                    `Thread ${threadId.slice(0, 8)}`
-                                            });
-                                        }}
-                                    />
-                                </div>
+                    {/* Other tabs use traditional fixed layout with navigation sidebar */}
+                    {activeTab !== "build" && (
+                        <>
+                            {/* Left sidebar navigation for non-build tabs */}
+                            <NavigationPanel activeTab={activeTab} onTabChange={setActiveTab} />
 
-                                {/* Right panel: Thread Chat */}
-                                <div className="flex-1 bg-background min-w-0">
-                                    {currentAgent && currentThread ? (
-                                        <ThreadChat agent={currentAgent} thread={currentThread} />
-                                    ) : (
-                                        <div className="h-full flex items-center justify-center text-muted-foreground">
-                                            <div className="text-center">
-                                                <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                                                <p>
-                                                    {threads.length === 0
-                                                        ? "Start a new thread"
-                                                        : "Select a thread to continue"}
-                                                </p>
-                                            </div>
+                            {/* Main content panel for non-build tabs */}
+                            <div className="flex-1 flex overflow-hidden">
+                                {activeTab === "threads" && (
+                                    <>
+                                        {/* Left panel: Thread List */}
+                                        <div className="w-80 flex-shrink-0 h-full">
+                                            <ThreadList
+                                                threads={threads}
+                                                currentThread={currentThread}
+                                                onThreadSelect={handleSelectThread}
+                                                onNewThread={handleNewThread}
+                                                onUpdateTitle={updateThreadTitle}
+                                                onArchiveThread={handleArchiveThread}
+                                                onDeleteThread={async (threadId) => {
+                                                    const thread = threads.find(
+                                                        (t) => t.id === threadId
+                                                    );
+                                                    setThreadToDelete({
+                                                        id: threadId,
+                                                        title:
+                                                            thread?.title ||
+                                                            `Thread ${threadId.slice(0, 8)}`
+                                                    });
+                                                }}
+                                            />
                                         </div>
-                                    )}
-                                </div>
-                            </>
-                        )}
 
-                        {activeTab === "slack" && (
-                            <div className="flex-1 flex items-center justify-center bg-card">
-                                <div className="text-center text-muted-foreground">
-                                    <Slack className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                                    <p className="text-sm">Connect your agent to Slack</p>
-                                    <p className="text-xs mt-2">Coming soon</p>
-                                </div>
-                            </div>
-                        )}
-
-                        {activeTab === "settings" && (
-                            <div className="flex-1 bg-card overflow-auto">
-                                <div className="max-w-3xl p-6 space-y-6">
-                                    {/* Agent Name */}
-                                    <div>
-                                        <label className="block text-sm font-medium text-foreground mb-2">
-                                            Agent Name
-                                        </label>
-                                        <Input
-                                            type="text"
-                                            value={name}
-                                            onChange={(e) => setName(e.target.value)}
-                                            placeholder="My Assistant"
-                                            className={cn(
-                                                "w-full px-3 py-2 rounded-lg",
-                                                "bg-muted border border-border",
-                                                "text-foreground placeholder:text-muted-foreground",
-                                                "focus:outline-none focus:ring-2 focus:ring-primary"
-                                            )}
-                                        />
-                                    </div>
-
-                                    {/* Description */}
-                                    <div>
-                                        <label className="block text-sm font-medium text-foreground mb-2">
-                                            Description (optional)
-                                        </label>
-                                        <Textarea
-                                            value={description}
-                                            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                                                setDescription(e.target.value)
-                                            }
-                                            placeholder="What does this agent do?"
-                                            rows={2}
-                                            className={cn(
-                                                "w-full px-3 py-2 rounded-lg",
-                                                "bg-muted border border-border",
-                                                "text-foreground placeholder:text-muted-foreground",
-                                                "focus:outline-none focus:ring-2 focus:ring-primary",
-                                                "resize-y"
-                                            )}
-                                        />
-                                    </div>
-
-                                    {/* Connection (optional) */}
-                                    <div>
-                                        <label className="block text-sm font-medium text-foreground mb-2">
-                                            API Connection (optional)
-                                        </label>
-                                        <Select
-                                            value={connectionId}
-                                            onChange={setConnectionId}
-                                            placeholder="Use environment variables"
-                                            options={llmConnections.map((conn) => ({
-                                                value: conn.id,
-                                                label: conn.name
-                                            }))}
-                                        />
-                                    </div>
-
-                                    {/* Advanced Settings */}
-                                    <div>
-                                        <h3 className="text-base font-semibold text-foreground mb-4">
-                                            Advanced Settings
-                                        </h3>
-                                        <div className="space-y-4">
-                                            {/* Temperature */}
-                                            <div>
-                                                <div className="flex items-center justify-between mb-2">
-                                                    <span className="text-sm text-muted-foreground">
-                                                        Temperature
-                                                    </span>
-                                                    <span className="text-sm font-medium">
-                                                        {temperature}
-                                                    </span>
-                                                </div>
-                                                <Input
-                                                    type="range"
-                                                    min="0"
-                                                    max="2"
-                                                    step="0.1"
-                                                    value={temperature}
-                                                    onChange={(e) =>
-                                                        setTemperature(parseFloat(e.target.value))
-                                                    }
-                                                    className="w-full"
+                                        {/* Right panel: Thread Chat */}
+                                        <div className="flex-1 bg-background min-w-0">
+                                            {currentAgent && currentThread ? (
+                                                <ThreadChat
+                                                    agent={currentAgent}
+                                                    thread={currentThread}
                                                 />
-                                            </div>
-
-                                            {/* Max Tokens */}
-                                            <div>
-                                                <div className="flex items-center justify-between mb-2">
-                                                    <span className="text-sm text-muted-foreground">
-                                                        Max Tokens
-                                                    </span>
-                                                    <span className="text-sm font-medium">
-                                                        {maxTokens}
-                                                    </span>
+                                            ) : (
+                                                <div className="h-full flex items-center justify-center text-muted-foreground">
+                                                    <div className="text-center">
+                                                        <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                                                        <p>
+                                                            {threads.length === 0
+                                                                ? "Start a new thread"
+                                                                : "Select a thread to continue"}
+                                                        </p>
+                                                    </div>
                                                 </div>
+                                            )}
+                                        </div>
+                                    </>
+                                )}
+
+                                {activeTab === "slack" && (
+                                    <div className="flex-1 flex items-center justify-center bg-card">
+                                        <div className="text-center text-muted-foreground">
+                                            <Slack className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                                            <p className="text-sm">Connect your agent to Slack</p>
+                                            <p className="text-xs mt-2">Coming soon</p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {activeTab === "settings" && (
+                                    <div className="flex-1 bg-card overflow-auto">
+                                        <div className="max-w-3xl mx-auto p-6 space-y-6">
+                                            {/* Agent Name */}
+                                            <div>
+                                                <label className="block text-sm font-medium text-foreground mb-2">
+                                                    Agent Name
+                                                </label>
                                                 <Input
-                                                    type="number"
-                                                    min="100"
-                                                    max="100000"
-                                                    step="100"
-                                                    value={maxTokens}
-                                                    onChange={(e) =>
-                                                        setMaxTokens(parseInt(e.target.value))
-                                                    }
+                                                    type="text"
+                                                    value={name}
+                                                    onChange={(e) => setName(e.target.value)}
+                                                    placeholder="My Assistant"
                                                     className={cn(
                                                         "w-full px-3 py-2 rounded-lg",
                                                         "bg-muted border border-border",
-                                                        "text-foreground",
+                                                        "text-foreground placeholder:text-muted-foreground",
                                                         "focus:outline-none focus:ring-2 focus:ring-primary"
                                                     )}
                                                 />
                                             </div>
+
+                                            {/* Description */}
+                                            <div>
+                                                <label className="block text-sm font-medium text-foreground mb-2">
+                                                    Description (optional)
+                                                </label>
+                                                <Textarea
+                                                    value={description}
+                                                    onChange={(
+                                                        e: React.ChangeEvent<HTMLTextAreaElement>
+                                                    ) => setDescription(e.target.value)}
+                                                    placeholder="What does this agent do?"
+                                                    rows={2}
+                                                    className={cn(
+                                                        "w-full px-3 py-2 rounded-lg",
+                                                        "bg-muted border border-border",
+                                                        "text-foreground placeholder:text-muted-foreground",
+                                                        "focus:outline-none focus:ring-2 focus:ring-primary",
+                                                        "resize-y"
+                                                    )}
+                                                />
+                                            </div>
+
+                                            {/* Connection (optional) */}
+                                            <div>
+                                                <label className="block text-sm font-medium text-foreground mb-2">
+                                                    API Connection (optional)
+                                                </label>
+                                                <Select
+                                                    value={connectionId}
+                                                    onChange={setConnectionId}
+                                                    placeholder="Use environment variables"
+                                                    options={llmConnections.map((conn) => ({
+                                                        value: conn.id,
+                                                        label: conn.name
+                                                    }))}
+                                                />
+                                            </div>
+
+                                            {/* Advanced Settings */}
+                                            <div>
+                                                <h3 className="text-base font-semibold text-foreground mb-4">
+                                                    Advanced Settings
+                                                </h3>
+                                                <div className="space-y-4">
+                                                    {/* Temperature */}
+                                                    <div>
+                                                        <div className="flex items-center justify-between mb-2">
+                                                            <span className="text-sm text-muted-foreground">
+                                                                Temperature
+                                                            </span>
+                                                            <span className="text-sm font-medium">
+                                                                {temperature}
+                                                            </span>
+                                                        </div>
+                                                        <Input
+                                                            type="range"
+                                                            min="0"
+                                                            max="2"
+                                                            step="0.1"
+                                                            value={temperature}
+                                                            onChange={(e) =>
+                                                                setTemperature(
+                                                                    parseFloat(e.target.value)
+                                                                )
+                                                            }
+                                                            className="w-full"
+                                                        />
+                                                    </div>
+
+                                                    {/* Max Tokens */}
+                                                    <div>
+                                                        <div className="flex items-center justify-between mb-2">
+                                                            <span className="text-sm text-muted-foreground">
+                                                                Max Tokens
+                                                            </span>
+                                                            <span className="text-sm font-medium">
+                                                                {maxTokens}
+                                                            </span>
+                                                        </div>
+                                                        <Input
+                                                            type="number"
+                                                            min="100"
+                                                            max="100000"
+                                                            step="100"
+                                                            value={maxTokens}
+                                                            onChange={(e) =>
+                                                                setMaxTokens(
+                                                                    parseInt(e.target.value)
+                                                                )
+                                                            }
+                                                            className={cn(
+                                                                "w-full px-3 py-2 rounded-lg",
+                                                                "bg-muted border border-border",
+                                                                "text-foreground",
+                                                                "focus:outline-none focus:ring-2 focus:ring-primary"
+                                                            )}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
+                                )}
                             </div>
-                        )}
-                    </div>
+                        </>
+                    )}
                 </div>
 
                 {/* Tool Dialogs */}

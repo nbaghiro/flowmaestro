@@ -7,7 +7,8 @@
  */
 
 import { Brain, Settings, ChevronDown } from "lucide-react";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
     LLM_MODELS_BY_PROVIDER,
     getDefaultModelForProvider,
@@ -78,6 +79,20 @@ export function LLMConnectionDropdown({
     const [internalConnections, setInternalConnections] = useState<Connection[]>([]);
     const [isOpen, setIsOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
+    const buttonRef = useRef<HTMLButtonElement>(null);
+
+    // Calculate dropdown position when opening
+    useEffect(() => {
+        if (isOpen && buttonRef.current) {
+            const rect = buttonRef.current.getBoundingClientRect();
+            setDropdownPosition({
+                top: rect.bottom + 4, // 4px gap
+                left: rect.left,
+                width: rect.width
+            });
+        }
+    }, [isOpen]);
 
     // Use external connections if provided, otherwise use internal
     const connections = externalConnections ?? internalConnections;
@@ -206,6 +221,7 @@ export function LLMConnectionDropdown({
             )}
             <div className="relative">
                 <button
+                    ref={buttonRef}
                     onClick={() => setIsOpen(!isOpen)}
                     className={cn(
                         variant === "compact"
@@ -234,109 +250,124 @@ export function LLMConnectionDropdown({
                     />
                 </button>
 
-                {isOpen && (
-                    <>
-                        {/* Backdrop */}
-                        <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
+                {isOpen &&
+                    createPortal(
+                        <>
+                            {/* Backdrop */}
+                            <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
 
-                        {/* Dropdown */}
-                        <div
-                            className={cn(
-                                "absolute top-full mt-1 bg-popover border border-border rounded-lg shadow-lg z-50 overflow-hidden",
-                                variant === "compact"
-                                    ? showThinkingBadges || thinkingConfig
-                                        ? "w-72"
-                                        : "w-64"
-                                    : "left-0 right-0",
-                                align === "right" && variant === "compact" && "right-0",
-                                align === "left" && variant === "compact" && "left-0"
-                            )}
-                        >
-                            {/* Connections Section */}
-                            <div className="p-2 border-b border-border">
-                                <p className="text-xs font-medium text-muted-foreground mb-1.5 px-2">
-                                    Connection
-                                </p>
-                                <div className="space-y-0.5 max-h-48 overflow-y-auto">
-                                    {sortedConnections.map((conn) => (
-                                        <button
-                                            key={conn.id}
-                                            onClick={() => handleConnectionChange(conn)}
-                                            className={cn(
-                                                "w-full text-left px-2 py-1.5 rounded text-xs",
-                                                "hover:bg-muted transition-colors",
-                                                connectionId === conn.id
-                                                    ? "bg-primary/10 text-primary"
-                                                    : "text-foreground"
-                                            )}
-                                        >
-                                            <div className="font-medium">{conn.name}</div>
-                                            <div className="text-[10px] text-muted-foreground capitalize">
-                                                {conn.provider}
-                                            </div>
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Models Section */}
-                            {availableModels.length > 0 && (
-                                <div
-                                    className={cn(
-                                        "p-2",
-                                        showThinkingToggle && "border-b border-border"
-                                    )}
-                                >
+                            {/* Dropdown */}
+                            <div
+                                className={cn(
+                                    "fixed bg-popover border border-border rounded-lg shadow-lg z-50 overflow-hidden",
+                                    variant === "compact" &&
+                                        (showThinkingBadges || thinkingConfig ? "w-72" : "w-64")
+                                )}
+                                style={{
+                                    top: dropdownPosition.top,
+                                    left:
+                                        variant === "compact" && align === "right"
+                                            ? "auto"
+                                            : dropdownPosition.left,
+                                    right:
+                                        variant === "compact" && align === "right"
+                                            ? window.innerWidth -
+                                              dropdownPosition.left -
+                                              dropdownPosition.width
+                                            : "auto",
+                                    width:
+                                        variant === "full-width"
+                                            ? dropdownPosition.width
+                                            : undefined
+                                }}
+                            >
+                                {/* Connections Section */}
+                                <div className="p-2 border-b border-border">
                                     <p className="text-xs font-medium text-muted-foreground mb-1.5 px-2">
-                                        Model
+                                        Connection
                                     </p>
                                     <div className="space-y-0.5 max-h-48 overflow-y-auto">
-                                        {availableModels.map((m) => (
+                                        {sortedConnections.map((conn) => (
                                             <button
-                                                key={m.value}
-                                                onClick={() => handleModelChange(m.value)}
+                                                key={conn.id}
+                                                onClick={() => handleConnectionChange(conn)}
                                                 className={cn(
                                                     "w-full text-left px-2 py-1.5 rounded text-xs",
                                                     "hover:bg-muted transition-colors",
-                                                    model === m.value
+                                                    connectionId === conn.id
                                                         ? "bg-primary/10 text-primary"
                                                         : "text-foreground"
                                                 )}
                                             >
-                                                <div className="flex items-center gap-2">
-                                                    {m.label}
-                                                    {showThinkingBadges && m.supportsThinking && (
-                                                        <Brain className="w-3 h-3 text-amber-500" />
-                                                    )}
+                                                <div className="font-medium">{conn.name}</div>
+                                                <div className="text-[10px] text-muted-foreground capitalize">
+                                                    {conn.provider}
                                                 </div>
                                             </button>
                                         ))}
                                     </div>
                                 </div>
-                            )}
 
-                            {/* Thinking Toggle Section */}
-                            {showThinkingToggle && (
-                                <div className="p-2">
-                                    <label className="flex items-center gap-2 px-2 cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            checked={thinkingConfig.enabled}
-                                            onChange={(e) =>
-                                                thinkingConfig.onEnabledChange(e.target.checked)
-                                            }
-                                            className="rounded border-border"
-                                        />
-                                        <div className="flex items-center gap-1.5 text-xs">
-                                            <Brain className="w-3.5 h-3.5 text-amber-500" />
-                                            <span>Enable Extended Thinking</span>
+                                {/* Models Section */}
+                                {availableModels.length > 0 && (
+                                    <div
+                                        className={cn(
+                                            "p-2",
+                                            showThinkingToggle && "border-b border-border"
+                                        )}
+                                    >
+                                        <p className="text-xs font-medium text-muted-foreground mb-1.5 px-2">
+                                            Model
+                                        </p>
+                                        <div className="space-y-0.5 max-h-48 overflow-y-auto">
+                                            {availableModels.map((m) => (
+                                                <button
+                                                    key={m.value}
+                                                    onClick={() => handleModelChange(m.value)}
+                                                    className={cn(
+                                                        "w-full text-left px-2 py-1.5 rounded text-xs",
+                                                        "hover:bg-muted transition-colors",
+                                                        model === m.value
+                                                            ? "bg-primary/10 text-primary"
+                                                            : "text-foreground"
+                                                    )}
+                                                >
+                                                    <div className="flex items-center gap-2">
+                                                        {m.label}
+                                                        {showThinkingBadges &&
+                                                            m.supportsThinking && (
+                                                                <Brain className="w-3 h-3 text-amber-500" />
+                                                            )}
+                                                    </div>
+                                                </button>
+                                            ))}
                                         </div>
-                                    </label>
-                                </div>
-                            )}
-                        </div>
-                    </>
-                )}
+                                    </div>
+                                )}
+
+                                {/* Thinking Toggle Section */}
+                                {showThinkingToggle && (
+                                    <div className="p-2">
+                                        <label className="flex items-center gap-2 px-2 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={thinkingConfig.enabled}
+                                                onChange={(e) =>
+                                                    thinkingConfig.onEnabledChange(e.target.checked)
+                                                }
+                                                className="rounded border-border"
+                                            />
+                                            <div className="flex items-center gap-1.5 text-xs">
+                                                <Brain className="w-3.5 h-3.5 text-amber-500" />
+                                                <span>Enable Extended Thinking</span>
+                                            </div>
+                                        </label>
+                                    </div>
+                                )}
+                            </div>
+                        </>,
+                        document.body
+                    )}
             </div>
         </div>
     );
