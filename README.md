@@ -37,6 +37,15 @@ Built for TypeScript developers who need both visual workflow orchestration and 
 - **[JavaScript SDK](/sdks/javascript)** - Official TypeScript/JavaScript SDK with streaming support
 - **[Python SDK](/sdks/python)** - Official Python SDK with sync and async clients
 
+### Browser Extension
+
+- **[Chrome Extension](./.docs/browser-extension.md)** - Use FlowMaestro directly from any web page
+- **Page Context** - Extract text, tables, forms, metadata, and screenshots from any page
+- **Agent Chat** - Chat with your agents using the current page as context
+- **Workflow Execution** - Run workflows with auto-mapped page content as inputs
+- **Knowledge Base** - Quick-add page content to your knowledge bases
+- **Permission Control** - Granular per-site permissions following Claude's trust model
+
 ### Production Ready
 
 - **[Deployment Guide](./.docs/deployment-guide.md)** - Google Kubernetes Engine with Pulumi infrastructure-as-code
@@ -124,6 +133,8 @@ flowmaestro/
 ├── backend/          # Fastify API + Temporal workers
 ├── shared/           # Shared TypeScript types and utilities
 ├── cli/              # Command-line interface (@flowmaestro/cli)
+├── extensions/       # Browser extensions
+│   └── chrome/       # Chrome extension with sidebar UI
 ├── sdks/             # Official client SDKs
 │   ├── javascript/   # TypeScript/JavaScript SDK (@flowmaestro/sdk)
 │   └── python/       # Python SDK (flowmaestro)

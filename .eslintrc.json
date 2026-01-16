@@ -82,7 +82,9 @@
                 "backend/src/temporal/shared/workflow-logger.ts",
                 "backend/src/temporal/shared/logger.ts",
                 "examples/**/*.ts",
-                "cli/src/**/*.ts"
+                "cli/src/**/*.ts",
+                "extensions/chrome/src/**/*.ts",
+                "extensions/chrome/src/**/*.tsx"
             ],
             "rules": {
                 "no-console": "off"

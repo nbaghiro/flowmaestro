@@ -52,26 +52,26 @@ input:-webkit-autofill::first-line {
 
 @layer base {
     :root {
-        /* GitHub Primer-inspired light mode */
-        --background: 210 25% 97%;
-        --foreground: 210 13% 14%;
-        --card: 0 0% 100%;
-        --card-foreground: 210 13% 14%;
-        --popover: 0 0% 100%;
-        --popover-foreground: 210 13% 14%;
-        --primary: 210 13% 14%;
+        /* Soft neutral gray light mode */
+        --background: 0 0% 92%;
+        --foreground: 0 0% 9%;
+        --card: 0 0% 98%;
+        --card-foreground: 0 0% 9%;
+        --popover: 0 0% 98%;
+        --popover-foreground: 0 0% 9%;
+        --primary: 0 0% 9%;
         --primary-foreground: 0 0% 100%;
-        --secondary: 210 20% 95%;
-        --secondary-foreground: 210 13% 14%;
-        --muted: 210 20% 95%;
-        --muted-foreground: 210 12% 35%;
-        --accent: 210 20% 95%;
-        --accent-foreground: 210 13% 14%;
+        --secondary: 0 0% 88%;
+        --secondary-foreground: 0 0% 9%;
+        --muted: 0 0% 94%;
+        --muted-foreground: 0 0% 40%;
+        --accent: 0 0% 88%;
+        --accent-foreground: 0 0% 9%;
         --destructive: 0 84.2% 60.2%;
         --destructive-foreground: 0 0% 100%;
-        --border: 210 18% 84%;
-        --input: 210 20% 95%;
-        --ring: 210 13% 14%;
+        --border: 0 0% 78%;
+        --input: 0 0% 88%;
+        --ring: 0 0% 9%;
         --radius: 0.5rem;
     }
 

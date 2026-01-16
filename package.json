@@ -11,7 +11,8 @@
         "marketing",
         "documentation",
         "sdks/javascript",
-        "sdks/widget"
+        "sdks/widget",
+        "extensions/chrome"
     ],
     "scripts": {
         "prepare": "husky",

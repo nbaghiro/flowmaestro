@@ -24,3 +24,4 @@ export * from "./workspace";
 export * from "./workflow-patterns";
 export * from "./agent-patterns";
 export * from "./workflow-layout";
+export * from "./extension";

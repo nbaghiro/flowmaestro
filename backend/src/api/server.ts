@@ -22,6 +22,7 @@ import { chatInterfaceRoutes } from "./routes/chat-interfaces";
 import { checkpointRoutes } from "./routes/checkpoints";
 import { connectionRoutes } from "./routes/connections";
 import { executionRoutes } from "./routes/executions";
+import { extensionRoutes } from "./routes/extension";
 import { folderRoutes } from "./routes/folders";
 import { formInterfaceRoutes } from "./routes/form-interfaces";
 import { integrationRoutes } from "./routes/integrations";
@@ -168,6 +169,7 @@ export async function buildServer() {
     await fastify.register(webhookRoutes, { prefix: "/webhooks" });
     await fastify.register(websocketRoutes);
     await fastify.register(workspaceRoutes);
+    await fastify.register(extensionRoutes, { prefix: "/extension" });
 
     // Public routes (widgets and public API - CORS allows any origin via dynamic origin check)
     await fastify.register(publicFormInterfaceRoutes, { prefix: "/public/form-interfaces" });
