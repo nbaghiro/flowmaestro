@@ -1,7 +1,6 @@
 import { Loader2 } from "lucide-react";
 import { useEffect } from "react";
 import { Navigate } from "react-router-dom";
-import { useExecutionEventHandlers } from "../hooks/useExecutionEventHandlers";
 import { logger } from "../lib/logger";
 import { wsClient } from "../lib/websocket";
 import { useAuthStore } from "../stores/authStore";
@@ -19,10 +18,9 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
         currentWorkspace
     } = useWorkspaceStore();
 
-    // Set up WebSocket event handlers for execution monitoring
-    useExecutionEventHandlers();
-
     // Initialize WebSocket connection when authenticated
+    // Note: Workflow execution events are now handled via SSE in BuilderHeader and TriggerCard
+    // WebSocket is still used for other real-time events (KB updates, etc.)
     useEffect(() => {
         if (isAuthenticated) {
             const token = localStorage.getItem("auth_token");

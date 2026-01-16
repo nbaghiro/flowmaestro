@@ -132,6 +132,10 @@ export class WebSocketClient {
 
     private handleMessage(data: unknown): void {
         const d = data as Record<string, unknown>;
+
+        // Log all incoming messages for debugging (using info for visibility)
+        logger.info("WebSocket message received", { type: d.type, executionId: d.executionId });
+
         // Handle system messages
         if (d.type === "connected") {
             logger.debug("WebSocket connection confirmed", { data });
@@ -148,8 +152,18 @@ export class WebSocketClient {
 
         // Emit to specific event type handlers
         const handlers = this.eventHandlers.get(d.type as string);
+        logger.debug("Looking for handlers", {
+            eventType: d.type,
+            hasHandlers: !!handlers,
+            handlerCount: handlers?.size ?? 0,
+            registeredEventTypes: Array.from(this.eventHandlers.keys())
+        });
+
         if (handlers) {
-            handlers.forEach((handler) => handler(data as WebSocketEvent));
+            handlers.forEach((handler) => {
+                logger.debug("Calling handler for event", { type: d.type });
+                handler(data as WebSocketEvent);
+            });
         }
 
         // Emit to "all" handlers
@@ -186,6 +200,11 @@ export class WebSocketClient {
 
     isConnected(): boolean {
         return this.ws?.readyState === WebSocket.OPEN;
+    }
+
+    hasHandlers(eventType: string): boolean {
+        const handlers = this.eventHandlers.get(eventType);
+        return handlers !== undefined && handlers.size > 0;
     }
 }
 

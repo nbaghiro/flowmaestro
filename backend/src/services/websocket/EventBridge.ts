@@ -8,9 +8,10 @@ const logger = createServiceLogger("EventBridge");
 
 /**
  * Bridge between event sources and WebSocket manager
- * Forwards events from two sources to connected WebSocket clients:
- * 1. Redis Pub/Sub - for events from Temporal worker process (workflow execution events)
- * 2. In-memory EventEmitter - for local events (trigger events, KB events, etc.)
+ * Forwards Knowledge Base events to connected WebSocket clients.
+ *
+ * Note: Workflow and Agent execution events are now handled via SSE
+ * (see /api/executions/:id/stream and /api/agents/:id/executions/:id/stream)
  */
 export class EventBridge {
     private static instance: EventBridge;
@@ -30,45 +31,31 @@ export class EventBridge {
             return;
         }
 
-        // 1. Connect to Redis and subscribe to workflow & agent events from Temporal worker
+        // Connect to Redis (needed for SSE routes that subscribe directly)
         try {
             await redisEventBus.connect();
-
-            // Subscribe to all workflow events published by Temporal activities
-            await redisEventBus.subscribe("workflow:events:*", (event: WebSocketEvent) => {
-                logger.info({ eventType: event.type }, "Received workflow event from Redis");
-                wsManager.broadcast(event);
-            });
-
-            // Subscribe to all agent events (chat agents) published by Temporal activities
-            await redisEventBus.subscribe("agent:events:*", (event: WebSocketEvent) => {
-                logger.info({ eventType: event.type }, "Received agent event from Redis");
-                wsManager.broadcast(event);
-            });
-
-            logger.info("Event bridge subscribed to Redis workflow and agent events");
+            logger.info("Redis event bus connected");
         } catch (error) {
-            logger.error({ err: error }, "Failed to subscribe to Redis events");
-            logger.warn("Workflow and agent execution events will not be received");
+            logger.error({ err: error }, "Failed to connect to Redis event bus");
         }
 
-        // 2. Subscribe to local in-memory events (non-Temporal events)
-        const localEventTypes: WebSocketEventType[] = [
-            // Knowledge Base events (emitted locally, not from Temporal)
+        // Subscribe to Knowledge Base events (emitted locally, not from Temporal)
+        // These are broadcast via WebSocket for real-time document processing updates
+        const kbEventTypes: WebSocketEventType[] = [
             "kb:document:processing",
             "kb:document:completed",
             "kb:document:failed"
         ];
 
-        localEventTypes.forEach((eventType) => {
+        kbEventTypes.forEach((eventType) => {
             globalEventEmitter.on(eventType, (event: WebSocketEvent) => {
-                logger.info({ eventType: event.type }, "Received from local emitter");
+                logger.debug({ eventType: event.type }, "Broadcasting KB event via WebSocket");
                 wsManager.broadcast(event);
             });
         });
 
         this.initialized = true;
-        logger.info("Event bridge initialized - events will be broadcast via WebSocket");
+        logger.info("Event bridge initialized for Knowledge Base events");
     }
 
     isInitialized(): boolean {

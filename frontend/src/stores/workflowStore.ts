@@ -129,7 +129,7 @@ interface WorkflowStore {
     startExecution: (executionId: string, triggerId?: string) => void;
     updateExecutionStatus: (status: CurrentExecution["status"]) => void;
     updateNodeState: (nodeId: string, state: Partial<NodeExecutionState>) => void;
-    addExecutionLog: (log: Omit<ExecutionLog, "id">) => void;
+    addExecutionLog: (log: Omit<ExecutionLog, "id" | "timestamp">) => void;
     updateVariable: (key: string, value: JsonValue) => void;
     setPauseContext: (pauseContext: ExecutionPauseContextState | null) => void;
     clearExecution: () => void;
