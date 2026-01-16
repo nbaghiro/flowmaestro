@@ -16,6 +16,10 @@ data:
   DOCS_URL: "https://docs.flowmaestro.ai"
   MARKETING_URL: "https://flowmaestro.ai"
 
+  # Database configuration
+  # Keep pool size low for small CloudSQL instances (db-g1-small has ~25-50 max connections)
+  POSTGRES_POOL_SIZE: "5"
+
   # Temporal worker configuration
   TEMPORAL_TASK_QUEUE: "flowmaestro-orchestrator"
   TEMPORAL_MAX_CONCURRENT_ACTIVITIES: "10"

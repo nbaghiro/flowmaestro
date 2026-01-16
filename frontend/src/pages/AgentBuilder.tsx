@@ -531,9 +531,20 @@ export function AgentBuilder() {
         try {
             // Add each workflow as a tool
             for (const workflow of workflows) {
+                // Generate a valid tool name from the workflow name
+                // Tool names must match pattern ^[a-zA-Z0-9_-]+$ for LLM function calling
+                let toolName = workflow.name
+                    .toLowerCase()
+                    .replace(/[^a-z0-9]+/g, "_")
+                    .replace(/^_+|_+$/g, "");
+
+                if (!/^[a-z]/.test(toolName)) {
+                    toolName = `workflow_${toolName}`;
+                }
+
                 await addTool(currentAgent.id, {
                     type: "workflow",
-                    name: workflow.name,
+                    name: toolName,
                     description: workflow.description || `Workflow: ${workflow.name}`,
                     schema: {}, // Empty schema for now
                     config: {
@@ -557,11 +568,22 @@ export function AgentBuilder() {
         if (!currentAgent) return;
 
         try {
+            // Generate a valid tool name from the server name
+            // Tool names must match pattern ^[a-zA-Z0-9_-]+$ for LLM function calling
+            let toolName = server.name
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, "_")
+                .replace(/^_+|_+$/g, "");
+
+            if (!/^[a-z]/.test(toolName)) {
+                toolName = `mcp_${toolName}`;
+            }
+
             // Note: Using "function" type for custom MCP servers
             // This will need to be updated when we have proper MCP integration
             await addTool(currentAgent.id, {
                 type: "function",
-                name: server.name,
+                name: toolName,
                 description: `Custom MCP Server: ${server.name}`,
                 schema: {
                     type: "mcp_server",

@@ -28,7 +28,7 @@ class Database {
             password: dbConfig.password,
             max: dbConfig.max || 20,
             idleTimeoutMillis: dbConfig.idleTimeoutMillis || 30000,
-            connectionTimeoutMillis: dbConfig.connectionTimeoutMillis || 2000,
+            connectionTimeoutMillis: dbConfig.connectionTimeoutMillis || 10000,
             // Set timezone to UTC to ensure consistent timestamp handling
             // This prevents timezone mismatches between Node.js and PostgreSQL
             options: "-c timezone=UTC"
@@ -46,7 +46,8 @@ class Database {
                 port: config.database.port,
                 database: config.database.database,
                 user: config.database.user,
-                password: config.database.password
+                password: config.database.password,
+                max: config.database.poolSize
             };
             Database.instance = new Database(dbConfig);
         }

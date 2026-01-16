@@ -799,8 +799,37 @@ export function generateKnowledgeBaseToolName(kbName: string): string {
 }
 
 // =============================================================================
-// Internal Helper Functions - JSON Schema Sanitization
+// Internal Helper Functions - Tool Name and JSON Schema Sanitization
 // =============================================================================
+
+/**
+ * Sanitize tool name to ensure it's valid for LLM function calling
+ * OpenAI, Anthropic, and other providers require: ^[a-zA-Z0-9_-]+$
+ * - Only alphanumeric characters, underscores, and hyphens
+ * - Must start with a letter or underscore
+ */
+function sanitizeToolName(name: string): string {
+    // Replace any character that isn't alphanumeric, underscore, or hyphen with underscore
+    let sanitized = name.replace(/[^a-zA-Z0-9_-]/g, "_");
+
+    // Remove consecutive underscores
+    sanitized = sanitized.replace(/_+/g, "_");
+
+    // Remove leading/trailing underscores and hyphens
+    sanitized = sanitized.replace(/^[_-]+|[_-]+$/g, "");
+
+    // Ensure it starts with a letter or underscore (not a number or hyphen)
+    if (/^[0-9-]/.test(sanitized)) {
+        sanitized = `tool_${sanitized}`;
+    }
+
+    // If empty after sanitization, provide a fallback
+    if (!sanitized) {
+        sanitized = "unnamed_tool";
+    }
+
+    return sanitized;
+}
 
 /**
  * Sanitize JSON schema to ensure it's valid for OpenAI's function calling
@@ -857,7 +886,7 @@ function sanitizeJsonSchema(schema: JsonObject): JsonObject {
 async function callOpenAI(input: OpenAICallInput): Promise<LLMResponse> {
     const { model, apiKey, messages, tools, temperature, maxTokens, executionId } = input;
 
-    // Format messages for OpenAI
+    // Format messages for OpenAI (sanitize tool names for consistency)
     const formattedMessages = messages.map((msg) => ({
         role: msg.role === "assistant" ? "assistant" : msg.role === "tool" ? "tool" : "user",
         content: msg.content,
@@ -866,7 +895,7 @@ async function callOpenAI(input: OpenAICallInput): Promise<LLMResponse> {
                 id: tc.id,
                 type: "function",
                 function: {
-                    name: tc.name,
+                    name: sanitizeToolName(tc.name),
                     arguments:
                         typeof tc.arguments === "string"
                             ? tc.arguments
@@ -875,14 +904,14 @@ async function callOpenAI(input: OpenAICallInput): Promise<LLMResponse> {
             }))
         }),
         ...(msg.tool_call_id && { tool_call_id: msg.tool_call_id }),
-        ...(msg.tool_name && { name: msg.tool_name })
+        ...(msg.tool_name && { name: sanitizeToolName(msg.tool_name) })
     }));
 
-    // Format tools for OpenAI function calling with schema sanitization
+    // Format tools for OpenAI function calling with name and schema sanitization
     const formattedTools = tools.map((tool) => ({
         type: "function",
         function: {
-            name: tool.name,
+            name: sanitizeToolName(tool.name),
             description: tool.description,
             parameters: sanitizeJsonSchema(tool.schema)
         }
@@ -1078,7 +1107,7 @@ async function callAnthropic(input: AnthropicCallInput): Promise<LLMResponse> {
     const systemPrompt = messages.find((m) => m.role === "system")?.content || "";
     const threadMessages = messages.filter((m) => m.role !== "system");
 
-    // Format messages for Anthropic
+    // Format messages for Anthropic (sanitize tool names for consistency)
     const formattedMessages = threadMessages.map((msg) => {
         if (msg.role === "assistant") {
             return {
@@ -1089,7 +1118,7 @@ async function callAnthropic(input: AnthropicCallInput): Promise<LLMResponse> {
                           ...msg.tool_calls.map((tc) => ({
                               type: "tool_use",
                               id: tc.id,
-                              name: tc.name,
+                              name: sanitizeToolName(tc.name),
                               input: tc.arguments
                           }))
                       ]
@@ -1114,9 +1143,9 @@ async function callAnthropic(input: AnthropicCallInput): Promise<LLMResponse> {
         }
     });
 
-    // Format tools for Anthropic with schema sanitization
+    // Format tools for Anthropic with name and schema sanitization
     const formattedTools = tools.map((tool) => ({
-        name: tool.name,
+        name: sanitizeToolName(tool.name),
         description: tool.description,
         input_schema: sanitizeJsonSchema(tool.schema)
     }));
@@ -1318,7 +1347,7 @@ async function callGoogle(input: GoogleCallInput): Promise<LLMResponse> {
     const systemPrompt = messages.find((m) => m.role === "system")?.content || "";
     const threadMessages = messages.filter((m) => m.role !== "system");
 
-    // Format messages for Gemini
+    // Format messages for Gemini (sanitize tool names for consistency)
     const formattedMessages = threadMessages.map((msg) => {
         if (msg.role === "assistant") {
             return {
@@ -1331,7 +1360,7 @@ async function callGoogle(input: GoogleCallInput): Promise<LLMResponse> {
                 parts: [
                     {
                         functionResponse: {
-                            name: msg.tool_name || "",
+                            name: sanitizeToolName(msg.tool_name || ""),
                             response: {
                                 content: msg.content
                             }
@@ -1347,12 +1376,12 @@ async function callGoogle(input: GoogleCallInput): Promise<LLMResponse> {
         }
     });
 
-    // Format tools for Gemini
+    // Format tools for Gemini with name sanitization
     const formattedTools =
         tools.length > 0
             ? {
                   functionDeclarations: tools.map((tool) => ({
-                      name: tool.name,
+                      name: sanitizeToolName(tool.name),
                       description: tool.description,
                       parameters: sanitizeJsonSchema(tool.schema)
                   }))
@@ -1492,11 +1521,11 @@ async function callCohere(input: CohereCallInput): Promise<LLMResponse> {
         message: msg.content
     }));
 
-    // Format tools for Cohere
+    // Format tools for Cohere with name sanitization
     const formattedTools =
         tools.length > 0
             ? tools.map((tool) => ({
-                  name: tool.name,
+                  name: sanitizeToolName(tool.name),
                   description: tool.description,
                   parameter_definitions: tool.schema.properties || {}
               }))

@@ -59,7 +59,10 @@ export const config = {
         port: parseInt(process.env.POSTGRES_PORT || "5432"),
         database: process.env.POSTGRES_DB || "flowmaestro",
         user: process.env.POSTGRES_USER || "flowmaestro",
-        password: process.env.POSTGRES_PASSWORD || "flowmaestro_dev_password"
+        password: process.env.POSTGRES_PASSWORD || "flowmaestro_dev_password",
+        // Pool size - keep low for small CloudSQL instances (db-g1-small has ~25-50 max connections)
+        // temporal-server uses 10-20+ connections, so app services need to share the rest
+        poolSize: parseInt(process.env.POSTGRES_POOL_SIZE || "5")
     },
 
     // ==========================================================================
