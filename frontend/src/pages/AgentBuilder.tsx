@@ -968,7 +968,12 @@ export function AgentBuilder() {
                             <NavigationPanel activeTab={activeTab} onTabChange={setActiveTab} />
 
                             {/* Main content panel for non-build tabs */}
-                            <div className="flex-1 flex overflow-hidden">
+                            <div
+                                className={cn(
+                                    "flex-1 flex overflow-hidden",
+                                    activeTab === "settings" && "border-l border-border"
+                                )}
+                            >
                                 {activeTab === "threads" && (
                                     <>
                                         {/* Left panel: Thread List */}
