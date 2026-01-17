@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { logger } from "../lib/logger";
+import { getCurrentWorkspaceId } from "../stores/workspaceStore";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
@@ -52,9 +53,11 @@ export function useOAuth() {
         if (!token) return;
 
         try {
+            const workspaceId = getCurrentWorkspaceId();
             const response = await fetch(`${API_BASE_URL}/oauth/providers`, {
                 headers: {
-                    Authorization: `Bearer ${token}`
+                    Authorization: `Bearer ${token}`,
+                    ...(workspaceId && { "X-Workspace-Id": workspaceId })
                 }
             });
 
@@ -99,9 +102,15 @@ export function useOAuth() {
             }
 
             // Get authorization URL from backend
+            const workspaceId = getCurrentWorkspaceId();
+            if (!workspaceId) {
+                throw new Error("Workspace context required");
+            }
+
             const response = await fetch(url.toString(), {
                 headers: {
-                    Authorization: `Bearer ${token}`
+                    Authorization: `Bearer ${token}`,
+                    "X-Workspace-Id": workspaceId
                 }
             });
 
@@ -204,10 +213,16 @@ export function useOAuth() {
             throw new Error("Not authenticated");
         }
 
+        const workspaceId = getCurrentWorkspaceId();
+        if (!workspaceId) {
+            throw new Error("Workspace context required");
+        }
+
         const response = await fetch(`${API_BASE_URL}/oauth/${provider}/revoke/${connectionId}`, {
             method: "POST",
             headers: {
-                Authorization: `Bearer ${token}`
+                Authorization: `Bearer ${token}`,
+                "X-Workspace-Id": workspaceId
             }
         });
 
@@ -227,10 +242,16 @@ export function useOAuth() {
             throw new Error("Not authenticated");
         }
 
+        const workspaceId = getCurrentWorkspaceId();
+        if (!workspaceId) {
+            throw new Error("Workspace context required");
+        }
+
         const response = await fetch(`${API_BASE_URL}/oauth/${provider}/refresh/${connectionId}`, {
             method: "POST",
             headers: {
-                Authorization: `Bearer ${token}`
+                Authorization: `Bearer ${token}`,
+                "X-Workspace-Id": workspaceId
             }
         });
 

@@ -1643,12 +1643,18 @@ export async function getConnectionMCPTools(connectionId: string): Promise<{
     error?: string;
 }> {
     const token = getAuthToken();
+    const workspaceId = getCurrentWorkspaceId();
+
+    if (!workspaceId) {
+        throw new Error("Workspace context required");
+    }
 
     const response = await apiFetch(`${API_BASE_URL}/connections/${connectionId}/mcp-tools`, {
         method: "GET",
         headers: {
             "Content-Type": "application/json",
-            ...(token && { Authorization: `Bearer ${token}` })
+            ...(token && { Authorization: `Bearer ${token}` }),
+            "X-Workspace-Id": workspaceId
         }
     });
 
