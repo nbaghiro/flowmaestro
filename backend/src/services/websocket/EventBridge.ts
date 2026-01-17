@@ -1,17 +1,17 @@
-import { WebSocketEvent, WebSocketEventType } from "@flowmaestro/shared";
 import { createServiceLogger } from "../../core/logging";
-import { globalEventEmitter } from "../../services/events/EventEmitter";
 import { redisEventBus } from "../../services/events/RedisEventBus";
-import { wsManager } from "./WebSocketManager";
 
 const logger = createServiceLogger("EventBridge");
 
 /**
- * Bridge between event sources and WebSocket manager
- * Forwards Knowledge Base events to connected WebSocket clients.
+ * Event Bridge - manages Redis event bus connection for SSE streaming.
  *
- * Note: Workflow and Agent execution events are now handled via SSE
- * (see /api/executions/:id/stream and /api/agents/:id/executions/:id/stream)
+ * All real-time events are now handled via SSE:
+ * - Workflow execution: /api/executions/:id/stream
+ * - Agent execution: /api/agents/:id/executions/:id/stream
+ * - KB document processing: /api/knowledge-bases/:id/stream
+ *
+ * WebSocket is no longer used for event broadcasting.
  */
 export class EventBridge {
     private static instance: EventBridge;
@@ -39,23 +39,8 @@ export class EventBridge {
             logger.error({ err: error }, "Failed to connect to Redis event bus");
         }
 
-        // Subscribe to Knowledge Base events (emitted locally, not from Temporal)
-        // These are broadcast via WebSocket for real-time document processing updates
-        const kbEventTypes: WebSocketEventType[] = [
-            "kb:document:processing",
-            "kb:document:completed",
-            "kb:document:failed"
-        ];
-
-        kbEventTypes.forEach((eventType) => {
-            globalEventEmitter.on(eventType, (event: WebSocketEvent) => {
-                logger.debug({ eventType: event.type }, "Broadcasting KB event via WebSocket");
-                wsManager.broadcast(event);
-            });
-        });
-
         this.initialized = true;
-        logger.info("Event bridge initialized for Knowledge Base events");
+        logger.info("Event bridge initialized (Redis connection for SSE)");
     }
 
     isInitialized(): boolean {

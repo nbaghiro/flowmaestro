@@ -1,8 +1,5 @@
 import { Loader2 } from "lucide-react";
-import { useEffect } from "react";
 import { Navigate } from "react-router-dom";
-import { logger } from "../lib/logger";
-import { wsClient } from "../lib/websocket";
 import { useAuthStore } from "../stores/authStore";
 import { useWorkspaceStore } from "../stores/workspaceStore";
 
@@ -10,6 +7,14 @@ interface ProtectedRouteProps {
     children: React.ReactNode;
 }
 
+/**
+ * Protected route wrapper that handles authentication and workspace initialization.
+ *
+ * Note: All real-time events are now handled via SSE:
+ * - Workflow execution: BuilderHeader, TriggerCard
+ * - Agent execution: AgentChat
+ * - KB document processing: KnowledgeBaseDetail
+ */
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
     const { isAuthenticated, isLoading: isAuthLoading } = useAuthStore();
     const {
@@ -17,27 +22,6 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
         isLoading: isWorkspaceLoading,
         currentWorkspace
     } = useWorkspaceStore();
-
-    // Initialize WebSocket connection when authenticated
-    // Note: Workflow execution events are now handled via SSE in BuilderHeader and TriggerCard
-    // WebSocket is still used for other real-time events (KB updates, etc.)
-    useEffect(() => {
-        if (isAuthenticated) {
-            const token = localStorage.getItem("auth_token");
-            if (token) {
-                wsClient.connect(token).catch((error) => {
-                    logger.error("Failed to connect WebSocket", error);
-                });
-            }
-        }
-
-        return () => {
-            // Disconnect when component unmounts or user logs out
-            if (!isAuthenticated) {
-                wsClient.disconnect();
-            }
-        };
-    }, [isAuthenticated]);
 
     // Show loading while auth or workspace is initializing
     if (isAuthLoading || (!isWorkspaceInitialized && isAuthenticated) || isWorkspaceLoading) {

@@ -10,6 +10,7 @@ import { listDocumentsRoute } from "./list-documents";
 import { queryKnowledgeBaseRoute } from "./query";
 import { reprocessDocumentRoute } from "./reprocess-document";
 import { getStatsRoute } from "./stats";
+import { streamKnowledgeBaseRoute } from "./stream";
 import { updateKnowledgeBaseRoute } from "./update";
 import { uploadDocumentRoute } from "./upload-document";
 
@@ -32,4 +33,7 @@ export async function knowledgeBaseRoutes(fastify: FastifyInstance) {
 
     // Query
     await queryKnowledgeBaseRoute(fastify);
+
+    // Real-time streaming
+    await streamKnowledgeBaseRoute(fastify);
 }

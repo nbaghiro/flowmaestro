@@ -13,7 +13,7 @@ export function TabNavigation() {
     const { activeTab, setActiveTab } = useSidebarStore();
 
     return (
-        <div className="flex border-b border-gray-200">
+        <div className="flex border-b border-border bg-card">
             {tabs.map((tab) => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;
@@ -25,8 +25,8 @@ export function TabNavigation() {
                         className={clsx(
                             "flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium transition-colors",
                             isActive
-                                ? "text-primary-600 border-b-2 border-primary-600"
-                                : "text-gray-500 hover:text-gray-700"
+                                ? "text-foreground border-b-2 border-foreground"
+                                : "text-muted-foreground hover:text-foreground"
                         )}
                     >
                         <Icon className="w-4 h-4" />

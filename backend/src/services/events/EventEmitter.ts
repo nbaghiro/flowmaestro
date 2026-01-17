@@ -5,6 +5,7 @@ import type {
     JsonObject,
     JsonValue
 } from "@flowmaestro/shared";
+import { redisEventBus } from "./RedisEventBus";
 
 type EventHandler = (event: WebSocketEvent) => void;
 
@@ -166,33 +167,50 @@ export class WorkflowEventEmitter {
         });
     }
 
-    // Knowledge Base events
+    // Knowledge Base events - published to Redis for SSE streaming
+    // Note: These no longer emit locally since WebSocket is removed.
+    // Events are only published to Redis for SSE subscribers.
     emitDocumentProcessing(
         knowledgeBaseId: string,
         documentId: string,
         documentName: string
     ): void {
-        this.emit("kb:document:processing", {
-            knowledgeBaseId,
-            documentId,
-            documentName
-        });
+        redisEventBus
+            .publishJson("kb:events:document:processing", {
+                knowledgeBaseId,
+                documentId,
+                documentName,
+                timestamp: new Date().toISOString()
+            })
+            .catch(() => {
+                // Silently ignore Redis publish errors
+            });
     }
 
     emitDocumentCompleted(knowledgeBaseId: string, documentId: string, chunkCount: number): void {
-        this.emit("kb:document:completed", {
-            knowledgeBaseId,
-            documentId,
-            chunkCount
-        });
+        redisEventBus
+            .publishJson("kb:events:document:completed", {
+                knowledgeBaseId,
+                documentId,
+                chunkCount,
+                timestamp: new Date().toISOString()
+            })
+            .catch(() => {
+                // Silently ignore Redis publish errors
+            });
     }
 
     emitDocumentFailed(knowledgeBaseId: string, documentId: string, error: string): void {
-        this.emit("kb:document:failed", {
-            knowledgeBaseId,
-            documentId,
-            error
-        });
+        redisEventBus
+            .publishJson("kb:events:document:failed", {
+                knowledgeBaseId,
+                documentId,
+                error,
+                timestamp: new Date().toISOString()
+            })
+            .catch(() => {
+                // Silently ignore Redis publish errors
+            });
     }
 }
 

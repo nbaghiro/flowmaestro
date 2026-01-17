@@ -7,8 +7,11 @@ import type {
 const STORAGE_KEYS = {
     AUTH: "flowmaestro_auth",
     SETTINGS: "flowmaestro_settings",
-    USER_CONTEXT: "flowmaestro_user_context"
+    USER_CONTEXT: "flowmaestro_user_context",
+    THEME: "flowmaestro_theme"
 } as const;
+
+export type Theme = "light" | "dark" | "system";
 
 /**
  * Get authentication state from storage
@@ -93,4 +96,41 @@ export async function setUserContext(context: ExtensionUserContext): Promise<voi
  */
 export async function clearAllData(): Promise<void> {
     await chrome.storage.local.clear();
+}
+
+/**
+ * Get theme preference from storage
+ */
+export async function getTheme(): Promise<Theme> {
+    const result = await chrome.storage.local.get(STORAGE_KEYS.THEME);
+    return result[STORAGE_KEYS.THEME] || "system";
+}
+
+/**
+ * Set theme preference in storage
+ */
+export async function setTheme(theme: Theme): Promise<void> {
+    await chrome.storage.local.set({ [STORAGE_KEYS.THEME]: theme });
+}
+
+/**
+ * Get the resolved theme (light or dark) based on preference and system settings
+ */
+export function getResolvedTheme(theme: Theme): "light" | "dark" {
+    if (theme === "system") {
+        return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    }
+    return theme;
+}
+
+/**
+ * Apply theme to document
+ */
+export function applyTheme(theme: Theme): void {
+    const resolved = getResolvedTheme(theme);
+    if (resolved === "dark") {
+        document.documentElement.classList.add("dark");
+    } else {
+        document.documentElement.classList.remove("dark");
+    }
 }

@@ -1,7 +1,6 @@
 import cors from "@fastify/cors";
 import jwt from "@fastify/jwt";
 import multipart from "@fastify/multipart";
-import websocket from "@fastify/websocket";
 import Fastify from "fastify";
 import { config } from "../core/config";
 import { initializeLogger, shutdownLogger } from "../core/logging";
@@ -36,7 +35,6 @@ import { threadRoutes } from "./routes/threads";
 import { triggerRoutes } from "./routes/triggers";
 import { publicApiV1Routes } from "./routes/v1";
 import { webhookRoutes } from "./routes/webhooks";
-import { websocketRoutes } from "./routes/websocket";
 import { workflowRoutes } from "./routes/workflows";
 import { workspaceRoutes } from "./routes/workspaces";
 
@@ -84,9 +82,6 @@ export async function buildServer() {
         }
     });
 
-    // Register WebSocket
-    await fastify.register(websocket);
-
     // Register multipart for file uploads
     await fastify.register(multipart, {
         limits: {
@@ -104,7 +99,7 @@ export async function buildServer() {
         }
     });
 
-    // Initialize event bridge (connect orchestrator events to WebSocket via Redis)
+    // Initialize event bridge (manages Redis connection for SSE streaming)
     await eventBridge.initialize();
 
     // Initialize OpenTelemetry (exports to GCP Cloud Trace/Monitoring)
@@ -167,7 +162,6 @@ export async function buildServer() {
     await fastify.register(formInterfaceRoutes);
     await fastify.register(chatInterfaceRoutes);
     await fastify.register(webhookRoutes, { prefix: "/webhooks" });
-    await fastify.register(websocketRoutes);
     await fastify.register(workspaceRoutes);
     await fastify.register(extensionRoutes, { prefix: "/extension" });
 
