@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import {
     LLM_PROVIDERS,
     getDefaultModelForProvider,
+    getTemperatureMaxForProvider,
     type ValidationError
 } from "@flowmaestro/shared";
 import { FormField, FormSection } from "../../../components/common/FormField";
@@ -61,7 +62,15 @@ export function VisionNodeConfig({
         if (defaultModel) {
             setModel(defaultModel);
         }
+        // Clamp temperature if it exceeds the new provider's max
+        const maxTemp = getTemperatureMaxForProvider(newProvider);
+        if (temperature > maxTemp) {
+            setTemperature(maxTemp);
+        }
     };
+
+    // Calculate max temperature based on provider
+    const maxTemperature = getTemperatureMaxForProvider(provider);
 
     return (
         <div>
@@ -133,13 +142,13 @@ export function VisionNodeConfig({
             <FormSection title="Parameters">
                 <FormField
                     label="Temperature"
-                    description="Controls randomness (0 = deterministic, 2 = creative)"
+                    description={`Controls randomness (0 = deterministic, ${maxTemperature} = creative)`}
                 >
                     <Slider
                         value={temperature}
                         onChange={setTemperature}
                         min={0}
-                        max={2}
+                        max={maxTemperature}
                         step={0.1}
                     />
                 </FormField>
