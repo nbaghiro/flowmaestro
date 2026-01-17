@@ -39,6 +39,7 @@ export function ChatPanel({ children, hasUnread = false }: ChatPanelProps) {
             collapsedWidth={48}
             minimizedIcon={MessageSquare}
             minimizedLabel="Chat"
+            hideSideBorders
         >
             <div className="h-full bg-background">{children}</div>
         </Panel>

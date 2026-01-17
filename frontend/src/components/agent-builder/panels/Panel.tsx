@@ -24,6 +24,8 @@ export interface PanelProps {
     flexGrow?: boolean;
     /** Collapsed width override (default: minWidth from store) */
     collapsedWidth?: number;
+    /** Hide left and right side borders */
+    hideSideBorders?: boolean;
 }
 
 export interface PanelHeaderProps {
@@ -102,7 +104,8 @@ export function Panel({
     resizePosition = "right",
     className,
     flexGrow = false,
-    collapsedWidth
+    collapsedWidth,
+    hideSideBorders = false
 }: PanelProps) {
     const { panels, setPanelWidth, setPanelState } = useAgentBuilderLayoutStore();
     const panel = panels[id];
@@ -113,6 +116,12 @@ export function Panel({
     const [isResizing, setIsResizing] = useState(false);
     const resizeStartX = useRef(0);
     const resizeStartWidth = useRef(panel.width);
+
+    // Get panel order for border logic
+    // Order 0 (leftmost): no border
+    // Order 1 (middle): both borders (right and left)
+    // Order 2 (rightmost): no border
+    const panelOrder = panel.order;
 
     // Handle resize start
     const handleResizeStart = (e: React.MouseEvent) => {
@@ -210,11 +219,25 @@ export function Panel({
         return children;
     };
 
+    // Determine border based on panel order
+    // Order 0 (leftmost): no border
+    // Order 1 (middle): both borders (right and left) - always show even if hideSideBorders
+    // Order 2 (rightmost): no border
+    // Skip border if hideSideBorders is true (unless order is 1, which always shows borders)
+    let borderSide = "";
+    if (panelOrder === 1) {
+        // Middle position: always show both borders, even if hideSideBorders is set
+        borderSide = "border-l border-r";
+    } else if (!hideSideBorders) {
+        // Order 0 and 2: no border (empty string)
+        // Only respect hideSideBorders for non-middle panels
+    }
+
     return (
         <div
             className={cn(
                 "relative h-full bg-card border-border flex flex-col transition-all duration-300",
-                resizePosition === "right" ? "border-r" : "border-l",
+                borderSide,
                 shouldGrow && "flex-1",
                 isResizing && "select-none",
                 isMinimized && "bg-muted/30",
