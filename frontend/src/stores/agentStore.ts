@@ -480,10 +480,27 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
             );
             const { executionId, threadId: returnedThreadId } = response.data;
 
-            // If we got a new thread, add it to the list
+            // If we got a new thread, format its title using frontend's local timezone
             if (!threadId && returnedThreadId) {
                 const threadResponse = await api.getThread(returnedThreadId);
                 const newThread = threadResponse.data as Thread;
+
+                // Format title using frontend's local timezone if thread doesn't have one
+                if (!newThread.title) {
+                    const formattedTitle = new Date(newThread.created_at).toLocaleString("en-US", {
+                        year: "numeric",
+                        month: "numeric",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit",
+                        hour12: true
+                    });
+
+                    // Update the thread title with formatted date
+                    await api.updateThread(newThread.id, { title: formattedTitle });
+                    newThread.title = formattedTitle;
+                }
 
                 set((state) => ({
                     currentThread: newThread,
