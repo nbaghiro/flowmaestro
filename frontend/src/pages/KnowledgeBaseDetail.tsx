@@ -23,8 +23,8 @@ import {
     SearchSection,
     UploadSection
 } from "../components/knowledgebases";
+import { streamKnowledgeBase } from "../lib/api";
 import { logger } from "../lib/logger";
-import { wsClient } from "../lib/websocket";
 import { useKnowledgeBaseStore } from "../stores/knowledgeBaseStore";
 import type { KnowledgeDocument } from "../lib/api";
 
@@ -84,40 +84,37 @@ export function KnowledgeBaseDetail() {
         }
     }, [id]);
 
+    // SSE streaming for real-time document processing updates
     useEffect(() => {
         if (!id) return;
 
-        const token = localStorage.getItem("auth_token");
-        if (!token) return;
+        const cleanup = streamKnowledgeBase(id, {
+            onConnected: () => {
+                logger.info("Connected to KB stream", { knowledgeBaseId: id });
+            },
+            onDocumentProcessing: () => {
+                fetchDocuments(id);
+            },
+            onDocumentCompleted: () => {
+                fetchDocuments(id);
+                fetchStats(id);
+            },
+            onDocumentFailed: () => {
+                fetchDocuments(id);
+            },
+            onError: (error) => {
+                logger.error("KB stream error", { error, knowledgeBaseId: id });
+            }
+        });
 
-        wsClient.connect(token).catch((err) => logger.error("Failed to connect WebSocket", err));
-
-        const handleDocumentProcessing = () => {
-            fetchDocuments(id);
-        };
-
-        const handleDocumentCompleted = () => {
-            fetchDocuments(id);
-            fetchStats(id);
-        };
-
-        const handleDocumentFailed = () => {
-            fetchDocuments(id);
-        };
-
-        wsClient.on("kb:document:processing", handleDocumentProcessing);
-        wsClient.on("kb:document:completed", handleDocumentCompleted);
-        wsClient.on("kb:document:failed", handleDocumentFailed);
-
+        // Fallback polling at reduced frequency (SSE handles real-time)
         pollingIntervalRef.current = setInterval(() => {
             fetchDocuments(id);
             fetchStats(id);
-        }, 5000);
+        }, 30000); // Reduced from 5s to 30s since SSE provides real-time updates
 
         return () => {
-            wsClient.off("kb:document:processing", handleDocumentProcessing);
-            wsClient.off("kb:document:completed", handleDocumentCompleted);
-            wsClient.off("kb:document:failed", handleDocumentFailed);
+            cleanup();
             if (pollingIntervalRef.current) {
                 clearInterval(pollingIntervalRef.current);
             }

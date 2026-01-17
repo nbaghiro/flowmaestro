@@ -3458,6 +3458,111 @@ export async function reprocessDocument(kbId: string, docId: string): Promise<Ap
     return response.json();
 }
 
+/**
+ * Stream knowledge base document events via Server-Sent Events.
+ *
+ * @param knowledgeBaseId - The knowledge base ID to stream events for
+ * @param callbacks - Event callbacks for different event types
+ * @returns Cleanup function to close the connection
+ */
+export function streamKnowledgeBase(
+    knowledgeBaseId: string,
+    callbacks: {
+        onConnected?: () => void;
+        onDocumentProcessing?: (data: {
+            documentId: string;
+            documentName: string;
+            timestamp: string;
+        }) => void;
+        onDocumentCompleted?: (data: {
+            documentId: string;
+            chunkCount: number;
+            timestamp: string;
+        }) => void;
+        onDocumentFailed?: (data: { documentId: string; error: string; timestamp: string }) => void;
+        onError?: (error: string) => void;
+    }
+): () => void {
+    const token = getAuthToken();
+    if (!token) {
+        callbacks.onError?.("Authentication required");
+        return () => {};
+    }
+
+    const workspaceId = getCurrentWorkspaceId();
+    if (!workspaceId) {
+        callbacks.onError?.("Workspace context required");
+        return () => {};
+    }
+
+    // EventSource doesn't support custom headers, so we pass token as query param
+    const url = `${API_BASE_URL}/knowledge-bases/${knowledgeBaseId}/stream?token=${encodeURIComponent(token)}&workspaceId=${encodeURIComponent(workspaceId)}`;
+
+    const eventSource = new EventSource(url, {
+        withCredentials: true
+    });
+
+    // Track if we intentionally closed the connection
+    let intentionallyClosed = false;
+
+    eventSource.addEventListener("connected", () => {
+        callbacks.onConnected?.();
+    });
+
+    eventSource.addEventListener("document:processing", (event) => {
+        try {
+            const data = JSON.parse(event.data) as {
+                documentId: string;
+                documentName: string;
+                timestamp: string;
+            };
+            callbacks.onDocumentProcessing?.(data);
+        } catch {
+            // Silently ignore parsing errors
+        }
+    });
+
+    eventSource.addEventListener("document:completed", (event) => {
+        try {
+            const data = JSON.parse(event.data) as {
+                documentId: string;
+                chunkCount: number;
+                timestamp: string;
+            };
+            callbacks.onDocumentCompleted?.(data);
+        } catch {
+            // Silently ignore parsing errors
+        }
+    });
+
+    eventSource.addEventListener("document:failed", (event) => {
+        try {
+            const data = JSON.parse(event.data) as {
+                documentId: string;
+                error: string;
+                timestamp: string;
+            };
+            callbacks.onDocumentFailed?.(data);
+        } catch {
+            // Silently ignore parsing errors
+        }
+    });
+
+    eventSource.onerror = () => {
+        // Don't report error if we intentionally closed
+        if (intentionallyClosed || eventSource.readyState === EventSource.CLOSED) {
+            return;
+        }
+        callbacks.onError?.("Stream connection failed");
+    };
+
+    // Return cleanup function
+    return () => {
+        intentionallyClosed = true;
+        eventSource.close();
+    };
+}
+
 // ===== Integration Provider API Functions =====
 
 export interface ProviderSummary {
@@ -5903,4 +6008,175 @@ export async function upgradeWorkspace(
     }
 
     return response.json();
+}
+
+// =============================================================================
+// WORKFLOW CHAT (Flow Builder Chat Interface)
+// =============================================================================
+
+export interface WorkflowConversationResponse {
+    id: string;
+    workflowId: string;
+    title: string | null;
+    status: "active" | "archived";
+    messageCount: number;
+    lastMessageAt: string | null;
+    createdAt: string;
+}
+
+export interface WorkflowChatMessageResponse {
+    id: string;
+    role: "user" | "assistant" | "system";
+    content: string;
+    isStreaming: boolean;
+    attachments: Array<{
+        fileName: string;
+        fileType: string;
+        fileSize: number;
+        url: string;
+    }>;
+    executionId: string | null;
+    tokenCount: number | null;
+    createdAt: string;
+}
+
+export interface WorkflowChatMessagesResponse {
+    messages: WorkflowChatMessageResponse[];
+    total: number;
+    hasMore: boolean;
+}
+
+export interface SendWorkflowChatMessageResponse {
+    messageId: string;
+    assistantMessageId: string;
+    conversationId: string;
+}
+
+/**
+ * Get or create the active conversation for a workflow
+ */
+export async function getWorkflowConversation(
+    workflowId: string
+): Promise<WorkflowConversationResponse> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/workflows/${workflowId}/conversation`, {
+        method: "GET",
+        headers: {
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+            errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`
+        );
+    }
+
+    const result = await response.json();
+    return result.data;
+}
+
+/**
+ * Get messages for the active conversation
+ */
+export async function getWorkflowChatMessages(
+    workflowId: string,
+    options?: { limit?: number; offset?: number }
+): Promise<WorkflowChatMessagesResponse> {
+    const token = getAuthToken();
+
+    const params = new URLSearchParams();
+    if (options?.limit) params.set("limit", options.limit.toString());
+    if (options?.offset) params.set("offset", options.offset.toString());
+
+    const url = `${API_BASE_URL}/workflows/${workflowId}/conversation/messages${params.toString() ? `?${params}` : ""}`;
+
+    const response = await apiFetch(url, {
+        method: "GET",
+        headers: {
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+            errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`
+        );
+    }
+
+    const result = await response.json();
+    return result.data;
+}
+
+/**
+ * Send a chat message to a workflow
+ */
+export async function sendWorkflowChatMessage(
+    workflowId: string,
+    message: string,
+    attachments?: Array<{
+        fileName: string;
+        fileType: string;
+        fileSize: number;
+        url: string;
+    }>
+): Promise<SendWorkflowChatMessageResponse> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(
+        `${API_BASE_URL}/workflows/${workflowId}/conversation/messages`,
+        {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                ...(token && { Authorization: `Bearer ${token}` })
+            },
+            body: JSON.stringify({
+                message,
+                attachments: attachments || []
+            })
+        }
+    );
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+            errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`
+        );
+    }
+
+    const result = await response.json();
+    return result.data;
+}
+
+/**
+ * Clear all messages in the active conversation
+ */
+export async function clearWorkflowConversation(workflowId: string): Promise<void> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/workflows/${workflowId}/conversation`, {
+        method: "DELETE",
+        headers: {
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+            errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`
+        );
+    }
+}
+
+/**
+ * Get the SSE stream URL for workflow chat
+ */
+export function getWorkflowChatStreamUrl(workflowId: string): string {
+    const token = getAuthToken();
+    return `${API_BASE_URL}/workflows/${workflowId}/conversation/stream${token ? `?token=${token}` : ""}`;
 }

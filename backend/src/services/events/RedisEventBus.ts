@@ -131,6 +131,25 @@ export class RedisEventBus {
     }
 
     /**
+     * Publish a generic JSON object to a Redis channel.
+     * Used for SSE events that don't conform to WebSocketEvent type.
+     */
+    async publishJson(channel: string, data: Record<string, unknown>): Promise<void> {
+        if (!this.isConnected) {
+            logger.warn("Not connected, skipping publish");
+            return;
+        }
+
+        try {
+            const message = JSON.stringify(data);
+            await this.publisher.publish(channel, message);
+            logger.debug({ channel }, "Published JSON event");
+        } catch (error) {
+            logger.error({ channel, err: error }, "Failed to publish JSON");
+        }
+    }
+
+    /**
      * Subscribe to events matching a pattern
      * Pattern uses Redis glob-style matching: * matches any characters
      * Example: "workflow:events:*" matches all workflow events
