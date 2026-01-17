@@ -36,6 +36,20 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage, sender, sendRes
 });
 
 /**
+ * Get the active tab ID - either from sender (if from content script) or from active tab query
+ */
+async function getActiveTabId(senderTabId?: number): Promise<number | undefined> {
+    // If message came from a content script, use that tab
+    if (senderTabId) {
+        return senderTabId;
+    }
+
+    // Otherwise, query for the active tab in the current window
+    const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    return activeTab?.id;
+}
+
+/**
  * Process incoming messages
  */
 async function handleMessage(
@@ -43,11 +57,15 @@ async function handleMessage(
     sender: chrome.runtime.MessageSender
 ): Promise<ExtensionMessage> {
     switch (message.type) {
-        case "GET_PAGE_CONTEXT":
-            return handleGetPageContext(sender.tab?.id);
+        case "GET_PAGE_CONTEXT": {
+            const tabId = await getActiveTabId(sender.tab?.id);
+            return handleGetPageContext(tabId);
+        }
 
-        case "CAPTURE_SCREENSHOT":
-            return handleCaptureScreenshot(sender.tab?.id);
+        case "CAPTURE_SCREENSHOT": {
+            const tabId = await getActiveTabId(sender.tab?.id);
+            return handleCaptureScreenshot(tabId);
+        }
 
         case "AUTH_STATUS":
             return handleAuthStatus();
@@ -77,6 +95,30 @@ async function handleMessage(
 }
 
 /**
+ * Ensure content script is injected into the tab
+ */
+async function ensureContentScriptInjected(tabId: number): Promise<void> {
+    try {
+        // Try to ping the content script
+        await chrome.tabs.sendMessage(tabId, { type: "PING" });
+    } catch {
+        // Content script not loaded, inject it
+        // Get content script path from manifest
+        const manifest = chrome.runtime.getManifest();
+        const contentScriptPath = manifest.content_scripts?.[0]?.js?.[0];
+
+        if (contentScriptPath) {
+            await chrome.scripting.executeScript({
+                target: { tabId },
+                files: [contentScriptPath]
+            });
+            // Wait a bit for the script to initialize
+            await new Promise((resolve) => setTimeout(resolve, 100));
+        }
+    }
+}
+
+/**
  * Request page context from content script
  */
 async function handleGetPageContext(tabId?: number): Promise<ExtensionMessage> {
@@ -85,6 +127,19 @@ async function handleGetPageContext(tabId?: number): Promise<ExtensionMessage> {
     }
 
     try {
+        // Check if we can access this tab (not a chrome:// URL, etc.)
+        const tab = await chrome.tabs.get(tabId);
+        if (
+            !tab.url ||
+            tab.url.startsWith("chrome://") ||
+            tab.url.startsWith("chrome-extension://")
+        ) {
+            return { type: "ERROR", error: "Cannot extract content from this page" };
+        }
+
+        // Ensure content script is injected
+        await ensureContentScriptInjected(tabId);
+
         const response = await chrome.tabs.sendMessage(tabId, {
             type: "GET_PAGE_CONTEXT",
             payload: {

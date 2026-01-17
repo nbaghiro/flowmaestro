@@ -363,6 +363,8 @@ export type ExtensionMessageType =
     | "AUTH_TOKEN"
     | "EXECUTE_WORKFLOW"
     | "AGENT_CHAT"
+    | "PING"
+    | "PONG"
     | "ERROR";
 
 /**

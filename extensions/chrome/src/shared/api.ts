@@ -61,7 +61,7 @@ class ExtensionApiClient {
      */
     async checkAuth(): Promise<boolean> {
         try {
-            // Use user-context endpoint to verify auth since /api/auth/me doesn't exist
+            // Use user-context endpoint to verify auth since /auth/me requires workspace context
             await this.request("/extension/user-context");
             return true;
         } catch {
@@ -106,7 +106,7 @@ class ExtensionApiClient {
         const auth = await getAuthState();
         const token = auth?.accessToken || "";
         const workspaceId = auth?.workspace?.id || "";
-        return `${baseUrl}/api/agents/${agentId}/executions/${executionId}/stream?token=${encodeURIComponent(token)}&workspaceId=${encodeURIComponent(workspaceId)}`;
+        return `${baseUrl}/agents/${agentId}/executions/${executionId}/stream?token=${encodeURIComponent(token)}&workspaceId=${encodeURIComponent(workspaceId)}`;
     }
 
     /**
@@ -119,7 +119,7 @@ class ExtensionApiClient {
         pageContext?: PageContext
     ): Promise<ExtensionAgentChatResponse> {
         return this.request<ExtensionAgentChatResponse>(
-            `/api/agents/${agentId}/threads/${threadId}/messages`,
+            `/agents/${agentId}/threads/${threadId}/messages`,
             {
                 method: "POST",
                 body: JSON.stringify({
@@ -136,7 +136,7 @@ class ExtensionApiClient {
     async getExecutionStatus(
         executionId: string
     ): Promise<{ status: string; outputs?: Record<string, unknown> }> {
-        return this.request(`/api/executions/${executionId}`);
+        return this.request(`/executions/${executionId}`);
     }
 
     /**
@@ -146,7 +146,7 @@ class ExtensionApiClient {
         knowledgeBaseId: string,
         pageContext: PageContext
     ): Promise<{ documentId: string }> {
-        return this.request(`/api/knowledge-bases/${knowledgeBaseId}/documents`, {
+        return this.request(`/knowledge-bases/${knowledgeBaseId}/documents`, {
             method: "POST",
             body: JSON.stringify({
                 title: pageContext.title,
@@ -211,6 +211,56 @@ class ExtensionApiClient {
 
         const data = await response.json();
         return data.data;
+    }
+
+    /**
+     * Login with email and password
+     */
+    async loginWithEmail(
+        email: string,
+        password: string,
+        code?: string
+    ): Promise<
+        | {
+              type: "success";
+              user: { id: string; email: string; name: string; avatar_url?: string };
+              token: string;
+          }
+        | {
+              type: "two_factor_required";
+              masked_phone: string;
+          }
+    > {
+        const baseUrl = await this.getBaseUrl();
+
+        const response = await fetch(`${baseUrl}/auth/login`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ email, password, code })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || "Invalid credentials");
+        }
+
+        const data = await response.json();
+
+        // Check if 2FA is required
+        if (data.data.two_factor_required) {
+            return {
+                type: "two_factor_required",
+                masked_phone: data.data.masked_phone
+            };
+        }
+
+        return {
+            type: "success",
+            user: data.data.user,
+            token: data.data.token
+        };
     }
 }
 

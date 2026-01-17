@@ -14,9 +14,15 @@ import type {
  * Listen for messages from the service worker
  */
 chrome.runtime.onMessage.addListener((message: ExtensionMessage, _sender, sendResponse) => {
+    // Handle ping to check if content script is loaded
+    if (message.type === "PING") {
+        sendResponse({ type: "PONG" });
+        return true;
+    }
+
     if (message.type === "GET_PAGE_CONTEXT") {
         const payload = (message as GetPageContextMessage).payload;
-        const context = extractPageContext(payload.includeStructured);
+        const context = extractPageContext(payload?.includeStructured ?? true);
         sendResponse({
             type: "PAGE_CONTEXT_RESULT",
             payload: context
