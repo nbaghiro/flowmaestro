@@ -53,12 +53,12 @@ export async function executeAgentHandler(
             }
             threadId = thread_id;
         } else {
-            // Create new thread
+            // Create new thread - title will be null, frontend will format it with user's timezone
             const newThread = await threadRepo.create({
                 user_id: userId,
                 workspace_id: workspaceId,
-                agent_id: agentId,
-                title: new Date().toLocaleString() // Auto-generated timestamp as title
+                agent_id: agentId
+                // title omitted - frontend will format using user's local timezone
             });
             threadId = newThread.id;
         }
