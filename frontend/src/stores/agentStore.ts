@@ -498,7 +498,12 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
                     });
 
                     // Update the thread title with formatted date
-                    await api.updateThread(newThread.id, { title: formattedTitle });
+                    try {
+                        await api.updateThread(newThread.id, { title: formattedTitle });
+                    } catch (error) {
+                        logger.error("Failed to update thread title", error);
+                    }
+                    // Use formatted title locally regardless of API success for better UX
                     newThread.title = formattedTitle;
                 }
 
