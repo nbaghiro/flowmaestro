@@ -19,8 +19,6 @@ export interface PanelProps {
     flexGrow?: boolean;
     /** Collapsed width override (default: minWidth from store) */
     collapsedWidth?: number;
-    /** Hide left and right side borders */
-    hideSideBorders?: boolean;
 }
 
 export interface PanelHeaderProps {
@@ -105,9 +103,6 @@ export function Panel({
     const isMinimized = panel.state === "minimized";
     const isExpanded = panel.state === "expanded";
 
-    // Get panel order for border logic
-    const panelOrder = panel.order;
-
     // Check if the chat panel (flexGrow panel) is expanded
     const chatPanel = panels["chat"];
     const chatExpanded = chatPanel?.state === "expanded";
@@ -146,22 +141,11 @@ export function Panel({
         return children;
     };
 
-    // Determine border based on panel order
-    // Order 0 (leftmost): no border
-    // Order 1 (middle): both borders (right and left) - always show even if hideSideBorders
-    // Order 2 (rightmost): no border
-    // Skip border if hideSideBorders is true (unless order is 1, which always shows borders)
-    let borderSide = "";
-    if (panelOrder === 1) {
-        // Middle position: always show both borders, even if hideSideBorders is set
-        borderSide = "border-l border-r";
-    }
-
     return (
         <div
             className={cn(
                 "relative h-full bg-card border-border flex flex-col transition-all duration-300",
-                borderSide,
+                panel.order === 1 && "border-l border-r",
                 shouldGrow && "flex-1",
                 isMinimized && "bg-muted/30",
                 className
