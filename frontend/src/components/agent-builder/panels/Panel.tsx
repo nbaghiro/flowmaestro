@@ -1,5 +1,4 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useRef, useEffect, useState } from "react";
 import { cn } from "../../../lib/utils";
 import { useAgentBuilderLayoutStore } from "../../../stores/agentBuilderLayoutStore";
 
@@ -14,10 +13,6 @@ export interface PanelProps {
     /** Content to show when panel is minimized (tiny strip with expand button) */
     minimizedIcon?: LucideIcon;
     minimizedLabel?: string;
-    /** Enable resize handle */
-    resizable?: boolean;
-    /** Which side to place resize handle */
-    resizePosition?: "left" | "right";
     /** Additional class names */
     className?: string;
     /** Whether this panel takes remaining space (flex-1) */
@@ -100,68 +95,18 @@ export function Panel({
     collapsedContent,
     minimizedIcon: MinimizedIcon,
     minimizedLabel,
-    resizable = false,
-    resizePosition = "right",
     className,
     flexGrow = false,
-    collapsedWidth,
-    hideSideBorders = false
+    collapsedWidth
 }: PanelProps) {
-    const { panels, setPanelWidth, setPanelState } = useAgentBuilderLayoutStore();
+    const { panels, setPanelState } = useAgentBuilderLayoutStore();
     const panel = panels[id];
     const isCollapsed = panel.state === "collapsed";
     const isMinimized = panel.state === "minimized";
     const isExpanded = panel.state === "expanded";
 
-    const [isResizing, setIsResizing] = useState(false);
-    const resizeStartX = useRef(0);
-    const resizeStartWidth = useRef(panel.width);
-
     // Get panel order for border logic
-    // Order 0 (leftmost): no border
-    // Order 1 (middle): both borders (right and left)
-    // Order 2 (rightmost): no border
     const panelOrder = panel.order;
-
-    // Handle resize start
-    const handleResizeStart = (e: React.MouseEvent) => {
-        e.preventDefault();
-        setIsResizing(true);
-        resizeStartX.current = e.clientX;
-        resizeStartWidth.current = panel.width;
-    };
-
-    // Handle resize with mouse events
-    useEffect(() => {
-        const handleResize = (e: MouseEvent) => {
-            if (!isResizing) return;
-
-            // Calculate delta based on resize position
-            const deltaX =
-                resizePosition === "right"
-                    ? e.clientX - resizeStartX.current
-                    : resizeStartX.current - e.clientX;
-
-            const newWidth = resizeStartWidth.current + deltaX;
-            setPanelWidth(id, newWidth);
-        };
-
-        const handleResizeEnd = () => {
-            setIsResizing(false);
-        };
-
-        if (isResizing) {
-            document.addEventListener("mousemove", handleResize);
-            document.addEventListener("mouseup", handleResizeEnd);
-
-            return () => {
-                document.removeEventListener("mousemove", handleResize);
-                document.removeEventListener("mouseup", handleResizeEnd);
-            };
-        }
-
-        return undefined;
-    }, [isResizing, id, setPanelWidth, resizePosition]);
 
     // Check if the chat panel (flexGrow panel) is expanded
     const chatPanel = panels["chat"];
@@ -181,33 +126,15 @@ export function Panel({
     // 2. It's the config panel and expanded, and the chat panel is not expanded
     const shouldGrow = (flexGrow && isExpanded) || (id === "config" && isExpanded && !chatExpanded);
 
-    // Resize handle component
-    const ResizeHandle = resizable && isExpanded && (
-        <div
-            onMouseDown={handleResizeStart}
-            className={cn(
-                "absolute top-0 bottom-0 w-1 cursor-ew-resize z-10",
-                "hover:bg-primary/30 transition-colors",
-                isResizing && "bg-primary/50",
-                resizePosition === "right" ? "right-0" : "left-0"
-            )}
-        />
-    );
-
     // Minimized content - thin strip with expand button
     const minimizedContent = (
         <button
             onClick={() => setPanelState(id, "expanded")}
-            className="h-full w-full flex flex-col items-center justify-center gap-1 hover:bg-muted/50 transition-colors group"
+            className="h-full w-full flex flex-col items-center justify-start pt-3 gap-1 hover:bg-muted/50 transition-colors group"
             title={`Expand ${minimizedLabel || id}`}
         >
             {MinimizedIcon && (
                 <MinimizedIcon className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-            )}
-            {resizePosition === "right" ? (
-                <ChevronRight className="w-3 h-3 text-muted-foreground group-hover:text-foreground" />
-            ) : (
-                <ChevronLeft className="w-3 h-3 text-muted-foreground group-hover:text-foreground" />
             )}
         </button>
     );
@@ -228,9 +155,6 @@ export function Panel({
     if (panelOrder === 1) {
         // Middle position: always show both borders, even if hideSideBorders is set
         borderSide = "border-l border-r";
-    } else if (!hideSideBorders) {
-        // Order 0 and 2: no border (empty string)
-        // Only respect hideSideBorders for non-middle panels
     }
 
     return (
@@ -239,7 +163,6 @@ export function Panel({
                 "relative h-full bg-card border-border flex flex-col transition-all duration-300",
                 borderSide,
                 shouldGrow && "flex-1",
-                isResizing && "select-none",
                 isMinimized && "bg-muted/30",
                 className
             )}
@@ -248,7 +171,6 @@ export function Panel({
                 minWidth: shouldGrow ? panel.minWidth : undefined
             }}
         >
-            {ResizeHandle}
             {renderContent()}
         </div>
     );

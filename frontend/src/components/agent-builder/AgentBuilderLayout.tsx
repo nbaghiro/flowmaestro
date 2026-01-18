@@ -62,8 +62,11 @@ export function AgentBuilderLayout({
             const nextPanelId = index < orderedPanels.length - 1 ? orderedPanels[index + 1] : null;
 
             // Determine if swap button should show for this panel pair
+            // Don't show swap button next to navigation panel (it has fixed position)
             const showSwap = nextPanelId
-                ? panels[panelId].state === "expanded" || panels[nextPanelId].state === "expanded"
+                ? panelId !== "navigation" &&
+                  nextPanelId !== "navigation" &&
+                  (panels[panelId].state === "expanded" || panels[nextPanelId].state === "expanded")
                 : false;
 
             // Render the panel

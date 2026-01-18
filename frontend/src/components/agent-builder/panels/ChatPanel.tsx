@@ -33,8 +33,6 @@ export function ChatPanel({ children, hasUnread = false }: ChatPanelProps) {
         <Panel
             id="chat"
             flexGrow
-            resizable
-            resizePosition="left"
             collapsedContent={collapsedContent}
             collapsedWidth={48}
             minimizedIcon={MessageSquare}
