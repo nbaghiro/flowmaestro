@@ -8,6 +8,7 @@ import { useAgentStore } from "../../stores/agentStore";
 import { Button } from "../common/Button";
 import { Dialog } from "../common/Dialog";
 import { Input } from "../common/Input";
+import { TypingDots } from "../common/TypingDots";
 import { AgentConnectionSelector } from "./AgentConnectionSelector";
 import type { Agent, Thread, ThreadMessage, JsonObject, ThreadTokenUsage } from "../../lib/api";
 
@@ -512,7 +513,7 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
                                     <Bot className="w-4 h-4 text-primary" />
                                 </div>
                                 <div className="bg-muted text-foreground rounded-lg px-4 py-3">
-                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    <TypingDots />
                                 </div>
                             </div>
                         )}

@@ -1,7 +1,8 @@
-import { Bot, User, Loader2 } from "lucide-react";
+import { Bot, User } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "../../lib/utils";
+import { TypingDots } from "../common/TypingDots";
 import type { ChatMessage as ChatMessageType, NodeChange } from "../../stores/chatStore";
 
 interface ChatMessageProps {
@@ -53,7 +54,7 @@ export function ChatMessage({
             <div className="flex-1 max-w-[80%]">
                 <div className="rounded-lg px-4 py-3 bg-muted text-foreground">
                     {isStreaming && !message.content ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <TypingDots />
                     ) : (
                         <div className="text-sm prose prose-sm max-w-none dark:prose-invert">
                             <ReactMarkdown

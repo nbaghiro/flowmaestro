@@ -136,14 +136,14 @@ export class RedisEventBus {
      */
     async publishJson(channel: string, data: Record<string, unknown>): Promise<void> {
         if (!this.isConnected) {
-            logger.warn("Not connected, skipping publish");
+            logger.warn({ channel }, "Not connected, skipping publish");
             return;
         }
 
         try {
             const message = JSON.stringify(data);
             await this.publisher.publish(channel, message);
-            logger.debug({ channel }, "Published JSON event");
+            logger.info({ channel, type: data.type }, "Published JSON event");
         } catch (error) {
             logger.error({ channel, err: error }, "Failed to publish JSON");
         }

@@ -15,20 +15,14 @@ import {
     Play,
     Pencil
 } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import type {
     WorkflowTrigger,
     ScheduleTriggerConfig,
     WebhookTriggerConfig,
     ManualTriggerConfig
 } from "@flowmaestro/shared";
-import {
-    getWebhookUrl,
-    deleteTrigger,
-    updateTrigger,
-    executeTrigger,
-    streamWorkflowExecution
-} from "../../lib/api";
+import { getWebhookUrl, deleteTrigger, updateTrigger, executeTrigger } from "../../lib/api";
 import { logger } from "../../lib/logger";
 import { cn } from "../../lib/utils";
 import { useWorkflowStore } from "../../stores/workflowStore";
@@ -54,21 +48,7 @@ export function TriggerCard({ trigger, onUpdate }: TriggerCardProps) {
     const [showRenameDialog, setShowRenameDialog] = useState(false);
     const [newName, setNewName] = useState(trigger.name);
     const [isRenaming, setIsRenaming] = useState(false);
-    const { startExecution, updateExecutionStatus, updateNodeState, addExecutionLog } =
-        useWorkflowStore();
-
-    // Track SSE cleanup function
-    const sseCleanupRef = useRef<(() => void) | null>(null);
-
-    // Cleanup SSE connection on unmount
-    useEffect(() => {
-        return () => {
-            if (sseCleanupRef.current) {
-                sseCleanupRef.current();
-                sseCleanupRef.current = null;
-            }
-        };
-    }, []);
+    const { startExecution } = useWorkflowStore();
 
     const getTriggerIcon = () => {
         switch (trigger.trigger_type) {
@@ -249,80 +229,12 @@ export function TriggerCard({ trigger, onUpdate }: TriggerCardProps) {
                 const executionId = response.data.executionId;
 
                 // Start execution monitoring in the workflow store
+                // SSE connection is managed by ExecutionPanel
                 startExecution(executionId, trigger.id);
-
-                // Clean up any previous SSE connection
-                if (sseCleanupRef.current) {
-                    sseCleanupRef.current();
-                }
-
-                // Connect to SSE stream for real-time updates
-                sseCleanupRef.current = streamWorkflowExecution(executionId, {
-                    onExecutionStarted: (data) => {
-                        addExecutionLog({
-                            level: "info",
-                            message: `Workflow started: ${data.workflowName} (${data.totalNodes} nodes)`
-                        });
-                    },
-                    onExecutionCompleted: (data) => {
-                        updateExecutionStatus("completed");
-                        addExecutionLog({
-                            level: "success",
-                            message: `Workflow completed successfully in ${data.duration}ms`
-                        });
-                    },
-                    onExecutionFailed: (data) => {
-                        updateExecutionStatus("failed");
-                        addExecutionLog({
-                            level: "error",
-                            message: `Workflow failed: ${data.error}`
-                        });
-                    },
-                    onNodeStarted: (data) => {
-                        updateNodeState(data.nodeId, {
-                            status: "running",
-                            startedAt: new Date(data.timestamp)
-                        });
-                        addExecutionLog({
-                            level: "info",
-                            message: `Node started: ${data.nodeName} (${data.nodeType})`,
-                            nodeId: data.nodeId
-                        });
-                    },
-                    onNodeCompleted: (data) => {
-                        updateNodeState(data.nodeId, {
-                            status: "success",
-                            completedAt: new Date(data.timestamp),
-                            output: data.output,
-                            duration: data.duration
-                        });
-                        addExecutionLog({
-                            level: "success",
-                            message: `Node completed in ${data.duration}ms`,
-                            nodeId: data.nodeId
-                        });
-                    },
-                    onNodeFailed: (data) => {
-                        updateNodeState(data.nodeId, {
-                            status: "error",
-                            completedAt: new Date(data.timestamp),
-                            error: data.error
-                        });
-                        addExecutionLog({
-                            level: "error",
-                            message: `Node failed: ${data.error}`,
-                            nodeId: data.nodeId
-                        });
-                    },
-                    onError: (error) => {
-                        logger.error("SSE stream error", { error });
-                    }
-                });
 
                 // Show success notification
                 setSuccessMessage(`Execution started successfully!\nExecution ID: ${executionId}`);
                 setShowSuccessDialog(true);
-                onUpdate();
             }
         } catch (error) {
             logger.error("Failed to execute trigger", error);

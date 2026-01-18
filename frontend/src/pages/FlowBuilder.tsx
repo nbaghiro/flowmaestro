@@ -14,6 +14,7 @@ import { Button } from "../components/common/Button";
 import { Dialog } from "../components/common/Dialog";
 import { MobileBuilderGuard } from "../components/common/MobileBuilderGuard";
 import { Tooltip } from "../components/common/Tooltip";
+import { ExecutionSSEManager } from "../components/execution/ExecutionSSEManager";
 import { ExecutionPanel } from "../components/ExecutionPanel";
 import { CreateFormInterfaceDialog } from "../components/forms/CreateFormInterfaceDialog";
 import { WorkflowSettingsDialog } from "../components/WorkflowSettingsDialog";
@@ -655,6 +656,8 @@ export function FlowBuilder() {
                         </div>
 
                         {workflowId && <ExecutionPanel workflowId={workflowId} renderPanelOnly />}
+                        {/* SSE manager for workflow executions - always mounted to maintain connection */}
+                        <ExecutionSSEManager />
                         <AIChatPanel workflowId={workflowId} />
                         <CheckpointPanel
                             open={isCheckpointOpen}

@@ -9,7 +9,6 @@ import {
     Bot,
     ChevronDown,
     ChevronRight,
-    Loader2,
     RefreshCw,
     RotateCcw,
     Send,
@@ -43,6 +42,7 @@ import { Button } from "./common/Button";
 import { ConfirmDialog } from "./common/ConfirmDialog";
 import { Input } from "./common/Input";
 import { LLMConnectionDropdown } from "./common/LLMConnectionDropdown";
+import { TypingDots } from "./common/TypingDots";
 
 const MIN_WIDTH = 400;
 const MAX_WIDTH = 800;
@@ -572,7 +572,7 @@ function MessageBubble({
                 {/* Response Content */}
                 <div className="rounded-lg px-4 py-3 bg-muted text-foreground">
                     {isStreaming && !message.content && !isThinking ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <TypingDots />
                     ) : (
                         <div className="text-sm prose prose-sm max-w-none dark:prose-invert">
                             <ReactMarkdown

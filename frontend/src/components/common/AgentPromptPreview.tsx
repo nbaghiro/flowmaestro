@@ -123,18 +123,17 @@ export function AgentPromptPreview({
             <div
                 className={cn(
                     height,
-                    "bg-muted dark:bg-muted relative overflow-hidden shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)]",
+                    "bg-card dark:bg-card relative overflow-hidden shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)]",
                     className
                 )}
             >
                 {/* Dotted background pattern */}
                 <div
-                    className="absolute inset-0"
+                    className="absolute inset-0 opacity-[0.15] dark:opacity-[0.10]"
                     style={{
                         backgroundImage:
                             "radial-gradient(circle, currentColor 1px, transparent 1px)",
-                        backgroundSize: "16px 16px",
-                        opacity: 0.1
+                        backgroundSize: "16px 16px"
                     }}
                 />
                 {/* Centered Bot icon */}
@@ -153,17 +152,16 @@ export function AgentPromptPreview({
         <div
             className={cn(
                 height,
-                "bg-muted dark:bg-muted relative overflow-hidden shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)]",
+                "bg-card dark:bg-card relative overflow-hidden shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)]",
                 className
             )}
         >
             {/* Dotted background pattern */}
             <div
-                className="absolute inset-0"
+                className="absolute inset-0 opacity-[0.15] dark:opacity-[0.10]"
                 style={{
                     backgroundImage: "radial-gradient(circle, currentColor 1px, transparent 1px)",
-                    backgroundSize: "16px 16px",
-                    opacity: 0.06
+                    backgroundSize: "16px 16px"
                 }}
             />
             {/* Layered waves visualization */}
