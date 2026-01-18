@@ -2748,7 +2748,19 @@ export function streamWorkflowExecution(
         }
     });
 
-    eventSource.onerror = () => {
+    eventSource.onerror = (error) => {
+        logger.error("EventSource error", {
+            executionId,
+            readyState: eventSource.readyState,
+            readyStateText:
+                eventSource.readyState === EventSource.CONNECTING
+                    ? "CONNECTING"
+                    : eventSource.readyState === EventSource.OPEN
+                      ? "OPEN"
+                      : "CLOSED",
+            intentionallyClosed,
+            error
+        });
         // Don't report error if we intentionally closed (after completion/failure)
         if (intentionallyClosed || eventSource.readyState === EventSource.CLOSED) {
             // Stream closed normally or intentionally

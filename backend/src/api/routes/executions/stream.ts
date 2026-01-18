@@ -34,7 +34,7 @@ export async function streamExecutionRoute(fastify: FastifyInstance): Promise<vo
                 Params: StreamExecutionParams;
             }>,
             reply: FastifyReply
-        ) => {
+        ): Promise<void> => {
             const executionRepository = new ExecutionRepository();
             const workflowRepository = new WorkflowRepository();
             const { id: executionId } = request.params;
@@ -56,7 +56,8 @@ export async function streamExecutionRoute(fastify: FastifyInstance): Promise<vo
 
             logger.info({ executionId, userId }, "SSE connection established");
 
-            // Set up SSE headers
+            // Set SSE headers - use config.cors.origin for allowed origins
+            // Match the pattern from the working agent stream
             const origin = request.headers.origin;
             const corsOrigin =
                 origin && config.cors.origin.includes(origin) ? origin : config.cors.origin[0];
@@ -67,33 +68,49 @@ export async function streamExecutionRoute(fastify: FastifyInstance): Promise<vo
                 Connection: "keep-alive",
                 "X-Accel-Buffering": "no", // Disable nginx buffering
                 "Access-Control-Allow-Origin": corsOrigin,
-                "Access-Control-Allow-Credentials": "true"
+                "Access-Control-Allow-Credentials": "true",
+                "Access-Control-Allow-Methods": "GET, OPTIONS",
+                "Access-Control-Allow-Headers": "Cache-Control"
             });
+
+            // Keep connection alive
+            const keepAliveInterval = setInterval(() => {
+                reply.raw.write(": keepalive\n\n");
+            }, 15000); // Every 15 seconds
 
             // Track if client disconnected
             let clientDisconnected = false;
 
-            // Keep connection alive
-            const keepAliveInterval = setInterval(() => {
-                if (!clientDisconnected) {
-                    try {
-                        reply.raw.write(": keepalive\n\n");
-                    } catch {
-                        clientDisconnected = true;
-                        clearInterval(keepAliveInterval);
-                    }
+            // Handle client disconnect
+            request.raw.on("close", () => {
+                logger.info({ executionId }, "Client disconnected");
+                clientDisconnected = true;
+                clearInterval(keepAliveInterval);
+                unsubscribeAll();
+            });
+
+            request.raw.on("error", (error: NodeJS.ErrnoException) => {
+                // ECONNRESET is expected when client closes connection after receiving terminal event
+                if (error.code === "ECONNRESET") {
+                    logger.debug({ executionId }, "Client closed connection");
+                } else {
+                    logger.error({ executionId, error }, "Request error");
                 }
-            }, 15000);
+                clientDisconnected = true;
+                clearInterval(keepAliveInterval);
+                unsubscribeAll();
+            });
 
             // Helper function to send SSE event
             const sendEvent = (event: string, data: Record<string, unknown>): void => {
                 if (clientDisconnected) return;
 
                 const message = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+                logger.debug({ event, executionId }, "Writing SSE event");
                 try {
                     reply.raw.write(message);
                 } catch (error) {
-                    logger.error({ event, error }, "Error writing SSE event");
+                    logger.error({ event, error, executionId }, "Error writing SSE event");
                     clientDisconnected = true;
                 }
             };
@@ -123,21 +140,6 @@ export async function streamExecutionRoute(fastify: FastifyInstance): Promise<vo
                     redisEventBus.unsubscribe(channel, handler);
                 });
             };
-
-            // Handle client disconnect
-            request.raw.on("close", () => {
-                logger.info({ executionId }, "Client disconnected");
-                clientDisconnected = true;
-                clearInterval(keepAliveInterval);
-                unsubscribeAll();
-            });
-
-            request.raw.on("error", (error) => {
-                logger.error({ executionId, error }, "Request error");
-                clientDisconnected = true;
-                clearInterval(keepAliveInterval);
-                unsubscribeAll();
-            });
 
             // Subscribe to execution events
             subscribe("execution:started", (data) => {
@@ -296,12 +298,6 @@ export async function streamExecutionRoute(fastify: FastifyInstance): Promise<vo
             });
 
             logger.info({ executionId }, "Stream handler initialized, waiting for events");
-
-            // Return a promise that never resolves to keep connection open
-            // The connection will be closed when:
-            // 1. Client disconnects
-            // 2. Execution completes/fails
-            return new Promise(() => {});
         }
     );
 }
