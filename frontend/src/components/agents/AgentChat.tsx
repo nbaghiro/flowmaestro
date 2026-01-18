@@ -11,6 +11,7 @@ import { Button } from "../common/Button";
 import { Dialog } from "../common/Dialog";
 import { Input } from "../common/Input";
 import { MediaOutput, hasMediaContent } from "../common/MediaOutput";
+import { TypingDots } from "../common/TypingDots";
 import { AgentConnectionSelector } from "./AgentConnectionSelector";
 import type { Agent, ThreadMessage, JsonObject, ThreadTokenUsage } from "../../lib/api";
 
@@ -609,7 +610,7 @@ export function AgentChat({ agent }: AgentChatProps) {
                                     <Bot className="w-4 h-4 text-primary" />
                                 </div>
                                 <div className="bg-card border border-border text-foreground rounded-lg px-4 py-3">
-                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    <TypingDots />
                                 </div>
                             </div>
                         )}

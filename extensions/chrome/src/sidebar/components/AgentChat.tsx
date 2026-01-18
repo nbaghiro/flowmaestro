@@ -3,6 +3,7 @@ import { Send, ChevronDown, Loader2, Camera, FileText, Trash2, Bot } from "lucid
 import React, { useState, useRef, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { TypingDots } from "../../shared/components/TypingDots";
 import { useSidebarStore } from "../stores/sidebarStore";
 
 export function AgentChat() {
@@ -140,7 +141,7 @@ export function AgentChat() {
                 {isStreaming && (
                     <div className="flex justify-start">
                         <div className="bg-muted rounded-lg px-3 py-2">
-                            <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                            <TypingDots />
                         </div>
                     </div>
                 )}

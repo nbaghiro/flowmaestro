@@ -126,7 +126,7 @@ export function WorkflowCanvasPreview({
                 proOptions={{ hideAttribution: true }}
                 className="pointer-events-none"
             >
-                <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="#e5e7eb" />
+                <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="#9ca3af" />
             </Flow>
         </div>
     );
