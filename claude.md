@@ -242,6 +242,12 @@ The frontend logger automatically:
 - Implicit `any` bypasses type safety and defeats the purpose of TypeScript
 - Type warnings indicate potential bugs or code quality issues
 - Consistent type checking prevents technical debt accumulation
+
+### Git Commit Guidelines
+
+- **Do NOT mention Claude or AI** in commit messages - no "Co-Authored-By: Claude" or similar
+- Write commit messages as if a human developer wrote them
+- Keep commit messages concise and descriptive of the changes
 - Consistent formatting improves code readability and reduces merge conflicts
 
 ### Examples
