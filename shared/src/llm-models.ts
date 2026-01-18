@@ -328,6 +328,40 @@ export function getDefaultModelForProvider(provider: string): string {
 }
 
 /**
+ * Get maximum temperature allowed for a provider
+ * Anthropic: 0.0-1.0
+ * OpenAI: 0.0-2.0
+ * Cohere: 0.0-5.0
+ * Google: 0.0-2.0 (some older models max at 1.0, but newer models support up to 2.0)
+ * Hugging Face: 0.0-2.0
+ * FAL.ai: 0.0-2.0 (supports LLMs via OpenRouter)
+ * Replicate: 0.0-2.0 (supports LLM text generation models)
+ * Stability AI: 0.0-2.0 (supports text generation models)
+ */
+export function getTemperatureMaxForProvider(provider: string): number {
+    switch (provider) {
+        case "anthropic":
+            return 1.0;
+        case "openai":
+            return 2.0;
+        case "cohere":
+            return 5.0;
+        case "google":
+            return 2.0; // Some older models max at 1.0, but newer models support up to 2.0
+        case "huggingface":
+            return 2.0;
+        case "fal":
+            return 2.0;
+        case "replicate":
+            return 2.0;
+        case "stabilityai":
+            return 2.0;
+        default:
+            return 2.0;
+    }
+}
+
+/**
  * Find model definition by value
  */
 export function findModelByValue(modelValue: string): LLMModelDefinition | undefined {

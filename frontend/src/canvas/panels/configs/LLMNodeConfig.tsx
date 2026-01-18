@@ -2,6 +2,7 @@ import { Plus } from "lucide-react";
 import { useState, useEffect } from "react";
 import {
     getDefaultModelForProvider,
+    getTemperatureMaxForProvider,
     ALL_PROVIDERS,
     type ValidationError
 } from "@flowmaestro/shared";
@@ -60,6 +61,16 @@ export function LLMNodeConfig({ nodeId, data, onUpdate, errors = [] }: LLMNodeCo
         }
     }, [provider, connectionId, connections]);
 
+    // Clamp temperature when provider changes (if it exceeds the new max)
+    // Note: intentionally only depends on provider, not temperature, to avoid re-clamping on every temp change
+    useEffect(() => {
+        if (provider) {
+            const maxTemp = getTemperatureMaxForProvider(provider);
+            // Use functional update to get current temperature value
+            setTemperature((currentTemp) => (currentTemp > maxTemp ? maxTemp : currentTemp));
+        }
+    }, [provider]);
+
     useEffect(() => {
         onUpdate({
             provider,
@@ -95,7 +106,16 @@ export function LLMNodeConfig({ nodeId, data, onUpdate, errors = [] }: LLMNodeCo
         if (defaultModel) {
             setModel(defaultModel);
         }
+
+        // Clamp temperature if it exceeds the new provider's max
+        const maxTemp = getTemperatureMaxForProvider(selectedProvider);
+        if (temperature > maxTemp) {
+            setTemperature(maxTemp);
+        }
     };
+
+    // Calculate max temperature based on provider
+    const maxTemperature = provider ? getTemperatureMaxForProvider(provider) : 2.0;
 
     return (
         <>
@@ -195,13 +215,13 @@ export function LLMNodeConfig({ nodeId, data, onUpdate, errors = [] }: LLMNodeCo
             <FormSection title="Parameters">
                 <FormField
                     label="Temperature"
-                    description="Controls randomness (0 = deterministic, 2 = creative)"
+                    description={`Controls randomness (0 = deterministic, ${maxTemperature} = creative)`}
                 >
                     <Slider
                         value={temperature}
                         onChange={setTemperature}
                         min={0}
-                        max={2}
+                        max={maxTemperature}
                         step={0.1}
                     />
                 </FormField>

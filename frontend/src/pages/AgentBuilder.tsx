@@ -1,7 +1,7 @@
 import { ArrowLeft, Save, Loader2, MessageSquare, Slack, Pencil, FileText } from "lucide-react";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { getDefaultModelForProvider } from "@flowmaestro/shared";
+import { getDefaultModelForProvider, getTemperatureMaxForProvider } from "@flowmaestro/shared";
 import type { WorkflowSummary } from "@flowmaestro/shared";
 import {
     AgentBuilderLayout,
@@ -294,6 +294,14 @@ export function AgentBuilder() {
             setModel(defaultModel);
         }
     }, [provider, isNewAgent]);
+
+    // Clamp temperature when provider changes (if it exceeds the new max)
+    // Note: intentionally only depends on provider, not temperature, to avoid re-clamping on every temp change
+    useEffect(() => {
+        const maxTemp = getTemperatureMaxForProvider(provider);
+        // Use functional update to get current temperature value
+        setTemperature((currentTemp) => (currentTemp > maxTemp ? maxTemp : currentTemp));
+    }, [provider]);
 
     // Filter connections by LLM providers
     const llmConnections = connections.filter(
@@ -891,27 +899,28 @@ export function AgentBuilder() {
                                             connModel
                                         ) => {
                                             setConnectionId(connId);
-                                            setProvider(
-                                                connProvider as
-                                                    | "openai"
-                                                    | "anthropic"
-                                                    | "google"
-                                                    | "cohere"
-                                                    | "huggingface"
-                                            );
+                                            const newProvider = connProvider as
+                                                | "openai"
+                                                | "anthropic"
+                                                | "google"
+                                                | "cohere"
+                                                | "huggingface";
+                                            setProvider(newProvider);
                                             setModel(connModel);
+
+                                            // Clamp temperature if it exceeds the new provider's max
+                                            const maxTemp =
+                                                getTemperatureMaxForProvider(newProvider);
+                                            if (temperature > maxTemp) {
+                                                setTemperature(maxTemp);
+                                            }
 
                                             // Auto-save to agent if not a new agent
                                             if (!isNewAgent && agentId) {
                                                 try {
                                                     await updateAgent(agentId, {
                                                         connection_id: connId,
-                                                        provider: connProvider as
-                                                            | "openai"
-                                                            | "anthropic"
-                                                            | "google"
-                                                            | "cohere"
-                                                            | "huggingface",
+                                                        provider: newProvider,
                                                         model: connModel
                                                     });
                                                 } catch (err) {
@@ -1111,7 +1120,9 @@ export function AgentBuilder() {
                                                         <Input
                                                             type="range"
                                                             min="0"
-                                                            max="2"
+                                                            max={getTemperatureMaxForProvider(
+                                                                provider
+                                                            ).toString()}
                                                             step="0.1"
                                                             value={temperature}
                                                             onChange={(e) =>
