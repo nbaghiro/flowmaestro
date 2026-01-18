@@ -1,3 +1,4 @@
+import { format } from "date-fns";
 import { create } from "zustand";
 import * as api from "../lib/api";
 import { logger } from "../lib/logger";
@@ -311,7 +312,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
         try {
             const response = await api.createThread({
                 agent_id: agentId,
-                title: new Date().toLocaleString("en-US"),
+                title: format(new Date(), "Pp"),
                 status: "active"
             });
             const newThread = response.data;
@@ -487,15 +488,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
 
                 // Format title using frontend's local timezone if thread doesn't have one
                 if (!newThread.title) {
-                    const formattedTitle = new Date(newThread.created_at).toLocaleString("en-US", {
-                        year: "numeric",
-                        month: "numeric",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        second: "2-digit",
-                        hour12: true
-                    });
+                    const formattedTitle = format(new Date(newThread.created_at), "Pp");
 
                     // Update the thread title with formatted date
                     try {
