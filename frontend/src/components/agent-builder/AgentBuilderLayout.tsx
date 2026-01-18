@@ -1,7 +1,6 @@
 import { ArrowLeftRight } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { useAgentBuilderLayoutStore, type PanelId } from "../../stores/agentBuilderLayoutStore";
-import { Tooltip } from "../common/Tooltip";
 
 interface AgentBuilderLayoutProps {
     /** Navigation panel content */
@@ -21,23 +20,21 @@ function SwapButton({ panelA, panelB }: SwapButtonProps) {
     const { swapPanels } = useAgentBuilderLayoutStore();
 
     return (
-        <div className="relative flex items-center justify-center w-0 group z-20">
-            <Tooltip content="Swap panels">
-                <button
-                    onClick={() => swapPanels(panelA, panelB)}
-                    className={cn(
-                        "absolute p-1.5 rounded-full",
-                        "bg-card border border-border shadow-sm",
-                        "text-muted-foreground hover:text-foreground",
-                        "hover:bg-muted hover:border-primary/50",
-                        "opacity-0 group-hover:opacity-100",
-                        "transition-all duration-200",
-                        "focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-primary"
-                    )}
-                >
-                    <ArrowLeftRight className="w-3 h-3" />
-                </button>
-            </Tooltip>
+        <div className="relative flex items-center justify-center w-0 z-30">
+            <button
+                onClick={() => swapPanels(panelA, panelB)}
+                className={cn(
+                    "absolute left-1/2 -translate-x-1/2 p-1.5 rounded-full",
+                    "bg-card border border-border shadow-sm",
+                    "text-muted-foreground hover:text-foreground",
+                    "hover:bg-muted hover:border-primary/50 hover:shadow-md",
+                    "opacity-60 hover:opacity-100",
+                    "transition-all duration-200",
+                    "focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-primary"
+                )}
+            >
+                <ArrowLeftRight className="w-3 h-3" />
+            </button>
         </div>
     );
 }
@@ -62,30 +59,32 @@ export function AgentBuilderLayout({
         const elements: React.ReactNode[] = [];
 
         orderedPanels.forEach((panelId, index) => {
-            // Add the panel
+            const nextPanelId = index < orderedPanels.length - 1 ? orderedPanels[index + 1] : null;
+
+            // Determine if swap button should show for this panel pair
+            // Don't show swap button next to navigation panel (it has fixed position)
+            const showSwap = nextPanelId
+                ? panelId !== "navigation" &&
+                  nextPanelId !== "navigation" &&
+                  (panels[panelId].state === "expanded" || panels[nextPanelId].state === "expanded")
+                : false;
+
+            // Render the panel
             elements.push(
-                <div key={panelId} className="contents">
+                <div key={panelId} className="contents group/panel-pair">
                     {panelContent[panelId]}
                 </div>
             );
 
             // Add swap button between panels (not after the last one)
-            if (index < orderedPanels.length - 1) {
-                const nextPanelId = orderedPanels[index + 1];
-                // Only show swap button if at least one panel is expanded
-                const showSwap =
-                    panels[panelId].state === "expanded" ||
-                    panels[nextPanelId].state === "expanded";
-
-                if (showSwap) {
-                    elements.push(
-                        <SwapButton
-                            key={`swap-${panelId}-${nextPanelId}`}
-                            panelA={panelId}
-                            panelB={nextPanelId}
-                        />
-                    );
-                }
+            if (nextPanelId && showSwap) {
+                elements.push(
+                    <SwapButton
+                        key={`swap-${panelId}-${nextPanelId}`}
+                        panelA={panelId}
+                        panelB={nextPanelId}
+                    />
+                );
             }
         });
 

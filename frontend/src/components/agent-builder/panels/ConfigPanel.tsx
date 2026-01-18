@@ -27,8 +27,6 @@ export function ConfigPanel({ children }: ConfigPanelProps) {
     return (
         <Panel
             id="config"
-            resizable
-            resizePosition="right"
             collapsedContent={collapsedContent}
             collapsedWidth={48}
             minimizedIcon={Settings}

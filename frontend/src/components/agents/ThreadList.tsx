@@ -108,7 +108,7 @@ export function ThreadList({
     };
 
     return (
-        <div className="h-full flex flex-col bg-card border-r border-border">
+        <div className="h-full flex flex-col bg-card border-l border-r border-border">
             {/* Header */}
             <div className="p-4 border-b border-border flex-shrink-0">
                 <button
