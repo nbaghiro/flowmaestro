@@ -200,35 +200,69 @@ export function AgentBuilder() {
         }
     }, [isNewAgent, patternData]);
 
-    // Load threads when agent loads and auto-select most recent for build tab
+    // Load threads when agent loads and restore or auto-select thread
     useEffect(() => {
         if (currentAgent && !isNewAgent) {
             fetchThreads(currentAgent.id).then(() => {
-                // Auto-select most recent thread if none is currently selected
                 const store = useAgentStore.getState();
+
+                // Try to restore thread selection from localStorage
+                const storageKey = `flowmaestro:selectedThread:${currentAgent.id}`;
+                const savedThreadId = localStorage.getItem(storageKey);
+
+                if (savedThreadId && store.threads.length > 0) {
+                    // Try to restore the saved thread if it exists
+                    const savedThread = store.threads.find((t) => t.id === savedThreadId);
+                    if (savedThread) {
+                        setCurrentThread(savedThread);
+                        return;
+                    }
+                }
+
+                // If no saved thread or saved thread not found, auto-select most recent
                 if (!store.currentThread && store.threads.length > 0) {
                     // Threads are ordered by created_at DESC, so first is most recent
+                    // Note: Persistence to localStorage is handled by the useEffect that watches currentThread
                     setCurrentThread(store.threads[0]);
                 }
             });
         }
     }, [currentAgent, isNewAgent, fetchThreads, setCurrentThread]);
 
-    // Auto-select most recent thread when switching to build tab
+    // Auto-select most recent thread when switching to build tab (only if no thread is selected)
     useEffect(() => {
         const prevTab = prevTabRef.current;
         prevTabRef.current = activeTab;
 
-        // When switching TO build tab from another tab, always select most recent thread
+        // When switching TO build tab from another tab, restore saved thread or select most recent
         if (activeTab === "build" && prevTab !== "build") {
-            // Get latest threads from store to avoid having threads as dependency
             const store = useAgentStore.getState();
-            if (store.threads.length > 0) {
+
+            // If a thread is already selected, keep it
+            if (store.currentThread) {
+                return;
+            }
+
+            // Try to restore from localStorage
+            if (currentAgent && store.threads.length > 0) {
+                const storageKey = `flowmaestro:selectedThread:${currentAgent.id}`;
+                const savedThreadId = localStorage.getItem(storageKey);
+
+                if (savedThreadId) {
+                    const savedThread = store.threads.find((t) => t.id === savedThreadId);
+                    if (savedThread) {
+                        setCurrentThread(savedThread);
+                        return;
+                    }
+                }
+
+                // Fallback to most recent thread
                 // Threads are ordered by created_at DESC, so first is most recent
+                // Note: Persistence to localStorage is handled by the useEffect that watches currentThread
                 setCurrentThread(store.threads[0]);
             }
         }
-    }, [activeTab, setCurrentThread]);
+    }, [activeTab, setCurrentThread, currentAgent]);
 
     // Update URL when tab changes
     useEffect(() => {
@@ -245,6 +279,14 @@ export function AgentBuilder() {
             navigate(tabPaths[activeTab], { replace: true });
         }
     }, [activeTab, agentId, navigate, location.pathname]);
+
+    // Persist thread selection to localStorage whenever it changes
+    useEffect(() => {
+        if (currentThread && currentAgent && !isNewAgent) {
+            const storageKey = `flowmaestro:selectedThread:${currentAgent.id}`;
+            localStorage.setItem(storageKey, currentThread.id);
+        }
+    }, [currentThread, currentAgent, isNewAgent]);
 
     // Load thread from URL params when threadId is present
     // Note: currentThread intentionally excluded from deps to prevent circular updates
@@ -702,6 +744,7 @@ export function AgentBuilder() {
     // Thread management handlers
     const handleSelectThread = (thread: typeof currentThread) => {
         setCurrentThread(thread);
+        // Note: Persistence to localStorage is handled by the useEffect that watches currentThread
         // Note: URL update is handled by the useEffect that watches currentThread
         // to avoid duplicate navigation calls
     };
@@ -738,6 +781,12 @@ export function AgentBuilder() {
     const handleArchiveThread = async (threadId: string) => {
         try {
             await archiveThread(threadId);
+
+            // Clear localStorage if the archived thread was the selected one
+            if (currentThread?.id === threadId && currentAgent) {
+                const storageKey = `flowmaestro:selectedThread:${currentAgent.id}`;
+                localStorage.removeItem(storageKey);
+            }
         } catch (error) {
             logger.error("Failed to archive thread", error);
             setError(error instanceof Error ? error.message : "Failed to archive thread");
@@ -749,6 +798,13 @@ export function AgentBuilder() {
 
         try {
             await deleteThread(threadToDelete.id);
+
+            // Clear localStorage if the deleted thread was the selected one
+            if (currentThread?.id === threadToDelete.id && currentAgent) {
+                const storageKey = `flowmaestro:selectedThread:${currentAgent.id}`;
+                localStorage.removeItem(storageKey);
+            }
+
             setThreadToDelete(null);
         } catch (error) {
             logger.error("Failed to delete thread", error);
