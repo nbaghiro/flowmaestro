@@ -36,7 +36,7 @@ interface AgentStore {
     fetchAgents: (params?: { folderId?: string }) => Promise<void>;
     fetchAgent: (agentId: string) => Promise<void>;
     createAgent: (data: CreateAgentRequest) => Promise<Agent>;
-    updateAgent: (agentId: string, data: UpdateAgentRequest) => Promise<void>;
+    updateAgent: (agentId: string, data: UpdateAgentRequest) => Promise<Agent>;
     deleteAgent: (agentId: string) => Promise<void>;
     setCurrentAgent: (agent: Agent | null) => void;
     resetAgentState: () => void;
@@ -156,6 +156,8 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
                     state.currentAgent?.id === agentId ? updatedAgent : state.currentAgent,
                 isLoading: false
             }));
+            // Return the updated agent directly to avoid stale data issues
+            return updatedAgent;
         } catch (error) {
             set({
                 error: error instanceof Error ? error.message : "Failed to update agent",

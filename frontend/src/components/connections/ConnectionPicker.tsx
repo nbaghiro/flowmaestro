@@ -1,5 +1,5 @@
 import { Plus, Key, AlertCircle } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ALL_PROVIDERS } from "@flowmaestro/shared";
 import { ConnectionMethod } from "../../lib/api";
 import { cn } from "../../lib/utils";
@@ -49,11 +49,8 @@ export function ConnectionPicker({
     allowedMethods
 }: ConnectionPickerProps) {
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-    const { connections, fetchConnections } = useConnectionStore();
-
-    useEffect(() => {
-        fetchConnections({ provider });
-    }, [provider, fetchConnections]);
+    const { connections } = useConnectionStore();
+    // No need to fetch with filter - use existing connections and filter locally
 
     // Filter connections by provider and optionally by method
     const providerConnections = connections.filter((conn) => {
@@ -201,7 +198,6 @@ export function ConnectionPicker({
                         isOpen={isAddDialogOpen}
                         onClose={() => {
                             setIsAddDialogOpen(false);
-                            fetchConnections({ provider });
                         }}
                         provider={provider}
                         providerDisplayName={providerInfo.displayName}
@@ -214,7 +210,6 @@ export function ConnectionPicker({
                         }
                         onSuccess={() => {
                             setIsAddDialogOpen(false);
-                            fetchConnections({ provider });
                         }}
                         supportsOAuth={providerInfo.methods.includes("oauth2")}
                         supportsApiKey={providerInfo.methods.includes("api_key")}

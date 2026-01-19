@@ -36,21 +36,12 @@ import { cn } from "../lib/utils";
 import { useAgentStore } from "../stores/agentStore";
 import { useConnectionStore } from "../stores/connectionStore";
 import type { AgentTab } from "../components/agent-builder";
-import type { AgentPatternData } from "../components/CreateAgentDialog";
-import type {
-    CreateAgentRequest,
-    UpdateAgentRequest,
-    AddToolRequest,
-    Tool,
-    KnowledgeBase
-} from "../lib/api";
+import type { UpdateAgentRequest, AddToolRequest, Tool, KnowledgeBase } from "../lib/api";
 
 export function AgentBuilder() {
     const { agentId, threadId } = useParams<{ agentId: string; threadId?: string }>();
     const navigate = useNavigate();
     const location = useLocation();
-    const isNewAgent = agentId === "new";
-    const patternData = location.state?.patternData as AgentPatternData | undefined;
     const fromFolderId = (location.state as { fromFolderId?: string } | null)?.fromFolderId;
 
     // Determine where to navigate back to
@@ -77,7 +68,6 @@ export function AgentBuilder() {
     const {
         currentAgent,
         fetchAgent,
-        createAgent,
         updateAgent,
         resetAgentState,
         addTool,
@@ -145,13 +135,49 @@ export function AgentBuilder() {
         title: string;
     } | null>(null);
 
-    // Load agent if editing - reset state first when switching agents
+    // Redirect if agentId is "new" - agents should be created before reaching AgentBuilder
+    useEffect(() => {
+        if (agentId === "new") {
+            navigate("/agents", { replace: true });
+            return;
+        }
+    }, [agentId, navigate]);
+
+    // Load agent and populate form when agentId changes (not on currentAgent changes)
+    // This prevents resetting form fields when currentAgent updates due to tool additions
     useEffect(() => {
         // Reset all agent-specific state when agentId changes
         resetAgentState();
 
-        if (!isNewAgent && agentId) {
-            fetchAgent(agentId);
+        if (agentId && agentId !== "new") {
+            fetchAgent(agentId).then(() => {
+                // After fetching, populate form from the agent
+                const agent = useAgentStore.getState().currentAgent;
+                if (agent && agent.id === agentId) {
+                    setName(agent.name);
+                    setDescription(agent.description || "");
+                    setProvider(agent.provider);
+                    setModel(agent.model);
+                    setConnectionId(agent.connection_id || "");
+                    setSystemPrompt(agent.system_prompt);
+                    setTemperature(agent.temperature);
+                    setMaxTokens(agent.max_tokens);
+                    // Parse tools from available_tools array
+                    setTools(agent.available_tools || []);
+
+                    // Store original values for change detection
+                    setOriginalValues({
+                        name: agent.name,
+                        description: agent.description || "",
+                        provider: agent.provider,
+                        model: agent.model,
+                        connectionId: agent.connection_id || "",
+                        systemPrompt: agent.system_prompt,
+                        temperature: agent.temperature,
+                        maxTokens: agent.max_tokens
+                    });
+                }
+            });
         }
         fetchConnections();
 
@@ -159,50 +185,11 @@ export function AgentBuilder() {
             // Also reset on unmount to ensure clean state
             resetAgentState();
         };
-    }, [agentId, isNewAgent, fetchAgent, fetchConnections, resetAgentState]);
-
-    // Populate form when agent loads
-    useEffect(() => {
-        if (currentAgent) {
-            setName(currentAgent.name);
-            setDescription(currentAgent.description || "");
-            setProvider(currentAgent.provider);
-            setModel(currentAgent.model);
-            setConnectionId(currentAgent.connection_id || "");
-            setSystemPrompt(currentAgent.system_prompt);
-            setTemperature(currentAgent.temperature);
-            setMaxTokens(currentAgent.max_tokens);
-            // Parse tools from available_tools array
-            setTools(currentAgent.available_tools || []);
-
-            // Store original values for change detection
-            setOriginalValues({
-                name: currentAgent.name,
-                description: currentAgent.description || "",
-                provider: currentAgent.provider,
-                model: currentAgent.model,
-                connectionId: currentAgent.connection_id || "",
-                systemPrompt: currentAgent.system_prompt,
-                temperature: currentAgent.temperature,
-                maxTokens: currentAgent.max_tokens
-            });
-        }
-    }, [currentAgent]);
-
-    // Initialize form from pattern data when creating a new agent
-    useEffect(() => {
-        if (isNewAgent && patternData) {
-            setName(patternData.name);
-            setDescription(patternData.description || "");
-            setSystemPrompt(patternData.pattern.systemPrompt);
-            setTemperature(patternData.pattern.temperature);
-            setMaxTokens(patternData.pattern.maxTokens);
-        }
-    }, [isNewAgent, patternData]);
+    }, [agentId, fetchAgent, fetchConnections, resetAgentState]);
 
     // Load threads when agent loads and restore or auto-select thread
     useEffect(() => {
-        if (currentAgent && !isNewAgent) {
+        if (currentAgent) {
             fetchThreads(currentAgent.id).then(() => {
                 const store = useAgentStore.getState();
 
@@ -227,7 +214,7 @@ export function AgentBuilder() {
                 }
             });
         }
-    }, [currentAgent, isNewAgent, fetchThreads, setCurrentThread]);
+    }, [currentAgent, fetchThreads, setCurrentThread]);
 
     // Auto-select most recent thread when switching to build tab (only if no thread is selected)
     useEffect(() => {
@@ -282,11 +269,11 @@ export function AgentBuilder() {
 
     // Persist thread selection to localStorage whenever it changes
     useEffect(() => {
-        if (currentThread && currentAgent && !isNewAgent) {
+        if (currentThread && currentAgent) {
             const storageKey = `flowmaestro:selectedThread:${currentAgent.id}`;
             localStorage.setItem(storageKey, currentThread.id);
         }
-    }, [currentThread, currentAgent, isNewAgent]);
+    }, [currentThread, currentAgent]);
 
     // Load thread from URL params when threadId is present
     // Note: currentThread intentionally excluded from deps to prevent circular updates
@@ -331,11 +318,11 @@ export function AgentBuilder() {
 
     // Set default model when provider changes
     useEffect(() => {
-        if (!model || !isNewAgent) {
+        if (!model) {
             const defaultModel = getDefaultModelForProvider(provider);
             setModel(defaultModel);
         }
-    }, [provider, isNewAgent]);
+    }, [provider]);
 
     // Clamp temperature when provider changes (if it exceeds the new max)
     // Note: intentionally only depends on provider, not temperature, to avoid re-clamping on every temp change
@@ -387,7 +374,7 @@ export function AgentBuilder() {
         setError(null);
 
         try {
-            const agentData: CreateAgentRequest | UpdateAgentRequest = {
+            const agentData: UpdateAgentRequest = {
                 name: name.trim(),
                 description: description.trim() || undefined,
                 model,
@@ -398,11 +385,40 @@ export function AgentBuilder() {
                 max_tokens: maxTokens
             };
 
-            if (isNewAgent) {
-                const newAgent = await createAgent(agentData as CreateAgentRequest);
-                navigate(`/agents/${newAgent.id}`);
-            } else if (agentId) {
-                await updateAgent(agentId, agentData);
+            // Agent should always exist at this point (created before reaching AgentBuilder)
+            if (!agentId) {
+                setError("Agent ID is required");
+                setIsSaving(false);
+                return;
+            }
+
+            const savedAgent = await updateAgent(agentId, agentData);
+
+            // Update originalValues to match what was just saved
+            // This ensures hasUnsavedChanges is false after save
+            if (savedAgent) {
+                setOriginalValues({
+                    name: savedAgent.name,
+                    description: savedAgent.description || "",
+                    provider: savedAgent.provider,
+                    model: savedAgent.model,
+                    connectionId: savedAgent.connection_id || "",
+                    systemPrompt: savedAgent.system_prompt,
+                    temperature: savedAgent.temperature,
+                    maxTokens: savedAgent.max_tokens
+                });
+            } else {
+                // Fallback: update originalValues from form values if agent not available
+                setOriginalValues({
+                    name: name.trim(),
+                    description: description.trim() || "",
+                    provider,
+                    model,
+                    connectionId: connectionId || "",
+                    systemPrompt,
+                    temperature,
+                    maxTokens
+                });
             }
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to save agent");
@@ -412,17 +428,18 @@ export function AgentBuilder() {
     };
 
     // Detect unsaved changes
+    // Compare form fields against originalValues
     const hasUnsavedChanges =
-        isNewAgent ||
-        (originalValues !== null &&
-            (name !== originalValues.name ||
-                description !== originalValues.description ||
-                provider !== originalValues.provider ||
-                model !== originalValues.model ||
-                connectionId !== originalValues.connectionId ||
-                systemPrompt !== originalValues.systemPrompt ||
-                temperature !== originalValues.temperature ||
-                maxTokens !== originalValues.maxTokens));
+        originalValues !== null &&
+        currentAgent &&
+        (name !== originalValues.name ||
+            description !== originalValues.description ||
+            provider !== originalValues.provider ||
+            model !== originalValues.model ||
+            connectionId !== originalValues.connectionId ||
+            systemPrompt !== originalValues.systemPrompt ||
+            temperature !== originalValues.temperature ||
+            maxTokens !== originalValues.maxTokens);
 
     // Warn user about unsaved changes when closing/refreshing browser
     useEffect(() => {
@@ -457,7 +474,7 @@ export function AgentBuilder() {
         setIsSaving(true);
 
         try {
-            const agentData: CreateAgentRequest | UpdateAgentRequest = {
+            const agentData: UpdateAgentRequest = {
                 name: name.trim(),
                 description: description.trim() || undefined,
                 model,
@@ -468,10 +485,39 @@ export function AgentBuilder() {
                 max_tokens: maxTokens
             };
 
-            if (isNewAgent) {
-                await createAgent(agentData as CreateAgentRequest);
-            } else if (agentId) {
-                await updateAgent(agentId, agentData);
+            // Agent should always exist at this point (created before reaching AgentBuilder)
+            if (!agentId) {
+                setError("Agent ID is required");
+                setIsSaving(false);
+                return;
+            }
+
+            const savedAgent = await updateAgent(agentId, agentData);
+
+            // Update originalValues to match what was just saved
+            if (savedAgent) {
+                setOriginalValues({
+                    name: savedAgent.name,
+                    description: savedAgent.description || "",
+                    provider: savedAgent.provider,
+                    model: savedAgent.model,
+                    connectionId: savedAgent.connection_id || "",
+                    systemPrompt: savedAgent.system_prompt,
+                    temperature: savedAgent.temperature,
+                    maxTokens: savedAgent.max_tokens
+                });
+            } else {
+                // Fallback: update originalValues from form values
+                setOriginalValues({
+                    name: name.trim(),
+                    description: description.trim() || "",
+                    provider,
+                    model,
+                    connectionId: connectionId || "",
+                    systemPrompt,
+                    temperature,
+                    maxTokens
+                });
             }
 
             setShowUnsavedDialog(false);
@@ -489,9 +535,8 @@ export function AgentBuilder() {
         systemPrompt,
         temperature,
         maxTokens,
-        isNewAgent,
         agentId,
-        createAgent,
+        currentAgent,
         updateAgent,
         navigate,
         getBackUrl
@@ -499,7 +544,6 @@ export function AgentBuilder() {
 
     // Inline name editing handlers
     const handleStartEditingName = () => {
-        if (isNewAgent) return;
         setEditedName(name);
         setIsEditingName(true);
     };
@@ -521,7 +565,7 @@ export function AgentBuilder() {
         setIsEditingName(false);
 
         // Auto-save the name change
-        if (!isNewAgent && agentId) {
+        if (agentId) {
             try {
                 await updateAgent(agentId, { name: trimmedName });
             } catch (err) {
@@ -847,21 +891,14 @@ export function AgentBuilder() {
                             ) : (
                                 <button
                                     onClick={handleStartEditingName}
-                                    disabled={isNewAgent}
                                     className={cn(
-                                        "flex items-center gap-2 group",
-                                        !isNewAgent &&
-                                            "hover:bg-muted rounded px-2 py-1 transition-colors"
+                                        "flex items-center gap-2 group hover:bg-muted rounded px-2 py-1 transition-colors"
                                     )}
                                 >
                                     <h1 className="text-lg font-semibold text-foreground">
-                                        {isNewAgent
-                                            ? "New Agent"
-                                            : currentAgent?.name || "Loading..."}
+                                        {currentAgent?.name || "Loading..."}
                                     </h1>
-                                    {!isNewAgent && (
-                                        <Pencil className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                                    )}
+                                    <Pencil className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                                 </button>
                             )}
                         </div>
@@ -875,7 +912,7 @@ export function AgentBuilder() {
                     {/* Right section */}
                     <div className="flex items-center gap-2 ml-auto">
                         <ThemeToggle />
-                        {!isNewAgent && agentId && (
+                        {agentId && (
                             <>
                                 <Tooltip content="Form Interface" position="bottom">
                                     <button
@@ -971,8 +1008,8 @@ export function AgentBuilder() {
                                                 setTemperature(maxTemp);
                                             }
 
-                                            // Auto-save to agent if not a new agent
-                                            if (!isNewAgent && agentId) {
+                                            // Auto-save connection change to agent
+                                            if (agentId) {
                                                 try {
                                                     await updateAgent(agentId, {
                                                         connection_id: connId,
@@ -1007,7 +1044,7 @@ export function AgentBuilder() {
                             }
                             chatPanel={
                                 <ChatPanel>
-                                    {currentAgent && !isNewAgent ? (
+                                    {currentAgent ? (
                                         <AgentChat agent={currentAgent} />
                                     ) : (
                                         <div className="h-full flex items-center justify-center text-muted-foreground">
@@ -1311,7 +1348,7 @@ export function AgentBuilder() {
                         setIsFormInterfaceDialogOpen(false);
                         navigate(`/form-interfaces/${formInterface.id}/edit`);
                     }}
-                    initialAgentId={!isNewAgent ? agentId : undefined}
+                    initialAgentId={agentId || undefined}
                 />
 
                 {/* Create Chat Interface Dialog */}
@@ -1322,7 +1359,7 @@ export function AgentBuilder() {
                         setIsChatInterfaceDialogOpen(false);
                         navigate(`/chat-interfaces/${chatInterface.id}/edit`);
                     }}
-                    initialAgentId={!isNewAgent ? agentId : undefined}
+                    initialAgentId={agentId || undefined}
                 />
             </div>
         </MobileBuilderGuard>

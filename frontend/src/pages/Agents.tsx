@@ -579,13 +579,10 @@ export function Agents() {
             <CreateAgentDialog
                 isOpen={isCreateDialogOpen}
                 onClose={() => setIsCreateDialogOpen(false)}
-                onCreate={(patternData) => {
+                onCreated={(agentId) => {
                     setIsCreateDialogOpen(false);
-                    navigate("/agents/new", {
-                        state: {
-                            patternData,
-                            ...(currentFolderId && { fromFolderId: currentFolderId })
-                        }
+                    navigate(`/agents/${agentId}/build`, {
+                        ...(currentFolderId && { state: { fromFolderId: currentFolderId } })
                     });
                 }}
             />

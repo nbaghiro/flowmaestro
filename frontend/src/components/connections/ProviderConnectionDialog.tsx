@@ -109,7 +109,6 @@ export function ProviderConnectionDialog({
     const handleProviderClick = (provider: Provider) => {
         setCurrentProvider(provider);
         setView("connection-list");
-        fetchConnections({ provider: provider.provider });
     };
 
     const handleConnectionSelect = (connectionId: string) => {
@@ -135,9 +134,6 @@ export function ProviderConnectionDialog({
 
     const handleConnectionCreated = () => {
         setView("connection-list");
-        if (currentProvider) {
-            fetchConnections({ provider: currentProvider.provider });
-        }
     };
 
     if (!isOpen) return null;
