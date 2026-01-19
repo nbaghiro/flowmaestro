@@ -183,6 +183,148 @@ STARTING --> RUNNING ---> COMPLETED                        |
 
 ## User Flows
 
+### Overview: How Users Interact with Long-Running Agents
+
+Long-running agents differ from short interactions in three key ways:
+
+1. **Autonomous execution** - Agent works independently for hours after initial goal-setting
+2. **Asynchronous approvals** - User can respond to approval requests hours/days later
+3. **Interruptible** - User can redirect or cancel at any time
+
+#### Triggering a Long-Running Agent
+
+**Entry Point**: User sends a message to an agent in a thread (same as regular agents)
+
+```
+User → "Analyze our top 5 competitors and produce a comprehensive report"
+```
+
+**What Happens Behind the Scenes**:
+
+1. Backend creates/continues a thread
+2. Temporal workflow starts → creates E2B sandbox (~150ms)
+3. Agent Runtime starts inside sandbox
+4. Agent may ask clarifying questions first (back-and-forth like normal chat)
+5. Once goal is clear, agent confirms and begins autonomous work
+
+**Key Difference from Short-Running**: The agent doesn't need continuous user input. After initial goal-setting, it works independently for hours.
+
+#### How the Agent Provides Progress and Reasoning
+
+The thread view shows **real-time progress** via WebSocket events. Users see:
+
+| Update Type                   | When                     | Example                                |
+| ----------------------------- | ------------------------ | -------------------------------------- |
+| **Progress messages**         | Periodically during work | "Completed analysis of Acme and Beta"  |
+| **Milestone announcements**   | Major phase transitions  | "Moving to data synthesis phase"       |
+| **Approval requests**         | When risky action needed | "I'd like to query Crunchbase API"     |
+| **Deliverable notifications** | When artifact created    | "Created draft: competitive-report.md" |
+| **Cost/iteration updates**    | Header bar, real-time    | "Progress: 45/~200, Cost: 23 credits"  |
+
+**When User is Away**:
+
+- Agent continues working (sandbox keeps running)
+- When approval needed → sandbox **pauses** (no compute cost), notification sent
+- User can respond hours/days later
+- On reconnect, user sees full history and current state
+
+#### How Users Interrupt and Redirect
+
+Users have **three ways** to interact with a running agent:
+
+**A. Send a Message (Soft Redirect)**
+
+User types in the chat anytime to redirect the agent's work:
+
+```
+[10:30 AM] You
+Actually, skip Delta Corp - they're not a real competitor.
+Focus more on Echo's enterprise features instead.
+
+[10:30 AM] Research Agent
+Understood. I'll skip Delta Corp and prioritize Echo's
+enterprise features in my analysis. Continuing with Gamma now.
+```
+
+How it works:
+
+1. User message → Backend → Temporal signal → Forwarded to sandbox via HTTP
+2. Agent Runtime receives message in its signal queue
+3. At next iteration, agent sees message and adapts behavior
+4. Agent acknowledges and continues with new direction
+
+**B. Deny an Approval Request (Redirect with Constraint)**
+
+When agent asks for approval, user can deny with a reason:
+
+```
+[User clicks "Deny" with note: "Don't use paid APIs, use public sources only"]
+
+[10:25 AM] Research Agent
+Understood. I won't use the Crunchbase API. I'll gather funding
+information from public sources like press releases and news
+articles instead. This may be less precise but avoids the cost.
+```
+
+How it works:
+
+1. Denial + reason → Temporal signal → Resume sandbox → Forward to Agent Runtime
+2. Agent receives denial reason in its context
+3. Agent adapts and tries alternative approach
+4. No re-approval needed for alternative (unless it's also risky)
+
+**C. Cancel Execution (Hard Stop)**
+
+User clicks the **[Cancel]** button in the thread header:
+
+```
++-------------------------------------------------------------------+
+| Research Agent - Competitive Analysis                    [Cancel] |
++-------------------------------------------------------------------+
+```
+
+What happens:
+
+1. Cancel signal → Temporal workflow
+2. Workflow kills sandbox immediately
+3. Any work-in-progress deliverables saved as "draft"
+4. Execution marked as "cancelled"
+5. User can review partial work and optionally start new execution
+
+#### Interaction Summary
+
+```
+                    ┌──────────────────────────────────────────┐
+                    │           USER INTERACTIONS              │
+                    └──────────────────────────────────────────┘
+                                      │
+         ┌────────────────────────────┼────────────────────────────┐
+         │                            │                            │
+         ▼                            ▼                            ▼
+   ┌───────────┐              ┌──────────────┐              ┌───────────┐
+   │  MESSAGE  │              │   APPROVAL   │              │  CANCEL   │
+   │ (Redirect)│              │   (Gate)     │              │  (Stop)   │
+   └───────────┘              └──────────────┘              └───────────┘
+         │                            │                            │
+         ▼                            ▼                            ▼
+   Agent adapts            Approve: Continue             Kill sandbox
+   at next iteration       Deny: Agent adapts            Save drafts
+                           (sandbox pauses               Mark cancelled
+                            while waiting)
+```
+
+**Key Behavioral Differences**:
+
+- **Messages** are **non-blocking** - agent sees them at next iteration
+- **Approvals** are **blocking** - sandbox pauses (no cost) until user responds
+- **Cancel** is **immediate** - sandbox killed, partial work preserved
+
+---
+
+### Sequence Diagrams
+
+The following diagrams show the technical flow for each interaction type.
+
 ### Flow 1: Starting a Long-Running Task
 
 ```
@@ -239,7 +381,60 @@ User                          System                         Agent
   |                              |     with alternative approach]|
 ```
 
-### Flow 4: Deliverable Creation
+### Flow 4: User Message Interrupt (Redirect)
+
+```
+User                          System                         Agent
+  |                              |                              |
+  |                              |    [Agent working on task]   |
+  |                              |                              |
+  |-- "Skip Delta, focus on" --->|                              |
+  |   "Echo's enterprise"        |                              |
+  |                              |-- Queue message signal ----->|
+  |                              |                              |
+  |                              |    [Agent completes current  |
+  |                              |     iteration]               |
+  |                              |                              |
+  |                              |<-- Check signal queue -------|
+  |                              |                              |
+  |                              |<-- Process user message -----|
+  |                              |                              |
+  |<---- "Understood, I'll" -----|<---- Acknowledge + adapt ----|
+  |       "skip Delta..."        |                              |
+  |                              |                              |
+  |                              |    [Agent continues with     |
+  |                              |     new direction]           |
+```
+
+**Note**: User messages are **non-blocking**. The agent sees the message at its next iteration and adapts. The agent does NOT pause when a user message arrives - it processes it naturally in its loop.
+
+### Flow 5: Cancellation
+
+```
+User                          System                         Agent
+  |                              |                              |
+  |                              |    [Agent working on task]   |
+  |                              |                              |
+  |-- Click [Cancel] ----------->|                              |
+  |                              |-- Signal workflow: cancel -->|
+  |                              |                              |
+  |                              |<-- Save current state -------|
+  |                              |<-- Finalize draft deliverables|
+  |                              |                              |
+  |                              |-- Kill sandbox ------------>X|
+  |                              |                              |
+  |                              |-- Update execution status ---|
+  |                              |    (cancelled)               |
+  |                              |                              |
+  |<-- "Execution cancelled" ----|                              |
+  |    "3 draft deliverables     |                              |
+  |     preserved"               |                              |
+  |                              |                              |
+  |-- View partial work -------->|                              |
+  |<---- Display drafts ---------|                              |
+```
+
+### Flow 6: Deliverable Creation
 
 ```
 User                          System                         Agent
@@ -255,7 +450,7 @@ User                          System                         Agent
   |<---- Display artifacts ------|                              |
 ```
 
-### Flow 5: Timeout/Limit Reached
+### Flow 7: Timeout/Limit Reached
 
 ```
 User                          System                         Agent
@@ -264,6 +459,8 @@ User                          System                         Agent
   |                              |                              |
   |                              |<-- Save current state -------|
   |                              |<-- Create final deliverables-|
+  |                              |                              |
+  |                              |-- Kill sandbox ------------>X|
   |                              |                              |
   |<-- "Time limit reached" -----|<-- Emit completion event ----|
   |                              |                              |
@@ -341,6 +538,28 @@ When creating/editing an agent, users configure long-running behavior:
 | | write_file            | High         | [High    v]  |           |
 |                                                                   |
 | [+ Add override]                                                  |
+|                                                                   |
+| ----------------------------------------------------------------- |
+|                                                                   |
+| SANDBOX ENVIRONMENT                                               |
+| ----------------------------------------------------------------- |
+|                                                                   |
+| Compute Resources: Determined by your workspace plan              |
+| Current: Pro (4 vCPU, 2GB RAM, 24hr max) - ~$0.20/hr             |
+|                                                                   |
+| Network Access:                                                   |
+| [v] Enable internet access                                        |
+|     Agent can access web, APIs, and external services.            |
+|     Disable for maximum security isolation.                       |
+|                                                                   |
+| Desktop Environment: Included                                     |
+| Browser automation and computer use capabilities available.       |
+|                                                                   |
+| Advanced: Custom Template                                         |
+| +--------------------------------------------------+              |
+| | flowmaestro-agent-v1 (default)              [v]  |              |
+| +--------------------------------------------------+              |
+| Use a custom E2B template with pre-installed tools.               |
 |                                                                   |
 +-------------------------------------------------------------------+
 ```
@@ -608,6 +827,14 @@ interface AgentLongRunningConfig {
         email_on_completion: boolean;
         email_on_approval_needed: boolean;
     };
+
+    // Sandbox configuration (E2B)
+    // Note: CPU/RAM determined by workspace plan tier
+    // Note: Desktop environment always available
+    sandbox: {
+        internet_access: boolean; // true = full access, false = isolated (default: true)
+        custom_template_id?: string; // Override default template (advanced use)
+    };
 }
 ```
 
@@ -788,36 +1015,348 @@ interface ApprovalNotification {
 +------------------+     +------------------+     +------------------+
 |                  |     |                  |     |                  |
 |    Frontend      |<--->|    Backend       |<--->|    Temporal      |
-|    (React)       |     |    (Fastify)     |     |    (Workflows)   |
+|    (React)       |     |    (Fastify)     |     |  (Orchestrator)  |
 |                  |     |                  |     |                  |
 +------------------+     +------------------+     +------------------+
         |                        |                        |
-        |                        |                        |
-        v                        v                        v
-+------------------+     +------------------+     +------------------+
-|                  |     |                  |     |                  |
-|    WebSocket     |     |    PostgreSQL    |     |    Redis         |
-|    (Socket.IO)   |     |    (Database)    |     |    (Events)      |
-|                  |     |                  |     |                  |
-+------------------+     +------------------+     +------------------+
+        |                        |                        v
+        v                        v              +------------------+
++------------------+     +------------------+   |                  |
+|                  |     |                  |   |   E2B Sandbox    |
+|    WebSocket     |     |    PostgreSQL    |   |   (Agent Loop)   |
+|    (Socket.IO)   |     |    (Database)    |   |                  |
+|                  |     |                  |   +------------------+
++------------------+     +------------------+            |
+        ^                        ^                      |
+        |                        |                      v
+        |                +------------------+   +------------------+
+        +----------------|    Redis         |<--|  Agent Runtime   |
+                         |    (Events)      |   |  (Node.js)       |
+                         +------------------+   +------------------+
 ```
 
-### Data Flow for Approval
+**Key architectural change**: Temporal workflows act as **orchestrators**, managing the E2B sandbox lifecycle. The actual agent LLM loop runs inside the isolated sandbox, communicating with the backend via HTTP.
+
+### Data Flow for Approval (with E2B Sandbox)
 
 ```
-1. Agent (Temporal) detects risky tool call
-2. Agent calls createApprovalRequest activity
-3. Activity inserts ApprovalRequest in PostgreSQL
-4. Activity publishes notification via Redis pub/sub
-5. Backend receives Redis event
-6. Backend emits WebSocket event to user
-7. Frontend displays notification/badge
-8. User clicks Approve in UI
-9. Frontend calls POST /api/approvals/:id/approve
-10. Backend validates and signals Temporal workflow
-11. Workflow receives signal, continues execution
-12. Backend updates ApprovalRequest status
+1.  Agent Runtime (in E2B Sandbox) detects risky tool call
+2.  Agent Runtime calls POST /api/internal/sandbox/approval-request
+3.  Backend inserts ApprovalRequest in PostgreSQL
+4.  Backend publishes notification via Redis pub/sub
+5.  Backend signals Temporal workflow (sandbox will pause)
+6.  Temporal workflow calls pauseSandbox() activity (~4s pause)
+7.  Backend emits WebSocket event to user
+8.  Frontend displays notification/badge
+    [Sandbox is paused - no billing during wait]
+9.  User clicks Approve in UI (could be hours/days later)
+10. Frontend calls POST /api/approvals/:id/approve
+11. Backend validates and signals Temporal workflow
+12. Temporal workflow calls resumeSandbox() activity (~1s resume)
+13. Temporal forwards approval decision to Agent Runtime via HTTP
+14. Agent Runtime continues execution with the approved action
+15. Backend updates ApprovalRequest status
 ```
+
+**Key difference**: The sandbox is **paused** (not running) while waiting for approval, which:
+
+- Preserves full state (memory + filesystem) for up to 30 days
+- Eliminates compute costs during approval waits
+- Allows indefinite approval wait times
+
+---
+
+## Sandbox Environment (E2B)
+
+Long-running agents execute inside isolated E2B sandboxes, providing secure, resource-isolated environments with persistent state. This architecture enables agents to run complex, multi-hour tasks while maintaining security isolation and cost efficiency.
+
+### Why E2B Sandboxes (Not Direct Temporal Execution)
+
+Temporal is excellent for **workflow orchestration** - it provides durable execution, long-running workflows via `continueAsNew`, signals, and activity retries. However, running agent LLM loops directly in Temporal workers creates significant problems.
+
+#### The Problem: Running Agent Code Directly in Temporal Workers
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    TEMPORAL WORKER NODE                     │
+│                                                             │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │
+│  │  Agent A     │  │  Agent B     │  │  Workflow C  │       │
+│  │  (LLM loop)  │  │  (LLM loop)  │  │  (other)     │       │
+│  │              │  │              │  │              │       │
+│  │ - Web search │  │ - Code exec  │  │              │       │
+│  │ - File write │  │ - API calls  │  │              │       │
+│  │ - Shell cmd  │  │ - Shell cmd  │  │              │       │
+│  └──────────────┘  └──────────────┘  └──────────────┘       │
+│                                                             │
+│  SHARED: CPU, Memory, Network, Filesystem, Secrets          │
+└─────────────────────────────────────────────────────────────┘
+```
+
+| Issue                   | Impact                                                                                  |
+| ----------------------- | --------------------------------------------------------------------------------------- |
+| **Security**            | Agent code runs on your infra with access to internal network, secrets, other processes |
+| **Resource contention** | One agent consuming 100% CPU affects all other workflows on that worker                 |
+| **No isolation**        | Agent A can read Agent B's files, environment variables                                 |
+| **Code execution risk** | `execute_code` tool runs arbitrary Python/JS directly on worker node                    |
+| **Escape potential**    | Malicious or buggy agent code could compromise the worker                               |
+
+#### The Solution: E2B Sandboxes for Execution, Temporal for Orchestration
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    TEMPORAL WORKER NODE                     │
+│                    (orchestration only)                     │
+│                                                             │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │  Agent Orchestrator Workflow                         │   │
+│  │  - Create sandbox       - Handle signals             │   │
+│  │  - Pause/resume sandbox - Forward approvals          │   │
+│  └──────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              │ API calls only
+                              ▼
+┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
+│  E2B SANDBOX A  │  │  E2B SANDBOX B  │  │  E2B SANDBOX C  │
+│  (Firecracker)  │  │  (Firecracker)  │  │  (Firecracker)  │
+│                 │  │                 │  │                 │
+│  Agent Runtime  │  │  Agent Runtime  │  │  Agent Runtime  │
+│  - LLM loop     │  │  - LLM loop     │  │  - LLM loop     │
+│  - Code exec    │  │  - Code exec    │  │  - Code exec    │
+│  - File I/O     │  │  - File I/O     │  │  - File I/O     │
+│                 │  │                 │  │                 │
+│  ISOLATED       │  │  ISOLATED       │  │  ISOLATED       │
+└─────────────────┘  └─────────────────┘  └─────────────────┘
+```
+
+#### Key Benefits of E2B Sandboxes
+
+**1. Security Isolation (Firecracker microVMs)**
+
+- Each agent runs in its own Firecracker microVM (same technology as AWS Lambda)
+- Complete filesystem, network, and process isolation
+- Agent A cannot see or affect Agent B
+- Compromised agent cannot escape to host infrastructure
+
+**2. Cost-Efficient Approval Waits (Pause/Resume)**
+
+Without E2B, waiting for approval has two bad options:
+
+- **Option A**: Keep workflow running → worker resources consumed while waiting (could be hours/days)
+- **Option B**: Serialize state, complete workflow, restart on approval → complex, error-prone, risk of state loss
+
+With E2B pause/resume:
+
+```
+Agent needs approval → sandbox.pause()
+├── Memory state: PRESERVED (frozen in RAM image)
+├── Filesystem:   PRESERVED
+├── Compute cost: $0.00/hour
+└── Retention:    30 days
+
+User approves (hours later) → Sandbox.connect(id)
+├── Resume time: ~1 second
+├── Exact same state as when paused
+└── No serialization/reconstruction needed
+```
+
+Cost comparison for a 4-hour task with 2 hours of approval waits:
+
+| Approach                    | Active Compute | Wait Compute | Total Cost        |
+| --------------------------- | -------------- | ------------ | ----------------- |
+| Temporal worker (always on) | 4 hours        | 2 hours      | 6 hours of worker |
+| E2B with pause              | 4 hours        | 0 hours      | ~$0.80            |
+
+**3. Guaranteed Resource Isolation**
+
+Temporal workers have shared resources (noisy neighbor problems):
+
+```
+Agent A uses 8GB RAM → Agent B gets OOM killed
+Agent A spins CPU → Agent B's LLM calls timeout
+```
+
+E2B sandboxes have dedicated resources per execution:
+
+```
+Each sandbox: 4 vCPU (dedicated), 2GB RAM (dedicated)
+No contention, predictable performance
+```
+
+**4. Computer Use / Desktop Environment**
+
+E2B provides a full graphical desktop environment for agents that need to:
+
+- Automate browser interactions (Chrome, Firefox)
+- Take screenshots for visual verification
+- Control mouse/keyboard for computer use tasks
+
+This is impossible to do safely in a Temporal worker - you'd need X11/VNC on worker nodes with all the security implications.
+
+**5. Dependency Isolation**
+
+Temporal workers must pre-install all possible dependencies (Python versions, pip packages, Node versions, npm packages). Conflicting versions are problematic.
+
+E2B sandboxes: Each execution can have its own environment. Install dependencies at runtime if needed. No conflicts.
+
+**6. Clean Failure Handling**
+
+Temporal workers: Runaway process (e.g., fork bomb) affects all workflows on that worker.
+
+E2B sandboxes: Contained failure. Sandbox killed, other sandboxes unaffected. Temporal workflow gets error, handles gracefully.
+
+#### Summary: Why Both Together
+
+| Concern                      | Temporal Handles | E2B Handles |
+| ---------------------------- | ---------------- | ----------- |
+| Workflow durability          | ✅               |             |
+| Signal handling              | ✅               |             |
+| Retry policies               | ✅               |             |
+| Long-term orchestration      | ✅               |             |
+| Security isolation           |                  | ✅          |
+| Resource isolation           |                  | ✅          |
+| Pause/resume with full state |                  | ✅          |
+| Pay-per-second compute       |                  | ✅          |
+| Computer use (desktop)       |                  | ✅          |
+| Dependency isolation         |                  | ✅          |
+| Safe code execution          |                  | ✅          |
+
+**The architecture uses each for what it's best at**:
+
+- **Temporal**: Orchestration, durability, signals, long-term state machine
+- **E2B**: Isolated execution environment where untrusted agent code actually runs
+
+### Sandbox Architecture
+
+```
+User Request → Backend API → Temporal Workflow → E2B Sandbox
+                                    ↓                   ↓
+                        Approval wait (indefinite)   Agent Runtime
+                        (sandbox paused)                 ↓
+                                    ↓              Tool Execution
+                        Resume sandbox signal           ↓
+                                    ↓              Report Progress
+                            ← ← ← ← ← ← ← ← ← ← ← ← ← ←
+```
+
+**Key architectural changes from direct Temporal execution:**
+
+1. **Temporal workflow becomes orchestrator only** - Manages sandbox lifecycle (create, pause, resume, kill), handles signals (approval, cancel, user message), forwards signals to sandbox
+2. **E2B sandbox runs agent execution** - Agent LLM loop runs inside sandbox, tool calls executed within sandbox, state persisted via sandbox memory (no manual serialization needed)
+3. **Communication via HTTP** - Sandbox exposes endpoint for receiving signals, sandbox calls backend API to report status, request approvals, create deliverables
+
+### Resource Configuration
+
+Sandbox resources are determined by workspace plan tier, providing predictable costs and simplified billing:
+
+| Workspace Plan | vCPU | RAM | Max Duration | Desktop | Hourly Cost |
+| -------------- | ---- | --- | ------------ | ------- | ----------- |
+| Hobby          | 2    | 1GB | 1 hour       | Yes     | ~$0.10      |
+| Pro            | 4    | 2GB | 24 hours     | Yes     | ~$0.20      |
+| Enterprise     | 8    | 4GB | 24 hours     | Yes     | ~$0.40      |
+
+**Notes:**
+
+- Sandbox resources are determined by workspace plan tier, not configured per-agent
+- Desktop environment (E2B Desktop) included by default for all tiers to support browser automation and computer use
+- Pricing based on E2B rates (~$0.05/hour per vCPU)
+
+### Sandbox States
+
+```
+CREATING → RUNNING ↔ PAUSED → KILLED
+                ↑        ↑
+                |        |
+         (active work)  (approval wait or timeout)
+```
+
+| State      | Description                                         | Billing   |
+| ---------- | --------------------------------------------------- | --------- |
+| `creating` | Sandbox initializing (~150ms startup)               | No charge |
+| `running`  | Agent actively executing                            | Charged   |
+| `paused`   | Waiting for approval, preserves memory + filesystem | No charge |
+| `killed`   | Execution complete, sandbox terminated              | No charge |
+
+### Pause/Resume Behavior
+
+E2B's pause/resume feature is critical for cost-efficient approval workflows:
+
+- **Pause time**: ~4 seconds per GB RAM
+- **Resume time**: ~1 second
+- **State retention**: 30 days (filesystem + memory preserved)
+- **Auto-pause**: Enabled by default when approval is requested
+
+```typescript
+// When approval is needed
+await sandbox.betaPause(); // ~4s for 2GB RAM
+
+// When approval is received
+const sandbox = await Sandbox.connect(sandboxId); // Auto-resumes, ~1s
+```
+
+### Network Access
+
+Configurable per-agent with a simple on/off toggle:
+
+| Setting    | Behavior                                                            |
+| ---------- | ------------------------------------------------------------------- |
+| `enabled`  | Full internet access for web searches, API calls, external services |
+| `disabled` | No outbound network access for maximum security isolation           |
+
+**Default**: `enabled` (most agents need web access for research, API calls, etc.)
+
+### Custom Templates
+
+Advanced users can create custom E2B templates with pre-installed tools and dependencies:
+
+```dockerfile
+# e2b.Dockerfile for flowmaestro-agent-v1
+FROM e2bdev/code-interpreter:latest
+
+# Install Node.js 22
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
+    apt-get install -y nodejs
+
+# Install Python packages for data processing
+RUN pip install pandas numpy matplotlib requests beautifulsoup4
+
+# Install agent runtime
+COPY packages/agent-runtime/dist /app/
+COPY node_modules /app/node_modules
+
+WORKDIR /workspace
+CMD ["node", "/app/agent-runtime.js"]
+```
+
+Template ID can be specified in agent configuration to override the default `flowmaestro-agent-v1` template.
+
+### Desktop Environment (Computer Use)
+
+E2B Desktop provides a full graphical environment for agents that need to:
+
+- Automate browser interactions (Chrome, Firefox)
+- Capture screenshots for visual verification
+- Control mouse/keyboard for computer use tasks
+- Run GUI applications
+
+```typescript
+// Create desktop sandbox for browser automation
+const sandbox = await Sandbox.create({
+    template: "desktop",
+    timeoutMs: 3600000 // 1 hour
+});
+
+// Take screenshot
+const screenshot = await sandbox.screenshot();
+
+// Control mouse and keyboard
+await sandbox.moveMouse(100, 200);
+await sandbox.click();
+await sandbox.type("search query");
+```
+
+Desktop environment is available to all workspace tiers and is included by default.
 
 ---
 
@@ -955,6 +1494,14 @@ ALTER TABLE agents ADD COLUMN tool_risk_overrides JSONB
 
 ALTER TABLE agents ADD COLUMN long_running_notifications JSONB
     NOT NULL DEFAULT '{"email_on_completion": false, "email_on_approval_needed": false}';
+
+-- Sandbox configuration (simplified: network toggle + optional custom template)
+-- Note: CPU/RAM determined by workspace plan tier, desktop always enabled
+ALTER TABLE agents ADD COLUMN sandbox_config JSONB
+    NOT NULL DEFAULT '{"internet_access": true, "custom_template_id": null}';
+
+COMMENT ON COLUMN agents.sandbox_config IS 'E2B sandbox configuration: internet_access (bool), custom_template_id (string|null)';
+    NOT NULL DEFAULT '{"email_on_completion": false, "email_on_approval_needed": false}';
 ```
 
 #### `agent_executions` table additions
@@ -969,6 +1516,23 @@ ALTER TABLE agent_executions ADD COLUMN completion_reason VARCHAR(50)
         'success', 'max_iterations', 'max_duration', 'max_cost',
         'cancelled', 'failed', 'approval_timeout'
     ));
+
+-- E2B Sandbox tracking
+ALTER TABLE agent_executions ADD COLUMN sandbox_id VARCHAR(100);
+ALTER TABLE agent_executions ADD COLUMN sandbox_state VARCHAR(20)
+    CHECK (sandbox_state IN ('creating', 'running', 'paused', 'killed'));
+ALTER TABLE agent_executions ADD COLUMN sandbox_public_url VARCHAR(500);
+ALTER TABLE agent_executions ADD COLUMN sandbox_paused_at TIMESTAMPTZ;
+ALTER TABLE agent_executions ADD COLUMN sandbox_total_runtime_seconds INTEGER DEFAULT 0;
+
+CREATE INDEX idx_agent_executions_sandbox_id ON agent_executions(sandbox_id);
+CREATE INDEX idx_agent_executions_sandbox_state ON agent_executions(sandbox_state);
+
+COMMENT ON COLUMN agent_executions.sandbox_id IS 'E2B sandbox identifier for this execution';
+COMMENT ON COLUMN agent_executions.sandbox_state IS 'Current state of the E2B sandbox';
+COMMENT ON COLUMN agent_executions.sandbox_public_url IS 'Public URL for sandbox (if exposed)';
+COMMENT ON COLUMN agent_executions.sandbox_paused_at IS 'When sandbox was last paused (for billing)';
+COMMENT ON COLUMN agent_executions.sandbox_total_runtime_seconds IS 'Cumulative active runtime (for cost tracking)';
 ```
 
 ---
@@ -1339,6 +1903,23 @@ const {
     startToCloseTimeout: "30 seconds",
     retry: RETRY_POLICIES.DEFAULT
 });
+
+// Proxy for E2B sandbox activities
+const {
+    createAgentSandbox,
+    pauseSandbox,
+    resumeSandbox,
+    killSandbox,
+    forwardSignalToSandbox,
+    getSandboxStatus
+} = proxyActivities<typeof sandboxActivities>({
+    startToCloseTimeout: "60 seconds", // Sandbox operations may take longer
+    retry: {
+        maximumAttempts: 3,
+        initialInterval: "1 second",
+        maximumInterval: "10 seconds"
+    }
+});
 ```
 
 #### Workflow Input Modifications
@@ -1347,13 +1928,28 @@ const {
 interface AgentOrchestratorInput {
     // ... existing fields
 
-    // New fields
+    // New fields for long-running support
     startedAt?: number; // For continue-as-new to track original start
     accumulatedCostCredits?: number; // For continue-as-new to track costs
+
+    // Sandbox state (for continue-as-new)
+    sandboxId?: string; // E2B sandbox identifier
+    sandboxState?: "creating" | "running" | "paused" | "killed";
+}
+
+interface SandboxConfig {
+    templateId: string; // 'flowmaestro-agent-v1' or custom
+    cpuCount: number; // From workspace plan
+    memoryMb: number; // From workspace plan
+    internetAccess: boolean; // From agent config
+    maxDurationMs: number; // From agent config
+    envVars: Record<string, string>;
 }
 ```
 
-#### Main Loop Modifications
+#### Main Loop Modifications (Sandbox-Based)
+
+The workflow now acts as an **orchestrator** managing the E2B sandbox lifecycle, rather than executing the agent loop directly.
 
 ```typescript
 export async function agentOrchestratorWorkflow(
@@ -1371,17 +1967,58 @@ export async function agentOrchestratorWorkflow(
     // Track execution start time
     const executionStartTime = input.startedAt || Date.now();
     let accumulatedCost = input.accumulatedCostCredits || 0;
+    let sandboxId = input.sandboxId;
+    let sandboxState = input.sandboxState || "creating";
 
     // Calculate duration limit
     const maxDurationMs = agent.max_duration_hours * 60 * 60 * 1000;
 
-    // Cancel handling
+    // ========================================
+    // PHASE 1: Create or reconnect to sandbox
+    // ========================================
+    if (!sandboxId) {
+        // Get workspace plan to determine sandbox resources
+        const workspacePlan = await getWorkspacePlan(workspaceId);
+
+        const sandbox = await createAgentSandbox({
+            templateId: agent.sandbox_config.custom_template_id || "flowmaestro-agent-v1",
+            cpuCount: workspacePlan.sandbox_cpu,
+            memoryMb: workspacePlan.sandbox_memory_mb,
+            internetAccess: agent.sandbox_config.internet_access,
+            maxDurationMs: maxDurationMs,
+            envVars: {
+                EXECUTION_ID: executionId,
+                AGENT_ID: agentId,
+                BACKEND_URL: process.env.BACKEND_INTERNAL_URL!,
+                BACKEND_TOKEN: await generateSandboxToken(executionId)
+            }
+        });
+
+        sandboxId = sandbox.id;
+        sandboxState = "running";
+
+        // Update execution record with sandbox info
+        await updateExecutionSandbox(executionId, {
+            sandboxId: sandbox.id,
+            sandboxState: "running",
+            sandboxPublicUrl: sandbox.publicUrl
+        });
+    } else {
+        // Resume existing sandbox (from continue-as-new or pause)
+        if (sandboxState === "paused") {
+            await resumeSandbox(sandboxId);
+            sandboxState = "running";
+        }
+    }
+
+    // ========================================
+    // PHASE 2: Signal handlers
+    // ========================================
     let cancelRequested = false;
     setHandler(cancelSignal, () => {
         cancelRequested = true;
     });
 
-    // Approval handling
     let pendingApprovalResolve: ((result: ApprovalResult) => void) | null = null;
     let pendingApprovalId: string | null = null;
 
@@ -1393,59 +2030,79 @@ export async function agentOrchestratorWorkflow(
         }
     });
 
-    // Main loop
-    while (currentIterations < maxIterations) {
-        // Check cancel
+    // User message handler - forwards to sandbox
+    setHandler(userMessageSignal, async (message) => {
+        await forwardSignalToSandbox(sandboxId!, {
+            type: "user_message",
+            content: message
+        });
+    });
+
+    // ========================================
+    // PHASE 3: Event loop (wait for sandbox events)
+    // ========================================
+    while (true) {
+        // Check for cancel
         if (cancelRequested) {
-            await saveCurrentState();
+            await killSandbox(sandboxId!);
+            await updateExecutionSandbox(executionId, { sandboxState: "killed" });
             return { success: false, reason: "cancelled" };
         }
 
         // Check duration limit
         const elapsedMs = Date.now() - executionStartTime;
         if (maxDurationMs > 0 && elapsedMs >= maxDurationMs) {
-            await saveCurrentState();
+            await killSandbox(sandboxId!);
             return { success: true, reason: "max_duration" };
         }
 
-        // Check cost limit
-        if (agent.max_cost_credits > 0 && accumulatedCost >= agent.max_cost_credits) {
-            await saveCurrentState();
-            return { success: false, reason: "max_cost" };
+        // Wait for next event from sandbox (via activity polling)
+        const event = await condition(
+            () => sandboxEvent !== null,
+            "5 minutes" // Poll interval
+        );
+
+        if (!event) {
+            // Timeout - check sandbox health
+            const status = await getSandboxStatus(sandboxId!);
+            if (status.state === "killed" || status.error) {
+                return { success: false, reason: "sandbox_error", error: status.error };
+            }
+            continue;
         }
 
-        // ... existing LLM call logic ...
+        // Process sandbox events
+        switch (event.type) {
+            case "approval_needed":
+                // Sandbox is requesting approval for a risky action
+                const approvalReq = event.data as ApprovalRequestData;
 
-        // Tool execution with approval
-        for (const toolCall of llmResponse.tool_calls) {
-            const tool = findTool(agent.available_tools, toolCall.name);
+                // Pause the sandbox while waiting for approval (saves costs!)
+                await pauseSandbox(sandboxId!);
+                sandboxState = "paused";
+                await updateExecutionSandbox(executionId, {
+                    sandboxState: "paused",
+                    sandboxPausedAt: new Date()
+                });
 
-            // Determine if approval needed
-            const needsApproval = shouldRequireApproval(
-                tool,
-                agent.autonomy_level,
-                agent.tool_risk_overrides
-            );
-
-            if (needsApproval) {
-                // Create approval request
+                // Create approval request in database
                 const approval = await createApprovalRequest({
                     executionId,
                     agentId,
                     userId,
                     workspaceId,
                     threadId,
-                    actionType: "tool_call",
-                    toolName: toolCall.name,
-                    actionDescription: generateToolDescription(tool, toolCall.arguments),
-                    actionArguments: toolCall.arguments,
-                    riskLevel: tool.risk_level || "medium",
-                    estimatedCost: estimateToolCost(tool),
-                    agentContext: summarizeContext(messageState.messages),
-                    alternatives: "If denied, I will try an alternative approach."
+                    actionType: approvalReq.actionType,
+                    toolName: approvalReq.toolName,
+                    actionDescription: approvalReq.description,
+                    actionArguments: approvalReq.arguments,
+                    riskLevel: approvalReq.riskLevel,
+                    estimatedCost: approvalReq.estimatedCost,
+                    agentContext: approvalReq.context,
+                    alternatives: approvalReq.alternatives
                 });
 
-                // Emit notification
+                // Emit notification to user
                 await emitApprovalNeeded({
                     approvalId: approval.id,
                     executionId,
@@ -1455,60 +2112,103 @@ export async function agentOrchestratorWorkflow(
                     riskLevel: approval.risk_level
                 });
 
-                // Wait for approval (indefinitely)
+                // Wait for approval signal (indefinitely - sandbox is paused)
                 pendingApprovalId = approval.id;
                 const approvalResult = await new Promise<ApprovalResult>((resolve) => {
                     pendingApprovalResolve = resolve;
                 });
 
-                if (approvalResult.decision === "denied") {
-                    // Add denial to context
-                    messageState.messages.push({
-                        id: `system-denial-${Date.now()}`,
-                        role: "system",
-                        content:
-                            `Your request to use "${toolCall.name}" was denied by the user. ` +
-                            `Reason: ${approvalResult.note || "No reason provided"}. ` +
-                            `Please try an alternative approach or continue without this action.`,
-                        timestamp: new Date()
-                    });
+                // Resume sandbox with the decision
+                await resumeSandbox(sandboxId!);
+                sandboxState = "running";
+                await updateExecutionSandbox(executionId, { sandboxState: "running" });
 
-                    // Update approval status
-                    await updateApprovalRequest(approval.id, "denied", approvalResult.note);
+                // Forward the decision to the sandbox
+                await forwardSignalToSandbox(sandboxId!, {
+                    type: "approval_response",
+                    approvalId: approval.id,
+                    decision: approvalResult.decision,
+                    note: approvalResult.note
+                });
 
-                    continue; // Skip this tool call
+                // Update approval record
+                await updateApprovalRequest(
+                    approval.id,
+                    approvalResult.decision,
+                    approvalResult.note
+                );
+                break;
+
+            case "progress_update":
+                // Sandbox reporting progress (iteration count, cost, etc.)
+                const progress = event.data as ProgressUpdateData;
+                accumulatedCost = progress.accumulatedCost;
+
+                // Check cost limit
+                if (agent.max_cost_credits > 0 && accumulatedCost >= agent.max_cost_credits) {
+                    await forwardSignalToSandbox(sandboxId!, { type: "stop", reason: "max_cost" });
+                    await killSandbox(sandboxId!);
+                    return { success: false, reason: "max_cost" };
                 }
 
-                // Update approval status
-                await updateApprovalRequest(approval.id, "approved", approvalResult.note);
-            }
+                // Emit progress event to frontend
+                await emitProgressUpdate(executionId, progress);
+                break;
 
-            // Execute tool (either approved or safe)
-            const result = await executeToolCall(toolCall);
+            case "deliverable_created":
+                // Sandbox created a deliverable
+                const deliverable = event.data as DeliverableData;
+                await createDeliverable({
+                    executionId,
+                    agentId,
+                    userId,
+                    workspaceId,
+                    threadId,
+                    name: deliverable.name,
+                    description: deliverable.description,
+                    type: deliverable.type,
+                    mimeType: deliverable.mimeType,
+                    content: deliverable.content,
+                    status: deliverable.status
+                });
+                break;
 
-            // Track cost
-            if (result.cost_credits) {
-                accumulatedCost += result.cost_credits;
-            }
+            case "completed":
+                // Agent finished successfully
+                await killSandbox(sandboxId!);
+                await updateExecutionSandbox(executionId, { sandboxState: "killed" });
+                return {
+                    success: true,
+                    reason: "success",
+                    deliverables: event.data.deliverableIds
+                };
 
-            // ... rest of tool result handling ...
+            case "error":
+                // Agent encountered an error
+                await killSandbox(sandboxId!);
+                await updateExecutionSandbox(executionId, { sandboxState: "killed" });
+                return {
+                    success: false,
+                    reason: "failed",
+                    error: event.data.error
+                };
         }
 
-        // Continue-as-new check (pass accumulated state)
-        if (currentIterations % CONTINUE_AS_NEW_THRESHOLD === 0) {
+        // Continue-as-new check for long-running workflows (preserve sandbox state)
+        // This prevents Temporal history from growing too large
+        if (shouldContinueAsNew()) {
             await continueAsNew<typeof agentOrchestratorWorkflow>({
                 ...input,
                 startedAt: executionStartTime,
                 accumulatedCostCredits: accumulatedCost,
-                iterations: currentIterations,
-                serializedMessages: messageState
+                sandboxId: sandboxId,
+                sandboxState: sandboxState
             });
         }
-
-        currentIterations++;
     }
 
-    return { success: true, reason: "max_iterations" };
+    // Should never reach here (loop exits via return statements)
+    return { success: false, reason: "unexpected_exit" };
 }
 ```
 
@@ -1714,6 +2414,405 @@ export async function createDeliverable(input: CreateDeliverableInput): Promise<
 
     return deliverable;
 }
+```
+
+**File**: `backend/src/temporal/activities/agents/sandbox.ts`
+
+```typescript
+import { Sandbox } from "@e2b/code-interpreter";
+import { createServiceLogger } from "../../../core/logging";
+
+const logger = createServiceLogger("SandboxActivity");
+
+export interface CreateSandboxInput {
+    templateId: string;
+    cpuCount: number;
+    memoryMb: number;
+    internetAccess: boolean;
+    maxDurationMs: number;
+    envVars: Record<string, string>;
+}
+
+export interface SandboxInfo {
+    id: string;
+    publicUrl?: string;
+    state: "creating" | "running" | "paused" | "killed";
+}
+
+/**
+ * Create a new E2B sandbox for agent execution
+ */
+export async function createAgentSandbox(input: CreateSandboxInput): Promise<SandboxInfo> {
+    logger.info("Creating E2B sandbox", {
+        templateId: input.templateId,
+        cpuCount: input.cpuCount,
+        memoryMb: input.memoryMb
+    });
+
+    const sandbox = await Sandbox.create({
+        template: input.templateId,
+        timeoutMs: input.maxDurationMs,
+        metadata: {
+            cpu: input.cpuCount,
+            memory: input.memoryMb
+        },
+        envVars: input.envVars
+    });
+
+    // Start the agent runtime in background
+    await sandbox.commands.run("node /app/agent-runtime.js", {
+        background: true,
+        envVars: input.envVars
+    });
+
+    logger.info("Sandbox created and agent started", { sandboxId: sandbox.sandboxId });
+
+    return {
+        id: sandbox.sandboxId,
+        publicUrl: sandbox.getHost(3000), // If exposing HTTP endpoint
+        state: "running"
+    };
+}
+
+/**
+ * Pause a sandbox to save costs during approval waits
+ * Memory and filesystem state are preserved for 30 days
+ */
+export async function pauseSandbox(sandboxId: string): Promise<void> {
+    logger.info("Pausing sandbox", { sandboxId });
+
+    const sandbox = await Sandbox.connect(sandboxId);
+    await sandbox.pause();
+
+    logger.info("Sandbox paused", { sandboxId });
+}
+
+/**
+ * Resume a paused sandbox - auto-reconnects and resumes execution
+ */
+export async function resumeSandbox(sandboxId: string): Promise<void> {
+    logger.info("Resuming sandbox", { sandboxId });
+
+    // Sandbox.connect() automatically resumes a paused sandbox
+    const sandbox = await Sandbox.connect(sandboxId);
+
+    logger.info("Sandbox resumed", { sandboxId });
+}
+
+/**
+ * Terminate a sandbox - called on completion, cancellation, or error
+ */
+export async function killSandbox(sandboxId: string): Promise<void> {
+    logger.info("Killing sandbox", { sandboxId });
+
+    try {
+        const sandbox = await Sandbox.connect(sandboxId);
+        await sandbox.kill();
+        logger.info("Sandbox killed", { sandboxId });
+    } catch (error) {
+        // Sandbox may already be dead
+        logger.warn("Failed to kill sandbox (may already be dead)", {
+            sandboxId,
+            error: (error as Error).message
+        });
+    }
+}
+
+/**
+ * Forward a signal to the sandbox's agent runtime via HTTP
+ */
+export async function forwardSignalToSandbox(
+    sandboxId: string,
+    signal: { type: string; [key: string]: unknown }
+): Promise<void> {
+    const sandbox = await Sandbox.connect(sandboxId);
+    const host = sandbox.getHost(3000);
+
+    const response = await fetch(`https://${host}/signal`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(signal)
+    });
+
+    if (!response.ok) {
+        throw new Error(`Failed to forward signal: ${response.statusText}`);
+    }
+}
+
+/**
+ * Get current sandbox status
+ */
+export async function getSandboxStatus(sandboxId: string): Promise<{
+    state: "running" | "paused" | "killed";
+    error?: string;
+}> {
+    try {
+        const sandbox = await Sandbox.connect(sandboxId);
+        return { state: "running" }; // If connect succeeds, it's running
+    } catch (error) {
+        const message = (error as Error).message;
+        if (message.includes("paused")) {
+            return { state: "paused" };
+        }
+        return { state: "killed", error: message };
+    }
+}
+```
+
+---
+
+## Agent Runtime (Runs Inside Sandbox)
+
+The Agent Runtime is a Node.js application that runs inside the E2B sandbox and executes the actual agent loop. It communicates with the backend via HTTP to receive signals and report progress.
+
+### Architecture
+
+```
++--------------------------------------------------+
+|                  E2B SANDBOX                     |
+|                                                  |
+|  +--------------------------------------------+  |
+|  |           AGENT RUNTIME (Node.js)          |  |
+|  |                                            |  |
+|  |  +--------------------------------------+  |  |
+|  |  |          LLM Loop                    |  |  |
+|  |  |   1. Build context                   |  |  |
+|  |  |   2. Call LLM API                    |  |  |
+|  |  |   3. Parse tool calls                |  |  |
+|  |  |   4. Execute tools                   |  |  |
+|  |  |   5. Check for approvals             |  |  |
+|  |  |   6. Report progress                 |  |  |
+|  |  +--------------------------------------+  |  |
+|  |                                            |  |
+|  |  +--------------------------------------+  |  |
+|  |  |        HTTP Server (port 3000)       |  |  |
+|  |  |   /signal - Receive signals          |  |  |
+|  |  |   /health - Health check             |  |  |
+|  |  +--------------------------------------+  |  |
+|  |                                            |  |
+|  +--------------------------------------------+  |
+|                                                  |
++--------------------------------------------------+
+            |                      ^
+            | Report progress,     | Receive signals,
+            | Request approvals,   | Approval responses,
+            | Create deliverables  | User messages
+            v                      |
++--------------------------------------------------+
+|              BACKEND (Fastify)                   |
+|                                                  |
+|  /api/internal/sandbox/progress                  |
+|  /api/internal/sandbox/approval-request          |
+|  /api/internal/sandbox/deliverable               |
++--------------------------------------------------+
+```
+
+### Agent Runtime Implementation
+
+**File**: `packages/agent-runtime/src/index.ts`
+
+```typescript
+import { Hono } from "hono";
+import { serve } from "@hono/node-server";
+
+const EXECUTION_ID = process.env.EXECUTION_ID!;
+const AGENT_ID = process.env.AGENT_ID!;
+const BACKEND_URL = process.env.BACKEND_URL!;
+const BACKEND_TOKEN = process.env.BACKEND_TOKEN!;
+
+// Signal queue for receiving messages from backend
+const signalQueue: Signal[] = [];
+const pendingApprovals = new Map<string, (result: ApprovalResult) => void>();
+
+// HTTP server for receiving signals
+const app = new Hono();
+
+app.post("/signal", async (c) => {
+    const signal = await c.req.json<Signal>();
+
+    if (signal.type === "approval_response") {
+        const resolve = pendingApprovals.get(signal.approvalId);
+        if (resolve) {
+            resolve({ decision: signal.decision, note: signal.note });
+            pendingApprovals.delete(signal.approvalId);
+        }
+    } else {
+        signalQueue.push(signal);
+    }
+
+    return c.json({ ok: true });
+});
+
+app.get("/health", (c) => c.json({ status: "healthy" }));
+
+serve({ fetch: app.fetch, port: 3000 });
+
+// Main agent loop
+async function runAgentLoop(): Promise<void> {
+    const agent = await fetchAgentConfig();
+    const context = initializeContext(agent);
+    let iteration = 0;
+    let accumulatedCost = 0;
+
+    while (true) {
+        iteration++;
+
+        // Process any pending signals (user messages, stop commands)
+        while (signalQueue.length > 0) {
+            const signal = signalQueue.shift()!;
+            await handleSignal(signal, context);
+
+            if (signal.type === "stop") {
+                await reportCompletion("cancelled");
+                return;
+            }
+        }
+
+        // Build messages and call LLM
+        const messages = buildMessages(context);
+        const llmResponse = await callLLM(agent.llm_config, messages);
+
+        // Update cost tracking
+        accumulatedCost += llmResponse.usage.total_cost;
+
+        // Check if agent wants to finish
+        if (llmResponse.finish_reason === "stop" && !llmResponse.tool_calls?.length) {
+            await reportCompletion("success");
+            return;
+        }
+
+        // Execute tool calls
+        for (const toolCall of llmResponse.tool_calls || []) {
+            const tool = agent.tools.find((t) => t.name === toolCall.name);
+
+            // Check if approval is needed
+            if (requiresApproval(tool, agent.autonomy_level, agent.tool_risk_overrides)) {
+                // Request approval from backend (sandbox will be paused)
+                const approvalId = await requestApproval({
+                    actionType: "tool_call",
+                    toolName: toolCall.name,
+                    description: generateDescription(tool, toolCall.arguments),
+                    arguments: toolCall.arguments,
+                    riskLevel: tool.risk_level || "medium",
+                    estimatedCost: estimateToolCost(tool),
+                    context: summarizeContext(context),
+                    alternatives: "If denied, I will try an alternative approach."
+                });
+
+                // Wait for approval (sandbox may be paused during this time)
+                const result = await waitForApproval(approvalId);
+
+                if (result.decision === "denied") {
+                    // Add denial to context and skip this tool
+                    context.messages.push({
+                        role: "system",
+                        content: `Tool "${toolCall.name}" was denied. Reason: ${result.note || "No reason provided"}`
+                    });
+                    continue;
+                }
+            }
+
+            // Execute the tool
+            const result = await executeTool(tool, toolCall.arguments);
+            context.messages.push({
+                role: "tool",
+                tool_call_id: toolCall.id,
+                content: JSON.stringify(result)
+            });
+
+            // Update cost if tool has cost
+            if (result.cost) {
+                accumulatedCost += result.cost;
+            }
+        }
+
+        // Report progress to backend
+        await reportProgress({
+            iteration,
+            accumulatedCost,
+            messagesCount: context.messages.length,
+            status: "running"
+        });
+    }
+}
+
+async function requestApproval(request: ApprovalRequestData): Promise<string> {
+    const response = await fetch(`${BACKEND_URL}/api/internal/sandbox/approval-request`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${BACKEND_TOKEN}`
+        },
+        body: JSON.stringify({
+            executionId: EXECUTION_ID,
+            ...request
+        })
+    });
+
+    const data = await response.json();
+    return data.approvalId;
+}
+
+async function waitForApproval(approvalId: string): Promise<ApprovalResult> {
+    return new Promise((resolve) => {
+        pendingApprovals.set(approvalId, resolve);
+    });
+}
+
+async function reportProgress(progress: ProgressData): Promise<void> {
+    await fetch(`${BACKEND_URL}/api/internal/sandbox/progress`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${BACKEND_TOKEN}`
+        },
+        body: JSON.stringify({
+            executionId: EXECUTION_ID,
+            ...progress
+        })
+    });
+}
+
+async function reportCompletion(reason: string): Promise<void> {
+    await fetch(`${BACKEND_URL}/api/internal/sandbox/complete`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${BACKEND_TOKEN}`
+        },
+        body: JSON.stringify({
+            executionId: EXECUTION_ID,
+            reason
+        })
+    });
+}
+
+// Start the agent
+runAgentLoop().catch((error) => {
+    console.error("Agent runtime error:", error);
+    reportCompletion("error").catch(() => {});
+    process.exit(1);
+});
+```
+
+### Internal API Endpoints
+
+The backend exposes internal endpoints for sandbox communication:
+
+**File**: `backend/src/api/routes/internal/sandbox.ts`
+
+```typescript
+// POST /api/internal/sandbox/approval-request
+// Called by sandbox to request approval - creates ApprovalRequest and emits event
+
+// POST /api/internal/sandbox/progress
+// Called by sandbox to report progress - updates execution record and emits event
+
+// POST /api/internal/sandbox/deliverable
+// Called by sandbox to create a deliverable
+
+// POST /api/internal/sandbox/complete
+// Called by sandbox when agent finishes - signals Temporal workflow
 ```
 
 ---
@@ -2284,9 +3383,10 @@ const LONG_RUNNING_ENABLED = true;
     - Interactive approval buttons in Slack
     - Thread updates for execution progress
 
-2. **Pause/Resume**
-    - User can pause running execution
-    - Resume from checkpoint later
+2. **Manual Pause/Resume UI**
+    - User-initiated pause (sandbox pause is automatic during approvals)
+    - Manual resume from checkpoint
+    - Pause before a specific action
 
 3. **Scheduled Agents**
     - Run agents on schedule (daily, weekly)
@@ -2299,10 +3399,23 @@ const LONG_RUNNING_ENABLED = true;
 5. **Multi-Agent Coordination**
     - Long-running orchestrator spawning sub-agents
     - Shared approval queues
+    - Multiple sandboxes per execution
 
 6. **Cost Prediction**
     - ML-based cost estimation
     - Budget recommendations
+    - Sandbox runtime predictions
+
+7. **Advanced Sandbox Features**
+    - Custom sandbox templates per agent (with UI)
+    - Per-domain network allowlists/denylists
+    - Persistent workspace volumes across executions
+    - Sandbox snapshots for debugging
+
+8. **Computer Use Enhancements**
+    - Screenshot streaming to frontend
+    - Interactive desktop view for debugging
+    - Browser automation templates
 
 ---
 
@@ -2317,9 +3430,25 @@ const LONG_RUNNING_ENABLED = true;
 | **Deliverable**      | A tangible artifact produced by an agent (document, code, data)                          |
 | **Risk Level**       | Classification of how risky an action is (low/medium/high)                               |
 | **Autonomy Level**   | User setting for how much independence an agent has                                      |
+| **E2B Sandbox**      | Isolated Firecracker microVM environment where agent code executes                       |
+| **Agent Runtime**    | Node.js application running inside sandbox that executes the LLM loop                    |
+| **Sandbox Pause**    | E2B feature that suspends sandbox (preserving memory+filesystem) with no compute cost    |
+| **Sandbox Resume**   | E2B feature that resumes a paused sandbox from exact state (~1s startup)                 |
+| **Computer Use**     | Agent capability to control a desktop environment (browser, mouse, keyboard)             |
 
 ## References
 
 - [Temporal Workflow Documentation](https://docs.temporal.io)
 - [FlowMaestro Architecture Guide](./architecture.md)
 - [Agent Architecture](./agent-architecture.md)
+
+### E2B Sandbox Documentation
+
+- [E2B Documentation](https://e2b.dev/docs) - Main documentation
+- [E2B Sandbox Persistence](https://e2b.dev/docs/sandbox/persistence) - Pause/resume capabilities
+- [E2B Custom Templates](https://e2b.dev/docs/sandbox-template) - Creating custom sandbox templates
+- [E2B Desktop Sandbox](https://github.com/e2b-dev/desktop) - Desktop environment for computer use
+- [E2B Pricing](https://e2b.dev/pricing) - Cost structure (~$0.05/hour per vCPU)
+- [E2B Internet Access](https://e2b.dev/docs/sandbox/internet-access) - Network configuration
+- [E2B Background Commands](https://e2b.dev/docs/commands/background) - Running commands in background
+- [E2B Code Interpreter SDK](https://github.com/e2b-dev/code-interpreter) - TypeScript SDK

@@ -1,33 +1,12 @@
 /**
  * useKeyboardShortcuts Hook Tests
  *
- * Tests for keyboard shortcut handling patterns including
- * modifier keys, input field detection, and various shortcuts.
+ * Tests for keyboard shortcut handling using renderHook.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-
-// Since we can't call React hooks directly, we test the keyboard event
-// handling logic by simulating what the hook does.
-
-// Mock document event listeners
-let keydownHandler: ((event: KeyboardEvent) => void) | null = null;
-
-const mockAddEventListener = vi.fn((event: string, handler: (e: KeyboardEvent) => void) => {
-    if (event === "keydown") {
-        keydownHandler = handler;
-    }
-});
-
-const mockRemoveEventListener = vi.fn();
-
-Object.defineProperty(globalThis, "document", {
-    value: {
-        addEventListener: mockAddEventListener,
-        removeEventListener: mockRemoveEventListener
-    },
-    writable: true
-});
+import { renderHook } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { useKeyboardShortcuts, KeyboardShortcutHandlers } from "../useKeyboardShortcuts";
 
 // Helper to create keyboard events
 function createKeyboardEvent(
@@ -39,557 +18,379 @@ function createKeyboardEvent(
         target?: Partial<HTMLElement>;
     } = {}
 ): KeyboardEvent {
-    const event = {
+    const event = new KeyboardEvent("keydown", {
         key,
         metaKey: options.metaKey || false,
         ctrlKey: options.ctrlKey || false,
         shiftKey: options.shiftKey || false,
-        target: {
+        bubbles: true
+    });
+
+    // Override target since KeyboardEvent constructor doesn't support it
+    Object.defineProperty(event, "target", {
+        value: {
             tagName: "DIV",
             isContentEditable: false,
             blur: vi.fn(),
             ...options.target
         },
-        preventDefault: vi.fn()
-    } as unknown as KeyboardEvent;
+        writable: false
+    });
+
     return event;
 }
 
-// Simulate what the hook does
-function setupKeyboardHandler(handlers: {
-    onSave?: () => void;
-    onRun?: () => void;
-    onOpenSettings?: () => void;
-    onOpenCheckpoints?: () => void;
-    onUndo?: () => void;
-    onRedo?: () => void;
-    onDelete?: () => void;
-    onDuplicate?: () => void;
-    onCopy?: () => void;
-    onPaste?: () => void;
-    onSelectAll?: () => void;
-    onDeselectAll?: () => void;
-    onFitView?: () => void;
-    onAutoLayout?: () => void;
-    onCreateComment?: () => void;
-    canUndo?: () => boolean;
-    canRedo?: () => boolean;
-}) {
-    const {
-        onSave = vi.fn(),
-        onRun,
-        onOpenSettings = vi.fn(),
-        onOpenCheckpoints,
-        onUndo = vi.fn(),
-        onRedo = vi.fn(),
-        onDelete = vi.fn(),
-        onDuplicate = vi.fn(),
-        onCopy = vi.fn(),
-        onPaste = vi.fn(),
-        onSelectAll = vi.fn(),
-        onDeselectAll = vi.fn(),
-        onFitView = vi.fn(),
-        onAutoLayout,
-        onCreateComment,
-        canUndo = () => true,
-        canRedo = () => true
-    } = handlers;
-
-    keydownHandler = (event: KeyboardEvent) => {
-        const target = event.target as HTMLElement;
-        const isTyping =
-            target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable;
-
-        const key = event.key.toLowerCase();
-        const modifier = event.metaKey || event.ctrlKey;
-
-        // Escape - Deselect / exit edit mode
-        if (event.key === "Escape") {
-            event.preventDefault();
-            if (target && typeof target.blur === "function") {
-                target.blur();
-            }
-            onDeselectAll();
-            return;
-        }
-
-        // Cmd+S / Ctrl+S - Save
-        if (modifier && key === "s") {
-            event.preventDefault();
-            onSave();
-            return;
-        }
-
-        // Ignore other shortcuts when typing
-        if (isTyping) return;
-
-        // Cmd+Enter - Run
-        if (modifier && event.key === "Enter" && onRun) {
-            event.preventDefault();
-            onRun();
-            return;
-        }
-
-        // Cmd+, - Settings
-        if (modifier && event.key === ",") {
-            event.preventDefault();
-            onOpenSettings();
-            return;
-        }
-
-        // Cmd+. - Checkpoints
-        if (modifier && event.key === "." && onOpenCheckpoints) {
-            event.preventDefault();
-            onOpenCheckpoints();
-            return;
-        }
-
-        // Cmd+Z - Undo
-        if (modifier && key === "z" && !event.shiftKey) {
-            event.preventDefault();
-            if (canUndo()) onUndo();
-            return;
-        }
-
-        // Cmd+Shift+Z - Redo
-        if (modifier && event.shiftKey && key === "z") {
-            event.preventDefault();
-            if (canRedo()) onRedo();
-            return;
-        }
-
-        // Ctrl+Y - Redo
-        if (modifier && key === "y") {
-            event.preventDefault();
-            if (canRedo()) onRedo();
-            return;
-        }
-
-        // Delete / Backspace
-        if (event.key === "Delete" || event.key === "Backspace") {
-            event.preventDefault();
-            onDelete();
-            return;
-        }
-
-        // Cmd+D - Duplicate
-        if (modifier && key === "d") {
-            event.preventDefault();
-            onDuplicate();
-            return;
-        }
-
-        // Cmd+C - Copy
-        if (modifier && key === "c") {
-            event.preventDefault();
-            onCopy();
-            return;
-        }
-
-        // Cmd+V - Paste
-        if (modifier && key === "v") {
-            event.preventDefault();
-            onPaste();
-            return;
-        }
-
-        // Cmd+A - Select all
-        if (modifier && key === "a") {
-            event.preventDefault();
-            onSelectAll();
-            return;
-        }
-
-        // Cmd+0 - Fit view
-        if (modifier && key === "0") {
-            event.preventDefault();
-            onFitView();
-            return;
-        }
-
-        // N - Create comment
-        if (!modifier && key === "n" && onCreateComment) {
-            event.preventDefault();
-            onCreateComment();
-            return;
-        }
-
-        // Shift+L - Auto layout
-        if (!modifier && event.shiftKey && key === "l" && onAutoLayout) {
-            event.preventDefault();
-            onAutoLayout();
-            return;
-        }
-    };
-
-    return {
-        onSave,
-        onRun,
-        onOpenSettings,
-        onOpenCheckpoints,
-        onUndo,
-        onRedo,
-        onDelete,
-        onDuplicate,
-        onCopy,
-        onPaste,
-        onSelectAll,
-        onDeselectAll,
-        onFitView,
-        onAutoLayout,
-        onCreateComment,
-        canUndo,
-        canRedo
-    };
+// Helper to dispatch keyboard event
+function pressKey(
+    key: string,
+    options: {
+        metaKey?: boolean;
+        ctrlKey?: boolean;
+        shiftKey?: boolean;
+        target?: Partial<HTMLElement>;
+    } = {}
+) {
+    const event = createKeyboardEvent(key, options);
+    document.dispatchEvent(event);
+    return event;
 }
 
-describe("useKeyboardShortcuts patterns", () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-        keydownHandler = null;
-    });
+describe("useKeyboardShortcuts", () => {
+    let handlers: KeyboardShortcutHandlers;
 
-    afterEach(() => {
-        keydownHandler = null;
+    beforeEach(() => {
+        handlers = {
+            onSave: vi.fn(),
+            onRun: vi.fn(),
+            onOpenSettings: vi.fn(),
+            onOpenCheckpoints: vi.fn(),
+            onUndo: vi.fn(),
+            onRedo: vi.fn(),
+            onDelete: vi.fn(),
+            onDuplicate: vi.fn(),
+            onCopy: vi.fn(),
+            onPaste: vi.fn(),
+            onSelectAll: vi.fn(),
+            onDeselectAll: vi.fn(),
+            onFitView: vi.fn(),
+            onAutoLayout: vi.fn(),
+            onCreateComment: vi.fn(),
+            canUndo: vi.fn(() => true),
+            canRedo: vi.fn(() => true)
+        };
     });
 
     // ===== Save Shortcut =====
-    describe("Cmd+S / Ctrl+S - Save", () => {
-        it("triggers save with Cmd+S", () => {
-            const handlers = setupKeyboardHandler({});
-            const event = createKeyboardEvent("s", { metaKey: true });
+    describe("save shortcut (Cmd/Ctrl+S)", () => {
+        it("triggers onSave with Cmd+S", () => {
+            renderHook(() => useKeyboardShortcuts(handlers));
 
-            keydownHandler!(event);
+            pressKey("s", { metaKey: true });
 
-            expect(handlers.onSave).toHaveBeenCalled();
-            expect(event.preventDefault).toHaveBeenCalled();
+            expect(handlers.onSave).toHaveBeenCalledTimes(1);
         });
 
-        it("triggers save with Ctrl+S", () => {
-            const handlers = setupKeyboardHandler({});
-            const event = createKeyboardEvent("s", { ctrlKey: true });
+        it("triggers onSave with Ctrl+S", () => {
+            renderHook(() => useKeyboardShortcuts(handlers));
 
-            keydownHandler!(event);
+            pressKey("s", { ctrlKey: true });
 
-            expect(handlers.onSave).toHaveBeenCalled();
+            expect(handlers.onSave).toHaveBeenCalledTimes(1);
         });
 
-        it("saves even when typing in input", () => {
-            const handlers = setupKeyboardHandler({});
-            const event = createKeyboardEvent("s", {
-                metaKey: true,
-                target: { tagName: "INPUT" }
-            });
+        it("works even when typing in input", () => {
+            renderHook(() => useKeyboardShortcuts(handlers));
 
-            keydownHandler!(event);
+            pressKey("s", { metaKey: true, target: { tagName: "INPUT" } });
 
-            expect(handlers.onSave).toHaveBeenCalled();
+            expect(handlers.onSave).toHaveBeenCalledTimes(1);
         });
     });
 
-    // ===== Escape =====
-    describe("Escape - Deselect", () => {
-        it("triggers deselect all on Escape", () => {
-            const handlers = setupKeyboardHandler({});
-            const event = createKeyboardEvent("Escape");
+    // ===== Run Shortcut =====
+    describe("run shortcut (Cmd/Ctrl+Enter)", () => {
+        it("triggers onRun with Cmd+Enter", () => {
+            renderHook(() => useKeyboardShortcuts(handlers));
 
-            keydownHandler!(event);
+            pressKey("Enter", { metaKey: true });
 
-            expect(handlers.onDeselectAll).toHaveBeenCalled();
-            expect(event.preventDefault).toHaveBeenCalled();
+            expect(handlers.onRun).toHaveBeenCalledTimes(1);
         });
 
-        it("blurs active element", () => {
-            const handlers = setupKeyboardHandler({});
-            const blur = vi.fn();
-            const event = createKeyboardEvent("Escape", {
-                target: { blur }
-            });
+        it("does not trigger when typing in input", () => {
+            renderHook(() => useKeyboardShortcuts(handlers));
 
-            keydownHandler!(event);
+            pressKey("Enter", { metaKey: true, target: { tagName: "INPUT" } });
 
-            expect(blur).toHaveBeenCalled();
-            expect(handlers.onDeselectAll).toHaveBeenCalled();
+            expect(handlers.onRun).not.toHaveBeenCalled();
         });
     });
 
-    // ===== Undo/Redo =====
-    describe("Cmd+Z - Undo", () => {
-        it("triggers undo with Cmd+Z", () => {
-            const handlers = setupKeyboardHandler({});
-            const event = createKeyboardEvent("z", { metaKey: true });
+    // ===== Settings Shortcut =====
+    describe("settings shortcut (Cmd/Ctrl+,)", () => {
+        it("triggers onOpenSettings with Cmd+,", () => {
+            renderHook(() => useKeyboardShortcuts(handlers));
 
-            keydownHandler!(event);
+            pressKey(",", { metaKey: true });
 
-            expect(handlers.onUndo).toHaveBeenCalled();
+            expect(handlers.onOpenSettings).toHaveBeenCalledTimes(1);
+        });
+    });
+
+    // ===== Checkpoints Shortcut =====
+    describe("checkpoints shortcut (Cmd/Ctrl+.)", () => {
+        it("triggers onOpenCheckpoints with Cmd+.", () => {
+            renderHook(() => useKeyboardShortcuts(handlers));
+
+            pressKey(".", { metaKey: true });
+
+            expect(handlers.onOpenCheckpoints).toHaveBeenCalledTimes(1);
+        });
+    });
+
+    // ===== Undo/Redo Shortcuts =====
+    describe("undo shortcut (Cmd/Ctrl+Z)", () => {
+        it("triggers onUndo with Cmd+Z", () => {
+            renderHook(() => useKeyboardShortcuts(handlers));
+
+            pressKey("z", { metaKey: true });
+
+            expect(handlers.onUndo).toHaveBeenCalledTimes(1);
         });
 
-        it("does not undo when canUndo returns false", () => {
-            const handlers = setupKeyboardHandler({ canUndo: () => false });
-            const event = createKeyboardEvent("z", { metaKey: true });
+        it("checks canUndo before calling onUndo", () => {
+            handlers.canUndo = vi.fn(() => false);
+            renderHook(() => useKeyboardShortcuts(handlers));
 
-            keydownHandler!(event);
+            pressKey("z", { metaKey: true });
 
+            expect(handlers.canUndo).toHaveBeenCalled();
             expect(handlers.onUndo).not.toHaveBeenCalled();
         });
     });
 
-    describe("Cmd+Shift+Z / Ctrl+Y - Redo", () => {
-        it("triggers redo with Cmd+Shift+Z", () => {
-            const handlers = setupKeyboardHandler({});
-            const event = createKeyboardEvent("z", { metaKey: true, shiftKey: true });
+    describe("redo shortcut (Cmd/Ctrl+Shift+Z)", () => {
+        it("triggers onRedo with Cmd+Shift+Z", () => {
+            renderHook(() => useKeyboardShortcuts(handlers));
 
-            keydownHandler!(event);
+            pressKey("z", { metaKey: true, shiftKey: true });
 
-            expect(handlers.onRedo).toHaveBeenCalled();
+            expect(handlers.onRedo).toHaveBeenCalledTimes(1);
         });
 
-        it("triggers redo with Ctrl+Y", () => {
-            const handlers = setupKeyboardHandler({});
-            const event = createKeyboardEvent("y", { ctrlKey: true });
+        it("triggers onRedo with Ctrl+Y", () => {
+            renderHook(() => useKeyboardShortcuts(handlers));
 
-            keydownHandler!(event);
+            pressKey("y", { ctrlKey: true });
 
-            expect(handlers.onRedo).toHaveBeenCalled();
+            expect(handlers.onRedo).toHaveBeenCalledTimes(1);
         });
 
-        it("does not redo when canRedo returns false", () => {
-            const handlers = setupKeyboardHandler({ canRedo: () => false });
-            const event = createKeyboardEvent("z", { metaKey: true, shiftKey: true });
+        it("checks canRedo before calling onRedo", () => {
+            handlers.canRedo = vi.fn(() => false);
+            renderHook(() => useKeyboardShortcuts(handlers));
 
-            keydownHandler!(event);
+            pressKey("z", { metaKey: true, shiftKey: true });
 
+            expect(handlers.canRedo).toHaveBeenCalled();
             expect(handlers.onRedo).not.toHaveBeenCalled();
         });
     });
 
-    // ===== Delete =====
-    describe("Delete / Backspace - Delete", () => {
-        it("triggers delete with Delete key", () => {
-            const handlers = setupKeyboardHandler({});
-            const event = createKeyboardEvent("Delete");
+    // ===== Delete Shortcut =====
+    describe("delete shortcut (Delete/Backspace)", () => {
+        it("triggers onDelete with Delete key", () => {
+            renderHook(() => useKeyboardShortcuts(handlers));
 
-            keydownHandler!(event);
+            pressKey("Delete");
 
-            expect(handlers.onDelete).toHaveBeenCalled();
+            expect(handlers.onDelete).toHaveBeenCalledTimes(1);
         });
 
-        it("triggers delete with Backspace key", () => {
-            const handlers = setupKeyboardHandler({});
-            const event = createKeyboardEvent("Backspace");
+        it("triggers onDelete with Backspace key", () => {
+            renderHook(() => useKeyboardShortcuts(handlers));
 
-            keydownHandler!(event);
+            pressKey("Backspace");
 
-            expect(handlers.onDelete).toHaveBeenCalled();
+            expect(handlers.onDelete).toHaveBeenCalledTimes(1);
         });
 
-        it("ignores delete when typing in input", () => {
-            const handlers = setupKeyboardHandler({});
-            const event = createKeyboardEvent("Delete", {
-                target: { tagName: "INPUT" }
-            });
+        it("does not trigger when typing in input", () => {
+            renderHook(() => useKeyboardShortcuts(handlers));
 
-            keydownHandler!(event);
+            pressKey("Delete", { target: { tagName: "INPUT" } });
 
             expect(handlers.onDelete).not.toHaveBeenCalled();
         });
     });
 
-    // ===== Copy/Paste/Duplicate =====
-    describe("Cmd+C/V/D - Copy/Paste/Duplicate", () => {
-        it("triggers copy with Cmd+C", () => {
-            const handlers = setupKeyboardHandler({});
-            const event = createKeyboardEvent("c", { metaKey: true });
+    // ===== Duplicate Shortcut =====
+    describe("duplicate shortcut (Cmd/Ctrl+D)", () => {
+        it("triggers onDuplicate with Cmd+D", () => {
+            renderHook(() => useKeyboardShortcuts(handlers));
 
-            keydownHandler!(event);
+            pressKey("d", { metaKey: true });
 
-            expect(handlers.onCopy).toHaveBeenCalled();
-        });
-
-        it("triggers paste with Cmd+V", () => {
-            const handlers = setupKeyboardHandler({});
-            const event = createKeyboardEvent("v", { metaKey: true });
-
-            keydownHandler!(event);
-
-            expect(handlers.onPaste).toHaveBeenCalled();
-        });
-
-        it("triggers duplicate with Cmd+D", () => {
-            const handlers = setupKeyboardHandler({});
-            const event = createKeyboardEvent("d", { metaKey: true });
-
-            keydownHandler!(event);
-
-            expect(handlers.onDuplicate).toHaveBeenCalled();
-        });
-
-        it("ignores copy when typing in textarea", () => {
-            const handlers = setupKeyboardHandler({});
-            const event = createKeyboardEvent("c", {
-                metaKey: true,
-                target: { tagName: "TEXTAREA" }
-            });
-
-            keydownHandler!(event);
-
-            expect(handlers.onCopy).not.toHaveBeenCalled();
+            expect(handlers.onDuplicate).toHaveBeenCalledTimes(1);
         });
     });
 
-    // ===== Select All =====
-    describe("Cmd+A - Select All", () => {
-        it("triggers select all with Cmd+A", () => {
-            const handlers = setupKeyboardHandler({});
-            const event = createKeyboardEvent("a", { metaKey: true });
+    // ===== Copy/Paste Shortcuts =====
+    describe("copy shortcut (Cmd/Ctrl+C)", () => {
+        it("triggers onCopy with Cmd+C", () => {
+            renderHook(() => useKeyboardShortcuts(handlers));
 
-            keydownHandler!(event);
+            pressKey("c", { metaKey: true });
 
-            expect(handlers.onSelectAll).toHaveBeenCalled();
+            expect(handlers.onCopy).toHaveBeenCalledTimes(1);
         });
     });
 
-    // ===== Fit View =====
-    describe("Cmd+0 - Fit View", () => {
-        it("triggers fit view with Cmd+0", () => {
-            const handlers = setupKeyboardHandler({});
-            const event = createKeyboardEvent("0", { metaKey: true });
+    describe("paste shortcut (Cmd/Ctrl+V)", () => {
+        it("triggers onPaste with Cmd+V", () => {
+            renderHook(() => useKeyboardShortcuts(handlers));
 
-            keydownHandler!(event);
+            pressKey("v", { metaKey: true });
 
-            expect(handlers.onFitView).toHaveBeenCalled();
+            expect(handlers.onPaste).toHaveBeenCalledTimes(1);
         });
     });
 
-    // ===== Run Workflow =====
-    describe("Cmd+Enter - Run", () => {
-        it("triggers run with Cmd+Enter when handler provided", () => {
-            const onRun = vi.fn();
-            setupKeyboardHandler({ onRun });
-            const event = createKeyboardEvent("Enter", { metaKey: true });
+    // ===== Select All Shortcut =====
+    describe("select all shortcut (Cmd/Ctrl+A)", () => {
+        it("triggers onSelectAll with Cmd+A", () => {
+            renderHook(() => useKeyboardShortcuts(handlers));
 
-            keydownHandler!(event);
+            pressKey("a", { metaKey: true });
 
-            expect(onRun).toHaveBeenCalled();
-        });
-
-        it("does nothing when onRun not provided", () => {
-            setupKeyboardHandler({});
-            const event = createKeyboardEvent("Enter", { metaKey: true });
-
-            keydownHandler!(event);
-
-            expect(event.preventDefault).not.toHaveBeenCalled();
+            expect(handlers.onSelectAll).toHaveBeenCalledTimes(1);
         });
     });
 
-    // ===== Settings =====
-    describe("Cmd+, - Settings", () => {
-        it("triggers settings with Cmd+,", () => {
-            const handlers = setupKeyboardHandler({});
-            const event = createKeyboardEvent(",", { metaKey: true });
+    // ===== Escape Shortcut =====
+    describe("escape shortcut", () => {
+        it("triggers onDeselectAll with Escape", () => {
+            renderHook(() => useKeyboardShortcuts(handlers));
 
-            keydownHandler!(event);
+            pressKey("Escape");
 
-            expect(handlers.onOpenSettings).toHaveBeenCalled();
+            expect(handlers.onDeselectAll).toHaveBeenCalledTimes(1);
+        });
+
+        it("works even when typing in input", () => {
+            renderHook(() => useKeyboardShortcuts(handlers));
+
+            pressKey("Escape", { target: { tagName: "INPUT" } });
+
+            expect(handlers.onDeselectAll).toHaveBeenCalledTimes(1);
         });
     });
 
-    // ===== Create Comment =====
-    describe("N - Create Comment", () => {
-        it("triggers create comment with N key", () => {
-            const onCreateComment = vi.fn();
-            setupKeyboardHandler({ onCreateComment });
-            const event = createKeyboardEvent("n");
+    // ===== Fit View Shortcut =====
+    describe("fit view shortcut (Cmd/Ctrl+0)", () => {
+        it("triggers onFitView with Cmd+0", () => {
+            renderHook(() => useKeyboardShortcuts(handlers));
 
-            keydownHandler!(event);
+            pressKey("0", { metaKey: true });
 
-            expect(onCreateComment).toHaveBeenCalled();
-        });
-
-        it("does not create comment with Cmd+N", () => {
-            const onCreateComment = vi.fn();
-            setupKeyboardHandler({ onCreateComment });
-            const event = createKeyboardEvent("n", { metaKey: true });
-
-            keydownHandler!(event);
-
-            expect(onCreateComment).not.toHaveBeenCalled();
+            expect(handlers.onFitView).toHaveBeenCalledTimes(1);
         });
     });
 
-    // ===== Auto Layout =====
-    describe("Shift+L - Auto Layout", () => {
-        it("triggers auto layout with Shift+L", () => {
-            const onAutoLayout = vi.fn();
-            setupKeyboardHandler({ onAutoLayout });
-            const event = createKeyboardEvent("l", { shiftKey: true });
+    // ===== Auto Layout Shortcut =====
+    describe("auto layout shortcut (Shift+L)", () => {
+        it("triggers onAutoLayout with Shift+L", () => {
+            renderHook(() => useKeyboardShortcuts(handlers));
 
-            keydownHandler!(event);
+            pressKey("l", { shiftKey: true });
 
-            expect(onAutoLayout).toHaveBeenCalled();
+            expect(handlers.onAutoLayout).toHaveBeenCalledTimes(1);
         });
     });
 
-    // ===== Input Field Filtering =====
-    describe("input field filtering", () => {
-        it("ignores most shortcuts in INPUT fields", () => {
-            const handlers = setupKeyboardHandler({});
-            const event = createKeyboardEvent("d", {
-                metaKey: true,
-                target: { tagName: "INPUT" }
-            });
+    // ===== Create Comment Shortcut =====
+    describe("create comment shortcut (N)", () => {
+        it("triggers onCreateComment with N key", () => {
+            renderHook(() => useKeyboardShortcuts(handlers));
 
-            keydownHandler!(event);
+            pressKey("n");
+
+            expect(handlers.onCreateComment).toHaveBeenCalledTimes(1);
+        });
+
+        it("does not trigger when modifier key is held", () => {
+            renderHook(() => useKeyboardShortcuts(handlers));
+
+            pressKey("n", { metaKey: true });
+
+            expect(handlers.onCreateComment).not.toHaveBeenCalled();
+        });
+    });
+
+    // ===== Cleanup =====
+    describe("cleanup", () => {
+        it("removes event listener on unmount", () => {
+            const addSpy = vi.spyOn(document, "addEventListener");
+            const removeSpy = vi.spyOn(document, "removeEventListener");
+
+            const { unmount } = renderHook(() => useKeyboardShortcuts(handlers));
+
+            expect(addSpy).toHaveBeenCalledWith("keydown", expect.any(Function));
+
+            unmount();
+
+            expect(removeSpy).toHaveBeenCalledWith("keydown", expect.any(Function));
+
+            addSpy.mockRestore();
+            removeSpy.mockRestore();
+        });
+    });
+
+    // ===== Optional Handlers =====
+    describe("optional handlers", () => {
+        it("handles missing onRun gracefully", () => {
+            const { onRun: _onRun, ...handlersWithoutRun } = handlers;
+            renderHook(() => useKeyboardShortcuts(handlersWithoutRun as KeyboardShortcutHandlers));
+
+            // Should not throw
+            expect(() => pressKey("Enter", { metaKey: true })).not.toThrow();
+        });
+
+        it("handles missing onAutoLayout gracefully", () => {
+            const { onAutoLayout: _onAutoLayout, ...handlersWithoutLayout } = handlers;
+            renderHook(() =>
+                useKeyboardShortcuts(handlersWithoutLayout as KeyboardShortcutHandlers)
+            );
+
+            // Should not throw
+            expect(() => pressKey("l", { shiftKey: true })).not.toThrow();
+        });
+    });
+
+    // ===== Input Field Detection =====
+    describe("input field detection", () => {
+        it("ignores most shortcuts when in textarea", () => {
+            renderHook(() => useKeyboardShortcuts(handlers));
+
+            pressKey("d", { metaKey: true, target: { tagName: "TEXTAREA" } });
 
             expect(handlers.onDuplicate).not.toHaveBeenCalled();
         });
 
-        it("ignores most shortcuts in TEXTAREA fields", () => {
-            const handlers = setupKeyboardHandler({});
-            const event = createKeyboardEvent("a", {
-                metaKey: true,
-                target: { tagName: "TEXTAREA" }
-            });
+        it("ignores most shortcuts when in contenteditable", () => {
+            renderHook(() => useKeyboardShortcuts(handlers));
 
-            keydownHandler!(event);
+            pressKey("d", { metaKey: true, target: { tagName: "DIV", isContentEditable: true } });
 
-            expect(handlers.onSelectAll).not.toHaveBeenCalled();
+            expect(handlers.onDuplicate).not.toHaveBeenCalled();
         });
 
-        it("ignores most shortcuts in contentEditable elements", () => {
-            const handlers = setupKeyboardHandler({});
-            const event = createKeyboardEvent("z", {
-                metaKey: true,
-                target: { tagName: "DIV", isContentEditable: true }
-            });
+        it("still allows save when in input", () => {
+            renderHook(() => useKeyboardShortcuts(handlers));
 
-            keydownHandler!(event);
+            pressKey("s", { metaKey: true, target: { tagName: "INPUT" } });
 
-            expect(handlers.onUndo).not.toHaveBeenCalled();
-        });
-
-        it("always allows Save even in input fields", () => {
-            const handlers = setupKeyboardHandler({});
-            const event = createKeyboardEvent("s", {
-                metaKey: true,
-                target: { tagName: "INPUT" }
-            });
-
-            keydownHandler!(event);
-
-            expect(handlers.onSave).toHaveBeenCalled();
-        });
-
-        it("always allows Escape even in input fields", () => {
-            const handlers = setupKeyboardHandler({});
-            const event = createKeyboardEvent("Escape", {
-                target: { tagName: "INPUT", blur: vi.fn() }
-            });
-
-            keydownHandler!(event);
-
-            expect(handlers.onDeselectAll).toHaveBeenCalled();
+            expect(handlers.onSave).toHaveBeenCalledTimes(1);
         });
     });
 });

@@ -219,6 +219,12 @@ export async function agentOrchestratorWorkflow(
             const errorMessage = `Insufficient credits for agent execution. Estimated need: ${estimatedCredits} credits`;
             logger.warn("Insufficient credits", { estimatedCredits });
 
+            await emitAgentExecutionFailed({
+                executionId,
+                threadId,
+                error: errorMessage
+            });
+
             return {
                 success: false,
                 serializedThread: { messages: [], savedMessageIds: [], metadata: {} },
@@ -235,6 +241,12 @@ export async function agentOrchestratorWorkflow(
         if (!reserved) {
             const errorMessage = "Failed to reserve credits for agent execution";
             logger.error("Credit reservation failed");
+
+            await emitAgentExecutionFailed({
+                executionId,
+                threadId,
+                error: errorMessage
+            });
 
             return {
                 success: false,
