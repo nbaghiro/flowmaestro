@@ -2,6 +2,7 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import type { WebSocketEvent } from "@flowmaestro/shared";
 import { createServiceLogger } from "../../../../core/logging";
 import { redisEventBus } from "../../../../services/events/RedisEventBus";
+import { createSSEHandler, sendTerminalEvent } from "../../../../services/sse";
 import { ExecutionRepository } from "../../../../storage/repositories/ExecutionRepository";
 import { WorkflowRepository } from "../../../../storage/repositories/WorkflowRepository";
 import { requireScopes } from "../../../middleware/scope-checker";
@@ -53,19 +54,17 @@ export async function streamExecutionHandler(fastify: FastifyInstance): Promise<
                 return sendNotFound(reply, "Execution", executionId);
             }
 
+            // Create SSE handler
+            const sse = createSSEHandler(request, reply, {
+                keepAliveInterval: 30000
+            });
+
             // If execution is already completed/failed, send final event and close
             if (
                 execution.status === "completed" ||
                 execution.status === "failed" ||
                 execution.status === "cancelled"
             ) {
-                reply.raw.writeHead(200, {
-                    "Content-Type": "text/event-stream",
-                    "Cache-Control": "no-cache",
-                    Connection: "keep-alive",
-                    "X-Accel-Buffering": "no"
-                });
-
                 const eventData = {
                     execution_id: executionId,
                     status: execution.status,
@@ -81,25 +80,9 @@ export async function streamExecutionHandler(fastify: FastifyInstance): Promise<
                           ? "execution:failed"
                           : "execution:cancelled";
 
-                reply.raw.write(`event: ${eventType}\n`);
-                reply.raw.write(`data: ${JSON.stringify(eventData)}\n\n`);
-                reply.raw.end();
+                sendTerminalEvent(sse, eventType, eventData);
                 return;
             }
-
-            // Set up SSE
-            reply.raw.writeHead(200, {
-                "Content-Type": "text/event-stream",
-                "Cache-Control": "no-cache",
-                Connection: "keep-alive",
-                "X-Accel-Buffering": "no"
-            });
-
-            // Send initial connection event
-            reply.raw.write("event: connected\n");
-            reply.raw.write(
-                `data: ${JSON.stringify({ execution_id: executionId, status: execution.status })}\n\n`
-            );
 
             // Subscribe to execution events
             const channel = `execution:${executionId}:*`;
@@ -108,20 +91,20 @@ export async function streamExecutionHandler(fastify: FastifyInstance): Promise<
                 try {
                     const eventType = event.type || "execution:progress";
 
-                    reply.raw.write(`event: ${eventType}\n`);
-                    reply.raw.write(`data: ${JSON.stringify(event)}\n\n`);
-
-                    // Close connection on terminal events
+                    // Check for terminal events
                     const terminalEvents = [
                         "execution:completed",
                         "execution:failed",
                         "execution:cancelled"
                     ];
+
                     if (terminalEvents.includes(eventType)) {
-                        setTimeout(() => {
+                        // Send event first, then unsubscribe in cleanup callback
+                        sendTerminalEvent(sse, eventType, event, () => {
                             redisEventBus.unsubscribe(channel, messageHandler).catch(() => {});
-                            reply.raw.end();
-                        }, 100);
+                        });
+                    } else {
+                        sse.sendEvent(eventType, event);
                     }
                 } catch (error) {
                     logger.error({ error, executionId }, "Failed to handle execution event");
@@ -131,22 +114,15 @@ export async function streamExecutionHandler(fastify: FastifyInstance): Promise<
             await redisEventBus.subscribe(channel, messageHandler);
 
             // Handle client disconnect
-            request.raw.on("close", () => {
+            sse.onDisconnect(() => {
                 redisEventBus.unsubscribe(channel, messageHandler).catch(() => {});
                 logger.debug({ executionId, userId }, "Client disconnected from execution stream");
             });
 
-            // Keep connection alive with periodic heartbeat
-            const heartbeatInterval = setInterval(() => {
-                try {
-                    reply.raw.write(":heartbeat\n\n");
-                } catch {
-                    clearInterval(heartbeatInterval);
-                }
-            }, 30000);
-
-            request.raw.on("close", () => {
-                clearInterval(heartbeatInterval);
+            // Send initial connection event
+            sse.sendEvent("connected", {
+                execution_id: executionId,
+                status: execution.status
             });
         }
     );

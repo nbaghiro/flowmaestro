@@ -23,8 +23,8 @@ import {
     SearchSection,
     UploadSection
 } from "../components/knowledgebases";
-import { streamKnowledgeBase } from "../lib/api";
 import { logger } from "../lib/logger";
+import { streamKnowledgeBase } from "../lib/sse";
 import { useKnowledgeBaseStore } from "../stores/knowledgeBaseStore";
 import type { KnowledgeDocument } from "../lib/api";
 

@@ -12,6 +12,7 @@ import { z } from "zod";
 import { config } from "../../../core/config";
 import { createServiceLogger } from "../../../core/logging";
 import { redisEventBus } from "../../../services/events/RedisEventBus";
+import { createSSEHandler } from "../../../services/sse";
 import { KnowledgeBaseRepository } from "../../../storage/repositories";
 import { authMiddleware, validateParams, NotFoundError, UnauthorizedError } from "../../middleware";
 
@@ -56,49 +57,20 @@ export async function streamKnowledgeBaseRoute(fastify: FastifyInstance): Promis
 
             logger.info({ knowledgeBaseId, userId }, "SSE connection established for KB");
 
-            // Set up SSE headers
+            // Create SSE handler with CORS headers
             const origin = request.headers.origin;
             const corsOrigin =
                 origin && config.cors.origin.includes(origin) ? origin : config.cors.origin[0];
 
-            reply.raw.writeHead(200, {
-                "Content-Type": "text/event-stream",
-                "Cache-Control": "no-cache",
-                Connection: "keep-alive",
-                "X-Accel-Buffering": "no", // Disable nginx buffering
-                "Access-Control-Allow-Origin": corsOrigin,
-                "Access-Control-Allow-Credentials": "true"
+            const sse = createSSEHandler(request, reply, {
+                keepAliveInterval: 15000,
+                headers: {
+                    "Access-Control-Allow-Origin": corsOrigin,
+                    "Access-Control-Allow-Credentials": "true"
+                }
             });
 
-            // Track if client disconnected
-            let clientDisconnected = false;
-
-            // Keep connection alive
-            const keepAliveInterval = setInterval(() => {
-                if (!clientDisconnected) {
-                    try {
-                        reply.raw.write(": keepalive\n\n");
-                    } catch {
-                        clientDisconnected = true;
-                        clearInterval(keepAliveInterval);
-                    }
-                }
-            }, 15000);
-
-            // Helper function to send SSE event
-            const sendEvent = (event: string, data: Record<string, unknown>): void => {
-                if (clientDisconnected) return;
-
-                const message = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
-                try {
-                    reply.raw.write(message);
-                } catch (error) {
-                    logger.error({ event, error }, "Error writing SSE event");
-                    clientDisconnected = true;
-                }
-            };
-
-            // Subscribe to KB document events for this knowledge base
+            // Track event handlers for cleanup
             const eventHandlers: Array<{
                 channel: string;
                 handler: (data: Record<string, unknown>) => void;
@@ -125,24 +97,15 @@ export async function streamKnowledgeBaseRoute(fastify: FastifyInstance): Promis
             };
 
             // Handle client disconnect
-            request.raw.on("close", () => {
+            sse.onDisconnect(() => {
                 logger.info({ knowledgeBaseId }, "Client disconnected from KB stream");
-                clientDisconnected = true;
-                clearInterval(keepAliveInterval);
-                unsubscribeAll();
-            });
-
-            request.raw.on("error", (error) => {
-                logger.error({ knowledgeBaseId, error }, "Request error in KB stream");
-                clientDisconnected = true;
-                clearInterval(keepAliveInterval);
                 unsubscribeAll();
             });
 
             // Subscribe to document events - filter by knowledgeBaseId
             subscribe("document:processing", (data) => {
                 if (data.knowledgeBaseId === knowledgeBaseId) {
-                    sendEvent("document:processing", {
+                    sse.sendEvent("document:processing", {
                         documentId: data.documentId,
                         documentName: data.documentName,
                         timestamp: data.timestamp
@@ -152,7 +115,7 @@ export async function streamKnowledgeBaseRoute(fastify: FastifyInstance): Promis
 
             subscribe("document:completed", (data) => {
                 if (data.knowledgeBaseId === knowledgeBaseId) {
-                    sendEvent("document:completed", {
+                    sse.sendEvent("document:completed", {
                         documentId: data.documentId,
                         chunkCount: data.chunkCount,
                         timestamp: data.timestamp
@@ -162,7 +125,7 @@ export async function streamKnowledgeBaseRoute(fastify: FastifyInstance): Promis
 
             subscribe("document:failed", (data) => {
                 if (data.knowledgeBaseId === knowledgeBaseId) {
-                    sendEvent("document:failed", {
+                    sse.sendEvent("document:failed", {
                         documentId: data.documentId,
                         error: data.error,
                         timestamp: data.timestamp
@@ -171,7 +134,7 @@ export async function streamKnowledgeBaseRoute(fastify: FastifyInstance): Promis
             });
 
             // Send initial connected event
-            sendEvent("connected", {
+            sse.sendEvent("connected", {
                 knowledgeBaseId,
                 message: "Connected to knowledge base stream"
             });

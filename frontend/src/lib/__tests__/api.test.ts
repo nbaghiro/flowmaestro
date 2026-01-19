@@ -19,7 +19,36 @@ import {
     deleteWorkflow,
     executeWorkflow,
     forgotPassword,
-    resetPassword
+    resetPassword,
+    // Agent functions
+    getAgents,
+    getAgent,
+    createAgent,
+    updateAgent,
+    deleteAgent,
+    // Knowledge base functions
+    getKnowledgeBases,
+    getKnowledgeBase,
+    createKnowledgeBase,
+    updateKnowledgeBase,
+    deleteKnowledgeBase,
+    // Thread functions
+    getThreads,
+    getThread,
+    createThread,
+    updateThread,
+    deleteThread,
+    // Connection functions
+    getConnections,
+    getConnection,
+    createConnection,
+    deleteConnection,
+    // Folder functions
+    getFolders,
+    getFolder,
+    createFolder,
+    updateFolder as updateFolderApi,
+    deleteFolder as deleteFolderApi
 } from "../api";
 import {
     createMockFetchResponse,
@@ -617,6 +646,469 @@ describe("API Client", () => {
             vi.mocked(fetch).mockRejectedValueOnce(new Error("Request timeout"));
 
             await expect(login("test@example.com", "password")).rejects.toThrow("Request timeout");
+        });
+    });
+
+    // ===== Agent API Tests =====
+    describe("Agent API", () => {
+        beforeEach(() => {
+            localStorage.setItem("auth_token", createMockAuthToken());
+        });
+
+        describe("getAgents", () => {
+            it("returns list of agents", async () => {
+                const mockAgents = [
+                    { id: "agent-1", name: "Agent 1" },
+                    { id: "agent-2", name: "Agent 2" }
+                ];
+
+                mockFetchOnce(
+                    createMockFetchResponse(createMockApiResponse({ agents: mockAgents }))
+                );
+
+                const result = await getAgents();
+
+                expect(result.success).toBe(true);
+                expect(result.data.agents).toHaveLength(2);
+            });
+
+            it("filters by folderId", async () => {
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse({ agents: [] })));
+
+                await getAgents({ folderId: "folder-123" });
+
+                const fetchCall = vi.mocked(fetch).mock.calls[0];
+                const url = fetchCall[0] as string;
+                expect(url).toContain("folderId=folder-123");
+            });
+        });
+
+        describe("getAgent", () => {
+            it("returns agent by ID", async () => {
+                const mockAgent = { id: "agent-123", name: "Test Agent" };
+
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse(mockAgent)));
+
+                const result = await getAgent("agent-123");
+
+                expect(result.success).toBe(true);
+                expect(result.data.id).toBe("agent-123");
+            });
+
+            it("throws error when agent not found", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(createMockApiError("Agent not found"), false, 404)
+                );
+
+                await expect(getAgent("nonexistent")).rejects.toThrow("Agent not found");
+            });
+        });
+
+        describe("createAgent", () => {
+            it("creates agent successfully", async () => {
+                const mockAgent = { id: "agent-new", name: "New Agent" };
+
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse(mockAgent)));
+
+                const result = await createAgent({
+                    name: "New Agent",
+                    systemPrompt: "You are helpful"
+                });
+
+                expect(result.success).toBe(true);
+                expect(result.data.name).toBe("New Agent");
+            });
+
+            it("sends agent data in request body", async () => {
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse({ id: "agent-1" })));
+
+                await createAgent({
+                    name: "Test Agent",
+                    systemPrompt: "Be helpful",
+                    temperature: 0.7
+                });
+
+                const fetchCall = vi.mocked(fetch).mock.calls[0];
+                const body = JSON.parse(fetchCall[1]?.body as string);
+                expect(body.name).toBe("Test Agent");
+                expect(body.systemPrompt).toBe("Be helpful");
+            });
+        });
+
+        describe("updateAgent", () => {
+            it("updates agent successfully", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(
+                        createMockApiResponse({ id: "agent-123", name: "Updated" })
+                    )
+                );
+
+                const result = await updateAgent("agent-123", { name: "Updated" });
+
+                expect(result.success).toBe(true);
+                expect(result.data.name).toBe("Updated");
+            });
+        });
+
+        describe("deleteAgent", () => {
+            it("deletes agent successfully", async () => {
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse(null)));
+
+                const result = await deleteAgent("agent-123");
+
+                expect(result.success).toBe(true);
+            });
+        });
+    });
+
+    // ===== Knowledge Base API Tests =====
+    describe("Knowledge Base API", () => {
+        beforeEach(() => {
+            localStorage.setItem("auth_token", createMockAuthToken());
+        });
+
+        describe("getKnowledgeBases", () => {
+            it("returns list of knowledge bases", async () => {
+                const mockKBs = [
+                    { id: "kb-1", name: "KB 1" },
+                    { id: "kb-2", name: "KB 2" }
+                ];
+
+                mockFetchOnce(
+                    createMockFetchResponse(createMockApiResponse({ knowledgeBases: mockKBs }))
+                );
+
+                const result = await getKnowledgeBases();
+
+                expect(result.success).toBe(true);
+                expect(result.data.knowledgeBases).toHaveLength(2);
+            });
+
+            it("supports pagination", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(createMockApiResponse({ knowledgeBases: [] }))
+                );
+
+                await getKnowledgeBases({ limit: 10, offset: 20 });
+
+                const fetchCall = vi.mocked(fetch).mock.calls[0];
+                const url = fetchCall[0] as string;
+                expect(url).toContain("limit=10");
+                expect(url).toContain("offset=20");
+            });
+        });
+
+        describe("getKnowledgeBase", () => {
+            it("returns knowledge base by ID", async () => {
+                const mockKB = { id: "kb-123", name: "Test KB" };
+
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse(mockKB)));
+
+                const result = await getKnowledgeBase("kb-123");
+
+                expect(result.success).toBe(true);
+                expect(result.data?.id).toBe("kb-123");
+            });
+        });
+
+        describe("createKnowledgeBase", () => {
+            it("creates knowledge base successfully", async () => {
+                const mockKB = { id: "kb-new", name: "New KB" };
+
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse(mockKB)));
+
+                const result = await createKnowledgeBase({
+                    name: "New KB",
+                    description: "A new knowledge base"
+                });
+
+                expect(result.success).toBe(true);
+                expect(result.data?.name).toBe("New KB");
+            });
+        });
+
+        describe("updateKnowledgeBase", () => {
+            it("updates knowledge base successfully", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(
+                        createMockApiResponse({ id: "kb-123", name: "Updated KB" })
+                    )
+                );
+
+                const result = await updateKnowledgeBase("kb-123", { name: "Updated KB" });
+
+                expect(result.success).toBe(true);
+            });
+        });
+
+        describe("deleteKnowledgeBase", () => {
+            it("deletes knowledge base successfully", async () => {
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse(null)));
+
+                const result = await deleteKnowledgeBase("kb-123");
+
+                expect(result.success).toBe(true);
+            });
+        });
+    });
+
+    // ===== Thread API Tests =====
+    describe("Thread API", () => {
+        beforeEach(() => {
+            localStorage.setItem("auth_token", createMockAuthToken());
+        });
+
+        describe("getThreads", () => {
+            it("returns list of threads", async () => {
+                const mockThreads = [
+                    { id: "thread-1", title: "Thread 1" },
+                    { id: "thread-2", title: "Thread 2" }
+                ];
+
+                mockFetchOnce(
+                    createMockFetchResponse(createMockApiResponse({ threads: mockThreads }))
+                );
+
+                const result = await getThreads();
+
+                expect(result.success).toBe(true);
+                expect(result.data.threads).toHaveLength(2);
+            });
+
+            it("filters by agent_id", async () => {
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse({ threads: [] })));
+
+                await getThreads({ agent_id: "agent-123" });
+
+                const fetchCall = vi.mocked(fetch).mock.calls[0];
+                const url = fetchCall[0] as string;
+                expect(url).toContain("agent_id=agent-123");
+            });
+
+            it("filters by status", async () => {
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse({ threads: [] })));
+
+                await getThreads({ status: "active" });
+
+                const fetchCall = vi.mocked(fetch).mock.calls[0];
+                const url = fetchCall[0] as string;
+                expect(url).toContain("status=active");
+            });
+        });
+
+        describe("getThread", () => {
+            it("returns thread by ID", async () => {
+                const mockThread = { id: "thread-123", title: "Test Thread" };
+
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse(mockThread)));
+
+                const result = await getThread("thread-123");
+
+                expect(result.success).toBe(true);
+                expect(result.data?.id).toBe("thread-123");
+            });
+        });
+
+        describe("createThread", () => {
+            it("creates thread successfully", async () => {
+                const mockThread = { id: "thread-new", title: "New Thread" };
+
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse(mockThread)));
+
+                const result = await createThread({
+                    agent_id: "agent-123",
+                    title: "New Thread",
+                    status: "active"
+                });
+
+                expect(result.success).toBe(true);
+                expect(result.data?.title).toBe("New Thread");
+            });
+        });
+
+        describe("updateThread", () => {
+            it("updates thread title", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(
+                        createMockApiResponse({ id: "thread-123", title: "Updated Title" })
+                    )
+                );
+
+                const result = await updateThread("thread-123", { title: "Updated Title" });
+
+                expect(result.success).toBe(true);
+            });
+        });
+
+        describe("deleteThread", () => {
+            it("deletes thread successfully", async () => {
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse(null)));
+
+                const result = await deleteThread("thread-123");
+
+                expect(result.success).toBe(true);
+            });
+        });
+    });
+
+    // ===== Connection API Tests =====
+    describe("Connection API", () => {
+        beforeEach(() => {
+            localStorage.setItem("auth_token", createMockAuthToken());
+        });
+
+        describe("getConnections", () => {
+            it("returns list of connections", async () => {
+                const mockConnections = [
+                    { id: "conn-1", name: "OpenAI" },
+                    { id: "conn-2", name: "Anthropic" }
+                ];
+
+                mockFetchOnce(
+                    createMockFetchResponse(createMockApiResponse({ connections: mockConnections }))
+                );
+
+                const result = await getConnections();
+
+                expect(result.success).toBe(true);
+                expect(result.data.connections).toHaveLength(2);
+            });
+
+            it("filters by provider", async () => {
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse({ connections: [] })));
+
+                await getConnections({ provider: "openai" });
+
+                const fetchCall = vi.mocked(fetch).mock.calls[0];
+                const url = fetchCall[0] as string;
+                expect(url).toContain("provider=openai");
+            });
+        });
+
+        describe("getConnection", () => {
+            it("returns connection by ID", async () => {
+                const mockConnection = { id: "conn-123", name: "Test Connection" };
+
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse(mockConnection)));
+
+                const result = await getConnection("conn-123");
+
+                expect(result.success).toBe(true);
+                expect(result.data.id).toBe("conn-123");
+            });
+        });
+
+        describe("createConnection", () => {
+            it("creates connection successfully", async () => {
+                const mockConnection = { id: "conn-new", name: "New Connection" };
+
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse(mockConnection)));
+
+                const result = await createConnection({
+                    name: "New Connection",
+                    provider: "openai",
+                    credentials: { apiKey: "sk-test" }
+                });
+
+                expect(result.success).toBe(true);
+            });
+        });
+
+        describe("deleteConnection", () => {
+            it("deletes connection successfully", async () => {
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse(null)));
+
+                const result = await deleteConnection("conn-123");
+
+                expect(result.success).toBe(true);
+            });
+        });
+    });
+
+    // ===== Folder API Tests =====
+    describe("Folder API", () => {
+        beforeEach(() => {
+            localStorage.setItem("auth_token", createMockAuthToken());
+        });
+
+        describe("getFolders", () => {
+            it("returns list of folders", async () => {
+                const mockFolders = [
+                    { id: "folder-1", name: "Folder 1" },
+                    { id: "folder-2", name: "Folder 2" }
+                ];
+
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse(mockFolders)));
+
+                const result = await getFolders();
+
+                expect(result.success).toBe(true);
+                expect(result.data).toHaveLength(2);
+            });
+        });
+
+        describe("getFolder", () => {
+            it("returns folder by ID", async () => {
+                const mockFolder = { id: "folder-123", name: "Test Folder" };
+
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse(mockFolder)));
+
+                const result = await getFolder("folder-123");
+
+                expect(result.success).toBe(true);
+                expect(result.data?.id).toBe("folder-123");
+            });
+        });
+
+        describe("createFolder", () => {
+            it("creates folder successfully", async () => {
+                const mockFolder = { id: "folder-new", name: "New Folder" };
+
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse(mockFolder)));
+
+                const result = await createFolder({ name: "New Folder" });
+
+                expect(result.success).toBe(true);
+                expect(result.data?.name).toBe("New Folder");
+            });
+
+            it("creates folder with parent", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(
+                        createMockApiResponse({ id: "folder-new", parentId: "parent-123" })
+                    )
+                );
+
+                await createFolder({ name: "Subfolder", parentId: "parent-123" });
+
+                const fetchCall = vi.mocked(fetch).mock.calls[0];
+                const body = JSON.parse(fetchCall[1]?.body as string);
+                expect(body.parentId).toBe("parent-123");
+            });
+        });
+
+        describe("updateFolderApi", () => {
+            it("updates folder name", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(
+                        createMockApiResponse({ id: "folder-123", name: "Updated Name" })
+                    )
+                );
+
+                const result = await updateFolderApi("folder-123", { name: "Updated Name" });
+
+                expect(result.success).toBe(true);
+            });
+        });
+
+        describe("deleteFolderApi", () => {
+            it("deletes folder successfully", async () => {
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse(null)));
+
+                const result = await deleteFolderApi("folder-123");
+
+                expect(result.success).toBe(true);
+            });
         });
     });
 });

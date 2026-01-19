@@ -11,6 +11,7 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import { config } from "../../../core/config";
 import { createServiceLogger } from "../../../core/logging";
 import { redisEventBus } from "../../../services/events/RedisEventBus";
+import { createSSEHandler, sendTerminalEvent } from "../../../services/sse";
 import { ExecutionRepository, WorkflowRepository } from "../../../storage/repositories";
 import { authMiddleware, validateParams, NotFoundError, UnauthorizedError } from "../../middleware";
 import { executionIdParamSchema } from "../../schemas/execution-schemas";
@@ -56,66 +57,22 @@ export async function streamExecutionRoute(fastify: FastifyInstance): Promise<vo
 
             logger.info({ executionId, userId }, "SSE connection established");
 
-            // Set SSE headers - use config.cors.origin for allowed origins
-            // Match the pattern from the working agent stream
+            // Create SSE handler with CORS headers
             const origin = request.headers.origin;
             const corsOrigin =
                 origin && config.cors.origin.includes(origin) ? origin : config.cors.origin[0];
 
-            reply.raw.writeHead(200, {
-                "Content-Type": "text/event-stream",
-                "Cache-Control": "no-cache",
-                Connection: "keep-alive",
-                "X-Accel-Buffering": "no", // Disable nginx buffering
-                "Access-Control-Allow-Origin": corsOrigin,
-                "Access-Control-Allow-Credentials": "true",
-                "Access-Control-Allow-Methods": "GET, OPTIONS",
-                "Access-Control-Allow-Headers": "Cache-Control"
-            });
-
-            // Keep connection alive
-            const keepAliveInterval = setInterval(() => {
-                reply.raw.write(": keepalive\n\n");
-            }, 15000); // Every 15 seconds
-
-            // Track if client disconnected
-            let clientDisconnected = false;
-
-            // Handle client disconnect
-            request.raw.on("close", () => {
-                logger.info({ executionId }, "Client disconnected");
-                clientDisconnected = true;
-                clearInterval(keepAliveInterval);
-                unsubscribeAll();
-            });
-
-            request.raw.on("error", (error: NodeJS.ErrnoException) => {
-                // ECONNRESET is expected when client closes connection after receiving terminal event
-                if (error.code === "ECONNRESET") {
-                    logger.debug({ executionId }, "Client closed connection");
-                } else {
-                    logger.error({ executionId, error }, "Request error");
+            const sse = createSSEHandler(request, reply, {
+                keepAliveInterval: 15000,
+                headers: {
+                    "Access-Control-Allow-Origin": corsOrigin,
+                    "Access-Control-Allow-Credentials": "true",
+                    "Access-Control-Allow-Methods": "GET, OPTIONS",
+                    "Access-Control-Allow-Headers": "Cache-Control"
                 }
-                clientDisconnected = true;
-                clearInterval(keepAliveInterval);
-                unsubscribeAll();
             });
 
-            // Helper function to send SSE event
-            const sendEvent = (event: string, data: Record<string, unknown>): void => {
-                if (clientDisconnected) return;
-
-                const message = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
-                logger.debug({ event, executionId }, "Writing SSE event");
-                try {
-                    reply.raw.write(message);
-                } catch (error) {
-                    logger.error({ event, error, executionId }, "Error writing SSE event");
-                    clientDisconnected = true;
-                }
-            };
-
-            // Subscribe to workflow events for this execution
+            // Track event handlers for cleanup
             const eventHandlers: Array<{
                 channel: string;
                 handler: (data: Record<string, unknown>) => void;
@@ -141,10 +98,16 @@ export async function streamExecutionRoute(fastify: FastifyInstance): Promise<vo
                 });
             };
 
+            // Handle client disconnect
+            sse.onDisconnect(() => {
+                logger.info({ executionId }, "Client disconnected");
+                unsubscribeAll();
+            });
+
             // Subscribe to execution events
             subscribe("execution:started", (data) => {
                 if (data.executionId === executionId) {
-                    sendEvent("execution:started", {
+                    sse.sendEvent("execution:started", {
                         executionId: data.executionId,
                         workflowName: data.workflowName,
                         totalNodes: data.totalNodes
@@ -154,7 +117,7 @@ export async function streamExecutionRoute(fastify: FastifyInstance): Promise<vo
 
             subscribe("execution:progress", (data) => {
                 if (data.executionId === executionId) {
-                    sendEvent("execution:progress", {
+                    sse.sendEvent("execution:progress", {
                         executionId: data.executionId,
                         completed: data.completed,
                         total: data.total,
@@ -166,41 +129,37 @@ export async function streamExecutionRoute(fastify: FastifyInstance): Promise<vo
             subscribe("execution:completed", (data) => {
                 if (data.executionId === executionId) {
                     logger.info({ executionId }, "Sending completed event to client");
-                    sendEvent("execution:completed", {
-                        executionId: data.executionId,
-                        duration: data.duration,
-                        outputs: data.outputs
-                    });
-
-                    // Close connection after completion
-                    setTimeout(() => {
-                        clearInterval(keepAliveInterval);
-                        unsubscribeAll();
-                        reply.raw.end();
-                    }, 500);
+                    sendTerminalEvent(
+                        sse,
+                        "execution:completed",
+                        {
+                            executionId: data.executionId,
+                            duration: data.duration,
+                            outputs: data.outputs
+                        },
+                        unsubscribeAll
+                    );
                 }
             });
 
             subscribe("execution:failed", (data) => {
                 if (data.executionId === executionId) {
                     logger.error({ executionId }, "Sending failed event to client");
-                    sendEvent("execution:failed", {
-                        executionId: data.executionId,
-                        error: data.error
-                    });
-
-                    // Close connection after failure
-                    setTimeout(() => {
-                        clearInterval(keepAliveInterval);
-                        unsubscribeAll();
-                        reply.raw.end();
-                    }, 500);
+                    sendTerminalEvent(
+                        sse,
+                        "execution:failed",
+                        {
+                            executionId: data.executionId,
+                            error: data.error
+                        },
+                        unsubscribeAll
+                    );
                 }
             });
 
             subscribe("execution:paused", (data) => {
                 if (data.executionId === executionId) {
-                    sendEvent("execution:paused", {
+                    sse.sendEvent("execution:paused", {
                         executionId: data.executionId,
                         reason: data.reason,
                         nodeId: data.nodeId,
@@ -213,7 +172,7 @@ export async function streamExecutionRoute(fastify: FastifyInstance): Promise<vo
             // Subscribe to node events
             subscribe("node:started", (data) => {
                 if (data.executionId === executionId) {
-                    sendEvent("node:started", {
+                    sse.sendEvent("node:started", {
                         executionId: data.executionId,
                         nodeId: data.nodeId,
                         nodeName: data.nodeName,
@@ -225,7 +184,7 @@ export async function streamExecutionRoute(fastify: FastifyInstance): Promise<vo
 
             subscribe("node:completed", (data) => {
                 if (data.executionId === executionId) {
-                    sendEvent("node:completed", {
+                    sse.sendEvent("node:completed", {
                         executionId: data.executionId,
                         nodeId: data.nodeId,
                         nodeName: data.nodeName,
@@ -239,7 +198,7 @@ export async function streamExecutionRoute(fastify: FastifyInstance): Promise<vo
 
             subscribe("node:failed", (data) => {
                 if (data.executionId === executionId) {
-                    sendEvent("node:failed", {
+                    sse.sendEvent("node:failed", {
                         executionId: data.executionId,
                         nodeId: data.nodeId,
                         nodeName: data.nodeName,
@@ -252,7 +211,7 @@ export async function streamExecutionRoute(fastify: FastifyInstance): Promise<vo
 
             subscribe("node:retry", (data) => {
                 if (data.executionId === executionId) {
-                    sendEvent("node:retry", {
+                    sse.sendEvent("node:retry", {
                         executionId: data.executionId,
                         nodeId: data.nodeId,
                         nodeName: data.nodeName,
@@ -275,24 +234,23 @@ export async function streamExecutionRoute(fastify: FastifyInstance): Promise<vo
                           ? "execution:failed"
                           : "execution:cancelled";
 
-                sendEvent(eventType, {
-                    executionId,
-                    status: execution.status,
-                    outputs: execution.outputs,
-                    error: execution.error
-                });
-
-                setTimeout(() => {
-                    clearInterval(keepAliveInterval);
-                    unsubscribeAll();
-                    reply.raw.end();
-                }, 500);
+                sendTerminalEvent(
+                    sse,
+                    eventType,
+                    {
+                        executionId,
+                        status: execution.status,
+                        outputs: execution.outputs,
+                        error: execution.error
+                    },
+                    unsubscribeAll
+                );
 
                 return;
             }
 
             // Send initial connected event
-            sendEvent("connected", {
+            sse.sendEvent("connected", {
                 executionId,
                 status: execution.status
             });

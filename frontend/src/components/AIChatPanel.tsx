@@ -2,8 +2,9 @@ import { Send, X, Bot, RotateCcw } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import type { JsonObject } from "@flowmaestro/shared";
 import { modelSupportsThinking } from "@flowmaestro/shared";
-import { chatWorkflow, streamChatResponse } from "../lib/api";
+import { chatWorkflow } from "../lib/api";
 import { logger } from "../lib/logger";
+import { streamChatResponse } from "../lib/sse";
 import { cn } from "../lib/utils";
 import {
     useChatStore,

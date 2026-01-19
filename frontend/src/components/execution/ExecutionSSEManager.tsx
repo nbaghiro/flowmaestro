@@ -9,7 +9,7 @@
  */
 
 import { useEffect, useRef } from "react";
-import { streamWorkflowExecution } from "../../lib/api";
+import { streamWorkflowExecution } from "../../lib/sse";
 import { useWorkflowStore } from "../../stores/workflowStore";
 
 export function ExecutionSSEManager() {

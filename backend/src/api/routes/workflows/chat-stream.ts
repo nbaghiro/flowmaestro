@@ -1,9 +1,7 @@
 import { EventEmitter } from "events";
 import { FastifyRequest, FastifyReply } from "fastify";
 import { config } from "../../../core/config";
-import { createServiceLogger } from "../../../core/logging";
-
-const logger = createServiceLogger("ChatStream");
+import { createSSEHandler, sendTerminalEvent } from "../../../services/sse";
 
 interface StreamParams {
     executionId: string;
@@ -34,29 +32,18 @@ export async function chatStreamHandler(
         request.raw.socket.setKeepAlive(true);
     }
 
-    // Setup SSE headers with CORS - use config.cors.origin for allowed origins
+    // Create SSE handler with CORS headers
     const origin = request.headers.origin;
     const corsOrigin =
         origin && config.cors.origin.includes(origin) ? origin : config.cors.origin[0];
 
-    reply.raw.writeHead(200, {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        Connection: "keep-alive",
-        "X-Accel-Buffering": "no", // Disable nginx buffering
-        "Access-Control-Allow-Origin": corsOrigin,
-        "Access-Control-Allow-Credentials": "true"
-    });
-
-    const sendEvent = (event: string, data: Record<string, unknown>): void => {
-        const message = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
-        const written = reply.raw.write(message);
-
-        // Debug: Log if write buffer is full (indicates backpressure)
-        if (!written && event === "token") {
-            logger.warn({ executionId, event }, "Write buffer full - backpressure detected");
+    const sse = createSSEHandler(request, reply, {
+        keepAliveInterval: 15000,
+        headers: {
+            "Access-Control-Allow-Origin": corsOrigin,
+            "Access-Control-Allow-Credentials": "true"
         }
-    };
+    });
 
     // Get or create event emitter for this execution
     let emitter = executionStreams.get(executionId);
@@ -67,30 +54,28 @@ export async function chatStreamHandler(
 
     // Setup event listeners
     const onThinkingStart = (): void => {
-        sendEvent("thinking_start", {});
+        sse.sendEvent("thinking_start", {});
     };
 
     const onThinkingToken = (token: string): void => {
-        sendEvent("thinking_token", { token });
+        sse.sendEvent("thinking_token", { token });
     };
 
     const onThinkingComplete = (content: string): void => {
-        sendEvent("thinking_complete", { content });
+        sse.sendEvent("thinking_complete", { content });
     };
 
     const onToken = (token: string): void => {
-        sendEvent("token", { token });
+        sse.sendEvent("token", { token });
     };
 
     const onComplete = (data: { response: string; changes?: unknown; thinking?: string }): void => {
-        sendEvent("complete", data);
-        cleanup();
+        sendTerminalEvent(sse, "complete", data, cleanup);
     };
 
     const onError = (error: Error | string): void => {
         const message = typeof error === "string" ? error : error.message;
-        sendEvent("error", { message });
-        cleanup();
+        sendTerminalEvent(sse, "error", { message }, cleanup);
     };
 
     const cleanup = (): void => {
@@ -101,7 +86,6 @@ export async function chatStreamHandler(
         emitter?.removeListener("complete", onComplete);
         emitter?.removeListener("error", onError);
         executionStreams.delete(executionId);
-        reply.raw.end();
     };
 
     // Attach listeners
@@ -113,10 +97,10 @@ export async function chatStreamHandler(
     emitter.on("error", onError);
 
     // Handle client disconnect
-    request.raw.on("close", cleanup);
+    sse.onDisconnect(cleanup);
 
     // Send initial connected event
-    sendEvent("connected", { executionId });
+    sse.sendEvent("connected", { executionId });
 }
 
 // Export helper to emit events from WorkflowChatService

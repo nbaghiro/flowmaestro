@@ -9,9 +9,7 @@ import { EventEmitter } from "events";
 import { FastifyRequest, FastifyReply } from "fastify";
 import type { GenerationChatResponse, WorkflowPlan } from "@flowmaestro/shared";
 import { config } from "../../../core/config";
-import { createServiceLogger } from "../../../core/logging";
-
-const logger = createServiceLogger("GenerationChatStream");
+import { createSSEHandler, sendTerminalEvent } from "../../../services/sse";
 
 interface StreamParams {
     executionId: string;
@@ -55,28 +53,18 @@ export async function generationChatStreamHandler(
         request.raw.socket.setKeepAlive(true);
     }
 
-    // Setup SSE headers with CORS
+    // Create SSE handler with CORS headers
     const origin = request.headers.origin;
     const corsOrigin =
         origin && config.cors.origin.includes(origin) ? origin : config.cors.origin[0];
 
-    reply.raw.writeHead(200, {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        Connection: "keep-alive",
-        "X-Accel-Buffering": "no",
-        "Access-Control-Allow-Origin": corsOrigin,
-        "Access-Control-Allow-Credentials": "true"
-    });
-
-    const sendEvent = (event: GenerationStreamEventType, data: Record<string, unknown>): void => {
-        const message = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
-        const written = reply.raw.write(message);
-
-        if (!written && (event === "token" || event === "thinking_token")) {
-            logger.warn({ executionId, event }, "Write buffer full - backpressure detected");
+    const sse = createSSEHandler(request, reply, {
+        keepAliveInterval: 15000,
+        headers: {
+            "Access-Control-Allow-Origin": corsOrigin,
+            "Access-Control-Allow-Credentials": "true"
         }
-    };
+    });
 
     // Get or create event emitter for this execution
     let emitter = executionStreams.get(executionId);
@@ -87,34 +75,32 @@ export async function generationChatStreamHandler(
 
     // Setup event listeners
     const onThinkingStart = (): void => {
-        sendEvent("thinking_start", { timestamp: Date.now() });
+        sse.sendEvent("thinking_start", { timestamp: Date.now() });
     };
 
     const onThinkingToken = (token: string): void => {
-        sendEvent("thinking_token", { token });
+        sse.sendEvent("thinking_token", { token });
     };
 
     const onThinkingComplete = (content: string): void => {
-        sendEvent("thinking_complete", { content, timestamp: Date.now() });
+        sse.sendEvent("thinking_complete", { content, timestamp: Date.now() });
     };
 
     const onToken = (token: string): void => {
-        sendEvent("token", { token });
+        sse.sendEvent("token", { token });
     };
 
     const onPlanDetected = (plan: WorkflowPlan): void => {
-        sendEvent("plan_detected", { plan });
+        sse.sendEvent("plan_detected", { plan });
     };
 
     const onComplete = (data: GenerationChatResponse): void => {
-        sendEvent("complete", data as unknown as Record<string, unknown>);
-        cleanup();
+        sendTerminalEvent(sse, "complete", data as unknown as Record<string, unknown>, cleanup);
     };
 
     const onError = (error: Error | string): void => {
         const message = typeof error === "string" ? error : error.message;
-        sendEvent("error", { message });
-        cleanup();
+        sendTerminalEvent(sse, "error", { message }, cleanup);
     };
 
     const cleanup = (): void => {
@@ -126,7 +112,6 @@ export async function generationChatStreamHandler(
         emitter?.removeListener("complete", onComplete);
         emitter?.removeListener("error", onError);
         executionStreams.delete(executionId);
-        reply.raw.end();
     };
 
     // Attach listeners
@@ -139,10 +124,10 @@ export async function generationChatStreamHandler(
     emitter.on("error", onError);
 
     // Handle client disconnect
-    request.raw.on("close", cleanup);
+    sse.onDisconnect(cleanup);
 
     // Send initial connected event
-    sendEvent("connected", { executionId });
+    sse.sendEvent("connected", { executionId });
 }
 
 /**

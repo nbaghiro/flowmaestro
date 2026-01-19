@@ -25,12 +25,9 @@ import {
     getDefaultThinkingBudget,
     getRandomExamplePrompts
 } from "@flowmaestro/shared";
-import {
-    initiateGenerationChat,
-    streamGenerationChatResponse,
-    createWorkflowFromPlan
-} from "../lib/api";
+import { initiateGenerationChat, createWorkflowFromPlan } from "../lib/api";
 import { logger } from "../lib/logger";
+import { streamGenerationChatResponse } from "../lib/sse";
 import { cn } from "../lib/utils";
 import {
     useWorkflowGenerationChatStore,

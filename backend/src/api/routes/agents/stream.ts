@@ -4,6 +4,7 @@ import type { ThreadStreamingEvent } from "@flowmaestro/shared";
 import { config } from "../../../core/config";
 import { createServiceLogger } from "../../../core/logging";
 import { redisEventBus } from "../../../services/events/RedisEventBus";
+import { createSSEHandler, sendTerminalEvent } from "../../../services/sse";
 import { AgentExecutionRepository } from "../../../storage/repositories/AgentExecutionRepository";
 import { NotFoundError } from "../../middleware";
 
@@ -34,60 +35,22 @@ export async function streamAgentHandler(
     }
     const threadId = execution.thread_id;
 
-    // Set SSE headers - use config.cors.origin for allowed origins
+    // Create SSE handler with CORS headers
     const origin = request.headers.origin;
     const corsOrigin =
         origin && config.cors.origin.includes(origin) ? origin : config.cors.origin[0];
 
-    reply.raw.writeHead(200, {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        Connection: "keep-alive",
-        "X-Accel-Buffering": "no", // Disable nginx buffering
-        "Access-Control-Allow-Origin": corsOrigin,
-        "Access-Control-Allow-Credentials": "true",
-        "Access-Control-Allow-Methods": "GET, OPTIONS",
-        "Access-Control-Allow-Headers": "Cache-Control"
-    });
-
-    // Keep connection alive
-    const keepAliveInterval = setInterval(() => {
-        reply.raw.write(": keepalive\n\n");
-    }, 15000); // Every 15 seconds
-
-    // Track if client disconnected
-    let clientDisconnected = false;
-
-    // Handle client disconnect
-    request.raw.on("close", () => {
-        logger.info({ executionId }, "Client disconnected");
-        clientDisconnected = true;
-        clearInterval(keepAliveInterval);
-        unsubscribeAll();
-    });
-
-    request.raw.on("error", (error) => {
-        logger.error({ executionId, error }, "Request error");
-        clientDisconnected = true;
-        clearInterval(keepAliveInterval);
-        unsubscribeAll();
-    });
-
-    // Helper function to send SSE event
-    const sendEvent = (event: string, data: Record<string, unknown>): void => {
-        if (clientDisconnected) return;
-
-        const message = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
-        logger.debug({ event, data }, "Writing SSE event");
-        try {
-            reply.raw.write(message);
-        } catch (error) {
-            logger.error({ event, error }, "Error writing SSE event");
-            clientDisconnected = true;
+    const sse = createSSEHandler(request, reply, {
+        keepAliveInterval: 15000,
+        headers: {
+            "Access-Control-Allow-Origin": corsOrigin,
+            "Access-Control-Allow-Credentials": "true",
+            "Access-Control-Allow-Methods": "GET, OPTIONS",
+            "Access-Control-Allow-Headers": "Cache-Control"
         }
-    };
+    });
 
-    // Subscribe to Redis events for this execution
+    // Track event handlers for cleanup
     const eventHandlers: Array<{
         channel: string;
         handler: (data: Record<string, unknown>) => void;
@@ -129,10 +92,16 @@ export async function streamAgentHandler(
         }
     };
 
+    // Handle client disconnect
+    sse.onDisconnect(() => {
+        logger.info({ executionId }, "Client disconnected");
+        unsubscribeAll();
+    });
+
     // Subscribe to relevant events
     subscribe("started", (data) => {
         if (data.executionId === executionId) {
-            sendEvent("started", {
+            sse.sendEvent("started", {
                 executionId: data.executionId,
                 agentName: data.agentName
             });
@@ -141,7 +110,7 @@ export async function streamAgentHandler(
 
     subscribe("thinking", (data) => {
         if (data.executionId === executionId) {
-            sendEvent("thinking", { executionId: data.executionId });
+            sse.sendEvent("thinking", { executionId: data.executionId });
         }
     });
 
@@ -155,7 +124,7 @@ export async function streamAgentHandler(
         );
         if (data.executionId === executionId) {
             logger.debug({ token: data.token }, "Sending token to client");
-            sendEvent("token", {
+            sse.sendEvent("token", {
                 token: data.token,
                 executionId: data.executionId
             });
@@ -172,7 +141,7 @@ export async function streamAgentHandler(
 
     subscribe("message", (data) => {
         if (data.executionId === executionId) {
-            sendEvent("message", {
+            sse.sendEvent("message", {
                 message: data.message,
                 executionId: data.executionId
             });
@@ -181,7 +150,7 @@ export async function streamAgentHandler(
 
     subscribe("tool_call_started", (data) => {
         if (data.executionId === executionId) {
-            sendEvent("tool_call_started", {
+            sse.sendEvent("tool_call_started", {
                 toolName: data.toolName,
                 arguments: data.arguments,
                 executionId: data.executionId
@@ -191,7 +160,7 @@ export async function streamAgentHandler(
 
     subscribe("tool_call_completed", (data) => {
         if (data.executionId === executionId) {
-            sendEvent("tool_call_completed", {
+            sse.sendEvent("tool_call_completed", {
                 toolName: data.toolName,
                 result: data.result,
                 executionId: data.executionId
@@ -201,7 +170,7 @@ export async function streamAgentHandler(
 
     subscribe("tool_call_failed", (data) => {
         if (data.executionId === executionId) {
-            sendEvent("tool_call_failed", {
+            sse.sendEvent("tool_call_failed", {
                 toolName: data.toolName,
                 error: data.error,
                 executionId: data.executionId
@@ -220,43 +189,38 @@ export async function streamAgentHandler(
         );
         if (data.executionId === executionId) {
             logger.info({ executionId }, "Sending completed event to client");
-            sendEvent("completed", {
-                finalMessage: data.finalMessage,
-                iterations: data.iterations,
-                executionId: data.executionId
-            });
-
-            // Close connection after completion
-            setTimeout(() => {
-                clearInterval(keepAliveInterval);
-                unsubscribeAll();
-                reply.raw.end();
-            }, 500);
+            sendTerminalEvent(
+                sse,
+                "completed",
+                {
+                    finalMessage: data.finalMessage,
+                    iterations: data.iterations,
+                    executionId: data.executionId
+                },
+                unsubscribeAll
+            );
         }
     });
 
     subscribe("execution:failed", (data) => {
         logger.error({ executionId: data.executionId }, "Received execution:failed event");
         if (data.executionId === executionId) {
-            sendEvent("error", {
-                error: data.error,
-                executionId: data.executionId
-            });
-
-            // Close connection after error
-            setTimeout(() => {
-                clearInterval(keepAliveInterval);
-                unsubscribeAll();
-                reply.raw.end();
-            }, 500);
+            sendTerminalEvent(
+                sse,
+                "error",
+                {
+                    error: data.error,
+                    executionId: data.executionId
+                },
+                unsubscribeAll
+            );
         }
     });
 
     // Also listen on the thread-scoped stream for token usage updates
     const threadHandler = (event: ThreadStreamingEvent) => {
         if (event.type === "thread:tokens:updated" && event.executionId === executionId) {
-            // Spread to satisfy Record<string, unknown> requirement on sendEvent
-            sendEvent("thread:tokens:updated", { ...event });
+            sse.sendEvent("thread:tokens:updated", { ...event });
         }
     };
 
@@ -266,7 +230,7 @@ export async function streamAgentHandler(
     };
 
     // Send initial connection event
-    sendEvent("connected", {
+    sse.sendEvent("connected", {
         executionId,
         status: execution.status
     });

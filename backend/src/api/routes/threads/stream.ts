@@ -10,6 +10,7 @@ import { z } from "zod";
 import type { ThreadStreamingEvent } from "@flowmaestro/shared";
 import { createServiceLogger } from "../../../core/logging";
 import { redisEventBus } from "../../../services/events/RedisEventBus";
+import { createSSEHandler } from "../../../services/sse";
 import { ThreadRepository } from "../../../storage/repositories/ThreadRepository";
 import { NotFoundError } from "../../middleware";
 
@@ -40,47 +41,10 @@ export async function streamThreadHandler(
         throw new NotFoundError("Thread not found");
     }
 
-    // Set SSE headers
-    reply.raw.writeHead(200, {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        Connection: "keep-alive",
-        "X-Accel-Buffering": "no" // Disable nginx buffering
+    // Create SSE handler
+    const sse = createSSEHandler(request, reply, {
+        keepAliveInterval: 15000
     });
-
-    // Keep-alive ping (every 15 seconds)
-    const keepAliveInterval = setInterval(() => {
-        if (!clientDisconnected) {
-            try {
-                reply.raw.write(": keepalive\n\n");
-            } catch {
-                clientDisconnected = true;
-            }
-        }
-    }, 15000);
-
-    let clientDisconnected = false;
-
-    // Handle client disconnect
-    request.raw.on("close", () => {
-        logger.info({ threadId }, "Client disconnected");
-        clientDisconnected = true;
-        clearInterval(keepAliveInterval);
-        cleanup();
-    });
-
-    // Send SSE event to client
-    const sendEvent = (event: ThreadStreamingEvent): void => {
-        if (clientDisconnected) return;
-
-        const sseData = `event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`;
-        try {
-            reply.raw.write(sseData);
-        } catch (error) {
-            logger.error({ threadId, error }, "Error writing event");
-            clientDisconnected = true;
-        }
-    };
 
     // Subscribe to thread-specific Redis channel
     const eventHandler = (event: ThreadStreamingEvent) => {
@@ -92,15 +56,16 @@ export async function streamThreadHandler(
             },
             "Received event for thread"
         );
-        sendEvent(event);
+        sse.sendEvent(event.type, { ...event });
     };
 
     await redisEventBus.subscribeToThread(threadId, eventHandler);
 
-    const cleanup = () => {
+    // Handle client disconnect
+    sse.onDisconnect(() => {
+        logger.info({ threadId }, "Client disconnected");
         redisEventBus.unsubscribeFromThread(threadId, eventHandler);
-        clearInterval(keepAliveInterval);
-    };
+    });
 
     logger.info({ threadId }, "Stream started");
 
