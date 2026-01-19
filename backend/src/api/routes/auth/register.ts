@@ -64,8 +64,10 @@ export async function registerRoute(fastify: FastifyInstance) {
                     );
                 } catch (error) {
                     const errorMsg = error instanceof Error ? error.message : String(error);
+                    const stack = error instanceof Error ? error.stack : "";
                     fastify.log.error(
-                        `Failed to create personal workspace for ${user.email}: ${errorMsg}`
+                        { error: errorMsg, stack, userId: user.id, email: user.email },
+                        "Failed to create personal workspace for new user"
                     );
                     // Don't fail registration if workspace creation fails
                 }
