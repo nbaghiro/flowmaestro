@@ -1,30 +1,12 @@
 /**
  * useSearch Hook Tests
  *
- * Tests for search/filter logic including case-insensitive matching,
- * multi-field search, and edge cases.
+ * Tests for search/filter functionality using renderHook.
  */
 
+import { renderHook, act } from "@testing-library/react";
 import { describe, it, expect } from "vitest";
-
-// Helper to simulate the filtering logic from the hook
-function filterItems<T>(items: T[], searchQuery: string, searchFields: (keyof T)[]): T[] {
-    if (!searchQuery.trim()) {
-        return items;
-    }
-
-    const query = searchQuery.toLowerCase().trim();
-
-    return items.filter((item) => {
-        return searchFields.some((field) => {
-            const value = item[field];
-            if (typeof value === "string") {
-                return value.toLowerCase().includes(query);
-            }
-            return false;
-        });
-    });
-}
+import { useSearch } from "../useSearch";
 
 // Test data
 interface TestItem {
@@ -49,150 +31,255 @@ const testItems: TestItem[] = [
     { id: "5", name: "Email Parser", description: "Parse apple mail", category: "work", count: 3 }
 ];
 
-describe("useSearch patterns", () => {
-    // ===== Basic Search =====
-    describe("basic search", () => {
-        it("returns all items when query is empty", () => {
-            const result = filterItems(testItems, "", ["name"]);
-            expect(result).toHaveLength(5);
+describe("useSearch", () => {
+    // ===== Initial State =====
+    describe("initial state", () => {
+        it("starts with empty search query", () => {
+            const { result } = renderHook(() =>
+                useSearch({ items: testItems, searchFields: ["name"] })
+            );
+
+            expect(result.current.searchQuery).toBe("");
         });
 
-        it("returns all items when query is whitespace", () => {
-            const result = filterItems(testItems, "   ", ["name"]);
-            expect(result).toHaveLength(5);
+        it("returns all items when search is empty", () => {
+            const { result } = renderHook(() =>
+                useSearch({ items: testItems, searchFields: ["name"] })
+            );
+
+            expect(result.current.filteredItems).toHaveLength(5);
         });
 
-        it("filters items by name", () => {
-            const result = filterItems(testItems, "Apple", ["name"]);
-            expect(result).toHaveLength(1);
-            expect(result[0].name).toBe("Apple Pie");
+        it("isSearchActive is false initially", () => {
+            const { result } = renderHook(() =>
+                useSearch({ items: testItems, searchFields: ["name"] })
+            );
+
+            expect(result.current.isSearchActive).toBe(false);
+        });
+    });
+
+    // ===== Search Functionality =====
+    describe("search functionality", () => {
+        it("filters items when search query is set", () => {
+            const { result } = renderHook(() =>
+                useSearch({ items: testItems, searchFields: ["name"] })
+            );
+
+            act(() => {
+                result.current.setSearchQuery("Apple");
+            });
+
+            expect(result.current.filteredItems).toHaveLength(1);
+            expect(result.current.filteredItems[0].name).toBe("Apple Pie");
         });
 
-        it("filters items case-insensitively", () => {
-            const result = filterItems(testItems, "APPLE", ["name"]);
-            expect(result).toHaveLength(1);
-            expect(result[0].name).toBe("Apple Pie");
+        it("sets isSearchActive to true when query has content", () => {
+            const { result } = renderHook(() =>
+                useSearch({ items: testItems, searchFields: ["name"] })
+            );
+
+            act(() => {
+                result.current.setSearchQuery("test");
+            });
+
+            expect(result.current.isSearchActive).toBe(true);
+        });
+
+        it("filters case-insensitively", () => {
+            const { result } = renderHook(() =>
+                useSearch({ items: testItems, searchFields: ["name"] })
+            );
+
+            act(() => {
+                result.current.setSearchQuery("APPLE");
+            });
+
+            expect(result.current.filteredItems).toHaveLength(1);
+            expect(result.current.filteredItems[0].name).toBe("Apple Pie");
         });
 
         it("matches partial strings", () => {
-            const result = filterItems(testItems, "nana", ["name"]);
-            expect(result).toHaveLength(1);
-            expect(result[0].name).toBe("Banana Bread");
+            const { result } = renderHook(() =>
+                useSearch({ items: testItems, searchFields: ["name"] })
+            );
+
+            act(() => {
+                result.current.setSearchQuery("nana");
+            });
+
+            expect(result.current.filteredItems).toHaveLength(1);
+            expect(result.current.filteredItems[0].name).toBe("Banana Bread");
+        });
+
+        it("trims search query whitespace", () => {
+            const { result } = renderHook(() =>
+                useSearch({ items: testItems, searchFields: ["name"] })
+            );
+
+            act(() => {
+                result.current.setSearchQuery("  Apple  ");
+            });
+
+            expect(result.current.filteredItems).toHaveLength(1);
+        });
+
+        it("returns all items for whitespace-only query", () => {
+            const { result } = renderHook(() =>
+                useSearch({ items: testItems, searchFields: ["name"] })
+            );
+
+            act(() => {
+                result.current.setSearchQuery("   ");
+            });
+
+            expect(result.current.filteredItems).toHaveLength(5);
         });
     });
 
     // ===== Multi-field Search =====
     describe("multi-field search", () => {
         it("searches across multiple fields", () => {
-            const result = filterItems(testItems, "apple", ["name", "description"]);
-            expect(result).toHaveLength(2); // "Apple Pie" and "Email Parser" (parse apple mail)
+            const { result } = renderHook(() =>
+                useSearch({ items: testItems, searchFields: ["name", "description"] })
+            );
+
+            act(() => {
+                result.current.setSearchQuery("apple");
+            });
+
+            // "Apple Pie" and "Email Parser" (parse apple mail)
+            expect(result.current.filteredItems).toHaveLength(2);
         });
 
-        it("finds match in description", () => {
-            const result = filterItems(testItems, "dessert", ["name", "description"]);
-            expect(result).toHaveLength(1);
-            expect(result[0].name).toBe("Apple Pie");
+        it("finds match in description field", () => {
+            const { result } = renderHook(() =>
+                useSearch({ items: testItems, searchFields: ["name", "description"] })
+            );
+
+            act(() => {
+                result.current.setSearchQuery("dessert");
+            });
+
+            expect(result.current.filteredItems).toHaveLength(1);
+            expect(result.current.filteredItems[0].name).toBe("Apple Pie");
         });
 
-        it("finds match in category", () => {
-            const result = filterItems(testItems, "work", ["category"]);
-            expect(result).toHaveLength(2);
-        });
+        it("finds match in category field", () => {
+            const { result } = renderHook(() =>
+                useSearch({ items: testItems, searchFields: ["category"] })
+            );
 
-        it("returns union of matches across fields", () => {
-            const result = filterItems(testItems, "a", ["name", "description", "category"]);
-            expect(result.length).toBeGreaterThan(0);
+            act(() => {
+                result.current.setSearchQuery("work");
+            });
+
+            expect(result.current.filteredItems).toHaveLength(2);
+        });
+    });
+
+    // ===== Clear Search =====
+    describe("clearSearch", () => {
+        it("resets search query to empty", () => {
+            const { result } = renderHook(() =>
+                useSearch({ items: testItems, searchFields: ["name"] })
+            );
+
+            act(() => {
+                result.current.setSearchQuery("Apple");
+            });
+
+            expect(result.current.filteredItems).toHaveLength(1);
+
+            act(() => {
+                result.current.clearSearch();
+            });
+
+            expect(result.current.searchQuery).toBe("");
+            expect(result.current.filteredItems).toHaveLength(5);
+            expect(result.current.isSearchActive).toBe(false);
         });
     });
 
     // ===== Edge Cases =====
     describe("edge cases", () => {
         it("handles empty items array", () => {
-            const result = filterItems([], "test", ["name"] as (keyof TestItem)[]);
-            expect(result).toEqual([]);
+            const { result } = renderHook(() =>
+                useSearch({ items: [] as TestItem[], searchFields: ["name"] })
+            );
+
+            act(() => {
+                result.current.setSearchQuery("test");
+            });
+
+            expect(result.current.filteredItems).toEqual([]);
         });
 
         it("returns empty when no matches", () => {
-            const result = filterItems(testItems, "xyz123", ["name", "description"]);
-            expect(result).toHaveLength(0);
+            const { result } = renderHook(() =>
+                useSearch({ items: testItems, searchFields: ["name"] })
+            );
+
+            act(() => {
+                result.current.setSearchQuery("xyz123nonexistent");
+            });
+
+            expect(result.current.filteredItems).toHaveLength(0);
         });
 
         it("ignores non-string fields", () => {
-            // count is a number, should not match
-            const result = filterItems(testItems, "10", ["count" as keyof TestItem]);
-            expect(result).toHaveLength(0);
-        });
+            const { result } = renderHook(() =>
+                useSearch({ items: testItems, searchFields: ["count" as keyof TestItem] })
+            );
 
-        it("trims search query", () => {
-            const result = filterItems(testItems, "  Apple  ", ["name"]);
-            expect(result).toHaveLength(1);
+            act(() => {
+                result.current.setSearchQuery("10");
+            });
+
+            // count is a number, should not match
+            expect(result.current.filteredItems).toHaveLength(0);
         });
 
         it("handles special characters in query", () => {
             const items = [{ name: "Test (special)" }, { name: "Normal" }];
-            const result = filterItems(items, "(special)", ["name"]);
-            expect(result).toHaveLength(1);
+            const { result } = renderHook(() => useSearch({ items, searchFields: ["name"] }));
+
+            act(() => {
+                result.current.setSearchQuery("(special)");
+            });
+
+            expect(result.current.filteredItems).toHaveLength(1);
         });
     });
 
-    // ===== Search State Helpers =====
-    describe("search state helpers", () => {
-        it("isSearchActive is true when query has content", () => {
-            const searchQuery = "test";
-            const isSearchActive = searchQuery.length > 0;
-            expect(isSearchActive).toBe(true);
-        });
+    // ===== Reactive Updates =====
+    describe("reactive updates", () => {
+        it("updates filtered items when source items change", () => {
+            const { result, rerender } = renderHook(
+                ({ items }) => useSearch({ items, searchFields: ["name"] }),
+                { initialProps: { items: testItems } }
+            );
 
-        it("isSearchActive is false when query is empty", () => {
-            const searchQuery = "";
-            const isSearchActive = searchQuery.length > 0;
-            expect(isSearchActive).toBe(false);
-        });
+            act(() => {
+                result.current.setSearchQuery("Apple");
+            });
 
-        it("clearSearch resets query", () => {
-            let searchQuery = "test";
-            const clearSearch = () => {
-                searchQuery = "";
-            };
-            clearSearch();
-            expect(searchQuery).toBe("");
-        });
-    });
+            expect(result.current.filteredItems).toHaveLength(1);
 
-    // ===== Real-world Scenarios =====
-    describe("real-world scenarios", () => {
-        it("filters workflows by name and description", () => {
-            const workflows = [
-                { name: "Data Pipeline", description: "Process data from API" },
-                { name: "Email Notification", description: "Send email alerts" },
-                { name: "Slack Bot", description: "Handle slack messages" }
+            // Add another item with "Apple" in name
+            const newItems = [
+                ...testItems,
+                {
+                    id: "6",
+                    name: "Apple Juice",
+                    description: "Drink",
+                    category: "beverage",
+                    count: 20
+                }
             ];
+            rerender({ items: newItems });
 
-            const result = filterItems(workflows, "email", ["name", "description"]);
-            expect(result).toHaveLength(1);
-            expect(result[0].name).toBe("Email Notification");
-        });
-
-        it("filters agents by name", () => {
-            const agents = [
-                { name: "Customer Support Bot", provider: "openai" },
-                { name: "Sales Assistant", provider: "anthropic" },
-                { name: "Tech Support Agent", provider: "openai" }
-            ];
-
-            const result = filterItems(agents, "support", ["name"]);
-            expect(result).toHaveLength(2);
-        });
-
-        it("filters folders by name", () => {
-            const folders = [
-                { name: "Marketing", itemCount: 5 },
-                { name: "Sales", itemCount: 10 },
-                { name: "Marketing Campaigns", itemCount: 3 }
-            ];
-
-            const result = filterItems(folders, "market", ["name"]);
-            expect(result).toHaveLength(2);
+            expect(result.current.filteredItems).toHaveLength(2);
         });
     });
 });

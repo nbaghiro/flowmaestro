@@ -1,9 +1,10 @@
-import type {
-    Workspace,
-    WorkspaceWithStats,
-    GetWorkspacesResponse,
-    CreateWorkspaceInput,
-    UpdateWorkspaceInput
+import {
+    WORKSPACE_LIMITS,
+    type Workspace,
+    type WorkspaceWithStats,
+    type GetWorkspacesResponse,
+    type CreateWorkspaceInput,
+    type UpdateWorkspaceInput
 } from "@flowmaestro/shared";
 import { createServiceLogger } from "../../core/logging";
 import { WorkspaceCreditRepository } from "../../storage/repositories/WorkspaceCreditRepository";
@@ -51,7 +52,7 @@ export class WorkspaceService {
         });
 
         // Initialize credits (100 free credits for new workspaces)
-        const limits = (await import("@flowmaestro/shared")).WORKSPACE_LIMITS["free"];
+        const limits = WORKSPACE_LIMITS["free"];
         await this.creditRepo.create({
             workspace_id: workspace.id,
             subscription_balance: limits.monthly_credits

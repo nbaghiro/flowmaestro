@@ -142,49 +142,56 @@ Object.defineProperty(globalThis, "EventSource", {
 // Message event handlers for OAuth tests
 const messageHandlers: Set<(event: MessageEvent) => void> = new Set();
 
-// Mock window with full functionality
-const windowMock = {
-    location: {
-        pathname: "/test",
-        href: "http://localhost:3000/test",
-        hash: "",
-        origin: "http://localhost:3000"
-    },
-    history: {
-        replaceState: vi.fn()
-    },
-    addEventListener: vi.fn((type: string, handler: (event: Event) => void) => {
-        if (type === "message") {
-            messageHandlers.add(handler as (event: MessageEvent) => void);
-        }
-    }),
-    removeEventListener: vi.fn((type: string, handler: (event: Event) => void) => {
-        if (type === "message") {
-            messageHandlers.delete(handler as (event: MessageEvent) => void);
-        }
-    }),
-    open: vi.fn(() => ({
-        closed: false,
-        close: vi.fn()
-    })),
-    postMessage: vi.fn((message: unknown) => {
-        // Simulate message event to all handlers
-        const event = new MessageEvent("message", {
-            data: message,
-            origin: "http://localhost:3000"
-        });
-        messageHandlers.forEach((handler) => handler(event));
-    }),
-    screenX: 0,
-    screenY: 0,
-    outerWidth: 1024,
-    outerHeight: 768
-};
+// Extend jsdom's window instead of replacing it (preserves DOM classes like Element)
+// Store original methods we want to spy on
+const originalAddEventListener = window.addEventListener.bind(window);
+const originalRemoveEventListener = window.removeEventListener.bind(window);
 
-Object.defineProperty(globalThis, "window", {
-    value: windowMock,
-    writable: true
+// Override specific methods for testing
+window.addEventListener = vi.fn((type: string, handler: EventListener) => {
+    if (type === "message") {
+        messageHandlers.add(handler as (event: MessageEvent) => void);
+    }
+    originalAddEventListener(type, handler);
 });
+
+window.removeEventListener = vi.fn((type: string, handler: EventListener) => {
+    if (type === "message") {
+        messageHandlers.delete(handler as (event: MessageEvent) => void);
+    }
+    originalRemoveEventListener(type, handler);
+});
+
+// Mock window.open for OAuth popup tests
+window.open = vi.fn(() => ({
+    closed: false,
+    close: vi.fn()
+})) as unknown as typeof window.open;
+
+// Mock matchMedia for responsive hooks
+window.matchMedia = vi.fn((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(() => true)
+})) as unknown as typeof window.matchMedia;
+
+// Mock history.replaceState for OAuth tests
+window.history.replaceState = vi.fn();
+
+// Create a helper to access window for tests (with spied methods)
+const windowMock = {
+    ...window,
+    history: {
+        ...window.history,
+        replaceState: window.history.replaceState
+    },
+    location: window.location
+};
 
 // Mock fetch
 globalThis.fetch = vi.fn(() =>
@@ -213,8 +220,8 @@ beforeEach(() => {
     sessionStorageMock.clear();
     messageHandlers.clear();
     vi.clearAllMocks();
-    // Reset window.location.hash
-    windowMock.location.hash = "";
+    // Note: window.location.hash can't be directly reset in jsdom
+    // Tests that need specific hash values should use window.location.assign() or set it in the test
 });
 
 // Export for test files that need direct access

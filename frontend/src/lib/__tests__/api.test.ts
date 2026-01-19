@@ -48,7 +48,67 @@ import {
     getFolder,
     createFolder,
     updateFolder as updateFolderApi,
-    deleteFolder as deleteFolderApi
+    deleteFolder as deleteFolderApi,
+    // User account functions
+    updateUserName,
+    updateUserEmail,
+    setUserPassword,
+    changeUserPassword,
+    // 2FA functions
+    sendTwoFactorCode,
+    verifyTwoFactorCode,
+    disableTwoFactor,
+    // Trigger functions
+    getTriggers,
+    getTrigger,
+    createTrigger,
+    updateTrigger,
+    deleteTrigger,
+    // Workspace functions
+    getWorkspaces,
+    getWorkspace,
+    createWorkspace,
+    updateWorkspace,
+    deleteWorkspace,
+    getWorkspaceMembers,
+    inviteWorkspaceMember,
+    // Form Interface functions
+    getFormInterfaces,
+    getFormInterface,
+    createFormInterface,
+    updateFormInterface,
+    deleteFormInterface,
+    publishFormInterface,
+    unpublishFormInterface,
+    duplicateFormInterface,
+    getFormInterfaceSubmissions,
+    // Chat Interface functions
+    getChatInterfaces,
+    getChatInterface,
+    createChatInterface,
+    updateChatInterface,
+    deleteChatInterface,
+    publishChatInterface,
+    unpublishChatInterface,
+    duplicateChatInterface,
+    getChatInterfaceSessions,
+    // API Key functions
+    getApiKeys,
+    getApiKey,
+    createApiKey,
+    updateApiKey,
+    rotateApiKey,
+    revokeApiKey,
+    // Execution functions
+    getExecutions,
+    getExecution,
+    submitUserResponse,
+    // Checkpoint functions
+    listCheckpoints,
+    createCheckpoint,
+    restoreCheckpoint,
+    deleteCheckpoint,
+    renameCheckpoint
 } from "../api";
 import {
     createMockFetchResponse,
@@ -1108,6 +1168,1420 @@ describe("API Client", () => {
                 const result = await deleteFolderApi("folder-123");
 
                 expect(result.success).toBe(true);
+            });
+        });
+    });
+
+    // ===== User Account API Tests =====
+    describe("User Account API", () => {
+        beforeEach(() => {
+            localStorage.setItem("auth_token", createMockAuthToken());
+        });
+
+        describe("updateUserName", () => {
+            it("updates user name successfully", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(createMockApiResponse({ message: "Name updated" }))
+                );
+
+                const result = await updateUserName("New Name");
+
+                expect(result.success).toBe(true);
+            });
+
+            it("sends name in request body", async () => {
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse({ success: true })));
+
+                await updateUserName("John Doe");
+
+                const fetchCall = vi.mocked(fetch).mock.calls[0];
+                const body = JSON.parse(fetchCall[1]?.body as string);
+                expect(body.name).toBe("John Doe");
+            });
+
+            it("throws error when no token", async () => {
+                localStorage.clear();
+
+                await expect(updateUserName("Test")).rejects.toThrow(
+                    "No authentication token found"
+                );
+            });
+
+            it("throws error on validation failure", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(createMockApiError("Name too short"), false, 400)
+                );
+
+                await expect(updateUserName("")).rejects.toThrow("Name too short");
+            });
+        });
+
+        describe("updateUserEmail", () => {
+            it("updates user email successfully", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(createMockApiResponse({ message: "Email updated" }))
+                );
+
+                const result = await updateUserEmail("new@example.com");
+
+                expect(result.success).toBe(true);
+            });
+
+            it("sends email in request body", async () => {
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse({ success: true })));
+
+                await updateUserEmail("new@example.com");
+
+                const fetchCall = vi.mocked(fetch).mock.calls[0];
+                const body = JSON.parse(fetchCall[1]?.body as string);
+                expect(body.email).toBe("new@example.com");
+            });
+
+            it("throws error when email already in use", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(createMockApiError("Email already in use"), false, 400)
+                );
+
+                await expect(updateUserEmail("taken@example.com")).rejects.toThrow(
+                    "Email already in use"
+                );
+            });
+        });
+
+        describe("setUserPassword", () => {
+            it("sets password for OAuth-only user", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(createMockApiResponse({ message: "Password set" }))
+                );
+
+                const result = await setUserPassword("newpassword123");
+
+                expect(result.success).toBe(true);
+            });
+
+            it("sends password in request body", async () => {
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse({ success: true })));
+
+                await setUserPassword("securepassword");
+
+                const fetchCall = vi.mocked(fetch).mock.calls[0];
+                const body = JSON.parse(fetchCall[1]?.body as string);
+                expect(body.password).toBe("securepassword");
+            });
+
+            it("throws error when user already has password", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(
+                        createMockApiError("User already has a password"),
+                        false,
+                        400
+                    )
+                );
+
+                await expect(setUserPassword("password123")).rejects.toThrow(
+                    "User already has a password"
+                );
+            });
+        });
+
+        describe("changeUserPassword", () => {
+            it("changes password successfully", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(createMockApiResponse({ message: "Password changed" }))
+                );
+
+                const result = await changeUserPassword("oldpassword", "newpassword");
+
+                expect(result.success).toBe(true);
+            });
+
+            it("sends current and new password in request body", async () => {
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse({ success: true })));
+
+                await changeUserPassword("currentPass", "newPass");
+
+                const fetchCall = vi.mocked(fetch).mock.calls[0];
+                const body = JSON.parse(fetchCall[1]?.body as string);
+                expect(body.currentPassword).toBe("currentPass");
+                expect(body.newPassword).toBe("newPass");
+            });
+
+            it("throws error when current password is wrong", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(
+                        createMockApiError("Current password is incorrect"),
+                        false,
+                        400
+                    )
+                );
+
+                await expect(changeUserPassword("wrong", "newpass")).rejects.toThrow(
+                    "Current password is incorrect"
+                );
+            });
+        });
+    });
+
+    // ===== Two-Factor Authentication API Tests =====
+    describe("Two-Factor Authentication API", () => {
+        beforeEach(() => {
+            localStorage.setItem("auth_token", createMockAuthToken());
+        });
+
+        describe("sendTwoFactorCode", () => {
+            it("sends verification code to phone", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(createMockApiResponse({ message: "Code sent" }))
+                );
+
+                const result = await sendTwoFactorCode("+1234567890");
+
+                expect(result.success).toBe(true);
+            });
+
+            it("sends phone in request body", async () => {
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse({ success: true })));
+
+                await sendTwoFactorCode("+1234567890");
+
+                const fetchCall = vi.mocked(fetch).mock.calls[0];
+                const body = JSON.parse(fetchCall[1]?.body as string);
+                expect(body.phone).toBe("+1234567890");
+            });
+
+            it("throws error when no token", async () => {
+                localStorage.clear();
+
+                await expect(sendTwoFactorCode("+1234567890")).rejects.toThrow(
+                    "No authentication token found"
+                );
+            });
+
+            it("throws error on invalid phone", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(createMockApiError("Invalid phone number"), false, 400)
+                );
+
+                await expect(sendTwoFactorCode("invalid")).rejects.toThrow("Invalid phone number");
+            });
+        });
+
+        describe("verifyTwoFactorCode", () => {
+            it("verifies code and enables 2FA", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(createMockApiResponse({ message: "2FA enabled" }))
+                );
+
+                const result = await verifyTwoFactorCode("123456", "+1234567890");
+
+                expect(result.success).toBe(true);
+            });
+
+            it("sends code and phone in request body", async () => {
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse({ success: true })));
+
+                await verifyTwoFactorCode("654321", "+1234567890");
+
+                const fetchCall = vi.mocked(fetch).mock.calls[0];
+                const body = JSON.parse(fetchCall[1]?.body as string);
+                expect(body.code).toBe("654321");
+                expect(body.phone).toBe("+1234567890");
+            });
+
+            it("throws error on invalid code", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(
+                        createMockApiError("Invalid verification code"),
+                        false,
+                        400
+                    )
+                );
+
+                await expect(verifyTwoFactorCode("000000", "+1234567890")).rejects.toThrow(
+                    "Invalid verification code"
+                );
+            });
+
+            it("throws error on expired code", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(createMockApiError("Code expired"), false, 400)
+                );
+
+                await expect(verifyTwoFactorCode("123456", "+1234567890")).rejects.toThrow(
+                    "Code expired"
+                );
+            });
+        });
+
+        describe("disableTwoFactor", () => {
+            it("disables 2FA successfully", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(createMockApiResponse({ message: "2FA disabled" }))
+                );
+
+                const result = await disableTwoFactor();
+
+                expect(result.success).toBe(true);
+            });
+
+            it("throws error when no token", async () => {
+                localStorage.clear();
+
+                await expect(disableTwoFactor()).rejects.toThrow("No authentication token found");
+            });
+
+            it("throws error when 2FA not enabled", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(createMockApiError("2FA is not enabled"), false, 400)
+                );
+
+                await expect(disableTwoFactor()).rejects.toThrow("2FA is not enabled");
+            });
+        });
+    });
+
+    // ===== Trigger API Tests =====
+    describe("Trigger API", () => {
+        beforeEach(() => {
+            localStorage.setItem("auth_token", createMockAuthToken());
+        });
+
+        describe("getTriggers", () => {
+            it("returns list of triggers for workflow", async () => {
+                const mockTriggers = [
+                    { id: "trigger-1", type: "webhook", enabled: true },
+                    { id: "trigger-2", type: "schedule", enabled: false }
+                ];
+
+                mockFetchOnce(
+                    createMockFetchResponse(createMockApiResponse({ data: mockTriggers }))
+                );
+
+                const result = await getTriggers("workflow-123");
+
+                expect(result.success).toBe(true);
+            });
+
+            it("includes workflowId in query string", async () => {
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse({ data: [] })));
+
+                await getTriggers("workflow-456");
+
+                const fetchCall = vi.mocked(fetch).mock.calls[0];
+                const url = fetchCall[0] as string;
+                expect(url).toContain("workflowId=workflow-456");
+            });
+        });
+
+        describe("getTrigger", () => {
+            it("returns trigger by ID", async () => {
+                const mockTrigger = { id: "trigger-123", type: "webhook", enabled: true };
+
+                mockFetchOnce(
+                    createMockFetchResponse(createMockApiResponse({ data: mockTrigger }))
+                );
+
+                const result = await getTrigger("trigger-123");
+
+                expect(result.success).toBe(true);
+            });
+
+            it("throws error when trigger not found", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(createMockApiError("Trigger not found"), false, 404)
+                );
+
+                await expect(getTrigger("nonexistent")).rejects.toThrow("Trigger not found");
+            });
+        });
+
+        describe("createTrigger", () => {
+            it("creates webhook trigger", async () => {
+                const mockTrigger = { id: "trigger-new", type: "webhook", enabled: true };
+
+                mockFetchOnce(
+                    createMockFetchResponse(createMockApiResponse({ data: mockTrigger }))
+                );
+
+                const result = await createTrigger({
+                    workflowId: "workflow-123",
+                    type: "webhook",
+                    name: "API Webhook",
+                    enabled: true,
+                    config: {}
+                });
+
+                expect(result.success).toBe(true);
+            });
+
+            it("creates schedule trigger with cron expression", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(
+                        createMockApiResponse({ data: { id: "trigger-new", type: "schedule" } })
+                    )
+                );
+
+                await createTrigger({
+                    workflowId: "workflow-123",
+                    type: "schedule",
+                    name: "Daily Job",
+                    enabled: true,
+                    config: { cron: "0 9 * * *" }
+                });
+
+                const fetchCall = vi.mocked(fetch).mock.calls[0];
+                const body = JSON.parse(fetchCall[1]?.body as string);
+                expect(body.type).toBe("schedule");
+                expect(body.config.cron).toBe("0 9 * * *");
+            });
+
+            it("throws error on invalid cron expression", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(
+                        createMockApiError("Invalid cron expression"),
+                        false,
+                        400
+                    )
+                );
+
+                await expect(
+                    createTrigger({
+                        workflowId: "workflow-123",
+                        type: "schedule",
+                        name: "Bad Schedule",
+                        enabled: true,
+                        config: { cron: "invalid" }
+                    })
+                ).rejects.toThrow("Invalid cron expression");
+            });
+        });
+
+        describe("updateTrigger", () => {
+            it("updates trigger successfully", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(
+                        createMockApiResponse({
+                            data: { id: "trigger-123", enabled: false }
+                        })
+                    )
+                );
+
+                const result = await updateTrigger("trigger-123", { enabled: false });
+
+                expect(result.success).toBe(true);
+            });
+
+            it("sends update data in request body", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(createMockApiResponse({ data: { id: "trigger-123" } }))
+                );
+
+                await updateTrigger("trigger-123", {
+                    name: "Updated Trigger",
+                    enabled: true
+                });
+
+                const fetchCall = vi.mocked(fetch).mock.calls[0];
+                const body = JSON.parse(fetchCall[1]?.body as string);
+                expect(body.name).toBe("Updated Trigger");
+                expect(body.enabled).toBe(true);
+            });
+        });
+
+        describe("deleteTrigger", () => {
+            it("deletes trigger successfully", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(createMockApiResponse({ message: "Deleted" }))
+                );
+
+                const result = await deleteTrigger("trigger-123");
+
+                expect(result.success).toBe(true);
+            });
+
+            it("throws error when trigger not found", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(createMockApiError("Trigger not found"), false, 404)
+                );
+
+                await expect(deleteTrigger("nonexistent")).rejects.toThrow("Trigger not found");
+            });
+        });
+    });
+
+    // ===== Workspace API Tests =====
+    describe("Workspace API", () => {
+        beforeEach(() => {
+            localStorage.setItem("auth_token", createMockAuthToken());
+        });
+
+        describe("getWorkspaces", () => {
+            it("returns list of workspaces", async () => {
+                const mockWorkspaces = [
+                    { id: "ws-1", name: "Personal", role: "owner" },
+                    { id: "ws-2", name: "Team", role: "member" }
+                ];
+
+                mockFetchOnce(
+                    createMockFetchResponse(
+                        createMockApiResponse({
+                            workspaces: mockWorkspaces,
+                            defaultWorkspaceId: "ws-1"
+                        })
+                    )
+                );
+
+                const result = await getWorkspaces();
+
+                expect(result.success).toBe(true);
+                expect(result.data?.workspaces).toHaveLength(2);
+            });
+
+            it("includes default workspace ID", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(
+                        createMockApiResponse({
+                            workspaces: [{ id: "ws-1", name: "Personal" }],
+                            defaultWorkspaceId: "ws-1"
+                        })
+                    )
+                );
+
+                const result = await getWorkspaces();
+
+                expect(result.data?.defaultWorkspaceId).toBe("ws-1");
+            });
+        });
+
+        describe("getWorkspace", () => {
+            it("returns workspace by ID", async () => {
+                const mockWorkspace = { id: "ws-123", name: "Test Workspace" };
+
+                mockFetchOnce(
+                    createMockFetchResponse(
+                        createMockApiResponse({
+                            workspace: mockWorkspace,
+                            role: "owner",
+                            isOwner: true
+                        })
+                    )
+                );
+
+                const result = await getWorkspace("ws-123");
+
+                expect(result.success).toBe(true);
+                expect(result.data?.workspace.id).toBe("ws-123");
+                expect(result.data?.isOwner).toBe(true);
+            });
+
+            it("throws error when workspace not found", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(createMockApiError("Workspace not found"), false, 404)
+                );
+
+                await expect(getWorkspace("nonexistent")).rejects.toThrow("Workspace not found");
+            });
+        });
+
+        describe("createWorkspace", () => {
+            it("creates workspace successfully", async () => {
+                const mockWorkspace = { id: "ws-new", name: "New Workspace" };
+
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse(mockWorkspace)));
+
+                const result = await createWorkspace({ name: "New Workspace" });
+
+                expect(result.success).toBe(true);
+            });
+
+            it("sends workspace data in request body", async () => {
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse({ id: "ws-new" })));
+
+                await createWorkspace({ name: "My Workspace", description: "Test workspace" });
+
+                const fetchCall = vi.mocked(fetch).mock.calls[0];
+                const body = JSON.parse(fetchCall[1]?.body as string);
+                expect(body.name).toBe("My Workspace");
+                expect(body.description).toBe("Test workspace");
+            });
+
+            it("throws error on duplicate name", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(
+                        createMockApiError("Workspace name already exists"),
+                        false,
+                        400
+                    )
+                );
+
+                await expect(createWorkspace({ name: "Existing" })).rejects.toThrow(
+                    "Workspace name already exists"
+                );
+            });
+        });
+
+        describe("updateWorkspace", () => {
+            it("updates workspace successfully", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(
+                        createMockApiResponse({ id: "ws-123", name: "Updated Name" })
+                    )
+                );
+
+                const result = await updateWorkspace("ws-123", { name: "Updated Name" });
+
+                expect(result.success).toBe(true);
+            });
+
+            it("throws error when not owner", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(
+                        createMockApiError("Only workspace owner can update"),
+                        false,
+                        403
+                    )
+                );
+
+                await expect(updateWorkspace("ws-123", { name: "New" })).rejects.toThrow(
+                    "Only workspace owner can update"
+                );
+            });
+        });
+
+        describe("deleteWorkspace", () => {
+            it("deletes workspace successfully", async () => {
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse(null)));
+
+                const result = await deleteWorkspace("ws-123");
+
+                expect(result.success).toBe(true);
+            });
+
+            it("throws error when deleting default workspace", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(
+                        createMockApiError("Cannot delete default workspace"),
+                        false,
+                        400
+                    )
+                );
+
+                await expect(deleteWorkspace("default-ws")).rejects.toThrow(
+                    "Cannot delete default workspace"
+                );
+            });
+        });
+
+        describe("getWorkspaceMembers", () => {
+            it("returns list of workspace members", async () => {
+                const mockMembers = [
+                    { userId: "user-1", role: "owner", email: "owner@example.com" },
+                    { userId: "user-2", role: "member", email: "member@example.com" }
+                ];
+
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse(mockMembers)));
+
+                const result = await getWorkspaceMembers("ws-123");
+
+                expect(result.success).toBe(true);
+                expect(result.data).toHaveLength(2);
+            });
+
+            it("throws error when not a member", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(createMockApiError("Not a member"), false, 403)
+                );
+
+                await expect(getWorkspaceMembers("ws-123")).rejects.toThrow("Not a member");
+            });
+        });
+
+        describe("inviteWorkspaceMember", () => {
+            it("invites member successfully", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(
+                        createMockApiResponse({
+                            id: "invite-123",
+                            email: "new@example.com",
+                            role: "member"
+                        })
+                    )
+                );
+
+                const result = await inviteWorkspaceMember("ws-123", {
+                    email: "new@example.com",
+                    role: "member"
+                });
+
+                expect(result.success).toBe(true);
+                expect(result.data?.email).toBe("new@example.com");
+            });
+
+            it("sends invite data in request body", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(
+                        createMockApiResponse({ id: "invite-1", email: "test@example.com" })
+                    )
+                );
+
+                await inviteWorkspaceMember("ws-123", {
+                    email: "test@example.com",
+                    role: "admin"
+                });
+
+                const fetchCall = vi.mocked(fetch).mock.calls[0];
+                const body = JSON.parse(fetchCall[1]?.body as string);
+                expect(body.email).toBe("test@example.com");
+                expect(body.role).toBe("admin");
+            });
+
+            it("throws error when user already a member", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(
+                        createMockApiError("User is already a member"),
+                        false,
+                        400
+                    )
+                );
+
+                await expect(
+                    inviteWorkspaceMember("ws-123", {
+                        email: "existing@example.com",
+                        role: "member"
+                    })
+                ).rejects.toThrow("User is already a member");
+            });
+
+            it("throws error when not authorized to invite", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(
+                        createMockApiError("Not authorized to invite members"),
+                        false,
+                        403
+                    )
+                );
+
+                await expect(
+                    inviteWorkspaceMember("ws-123", { email: "new@example.com", role: "member" })
+                ).rejects.toThrow("Not authorized to invite members");
+            });
+        });
+    });
+
+    // ===== Form Interface API Tests =====
+    describe("Form Interface API", () => {
+        beforeEach(() => {
+            localStorage.setItem("auth_token", createMockAuthToken());
+        });
+
+        describe("getFormInterfaces", () => {
+            it("returns list of form interfaces", async () => {
+                const mockForms = [
+                    { id: "form-1", name: "Contact Form", status: "published" },
+                    { id: "form-2", name: "Survey", status: "draft" }
+                ];
+
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse({ data: mockForms })));
+
+                const result = await getFormInterfaces();
+
+                expect(result.success).toBe(true);
+            });
+
+            it("supports pagination params", async () => {
+                mockFetchOnce(createMockFetchResponse({ success: true, data: [] }));
+
+                await getFormInterfaces({ offset: 10, limit: 10 });
+
+                const url = vi.mocked(fetch).mock.calls[0][0] as string;
+                expect(url).toContain("offset=10");
+                expect(url).toContain("limit=10");
+            });
+
+            it("supports folder filter", async () => {
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse({ data: [] })));
+
+                await getFormInterfaces({ folderId: "folder-123" });
+
+                const url = vi.mocked(fetch).mock.calls[0][0] as string;
+                expect(url).toContain("folderId=folder-123");
+            });
+        });
+
+        describe("getFormInterface", () => {
+            it("returns form interface by ID", async () => {
+                const mockForm = { id: "form-123", name: "Test Form" };
+
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse(mockForm)));
+
+                const result = await getFormInterface("form-123");
+
+                expect(result.success).toBe(true);
+            });
+
+            it("throws error when not found", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(createMockApiError("Form not found"), false, 404)
+                );
+
+                await expect(getFormInterface("nonexistent")).rejects.toThrow("Form not found");
+            });
+        });
+
+        describe("createFormInterface", () => {
+            it("creates form interface successfully", async () => {
+                const mockForm = { id: "form-new", name: "New Form" };
+
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse(mockForm)));
+
+                const result = await createFormInterface({
+                    name: "New Form",
+                    agentId: "agent-123"
+                });
+
+                expect(result.success).toBe(true);
+            });
+
+            it("sends form data in request body", async () => {
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse({ id: "form-1" })));
+
+                await createFormInterface({
+                    name: "Contact Form",
+                    agentId: "agent-123",
+                    description: "A contact form"
+                });
+
+                const fetchCall = vi.mocked(fetch).mock.calls[0];
+                const body = JSON.parse(fetchCall[1]?.body as string);
+                expect(body.name).toBe("Contact Form");
+                expect(body.agentId).toBe("agent-123");
+            });
+        });
+
+        describe("updateFormInterface", () => {
+            it("updates form interface successfully", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(
+                        createMockApiResponse({ id: "form-123", name: "Updated" })
+                    )
+                );
+
+                const result = await updateFormInterface("form-123", { name: "Updated" });
+
+                expect(result.success).toBe(true);
+            });
+        });
+
+        describe("deleteFormInterface", () => {
+            it("deletes form interface successfully", async () => {
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse(null)));
+
+                const result = await deleteFormInterface("form-123");
+
+                expect(result.success).toBe(true);
+            });
+        });
+
+        describe("publishFormInterface", () => {
+            it("publishes form interface", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(createMockApiResponse({ status: "published" }))
+                );
+
+                const result = await publishFormInterface("form-123");
+
+                expect(result.success).toBe(true);
+            });
+
+            it("calls correct endpoint", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(createMockApiResponse({ status: "published" }))
+                );
+
+                await publishFormInterface("form-123");
+
+                const url = vi.mocked(fetch).mock.calls[0][0] as string;
+                expect(url).toContain("/form-interfaces/form-123/publish");
+            });
+        });
+
+        describe("unpublishFormInterface", () => {
+            it("unpublishes form interface", async () => {
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse({ status: "draft" })));
+
+                const result = await unpublishFormInterface("form-123");
+
+                expect(result.success).toBe(true);
+            });
+        });
+
+        describe("duplicateFormInterface", () => {
+            it("duplicates form interface", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(
+                        createMockApiResponse({ id: "form-copy", name: "Form Copy" })
+                    )
+                );
+
+                const result = await duplicateFormInterface("form-123");
+
+                expect(result.success).toBe(true);
+            });
+        });
+
+        describe("getFormInterfaceSubmissions", () => {
+            it("returns list of submissions", async () => {
+                const mockSubmissions = {
+                    items: [
+                        { id: "sub-1", data: { name: "John" } },
+                        { id: "sub-2", data: { name: "Jane" } }
+                    ],
+                    total: 2,
+                    page: 1,
+                    pageSize: 20,
+                    hasMore: false
+                };
+
+                mockFetchOnce(createMockFetchResponse({ success: true, data: mockSubmissions }));
+
+                const result = await getFormInterfaceSubmissions("form-123");
+
+                expect(result.success).toBe(true);
+            });
+
+            it("supports pagination with offset and limit", async () => {
+                mockFetchOnce(createMockFetchResponse({ success: true, data: { items: [] } }));
+
+                await getFormInterfaceSubmissions("form-123", { offset: 20, limit: 20 });
+
+                const url = vi.mocked(fetch).mock.calls[0][0] as string;
+                expect(url).toContain("offset=20");
+                expect(url).toContain("limit=20");
+            });
+        });
+    });
+
+    // ===== Chat Interface API Tests =====
+    describe("Chat Interface API", () => {
+        beforeEach(() => {
+            localStorage.setItem("auth_token", createMockAuthToken());
+        });
+
+        describe("getChatInterfaces", () => {
+            it("returns list of chat interfaces", async () => {
+                const mockChats = [
+                    { id: "chat-1", name: "Support Bot", status: "published" },
+                    { id: "chat-2", name: "FAQ Bot", status: "draft" }
+                ];
+
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse({ data: mockChats })));
+
+                const result = await getChatInterfaces();
+
+                expect(result.success).toBe(true);
+            });
+
+            it("supports folder filter", async () => {
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse({ data: [] })));
+
+                await getChatInterfaces({ folderId: "folder-123" });
+
+                const url = vi.mocked(fetch).mock.calls[0][0] as string;
+                expect(url).toContain("folderId=folder-123");
+            });
+        });
+
+        describe("getChatInterface", () => {
+            it("returns chat interface by ID", async () => {
+                const mockChat = { id: "chat-123", name: "Test Chat" };
+
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse(mockChat)));
+
+                const result = await getChatInterface("chat-123");
+
+                expect(result.success).toBe(true);
+            });
+
+            it("throws error when not found", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(
+                        createMockApiError("Chat interface not found"),
+                        false,
+                        404
+                    )
+                );
+
+                await expect(getChatInterface("nonexistent")).rejects.toThrow(
+                    "Chat interface not found"
+                );
+            });
+        });
+
+        describe("createChatInterface", () => {
+            it("creates chat interface successfully", async () => {
+                const mockChat = { id: "chat-new", name: "New Chat" };
+
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse(mockChat)));
+
+                const result = await createChatInterface({
+                    name: "New Chat",
+                    agentId: "agent-123"
+                });
+
+                expect(result.success).toBe(true);
+            });
+        });
+
+        describe("updateChatInterface", () => {
+            it("updates chat interface successfully", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(
+                        createMockApiResponse({ id: "chat-123", name: "Updated" })
+                    )
+                );
+
+                const result = await updateChatInterface("chat-123", { name: "Updated" });
+
+                expect(result.success).toBe(true);
+            });
+        });
+
+        describe("deleteChatInterface", () => {
+            it("deletes chat interface successfully", async () => {
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse(null)));
+
+                const result = await deleteChatInterface("chat-123");
+
+                expect(result.success).toBe(true);
+            });
+        });
+
+        describe("publishChatInterface", () => {
+            it("publishes chat interface", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(createMockApiResponse({ status: "published" }))
+                );
+
+                const result = await publishChatInterface("chat-123");
+
+                expect(result.success).toBe(true);
+            });
+        });
+
+        describe("unpublishChatInterface", () => {
+            it("unpublishes chat interface", async () => {
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse({ status: "draft" })));
+
+                const result = await unpublishChatInterface("chat-123");
+
+                expect(result.success).toBe(true);
+            });
+        });
+
+        describe("duplicateChatInterface", () => {
+            it("duplicates chat interface", async () => {
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse({ id: "chat-copy" })));
+
+                const result = await duplicateChatInterface("chat-123");
+
+                expect(result.success).toBe(true);
+            });
+        });
+
+        describe("getChatInterfaceSessions", () => {
+            it("returns list of sessions", async () => {
+                const mockSessions = [
+                    { id: "session-1", messageCount: 10 },
+                    { id: "session-2", messageCount: 5 }
+                ];
+
+                mockFetchOnce(
+                    createMockFetchResponse(createMockApiResponse({ data: mockSessions }))
+                );
+
+                const result = await getChatInterfaceSessions("chat-123");
+
+                expect(result.success).toBe(true);
+            });
+        });
+    });
+
+    // ===== API Key API Tests =====
+    describe("API Key API", () => {
+        beforeEach(() => {
+            localStorage.setItem("auth_token", createMockAuthToken());
+        });
+
+        describe("getApiKeys", () => {
+            it("returns list of API keys", async () => {
+                const mockKeys = [
+                    { id: "key-1", name: "Production", prefix: "fm_prod_" },
+                    { id: "key-2", name: "Development", prefix: "fm_dev_" }
+                ];
+
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse(mockKeys)));
+
+                const result = await getApiKeys();
+
+                expect(result.success).toBe(true);
+                expect(result.data).toHaveLength(2);
+            });
+        });
+
+        describe("getApiKey", () => {
+            it("returns API key by ID", async () => {
+                const mockKey = { id: "key-123", name: "Test Key" };
+
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse(mockKey)));
+
+                const result = await getApiKey("key-123");
+
+                expect(result.success).toBe(true);
+            });
+
+            it("throws error when not found", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(createMockApiError("API key not found"), false, 404)
+                );
+
+                await expect(getApiKey("nonexistent")).rejects.toThrow("API key not found");
+            });
+        });
+
+        describe("createApiKey", () => {
+            it("creates API key successfully", async () => {
+                const mockKey = { id: "key-new", name: "New Key", key: "fm_xxx_full_key" };
+
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse(mockKey)));
+
+                const result = await createApiKey({
+                    name: "New Key",
+                    scopes: ["workflows:read", "workflows:write"]
+                });
+
+                expect(result.success).toBe(true);
+            });
+
+            it("sends key data in request body", async () => {
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse({ id: "key-1" })));
+
+                await createApiKey({
+                    name: "Production Key",
+                    scopes: ["workflows:read"],
+                    expiresAt: "2025-12-31"
+                });
+
+                const fetchCall = vi.mocked(fetch).mock.calls[0];
+                const body = JSON.parse(fetchCall[1]?.body as string);
+                expect(body.name).toBe("Production Key");
+                expect(body.scopes).toContain("workflows:read");
+            });
+        });
+
+        describe("updateApiKey", () => {
+            it("updates API key successfully", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(
+                        createMockApiResponse({ id: "key-123", name: "Updated" })
+                    )
+                );
+
+                const result = await updateApiKey("key-123", { name: "Updated" });
+
+                expect(result.success).toBe(true);
+            });
+        });
+
+        describe("rotateApiKey", () => {
+            it("rotates API key and returns new key", async () => {
+                const mockKey = { id: "key-123", key: "fm_xxx_new_key" };
+
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse(mockKey)));
+
+                const result = await rotateApiKey("key-123");
+
+                expect(result.success).toBe(true);
+            });
+
+            it("calls correct endpoint with POST", async () => {
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse({ id: "key-123" })));
+
+                await rotateApiKey("key-123");
+
+                const fetchCall = vi.mocked(fetch).mock.calls[0];
+                expect(fetchCall[1]?.method).toBe("POST");
+                expect(fetchCall[0]).toContain("/api-keys/key-123/rotate");
+            });
+        });
+
+        describe("revokeApiKey", () => {
+            it("revokes API key successfully", async () => {
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse(null)));
+
+                const result = await revokeApiKey("key-123");
+
+                expect(result.success).toBe(true);
+            });
+
+            it("calls correct endpoint with DELETE", async () => {
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse(null)));
+
+                await revokeApiKey("key-123");
+
+                const fetchCall = vi.mocked(fetch).mock.calls[0];
+                expect(fetchCall[1]?.method).toBe("DELETE");
+            });
+        });
+    });
+
+    // ===== Execution API Tests =====
+    describe("Execution API", () => {
+        beforeEach(() => {
+            localStorage.setItem("auth_token", createMockAuthToken());
+        });
+
+        describe("getExecutions", () => {
+            it("returns list of executions", async () => {
+                const mockExecutions = [
+                    { id: "exec-1", status: "completed", workflowId: "wf-1" },
+                    { id: "exec-2", status: "running", workflowId: "wf-1" }
+                ];
+
+                mockFetchOnce(createMockFetchResponse({ success: true, data: mockExecutions }));
+
+                const result = await getExecutions();
+
+                expect(result.success).toBe(true);
+            });
+
+            it("supports workflow filter", async () => {
+                mockFetchOnce(createMockFetchResponse({ success: true, data: [] }));
+
+                await getExecutions("wf-123");
+
+                const url = vi.mocked(fetch).mock.calls[0][0] as string;
+                expect(url).toContain("workflowId=wf-123");
+            });
+
+            it("supports status filter", async () => {
+                mockFetchOnce(createMockFetchResponse({ success: true, data: [] }));
+
+                await getExecutions(undefined, { status: "completed" });
+
+                const url = vi.mocked(fetch).mock.calls[0][0] as string;
+                expect(url).toContain("status=completed");
+            });
+
+            it("supports pagination with offset and limit", async () => {
+                mockFetchOnce(createMockFetchResponse({ success: true, data: [] }));
+
+                await getExecutions(undefined, { offset: 20, limit: 50 });
+
+                const url = vi.mocked(fetch).mock.calls[0][0] as string;
+                expect(url).toContain("offset=20");
+                expect(url).toContain("limit=50");
+            });
+        });
+
+        describe("getExecution", () => {
+            it("returns execution by ID", async () => {
+                const mockExecution = {
+                    id: "exec-123",
+                    status: "completed",
+                    outputs: { result: "success" }
+                };
+
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse(mockExecution)));
+
+                const result = await getExecution("exec-123");
+
+                expect(result.success).toBe(true);
+            });
+
+            it("throws error when not found", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(createMockApiError("Execution not found"), false, 404)
+                );
+
+                await expect(getExecution("nonexistent")).rejects.toThrow("Execution not found");
+            });
+        });
+
+        describe("submitUserResponse", () => {
+            it("submits user response to paused execution", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse({ success: true, data: { status: "running" } })
+                );
+
+                const result = await submitUserResponse("exec-123", "Hello");
+
+                expect(result.success).toBe(true);
+            });
+
+            it("sends response data in request body", async () => {
+                mockFetchOnce(createMockFetchResponse({ success: true }));
+
+                await submitUserResponse("exec-123", { answer: "Yes", confirmed: true });
+
+                const fetchCall = vi.mocked(fetch).mock.calls[0];
+                const body = JSON.parse(fetchCall[1]?.body as string);
+                expect(body.response.answer).toBe("Yes");
+                expect(body.response.confirmed).toBe(true);
+            });
+
+            it("calls correct endpoint", async () => {
+                mockFetchOnce(createMockFetchResponse({ success: true }));
+
+                await submitUserResponse("exec-456", "response");
+
+                const url = vi.mocked(fetch).mock.calls[0][0] as string;
+                expect(url).toContain("/executions/exec-456/submit-response");
+            });
+
+            it("throws error when execution not paused", async () => {
+                mockFetchOnce(
+                    createMockFetchResponse(
+                        createMockApiError("Execution is not waiting for input"),
+                        false,
+                        400
+                    )
+                );
+
+                await expect(submitUserResponse("exec-123", "value")).rejects.toThrow(
+                    "Execution is not waiting for input"
+                );
+            });
+        });
+    });
+
+    // ===== Checkpoint API Tests =====
+    describe("Checkpoint API", () => {
+        beforeEach(() => {
+            localStorage.setItem("auth_token", createMockAuthToken());
+        });
+
+        describe("listCheckpoints", () => {
+            it("returns list of checkpoints for workflow", async () => {
+                const mockCheckpoints = [
+                    { id: "cp-1", name: "Before refactor", created_at: "2024-01-01", snapshot: {} },
+                    { id: "cp-2", name: "After feature", created_at: "2024-01-02", snapshot: {} }
+                ];
+
+                mockFetchOnce(createMockFetchResponse({ data: mockCheckpoints }));
+
+                const result = await listCheckpoints("wf-123");
+
+                expect(result).toHaveLength(2);
+            });
+
+            it("includes workflowId in URL", async () => {
+                mockFetchOnce(createMockFetchResponse({ data: [] }));
+
+                await listCheckpoints("wf-456");
+
+                const url = vi.mocked(fetch).mock.calls[0][0] as string;
+                expect(url).toContain("/checkpoints/workflow/wf-456");
+            });
+        });
+
+        describe("createCheckpoint", () => {
+            it("creates checkpoint successfully", async () => {
+                mockFetchOnce(createMockFetchResponse({ success: true }));
+
+                const result = await createCheckpoint("wf-123", "My Checkpoint");
+
+                expect(result.success).toBe(true);
+            });
+
+            it("creates checkpoint with auto-generated name", async () => {
+                mockFetchOnce(createMockFetchResponse({ success: true }));
+
+                await createCheckpoint("wf-123");
+
+                // Should not throw even without name
+                expect(fetch).toHaveBeenCalled();
+            });
+
+            it("calls correct endpoint", async () => {
+                mockFetchOnce(createMockFetchResponse({ success: true }));
+
+                await createCheckpoint("wf-123", "Test");
+
+                const url = vi.mocked(fetch).mock.calls[0][0] as string;
+                expect(url).toContain("/checkpoints/wf-123");
+            });
+        });
+
+        describe("restoreCheckpoint", () => {
+            it("restores checkpoint successfully", async () => {
+                mockFetchOnce(createMockFetchResponse({ success: true }));
+
+                const result = await restoreCheckpoint("cp-123");
+
+                expect(result.success).toBe(true);
+            });
+
+            it("calls correct endpoint with POST", async () => {
+                mockFetchOnce(createMockFetchResponse({ success: true }));
+
+                await restoreCheckpoint("cp-123");
+
+                const fetchCall = vi.mocked(fetch).mock.calls[0];
+                expect(fetchCall[1]?.method).toBe("POST");
+                expect(fetchCall[0]).toContain("/checkpoints/restore/cp-123");
+            });
+        });
+
+        describe("deleteCheckpoint", () => {
+            it("deletes checkpoint and returns remaining checkpoints", async () => {
+                // First call: delete checkpoint
+                mockFetchOnce(createMockFetchResponse({ success: true }));
+                // Second call: listCheckpoints is called after delete
+                mockFetchOnce(createMockFetchResponse({ data: [] }));
+
+                const result = await deleteCheckpoint("cp-123", "wf-123");
+
+                // deleteCheckpoint returns the updated list of checkpoints
+                expect(result).toEqual([]);
+            });
+
+            it("uses checkpointId in URL", async () => {
+                mockFetchOnce(createMockFetchResponse({ success: true }));
+                mockFetchOnce(createMockFetchResponse({ data: [] }));
+
+                await deleteCheckpoint("cp-789", "wf-456");
+
+                const url = vi.mocked(fetch).mock.calls[0][0] as string;
+                expect(url).toContain("/checkpoints/cp-789");
+            });
+        });
+
+        describe("renameCheckpoint", () => {
+            it("renames checkpoint successfully", async () => {
+                mockFetchOnce(createMockFetchResponse({ success: true }));
+
+                const result = await renameCheckpoint("cp-123", "New Name");
+
+                expect(result.success).toBe(true);
+            });
+
+            it("sends new name in request body", async () => {
+                mockFetchOnce(createMockFetchResponse({ success: true }));
+
+                await renameCheckpoint("cp-123", "Better Name");
+
+                const fetchCall = vi.mocked(fetch).mock.calls[0];
+                const body = JSON.parse(fetchCall[1]?.body as string);
+                expect(body.name).toBe("Better Name");
+            });
+
+            it("calls correct endpoint", async () => {
+                mockFetchOnce(createMockFetchResponse({ success: true }));
+
+                await renameCheckpoint("cp-123", "New Name");
+
+                const url = vi.mocked(fetch).mock.calls[0][0] as string;
+                expect(url).toContain("/checkpoints/rename/cp-123");
             });
         });
     });

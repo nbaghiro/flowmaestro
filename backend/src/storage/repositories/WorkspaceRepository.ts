@@ -1,8 +1,9 @@
-import type {
-    Workspace,
-    WorkspaceWithStats,
-    WorkspaceCategory,
-    WorkspaceType
+import {
+    WORKSPACE_LIMITS,
+    type Workspace,
+    type WorkspaceWithStats,
+    type WorkspaceCategory,
+    type WorkspaceType
 } from "@flowmaestro/shared";
 import { db } from "../database";
 import { WorkspaceModel, CreateWorkspaceInput, UpdateWorkspaceInput } from "../models/Workspace";
@@ -39,7 +40,7 @@ interface WorkspaceWithStatsRow extends WorkspaceRow {
 export class WorkspaceRepository {
     async create(input: CreateWorkspaceInput): Promise<WorkspaceModel> {
         // Get limits for the workspace type
-        const limits = (await import("@flowmaestro/shared")).WORKSPACE_LIMITS[input.type || "free"];
+        const limits = WORKSPACE_LIMITS[input.type || "free"];
 
         const query = `
             INSERT INTO flowmaestro.workspaces (
