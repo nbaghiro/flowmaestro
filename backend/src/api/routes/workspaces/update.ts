@@ -2,6 +2,7 @@ import { FastifyInstance } from "fastify";
 import type { UpdateWorkspaceInput } from "@flowmaestro/shared";
 import { createServiceLogger } from "../../../core/logging";
 import { workspaceService } from "../../../services/workspace";
+import { WorkspaceRepository } from "../../../storage/repositories";
 import { authMiddleware, workspaceContextMiddleware, requirePermission } from "../../middleware";
 
 const logger = createServiceLogger("WorkspaceRoutes");
@@ -21,6 +22,7 @@ export async function updateWorkspaceRoute(fastify: FastifyInstance) {
         },
         async (request, reply) => {
             const { workspaceId } = request.params;
+            const userId = request.user!.id;
             const body = request.body;
 
             try {
@@ -36,6 +38,20 @@ export async function updateWorkspaceRoute(fastify: FastifyInstance) {
                         return reply.status(400).send({
                             success: false,
                             error: "Workspace name must be 100 characters or less"
+                        });
+                    }
+
+                    // Check for duplicate workspace name (excluding current workspace)
+                    const workspaceRepo = new WorkspaceRepository();
+                    const nameAvailable = await workspaceRepo.isNameAvailableForOwner(
+                        body.name.trim(),
+                        userId,
+                        workspaceId
+                    );
+                    if (!nameAvailable) {
+                        return reply.status(400).send({
+                            success: false,
+                            error: "You already have another workspace with this name"
                         });
                     }
                 }
