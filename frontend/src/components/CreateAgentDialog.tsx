@@ -19,9 +19,11 @@ import { useState, FormEvent } from "react";
 import {
     getAdvancedAgentPatterns,
     getAllAgentPatterns,
+    getDefaultModelForProvider,
     type AgentPattern
 } from "@flowmaestro/shared";
 import { cn } from "../lib/utils";
+import { useAgentStore } from "../stores/agentStore";
 import { AgentPatternPicker } from "./AgentPatternPicker";
 import { Alert } from "./common/Alert";
 import { Button } from "./common/Button";
@@ -56,12 +58,14 @@ export interface AgentPatternData {
 interface CreateAgentDialogProps {
     isOpen: boolean;
     onClose: () => void;
-    onCreate: (patternData: AgentPatternData) => void;
+    onCreated: (agentId: string) => void;
 }
 
 type DialogStep = "pattern" | "details";
 
-export function CreateAgentDialog({ isOpen, onClose, onCreate }: CreateAgentDialogProps) {
+export function CreateAgentDialog({ isOpen, onClose, onCreated }: CreateAgentDialogProps) {
+    const { createAgent } = useAgentStore();
+
     // Step state
     const [step, setStep] = useState<DialogStep>("pattern");
 
@@ -77,6 +81,7 @@ export function CreateAgentDialog({ isOpen, onClose, onCreate }: CreateAgentDial
 
     // UI state
     const [error, setError] = useState("");
+    const [isCreating, setIsCreating] = useState(false);
 
     // Get patterns
     const basicPatterns = getAllAgentPatterns();
@@ -96,7 +101,7 @@ export function CreateAgentDialog({ isOpen, onClose, onCreate }: CreateAgentDial
         }
     };
 
-    const handleSubmit = (e: FormEvent) => {
+    const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
         setError("");
 
@@ -112,14 +117,30 @@ export function CreateAgentDialog({ isOpen, onClose, onCreate }: CreateAgentDial
             return;
         }
 
-        onCreate({
-            pattern: selectedPattern,
-            name: agentName,
-            description: description.trim() || undefined
-        });
+        setIsCreating(true);
+        try {
+            // Create agent with pattern defaults
+            const defaultProvider = "openai" as const;
+            const defaultModel = getDefaultModelForProvider(defaultProvider);
 
-        // Reset form
-        resetForm();
+            const agent = await createAgent({
+                name: agentName,
+                description: description.trim() || undefined,
+                provider: defaultProvider,
+                model: defaultModel,
+                system_prompt: selectedPattern.systemPrompt,
+                temperature: selectedPattern.temperature ?? 0.7,
+                max_tokens: selectedPattern.maxTokens ?? 4096
+            });
+
+            resetForm();
+
+            // Call onCreated with the new agent ID
+            onCreated(agent.id);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Failed to create agent");
+            setIsCreating(false);
+        }
     };
 
     const resetForm = () => {
@@ -318,8 +339,12 @@ export function CreateAgentDialog({ isOpen, onClose, onCreate }: CreateAgentDial
                                 <Button type="button" variant="ghost" onClick={handleClose}>
                                     Cancel
                                 </Button>
-                                <Button type="submit" variant="primary" disabled={!name.trim()}>
-                                    Create Agent
+                                <Button
+                                    type="submit"
+                                    variant="primary"
+                                    disabled={!name.trim() || isCreating}
+                                >
+                                    {isCreating ? "Creating..." : "Create Agent"}
                                 </Button>
                             </div>
                         </div>

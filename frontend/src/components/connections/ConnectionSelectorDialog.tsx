@@ -1,10 +1,8 @@
 import { Plus, Check, ExternalLink } from "lucide-react";
-import { useEffect } from "react";
 import { ALL_PROVIDERS } from "@flowmaestro/shared";
 import { useConnectionStore } from "../../stores/connectionStore";
 import { Button } from "../common/Button";
 import { Dialog } from "../common/Dialog";
-import { Spinner } from "../common/Spinner";
 import type { Connection } from "../../lib/api";
 
 interface ConnectionSelectorDialogProps {
@@ -26,21 +24,13 @@ export function ConnectionSelectorDialog({
     selectedConnectionId,
     onSelect
 }: ConnectionSelectorDialogProps) {
-    const { connections, loading, fetchConnections } = useConnectionStore();
+    const { getByProvider } = useConnectionStore();
 
-    // Filter connections for this provider
-    const providerConnections = connections.filter(
-        (conn) => conn.provider === provider && conn.status === "active"
-    );
+    // Filter connections for this provider locally - no need to refetch
+    const providerConnections = getByProvider(provider).filter((conn) => conn.status === "active");
 
     // Get provider info
     const providerInfo = ALL_PROVIDERS.find((p) => p.provider === provider);
-
-    useEffect(() => {
-        if (isOpen) {
-            fetchConnections({ provider });
-        }
-    }, [isOpen, provider, fetchConnections]);
 
     const handleSelectConnection = (connectionId: string) => {
         onSelect(connectionId);
@@ -50,10 +40,6 @@ export function ConnectionSelectorDialog({
     const handleAddNewConnection = () => {
         // Open connections page in new tab
         window.open("/connections", "_blank");
-        // Refresh connections after a short delay
-        setTimeout(() => {
-            fetchConnections({ provider });
-        }, 1000);
     };
 
     return (
@@ -63,14 +49,7 @@ export function ConnectionSelectorDialog({
             title={`Select ${providerInfo?.displayName || provider} Connection`}
             size="2xl"
         >
-            {loading ? (
-                <div className="flex items-center justify-center py-12">
-                    <Spinner size="md" />
-                    <span className="ml-3 text-sm text-muted-foreground">
-                        Loading connections...
-                    </span>
-                </div>
-            ) : providerConnections.length === 0 ? (
+            {providerConnections.length === 0 ? (
                 <div className="text-center py-12">
                     <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
                         {providerInfo?.logoUrl ? (
