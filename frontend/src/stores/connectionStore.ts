@@ -37,7 +37,40 @@ export const useConnectionStore = create<ConnectionStore>((set, get) => ({
         try {
             const response = await getConnections(params);
             if (response.success && response.data) {
-                set({ connections: response.data, loading: false });
+                // If fetching with filters (provider, connection_method, or status),
+                // merge the results with existing connections to preserve connections
+                // that don't match the filter (important for LLM dropdown in AgentBuilder)
+                if (params?.provider || params?.connection_method || params?.status) {
+                    set((state) => {
+                        const newConnections = response.data;
+                        // Remove old connections that match the filter criteria
+                        const filteredOut = state.connections.filter((conn) => {
+                            if (params.provider && conn.provider === params.provider) {
+                                return false; // Remove this connection as it matches the filter
+                            }
+                            if (
+                                params.connection_method &&
+                                conn.connection_method === params.connection_method
+                            ) {
+                                return false;
+                            }
+                            if (params.status && conn.status === params.status) {
+                                return false;
+                            }
+                            return true; // Keep connections that don't match the filter
+                        });
+                        // Merge: keep non-matching connections + add new filtered connections
+                        // Deduplicate by ID
+                        const merged = [...filteredOut, ...newConnections];
+                        const unique = merged.filter(
+                            (conn, index, self) => index === self.findIndex((c) => c.id === conn.id)
+                        );
+                        return { connections: unique, loading: false };
+                    });
+                } else {
+                    // No filters: replace all connections (normal behavior)
+                    set({ connections: response.data, loading: false });
+                }
             }
         } catch (error) {
             set({

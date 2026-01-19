@@ -131,6 +131,13 @@ export function AgentBuilder() {
     // Flag to prevent navigation during thread creation
     const isCreatingThreadRef = useRef(false);
 
+    // Track the last agent ID we populated the form for
+    // This prevents resetting form fields when currentAgent updates due to tool additions
+    const lastPopulatedAgentIdRef = useRef<string | null>(null);
+
+    // Track if we've auto-saved the new agent to prevent multiple auto-saves
+    const hasAutoSavedRef = useRef(false);
+
     // Tools state
     const [tools, setTools] = useState<Tool[]>([]);
     const [removingToolId, setRemovingToolId] = useState<string | null>(null);
@@ -149,6 +156,9 @@ export function AgentBuilder() {
     useEffect(() => {
         // Reset all agent-specific state when agentId changes
         resetAgentState();
+        // Reset the refs when switching agents
+        lastPopulatedAgentIdRef.current = null;
+        hasAutoSavedRef.current = false;
 
         if (!isNewAgent && agentId) {
             fetchAgent(agentId);
@@ -161,9 +171,10 @@ export function AgentBuilder() {
         };
     }, [agentId, isNewAgent, fetchAgent, fetchConnections, resetAgentState]);
 
-    // Populate form when agent loads
+    // Populate form when agent loads (only on initial load or when agent ID changes)
+    // This prevents resetting form fields when currentAgent updates due to tool additions
     useEffect(() => {
-        if (currentAgent) {
+        if (currentAgent && currentAgent.id !== lastPopulatedAgentIdRef.current) {
             setName(currentAgent.name);
             setDescription(currentAgent.description || "");
             setProvider(currentAgent.provider);
@@ -186,6 +197,9 @@ export function AgentBuilder() {
                 temperature: currentAgent.temperature,
                 maxTokens: currentAgent.max_tokens
             });
+
+            // Mark this agent ID as populated
+            lastPopulatedAgentIdRef.current = currentAgent.id;
         }
     }, [currentAgent]);
 
@@ -372,6 +386,86 @@ export function AgentBuilder() {
         }
     }, [llmConnections.length, connectionId]);
 
+    // Auto-save new agent when minimum required fields are filled
+    // This allows connections to be added before manual save
+    useEffect(() => {
+        // Only auto-save if:
+        // 1. It's a new agent (not saved yet)
+        // 2. We haven't already auto-saved
+        // 3. We're not currently saving
+        // 4. Minimum required fields are filled (name, provider, model)
+        // 5. Agent doesn't exist in store yet (prevents re-saving)
+        if (
+            isNewAgent &&
+            agentId === "new" &&
+            !hasAutoSavedRef.current &&
+            !isSaving &&
+            name.trim() &&
+            provider &&
+            model &&
+            !currentAgent
+        ) {
+            const autoSaveAgent = async () => {
+                // Double-check conditions before saving to prevent race conditions
+                if (hasAutoSavedRef.current || currentAgent || isSaving) {
+                    return;
+                }
+
+                try {
+                    hasAutoSavedRef.current = true;
+                    const agentData: CreateAgentRequest = {
+                        name: name.trim(),
+                        description: description.trim() || undefined,
+                        model,
+                        provider,
+                        connection_id: connectionId || null,
+                        system_prompt: systemPrompt,
+                        temperature,
+                        max_tokens: maxTokens
+                    };
+
+                    const newAgent = await createAgent(agentData);
+
+                    // Update original values to prevent unsaved changes warning
+                    setOriginalValues({
+                        name: newAgent.name,
+                        description: newAgent.description || "",
+                        provider: newAgent.provider,
+                        model: newAgent.model,
+                        connectionId: newAgent.connection_id || "",
+                        systemPrompt: newAgent.system_prompt,
+                        temperature: newAgent.temperature,
+                        maxTokens: newAgent.max_tokens
+                    });
+
+                    navigate(`/agents/${newAgent.id}/build`, { replace: true });
+                } catch (err) {
+                    // Reset the flag on error so we can retry
+                    hasAutoSavedRef.current = false;
+                    logger.error("Failed to auto-save agent", err);
+                    // Don't show error to user - they can still manually save
+                }
+            };
+
+            autoSaveAgent();
+        }
+    }, [
+        isNewAgent,
+        agentId,
+        name,
+        provider,
+        model,
+        description,
+        connectionId,
+        systemPrompt,
+        temperature,
+        maxTokens,
+        isSaving,
+        currentAgent,
+        createAgent,
+        navigate
+    ]);
+
     const handleSave = async () => {
         if (!name.trim()) {
             setError("Agent name is required");
@@ -398,11 +492,52 @@ export function AgentBuilder() {
                 max_tokens: maxTokens
             };
 
+            let savedAgent;
             if (isNewAgent) {
-                const newAgent = await createAgent(agentData as CreateAgentRequest);
-                navigate(`/agents/${newAgent.id}`);
+                // If agent was already auto-saved, update it instead of creating
+                if (currentAgent?.id) {
+                    await updateAgent(currentAgent.id, agentData);
+                    // Get the updated agent from the store
+                    savedAgent = useAgentStore.getState().currentAgent;
+                    // Navigate to the agent's URL if we're still on the "new" route
+                    if (agentId === "new") {
+                        navigate(`/agents/${currentAgent.id}`);
+                    }
+                } else {
+                    savedAgent = await createAgent(agentData as CreateAgentRequest);
+                    navigate(`/agents/${savedAgent.id}`);
+                }
             } else if (agentId) {
                 await updateAgent(agentId, agentData);
+                // Get the updated agent from the store
+                savedAgent = useAgentStore.getState().currentAgent;
+            }
+
+            // Update originalValues to match what was just saved
+            // This ensures hasUnsavedChanges is false after save
+            if (savedAgent) {
+                setOriginalValues({
+                    name: savedAgent.name,
+                    description: savedAgent.description || "",
+                    provider: savedAgent.provider,
+                    model: savedAgent.model,
+                    connectionId: savedAgent.connection_id || "",
+                    systemPrompt: savedAgent.system_prompt,
+                    temperature: savedAgent.temperature,
+                    maxTokens: savedAgent.max_tokens
+                });
+            } else {
+                // Fallback: update originalValues from form values if agent not available
+                setOriginalValues({
+                    name: name.trim(),
+                    description: description.trim() || "",
+                    provider,
+                    model,
+                    connectionId: connectionId || "",
+                    systemPrompt,
+                    temperature,
+                    maxTokens
+                });
             }
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to save agent");
@@ -412,17 +547,20 @@ export function AgentBuilder() {
     };
 
     // Detect unsaved changes
-    const hasUnsavedChanges =
-        isNewAgent ||
-        (originalValues !== null &&
-            (name !== originalValues.name ||
-                description !== originalValues.description ||
-                provider !== originalValues.provider ||
-                model !== originalValues.model ||
-                connectionId !== originalValues.connectionId ||
-                systemPrompt !== originalValues.systemPrompt ||
-                temperature !== originalValues.temperature ||
-                maxTokens !== originalValues.maxTokens));
+    // If we have a currentAgent, compare form fields against originalValues
+    // If we don't have a currentAgent and it's a new agent, show as unsaved
+    // If currentAgent exists, originalValues must be set (by the populate effect)
+    const hasUnsavedChanges = currentAgent
+        ? originalValues !== null &&
+          (name !== originalValues.name ||
+              description !== originalValues.description ||
+              provider !== originalValues.provider ||
+              model !== originalValues.model ||
+              connectionId !== originalValues.connectionId ||
+              systemPrompt !== originalValues.systemPrompt ||
+              temperature !== originalValues.temperature ||
+              maxTokens !== originalValues.maxTokens)
+        : isNewAgent; // New agent without currentAgent is always unsaved
 
     // Warn user about unsaved changes when closing/refreshing browser
     useEffect(() => {
@@ -468,10 +606,44 @@ export function AgentBuilder() {
                 max_tokens: maxTokens
             };
 
+            let savedAgent;
             if (isNewAgent) {
-                await createAgent(agentData as CreateAgentRequest);
+                // If agent was already auto-saved, update it instead of creating
+                if (currentAgent?.id) {
+                    await updateAgent(currentAgent.id, agentData);
+                    savedAgent = useAgentStore.getState().currentAgent;
+                } else {
+                    savedAgent = await createAgent(agentData as CreateAgentRequest);
+                }
             } else if (agentId) {
                 await updateAgent(agentId, agentData);
+                savedAgent = useAgentStore.getState().currentAgent;
+            }
+
+            // Update originalValues to match what was just saved
+            if (savedAgent) {
+                setOriginalValues({
+                    name: savedAgent.name,
+                    description: savedAgent.description || "",
+                    provider: savedAgent.provider,
+                    model: savedAgent.model,
+                    connectionId: savedAgent.connection_id || "",
+                    systemPrompt: savedAgent.system_prompt,
+                    temperature: savedAgent.temperature,
+                    maxTokens: savedAgent.max_tokens
+                });
+            } else {
+                // Fallback: update originalValues from form values
+                setOriginalValues({
+                    name: name.trim(),
+                    description: description.trim() || "",
+                    provider,
+                    model,
+                    connectionId: connectionId || "",
+                    systemPrompt,
+                    temperature,
+                    maxTokens
+                });
             }
 
             setShowUnsavedDialog(false);
@@ -491,6 +663,7 @@ export function AgentBuilder() {
         maxTokens,
         isNewAgent,
         agentId,
+        currentAgent,
         createAgent,
         updateAgent,
         navigate,
@@ -971,10 +1144,26 @@ export function AgentBuilder() {
                                                 setTemperature(maxTemp);
                                             }
 
-                                            // Auto-save to agent if not a new agent
+                                            // Auto-save connection change to agent
+                                            // For new agents, this will trigger the auto-save effect above
+                                            // For existing agents, update directly
                                             if (!isNewAgent && agentId) {
                                                 try {
                                                     await updateAgent(agentId, {
+                                                        connection_id: connId,
+                                                        provider: newProvider,
+                                                        model: connModel
+                                                    });
+                                                } catch (err) {
+                                                    logger.error(
+                                                        "Failed to update agent model",
+                                                        err
+                                                    );
+                                                }
+                                            } else if (isNewAgent && currentAgent?.id) {
+                                                // Agent was auto-saved, now update it with the new connection
+                                                try {
+                                                    await updateAgent(currentAgent.id, {
                                                         connection_id: connId,
                                                         provider: newProvider,
                                                         model: connModel
