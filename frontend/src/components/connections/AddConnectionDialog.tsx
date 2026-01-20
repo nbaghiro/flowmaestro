@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { ConnectionMethod, CreateConnectionInput } from "../../lib/api";
+import { validateApiKey, validateApiKeySoft } from "../../lib/connectionValidation";
 import { useConnectionStore } from "../../stores/connectionStore";
 import { Alert } from "../common/Alert";
 import { Button } from "../common/Button";
@@ -48,6 +49,7 @@ export function AddConnectionDialog({
     const [config, setConfig] = useState<Record<string, unknown>>({});
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [apiKeyValidationError, setApiKeyValidationError] = useState<string | null>(null);
 
     const { addConnection } = useConnectionStore();
 
@@ -67,6 +69,7 @@ export function AddConnectionDialog({
         setName("");
         setConfig({});
         setError(null);
+        setApiKeyValidationError(null);
         setSaving(false);
     };
 
@@ -101,10 +104,10 @@ export function AddConnectionDialog({
         // Build data based on connection method
         if (connectionMethod === "api_key") {
             const data: Record<string, string> = {
-                api_key: (config.apiKey as string) || ""
+                api_key: ((config.apiKey as string) || "").trim()
             };
             if (config.apiSecret) {
-                data.api_secret = config.apiSecret as string;
+                data.api_secret = (config.apiSecret as string).trim();
             }
             input.data = data as import("@flowmaestro/shared").JsonObject;
         } else if (connectionMethod === "basic_auth") {
@@ -119,6 +122,23 @@ export function AddConnectionDialog({
 
     const handleSave = async () => {
         if (!connectionMethod || !provider) return;
+
+        // Validate API key if using api_key method
+        if (connectionMethod === "api_key") {
+            const apiKeyValue = (config.apiKey as string) || "";
+            const providerLabel = providerLabels[provider] || provider;
+
+            if (!apiKeyValue.trim()) {
+                setError(`${providerLabel} key is required`);
+                return;
+            }
+
+            const validation = validateApiKey(apiKeyValue, provider);
+            if (!validation.valid) {
+                setError(validation.error || `Invalid ${providerLabel} key format`);
+                return;
+            }
+        }
 
         setSaving(true);
         setError(null);
@@ -225,11 +245,35 @@ export function AddConnectionDialog({
                                     <Input
                                         type="password"
                                         value={(config.apiKey as string) || ""}
-                                        onChange={(e) =>
-                                            setConfig({ ...config, apiKey: e.target.value })
-                                        }
+                                        onChange={(e) => {
+                                            const newValue = e.target.value;
+                                            setConfig({ ...config, apiKey: newValue });
+                                            // Clear form error when user starts typing check for various error messages
+                                            if (
+                                                error &&
+                                                (error.includes("key") ||
+                                                    error.includes("token") ||
+                                                    error.includes("required"))
+                                            ) {
+                                                setError(null);
+                                            }
+                                            const validation = validateApiKeySoft(
+                                                newValue,
+                                                provider
+                                            );
+                                            // Clear validation error if valid, otherwise set the error message
+                                            setApiKeyValidationError(
+                                                validation.valid ? null : validation.error || null
+                                            );
+                                        }}
                                         placeholder="sk-..."
                                     />
+                                    {/* Real-time validation feedback */}
+                                    {apiKeyValidationError && (
+                                        <div className="mt-2">
+                                            <Alert variant="error">{apiKeyValidationError}</Alert>
+                                        </div>
+                                    )}
                                 </div>
                                 {(provider === "openai" || provider === "custom") && (
                                     <div>
