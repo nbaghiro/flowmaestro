@@ -60,7 +60,11 @@ interface AgentStore {
     fetchThreadMessages: (threadId: string) => Promise<void>;
     setThreadMessages: (threadId: string, messages: ThreadMessage[]) => void;
     addMessageToThread: (threadId: string, message: ThreadMessage) => void;
-    updateThreadMessage: (threadId: string, messageId: string, content: string) => void;
+    updateThreadMessage: (
+        threadId: string,
+        messageId: string,
+        contentOrUpdater: string | ((current: string) => string)
+    ) => void;
     clearThreadMessages: (threadId: string) => void;
 
     // Execution actions (simplified - messages go to thread)
@@ -445,15 +449,51 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
         });
     },
 
-    updateThreadMessage: (threadId: string, messageId: string, content: string) => {
+    updateThreadMessage: (
+        threadId: string,
+        messageId: string,
+        contentOrUpdater: string | ((current: string) => string)
+    ) => {
         set((state) => {
             const existing = state.threadMessages[threadId] || [];
-            return {
-                threadMessages: {
-                    ...state.threadMessages,
-                    [threadId]: existing.map((m) => (m.id === messageId ? { ...m, content } : m))
-                }
-            };
+            const messageExists = existing.some((m) => m.id === messageId);
+
+            const currentContent = messageExists
+                ? existing.find((m) => m.id === messageId)?.content || ""
+                : "";
+            const newContent =
+                typeof contentOrUpdater === "function"
+                    ? contentOrUpdater(currentContent)
+                    : contentOrUpdater;
+
+            if (messageExists) {
+                // Update existing message
+                return {
+                    threadMessages: {
+                        ...state.threadMessages,
+                        [threadId]: existing.map((m) =>
+                            m.id === messageId ? { ...m, content: newContent } : m
+                        )
+                    }
+                };
+            } else {
+                // Create message if it doesn't exist handles race condition where token arrives before message creation
+                // Default to assistant role since this is used for streaming agent responses
+                return {
+                    threadMessages: {
+                        ...state.threadMessages,
+                        [threadId]: [
+                            ...existing,
+                            {
+                                id: messageId,
+                                role: "assistant" as const,
+                                content: newContent,
+                                timestamp: new Date().toISOString()
+                            }
+                        ]
+                    }
+                };
+            }
         });
     },
 
