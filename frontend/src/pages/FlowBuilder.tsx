@@ -39,6 +39,7 @@ import {
 } from "../lib/workflowTransformers";
 import { useChatStore } from "../stores/chatStore";
 import { useHistoryStore, initializeHistoryTracking } from "../stores/historyStore";
+import { useTriggerStore } from "../stores/triggerStore";
 import { useWorkflowStore } from "../stores/workflowStore";
 
 const NODE_DUPLICATE_OFFSET = 20;
@@ -112,7 +113,17 @@ export function FlowBuilder() {
 
     const { undo, redo, canUndo, canRedo, clear } = useHistoryStore();
 
-    const { isPanelOpen: isChatOpen, closePanel: closeChatPanel } = useChatStore();
+    const {
+        isPanelOpen: isChatOpen,
+        closePanel: closeChatPanel,
+        openPanel: openChatPanel
+    } = useChatStore();
+
+    const { isDrawerOpen, setDrawerOpen } = useTriggerStore();
+
+    // Panel coordination state
+    const [lastActivePanel, setLastActivePanel] = useState<"chat" | "execution" | null>(null);
+    const [sacrificedPanel, setSacrificedPanel] = useState<"chat" | "execution" | null>(null);
 
     useEffect(() => {
         if (workflowId) {
@@ -135,10 +146,51 @@ export function FlowBuilder() {
 
     // Panel coordination: Close chat panel when a node is selected
     useEffect(() => {
-        if (selectedNode && isChatOpen) {
-            closeChatPanel();
+        if (selectedNode) {
+            if (isChatOpen) closeChatPanel();
+            setSacrificedPanel(null); // Clear sacrificed panel on node selection
         }
     }, [selectedNode, isChatOpen, closeChatPanel]);
+
+    // Coordinate AI Chat and Execution panels
+    useEffect(() => {
+        if (isChatOpen && isDrawerOpen) {
+            // Both are open: one was already open and the other just opened
+            if (lastActivePanel === "execution") {
+                // Chat just opened while Execution was open
+                setDrawerOpen(false);
+                setSacrificedPanel("execution");
+                setLastActivePanel("chat");
+            } else {
+                // Execution just opened while Chat was open
+                closeChatPanel();
+                setSacrificedPanel("chat");
+                setLastActivePanel("execution");
+            }
+        } else if (isChatOpen) {
+            setLastActivePanel("chat");
+        } else if (isDrawerOpen) {
+            setLastActivePanel("execution");
+        } else {
+            // Both are closed. If one was sacrificed, reopen it.
+            if (sacrificedPanel === "chat") {
+                setSacrificedPanel(null);
+                openChatPanel();
+            } else if (sacrificedPanel === "execution") {
+                setSacrificedPanel(null);
+                setDrawerOpen(true);
+            }
+            setLastActivePanel(null);
+        }
+    }, [
+        isChatOpen,
+        isDrawerOpen,
+        lastActivePanel,
+        sacrificedPanel,
+        setDrawerOpen,
+        closeChatPanel,
+        openChatPanel
+    ]);
 
     // Panel coordination: Deselect node when chat panel opens
     useEffect(() => {
