@@ -266,8 +266,8 @@ export class WorkspaceRepository {
         excludeId?: string
     ): Promise<boolean> {
         const query = excludeId
-            ? "SELECT 1 FROM flowmaestro.workspaces WHERE name = $1 AND owner_id = $2 AND id != $3 AND deleted_at IS NULL"
-            : "SELECT 1 FROM flowmaestro.workspaces WHERE name = $1 AND owner_id = $2 AND deleted_at IS NULL";
+            ? "SELECT 1 FROM flowmaestro.workspaces WHERE LOWER(name) = LOWER($1) AND owner_id = $2 AND id != $3 AND deleted_at IS NULL"
+            : "SELECT 1 FROM flowmaestro.workspaces WHERE LOWER(name) = LOWER($1) AND owner_id = $2 AND deleted_at IS NULL";
 
         const params = excludeId ? [name, ownerId, excludeId] : [name, ownerId];
         const result = await db.query(query, params);
