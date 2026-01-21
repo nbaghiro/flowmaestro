@@ -2,6 +2,7 @@ import { ArrowLeft, X, Eye, EyeOff, Shield, Key } from "lucide-react";
 import React, { useState, useEffect, useCallback } from "react";
 import type { JsonObject, OAuthField } from "@flowmaestro/shared";
 import { useOAuth } from "../../hooks/useOAuth";
+import { validateApiKey, validateApiKeySoft } from "../../lib/connectionValidation";
 import { logger } from "../../lib/logger";
 import { useConnectionStore } from "../../stores/connectionStore";
 import { Alert } from "../common/Alert";
@@ -52,6 +53,7 @@ export function NewConnectionDialog({
     const [showApiKey, setShowApiKey] = useState<boolean>(false);
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
+    const [apiKeyValidationError, setApiKeyValidationError] = useState<string | null>(null);
     const [oauthInitiated, setOauthInitiated] = useState<boolean>(false);
 
     // OAuth pre-auth settings state (e.g., subdomain for Zendesk)
@@ -80,6 +82,7 @@ export function NewConnectionDialog({
         setApiKey("");
         setShowApiKey(false);
         setError(null);
+        setApiKeyValidationError(null);
         setIsSubmitting(false);
         setOauthInitiated(false);
 
@@ -254,7 +257,14 @@ export function NewConnectionDialog({
         }
 
         if (!apiKey.trim()) {
-            setError("API key is required");
+            setError(`${providerDisplayName} key is required`);
+            return;
+        }
+
+        // Validate API key format
+        const validation = validateApiKey(apiKey, provider);
+        if (!validation.valid) {
+            setError(validation.error || `Invalid ${providerDisplayName} key format`);
             return;
         }
 
@@ -267,7 +277,7 @@ export function NewConnectionDialog({
                 connection_method: "api_key",
                 provider,
                 data: {
-                    api_key: apiKey
+                    api_key: apiKey.trim()
                 }
             };
 
@@ -554,7 +564,27 @@ export function NewConnectionDialog({
                                     <Input
                                         type={showApiKey ? "text" : "password"}
                                         value={apiKey}
-                                        onChange={(e) => setApiKey(e.target.value)}
+                                        onChange={(e) => {
+                                            const newValue = e.target.value;
+                                            setApiKey(newValue);
+                                            // Clear form error when user starts typing check for various error messages
+                                            if (
+                                                error &&
+                                                (error.includes("key") ||
+                                                    error.includes("token") ||
+                                                    error.includes("required"))
+                                            ) {
+                                                setError(null);
+                                            }
+                                            const validation = validateApiKeySoft(
+                                                newValue,
+                                                provider
+                                            );
+                                            // Clear validation error if valid, otherwise set the error message
+                                            setApiKeyValidationError(
+                                                validation.valid ? null : validation.error || null
+                                            );
+                                        }}
                                         className="pr-10"
                                         placeholder="Enter your API key or token"
                                         required
@@ -595,6 +625,13 @@ export function NewConnectionDialog({
                                             <li>Click "Generate API token"</li>
                                             <li>Copy the token and paste it above</li>
                                         </ol>
+                                    </div>
+                                )}
+
+                                {/* Real-time validation feedback */}
+                                {apiKeyValidationError && (
+                                    <div className="mt-2">
+                                        <Alert variant="error">{apiKeyValidationError}</Alert>
                                     </div>
                                 )}
                             </div>
