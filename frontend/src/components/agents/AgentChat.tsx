@@ -150,7 +150,6 @@ export function AgentChat({ agent }: AgentChatProps) {
 
         // CRITICAL: Create streaming message IMMEDIATELY before starting stream
         // This prevents race condition where first tokens arrive before message exists
-        // (See: https://github.com/nbaghiro/flowmaestro/issues/50)
         // Use a single space to ensure message renders empty messages are filtered out
         addMessageToThread(threadId, {
             id: streamingMessageId,
