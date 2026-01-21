@@ -28,6 +28,8 @@ import { integrationRoutes } from "./routes/integrations";
 import { knowledgeBaseRoutes } from "./routes/knowledge-bases";
 import { logRoutes } from "./routes/logs";
 import { oauthRoutes } from "./routes/oauth";
+import { personaInstanceRoutes } from "./routes/persona-instances";
+import { personaRoutes } from "./routes/personas";
 import { publicChatInterfaceRoutes } from "./routes/public/chat-interfaces";
 import { publicFormInterfaceRoutes } from "./routes/public/form-interfaces";
 import { templateRoutes } from "./routes/templates";
@@ -164,6 +166,8 @@ export async function buildServer() {
     await fastify.register(webhookRoutes, { prefix: "/webhooks" });
     await fastify.register(workspaceRoutes);
     await fastify.register(extensionRoutes, { prefix: "/extension" });
+    await fastify.register(personaRoutes, { prefix: "/personas" });
+    await fastify.register(personaInstanceRoutes, { prefix: "/persona-instances" });
 
     // Public routes (widgets and public API - CORS allows any origin via dynamic origin check)
     await fastify.register(publicFormInterfaceRoutes, { prefix: "/public/form-interfaces" });

@@ -12,12 +12,14 @@ import {
     ChevronRight,
     Sun,
     Moon,
-    Zap
+    Zap,
+    Users
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { WORKSPACE_LIMITS } from "@flowmaestro/shared";
 import { cn } from "../../lib/utils";
+import { usePersonaStore } from "../../stores/personaStore";
 import { useThemeStore } from "../../stores/themeStore";
 import { useWorkspaceStore } from "../../stores/workspaceStore";
 import { Logo } from "../common/Logo";
@@ -176,6 +178,7 @@ const navItems: NavItem[] = [
     // Primary navigation
     { icon: LayoutGrid, label: "Workflows", path: "/", section: "primary" },
     { icon: Bot, label: "Agents", path: "/agents", section: "primary" },
+    { icon: Users, label: "Personas", path: "/personas", section: "primary" },
     { icon: ClipboardList, label: "Form Interfaces", path: "/form-interfaces", section: "primary" },
     { icon: MessageSquare, label: "Chat Interfaces", path: "/chat-interfaces", section: "primary" },
     { icon: Plug, label: "Connections", path: "/connections", section: "primary" },
@@ -191,6 +194,14 @@ export function AppSidebar() {
     const location = useLocation();
     const [isCollapsed, setIsCollapsed] = useState(false);
     const { theme, setTheme } = useThemeStore();
+    const { needsAttentionCount, fetchNeedsAttentionCount } = usePersonaStore();
+
+    // Fetch persona attention count on mount and periodically
+    useEffect(() => {
+        fetchNeedsAttentionCount();
+        const interval = setInterval(fetchNeedsAttentionCount, 60000); // every minute
+        return () => clearInterval(interval);
+    }, [fetchNeedsAttentionCount]);
 
     const toggleTheme = () => {
         setTheme(theme === "light" ? "dark" : "light");
@@ -271,8 +282,14 @@ export function AppSidebar() {
                         {primaryItems.map((item) => {
                             const Icon = item.icon;
                             const active = isActive(item.path);
-                            const tooltipContent = item.badge
-                                ? `${item.label} (${item.badge})`
+                            // Dynamic badge for Personas based on needs attention count
+                            const isPersonas = item.path === "/personas";
+                            const dynamicBadge =
+                                isPersonas && needsAttentionCount > 0
+                                    ? needsAttentionCount.toString()
+                                    : item.badge;
+                            const tooltipContent = dynamicBadge
+                                ? `${item.label} (${dynamicBadge})`
                                 : item.label;
 
                             const linkContent = (
@@ -300,9 +317,16 @@ export function AppSidebar() {
                                     {!isCollapsed && (
                                         <>
                                             <span className="flex-1">{item.label}</span>
-                                            {item.badge && (
-                                                <span className="px-1.5 py-0.5 text-xs font-medium bg-muted text-muted-foreground rounded">
-                                                    {item.badge}
+                                            {dynamicBadge && (
+                                                <span
+                                                    className={cn(
+                                                        "px-1.5 py-0.5 text-xs font-medium rounded",
+                                                        isPersonas && needsAttentionCount > 0
+                                                            ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+                                                            : "bg-muted text-muted-foreground"
+                                                    )}
+                                                >
+                                                    {dynamicBadge}
                                                 </span>
                                             )}
                                         </>

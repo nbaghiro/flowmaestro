@@ -22,6 +22,9 @@ import { FormInterfaceSubmissions } from "./pages/FormInterfaceSubmissions";
 import { KnowledgeBaseDetail } from "./pages/KnowledgeBaseDetail";
 import { KnowledgeBases } from "./pages/KnowledgeBases";
 import { Login } from "./pages/Login";
+import { PersonaInstances } from "./pages/PersonaInstances";
+import { PersonaInstanceView } from "./pages/PersonaInstanceView";
+import { Personas } from "./pages/Personas";
 import { PublicChatPage } from "./pages/PublicChatPage";
 import { PublicFormInterfacePage } from "./pages/PublicFormInterface";
 import { Register } from "./pages/Register";
@@ -66,6 +69,8 @@ function App() {
                     <Route path="connections" element={<Connections />} />
                     <Route path="knowledge-bases" element={<KnowledgeBases />} />
                     <Route path="templates" element={<Templates />} />
+                    <Route path="personas" element={<Personas />} />
+                    <Route path="persona-instances" element={<PersonaInstances />} />
                     <Route path="settings" element={<Settings />} />
                     <Route path="account" element={<Account />} />
                     <Route path="workspace" element={<Workspace />} />
@@ -135,6 +140,16 @@ function App() {
                     element={
                         <ProtectedRoute>
                             <AgentBuilder />
+                        </ProtectedRoute>
+                    }
+                />
+
+                {/* Full-screen persona instance view without sidebar */}
+                <Route
+                    path="/persona-instances/:id"
+                    element={
+                        <ProtectedRoute>
+                            <PersonaInstanceView />
                         </ProtectedRoute>
                     }
                 />

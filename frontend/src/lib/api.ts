@@ -59,7 +59,21 @@ import type {
     UpdateWorkspaceInput,
     InviteMemberInput,
     CreditBalance,
-    CreditTransaction
+    CreditTransaction,
+    PersonaDefinition,
+    PersonaDefinitionSummary,
+    PersonaDefinitionListParams,
+    PersonaDefinitionListResponse,
+    PersonaCategory,
+    PersonaInstance,
+    PersonaInstanceSummary,
+    PersonaInstanceListParams,
+    PersonaInstanceListResponse,
+    PersonaInstanceDashboardResponse,
+    PersonaInstanceStatus,
+    CreatePersonaInstanceRequest,
+    PersonaInstanceMessage,
+    PersonaInstanceDeliverable
 } from "@flowmaestro/shared";
 import { getCurrentWorkspaceId } from "../stores/workspaceStore";
 import { logger } from "./logger";
@@ -5418,3 +5432,358 @@ export function getWorkflowChatStreamUrl(workflowId: string): string {
     const token = getAuthToken();
     return `${API_BASE_URL}/workflows/${workflowId}/conversation/stream${token ? `?token=${token}` : ""}`;
 }
+
+// =============================================================================
+// PERSONA DEFINITIONS
+// =============================================================================
+
+/**
+ * Get all persona definitions
+ */
+export async function getPersonas(params?: PersonaDefinitionListParams): Promise<{
+    success: boolean;
+    data: PersonaDefinitionListResponse;
+    error?: string;
+}> {
+    const queryParams = new URLSearchParams();
+    if (params?.category) queryParams.set("category", params.category);
+    if (params?.featured !== undefined) queryParams.set("featured", String(params.featured));
+    if (params?.status) queryParams.set("status", params.status);
+    if (params?.search) queryParams.set("search", params.search);
+    if (params?.limit) queryParams.set("limit", String(params.limit));
+    if (params?.offset) queryParams.set("offset", String(params.offset));
+
+    const url = queryParams.toString()
+        ? `${API_BASE_URL}/personas?${queryParams.toString()}`
+        : `${API_BASE_URL}/personas`;
+
+    const response = await apiFetch(url, {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json"
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Get personas grouped by category
+ */
+export async function getPersonasByCategory(): Promise<{
+    success: boolean;
+    data: Record<PersonaCategory, PersonaDefinitionSummary[]>;
+    error?: string;
+}> {
+    const response = await apiFetch(`${API_BASE_URL}/personas/categories`, {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json"
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Get a specific persona by slug
+ */
+export async function getPersona(slug: string): Promise<{
+    success: boolean;
+    data: PersonaDefinition;
+    error?: string;
+}> {
+    const response = await apiFetch(`${API_BASE_URL}/personas/${slug}`, {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json"
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+// =============================================================================
+// PERSONA INSTANCES
+// =============================================================================
+
+/**
+ * Create a new persona instance (launch a task)
+ */
+export async function createPersonaInstance(
+    data: CreatePersonaInstanceRequest
+): Promise<{ success: boolean; data: PersonaInstance; error?: string }> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/persona-instances`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` })
+        },
+        body: JSON.stringify(data)
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Get all persona instances for the current user
+ */
+export async function getPersonaInstances(params?: PersonaInstanceListParams): Promise<{
+    success: boolean;
+    data: PersonaInstanceListResponse;
+    error?: string;
+}> {
+    const token = getAuthToken();
+
+    const queryParams = new URLSearchParams();
+    if (params?.status) {
+        const statusValue = Array.isArray(params.status) ? params.status.join(",") : params.status;
+        queryParams.set("status", statusValue);
+    }
+    if (params?.persona_definition_id) {
+        queryParams.set("persona_definition_id", params.persona_definition_id);
+    }
+    if (params?.limit) queryParams.set("limit", String(params.limit));
+    if (params?.offset) queryParams.set("offset", String(params.offset));
+
+    const url = queryParams.toString()
+        ? `${API_BASE_URL}/persona-instances?${queryParams.toString()}`
+        : `${API_BASE_URL}/persona-instances`;
+
+    const response = await apiFetch(url, {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Get persona instances dashboard (optimized for dashboard view)
+ */
+export async function getPersonaInstancesDashboard(): Promise<{
+    success: boolean;
+    data: PersonaInstanceDashboardResponse;
+    error?: string;
+}> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/persona-instances/dashboard`, {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Get count of persona instances needing attention (for badge)
+ */
+export async function getPersonaInstancesCount(): Promise<{
+    success: boolean;
+    data: { count: number };
+    error?: string;
+}> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/persona-instances/count`, {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Get a specific persona instance
+ */
+export async function getPersonaInstance(id: string): Promise<{
+    success: boolean;
+    data: PersonaInstance & {
+        persona: {
+            name: string;
+            slug: string;
+            avatar_url: string | null;
+            category: PersonaCategory;
+        } | null;
+    };
+    error?: string;
+}> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/persona-instances/${id}`, {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Send a message to a running persona instance
+ */
+export async function sendPersonaInstanceMessage(
+    id: string,
+    content: string
+): Promise<{
+    success: boolean;
+    data: { message: string; instance_id: string; content: string };
+    error?: string;
+}> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/persona-instances/${id}/message`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` })
+        },
+        body: JSON.stringify({ content })
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Cancel a running persona instance
+ */
+export async function cancelPersonaInstance(id: string): Promise<{
+    success: boolean;
+    data: PersonaInstance;
+    error?: string;
+}> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/persona-instances/${id}/cancel`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Mark a persona instance as user-completed (after reviewing deliverables)
+ */
+export async function completePersonaInstance(id: string): Promise<{
+    success: boolean;
+    data: PersonaInstance;
+    error?: string;
+}> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/persona-instances/${id}/complete`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Delete a persona instance
+ */
+export async function deletePersonaInstance(id: string): Promise<void> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/persona-instances/${id}`, {
+        method: "DELETE",
+        headers: {
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+}
+
+// Re-export persona types for components
+export type {
+    PersonaDefinition,
+    PersonaDefinitionSummary,
+    PersonaCategory,
+    PersonaInstance,
+    PersonaInstanceSummary,
+    PersonaInstanceStatus,
+    CreatePersonaInstanceRequest,
+    PersonaInstanceDashboardResponse,
+    PersonaInstanceMessage,
+    PersonaInstanceDeliverable
+};

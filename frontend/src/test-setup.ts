@@ -4,6 +4,7 @@
  */
 
 import { vi } from "vitest";
+import "@testing-library/jest-dom/vitest";
 
 // Mock localStorage
 const localStorageMock = {
@@ -167,6 +168,26 @@ window.open = vi.fn(() => ({
     closed: false,
     close: vi.fn()
 })) as unknown as typeof window.open;
+
+// Mock pointer capture APIs for Radix UI components (jsdom doesn't support these)
+Element.prototype.hasPointerCapture = vi.fn(() => false);
+Element.prototype.setPointerCapture = vi.fn();
+Element.prototype.releasePointerCapture = vi.fn();
+
+// Mock scrollIntoView (jsdom doesn't support this)
+Element.prototype.scrollIntoView = vi.fn();
+
+// Mock ResizeObserver (jsdom doesn't support this, needed for Radix UI)
+class MockResizeObserver {
+    observe = vi.fn();
+    unobserve = vi.fn();
+    disconnect = vi.fn();
+}
+
+Object.defineProperty(globalThis, "ResizeObserver", {
+    value: MockResizeObserver,
+    writable: true
+});
 
 // Mock matchMedia for responsive hooks
 window.matchMedia = vi.fn((query: string) => ({
