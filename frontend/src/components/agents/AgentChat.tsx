@@ -140,12 +140,23 @@ export function AgentChat({ agent }: AgentChatProps) {
         }
 
         // Reset streaming content and tool calls
-        streamingContentRef.current = "";
+        // Initialize with space to match the placeholder message
+        streamingContentRef.current = " ";
         setToolCalls([]);
 
         logger.debug("Starting SSE stream for execution", { executionId });
 
         const streamingMessageId = `streaming-${executionId}`;
+
+        // CRITICAL: Create streaming message IMMEDIATELY before starting stream
+        // This prevents race condition where first tokens arrive before message exists
+        // Use a single space to ensure message renders empty messages are filtered out
+        addMessageToThread(threadId, {
+            id: streamingMessageId,
+            role: "assistant",
+            content: " ", // Single space placeholder will be replaced by first token
+            timestamp: new Date().toISOString()
+        });
 
         // Start SSE stream
         const cleanup = streamAgentExecution(agentId, executionId, {
@@ -153,24 +164,16 @@ export function AgentChat({ agent }: AgentChatProps) {
                 logger.debug("SSE connected for execution", { executionId });
             },
             onToken: (token: string) => {
-                // Accumulate token
-                streamingContentRef.current += token;
-
-                // Update or add streaming message in store
-                const store = useAgentStore.getState();
-                const currentMessages = store.threadMessages[threadId] || [];
-                const existingStreamMsg = currentMessages.find((m) => m.id === streamingMessageId);
-
-                if (existingStreamMsg) {
-                    updateThreadMessage(threadId, streamingMessageId, streamingContentRef.current);
-                } else {
-                    addMessageToThread(threadId, {
-                        id: streamingMessageId,
-                        role: "assistant",
-                        content: streamingContentRef.current,
-                        timestamp: new Date().toISOString()
-                    });
-                }
+                // Use function updater pattern for atomic updates like AIChatPanel
+                // This ensures we always append to the current state, not accumulated ref
+                updateThreadMessage(threadId, streamingMessageId, (current: string) => {
+                    // Remove leading space placeholder on first real token
+                    const cleanCurrent = current.trimStart() || "";
+                    const newContent = cleanCurrent + token;
+                    // Also update ref for onCompleted fallback
+                    streamingContentRef.current = newContent;
+                    return newContent;
+                });
 
                 if (isSending) {
                     setIsSending(false);
@@ -178,7 +181,9 @@ export function AgentChat({ agent }: AgentChatProps) {
             },
             onMessage: (message: ThreadMessage) => {
                 logger.debug("Received message", { message });
-                if (message.role !== "user") {
+                // Ignore assistant messages during streaming they're handled via onToken
+                // Adding them here would create duplicate/incomplete messages
+                if (message.role === "user") {
                     addMessageToThread(threadId, message);
                 }
             },
@@ -221,21 +226,39 @@ export function AgentChat({ agent }: AgentChatProps) {
             onCompleted: (data) => {
                 logger.info("Execution completed", { executionId });
 
-                // Finalize streaming message - replace streaming message with final
+                // ALWAYS use backend finalMessage it's guaranteed complete
+                // The accumulated content may be missing initial tokens
                 const finalContent = data.finalMessage || streamingContentRef.current;
+
+                logger.info("Finalizing message", {
+                    hasBackendFinalMessage: !!data.finalMessage,
+                    backendLength: data.finalMessage?.length || 0,
+                    accumulatedLength: streamingContentRef.current.length,
+                    accumulatedPreview: streamingContentRef.current.substring(0, 100),
+                    backendPreview: data.finalMessage?.substring(0, 100)
+                });
+
                 const store = useAgentStore.getState();
                 const currentMessages = store.threadMessages[threadId] || [];
+                const streamingMsg = currentMessages.find((m) => m.id === streamingMessageId);
 
-                // Remove streaming message and add final message
-                const filteredMessages = currentMessages.filter((m) => m.id !== streamingMessageId);
-                const finalMessage: ThreadMessage = {
-                    id: `asst-${executionId}-${Date.now()}`,
-                    role: "assistant",
-                    content: finalContent,
-                    timestamp: new Date().toISOString()
-                };
-
-                store.setThreadMessages(threadId, [...filteredMessages, finalMessage]);
+                // Update streaming message in place with final content (don't replace)
+                // This prevents the message from disappearing/reappearing
+                if (streamingMsg) {
+                    updateThreadMessage(threadId, streamingMessageId, finalContent);
+                } else {
+                    // Message doesn't exist - create final message
+                    const filteredMessages = currentMessages.filter(
+                        (m) => m.id !== streamingMessageId
+                    );
+                    const finalMessage: ThreadMessage = {
+                        id: `asst-${executionId}-${Date.now()}`,
+                        role: "assistant",
+                        content: finalContent,
+                        timestamp: new Date().toISOString()
+                    };
+                    store.setThreadMessages(threadId, [...filteredMessages, finalMessage]);
+                }
 
                 streamingContentRef.current = "";
                 setIsSending(false);
