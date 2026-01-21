@@ -167,7 +167,7 @@ export function AIChatPanel({ workflowId }: AIChatPanelProps) {
             // Check if connection is selected
             if (!selectedConnectionId) {
                 throw new Error(
-                    "No LLM connection selected. Please select a connection from the dropdown."
+                    "No LLM connection configured. Please create an LLM connection in the Connections page first (e.g., OpenAI API key, Claude API key, etc.), then select it from the dropdown in this panel."
                 );
             }
 
