@@ -925,8 +925,30 @@ export async function agentOrchestratorWorkflow(
         }
 
         // Execute tool calls
-        for (const toolCall of llmResponse.tool_calls!) {
-            logger.info("Executing tool", { toolName: toolCall.name });
+        // Filter out invalid tool calls (missing id or name)
+        const validToolCalls = llmResponse.tool_calls!.filter((tc) => {
+            if (!tc.id || !tc.name) {
+                logger.warn("Skipping invalid tool call", {
+                    id: tc.id,
+                    name: tc.name,
+                    hasId: !!tc.id,
+                    hasName: !!tc.name
+                });
+                return false;
+            }
+            return true;
+        });
+
+        if (validToolCalls.length === 0 && llmResponse.tool_calls!.length > 0) {
+            logger.error("All tool calls were invalid", {
+                totalToolCalls: llmResponse.tool_calls!.length,
+                executionId
+            });
+            throw new Error("All tool calls were invalid (missing id or name)");
+        }
+
+        for (const toolCall of validToolCalls) {
+            logger.info("Executing tool", { toolName: toolCall.name, toolCallId: toolCall.id });
 
             await emitAgentToolCallStarted({
                 executionId,
@@ -963,12 +985,21 @@ export async function agentOrchestratorWorkflow(
                 });
 
                 // Add tool result to thread messages
+                // Ensure tool_call_id is always present (required by OpenAI)
+                if (!toolCall.id) {
+                    logger.error("Tool call missing id, cannot create tool message", {
+                        toolName: toolCall.name,
+                        executionId
+                    });
+                    throw new Error("Tool call missing required 'id' field");
+                }
+
                 const toolMessage: ThreadMessage = {
                     id: `tool-${Date.now()}-${toolCall.id}`,
                     role: "tool",
                     content: JSON.stringify(toolResult),
                     tool_name: toolCall.name,
-                    tool_call_id: toolCall.id,
+                    tool_call_id: toolCall.id, // Required by OpenAI
                     timestamp: new Date()
                 };
                 messageState.messages.push(toolMessage);
@@ -1001,12 +1032,24 @@ export async function agentOrchestratorWorkflow(
                 failedToolNames.add(toolCall.name);
 
                 // Add error result to thread messages
+                // Ensure tool_call_id is always present required by OpenAI
+                if (!toolCall.id) {
+                    logger.error("Tool call missing id, cannot create error tool message", {
+                        toolName: toolCall.name,
+                        executionId,
+                        error: errorMessage
+                    });
+                    // Skip adding the error message if we don't have a valid tool_call_id
+                    // This prevents the OpenAI API error
+                    continue;
+                }
+
                 const toolMessage: ThreadMessage = {
                     id: `tool-${Date.now()}-${toolCall.id}`,
                     role: "tool",
                     content: JSON.stringify({ error: errorMessage }),
                     tool_name: toolCall.name,
-                    tool_call_id: toolCall.id,
+                    tool_call_id: toolCall.id, // Required by OpenAI
                     timestamp: new Date()
                 };
                 messageState.messages.push(toolMessage);

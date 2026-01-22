@@ -120,6 +120,71 @@ export function AgentChat({ agent }: AgentChatProps) {
         }
     }, [currentThread?.id, refreshTokenUsage, currentThread?.metadata?.tokenUsage]);
 
+    // Extract tool calls from messages when execution is not running
+    // This ensures tool calls are available after page refresh
+    useEffect(() => {
+        const threadId = currentThread?.id || currentExecutionThreadId;
+        if (!threadId || !currentThread) return;
+
+        const store = useAgentStore.getState();
+        const execStatus = store.currentExecutionStatus;
+        const hasActiveExecution = currentExecutionId && execStatus === "running";
+
+        // Only extract if execution is not running and we have messages
+        if (!hasActiveExecution) {
+            const messages = threadMessages[threadId] || [];
+            const toolMessages = messages.filter((m) => m.role === "tool" && m.tool_name);
+
+            // Only update if we have tool messages and no current tool calls
+            if (toolMessages.length > 0 && toolCalls.length === 0) {
+                const extractedToolCalls = toolMessages.map((message, index) => {
+                    const isError =
+                        message.content.includes('"error":true') ||
+                        message.content.includes("Validation errors") ||
+                        message.content.toLowerCase().includes('"error"');
+
+                    let result: JsonObject | undefined;
+                    let error: string | undefined;
+
+                    try {
+                        const parsed = JSON.parse(message.content);
+                        if (isError) {
+                            error = message.content;
+                        } else {
+                            result = parsed;
+                        }
+                    } catch {
+                        if (isError) {
+                            error = message.content;
+                        } else {
+                            result = { content: message.content } as JsonObject;
+                        }
+                    }
+
+                    return {
+                        id: `tool-${message.tool_call_id || message.id || `extracted-${index}`}`,
+                        toolName: message.tool_name!,
+                        status: (isError ? "failed" : "success") as "success" | "failed",
+                        result: result,
+                        error: error
+                    };
+                });
+
+                logger.debug("Extracting tool calls from messages", {
+                    threadId,
+                    count: extractedToolCalls.length
+                });
+                setToolCalls(extractedToolCalls);
+            }
+        }
+    }, [
+        threadMessages,
+        currentThread?.id,
+        currentExecutionThreadId,
+        currentExecutionId,
+        toolCalls.length
+    ]);
+
     // Scroll to bottom when messages or tool calls change
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -204,14 +269,27 @@ export function AgentChat({ agent }: AgentChatProps) {
                 ]);
             },
             onToolCallCompleted: (data) => {
-                logger.debug("Tool call completed", { toolName: data.toolName });
-                setToolCalls((prev) =>
-                    prev.map((tc) =>
+                logger.debug("Tool call completed", {
+                    toolName: data.toolName,
+                    hasResult: !!data.result,
+                    resultType: typeof data.result
+                });
+                setToolCalls((prev) => {
+                    const updated = prev.map((tc) =>
                         tc.toolName === data.toolName && tc.status === "running"
                             ? { ...tc, status: "success" as const, result: data.result }
                             : tc
-                    )
-                );
+                    );
+                    logger.debug("Tool call state updated", {
+                        toolName: data.toolName,
+                        updatedCount: updated.length,
+                        hasResult:
+                            updated.find(
+                                (tc) => tc.toolName === data.toolName && tc.status === "success"
+                            )?.result !== undefined
+                    });
+                    return updated;
+                });
             },
             onToolCallFailed: (data) => {
                 logger.warn("Tool call failed", { toolName: data.toolName, error: data.error });
@@ -264,6 +342,16 @@ export function AgentChat({ agent }: AgentChatProps) {
                 setIsSending(false);
                 setExecutionStatus(null, null, null);
                 void refreshTokenUsage();
+
+                // Reload messages after a short delay to ensure tool messages are persisted
+                // This ensures tool results are available from persisted messages
+                setTimeout(() => {
+                    logger.debug("Reloading messages after execution completion", {
+                        threadId,
+                        executionId
+                    });
+                    void fetchThreadMessages(threadId);
+                }, 500);
             },
             onError: (error: string) => {
                 logger.error("SSE error", undefined, { error });
@@ -603,19 +691,40 @@ export function AgentChat({ agent }: AgentChatProps) {
                                                 variant="ghost"
                                                 size="sm"
                                                 className="text-xs h-auto py-0.5 px-2"
-                                                onClick={() =>
-                                                    setSelectedToolError({
-                                                        toolName: toolCall.toolName,
-                                                        error:
-                                                            toolCall.status === "failed"
-                                                                ? toolCall.error || "Unknown error"
-                                                                : JSON.stringify(
-                                                                      toolCall.result,
-                                                                      null,
-                                                                      2
-                                                                  )
-                                                    })
-                                                }
+                                                onClick={() => {
+                                                    // Read from current state to avoid stale closure
+                                                    setToolCalls((currentToolCalls) => {
+                                                        const currentToolCall =
+                                                            currentToolCalls.find(
+                                                                (tc) => tc.id === toolCall.id
+                                                            ) || toolCall;
+
+                                                        logger.debug("View Results clicked", {
+                                                            toolCallId: toolCall.id,
+                                                            foundInState: !!currentToolCalls.find(
+                                                                (tc) => tc.id === toolCall.id
+                                                            ),
+                                                            hasResult: !!currentToolCall.result
+                                                        });
+
+                                                        setSelectedToolError({
+                                                            toolName: currentToolCall.toolName,
+                                                            error:
+                                                                currentToolCall.status === "failed"
+                                                                    ? currentToolCall.error ||
+                                                                      "Unknown error"
+                                                                    : currentToolCall.result
+                                                                      ? JSON.stringify(
+                                                                            currentToolCall.result,
+                                                                            null,
+                                                                            2
+                                                                        )
+                                                                      : "No result available"
+                                                        });
+
+                                                        return currentToolCalls; // Don't modify, just read
+                                                    });
+                                                }}
                                             >
                                                 <Eye className="w-3 h-3 mr-1" />
                                                 {toolCall.status === "failed"

@@ -887,11 +887,29 @@ async function callOpenAI(input: OpenAICallInput): Promise<LLMResponse> {
     const { model, apiKey, messages, tools, temperature, maxTokens, executionId } = input;
 
     // Format messages for OpenAI (sanitize tool names for consistency)
-    const formattedMessages = messages.map((msg) => ({
-        role: msg.role === "assistant" ? "assistant" : msg.role === "tool" ? "tool" : "user",
-        content: msg.content,
-        ...(msg.tool_calls && {
-            tool_calls: msg.tool_calls.map((tc) => ({
+    const formattedMessages = messages.map((msg) => {
+        interface OpenAIMessage {
+            role: "assistant" | "tool" | "user";
+            content: string;
+            tool_calls?: Array<{
+                id: string;
+                type: "function";
+                function: {
+                    name: string;
+                    arguments: string;
+                };
+            }>;
+            tool_call_id?: string;
+            name?: string;
+        }
+
+        const formatted: OpenAIMessage = {
+            role: msg.role === "assistant" ? "assistant" : msg.role === "tool" ? "tool" : "user",
+            content: msg.content
+        };
+
+        if (msg.tool_calls) {
+            formatted.tool_calls = msg.tool_calls.map((tc) => ({
                 id: tc.id,
                 type: "function",
                 function: {
@@ -901,11 +919,31 @@ async function callOpenAI(input: OpenAICallInput): Promise<LLMResponse> {
                             ? tc.arguments
                             : JSON.stringify(tc.arguments)
                 }
-            }))
-        }),
-        ...(msg.tool_call_id && { tool_call_id: msg.tool_call_id }),
-        ...(msg.tool_name && { name: sanitizeToolName(msg.tool_name) })
-    }));
+            }));
+        }
+
+        // For tool messages, tool_call_id is REQUIRED by OpenAI
+        if (msg.role === "tool") {
+            if (!msg.tool_call_id) {
+                activityLogger.error(
+                    "Tool message missing tool_call_id",
+                    new Error("Tool message missing required tool_call_id"),
+                    {
+                        messageId: msg.id,
+                        toolName: msg.tool_name,
+                        content: msg.content?.substring(0, 100)
+                    }
+                );
+                throw new Error("Tool message missing required 'tool_call_id' field");
+            }
+            formatted.tool_call_id = msg.tool_call_id;
+            if (msg.tool_name) {
+                formatted.name = sanitizeToolName(msg.tool_name);
+            }
+        }
+
+        return formatted;
+    });
 
     // Format tools for OpenAI function calling with name and schema sanitization
     const formattedTools = tools.map((tool) => ({
@@ -1064,32 +1102,52 @@ async function callOpenAI(input: OpenAICallInput): Promise<LLMResponse> {
     }
 
     // Parse accumulated argument strings into tool calls
+    // Filter out invalid tool calls (missing id or name)
     if (toolCalls) {
+        const validToolCalls: ToolCall[] = [];
         for (let i = 0; i < toolCalls.length; i++) {
+            const toolCall = toolCalls[i];
+
+            // Skip tool calls with missing id or name
+            if (!toolCall.id || !toolCall.name) {
+                activityLogger.warn("Skipping invalid tool call", {
+                    index: i,
+                    id: toolCall.id,
+                    name: toolCall.name,
+                    hasId: !!toolCall.id,
+                    hasName: !!toolCall.name
+                });
+                continue;
+            }
+
             if (toolCallArgsStrings[i]) {
                 try {
-                    toolCalls[i].arguments = JSON.parse(toolCallArgsStrings[i]);
+                    toolCall.arguments = JSON.parse(toolCallArgsStrings[i]);
                     activityLogger.debug("Parsed tool call arguments", {
-                        toolName: toolCalls[i].name,
+                        toolName: toolCall.name,
                         argsString: toolCallArgsStrings[i],
-                        parsedArgs: toolCalls[i].arguments
+                        parsedArgs: toolCall.arguments
                     });
                 } catch (parseError) {
                     // If parsing fails, use empty object
                     activityLogger.warn("Failed to parse tool call arguments", {
-                        toolName: toolCalls[i].name,
+                        toolName: toolCall.name,
                         argsString: toolCallArgsStrings[i],
                         error: parseError instanceof Error ? parseError.message : "Unknown error"
                     });
-                    toolCalls[i].arguments = {};
+                    toolCall.arguments = {};
                 }
             } else {
                 activityLogger.warn("No arguments string accumulated for tool call", {
-                    toolName: toolCalls[i].name,
+                    toolName: toolCall.name,
                     toolCallIndex: i
                 });
+                toolCall.arguments = {};
             }
+
+            validToolCalls.push(toolCall);
         }
+        toolCalls = validToolCalls.length > 0 ? validToolCalls : undefined;
     }
 
     return {
@@ -1273,18 +1331,11 @@ async function callAnthropic(input: AnthropicCallInput): Promise<LLMResponse> {
                     // Handle content block stop (finalize tool use)
                     if (parsed.type === "content_block_stop" && currentToolUse) {
                         if (!toolCalls) toolCalls = [];
-                        try {
-                            toolCalls.push({
-                                id: currentToolUse.id,
-                                name: currentToolUse.name,
-                                arguments: JSON.parse(currentToolUse.input)
-                            });
-                        } catch (error) {
-                            activityLogger.error(
-                                "Failed to parse Anthropic tool input JSON",
-                                error instanceof Error ? error : new Error(String(error))
-                            );
-                        }
+                        toolCalls.push({
+                            id: currentToolUse.id,
+                            name: currentToolUse.name,
+                            arguments: JSON.parse(currentToolUse.input)
+                        });
                         currentToolUse = null;
                     }
 
@@ -1332,6 +1383,23 @@ async function callAnthropic(input: AnthropicCallInput): Promise<LLMResponse> {
         };
     }
 
+    // Filter out invalid tool calls before returning
+    if (toolCalls) {
+        const validToolCalls = toolCalls.filter((tc) => {
+            if (!tc.id || !tc.name) {
+                activityLogger.warn("Filtering invalid Anthropic tool call", {
+                    id: tc.id,
+                    name: tc.name,
+                    hasId: !!tc.id,
+                    hasName: !!tc.name
+                });
+                return false;
+            }
+            return true;
+        });
+        toolCalls = validToolCalls.length > 0 ? validToolCalls : undefined;
+    }
+
     return {
         content: fullContent,
         tool_calls: toolCalls,
@@ -1355,12 +1423,26 @@ async function callGoogle(input: GoogleCallInput): Promise<LLMResponse> {
                 parts: [{ text: msg.content }]
             };
         } else if (msg.role === "tool") {
+            // Google requires tool_name
+            if (!msg.tool_name) {
+                activityLogger.error(
+                    "Tool message missing tool_name for Google",
+                    new Error("Tool message missing required tool_name"),
+                    {
+                        messageId: msg.id,
+                        toolCallId: msg.tool_call_id,
+                        content: msg.content?.substring(0, 100)
+                    }
+                );
+                throw new Error("Tool message missing required 'tool_name' field for Google");
+            }
+
             return {
                 role: "function",
                 parts: [
                     {
                         functionResponse: {
-                            name: sanitizeToolName(msg.tool_name || ""),
+                            name: sanitizeToolName(msg.tool_name),
                             response: {
                                 content: msg.content
                             }
@@ -1471,11 +1553,20 @@ async function callGoogle(input: GoogleCallInput): Promise<LLMResponse> {
                                 }
                             }
                             if (part.functionCall) {
+                                // Validate tool call has required fields
+                                if (!part.functionCall.name) {
+                                    activityLogger.warn("Skipping invalid Google tool call", {
+                                        name: part.functionCall.name,
+                                        hasName: !!part.functionCall.name
+                                    });
+                                    continue;
+                                }
+
                                 if (!toolCalls) toolCalls = [];
                                 toolCalls.push({
                                     id: `google-${Date.now()}-${toolCalls.length}`,
                                     name: part.functionCall.name,
-                                    arguments: part.functionCall.args
+                                    arguments: part.functionCall.args || {}
                                 });
                             }
                         }
@@ -1498,6 +1589,23 @@ async function callGoogle(input: GoogleCallInput): Promise<LLMResponse> {
                 }
             }
         }
+    }
+
+    // Filter out invalid tool calls before returning
+    if (toolCalls) {
+        const validToolCalls = toolCalls.filter((tc) => {
+            if (!tc.id || !tc.name) {
+                activityLogger.warn("Filtering invalid Google tool call", {
+                    id: tc.id,
+                    name: tc.name,
+                    hasId: !!tc.id,
+                    hasName: !!tc.name
+                });
+                return false;
+            }
+            return true;
+        });
+        toolCalls = validToolCalls.length > 0 ? validToolCalls : undefined;
     }
 
     return {
@@ -1610,11 +1718,25 @@ async function callCohere(input: CohereCallInput): Promise<LLMResponse> {
                 }
 
                 if (parsed.event_type === "tool-calls-generation" && parsed.tool_calls) {
-                    toolCalls = parsed.tool_calls.map((tc, idx) => ({
-                        id: `cohere-${Date.now()}-${idx}`,
-                        name: tc.name,
-                        arguments: tc.parameters
-                    }));
+                    // Filter out invalid tool calls (missing name)
+                    const validToolCalls = parsed.tool_calls.filter((tc) => {
+                        if (!tc.name) {
+                            activityLogger.warn("Skipping invalid Cohere tool call", {
+                                name: tc.name,
+                                hasName: !!tc.name
+                            });
+                            return false;
+                        }
+                        return true;
+                    });
+
+                    if (validToolCalls.length > 0) {
+                        toolCalls = validToolCalls.map((tc, idx) => ({
+                            id: `cohere-${Date.now()}-${idx}`,
+                            name: tc.name,
+                            arguments: tc.parameters || {}
+                        }));
+                    }
                 }
 
                 if (parsed.meta?.tokens) {
@@ -1642,6 +1764,23 @@ async function callCohere(input: CohereCallInput): Promise<LLMResponse> {
         }
     }
 
+    // Filter out invalid tool calls before returning
+    if (toolCalls) {
+        const validToolCalls = toolCalls.filter((tc) => {
+            if (!tc.id || !tc.name) {
+                activityLogger.warn("Filtering invalid Cohere tool call", {
+                    id: tc.id,
+                    name: tc.name,
+                    hasId: !!tc.id,
+                    hasName: !!tc.name
+                });
+                return false;
+            }
+            return true;
+        });
+        toolCalls = validToolCalls.length > 0 ? validToolCalls : undefined;
+    }
+
     return {
         content: fullContent,
         tool_calls: toolCalls,
@@ -1654,10 +1793,37 @@ async function callHuggingFace(input: HuggingFaceCallInput): Promise<LLMResponse
     const { model, apiKey, messages, temperature, maxTokens, executionId } = input;
 
     // Format messages for Hugging Face (OpenAI-compatible format)
-    const formattedMessages = messages.map((msg) => ({
-        role: msg.role === "assistant" ? "assistant" : msg.role === "tool" ? "assistant" : "user",
-        content: msg.content
-    }));
+    const formattedMessages = messages.map((msg) => {
+        // HuggingFace uses OpenAI-compatible format, so tool messages need tool_call_id
+        if (msg.role === "tool") {
+            if (!msg.tool_call_id) {
+                activityLogger.error(
+                    "Tool message missing tool_call_id for HuggingFace",
+                    new Error("Tool message missing required tool_call_id"),
+                    {
+                        messageId: msg.id,
+                        toolName: msg.tool_name,
+                        content: msg.content?.substring(0, 100)
+                    }
+                );
+                throw new Error(
+                    "Tool message missing required 'tool_call_id' field for HuggingFace"
+                );
+            }
+            // HuggingFace converts tool to assistant, but we should still validate
+            return {
+                role: "assistant",
+                content: msg.content,
+                tool_call_id: msg.tool_call_id,
+                ...(msg.tool_name && { name: sanitizeToolName(msg.tool_name) })
+            };
+        }
+
+        return {
+            role: msg.role === "assistant" ? "assistant" : "user",
+            content: msg.content
+        };
+    });
 
     // Using the OpenAI-compatible Inference API endpoint
     const response = await fetch("https://router.huggingface.co/v1/chat/completions", {
