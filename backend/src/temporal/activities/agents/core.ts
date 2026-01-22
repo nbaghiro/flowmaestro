@@ -773,7 +773,7 @@ export function generateKnowledgeBaseTool(kb: KnowledgeBaseModel): Tool {
         id: `kb-tool-${kb.id}`,
         type: "knowledge_base",
         name: generateKnowledgeBaseToolName(kb.name),
-        description: `Search the "${kb.name}" knowledge base for relevant information. ${kb.description || ""}`,
+        description: `Search the "${kb.name}" knowledge base to find information from uploaded documents and files. You have access to this knowledge base and can search it using this tool. Use this when the user asks about documents, files, or information that might be in the knowledge base.${kb.description ? ` ${kb.description}` : ""}`,
         schema,
         config: {
             knowledgeBaseId: kb.id
@@ -1544,13 +1544,52 @@ async function callGoogle(input: GoogleCallInput): Promise<LLMResponse> {
     });
 
     // Format tools for Gemini with name sanitization
+    // Google doesn't accept 'additionalProperties' in schemas, so we need to remove it
+    const sanitizeSchemaForGoogle = (schema: JsonObject): JsonObject => {
+        const sanitized = sanitizeJsonSchema(schema);
+
+        // Recursively remove additionalProperties from the schema
+        const removeAdditionalProperties = (obj: Record<string, unknown>): void => {
+            if (typeof obj !== "object" || obj === null) return;
+
+            // Remove additionalProperties if present
+            if ("additionalProperties" in obj) {
+                delete obj.additionalProperties;
+            }
+
+            // Recursively process properties
+            if (obj.properties && typeof obj.properties === "object") {
+                removeAdditionalProperties(obj.properties as Record<string, unknown>);
+            }
+
+            // Recursively process items
+            if (obj.items && typeof obj.items === "object") {
+                removeAdditionalProperties(obj.items as Record<string, unknown>);
+            }
+
+            // Recursively process anyOf, oneOf, allOf arrays
+            ["anyOf", "oneOf", "allOf"].forEach((key) => {
+                if (Array.isArray(obj[key])) {
+                    (obj[key] as unknown[]).forEach((item) => {
+                        if (typeof item === "object" && item !== null) {
+                            removeAdditionalProperties(item as Record<string, unknown>);
+                        }
+                    });
+                }
+            });
+        };
+
+        removeAdditionalProperties(sanitized);
+        return sanitized;
+    };
+
     const formattedTools =
         tools.length > 0
             ? {
                   functionDeclarations: tools.map((tool) => ({
                       name: sanitizeToolName(tool.name),
                       description: tool.description,
-                      parameters: sanitizeJsonSchema(tool.schema)
+                      parameters: sanitizeSchemaForGoogle(tool.schema)
                   }))
               }
             : undefined;
@@ -1595,17 +1634,79 @@ async function callGoogle(input: GoogleCallInput): Promise<LLMResponse> {
     }
 
     let done = false;
+    let buffer = ""; // Buffer for incomplete lines across chunks
     while (!done) {
         const result = await reader.read();
         done = result.done;
-        if (done) break;
+        if (done) {
+            // Process any remaining buffer
+            if (buffer.trim()) {
+                const trimmedBuffer = buffer.trim();
+                if (trimmedBuffer.startsWith("data: ")) {
+                    const data = trimmedBuffer.slice(6);
+                    if (data.trim()) {
+                        try {
+                            const parsed = JSON.parse(data);
+                            // Process this final data using same logic as below
+                            const candidate = parsed.candidates?.[0];
+                            if (candidate?.content?.parts) {
+                                for (const part of candidate.content.parts) {
+                                    const textToAdd = part.text || part.textDelta || "";
+                                    if (textToAdd) {
+                                        fullContent += textToAdd;
+                                        if (executionId) {
+                                            await emitAgentToken({ executionId, token: textToAdd });
+                                        }
+                                    }
+                                    if (part.functionCall) {
+                                        if (!part.functionCall.name) continue;
+                                        if (!toolCalls) toolCalls = [];
+                                        toolCalls.push({
+                                            id: `google-${Date.now()}-${toolCalls.length}`,
+                                            name: part.functionCall.name,
+                                            arguments: part.functionCall.args || {}
+                                        });
+                                    }
+                                }
+                            }
+                            if (candidate?.finishReason) finishReason = candidate.finishReason;
+                            if (parsed.usageMetadata) {
+                                usage = {
+                                    promptTokens: parsed.usageMetadata.promptTokenCount,
+                                    completionTokens: parsed.usageMetadata.candidatesTokenCount,
+                                    totalTokens: parsed.usageMetadata.totalTokenCount
+                                };
+                            }
+                        } catch {
+                            // Skip invalid JSON
+                        }
+                    }
+                }
+            }
+            break;
+        }
 
         const chunk = decoder.decode(result.value, { stream: true });
-        const lines = chunk.split("\n").filter((line) => line.trim());
+
+        // Buffer chunks to handle multi-chunk JSON lines
+        if (!buffer) buffer = "";
+        buffer += chunk;
+
+        // Process complete lines (ending with \n) from buffer
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || ""; // Keep incomplete line in buffer
 
         for (const line of lines) {
-            if (line.startsWith("data: ")) {
+            const trimmedLine = line.trim();
+            if (!trimmedLine) continue;
+
+            if (trimmedLine.startsWith("data: ")) {
                 const data = line.slice(6);
+
+                // Skip empty data lines
+                if (!data.trim()) {
+                    continue;
+                }
 
                 try {
                     const parsed = JSON.parse(data) as {
@@ -1613,6 +1714,7 @@ async function callGoogle(input: GoogleCallInput): Promise<LLMResponse> {
                             content?: {
                                 parts?: Array<{
                                     text?: string;
+                                    textDelta?: string; // Google may send incremental text
                                     functionCall?: {
                                         name: string;
                                         args: JsonObject;
@@ -1631,10 +1733,12 @@ async function callGoogle(input: GoogleCallInput): Promise<LLMResponse> {
                     const candidate = parsed.candidates?.[0];
                     if (candidate?.content?.parts) {
                         for (const part of candidate.content.parts) {
-                            if (part.text) {
-                                fullContent += part.text;
+                            // Handle both text and textDelta (incremental text)
+                            const textToAdd = part.text || part.textDelta || "";
+                            if (textToAdd) {
+                                fullContent += textToAdd;
                                 if (executionId) {
-                                    await emitAgentToken({ executionId, token: part.text });
+                                    await emitAgentToken({ executionId, token: textToAdd });
                                 }
                             }
                             if (part.functionCall) {
