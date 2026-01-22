@@ -114,7 +114,8 @@ export function AddMCPIntegrationDialog({
     const handleProviderClick = (provider: Provider) => {
         setCurrentProvider(provider);
         setView("connection-list");
-        fetchConnections({ provider: provider.provider });
+        // Don't fetch with provider filter it replaces all connections in the store
+        // We already filter client-side using providerConnections
     };
 
     const handleConnectionSelect = async (connection: Connection) => {
@@ -168,9 +169,9 @@ export function AddMCPIntegrationDialog({
 
     const handleConnectionCreated = () => {
         setIsNewConnectionDialogOpen(false);
-        if (currentProvider) {
-            fetchConnections({ provider: currentProvider.provider });
-        }
+        // Refetch all connections not filtered to update the store
+        // This ensures LLM connections remain available
+        fetchConnections();
     };
 
     const handleToggleTool = (toolName: string) => {
