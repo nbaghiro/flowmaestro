@@ -20,7 +20,7 @@ const updateAgentSchema = z.object({
     name: z.string().min(1).max(100).optional(),
     description: z.string().optional(),
     model: z.string().min(1).optional(),
-    provider: z.enum(["openai", "anthropic", "google", "cohere"]).optional(),
+    provider: z.enum(["openai", "anthropic", "google", "cohere", "huggingface"]).optional(),
     connection_id: z.string().uuid().nullable().optional(),
     system_prompt: z.string().optional(),
     temperature: z.number().min(0).max(2).optional(),

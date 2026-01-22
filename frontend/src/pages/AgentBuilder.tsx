@@ -1,7 +1,11 @@
 import { ArrowLeft, Save, Loader2, MessageSquare, Slack, Pencil, FileText } from "lucide-react";
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { getDefaultModelForProvider, getTemperatureMaxForProvider } from "@flowmaestro/shared";
+import {
+    getDefaultModelForProvider,
+    getTemperatureMaxForProvider,
+    LLM_PROVIDERS
+} from "@flowmaestro/shared";
 import type { WorkflowSummary } from "@flowmaestro/shared";
 import {
     AgentBuilderLayout,
@@ -36,7 +40,7 @@ import { cn } from "../lib/utils";
 import { useAgentStore } from "../stores/agentStore";
 import { useConnectionStore } from "../stores/connectionStore";
 import type { AgentTab } from "../components/agent-builder";
-import type { UpdateAgentRequest, AddToolRequest, Tool, KnowledgeBase } from "../lib/api";
+import type { UpdateAgentRequest, AddToolRequest, Tool, KnowledgeBase, Agent } from "../lib/api";
 
 export function AgentBuilder() {
     const { agentId, threadId } = useParams<{ agentId: string; threadId?: string }>();
@@ -87,9 +91,7 @@ export function AgentBuilder() {
     // Form state
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
-    const [provider, setProvider] = useState<
-        "openai" | "anthropic" | "google" | "cohere" | "huggingface"
-    >("openai");
+    const [provider, setProvider] = useState<Agent["provider"]>("openai");
     const [model, setModel] = useState("");
     const [connectionId, setConnectionId] = useState<string>("");
     const [systemPrompt, setSystemPrompt] = useState("You are a helpful AI assistant.");
@@ -100,6 +102,8 @@ export function AgentBuilder() {
     const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
     const [isFormInterfaceDialogOpen, setIsFormInterfaceDialogOpen] = useState(false);
     const [isChatInterfaceDialogOpen, setIsChatInterfaceDialogOpen] = useState(false);
+
+    const temperatureMax = useMemo(() => getTemperatureMaxForProvider(provider), [provider]);
 
     // Track original values to detect changes
     const [originalValues, setOriginalValues] = useState<{
@@ -327,17 +331,17 @@ export function AgentBuilder() {
     // Clamp temperature when provider changes (if it exceeds the new max)
     // Note: intentionally only depends on provider, not temperature, to avoid re-clamping on every temp change
     useEffect(() => {
-        const maxTemp = getTemperatureMaxForProvider(provider);
         // Use functional update to get current temperature value
-        setTemperature((currentTemp) => (currentTemp > maxTemp ? maxTemp : currentTemp));
-    }, [provider]);
+        setTemperature((currentTemp) =>
+            currentTemp > temperatureMax ? temperatureMax : currentTemp
+        );
+    }, [provider, temperatureMax]);
 
     // Filter connections by LLM providers
+    const validLLMProviderValues = LLM_PROVIDERS.map((p) => p.value.toLowerCase());
     const llmConnections = connections.filter(
         (conn) =>
-            ["openai", "anthropic", "google", "cohere", "huggingface"].includes(
-                conn.provider.toLowerCase()
-            ) &&
+            validLLMProviderValues.includes(conn.provider.toLowerCase()) &&
             (conn.connection_method === "api_key" || conn.connection_method === "oauth2")
     );
 
@@ -351,9 +355,7 @@ export function AgentBuilder() {
             );
             const defaultConn = openAIConn || llmConnections[0];
             setConnectionId(defaultConn.id);
-            setProvider(
-                defaultConn.provider as "openai" | "anthropic" | "google" | "cohere" | "huggingface"
-            );
+            setProvider(defaultConn.provider.toLowerCase() as Agent["provider"]);
             const defaultModel = getDefaultModelForProvider(defaultConn.provider);
             setModel(defaultModel);
         }
@@ -992,12 +994,8 @@ export function AgentBuilder() {
                                             connModel
                                         ) => {
                                             setConnectionId(connId);
-                                            const newProvider = connProvider as
-                                                | "openai"
-                                                | "anthropic"
-                                                | "google"
-                                                | "cohere"
-                                                | "huggingface";
+                                            const newProvider =
+                                                connProvider.toLowerCase() as Agent["provider"];
                                             setProvider(newProvider);
                                             setModel(connModel);
 
@@ -1185,7 +1183,23 @@ export function AgentBuilder() {
                                                 </label>
                                                 <Select
                                                     value={connectionId}
-                                                    onChange={setConnectionId}
+                                                    onChange={(connId) => {
+                                                        setConnectionId(connId);
+                                                        const selectedConnection =
+                                                            llmConnections.find(
+                                                                (conn) => conn.id === connId
+                                                            );
+                                                        if (selectedConnection) {
+                                                            const newProvider =
+                                                                selectedConnection.provider.toLowerCase() as Agent["provider"];
+                                                            setProvider(newProvider);
+                                                            const defaultModel =
+                                                                getDefaultModelForProvider(
+                                                                    newProvider
+                                                                );
+                                                            setModel(defaultModel);
+                                                        }
+                                                    }}
                                                     placeholder="Use environment variables"
                                                     options={llmConnections.map((conn) => ({
                                                         value: conn.id,
@@ -1213,9 +1227,7 @@ export function AgentBuilder() {
                                                         <Input
                                                             type="range"
                                                             min="0"
-                                                            max={getTemperatureMaxForProvider(
-                                                                provider
-                                                            ).toString()}
+                                                            max={temperatureMax.toString()}
                                                             step="0.1"
                                                             value={temperature}
                                                             onChange={(e) =>
