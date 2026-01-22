@@ -5453,7 +5453,8 @@ async function seedPersonas() {
         port: parseInt(process.env.POSTGRES_PORT || "5432"),
         database: process.env.POSTGRES_DB || "flowmaestro",
         user: process.env.POSTGRES_USER || "flowmaestro",
-        password: process.env.POSTGRES_PASSWORD || "flowmaestro_dev_password"
+        password: process.env.POSTGRES_PASSWORD || "flowmaestro_dev_password",
+        max: 3
     });
 
     try {

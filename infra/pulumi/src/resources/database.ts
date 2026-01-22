@@ -30,8 +30,9 @@ export const database = new gcp.sql.DatabaseInstance(
                 {
                     // Increase max connections for concurrent API/worker/job pods
                     // Default for db-g1-small is ~25, which is too low
+                    // Temporal uses ~20-30, API/worker pools use 5 each, seed jobs use 10
                     name: "max_connections",
-                    value: "50"
+                    value: "100"
                 }
             ],
 
