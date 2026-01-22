@@ -53,6 +53,7 @@ interface AgentStore {
     setCurrentThread: (thread: Thread | null) => void;
     createNewThread: (agentId: string) => Promise<void>;
     updateThreadTitle: (threadId: string, title: string) => Promise<void>;
+    refreshThread: (threadId: string) => Promise<void>;
     archiveThread: (threadId: string) => Promise<void>;
     deleteThread: (threadId: string) => Promise<void>;
 
@@ -355,6 +356,22 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
                 error: error instanceof Error ? error.message : "Failed to update thread title"
             });
             throw error;
+        }
+    },
+
+    refreshThread: async (threadId: string) => {
+        try {
+            const response = await api.getThread(threadId);
+            if (response.success) {
+                const updatedThread = response.data as Thread;
+                set((state) => ({
+                    threads: state.threads.map((t) => (t.id === threadId ? updatedThread : t)),
+                    currentThread:
+                        state.currentThread?.id === threadId ? updatedThread : state.currentThread
+                }));
+            }
+        } catch (error) {
+            logger.error("Failed to refresh thread", error);
         }
     },
 
