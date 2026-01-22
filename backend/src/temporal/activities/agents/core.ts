@@ -1168,20 +1168,39 @@ async function callAnthropic(input: AnthropicCallInput): Promise<LLMResponse> {
     // Format messages for Anthropic (sanitize tool names for consistency)
     const formattedMessages = threadMessages.map((msg) => {
         if (msg.role === "assistant") {
-            return {
-                role: "assistant",
-                content: msg.tool_calls
-                    ? [
-                          { type: "text", text: msg.content },
-                          ...msg.tool_calls.map((tc) => ({
-                              type: "tool_use",
-                              id: tc.id,
-                              name: sanitizeToolName(tc.name),
-                              input: tc.arguments
-                          }))
-                      ]
-                    : msg.content
-            };
+            if (msg.tool_calls && msg.tool_calls.length > 0) {
+                // Build content array, only including text if it's non-empty
+                const content: Array<{
+                    type: string;
+                    text?: string;
+                    id?: string;
+                    name?: string;
+                    input?: JsonObject;
+                }> = [];
+                if (msg.content && msg.content.trim()) {
+                    content.push({ type: "text", text: msg.content });
+                }
+                content.push(
+                    ...msg.tool_calls.map((tc) => ({
+                        type: "tool_use",
+                        id: tc.id,
+                        name: sanitizeToolName(tc.name),
+                        input: tc.arguments
+                    }))
+                );
+                return {
+                    role: "assistant",
+                    content:
+                        content.length === 1 && content[0].type === "text"
+                            ? content[0].text!
+                            : content
+                };
+            } else {
+                return {
+                    role: "assistant",
+                    content: msg.content || ""
+                };
+            }
         } else if (msg.role === "tool") {
             return {
                 role: "user",
@@ -1272,6 +1291,7 @@ async function callAnthropic(input: AnthropicCallInput): Promise<LLMResponse> {
                         delta?: {
                             type?: string;
                             text?: string;
+                            partial_json?: string;
                             stop_reason?: string;
                         };
                         content_block?: {
@@ -1299,23 +1319,33 @@ async function callAnthropic(input: AnthropicCallInput): Promise<LLMResponse> {
                         parsed.delta?.type === "text_delta"
                     ) {
                         const text = parsed.delta.text;
-                        if (text && executionId) {
-                            // Emit token immediately for streaming
-                            await emitAgentToken({ executionId, token: text });
+                        if (text) {
+                            // Always accumulate content
                             fullContent += text;
+                            // Emit token for streaming if executionId is available
+                            if (executionId) {
+                                await emitAgentToken({ executionId, token: text });
+                            }
                         }
                     }
 
-                    // Handle content block start (for tool use)
-                    if (
-                        parsed.type === "content_block_start" &&
-                        parsed.content_block?.type === "tool_use"
-                    ) {
-                        currentToolUse = {
-                            id: parsed.content_block.id || "",
-                            name: parsed.content_block.name || "",
-                            input: ""
-                        };
+                    // Handle content block start (for text or tool use)
+                    if (parsed.type === "content_block_start" && parsed.content_block) {
+                        if (parsed.content_block.type === "text" && parsed.content_block.text) {
+                            fullContent += parsed.content_block.text;
+                            if (executionId) {
+                                await emitAgentToken({
+                                    executionId,
+                                    token: parsed.content_block.text
+                                });
+                            }
+                        } else if (parsed.content_block.type === "tool_use") {
+                            currentToolUse = {
+                                id: parsed.content_block.id || "",
+                                name: parsed.content_block.name || "",
+                                input: ""
+                            };
+                        }
                     }
 
                     // Handle input_json delta (for tool arguments)
@@ -1323,25 +1353,80 @@ async function callAnthropic(input: AnthropicCallInput): Promise<LLMResponse> {
                         parsed.type === "content_block_delta" &&
                         parsed.delta?.type === "input_json_delta"
                     ) {
-                        if (currentToolUse && parsed.delta.text) {
-                            currentToolUse.input += parsed.delta.text;
+                        if (currentToolUse && parsed.delta.partial_json) {
+                            currentToolUse.input += parsed.delta.partial_json;
                         }
                     }
 
                     // Handle content block stop (finalize tool use)
                     if (parsed.type === "content_block_stop" && currentToolUse) {
                         if (!toolCalls) toolCalls = [];
-                        toolCalls.push({
-                            id: currentToolUse.id,
-                            name: currentToolUse.name,
-                            arguments: JSON.parse(currentToolUse.input)
-                        });
+                        try {
+                            const args = currentToolUse.input
+                                ? JSON.parse(currentToolUse.input)
+                                : {};
+                            toolCalls.push({
+                                id: currentToolUse.id,
+                                name: currentToolUse.name,
+                                arguments: args
+                            });
+                        } catch (parseError) {
+                            activityLogger.warn("Failed to parse tool call arguments", {
+                                id: currentToolUse.id,
+                                name: currentToolUse.name,
+                                input: currentToolUse.input,
+                                error:
+                                    parseError instanceof Error
+                                        ? parseError.message
+                                        : "Unknown error"
+                            });
+                            // Still add the tool call with empty arguments
+                            toolCalls.push({
+                                id: currentToolUse.id,
+                                name: currentToolUse.name,
+                                arguments: {}
+                            });
+                        }
                         currentToolUse = null;
                     }
 
                     // Handle message delta (stop reason)
                     if (parsed.type === "message_delta" && parsed.delta?.stop_reason) {
                         stopReason = parsed.delta.stop_reason;
+                    }
+
+                    // Finalize any pending tool calls when message stops
+                    if (parsed.type === "message_stop" && currentToolUse) {
+                        if (!toolCalls) toolCalls = [];
+                        try {
+                            const args = currentToolUse.input
+                                ? JSON.parse(currentToolUse.input)
+                                : {};
+                            toolCalls.push({
+                                id: currentToolUse.id,
+                                name: currentToolUse.name,
+                                arguments: args
+                            });
+                        } catch (parseError) {
+                            activityLogger.warn(
+                                "Failed to parse tool call arguments on message_stop",
+                                {
+                                    id: currentToolUse.id,
+                                    name: currentToolUse.name,
+                                    input: currentToolUse.input,
+                                    error:
+                                        parseError instanceof Error
+                                            ? parseError.message
+                                            : "Unknown error"
+                                }
+                            );
+                            toolCalls.push({
+                                id: currentToolUse.id,
+                                name: currentToolUse.name,
+                                arguments: {}
+                            });
+                        }
+                        currentToolUse = null;
                     }
 
                     // Capture usage tokens (Anthropic streams usage on multiple event types)
