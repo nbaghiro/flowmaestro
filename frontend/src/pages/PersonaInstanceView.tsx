@@ -8,16 +8,22 @@ import {
     AlertCircle,
     Loader2,
     FileText,
-    Trash2
+    Trash2,
+    ListChecks,
+    Circle,
+    CheckCircle2,
+    SkipForward
 } from "lucide-react";
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ConfirmDialog } from "../components/common/ConfirmDialog";
+import { DeliverableCard } from "../components/personas/DeliverableCard";
 import { usePersonaStore } from "../stores/personaStore";
 import type {
     PersonaCategory,
     PersonaInstanceMessage,
-    PersonaInstanceDeliverable
+    PersonaProgressStep,
+    ProgressStepStatus
 } from "../lib/api";
 
 const categoryIcons: Record<PersonaCategory, string> = {
@@ -26,7 +32,8 @@ const categoryIcons: Record<PersonaCategory, string> = {
     development: "💻",
     data: "📊",
     operations: "⚙️",
-    business: "📈"
+    business: "📈",
+    proposals: "📝"
 };
 
 const statusConfig: Record<
@@ -94,6 +101,33 @@ function formatDuration(seconds: number | null | undefined): string {
 function formatDateTime(date: string): string {
     return new Date(date).toLocaleString();
 }
+
+// Step status icon mapping
+const stepStatusConfig: Record<
+    ProgressStepStatus,
+    { icon: React.ReactNode; color: string; bgColor: string }
+> = {
+    pending: {
+        icon: <Circle className="w-4 h-4" />,
+        color: "text-muted-foreground",
+        bgColor: "bg-muted"
+    },
+    in_progress: {
+        icon: <Loader2 className="w-4 h-4 animate-spin" />,
+        color: "text-blue-600 dark:text-blue-400",
+        bgColor: "bg-blue-100 dark:bg-blue-900/30"
+    },
+    completed: {
+        icon: <CheckCircle2 className="w-4 h-4" />,
+        color: "text-green-600 dark:text-green-400",
+        bgColor: "bg-green-100 dark:bg-green-900/30"
+    },
+    skipped: {
+        icon: <SkipForward className="w-4 h-4" />,
+        color: "text-slate-500",
+        bgColor: "bg-slate-100 dark:bg-slate-900/30"
+    }
+};
 
 export const PersonaInstanceView: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -436,32 +470,119 @@ export const PersonaInstanceView: React.FC = () => {
                     )}
                 </div>
 
-                {/* Deliverables Panel */}
+                {/* Sidebar - Progress & Deliverables */}
                 <div className="w-80 border-l border-border bg-card overflow-y-auto">
+                    {/* Progress Section */}
+                    <div className="border-b border-border">
+                        <div className="p-4 border-b border-border">
+                            <h3 className="font-semibold text-foreground flex items-center gap-2">
+                                <ListChecks className="w-4 h-4" />
+                                Progress
+                            </h3>
+                        </div>
+                        <div className="p-4">
+                            {/* Progress Bar */}
+                            {currentInstance.progress && (
+                                <div className="mb-4">
+                                    <div className="flex items-center justify-between text-sm mb-1.5">
+                                        <span className="text-muted-foreground">
+                                            Step {currentInstance.progress.current_step} of{" "}
+                                            {currentInstance.progress.total_steps}
+                                        </span>
+                                        <span className="font-medium text-foreground">
+                                            {currentInstance.progress.percentage}%
+                                        </span>
+                                    </div>
+                                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                                        <div
+                                            className="h-full bg-primary rounded-full transition-all duration-500"
+                                            style={{
+                                                width: `${currentInstance.progress.percentage}%`
+                                            }}
+                                        />
+                                    </div>
+                                    {currentInstance.progress.message && (
+                                        <p className="text-xs text-muted-foreground mt-2 italic">
+                                            {currentInstance.progress.message}
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Step List */}
+                            {currentInstance.progress?.steps &&
+                            currentInstance.progress.steps.length > 0 ? (
+                                <div className="space-y-2">
+                                    {currentInstance.progress.steps.map(
+                                        (step: PersonaProgressStep) => {
+                                            const config =
+                                                stepStatusConfig[step.status] ||
+                                                stepStatusConfig.pending;
+                                            return (
+                                                <div
+                                                    key={step.index}
+                                                    className={`flex items-start gap-2 p-2 rounded-lg ${
+                                                        step.status === "in_progress"
+                                                            ? config.bgColor
+                                                            : ""
+                                                    }`}
+                                                >
+                                                    <span className={`mt-0.5 ${config.color}`}>
+                                                        {config.icon}
+                                                    </span>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p
+                                                            className={`text-sm ${
+                                                                step.status === "completed"
+                                                                    ? "text-muted-foreground line-through"
+                                                                    : step.status === "in_progress"
+                                                                      ? "text-foreground font-medium"
+                                                                      : "text-muted-foreground"
+                                                            }`}
+                                                        >
+                                                            {step.title}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            );
+                                        }
+                                    )}
+                                </div>
+                            ) : isActive ? (
+                                <div className="flex flex-col items-center justify-center py-6 text-muted-foreground">
+                                    <Loader2 className="w-6 h-6 animate-spin mb-2" />
+                                    <p className="text-sm">Processing...</p>
+                                </div>
+                            ) : (
+                                <p className="text-sm text-muted-foreground text-center py-4">
+                                    {isTerminal ? "Task completed" : "Waiting to start"}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Deliverables Section */}
                     <div className="p-4 border-b border-border">
                         <h3 className="font-semibold text-foreground flex items-center gap-2">
                             <FileText className="w-4 h-4" />
                             Deliverables
+                            {currentInstance.deliverables &&
+                                currentInstance.deliverables.length > 0 && (
+                                    <span className="ml-auto text-xs text-muted-foreground font-normal">
+                                        {currentInstance.deliverables.length}
+                                    </span>
+                                )}
                         </h3>
                     </div>
                     <div className="p-4">
                         {currentInstance.deliverables && currentInstance.deliverables.length > 0 ? (
                             <div className="space-y-3">
-                                {currentInstance.deliverables.map(
-                                    (deliverable: PersonaInstanceDeliverable, index: number) => (
-                                        <div
-                                            key={index}
-                                            className="p-3 bg-muted rounded-lg hover:bg-muted/80 cursor-pointer transition-colors"
-                                        >
-                                            <p className="text-sm font-medium text-foreground truncate">
-                                                {deliverable.name}
-                                            </p>
-                                            <p className="text-xs text-muted-foreground mt-0.5">
-                                                {deliverable.type}
-                                            </p>
-                                        </div>
-                                    )
-                                )}
+                                {currentInstance.deliverables.map((deliverable) => (
+                                    <DeliverableCard
+                                        key={deliverable.id}
+                                        deliverable={deliverable}
+                                    />
+                                ))}
                             </div>
                         ) : (
                             <p className="text-sm text-muted-foreground text-center py-8">

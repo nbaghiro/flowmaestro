@@ -1,4 +1,10 @@
-import type { JsonObject, AgentTemplateTool } from "@flowmaestro/shared";
+import type {
+    JsonObject,
+    AgentTemplateTool,
+    PersonaInputField,
+    PersonaDeliverableSpec,
+    PersonaEstimatedDuration
+} from "@flowmaestro/shared";
 import { db } from "../database";
 import type {
     PersonaDefinitionModel,
@@ -19,13 +25,21 @@ interface PersonaDefinitionRow {
     id: string;
     name: string;
     slug: string;
+    title: string;
     description: string;
     avatar_url: string | null;
     category: string;
     tags: string[] | string;
+    specialty: string;
     expertise_areas: string[] | string;
     example_tasks: string[] | string;
     typical_deliverables: string[] | string;
+    input_fields: PersonaInputField[] | string;
+    deliverables: PersonaDeliverableSpec[] | string;
+    sop_steps: string[] | string;
+    estimated_duration: PersonaEstimatedDuration | string;
+    estimated_cost_credits: number | string;
+    // Agent configuration
     system_prompt: string;
     model: string;
     provider: string;
@@ -50,26 +64,34 @@ export class PersonaDefinitionRepository {
     async create(input: CreatePersonaDefinitionInput): Promise<PersonaDefinitionModel> {
         const query = `
             INSERT INTO flowmaestro.persona_definitions (
-                name, slug, description, avatar_url, category, tags,
-                expertise_areas, example_tasks, typical_deliverables,
+                name, slug, title, description, avatar_url, category, tags,
+                specialty, expertise_areas, example_tasks, typical_deliverables,
+                input_fields, deliverables, sop_steps, estimated_duration, estimated_cost_credits,
                 system_prompt, model, provider, temperature, max_tokens,
                 default_tools, default_max_duration_hours, default_max_cost_credits,
                 autonomy_level, tool_risk_overrides, featured, sort_order, status
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29)
             RETURNING *
         `;
 
         const values = [
             input.name,
             input.slug,
+            input.title,
             input.description,
             input.avatar_url || null,
             input.category,
             input.tags || [],
+            input.specialty,
             JSON.stringify(input.expertise_areas),
             JSON.stringify(input.example_tasks),
-            JSON.stringify(input.typical_deliverables),
+            JSON.stringify(input.typical_deliverables || []),
+            JSON.stringify(input.input_fields),
+            JSON.stringify(input.deliverables),
+            JSON.stringify(input.sop_steps),
+            JSON.stringify(input.estimated_duration || { min_minutes: 15, max_minutes: 30 }),
+            input.estimated_cost_credits || 25,
             input.system_prompt,
             input.model || "claude-sonnet-4-20250514",
             input.provider || "anthropic",
@@ -172,8 +194,9 @@ export class PersonaDefinitionRepository {
         // Data query
         const dataQuery = `
             SELECT
-                id, name, slug, description, avatar_url, category, tags,
-                expertise_areas, example_tasks, typical_deliverables,
+                id, name, slug, title, description, avatar_url, category, tags,
+                specialty, expertise_areas, example_tasks, typical_deliverables,
+                input_fields, deliverables, estimated_duration, estimated_cost_credits,
                 default_tools, featured, status
             FROM flowmaestro.persona_definitions
             ${whereClause}
@@ -203,8 +226,9 @@ export class PersonaDefinitionRepository {
     async findGroupedByCategory(): Promise<Record<PersonaCategory, PersonaDefinitionSummary[]>> {
         const query = `
             SELECT
-                id, name, slug, description, avatar_url, category, tags,
-                expertise_areas, example_tasks, typical_deliverables,
+                id, name, slug, title, description, avatar_url, category, tags,
+                specialty, expertise_areas, example_tasks, typical_deliverables,
+                input_fields, deliverables, estimated_duration, estimated_cost_credits,
                 default_tools, featured, status
             FROM flowmaestro.persona_definitions
             WHERE status = 'active'
@@ -223,7 +247,8 @@ export class PersonaDefinitionRepository {
             development: [],
             data: [],
             operations: [],
-            business: []
+            business: [],
+            proposals: []
         };
 
         for (const row of result.rows) {
@@ -250,6 +275,11 @@ export class PersonaDefinitionRepository {
             values.push(input.name);
         }
 
+        if (input.title !== undefined) {
+            updates.push(`title = $${paramIndex++}`);
+            values.push(input.title);
+        }
+
         if (input.description !== undefined) {
             updates.push(`description = $${paramIndex++}`);
             values.push(input.description);
@@ -270,6 +300,11 @@ export class PersonaDefinitionRepository {
             values.push(input.tags);
         }
 
+        if (input.specialty !== undefined) {
+            updates.push(`specialty = $${paramIndex++}`);
+            values.push(input.specialty);
+        }
+
         if (input.expertise_areas !== undefined) {
             updates.push(`expertise_areas = $${paramIndex++}`);
             values.push(JSON.stringify(input.expertise_areas));
@@ -283,6 +318,31 @@ export class PersonaDefinitionRepository {
         if (input.typical_deliverables !== undefined) {
             updates.push(`typical_deliverables = $${paramIndex++}`);
             values.push(JSON.stringify(input.typical_deliverables));
+        }
+
+        if (input.input_fields !== undefined) {
+            updates.push(`input_fields = $${paramIndex++}`);
+            values.push(JSON.stringify(input.input_fields));
+        }
+
+        if (input.deliverables !== undefined) {
+            updates.push(`deliverables = $${paramIndex++}`);
+            values.push(JSON.stringify(input.deliverables));
+        }
+
+        if (input.sop_steps !== undefined) {
+            updates.push(`sop_steps = $${paramIndex++}`);
+            values.push(JSON.stringify(input.sop_steps));
+        }
+
+        if (input.estimated_duration !== undefined) {
+            updates.push(`estimated_duration = $${paramIndex++}`);
+            values.push(JSON.stringify(input.estimated_duration));
+        }
+
+        if (input.estimated_cost_credits !== undefined) {
+            updates.push(`estimated_cost_credits = $${paramIndex++}`);
+            values.push(input.estimated_cost_credits);
         }
 
         if (input.system_prompt !== undefined) {
@@ -385,22 +445,30 @@ export class PersonaDefinitionRepository {
     async upsertBySlug(input: CreatePersonaDefinitionInput): Promise<PersonaDefinitionModel> {
         const query = `
             INSERT INTO flowmaestro.persona_definitions (
-                name, slug, description, avatar_url, category, tags,
-                expertise_areas, example_tasks, typical_deliverables,
+                name, slug, title, description, avatar_url, category, tags,
+                specialty, expertise_areas, example_tasks, typical_deliverables,
+                input_fields, deliverables, sop_steps, estimated_duration, estimated_cost_credits,
                 system_prompt, model, provider, temperature, max_tokens,
                 default_tools, default_max_duration_hours, default_max_cost_credits,
                 autonomy_level, tool_risk_overrides, featured, sort_order, status
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29)
             ON CONFLICT (slug) DO UPDATE SET
                 name = EXCLUDED.name,
+                title = EXCLUDED.title,
                 description = EXCLUDED.description,
                 avatar_url = EXCLUDED.avatar_url,
                 category = EXCLUDED.category,
                 tags = EXCLUDED.tags,
+                specialty = EXCLUDED.specialty,
                 expertise_areas = EXCLUDED.expertise_areas,
                 example_tasks = EXCLUDED.example_tasks,
                 typical_deliverables = EXCLUDED.typical_deliverables,
+                input_fields = EXCLUDED.input_fields,
+                deliverables = EXCLUDED.deliverables,
+                sop_steps = EXCLUDED.sop_steps,
+                estimated_duration = EXCLUDED.estimated_duration,
+                estimated_cost_credits = EXCLUDED.estimated_cost_credits,
                 system_prompt = EXCLUDED.system_prompt,
                 model = EXCLUDED.model,
                 provider = EXCLUDED.provider,
@@ -421,13 +489,20 @@ export class PersonaDefinitionRepository {
         const values = [
             input.name,
             input.slug,
+            input.title,
             input.description,
             input.avatar_url || null,
             input.category,
             input.tags || [],
+            input.specialty,
             JSON.stringify(input.expertise_areas),
             JSON.stringify(input.example_tasks),
-            JSON.stringify(input.typical_deliverables),
+            JSON.stringify(input.typical_deliverables || []),
+            JSON.stringify(input.input_fields),
+            JSON.stringify(input.deliverables),
+            JSON.stringify(input.sop_steps),
+            JSON.stringify(input.estimated_duration || { min_minutes: 15, max_minutes: 30 }),
+            input.estimated_cost_credits || 25,
             input.system_prompt,
             input.model || "claude-sonnet-4-20250514",
             input.provider || "anthropic",
@@ -455,13 +530,24 @@ export class PersonaDefinitionRepository {
             id: row.id,
             name: row.name,
             slug: row.slug,
+            title: row.title,
             description: row.description,
             avatar_url: row.avatar_url,
             category: row.category as PersonaCategory,
             tags: this.parseStringArray(row.tags),
+            specialty: row.specialty,
             expertise_areas: this.parseJsonArray(row.expertise_areas),
             example_tasks: this.parseJsonArray(row.example_tasks),
             typical_deliverables: this.parseJsonArray(row.typical_deliverables),
+            input_fields: this.parseJson(row.input_fields) as PersonaInputField[],
+            deliverables: this.parseJson(row.deliverables) as PersonaDeliverableSpec[],
+            sop_steps: this.parseJsonArray(row.sop_steps),
+            estimated_duration: this.parseJson(row.estimated_duration) as PersonaEstimatedDuration,
+            estimated_cost_credits:
+                typeof row.estimated_cost_credits === "string"
+                    ? parseInt(row.estimated_cost_credits)
+                    : row.estimated_cost_credits,
+            // Agent configuration
             system_prompt: row.system_prompt,
             model: row.model,
             provider: row.provider as LLMProvider,
@@ -503,13 +589,22 @@ export class PersonaDefinitionRepository {
             id: row.id,
             name: row.name,
             slug: row.slug,
+            title: row.title,
             description: row.description,
             avatar_url: row.avatar_url,
             category: row.category as PersonaCategory,
             tags: this.parseStringArray(row.tags),
+            specialty: row.specialty,
             expertise_areas: this.parseJsonArray(row.expertise_areas),
             example_tasks: this.parseJsonArray(row.example_tasks),
             typical_deliverables: this.parseJsonArray(row.typical_deliverables),
+            input_fields: this.parseJson(row.input_fields) as PersonaInputField[],
+            deliverables: this.parseJson(row.deliverables) as PersonaDeliverableSpec[],
+            estimated_duration: this.parseJson(row.estimated_duration) as PersonaEstimatedDuration,
+            estimated_cost_credits:
+                typeof row.estimated_cost_credits === "string"
+                    ? parseInt(row.estimated_cost_credits)
+                    : row.estimated_cost_credits,
             default_tools:
                 typeof row.default_tools === "string"
                     ? JSON.parse(row.default_tools)
@@ -557,5 +652,19 @@ export class PersonaDefinitionRepository {
             }
         }
         return [];
+    }
+
+    /**
+     * Parse JSON object from database
+     */
+    private parseJson<T>(value: T | string): T {
+        if (typeof value === "string") {
+            try {
+                return JSON.parse(value) as T;
+            } catch {
+                return value as T;
+            }
+        }
+        return value;
     }
 }

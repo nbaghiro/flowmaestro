@@ -15,7 +15,8 @@ const categoryOrder: PersonaCategory[] = [
     "development",
     "data",
     "operations",
-    "business"
+    "business",
+    "proposals"
 ];
 
 const categoryLabels: Record<PersonaCategory, string> = {
@@ -24,7 +25,8 @@ const categoryLabels: Record<PersonaCategory, string> = {
     development: "Software Development",
     data: "Data & Analytics",
     operations: "Operations & Support",
-    business: "Business Intelligence"
+    business: "Business Intelligence",
+    proposals: "Proposals & Bids"
 };
 
 export const Personas: React.FC = () => {
@@ -46,6 +48,7 @@ export const Personas: React.FC = () => {
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
     const [isLaunchDialogOpen, setIsLaunchDialogOpen] = useState(false);
     const [isLoadingPersonaDetail, setIsLoadingPersonaDetail] = useState(false);
+    const [launchDialogFromDetail, setLaunchDialogFromDetail] = useState(false);
 
     useEffect(() => {
         fetchPersonasByCategory();
@@ -60,7 +63,8 @@ export const Personas: React.FC = () => {
             development: [],
             data: [],
             operations: [],
-            business: []
+            business: [],
+            proposals: []
         };
 
         for (const category of categoryOrder) {
@@ -104,6 +108,7 @@ export const Personas: React.FC = () => {
     const handleLaunchClick = async (persona: PersonaDefinitionSummary) => {
         setSelectedPersonaSummary(persona);
         setIsLoadingPersonaDetail(true);
+        setLaunchDialogFromDetail(false);
 
         try {
             const response = await getPersona(persona.slug);
@@ -118,6 +123,7 @@ export const Personas: React.FC = () => {
 
     const handleDetailModalLaunch = () => {
         setIsDetailModalOpen(false);
+        setLaunchDialogFromDetail(true);
         if (selectedPersonaFull) {
             setIsLaunchDialogOpen(true);
         }
@@ -133,6 +139,11 @@ export const Personas: React.FC = () => {
         setIsLaunchDialogOpen(false);
         setSelectedPersonaSummary(null);
         setSelectedPersonaFull(null);
+    };
+
+    const handleBackFromLaunchDialog = () => {
+        setIsLaunchDialogOpen(false);
+        setIsDetailModalOpen(true);
     };
 
     const hasResults = categoryOrder.some((cat) => filteredCategories[cat].length > 0);
@@ -183,7 +194,7 @@ export const Personas: React.FC = () => {
                                 label: categoryLabels[cat]
                             }))
                         ]}
-                        className="w-44"
+                        className="w-52 whitespace-nowrap"
                     />
                 </div>
 
@@ -269,6 +280,7 @@ export const Personas: React.FC = () => {
                     persona={selectedPersonaFull}
                     isOpen={isLaunchDialogOpen}
                     onClose={handleCloseLaunchDialog}
+                    onBack={launchDialogFromDetail ? handleBackFromLaunchDialog : undefined}
                 />
             )}
         </div>

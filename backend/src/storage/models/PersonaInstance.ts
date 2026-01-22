@@ -1,4 +1,8 @@
-import type { PersonaCategory } from "@flowmaestro/shared";
+import type {
+    PersonaCategory,
+    PersonaStructuredInputs,
+    PersonaInstanceProgress
+} from "@flowmaestro/shared";
 
 /**
  * Status of a persona instance
@@ -60,8 +64,11 @@ export interface PersonaInstanceModel {
 
     // Task Definition
     task_title: string | null;
-    task_description: string;
+    task_description: string | null; // Now optional with structured_inputs
     additional_context: PersonaAdditionalContext;
+
+    // Structured Inputs (v2)
+    structured_inputs: PersonaStructuredInputs;
 
     // Execution Tracking
     thread_id: string | null;
@@ -74,7 +81,8 @@ export interface PersonaInstanceModel {
     max_duration_hours: number | null;
     max_cost_credits: number | null;
 
-    // Progress Tracking
+    // Progress Tracking (v2)
+    progress: PersonaInstanceProgress | null;
     started_at: Date | null;
     completed_at: Date | null;
     duration_seconds: number | null;
@@ -104,8 +112,10 @@ export interface PersonaInstanceSummary {
     id: string;
     persona_definition_id: string;
     task_title: string | null;
-    task_description: string;
+    task_description: string | null;
     status: PersonaInstanceStatus;
+    // Progress tracking (v2)
+    progress: PersonaInstanceProgress | null;
     started_at: Date | null;
     completed_at: Date | null;
     duration_seconds: number | null;
@@ -116,6 +126,7 @@ export interface PersonaInstanceSummary {
     persona: {
         name: string;
         slug: string;
+        title: string;
         avatar_url: string | null;
         category: PersonaCategory;
     } | null;
@@ -142,7 +153,8 @@ export interface CreatePersonaInstanceInput {
     persona_definition_id: string;
     user_id: string;
     workspace_id: string;
-    task_description: string;
+    structured_inputs?: PersonaStructuredInputs;
+    task_description?: string; // Now optional with structured_inputs
     task_title?: string;
     additional_context?: PersonaAdditionalContext;
     max_duration_hours?: number;
@@ -157,11 +169,14 @@ export interface UpdatePersonaInstanceInput {
     task_title?: string;
     task_description?: string;
     additional_context?: PersonaAdditionalContext;
+    structured_inputs?: PersonaStructuredInputs;
     thread_id?: string;
     execution_id?: string;
     status?: PersonaInstanceStatus;
     max_duration_hours?: number;
     max_cost_credits?: number;
+    // Progress tracking (v2)
+    progress?: PersonaInstanceProgress;
     started_at?: Date;
     completed_at?: Date;
     duration_seconds?: number;

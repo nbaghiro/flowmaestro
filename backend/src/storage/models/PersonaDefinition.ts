@@ -1,4 +1,10 @@
-import type { JsonObject, AgentTemplateTool } from "@flowmaestro/shared";
+import type {
+    JsonObject,
+    AgentTemplateTool,
+    PersonaInputField,
+    PersonaDeliverableSpec,
+    PersonaEstimatedDuration
+} from "@flowmaestro/shared";
 
 /**
  * Categories for organizing personas by domain
@@ -9,7 +15,8 @@ export type PersonaCategory =
     | "development"
     | "data"
     | "operations"
-    | "business";
+    | "business"
+    | "proposals";
 
 /**
  * Status of a persona definition
@@ -35,6 +42,7 @@ export interface PersonaDefinitionModel {
     // Identity
     name: string;
     slug: string;
+    title: string; // Short title like "Competitive Intel Analyst"
     description: string;
     avatar_url: string | null;
 
@@ -42,10 +50,26 @@ export interface PersonaDefinitionModel {
     category: PersonaCategory;
     tags: string[];
 
+    // What they specialize in (one-line)
+    specialty: string;
+
     // Expertise
     expertise_areas: string[];
     example_tasks: string[];
-    typical_deliverables: string[];
+    typical_deliverables: string[]; // Legacy field for backwards compatibility
+
+    // Structured Inputs (v2)
+    input_fields: PersonaInputField[];
+
+    // Guaranteed Outputs (v2)
+    deliverables: PersonaDeliverableSpec[];
+
+    // Standard Operating Procedure (v2)
+    sop_steps: string[];
+
+    // Estimates (v2)
+    estimated_duration: PersonaEstimatedDuration;
+    estimated_cost_credits: number;
 
     // Agent Configuration
     system_prompt: string;
@@ -80,13 +104,19 @@ export interface PersonaDefinitionSummary {
     id: string;
     name: string;
     slug: string;
+    title: string;
     description: string;
     avatar_url: string | null;
     category: PersonaCategory;
     tags: string[];
+    specialty: string;
     expertise_areas: string[];
     example_tasks: string[];
-    typical_deliverables: string[];
+    typical_deliverables: string[]; // Legacy
+    input_fields: PersonaInputField[];
+    deliverables: PersonaDeliverableSpec[];
+    estimated_duration: PersonaEstimatedDuration;
+    estimated_cost_credits: number;
     default_tools: AgentTemplateTool[];
     featured: boolean;
     status: PersonaStatus;
@@ -98,13 +128,21 @@ export interface PersonaDefinitionSummary {
 export interface CreatePersonaDefinitionInput {
     name: string;
     slug: string;
+    title: string;
     description: string;
     avatar_url?: string;
     category: PersonaCategory;
     tags?: string[];
+    specialty: string;
     expertise_areas: string[];
     example_tasks: string[];
-    typical_deliverables: string[];
+    typical_deliverables?: string[]; // Legacy, optional
+    input_fields: PersonaInputField[];
+    deliverables: PersonaDeliverableSpec[];
+    sop_steps: string[];
+    estimated_duration?: PersonaEstimatedDuration;
+    estimated_cost_credits?: number;
+    // Agent configuration
     system_prompt: string;
     model?: string;
     provider?: LLMProvider;
@@ -125,13 +163,21 @@ export interface CreatePersonaDefinitionInput {
  */
 export interface UpdatePersonaDefinitionInput {
     name?: string;
+    title?: string;
     description?: string;
     avatar_url?: string;
     category?: PersonaCategory;
     tags?: string[];
+    specialty?: string;
     expertise_areas?: string[];
     example_tasks?: string[];
     typical_deliverables?: string[];
+    input_fields?: PersonaInputField[];
+    deliverables?: PersonaDeliverableSpec[];
+    sop_steps?: string[];
+    estimated_duration?: PersonaEstimatedDuration;
+    estimated_cost_credits?: number;
+    // Agent configuration
     system_prompt?: string;
     model?: string;
     provider?: LLMProvider;

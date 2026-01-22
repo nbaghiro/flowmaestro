@@ -12,12 +12,37 @@ import type {
     PersonaInstanceDashboardResponse
 } from "../lib/api";
 
+// Storage key for custom avatars
+const CUSTOM_AVATARS_KEY = "flowmaestro-custom-avatars";
+
+// Load custom avatars from localStorage
+function loadCustomAvatars(): Record<string, string> {
+    try {
+        const stored = localStorage.getItem(CUSTOM_AVATARS_KEY);
+        return stored ? JSON.parse(stored) : {};
+    } catch {
+        return {};
+    }
+}
+
+// Save custom avatars to localStorage
+function saveCustomAvatars(avatars: Record<string, string>): void {
+    try {
+        localStorage.setItem(CUSTOM_AVATARS_KEY, JSON.stringify(avatars));
+    } catch (error) {
+        logger.error("Failed to save custom avatars to localStorage", error);
+    }
+}
+
 interface PersonaStore {
     // === PERSONA DEFINITIONS STATE ===
     personasByCategory: Record<PersonaCategory, PersonaDefinitionSummary[]>;
     currentPersona: PersonaDefinition | null;
     isLoadingPersonas: boolean;
     personasError: string | null;
+
+    // === CUSTOM AVATARS STATE ===
+    customAvatars: Record<string, string>; // Maps persona ID to custom avatar URL
 
     // === PERSONA INSTANCES STATE ===
     dashboard: PersonaInstanceDashboardResponse | null;
@@ -42,6 +67,11 @@ interface PersonaStore {
     fetchPersona: (slug: string) => Promise<void>;
     setCurrentPersona: (persona: PersonaDefinition | null) => void;
     clearPersonasError: () => void;
+
+    // === CUSTOM AVATAR ACTIONS ===
+    setCustomAvatar: (personaId: string, avatarUrl: string) => void;
+    getCustomAvatar: (personaId: string) => string | null;
+    clearCustomAvatar: (personaId: string) => void;
 
     // === PERSONA INSTANCES ACTIONS ===
     fetchDashboard: () => Promise<void>;
@@ -82,11 +112,15 @@ export const usePersonaStore = create<PersonaStore>((set, get) => ({
         development: [],
         data: [],
         operations: [],
-        business: []
+        business: [],
+        proposals: []
     },
     currentPersona: null,
     isLoadingPersonas: false,
     personasError: null,
+
+    // Custom avatars loaded from localStorage
+    customAvatars: loadCustomAvatars(),
 
     dashboard: null,
     instances: [],
@@ -132,6 +166,25 @@ export const usePersonaStore = create<PersonaStore>((set, get) => ({
 
     clearPersonasError: () => {
         set({ personasError: null });
+    },
+
+    // === CUSTOM AVATAR ACTIONS ===
+
+    setCustomAvatar: (personaId: string, avatarUrl: string) => {
+        const newAvatars = { ...get().customAvatars, [personaId]: avatarUrl };
+        saveCustomAvatars(newAvatars);
+        set({ customAvatars: newAvatars });
+    },
+
+    getCustomAvatar: (personaId: string) => {
+        return get().customAvatars[personaId] || null;
+    },
+
+    clearCustomAvatar: (personaId: string) => {
+        const newAvatars = { ...get().customAvatars };
+        delete newAvatars[personaId];
+        saveCustomAvatars(newAvatars);
+        set({ customAvatars: newAvatars });
     },
 
     // === PERSONA INSTANCES ACTIONS ===

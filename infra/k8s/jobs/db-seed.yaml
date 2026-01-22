@@ -58,6 +58,9 @@ spec:
               echo "Seeding agent templates..."
               npx tsx backend/scripts/seed-agent-templates.ts
               echo ""
+              echo "Seeding persona definitions..."
+              npx tsx backend/scripts/seed-personas.ts
+              echo ""
               echo "========================================"
               echo "Database seeding completed successfully"
               echo "========================================"

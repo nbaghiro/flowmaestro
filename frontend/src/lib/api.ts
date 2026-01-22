@@ -73,7 +73,17 @@ import type {
     PersonaInstanceStatus,
     CreatePersonaInstanceRequest,
     PersonaInstanceMessage,
-    PersonaInstanceDeliverable
+    PersonaInstanceDeliverable,
+    PersonaInputField,
+    PersonaDeliverableSpec,
+    PersonaEstimatedDuration,
+    PersonaStructuredInputs,
+    InputFieldType,
+    InputFieldOption,
+    DeliverableType,
+    PersonaInstanceProgress,
+    PersonaProgressStep,
+    ProgressStepStatus
 } from "@flowmaestro/shared";
 import { getCurrentWorkspaceId } from "../stores/workspaceStore";
 import { logger } from "./logger";
@@ -5785,5 +5795,15 @@ export type {
     CreatePersonaInstanceRequest,
     PersonaInstanceDashboardResponse,
     PersonaInstanceMessage,
-    PersonaInstanceDeliverable
+    PersonaInstanceDeliverable,
+    PersonaInputField,
+    PersonaDeliverableSpec,
+    PersonaEstimatedDuration,
+    PersonaStructuredInputs,
+    InputFieldType,
+    InputFieldOption,
+    DeliverableType,
+    PersonaInstanceProgress,
+    PersonaProgressStep,
+    ProgressStepStatus
 };

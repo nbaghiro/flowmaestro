@@ -16,7 +16,8 @@ const categoryIcons: Record<PersonaCategory, string> = {
     development: "💻",
     data: "📊",
     operations: "⚙️",
-    business: "📈"
+    business: "📈",
+    proposals: "📝"
 };
 
 const statusConfig: Record<

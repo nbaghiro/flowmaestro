@@ -14,17 +14,29 @@ import {
     BarChart3,
     Mail,
     Search,
-    Bot
+    Bot,
+    Package,
+    CheckCircle2,
+    HelpCircle,
+    ArrowLeft
 } from "lucide-react";
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { usePersonaStore } from "../../stores/personaStore";
-import type { PersonaDefinition, CreatePersonaInstanceRequest } from "../../lib/api";
+import { Select } from "../common/Select";
+import { Tooltip } from "../common/Tooltip";
+import type {
+    PersonaDefinition,
+    CreatePersonaInstanceRequest,
+    PersonaInputField,
+    PersonaStructuredInputs
+} from "../../lib/api";
 
 interface TaskLaunchDialogProps {
     persona: PersonaDefinition;
     isOpen: boolean;
     onClose: () => void;
+    onBack?: () => void;
 }
 
 // Map tool types to icons
@@ -56,11 +68,223 @@ const durationOptions = [
     { value: 2, label: "2 hours" }
 ];
 
-export const TaskLaunchDialog: React.FC<TaskLaunchDialogProps> = ({ persona, isOpen, onClose }) => {
+// Format duration estimate
+function formatDuration(duration: { min_minutes: number; max_minutes: number }): string {
+    const formatMinutes = (mins: number): string => {
+        if (mins < 60) return `${mins}m`;
+        const hours = Math.floor(mins / 60);
+        const remainingMins = mins % 60;
+        return remainingMins > 0 ? `${hours}h ${remainingMins}m` : `${hours}h`;
+    };
+
+    return `${formatMinutes(duration.min_minutes)} - ${formatMinutes(duration.max_minutes)}`;
+}
+
+// Tags input component
+const TagsInput: React.FC<{
+    value: string[];
+    onChange: (value: string[]) => void;
+    placeholder?: string;
+    disabled?: boolean;
+}> = ({ value, onChange, placeholder, disabled }) => {
+    const [inputValue, setInputValue] = useState("");
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === "Enter" || e.key === ",") {
+            e.preventDefault();
+            const trimmed = inputValue.trim();
+            if (trimmed && !value.includes(trimmed)) {
+                onChange([...value, trimmed]);
+                setInputValue("");
+            }
+        } else if (e.key === "Backspace" && !inputValue && value.length > 0) {
+            onChange(value.slice(0, -1));
+        }
+    };
+
+    const removeTag = (tagToRemove: string) => {
+        onChange(value.filter((t) => t !== tagToRemove));
+    };
+
+    return (
+        <div className="flex flex-wrap gap-1.5 p-2 min-h-[42px] bg-background border border-border rounded-lg focus-within:ring-2 focus-within:ring-primary/50">
+            {value.map((tag) => (
+                <span
+                    key={tag}
+                    className="flex items-center gap-1 px-2 py-0.5 bg-primary/10 text-primary text-sm rounded"
+                >
+                    {tag}
+                    {!disabled && (
+                        <button
+                            type="button"
+                            onClick={() => removeTag(tag)}
+                            className="hover:text-primary/70"
+                        >
+                            <X className="w-3 h-3" />
+                        </button>
+                    )}
+                </span>
+            ))}
+            <input
+                type="text"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder={value.length === 0 ? placeholder : ""}
+                className="flex-1 min-w-[120px] bg-transparent border-none outline-none text-sm placeholder:text-muted-foreground"
+                disabled={disabled}
+            />
+        </div>
+    );
+};
+
+// Dynamic form field renderer
+const FormField: React.FC<{
+    field: PersonaInputField;
+    value: string | number | boolean | string[] | undefined;
+    onChange: (value: string | number | boolean | string[]) => void;
+    disabled?: boolean;
+}> = ({ field, value, onChange, disabled }) => {
+    const baseInputStyles =
+        "w-full px-3 py-2 bg-background border border-border rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50";
+
+    switch (field.type) {
+        case "text":
+            return (
+                <input
+                    type="text"
+                    value={(value as string) || ""}
+                    onChange={(e) => onChange(e.target.value)}
+                    placeholder={field.placeholder}
+                    className={baseInputStyles}
+                    disabled={disabled}
+                    minLength={field.validation?.min_length}
+                    maxLength={field.validation?.max_length}
+                />
+            );
+
+        case "textarea":
+            return (
+                <textarea
+                    value={(value as string) || ""}
+                    onChange={(e) => onChange(e.target.value)}
+                    placeholder={field.placeholder}
+                    className={`${baseInputStyles} min-h-[100px] resize-y`}
+                    disabled={disabled}
+                    maxLength={field.validation?.max_length}
+                />
+            );
+
+        case "number":
+            return (
+                <input
+                    type="number"
+                    value={value as number | ""}
+                    onChange={(e) => onChange(e.target.value ? Number(e.target.value) : "")}
+                    placeholder={field.placeholder}
+                    className={baseInputStyles}
+                    disabled={disabled}
+                    min={field.validation?.min}
+                    max={field.validation?.max}
+                />
+            );
+
+        case "select":
+            return (
+                <Select
+                    value={(value as string) || ""}
+                    onChange={(v) => onChange(v)}
+                    options={field.options?.map((opt) => ({
+                        value: opt.value,
+                        label: opt.label
+                    }))}
+                    placeholder="Select..."
+                    disabled={disabled}
+                />
+            );
+
+        case "multiselect": {
+            const selectedValues = Array.isArray(value) ? value : [];
+            return (
+                <div className="space-y-1.5">
+                    {field.options?.map((opt) => (
+                        <label
+                            key={opt.value}
+                            className="flex items-center gap-2 text-sm cursor-pointer"
+                        >
+                            <input
+                                type="checkbox"
+                                checked={selectedValues.includes(opt.value)}
+                                onChange={(e) => {
+                                    if (e.target.checked) {
+                                        onChange([...selectedValues, opt.value]);
+                                    } else {
+                                        onChange(selectedValues.filter((v) => v !== opt.value));
+                                    }
+                                }}
+                                className="rounded border-border"
+                                disabled={disabled}
+                            />
+                            <span className="text-foreground">{opt.label}</span>
+                        </label>
+                    ))}
+                </div>
+            );
+        }
+
+        case "tags":
+            return (
+                <TagsInput
+                    value={Array.isArray(value) ? value : []}
+                    onChange={(v) => onChange(v)}
+                    placeholder={field.placeholder}
+                    disabled={disabled}
+                />
+            );
+
+        case "checkbox":
+            return (
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                        type="checkbox"
+                        checked={Boolean(value)}
+                        onChange={(e) => onChange(e.target.checked)}
+                        className="rounded border-border"
+                        disabled={disabled}
+                    />
+                    <span className="text-foreground">{field.label}</span>
+                </label>
+            );
+
+        default:
+            return null;
+    }
+};
+
+export const TaskLaunchDialog: React.FC<TaskLaunchDialogProps> = ({
+    persona,
+    isOpen,
+    onClose,
+    onBack
+}) => {
     const navigate = useNavigate();
     const { createInstance } = usePersonaStore();
 
-    const [taskDescription, setTaskDescription] = useState("");
+    // Initialize form values from field defaults
+    const initialInputs = useMemo(() => {
+        const inputs: PersonaStructuredInputs = {};
+        if (persona.input_fields) {
+            for (const field of persona.input_fields) {
+                if (field.default_value !== undefined) {
+                    inputs[field.name] = field.default_value;
+                }
+            }
+        }
+        return inputs;
+    }, [persona.input_fields]);
+
+    const [structuredInputs, setStructuredInputs] =
+        useState<PersonaStructuredInputs>(initialInputs);
     const [maxDurationHours, setMaxDurationHours] = useState<number>(
         persona.default_max_duration_hours
     );
@@ -73,12 +297,42 @@ export const TaskLaunchDialog: React.FC<TaskLaunchDialogProps> = ({ persona, isO
     const [error, setError] = useState<string | null>(null);
     const [showAdvanced, setShowAdvanced] = useState(false);
 
+    // Check if form is valid (all required fields have values)
+    const isFormValid = useMemo(() => {
+        if (!persona.input_fields || persona.input_fields.length === 0) {
+            return true; // No fields defined, allow submission
+        }
+
+        for (const field of persona.input_fields) {
+            if (!field.required) continue;
+
+            const value = structuredInputs[field.name];
+            if (value === undefined || value === "" || value === null) {
+                return false;
+            }
+            if (Array.isArray(value) && value.length === 0) {
+                return false;
+            }
+        }
+        return true;
+    }, [persona.input_fields, structuredInputs]);
+
+    const updateField = useCallback(
+        (fieldName: string, value: string | number | boolean | string[]) => {
+            setStructuredInputs((prev) => ({
+                ...prev,
+                [fieldName]: value
+            }));
+        },
+        []
+    );
+
     const handleSubmit = useCallback(
         async (e?: React.FormEvent | React.MouseEvent) => {
             e?.preventDefault();
 
-            if (!taskDescription.trim()) {
-                setError("Please provide a task description");
+            if (!isFormValid) {
+                setError("Please fill in all required fields");
                 return;
             }
 
@@ -86,9 +340,16 @@ export const TaskLaunchDialog: React.FC<TaskLaunchDialogProps> = ({ persona, isO
             setError(null);
 
             try {
+                // Build task description from structured inputs for backwards compatibility
+                const taskDescription = buildTaskDescription(
+                    persona.input_fields || [],
+                    structuredInputs
+                );
+
                 const request: CreatePersonaInstanceRequest = {
                     persona_slug: persona.slug,
-                    task_description: taskDescription.trim(),
+                    structured_inputs: structuredInputs,
+                    task_description: taskDescription,
                     max_duration_hours: maxDurationHours,
                     max_cost_credits: maxCostCredits,
                     notification_config: {
@@ -109,12 +370,14 @@ export const TaskLaunchDialog: React.FC<TaskLaunchDialogProps> = ({ persona, isO
             }
         },
         [
-            taskDescription,
+            isFormValid,
+            structuredInputs,
             maxDurationHours,
             maxCostCredits,
             notifyOnApproval,
             notifyOnCompletion,
             persona.slug,
+            persona.input_fields,
             createInstance,
             navigate,
             onClose
@@ -126,6 +389,14 @@ export const TaskLaunchDialog: React.FC<TaskLaunchDialogProps> = ({ persona, isO
     // Get unique tool types for display
     const tools = persona.default_tools || [];
     const uniqueToolTypes = [...new Set(tools.map((t) => t.type))].slice(0, 5);
+
+    // Use deliverables if available, otherwise fall back to typical_deliverables
+    const deliverables =
+        persona.deliverables && persona.deliverables.length > 0 ? persona.deliverables : null;
+    const guaranteedDeliverables = deliverables?.filter((d) => d.guaranteed) || [];
+
+    // Check if we have structured input fields
+    const hasInputFields = persona.input_fields && persona.input_fields.length > 0;
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -173,8 +444,28 @@ export const TaskLaunchDialog: React.FC<TaskLaunchDialogProps> = ({ persona, isO
                                 </span>
                             </div>
                             <p className="text-sm text-muted-foreground leading-relaxed">
-                                {persona.description}
+                                {persona.specialty || persona.description}
                             </p>
+
+                            {/* Estimates */}
+                            {(persona.estimated_duration || persona.estimated_cost_credits > 0) && (
+                                <div className="flex items-center gap-4 mt-3">
+                                    {persona.estimated_duration && (
+                                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                            <Clock className="w-3.5 h-3.5" />
+                                            <span>
+                                                {formatDuration(persona.estimated_duration)}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {persona.estimated_cost_credits > 0 && (
+                                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                            <Coins className="w-3.5 h-3.5" />
+                                            <span>~{persona.estimated_cost_credits} credits</span>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -215,27 +506,101 @@ export const TaskLaunchDialog: React.FC<TaskLaunchDialogProps> = ({ persona, isO
                             </div>
                         )}
 
-                        {/* Task Brief */}
-                        <div>
-                            <label className="block text-sm font-medium text-foreground mb-2">
-                                Brief your specialist
-                            </label>
-                            <p className="text-xs text-muted-foreground mb-3">
-                                Describe what you need. Be specific about goals, scope, and any
-                                constraints. {persona.name.split(" - ")[0]} will work autonomously
-                                and deliver results.
-                            </p>
-                            <textarea
-                                value={taskDescription}
-                                onChange={(e) => setTaskDescription(e.target.value)}
-                                placeholder={persona.example_tasks[0] || "Describe the task..."}
-                                className="w-full min-h-[120px] px-4 py-3 bg-background border border-border rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-y"
-                                disabled={isSubmitting}
-                            />
-                        </div>
+                        {/* Dynamic Input Fields */}
+                        {hasInputFields ? (
+                            <div className="space-y-5">
+                                {persona.input_fields?.map((field) => (
+                                    <div key={field.name}>
+                                        {field.type !== "checkbox" && (
+                                            <label className="flex items-center gap-1.5 text-sm font-medium text-foreground mb-2">
+                                                {field.label}
+                                                {field.required && (
+                                                    <span className="text-red-500">*</span>
+                                                )}
+                                                {field.help_text && (
+                                                    <Tooltip
+                                                        content={field.help_text}
+                                                        position="top"
+                                                    >
+                                                        <span className="text-muted-foreground cursor-help">
+                                                            <HelpCircle className="w-3.5 h-3.5" />
+                                                        </span>
+                                                    </Tooltip>
+                                                )}
+                                            </label>
+                                        )}
+                                        <FormField
+                                            field={field}
+                                            value={structuredInputs[field.name]}
+                                            onChange={(v) => updateField(field.name, v)}
+                                            disabled={isSubmitting}
+                                        />
+                                        {field.help_text && field.type !== "checkbox" && (
+                                            <p className="text-xs text-muted-foreground mt-1.5">
+                                                {field.help_text}
+                                            </p>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            /* Legacy: Single task description field */
+                            <div>
+                                <label className="block text-sm font-medium text-foreground mb-2">
+                                    Brief your specialist
+                                </label>
+                                <p className="text-xs text-muted-foreground mb-3">
+                                    Describe what you need. Be specific about goals, scope, and any
+                                    constraints. {persona.name.split(" - ")[0]} will work
+                                    autonomously and deliver results.
+                                </p>
+                                <textarea
+                                    value={(structuredInputs["task_description"] as string) || ""}
+                                    onChange={(e) =>
+                                        updateField("task_description", e.target.value)
+                                    }
+                                    placeholder={persona.example_tasks[0] || "Describe the task..."}
+                                    className="w-full min-h-[120px] px-4 py-3 bg-background border border-border rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-y"
+                                    disabled={isSubmitting}
+                                />
+                            </div>
+                        )}
 
-                        {/* Expected Deliverables */}
-                        {persona.typical_deliverables.length > 0 && (
+                        {/* Guaranteed Deliverables (v2) */}
+                        {guaranteedDeliverables.length > 0 && (
+                            <div className="bg-muted/30 rounded-lg p-4">
+                                <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
+                                    <Package className="w-3.5 h-3.5" />
+                                    Guaranteed Deliverables
+                                </p>
+                                <div className="space-y-2">
+                                    {guaranteedDeliverables.map((deliverable) => (
+                                        <div
+                                            key={deliverable.name}
+                                            className="flex items-start gap-2 text-sm"
+                                        >
+                                            <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                                            <div>
+                                                <span className="text-foreground font-medium">
+                                                    {deliverable.name.replace(/_/g, " ")}
+                                                </span>
+                                                <span className="text-muted-foreground ml-1">
+                                                    ({deliverable.type})
+                                                </span>
+                                                {deliverable.description && (
+                                                    <p className="text-xs text-muted-foreground mt-0.5">
+                                                        {deliverable.description}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Legacy Deliverables fallback */}
+                        {!deliverables && persona.typical_deliverables?.length > 0 && (
                             <div className="bg-muted/30 rounded-lg p-4">
                                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
                                     What you'll receive
@@ -360,19 +725,31 @@ export const TaskLaunchDialog: React.FC<TaskLaunchDialogProps> = ({ persona, isO
                 <div className="border-t border-border bg-card p-6 space-y-4">
                     {/* Actions */}
                     <div className="flex gap-3">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="px-5 py-2.5 border border-border rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                            disabled={isSubmitting}
-                        >
-                            Cancel
-                        </button>
+                        {onBack ? (
+                            <button
+                                type="button"
+                                onClick={onBack}
+                                className="p-2.5 border border-border rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                                disabled={isSubmitting}
+                                title="Back"
+                            >
+                                <ArrowLeft className="w-5 h-5" />
+                            </button>
+                        ) : (
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                className="px-5 py-2.5 border border-border rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                                disabled={isSubmitting}
+                            >
+                                Cancel
+                            </button>
+                        )}
                         <button
                             type="button"
                             onClick={handleSubmit}
-                            className="flex-1 flex items-center justify-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
-                            disabled={isSubmitting || !taskDescription.trim()}
+                            className={`flex-1 flex items-center justify-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors ${!isFormValid && !isSubmitting ? "cursor-not-allowed" : ""}`}
+                            disabled={isSubmitting}
                         >
                             {isSubmitting ? (
                                 <>
@@ -398,3 +775,30 @@ export const TaskLaunchDialog: React.FC<TaskLaunchDialogProps> = ({ persona, isO
         </div>
     );
 };
+
+// Helper to build task description from structured inputs
+function buildTaskDescription(
+    fields: PersonaInputField[],
+    inputs: PersonaStructuredInputs
+): string {
+    const parts: string[] = [];
+
+    for (const field of fields) {
+        const value = inputs[field.name];
+        if (value === undefined || value === "" || value === null) continue;
+
+        if (Array.isArray(value)) {
+            if (value.length > 0) {
+                parts.push(`${field.label}: ${value.join(", ")}`);
+            }
+        } else if (typeof value === "boolean") {
+            if (value) {
+                parts.push(field.label);
+            }
+        } else {
+            parts.push(`${field.label}: ${value}`);
+        }
+    }
+
+    return parts.join("\n");
+}

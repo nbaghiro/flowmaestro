@@ -14,7 +14,8 @@ export type PersonaCategory =
     | "development"
     | "data"
     | "operations"
-    | "business";
+    | "business"
+    | "proposals";
 
 /**
  * Status of a persona definition
@@ -26,6 +27,75 @@ export type PersonaStatus = "active" | "beta" | "deprecated";
  */
 export type PersonaAutonomyLevel = "full_auto" | "approve_high_risk" | "approve_all";
 
+// ============================================================================
+// STRUCTURED INPUT/OUTPUT TYPES
+// ============================================================================
+
+/**
+ * Types of input fields for structured task briefs
+ */
+export type InputFieldType =
+    | "text"
+    | "textarea"
+    | "select"
+    | "multiselect"
+    | "tags"
+    | "number"
+    | "checkbox";
+
+/**
+ * Option for select/multiselect fields
+ */
+export interface InputFieldOption {
+    value: string;
+    label: string;
+}
+
+/**
+ * Structured input field for task configuration
+ */
+export interface PersonaInputField {
+    name: string;
+    label: string;
+    type: InputFieldType;
+    required: boolean;
+    placeholder?: string;
+    default_value?: string | number | boolean | string[];
+    options?: InputFieldOption[];
+    help_text?: string;
+    validation?: {
+        min?: number;
+        max?: number;
+        min_length?: number;
+        max_length?: number;
+        pattern?: string;
+    };
+}
+
+/**
+ * Types of deliverables a persona can produce
+ */
+export type DeliverableType = "markdown" | "csv" | "json" | "pdf" | "code" | "image" | "html";
+
+/**
+ * Specification for a deliverable the persona guarantees to produce
+ */
+export interface PersonaDeliverableSpec {
+    name: string;
+    description: string;
+    type: DeliverableType;
+    guaranteed: boolean;
+    file_extension?: string;
+}
+
+/**
+ * Estimated duration range for task completion
+ */
+export interface PersonaEstimatedDuration {
+    min_minutes: number;
+    max_minutes: number;
+}
+
 /**
  * Pre-built persona definition
  */
@@ -35,6 +105,7 @@ export interface PersonaDefinition {
     // Identity
     name: string;
     slug: string;
+    title: string; // Short title like "Competitive Intel Analyst"
     description: string;
     avatar_url: string | null;
 
@@ -42,9 +113,27 @@ export interface PersonaDefinition {
     category: PersonaCategory;
     tags: string[];
 
+    // What they specialize in (one-line)
+    specialty: string;
+
     // Expertise
     expertise_areas: string[];
     example_tasks: string[];
+
+    // Structured Inputs
+    input_fields: PersonaInputField[];
+
+    // Guaranteed Outputs
+    deliverables: PersonaDeliverableSpec[];
+
+    // Standard Operating Procedure
+    sop_steps: string[];
+
+    // Estimates
+    estimated_duration: PersonaEstimatedDuration;
+    estimated_cost_credits: number;
+
+    // Legacy field
     typical_deliverables: string[];
 
     // Agent Configuration
@@ -80,12 +169,19 @@ export interface PersonaDefinitionSummary {
     id: string;
     name: string;
     slug: string;
+    title: string;
     description: string;
     avatar_url: string | null;
     category: PersonaCategory;
     tags: string[];
+    specialty: string;
     expertise_areas: string[];
     example_tasks: string[];
+    input_fields: PersonaInputField[];
+    deliverables: PersonaDeliverableSpec[];
+    estimated_duration: PersonaEstimatedDuration;
+    estimated_cost_credits: number;
+    // Legacy
     typical_deliverables: string[];
     default_tools: AgentTemplateTool[];
     featured: boolean;
@@ -167,9 +263,55 @@ export interface PersonaAdditionalContext {
  * Message in a persona instance conversation
  */
 export interface PersonaInstanceMessage {
-    role: "user" | "assistant";
+    id?: string;
+    role: "user" | "assistant" | "system";
     content: string;
     timestamp?: string;
+    metadata?: {
+        step_index?: number;
+        tool_used?: string;
+        type?: "info" | "progress" | "finding" | "warning" | "error";
+    };
+}
+
+/**
+ * Status of an individual SOP step
+ */
+export type ProgressStepStatus = "pending" | "in_progress" | "completed" | "skipped";
+
+/**
+ * Individual step progress within an SOP
+ */
+export interface PersonaProgressStep {
+    index: number;
+    title: string;
+    status: ProgressStepStatus;
+    started_at: string | null;
+    completed_at: string | null;
+}
+
+/**
+ * Progress tracking for a running persona instance
+ */
+export interface PersonaInstanceProgress {
+    current_step: number;
+    total_steps: number;
+    current_step_name: string;
+    percentage: number;
+    message?: string;
+    // Detailed step tracking (maps to persona's sop_steps)
+    steps?: PersonaProgressStep[];
+}
+
+/**
+ * Activity log entry for a persona instance
+ */
+export interface PersonaActivityEntry {
+    id: string;
+    timestamp: string;
+    type: "info" | "progress" | "finding" | "warning" | "error";
+    message: string;
+    step_index?: number;
 }
 
 /**
@@ -182,6 +324,13 @@ export interface PersonaInstanceDeliverable {
     url?: string;
     content?: string;
     created_at: string;
+}
+
+/**
+ * Structured inputs provided when launching a persona task
+ */
+export interface PersonaStructuredInputs {
+    [key: string]: string | number | boolean | string[] | undefined;
 }
 
 /**
@@ -200,6 +349,9 @@ export interface PersonaInstance {
     task_description: string;
     additional_context: PersonaAdditionalContext;
 
+    // Structured Inputs
+    structured_inputs: PersonaStructuredInputs;
+
     // Execution Tracking
     thread_id: string | null;
     execution_id: string | null;
@@ -212,6 +364,7 @@ export interface PersonaInstance {
     max_cost_credits: number | null;
 
     // Progress Tracking
+    progress: PersonaInstanceProgress | null;
     started_at: string | null;
     completed_at: string | null;
     duration_seconds: number | null;
@@ -238,6 +391,9 @@ export interface PersonaInstance {
 
     // Deliverables (included in detail view)
     deliverables?: PersonaInstanceDeliverable[];
+
+    // Activity log (included in detail view)
+    activity?: PersonaActivityEntry[];
 }
 
 /**
@@ -249,6 +405,8 @@ export interface PersonaInstanceSummary {
     task_title: string | null;
     task_description: string;
     status: PersonaInstanceStatus;
+    // Progress tracking
+    progress: PersonaInstanceProgress | null;
     started_at: string | null;
     completed_at: string | null;
     duration_seconds: number | null;
@@ -259,6 +417,7 @@ export interface PersonaInstanceSummary {
     persona: {
         name: string;
         slug: string;
+        title: string;
         avatar_url: string | null;
         category: PersonaCategory;
     } | null;
@@ -283,7 +442,10 @@ export interface PersonaPendingApproval {
  */
 export interface CreatePersonaInstanceRequest {
     persona_slug: string;
-    task_description: string;
+    // Structured inputs based on persona's input_fields
+    structured_inputs?: PersonaStructuredInputs;
+    // Free-form description
+    task_description?: string;
     task_title?: string;
     additional_context?: PersonaAdditionalContext;
     max_duration_hours?: number;

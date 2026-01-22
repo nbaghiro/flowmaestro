@@ -20,6 +20,7 @@ import {
     ClipboardList
 } from "lucide-react";
 import React from "react";
+import { usePersonaStore } from "../../stores/personaStore";
 import type { PersonaDefinitionSummary, PersonaCategory } from "../../lib/api";
 
 interface PersonaCardProps {
@@ -34,7 +35,8 @@ const categoryColors: Record<PersonaCategory, string> = {
     development: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
     data: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300",
     operations: "bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-300",
-    business: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300"
+    business: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300",
+    proposals: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
 };
 
 // Map deliverable types to unique icons
@@ -116,6 +118,8 @@ function shortenDeliverable(deliverable: string): string {
 }
 
 export const PersonaCard: React.FC<PersonaCardProps> = ({ persona, onClick, onLaunch }) => {
+    const { customAvatars } = usePersonaStore();
+
     const handleLaunchClick = (e: React.MouseEvent) => {
         e.stopPropagation();
         onLaunch();
@@ -124,6 +128,9 @@ export const PersonaCard: React.FC<PersonaCardProps> = ({ persona, onClick, onLa
     // Get unique deliverables (max 4)
     const deliverables = persona.typical_deliverables.slice(0, 4);
 
+    // Use custom avatar if set, otherwise fall back to persona's avatar
+    const displayAvatarUrl = customAvatars[persona.id] || persona.avatar_url;
+
     return (
         <div
             className="group relative bg-card border border-border rounded-lg p-5 cursor-pointer hover:border-primary/50 hover:shadow-md transition-all duration-200 flex flex-col h-full"
@@ -131,9 +138,9 @@ export const PersonaCard: React.FC<PersonaCardProps> = ({ persona, onClick, onLa
         >
             {/* Header: Avatar + Name + Category */}
             <div className="flex items-start gap-3 mb-3">
-                {persona.avatar_url ? (
+                {displayAvatarUrl ? (
                     <img
-                        src={persona.avatar_url}
+                        src={displayAvatarUrl}
                         alt={persona.name}
                         className="w-11 h-11 rounded-full flex-shrink-0"
                     />

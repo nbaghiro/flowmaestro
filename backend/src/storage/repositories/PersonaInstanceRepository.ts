@@ -1,4 +1,8 @@
-import type { PersonaCategory } from "@flowmaestro/shared";
+import type {
+    PersonaCategory,
+    PersonaStructuredInputs,
+    PersonaInstanceProgress
+} from "@flowmaestro/shared";
 import { db } from "../database";
 import type {
     PersonaInstanceModel,
@@ -23,13 +27,15 @@ interface PersonaInstanceRow {
     user_id: string;
     workspace_id: string;
     task_title: string | null;
-    task_description: string;
+    task_description: string | null;
     additional_context: PersonaAdditionalContext | string;
+    structured_inputs: PersonaStructuredInputs | string;
     thread_id: string | null;
     execution_id: string | null;
     status: string;
     max_duration_hours: number | string | null;
     max_cost_credits: number | string | null;
+    progress: PersonaInstanceProgress | string | null;
     started_at: string | Date | null;
     completed_at: string | Date | null;
     duration_seconds: number | string | null;
@@ -50,6 +56,7 @@ interface PersonaInstanceRow {
 interface PersonaInstanceSummaryRow extends PersonaInstanceRow {
     persona_name: string;
     persona_slug: string;
+    persona_title: string;
     persona_avatar_url: string | null;
     persona_category: string;
 }
@@ -70,9 +77,10 @@ export class PersonaInstanceRepository {
             INSERT INTO flowmaestro.persona_instances (
                 persona_definition_id, user_id, workspace_id,
                 task_title, task_description, additional_context,
+                structured_inputs,
                 max_duration_hours, max_cost_credits, notification_config
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             RETURNING *
         `;
 
@@ -81,8 +89,9 @@ export class PersonaInstanceRepository {
             input.user_id,
             input.workspace_id,
             input.task_title || null,
-            input.task_description,
+            input.task_description || null,
             JSON.stringify(input.additional_context || {}),
+            JSON.stringify(input.structured_inputs || {}),
             input.max_duration_hours || null,
             input.max_cost_credits || null,
             JSON.stringify(defaultNotificationConfig)
@@ -173,6 +182,7 @@ export class PersonaInstanceRepository {
                 pi.*,
                 pd.name as persona_name,
                 pd.slug as persona_slug,
+                pd.title as persona_title,
                 pd.avatar_url as persona_avatar_url,
                 pd.category as persona_category
             FROM flowmaestro.persona_instances pi
@@ -208,6 +218,7 @@ export class PersonaInstanceRepository {
                 pi.*,
                 pd.name as persona_name,
                 pd.slug as persona_slug,
+                pd.title as persona_title,
                 pd.avatar_url as persona_avatar_url,
                 pd.category as persona_category
             FROM flowmaestro.persona_instances pi
@@ -232,6 +243,7 @@ export class PersonaInstanceRepository {
                 pi.*,
                 pd.name as persona_name,
                 pd.slug as persona_slug,
+                pd.title as persona_title,
                 pd.avatar_url as persona_avatar_url,
                 pd.category as persona_category
             FROM flowmaestro.persona_instances pi
@@ -250,6 +262,7 @@ export class PersonaInstanceRepository {
                 pi.*,
                 pd.name as persona_name,
                 pd.slug as persona_slug,
+                pd.title as persona_title,
                 pd.avatar_url as persona_avatar_url,
                 pd.category as persona_category
             FROM flowmaestro.persona_instances pi
@@ -329,6 +342,11 @@ export class PersonaInstanceRepository {
             values.push(JSON.stringify(input.additional_context));
         }
 
+        if (input.structured_inputs !== undefined) {
+            updates.push(`structured_inputs = $${paramIndex++}`);
+            values.push(JSON.stringify(input.structured_inputs));
+        }
+
         if (input.thread_id !== undefined) {
             updates.push(`thread_id = $${paramIndex++}`);
             values.push(input.thread_id);
@@ -352,6 +370,11 @@ export class PersonaInstanceRepository {
         if (input.max_cost_credits !== undefined) {
             updates.push(`max_cost_credits = $${paramIndex++}`);
             values.push(input.max_cost_credits);
+        }
+
+        if (input.progress !== undefined) {
+            updates.push(`progress = $${paramIndex++}`);
+            values.push(JSON.stringify(input.progress));
         }
 
         if (input.started_at !== undefined) {
@@ -520,6 +543,10 @@ export class PersonaInstanceRepository {
                 typeof row.additional_context === "string"
                     ? JSON.parse(row.additional_context)
                     : row.additional_context,
+            structured_inputs:
+                typeof row.structured_inputs === "string"
+                    ? JSON.parse(row.structured_inputs)
+                    : row.structured_inputs,
             thread_id: row.thread_id,
             execution_id: row.execution_id,
             status: row.status as PersonaInstanceStatus,
@@ -534,6 +561,12 @@ export class PersonaInstanceRepository {
                     ? typeof row.max_cost_credits === "string"
                         ? parseInt(row.max_cost_credits)
                         : row.max_cost_credits
+                    : null,
+            progress:
+                row.progress !== null
+                    ? typeof row.progress === "string"
+                        ? JSON.parse(row.progress)
+                        : row.progress
                     : null,
             started_at: row.started_at ? new Date(row.started_at) : null,
             completed_at: row.completed_at ? new Date(row.completed_at) : null,
@@ -574,6 +607,12 @@ export class PersonaInstanceRepository {
             task_title: row.task_title,
             task_description: row.task_description,
             status: row.status as PersonaInstanceStatus,
+            progress:
+                row.progress !== null
+                    ? typeof row.progress === "string"
+                        ? JSON.parse(row.progress)
+                        : row.progress
+                    : null,
             started_at: row.started_at ? new Date(row.started_at) : null,
             completed_at: row.completed_at ? new Date(row.completed_at) : null,
             duration_seconds:
@@ -595,6 +634,7 @@ export class PersonaInstanceRepository {
                 ? {
                       name: row.persona_name,
                       slug: row.persona_slug,
+                      title: row.persona_title,
                       avatar_url: row.persona_avatar_url,
                       category: row.persona_category as PersonaCategory
                   }

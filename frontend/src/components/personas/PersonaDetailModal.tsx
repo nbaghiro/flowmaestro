@@ -22,9 +22,12 @@ import {
     BookOpen,
     Presentation,
     Mail,
-    ListChecks
+    ListChecks,
+    Pencil
 } from "lucide-react";
-import React from "react";
+import React, { useState } from "react";
+import { usePersonaStore } from "../../stores/personaStore";
+import { AvatarPickerPopup } from "./AvatarPickerPopup";
 import type { PersonaDefinition, PersonaCategory } from "../../lib/api";
 
 interface PersonaDetailModalProps {
@@ -40,7 +43,8 @@ const categoryColors: Record<PersonaCategory, string> = {
     development: "bg-green-500/10 text-green-500",
     data: "bg-orange-500/10 text-orange-500",
     operations: "bg-slate-500/10 text-slate-500",
-    business: "bg-indigo-500/10 text-indigo-500"
+    business: "bg-indigo-500/10 text-indigo-500",
+    proposals: "bg-amber-500/10 text-amber-500"
 };
 
 const categoryLabels: Record<PersonaCategory, string> = {
@@ -49,7 +53,8 @@ const categoryLabels: Record<PersonaCategory, string> = {
     development: "Development",
     data: "Data & Analytics",
     operations: "Operations",
-    business: "Business Intelligence"
+    business: "Business Intelligence",
+    proposals: "Proposals & Bids"
 };
 
 // Universal agent capabilities that all personas have
@@ -131,6 +136,9 @@ export const PersonaDetailModal: React.FC<PersonaDetailModalProps> = ({
     onClose,
     onLaunch
 }) => {
+    const [isAvatarPickerOpen, setIsAvatarPickerOpen] = useState(false);
+    const { customAvatars, setCustomAvatar } = usePersonaStore();
+
     if (!isOpen) return null;
 
     // Check for additional specialized capabilities
@@ -138,6 +146,10 @@ export const PersonaDetailModal: React.FC<PersonaDetailModalProps> = ({
     const specializedCapabilities = tools
         .map((t) => toolCapabilities[t.type])
         .filter((c): c is NonNullable<typeof c> => c !== undefined);
+
+    // Use custom avatar if set, otherwise fall back to persona's avatar
+    const customAvatarUrl = customAvatars[persona.id] || null;
+    const displayAvatarUrl = customAvatarUrl || persona.avatar_url;
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -157,21 +169,30 @@ export const PersonaDetailModal: React.FC<PersonaDetailModalProps> = ({
                 {/* Hero Section */}
                 <div className="relative bg-gradient-to-br from-primary/20 via-primary/10 to-transparent p-8">
                     <div className="flex items-start gap-6">
-                        {/* Avatar */}
-                        <div className="relative flex-shrink-0">
-                            {persona.avatar_url ? (
+                        {/* Avatar - Clickable */}
+                        <button
+                            onClick={() => setIsAvatarPickerOpen(true)}
+                            className="relative flex-shrink-0 group cursor-pointer"
+                            title="Click to change avatar"
+                        >
+                            {displayAvatarUrl ? (
                                 <img
-                                    src={persona.avatar_url}
+                                    src={displayAvatarUrl}
                                     alt={persona.name}
-                                    className="w-24 h-24 rounded-2xl border-2 border-primary/30"
+                                    className="w-24 h-24 rounded-2xl border-2 border-primary/30 transition-all group-hover:border-primary group-hover:opacity-80"
                                 />
                             ) : (
-                                <div className="w-24 h-24 rounded-2xl bg-primary/20 flex items-center justify-center">
+                                <div className="w-24 h-24 rounded-2xl bg-primary/20 flex items-center justify-center transition-all group-hover:bg-primary/30">
                                     <Bot className="w-12 h-12 text-primary" />
                                 </div>
                             )}
+                            {/* Edit overlay on hover */}
+                            <div className="absolute inset-0 rounded-2xl bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                <Pencil className="w-6 h-6 text-white" />
+                            </div>
+                            {/* Online indicator */}
                             <div className="absolute -bottom-1 -right-1 bg-green-500 w-4 h-4 rounded-full border-2 border-card" />
-                        </div>
+                        </button>
 
                         {/* Info */}
                         <div className="flex-1 pt-1">
@@ -331,6 +352,15 @@ export const PersonaDetailModal: React.FC<PersonaDetailModalProps> = ({
                     </p>
                 </div>
             </div>
+
+            {/* Avatar Picker Popup */}
+            <AvatarPickerPopup
+                isOpen={isAvatarPickerOpen}
+                onClose={() => setIsAvatarPickerOpen(false)}
+                onSelect={(url) => setCustomAvatar(persona.id, url)}
+                currentAvatarUrl={displayAvatarUrl}
+                personaName={persona.name}
+            />
         </div>
     );
 };

@@ -26,6 +26,12 @@ export const database = new gcp.sql.DatabaseInstance(
                 {
                     name: "timezone",
                     value: "UTC"
+                },
+                {
+                    // Increase max connections for concurrent API/worker/job pods
+                    // Default for db-g1-small is ~25, which is too low
+                    name: "max_connections",
+                    value: "50"
                 }
             ],
 
