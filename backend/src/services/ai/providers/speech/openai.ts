@@ -7,6 +7,7 @@ import { AbstractProvider, type SpeechProvider } from "../base";
 import type {
     TranscriptionRequest,
     TranscriptionResponse,
+    TranscriptionSegment,
     TTSRequest,
     TTSResponse
 } from "../../capabilities/speech/types";
@@ -58,11 +59,70 @@ export class OpenAISpeechProvider extends AbstractProvider implements SpeechProv
             throw new Error("Unsupported audio input format");
         }
 
+        // Determine if we need verbose response for timestamps
+        const needsVerbose =
+            request.timestamps || (request.timestampGranularities?.length ?? 0) > 0;
+
+        if (needsVerbose) {
+            // Use verbose_json for timestamps
+            const granularities = request.timestampGranularities ?? ["segment"];
+            const response = await client.audio.transcriptions.create({
+                model: request.model,
+                file: audioFile,
+                language: request.language,
+                prompt: request.prompt,
+                temperature: request.temperature,
+                response_format: "verbose_json",
+                timestamp_granularities: granularities
+            });
+
+            // Parse verbose response
+            const verboseResponse = response as OpenAI.Audio.Transcription & {
+                language?: string;
+                duration?: number;
+                segments?: Array<{
+                    id: number;
+                    start: number;
+                    end: number;
+                    text: string;
+                    words?: Array<{ word: string; start: number; end: number }>;
+                }>;
+            };
+
+            const segments: TranscriptionSegment[] | undefined = verboseResponse.segments?.map(
+                (seg, index) => ({
+                    id: seg.id ?? index,
+                    start: seg.start,
+                    end: seg.end,
+                    text: seg.text,
+                    words: seg.words?.map((w) => ({
+                        word: w.word,
+                        start: w.start,
+                        end: w.end
+                    }))
+                })
+            );
+
+            return {
+                text: verboseResponse.text,
+                language: verboseResponse.language,
+                duration: verboseResponse.duration,
+                segments,
+                metadata: {
+                    processingTimeMs: Date.now() - startTime,
+                    provider: this.provider,
+                    model: request.model
+                }
+            };
+        }
+
+        // Simple transcription without timestamps
         const response = await client.audio.transcriptions.create({
             model: request.model,
             file: audioFile,
             language: request.language,
-            prompt: request.prompt
+            prompt: request.prompt,
+            temperature: request.temperature
         });
 
         return {

@@ -258,7 +258,7 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
                 streamingContentRef.current = "";
                 setIsSending(false);
                 setExecutionStatus(null, null, null);
-                void refreshTokenUsage();
+                refreshTokenUsage();
             },
             onError: (error: string) => {
                 logger.error("SSE error", undefined, { error });
@@ -516,7 +516,9 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
                                                             </ol>
                                                         ),
                                                         li: ({ children }) => (
-                                                            <li className="ml-2">{children}</li>
+                                                            <li className="ml-2 [&>p]:inline [&>p]:my-0">
+                                                                {children}
+                                                            </li>
                                                         ),
                                                         p: ({ children }) => (
                                                             <p className="my-1.5">{children}</p>

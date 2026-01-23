@@ -4,10 +4,21 @@ FROM node:22-slim AS builder
 WORKDIR /app
 
 # Install build dependencies for native modules
+# Includes dependencies for:
+# - canvas (Cairo graphics library for chart generation)
+# - General native module compilation (Python, make, g++)
 RUN apt-get update && apt-get install -y \
     python3 \
     make \
     g++ \
+    # Canvas (node-canvas) dependencies
+    libcairo2-dev \
+    libpango1.0-dev \
+    libjpeg-dev \
+    libgif-dev \
+    librsvg2-dev \
+    libpixman-1-dev \
+    pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy root package files
@@ -43,6 +54,39 @@ FROM node:22-slim
 
 WORKDIR /app
 
+# Install runtime dependencies for native modules
+# Canvas: runtime libraries (without -dev) for chart generation
+# Playwright: browser dependencies for screenshot capture
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    # Canvas runtime dependencies
+    libcairo2 \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libjpeg62-turbo \
+    libgif7 \
+    librsvg2-2 \
+    libpixman-1-0 \
+    # Playwright/Chromium dependencies
+    libnss3 \
+    libnspr4 \
+    libatk1.0-0 \
+    libatk-bridge2.0-0 \
+    libcups2 \
+    libdrm2 \
+    libdbus-1-3 \
+    libxkbcommon0 \
+    libatspi2.0-0 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxfixes3 \
+    libxrandr2 \
+    libgbm1 \
+    libasound2 \
+    # Fonts for proper text rendering
+    fonts-liberation \
+    fonts-noto-color-emoji \
+    && rm -rf /var/lib/apt/lists/*
+
 # Copy root package files
 COPY package*.json ./
 
@@ -61,6 +105,10 @@ RUN sed -i 's|"main": "src/index.ts"|"main": "dist/index.js"|g' ./shared/package
 
 # Install production dependencies only (skip prepare scripts like husky)
 RUN npm ci --workspace=backend --workspace=shared --omit=dev --ignore-scripts
+
+# Install Playwright browsers (Chromium only for screenshot capture)
+# This downloads the browser binary to a shared location
+RUN npx playwright install chromium
 
 # Copy migrations
 COPY backend/migrations ./backend/migrations

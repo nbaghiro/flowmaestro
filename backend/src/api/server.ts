@@ -34,6 +34,7 @@ import { publicChatInterfaceRoutes } from "./routes/public/chat-interfaces";
 import { publicFormInterfaceRoutes } from "./routes/public/form-interfaces";
 import { templateRoutes } from "./routes/templates";
 import { threadRoutes } from "./routes/threads";
+import { toolRoutes } from "./routes/tools";
 import { triggerRoutes } from "./routes/triggers";
 import { publicApiV1Routes } from "./routes/v1";
 import { webhookRoutes } from "./routes/webhooks";
@@ -159,6 +160,7 @@ export async function buildServer() {
     await fastify.register(agentRoutes, { prefix: "/agents" });
     await fastify.register(apiKeyRoutes, { prefix: "/api-keys" });
     await fastify.register(threadRoutes, { prefix: "/threads" });
+    await fastify.register(toolRoutes, { prefix: "/tools" });
     await fastify.register(triggerRoutes);
     await fastify.register(folderRoutes);
     await fastify.register(formInterfaceRoutes);

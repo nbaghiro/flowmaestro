@@ -2,7 +2,7 @@ import type { JsonObject } from "@flowmaestro/shared";
 import type { SafetyConfig } from "../../core/safety/types";
 
 export type LLMProvider = "openai" | "anthropic" | "google" | "cohere" | "huggingface";
-export type ToolType = "workflow" | "function" | "knowledge_base" | "agent" | "mcp";
+export type ToolType = "workflow" | "function" | "knowledge_base" | "agent" | "mcp" | "builtin";
 export type MemoryType = "buffer" | "summary" | "vector";
 
 export interface Tool {
@@ -18,7 +18,7 @@ export interface ToolConfig {
     // For workflow type
     workflowId?: string;
 
-    // For function type
+    // For function type (simple utility functions)
     functionName?: string;
 
     // For knowledge_base type
@@ -28,9 +28,13 @@ export interface ToolConfig {
     agentId?: string;
     agentName?: string;
 
-    // For MCP type
+    // For MCP type (integration tools)
     connectionId?: string;
     provider?: string;
+
+    // For builtin type
+    category?: string;
+    creditCost?: number;
 }
 
 export interface MemoryConfig {

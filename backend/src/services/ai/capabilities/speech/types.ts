@@ -5,6 +5,11 @@
 import type { AIProvider, AudioFormat, ResponseMetadata } from "../../client/types";
 
 /**
+ * Timestamp granularity options for transcription
+ */
+export type TimestampGranularity = "segment" | "word";
+
+/**
  * Speech-to-text (transcription) request
  */
 export interface TranscriptionRequest {
@@ -18,8 +23,42 @@ export interface TranscriptionRequest {
     language?: string;
     /** Transcription prompt/context */
     prompt?: string;
+    /** Sampling temperature (0-1, 0 = deterministic) */
+    temperature?: number;
+    /** Include timestamps in response */
+    timestamps?: boolean;
+    /** Timestamp granularity (segment, word, or both) */
+    timestampGranularities?: TimestampGranularity[];
     /** Connection ID for multi-tenant auth */
     connectionId?: string;
+}
+
+/**
+ * Word with timing information
+ */
+export interface TranscriptionWord {
+    /** The word */
+    word: string;
+    /** Start time in seconds */
+    start: number;
+    /** End time in seconds */
+    end: number;
+}
+
+/**
+ * Transcription segment with timing
+ */
+export interface TranscriptionSegment {
+    /** Segment ID */
+    id: number;
+    /** Start time in seconds */
+    start: number;
+    /** End time in seconds */
+    end: number;
+    /** Segment text */
+    text: string;
+    /** Word-level timestamps (if requested) */
+    words?: TranscriptionWord[];
 }
 
 /**
@@ -30,6 +69,10 @@ export interface TranscriptionResponse {
     text: string;
     /** Detected language */
     language?: string;
+    /** Audio duration in seconds */
+    duration?: number;
+    /** Transcription segments with timing (if timestamps requested) */
+    segments?: TranscriptionSegment[];
     /** Response metadata */
     metadata: ResponseMetadata;
 }

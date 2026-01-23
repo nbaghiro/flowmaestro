@@ -17,7 +17,7 @@ import {
     ToolsSection,
     LayoutPresetButtons
 } from "../components/agent-builder";
-import { AddCustomMCPDialog } from "../components/agents/AddCustomMCPDialog";
+import { AddBuiltinToolDialog } from "../components/agents/AddBuiltinToolDialog";
 import { AddKnowledgeBaseDialog } from "../components/agents/AddKnowledgeBaseDialog";
 import { AddMCPIntegrationDialog } from "../components/agents/AddMCPIntegrationDialog";
 import { AddWorkflowDialog } from "../components/agents/AddWorkflowDialog";
@@ -130,8 +130,8 @@ export function AgentBuilder() {
     const [removingToolId, setRemovingToolId] = useState<string | null>(null);
     const [isWorkflowDialogOpen, setIsWorkflowDialogOpen] = useState(false);
     const [isMCPDialogOpen, setIsMCPDialogOpen] = useState(false);
-    const [isCustomMCPDialogOpen, setIsCustomMCPDialogOpen] = useState(false);
     const [isKnowledgeBaseDialogOpen, setIsKnowledgeBaseDialogOpen] = useState(false);
+    const [isBuiltinToolDialogOpen, setIsBuiltinToolDialogOpen] = useState(false);
 
     // Thread management state
     const [threadToDelete, setThreadToDelete] = useState<{
@@ -731,6 +731,38 @@ export function AgentBuilder() {
         }
     };
 
+    const handleAddBuiltinTools = async (toolsToAdd: AddToolRequest[]) => {
+        if (!currentAgent) return;
+
+        try {
+            // Use batch endpoint to add all tools atomically
+            const response = await addToolsBatch(currentAgent.id, toolsToAdd);
+
+            // Update local state from the store's updated agent
+            const updatedAgent = useAgentStore.getState().currentAgent;
+            if (updatedAgent) {
+                setTools(updatedAgent.available_tools || []);
+            }
+
+            // Log results
+            if (response.data.added.length > 0) {
+                logger.info("Successfully added builtin tools", {
+                    count: response.data.added.length
+                });
+            }
+            if (response.data.skipped.length > 0) {
+                logger.debug("Skipped builtin tools", {
+                    count: response.data.skipped.length,
+                    tools: response.data.skipped
+                });
+            }
+        } catch (error) {
+            const errorMsg = error instanceof Error ? error.message : "Failed to add builtin tools";
+            setError(errorMsg);
+            throw error;
+        }
+    };
+
     const handleAddKnowledgeBases = async (knowledgeBases: KnowledgeBase[]) => {
         if (!currentAgent) return;
 
@@ -967,13 +999,6 @@ export function AgentBuilder() {
                     </div>
                 </div>
 
-                {/* Error message */}
-                {error && (
-                    <div className="mx-6 mt-4 p-4 bg-destructive/10 border border-destructive/20 rounded-lg flex-shrink-0">
-                        <p className="text-sm text-destructive">{error}</p>
-                    </div>
-                )}
-
                 {/* Main content area */}
                 <div className="flex-1 flex overflow-hidden">
                     {/* Build tab uses the new flexible panel layout */}
@@ -983,7 +1008,7 @@ export function AgentBuilder() {
                                 <NavigationPanel activeTab={activeTab} onTabChange={setActiveTab} />
                             }
                             configPanel={
-                                <ConfigPanel>
+                                <ConfigPanel error={error} onDismissError={() => setError(null)}>
                                     <ModelSection
                                         connections={llmConnections}
                                         selectedConnectionId={connectionId}
@@ -1036,7 +1061,7 @@ export function AgentBuilder() {
                                             setIsKnowledgeBaseDialogOpen(true)
                                         }
                                         onAddMCP={() => setIsMCPDialogOpen(true)}
-                                        onAddCustomMCP={() => setIsCustomMCPDialogOpen(true)}
+                                        onAddBuiltinTool={() => setIsBuiltinToolDialogOpen(true)}
                                     />
                                 </ConfigPanel>
                             }
@@ -1290,13 +1315,8 @@ export function AgentBuilder() {
                     isOpen={isMCPDialogOpen}
                     onClose={() => setIsMCPDialogOpen(false)}
                     onAddTools={handleAddMCPTools}
+                    onAddCustomMCP={handleAddCustomMCP}
                     existingToolNames={tools.map((t) => t.name)}
-                />
-
-                <AddCustomMCPDialog
-                    isOpen={isCustomMCPDialogOpen}
-                    onClose={() => setIsCustomMCPDialogOpen(false)}
-                    onAdd={handleAddCustomMCP}
                 />
 
                 <AddKnowledgeBaseDialog
@@ -1306,6 +1326,13 @@ export function AgentBuilder() {
                     existingKnowledgeBaseIds={tools
                         .filter((t) => t.type === "knowledge_base")
                         .map((t) => t.config.knowledgeBaseId as string)}
+                />
+
+                <AddBuiltinToolDialog
+                    isOpen={isBuiltinToolDialogOpen}
+                    onClose={() => setIsBuiltinToolDialogOpen(false)}
+                    onAddTools={handleAddBuiltinTools}
+                    existingToolNames={tools.map((t) => t.name)}
                 />
 
                 {/* Delete Thread Confirmation Dialog */}

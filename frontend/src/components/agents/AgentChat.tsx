@@ -116,7 +116,7 @@ export function AgentChat({ agent }: AgentChatProps) {
     useEffect(() => {
         if (currentThread) {
             setTokenUsage(normalizeTokenUsage(currentThread.metadata?.tokenUsage || null));
-            void refreshTokenUsage();
+            refreshTokenUsage();
         }
     }, [currentThread?.id, refreshTokenUsage, currentThread?.metadata?.tokenUsage]);
 
@@ -263,7 +263,7 @@ export function AgentChat({ agent }: AgentChatProps) {
                 streamingContentRef.current = "";
                 setIsSending(false);
                 setExecutionStatus(null, null, null);
-                void refreshTokenUsage();
+                refreshTokenUsage();
             },
             onError: (error: string) => {
                 logger.error("SSE error", undefined, { error });
@@ -525,7 +525,9 @@ export function AgentChat({ agent }: AgentChatProps) {
                                                             </ol>
                                                         ),
                                                         li: ({ children }) => (
-                                                            <li className="ml-2">{children}</li>
+                                                            <li className="ml-2 [&>p]:inline [&>p]:my-0">
+                                                                {children}
+                                                            </li>
                                                         ),
                                                         p: ({ children }) => (
                                                             <p className="my-1.5">{children}</p>

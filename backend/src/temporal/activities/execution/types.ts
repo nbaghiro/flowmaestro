@@ -390,7 +390,20 @@ export type ExecutableNodeType =
     | "userInput"
     | "parallel"
     | "loop-start"
-    | "loop-end";
+    | "loop-end"
+    // Built-in tools
+    | "webSearch"
+    | "web_search"
+    | "webBrowse"
+    | "web_browse"
+    | "codeExecute"
+    | "code_execute"
+    | "dataAnalyze"
+    | "data_analyze"
+    | "imageGenerate"
+    | "image_generate"
+    | "pdfGenerate"
+    | "pdf_generate";
 
 /**
  * Loop context for nodes inside a loop

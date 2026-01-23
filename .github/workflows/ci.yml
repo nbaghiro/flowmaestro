@@ -110,9 +110,14 @@ jobs:
   # ============================================================================
 
   unit-tests:
-    name: Unit Tests
+    name: Unit Tests (${{ matrix.shard }}/${{ matrix.total-shards }})
     runs-on: ubuntu-latest
     needs: [lint-app]
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+        total-shards: [2]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -123,16 +128,36 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
 
+      - name: Setup Python (for syntax validation tests)
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
       - name: Install dependencies
         run: npm ci
 
-      - name: Run unit tests
-        run: npm run test:unit
+      # Run shared tests (small, no sharding needed) - only on first shard
+      - name: Run shared tests
+        if: matrix.shard == 1
+        run: npm run test --workspace=shared
+
+      # Run backend unit tests with sharding
+      - name: Run backend unit tests (shard ${{ matrix.shard }}/${{ matrix.total-shards }})
+        run: npm run test:unit --workspace=backend -- --shard=${{ matrix.shard }}/${{ matrix.total-shards }}
+
+      # Run frontend tests with sharding
+      - name: Run frontend tests (shard ${{ matrix.shard }}/${{ matrix.total-shards }})
+        run: npm run test --workspace=frontend -- --shard=${{ matrix.shard }}/${{ matrix.total-shards }}
 
   integration-tests:
-    name: Integration Tests
+    name: Integration Tests (${{ matrix.shard }}/${{ matrix.total-shards }})
     runs-on: ubuntu-latest
     needs: [lint-app]
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+        total-shards: [3]
     env:
       DATABASE_URL: postgresql://flowmaestro:flowmaestro_dev_password@localhost:5432/flowmaestro
       POSTGRES_HOST: localhost
@@ -197,9 +222,9 @@ jobs:
             exit 1
           fi
 
-      # Run integration tests
-      - name: Run integration tests
-        run: npm run test:integration
+      # Run integration tests (sharded)
+      - name: Run integration tests (shard ${{ matrix.shard }}/${{ matrix.total-shards }})
+        run: npm run test:integration --workspace=backend -- --shard=${{ matrix.shard }}/${{ matrix.total-shards }}
 
       # Stop worker (best-effort) to keep logs clean
       - name: Stop Temporal worker
@@ -212,6 +237,25 @@ jobs:
           if [ -f /tmp/worker_pid ]; then
             kill $(cat /tmp/worker_pid) || true
           fi
+
+  # Summary job to ensure all test shards passed
+  tests-complete:
+    name: Tests Complete
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests]
+    if: always()
+    steps:
+      - name: Check test results
+        run: |
+          if [ "${{ needs.unit-tests.result }}" != "success" ]; then
+            echo "Unit tests failed"
+            exit 1
+          fi
+          if [ "${{ needs.integration-tests.result }}" != "success" ]; then
+            echo "Integration tests failed"
+            exit 1
+          fi
+          echo "All tests passed!"
 
   build:
     name: Build

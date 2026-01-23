@@ -1,4 +1,4 @@
-import { ArrowLeft, Check, Plus, Search, X } from "lucide-react";
+import { ArrowLeft, Check, Globe, Plus, Search, Server, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { ALL_PROVIDERS, type Provider } from "@flowmaestro/shared";
 import { getConnectionMCPTools } from "../../lib/api";
@@ -11,23 +11,37 @@ import { Spinner } from "../common/Spinner";
 import { NewConnectionDialog } from "../connections/NewConnectionDialog";
 import type { Connection, MCPTool, AddToolRequest } from "../../lib/api";
 
+interface CustomMCPServer {
+    name: string;
+    url: string;
+    apiKey?: string;
+}
+
 interface AddMCPIntegrationDialogProps {
     isOpen: boolean;
     onClose: () => void;
     onAddTools: (tools: AddToolRequest[]) => Promise<void>;
+    onAddCustomMCP: (server: CustomMCPServer) => Promise<void>;
     existingToolNames?: string[]; // Names of tools already added to agent
 }
 
-type DialogView = "provider-list" | "connection-list" | "add-connection" | "tools";
+type DialogView =
+    | "source-choice"
+    | "provider-list"
+    | "connection-list"
+    | "add-connection"
+    | "tools"
+    | "custom-mcp";
 
 export function AddMCPIntegrationDialog({
     isOpen,
     onClose,
     onAddTools,
+    onAddCustomMCP,
     existingToolNames = []
 }: AddMCPIntegrationDialogProps) {
     const { connections, loading, fetchConnections } = useConnectionStore();
-    const [view, setView] = useState<DialogView>("provider-list");
+    const [view, setView] = useState<DialogView>("source-choice");
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedCategory, setSelectedCategory] = useState<string>("all");
     const [currentProvider, setCurrentProvider] = useState<Provider | null>(null);
@@ -41,11 +55,17 @@ export function AddMCPIntegrationDialog({
     // For creating new connections
     const [isNewConnectionDialogOpen, setIsNewConnectionDialogOpen] = useState(false);
 
+    // Custom MCP server form state
+    const [customServerName, setCustomServerName] = useState("");
+    const [customServerUrl, setCustomServerUrl] = useState("");
+    const [customServerApiKey, setCustomServerApiKey] = useState("");
+    const [isAddingCustomServer, setIsAddingCustomServer] = useState(false);
+
     useEffect(() => {
         if (isOpen) {
             fetchConnections();
             // Reset state when opening
-            setView("provider-list");
+            setView("source-choice");
             setSearchQuery("");
             setSelectedCategory("all");
             setCurrentProvider(null);
@@ -53,6 +73,10 @@ export function AddMCPIntegrationDialog({
             setAvailableTools([]);
             setSelectedTools(new Set());
             setError(null);
+            // Reset custom MCP form
+            setCustomServerName("");
+            setCustomServerUrl("");
+            setCustomServerApiKey("");
         }
     }, [isOpen, fetchConnections]);
 
@@ -152,6 +176,19 @@ export function AddMCPIntegrationDialog({
         setIsNewConnectionDialogOpen(true);
     };
 
+    const handleBackToSourceChoice = () => {
+        setView("source-choice");
+        setCurrentProvider(null);
+        setSelectedConnection(null);
+        setSearchQuery("");
+        setSelectedCategory("all");
+        setError(null);
+        // Reset custom MCP form
+        setCustomServerName("");
+        setCustomServerUrl("");
+        setCustomServerApiKey("");
+    };
+
     const handleBackToProviders = () => {
         setView("provider-list");
         setCurrentProvider(null);
@@ -223,6 +260,44 @@ export function AddMCPIntegrationDialog({
         }
     };
 
+    const handleCustomMCPSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError(null);
+
+        // Validation
+        if (!customServerName.trim()) {
+            setError("Server name is required");
+            return;
+        }
+
+        if (!customServerUrl.trim()) {
+            setError("Server URL is required");
+            return;
+        }
+
+        // Basic URL validation
+        try {
+            new URL(customServerUrl);
+        } catch {
+            setError("Please enter a valid URL");
+            return;
+        }
+
+        setIsAddingCustomServer(true);
+        try {
+            await onAddCustomMCP({
+                name: customServerName.trim(),
+                url: customServerUrl.trim(),
+                apiKey: customServerApiKey.trim() || undefined
+            });
+            onClose();
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Failed to add custom MCP server");
+        } finally {
+            setIsAddingCustomServer(false);
+        }
+    };
+
     if (!isOpen) return null;
 
     return (
@@ -244,6 +319,11 @@ export function AddMCPIntegrationDialog({
                     {/* Header */}
                     <div className="flex items-center justify-between p-6 pb-4 border-b border-border">
                         <div className="flex items-center gap-3">
+                            {(view === "provider-list" || view === "custom-mcp") && (
+                                <Button variant="icon" onClick={handleBackToSourceChoice}>
+                                    <ArrowLeft className="w-5 h-5" />
+                                </Button>
+                            )}
                             {(view === "connection-list" || view === "tools") && (
                                 <Button
                                     variant="icon"
@@ -258,13 +338,17 @@ export function AddMCPIntegrationDialog({
                             )}
                             <div>
                                 <h2 className="text-lg font-semibold text-foreground">
+                                    {view === "source-choice" && "Add MCP Integration"}
                                     {view === "provider-list" && "Add Integration Tools"}
                                     {view === "connection-list" &&
                                         `Select ${currentProvider?.displayName} Connection`}
                                     {view === "add-connection" && "New Connection"}
                                     {view === "tools" && `${currentProvider?.displayName} Tools`}
+                                    {view === "custom-mcp" && "Connect Custom MCP Server"}
                                 </h2>
                                 <p className="text-sm text-muted-foreground mt-1">
+                                    {view === "source-choice" &&
+                                        "Choose how you want to add MCP tools to your agent"}
                                     {view === "provider-list" &&
                                         "Choose an integration provider to add tools to your agent"}
                                     {view === "connection-list" &&
@@ -272,6 +356,8 @@ export function AddMCPIntegrationDialog({
                                     {view === "add-connection" && "Choose an authentication method"}
                                     {view === "tools" &&
                                         `${selectedConnection?.name} - Select tools to add`}
+                                    {view === "custom-mcp" &&
+                                        "Connect to your own MCP server endpoint"}
                                 </p>
                             </div>
                         </div>
@@ -289,6 +375,52 @@ export function AddMCPIntegrationDialog({
 
                     {/* Content */}
                     <div className="flex-1 overflow-y-auto">
+                        {view === "source-choice" && (
+                            <div className="p-6">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    {/* From Provider Option */}
+                                    <button
+                                        onClick={() => setView("provider-list")}
+                                        className="flex flex-col items-center gap-4 p-6 text-center border border-border rounded-xl transition-all bg-card hover:border-primary/50 hover:bg-accent hover:shadow-sm"
+                                        type="button"
+                                    >
+                                        <div className="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center">
+                                            <Globe className="w-7 h-7 text-primary" />
+                                        </div>
+                                        <div>
+                                            <h3 className="font-medium text-foreground mb-1">
+                                                From Provider
+                                            </h3>
+                                            <p className="text-sm text-muted-foreground">
+                                                Browse and connect to pre-built MCP integrations
+                                                from popular services
+                                            </p>
+                                        </div>
+                                    </button>
+
+                                    {/* Custom MCP Server Option */}
+                                    <button
+                                        onClick={() => setView("custom-mcp")}
+                                        className="flex flex-col items-center gap-4 p-6 text-center border border-border rounded-xl transition-all bg-card hover:border-primary/50 hover:bg-accent hover:shadow-sm"
+                                        type="button"
+                                    >
+                                        <div className="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center">
+                                            <Server className="w-7 h-7 text-primary" />
+                                        </div>
+                                        <div>
+                                            <h3 className="font-medium text-foreground mb-1">
+                                                Custom MCP Server
+                                            </h3>
+                                            <p className="text-sm text-muted-foreground">
+                                                Connect to your own MCP server using a custom
+                                                endpoint URL
+                                            </p>
+                                        </div>
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
                         {view === "provider-list" && (
                             <>
                                 {/* Search and Filter Bar */}
@@ -448,6 +580,80 @@ export function AddMCPIntegrationDialog({
                                     onToggle={handleToggleTool}
                                     onSelectAll={handleSelectAll}
                                 />
+                            </div>
+                        )}
+
+                        {view === "custom-mcp" && (
+                            <div className="p-6">
+                                <form onSubmit={handleCustomMCPSubmit} className="space-y-4">
+                                    {/* Server Name */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-foreground mb-2">
+                                            Server Name
+                                        </label>
+                                        <Input
+                                            type="text"
+                                            value={customServerName}
+                                            onChange={(e) => setCustomServerName(e.target.value)}
+                                            placeholder="My Custom MCP Server"
+                                            disabled={isAddingCustomServer}
+                                        />
+                                    </div>
+
+                                    {/* Server URL */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-foreground mb-2">
+                                            Server URL
+                                        </label>
+                                        <Input
+                                            type="url"
+                                            value={customServerUrl}
+                                            onChange={(e) => setCustomServerUrl(e.target.value)}
+                                            placeholder="https://mcp.example.com"
+                                            disabled={isAddingCustomServer}
+                                        />
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                            HTTP/HTTPS endpoint where your MCP server is hosted
+                                        </p>
+                                    </div>
+
+                                    {/* API Key (Optional) */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-foreground mb-2">
+                                            API Key / Token (optional)
+                                        </label>
+                                        <Input
+                                            type="password"
+                                            value={customServerApiKey}
+                                            onChange={(e) => setCustomServerApiKey(e.target.value)}
+                                            placeholder="••••••••••••••••"
+                                            disabled={isAddingCustomServer}
+                                        />
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                            Authentication credentials if required by your server
+                                        </p>
+                                    </div>
+
+                                    {/* Footer */}
+                                    <div className="flex items-center justify-end gap-3 pt-4">
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            onClick={onClose}
+                                            disabled={isAddingCustomServer}
+                                        >
+                                            Cancel
+                                        </Button>
+                                        <Button
+                                            type="submit"
+                                            variant="primary"
+                                            disabled={isAddingCustomServer}
+                                            loading={isAddingCustomServer}
+                                        >
+                                            Connect Server
+                                        </Button>
+                                    </div>
+                                </form>
                             </div>
                         )}
                     </div>

@@ -7,6 +7,6 @@
         "jsx": "react",
         "types": ["node", "jest"]
     },
-    "include": ["src/**/*", "tests/**/*", "../shared/src/**/*"],
+    "include": ["src/**/*", "__tests__/**/*", "../shared/src/**/*"],
     "exclude": ["node_modules", "dist"]
 }

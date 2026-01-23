@@ -37,7 +37,7 @@ export interface FinalizeCreditsInput {
     userId: string | null;
     reservedAmount: number;
     actualAmount: number;
-    operationType: "workflow_execution" | "agent_execution";
+    operationType: "workflow_execution" | "agent_execution" | "persona_execution";
     operationId: string;
     description: string;
     metadata?: Record<string, unknown>;
