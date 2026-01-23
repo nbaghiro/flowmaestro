@@ -792,7 +792,7 @@ export function generateKnowledgeBaseTool(kb: KnowledgeBaseModel): Tool {
         id: `kb-tool-${kb.id}`,
         type: "knowledge_base",
         name: generateKnowledgeBaseToolName(kb.name),
-        description: `Search the "${kb.name}" knowledge base for relevant information. ${kb.description || ""}`,
+        description: `Search the "${kb.name}" knowledge base to find information from uploaded documents and files. You have access to this knowledge base and can search it using this tool. Use this when the user asks about documents, files, or information that might be in the knowledge base.${kb.description ? ` ${kb.description}` : ""}`,
         schema,
         config: {
             knowledgeBaseId: kb.id
@@ -906,11 +906,29 @@ async function callOpenAI(input: OpenAICallInput): Promise<LLMResponse> {
     const { model, apiKey, messages, tools, temperature, maxTokens, executionId } = input;
 
     // Format messages for OpenAI (sanitize tool names for consistency)
-    const formattedMessages = messages.map((msg) => ({
-        role: msg.role === "assistant" ? "assistant" : msg.role === "tool" ? "tool" : "user",
-        content: msg.content,
-        ...(msg.tool_calls && {
-            tool_calls: msg.tool_calls.map((tc) => ({
+    const formattedMessages = messages.map((msg) => {
+        interface OpenAIMessage {
+            role: "assistant" | "tool" | "user";
+            content: string;
+            tool_calls?: Array<{
+                id: string;
+                type: "function";
+                function: {
+                    name: string;
+                    arguments: string;
+                };
+            }>;
+            tool_call_id?: string;
+            name?: string;
+        }
+
+        const formatted: OpenAIMessage = {
+            role: msg.role === "assistant" ? "assistant" : msg.role === "tool" ? "tool" : "user",
+            content: msg.content
+        };
+
+        if (msg.tool_calls) {
+            formatted.tool_calls = msg.tool_calls.map((tc) => ({
                 id: tc.id,
                 type: "function",
                 function: {
@@ -920,11 +938,31 @@ async function callOpenAI(input: OpenAICallInput): Promise<LLMResponse> {
                             ? tc.arguments
                             : JSON.stringify(tc.arguments)
                 }
-            }))
-        }),
-        ...(msg.tool_call_id && { tool_call_id: msg.tool_call_id }),
-        ...(msg.tool_name && { name: sanitizeToolName(msg.tool_name) })
-    }));
+            }));
+        }
+
+        // For tool messages, tool_call_id is REQUIRED by OpenAI
+        if (msg.role === "tool") {
+            if (!msg.tool_call_id) {
+                activityLogger.error(
+                    "Tool message missing tool_call_id",
+                    new Error("Tool message missing required tool_call_id"),
+                    {
+                        messageId: msg.id,
+                        toolName: msg.tool_name,
+                        content: msg.content?.substring(0, 100)
+                    }
+                );
+                throw new Error("Tool message missing required 'tool_call_id' field");
+            }
+            formatted.tool_call_id = msg.tool_call_id;
+            if (msg.tool_name) {
+                formatted.name = sanitizeToolName(msg.tool_name);
+            }
+        }
+
+        return formatted;
+    });
 
     // Format tools for OpenAI function calling with name and schema sanitization
     const formattedTools = tools.map((tool) => ({
@@ -1083,32 +1121,52 @@ async function callOpenAI(input: OpenAICallInput): Promise<LLMResponse> {
     }
 
     // Parse accumulated argument strings into tool calls
+    // Filter out invalid tool calls (missing id or name)
     if (toolCalls) {
+        const validToolCalls: ToolCall[] = [];
         for (let i = 0; i < toolCalls.length; i++) {
+            const toolCall = toolCalls[i];
+
+            // Skip tool calls with missing id or name
+            if (!toolCall.id || !toolCall.name) {
+                activityLogger.warn("Skipping invalid tool call", {
+                    index: i,
+                    id: toolCall.id,
+                    name: toolCall.name,
+                    hasId: !!toolCall.id,
+                    hasName: !!toolCall.name
+                });
+                continue;
+            }
+
             if (toolCallArgsStrings[i]) {
                 try {
-                    toolCalls[i].arguments = JSON.parse(toolCallArgsStrings[i]);
+                    toolCall.arguments = JSON.parse(toolCallArgsStrings[i]);
                     activityLogger.debug("Parsed tool call arguments", {
-                        toolName: toolCalls[i].name,
+                        toolName: toolCall.name,
                         argsString: toolCallArgsStrings[i],
-                        parsedArgs: toolCalls[i].arguments
+                        parsedArgs: toolCall.arguments
                     });
                 } catch (parseError) {
                     // If parsing fails, use empty object
                     activityLogger.warn("Failed to parse tool call arguments", {
-                        toolName: toolCalls[i].name,
+                        toolName: toolCall.name,
                         argsString: toolCallArgsStrings[i],
                         error: parseError instanceof Error ? parseError.message : "Unknown error"
                     });
-                    toolCalls[i].arguments = {};
+                    toolCall.arguments = {};
                 }
             } else {
                 activityLogger.warn("No arguments string accumulated for tool call", {
-                    toolName: toolCalls[i].name,
+                    toolName: toolCall.name,
                     toolCallIndex: i
                 });
+                toolCall.arguments = {};
             }
+
+            validToolCalls.push(toolCall);
         }
+        toolCalls = validToolCalls.length > 0 ? validToolCalls : undefined;
     }
 
     return {
@@ -1129,20 +1187,39 @@ async function callAnthropic(input: AnthropicCallInput): Promise<LLMResponse> {
     // Format messages for Anthropic (sanitize tool names for consistency)
     const formattedMessages = threadMessages.map((msg) => {
         if (msg.role === "assistant") {
-            return {
-                role: "assistant",
-                content: msg.tool_calls
-                    ? [
-                          { type: "text", text: msg.content },
-                          ...msg.tool_calls.map((tc) => ({
-                              type: "tool_use",
-                              id: tc.id,
-                              name: sanitizeToolName(tc.name),
-                              input: tc.arguments
-                          }))
-                      ]
-                    : msg.content
-            };
+            if (msg.tool_calls && msg.tool_calls.length > 0) {
+                // Build content array, only including text if it's non-empty
+                const content: Array<{
+                    type: string;
+                    text?: string;
+                    id?: string;
+                    name?: string;
+                    input?: JsonObject;
+                }> = [];
+                if (msg.content && msg.content.trim()) {
+                    content.push({ type: "text", text: msg.content });
+                }
+                content.push(
+                    ...msg.tool_calls.map((tc) => ({
+                        type: "tool_use",
+                        id: tc.id,
+                        name: sanitizeToolName(tc.name),
+                        input: tc.arguments
+                    }))
+                );
+                return {
+                    role: "assistant",
+                    content:
+                        content.length === 1 && content[0].type === "text"
+                            ? content[0].text!
+                            : content
+                };
+            } else {
+                return {
+                    role: "assistant",
+                    content: msg.content || ""
+                };
+            }
         } else if (msg.role === "tool") {
             return {
                 role: "user",
@@ -1233,6 +1310,7 @@ async function callAnthropic(input: AnthropicCallInput): Promise<LLMResponse> {
                         delta?: {
                             type?: string;
                             text?: string;
+                            partial_json?: string;
                             stop_reason?: string;
                         };
                         content_block?: {
@@ -1260,23 +1338,33 @@ async function callAnthropic(input: AnthropicCallInput): Promise<LLMResponse> {
                         parsed.delta?.type === "text_delta"
                     ) {
                         const text = parsed.delta.text;
-                        if (text && executionId) {
-                            // Emit token immediately for streaming
-                            await emitAgentToken({ executionId, token: text });
+                        if (text) {
+                            // Always accumulate content
                             fullContent += text;
+                            // Emit token for streaming if executionId is available
+                            if (executionId) {
+                                await emitAgentToken({ executionId, token: text });
+                            }
                         }
                     }
 
-                    // Handle content block start (for tool use)
-                    if (
-                        parsed.type === "content_block_start" &&
-                        parsed.content_block?.type === "tool_use"
-                    ) {
-                        currentToolUse = {
-                            id: parsed.content_block.id || "",
-                            name: parsed.content_block.name || "",
-                            input: ""
-                        };
+                    // Handle content block start (for text or tool use)
+                    if (parsed.type === "content_block_start" && parsed.content_block) {
+                        if (parsed.content_block.type === "text" && parsed.content_block.text) {
+                            fullContent += parsed.content_block.text;
+                            if (executionId) {
+                                await emitAgentToken({
+                                    executionId,
+                                    token: parsed.content_block.text
+                                });
+                            }
+                        } else if (parsed.content_block.type === "tool_use") {
+                            currentToolUse = {
+                                id: parsed.content_block.id || "",
+                                name: parsed.content_block.name || "",
+                                input: ""
+                            };
+                        }
                     }
 
                     // Handle input_json delta (for tool arguments)
@@ -1284,8 +1372,8 @@ async function callAnthropic(input: AnthropicCallInput): Promise<LLMResponse> {
                         parsed.type === "content_block_delta" &&
                         parsed.delta?.type === "input_json_delta"
                     ) {
-                        if (currentToolUse && parsed.delta.text) {
-                            currentToolUse.input += parsed.delta.text;
+                        if (currentToolUse && parsed.delta.partial_json) {
+                            currentToolUse.input += parsed.delta.partial_json;
                         }
                     }
 
@@ -1293,16 +1381,30 @@ async function callAnthropic(input: AnthropicCallInput): Promise<LLMResponse> {
                     if (parsed.type === "content_block_stop" && currentToolUse) {
                         if (!toolCalls) toolCalls = [];
                         try {
+                            const args = currentToolUse.input
+                                ? JSON.parse(currentToolUse.input)
+                                : {};
                             toolCalls.push({
                                 id: currentToolUse.id,
                                 name: currentToolUse.name,
-                                arguments: JSON.parse(currentToolUse.input)
+                                arguments: args
                             });
-                        } catch (error) {
-                            activityLogger.error(
-                                "Failed to parse Anthropic tool input JSON",
-                                error instanceof Error ? error : new Error(String(error))
-                            );
+                        } catch (parseError) {
+                            activityLogger.warn("Failed to parse tool call arguments", {
+                                id: currentToolUse.id,
+                                name: currentToolUse.name,
+                                input: currentToolUse.input,
+                                error:
+                                    parseError instanceof Error
+                                        ? parseError.message
+                                        : "Unknown error"
+                            });
+                            // Still add the tool call with empty arguments
+                            toolCalls.push({
+                                id: currentToolUse.id,
+                                name: currentToolUse.name,
+                                arguments: {}
+                            });
                         }
                         currentToolUse = null;
                     }
@@ -1310,6 +1412,40 @@ async function callAnthropic(input: AnthropicCallInput): Promise<LLMResponse> {
                     // Handle message delta (stop reason)
                     if (parsed.type === "message_delta" && parsed.delta?.stop_reason) {
                         stopReason = parsed.delta.stop_reason;
+                    }
+
+                    // Finalize any pending tool calls when message stops
+                    if (parsed.type === "message_stop" && currentToolUse) {
+                        if (!toolCalls) toolCalls = [];
+                        try {
+                            const args = currentToolUse.input
+                                ? JSON.parse(currentToolUse.input)
+                                : {};
+                            toolCalls.push({
+                                id: currentToolUse.id,
+                                name: currentToolUse.name,
+                                arguments: args
+                            });
+                        } catch (parseError) {
+                            activityLogger.warn(
+                                "Failed to parse tool call arguments on message_stop",
+                                {
+                                    id: currentToolUse.id,
+                                    name: currentToolUse.name,
+                                    input: currentToolUse.input,
+                                    error:
+                                        parseError instanceof Error
+                                            ? parseError.message
+                                            : "Unknown error"
+                                }
+                            );
+                            toolCalls.push({
+                                id: currentToolUse.id,
+                                name: currentToolUse.name,
+                                arguments: {}
+                            });
+                        }
+                        currentToolUse = null;
                     }
 
                     // Capture usage tokens (Anthropic streams usage on multiple event types)
@@ -1351,6 +1487,23 @@ async function callAnthropic(input: AnthropicCallInput): Promise<LLMResponse> {
         };
     }
 
+    // Filter out invalid tool calls before returning
+    if (toolCalls) {
+        const validToolCalls = toolCalls.filter((tc) => {
+            if (!tc.id || !tc.name) {
+                activityLogger.warn("Filtering invalid Anthropic tool call", {
+                    id: tc.id,
+                    name: tc.name,
+                    hasId: !!tc.id,
+                    hasName: !!tc.name
+                });
+                return false;
+            }
+            return true;
+        });
+        toolCalls = validToolCalls.length > 0 ? validToolCalls : undefined;
+    }
+
     return {
         content: fullContent,
         tool_calls: toolCalls,
@@ -1374,12 +1527,26 @@ async function callGoogle(input: GoogleCallInput): Promise<LLMResponse> {
                 parts: [{ text: msg.content }]
             };
         } else if (msg.role === "tool") {
+            // Google requires tool_name
+            if (!msg.tool_name) {
+                activityLogger.error(
+                    "Tool message missing tool_name for Google",
+                    new Error("Tool message missing required tool_name"),
+                    {
+                        messageId: msg.id,
+                        toolCallId: msg.tool_call_id,
+                        content: msg.content?.substring(0, 100)
+                    }
+                );
+                throw new Error("Tool message missing required 'tool_name' field for Google");
+            }
+
             return {
                 role: "function",
                 parts: [
                     {
                         functionResponse: {
-                            name: sanitizeToolName(msg.tool_name || ""),
+                            name: sanitizeToolName(msg.tool_name),
                             response: {
                                 content: msg.content
                             }
@@ -1396,13 +1563,52 @@ async function callGoogle(input: GoogleCallInput): Promise<LLMResponse> {
     });
 
     // Format tools for Gemini with name sanitization
+    // Google doesn't accept 'additionalProperties' in schemas, so we need to remove it
+    const sanitizeSchemaForGoogle = (schema: JsonObject): JsonObject => {
+        const sanitized = sanitizeJsonSchema(schema);
+
+        // Recursively remove additionalProperties from the schema
+        const removeAdditionalProperties = (obj: Record<string, unknown>): void => {
+            if (typeof obj !== "object" || obj === null) return;
+
+            // Remove additionalProperties if present
+            if ("additionalProperties" in obj) {
+                delete obj.additionalProperties;
+            }
+
+            // Recursively process properties
+            if (obj.properties && typeof obj.properties === "object") {
+                removeAdditionalProperties(obj.properties as Record<string, unknown>);
+            }
+
+            // Recursively process items
+            if (obj.items && typeof obj.items === "object") {
+                removeAdditionalProperties(obj.items as Record<string, unknown>);
+            }
+
+            // Recursively process anyOf, oneOf, allOf arrays
+            ["anyOf", "oneOf", "allOf"].forEach((key) => {
+                if (Array.isArray(obj[key])) {
+                    (obj[key] as unknown[]).forEach((item) => {
+                        if (typeof item === "object" && item !== null) {
+                            removeAdditionalProperties(item as Record<string, unknown>);
+                        }
+                    });
+                }
+            });
+        };
+
+        removeAdditionalProperties(sanitized);
+        return sanitized;
+    };
+
     const formattedTools =
         tools.length > 0
             ? {
                   functionDeclarations: tools.map((tool) => ({
                       name: sanitizeToolName(tool.name),
                       description: tool.description,
-                      parameters: sanitizeJsonSchema(tool.schema)
+                      parameters: sanitizeSchemaForGoogle(tool.schema)
                   }))
               }
             : undefined;
@@ -1447,17 +1653,79 @@ async function callGoogle(input: GoogleCallInput): Promise<LLMResponse> {
     }
 
     let done = false;
+    let buffer = ""; // Buffer for incomplete lines across chunks
     while (!done) {
         const result = await reader.read();
         done = result.done;
-        if (done) break;
+        if (done) {
+            // Process any remaining buffer
+            if (buffer.trim()) {
+                const trimmedBuffer = buffer.trim();
+                if (trimmedBuffer.startsWith("data: ")) {
+                    const data = trimmedBuffer.slice(6);
+                    if (data.trim()) {
+                        try {
+                            const parsed = JSON.parse(data);
+                            // Process this final data using same logic as below
+                            const candidate = parsed.candidates?.[0];
+                            if (candidate?.content?.parts) {
+                                for (const part of candidate.content.parts) {
+                                    const textToAdd = part.text || part.textDelta || "";
+                                    if (textToAdd) {
+                                        fullContent += textToAdd;
+                                        if (executionId) {
+                                            await emitAgentToken({ executionId, token: textToAdd });
+                                        }
+                                    }
+                                    if (part.functionCall) {
+                                        if (!part.functionCall.name) continue;
+                                        if (!toolCalls) toolCalls = [];
+                                        toolCalls.push({
+                                            id: `google-${Date.now()}-${toolCalls.length}`,
+                                            name: part.functionCall.name,
+                                            arguments: part.functionCall.args || {}
+                                        });
+                                    }
+                                }
+                            }
+                            if (candidate?.finishReason) finishReason = candidate.finishReason;
+                            if (parsed.usageMetadata) {
+                                usage = {
+                                    promptTokens: parsed.usageMetadata.promptTokenCount,
+                                    completionTokens: parsed.usageMetadata.candidatesTokenCount,
+                                    totalTokens: parsed.usageMetadata.totalTokenCount
+                                };
+                            }
+                        } catch {
+                            // Skip invalid JSON
+                        }
+                    }
+                }
+            }
+            break;
+        }
 
         const chunk = decoder.decode(result.value, { stream: true });
-        const lines = chunk.split("\n").filter((line) => line.trim());
+
+        // Buffer chunks to handle multi-chunk JSON lines
+        if (!buffer) buffer = "";
+        buffer += chunk;
+
+        // Process complete lines (ending with \n) from buffer
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || ""; // Keep incomplete line in buffer
 
         for (const line of lines) {
-            if (line.startsWith("data: ")) {
+            const trimmedLine = line.trim();
+            if (!trimmedLine) continue;
+
+            if (trimmedLine.startsWith("data: ")) {
                 const data = line.slice(6);
+
+                // Skip empty data lines
+                if (!data.trim()) {
+                    continue;
+                }
 
                 try {
                     const parsed = JSON.parse(data) as {
@@ -1465,6 +1733,7 @@ async function callGoogle(input: GoogleCallInput): Promise<LLMResponse> {
                             content?: {
                                 parts?: Array<{
                                     text?: string;
+                                    textDelta?: string; // Google may send incremental text
                                     functionCall?: {
                                         name: string;
                                         args: JsonObject;
@@ -1483,18 +1752,29 @@ async function callGoogle(input: GoogleCallInput): Promise<LLMResponse> {
                     const candidate = parsed.candidates?.[0];
                     if (candidate?.content?.parts) {
                         for (const part of candidate.content.parts) {
-                            if (part.text) {
-                                fullContent += part.text;
+                            // Handle both text and textDelta (incremental text)
+                            const textToAdd = part.text || part.textDelta || "";
+                            if (textToAdd) {
+                                fullContent += textToAdd;
                                 if (executionId) {
-                                    await emitAgentToken({ executionId, token: part.text });
+                                    await emitAgentToken({ executionId, token: textToAdd });
                                 }
                             }
                             if (part.functionCall) {
+                                // Validate tool call has required fields
+                                if (!part.functionCall.name) {
+                                    activityLogger.warn("Skipping invalid Google tool call", {
+                                        name: part.functionCall.name,
+                                        hasName: !!part.functionCall.name
+                                    });
+                                    continue;
+                                }
+
                                 if (!toolCalls) toolCalls = [];
                                 toolCalls.push({
                                     id: `google-${Date.now()}-${toolCalls.length}`,
                                     name: part.functionCall.name,
-                                    arguments: part.functionCall.args
+                                    arguments: part.functionCall.args || {}
                                 });
                             }
                         }
@@ -1517,6 +1797,23 @@ async function callGoogle(input: GoogleCallInput): Promise<LLMResponse> {
                 }
             }
         }
+    }
+
+    // Filter out invalid tool calls before returning
+    if (toolCalls) {
+        const validToolCalls = toolCalls.filter((tc) => {
+            if (!tc.id || !tc.name) {
+                activityLogger.warn("Filtering invalid Google tool call", {
+                    id: tc.id,
+                    name: tc.name,
+                    hasId: !!tc.id,
+                    hasName: !!tc.name
+                });
+                return false;
+            }
+            return true;
+        });
+        toolCalls = validToolCalls.length > 0 ? validToolCalls : undefined;
     }
 
     return {
@@ -1629,11 +1926,25 @@ async function callCohere(input: CohereCallInput): Promise<LLMResponse> {
                 }
 
                 if (parsed.event_type === "tool-calls-generation" && parsed.tool_calls) {
-                    toolCalls = parsed.tool_calls.map((tc, idx) => ({
-                        id: `cohere-${Date.now()}-${idx}`,
-                        name: tc.name,
-                        arguments: tc.parameters
-                    }));
+                    // Filter out invalid tool calls (missing name)
+                    const validToolCalls = parsed.tool_calls.filter((tc) => {
+                        if (!tc.name) {
+                            activityLogger.warn("Skipping invalid Cohere tool call", {
+                                name: tc.name,
+                                hasName: !!tc.name
+                            });
+                            return false;
+                        }
+                        return true;
+                    });
+
+                    if (validToolCalls.length > 0) {
+                        toolCalls = validToolCalls.map((tc, idx) => ({
+                            id: `cohere-${Date.now()}-${idx}`,
+                            name: tc.name,
+                            arguments: tc.parameters || {}
+                        }));
+                    }
                 }
 
                 if (parsed.meta?.tokens) {
@@ -1661,6 +1972,23 @@ async function callCohere(input: CohereCallInput): Promise<LLMResponse> {
         }
     }
 
+    // Filter out invalid tool calls before returning
+    if (toolCalls) {
+        const validToolCalls = toolCalls.filter((tc) => {
+            if (!tc.id || !tc.name) {
+                activityLogger.warn("Filtering invalid Cohere tool call", {
+                    id: tc.id,
+                    name: tc.name,
+                    hasId: !!tc.id,
+                    hasName: !!tc.name
+                });
+                return false;
+            }
+            return true;
+        });
+        toolCalls = validToolCalls.length > 0 ? validToolCalls : undefined;
+    }
+
     return {
         content: fullContent,
         tool_calls: toolCalls,
@@ -1673,10 +2001,37 @@ async function callHuggingFace(input: HuggingFaceCallInput): Promise<LLMResponse
     const { model, apiKey, messages, temperature, maxTokens, executionId } = input;
 
     // Format messages for Hugging Face (OpenAI-compatible format)
-    const formattedMessages = messages.map((msg) => ({
-        role: msg.role === "assistant" ? "assistant" : msg.role === "tool" ? "assistant" : "user",
-        content: msg.content
-    }));
+    const formattedMessages = messages.map((msg) => {
+        // HuggingFace uses OpenAI-compatible format, so tool messages need tool_call_id
+        if (msg.role === "tool") {
+            if (!msg.tool_call_id) {
+                activityLogger.error(
+                    "Tool message missing tool_call_id for HuggingFace",
+                    new Error("Tool message missing required tool_call_id"),
+                    {
+                        messageId: msg.id,
+                        toolName: msg.tool_name,
+                        content: msg.content?.substring(0, 100)
+                    }
+                );
+                throw new Error(
+                    "Tool message missing required 'tool_call_id' field for HuggingFace"
+                );
+            }
+            // HuggingFace converts tool to assistant, but we should still validate
+            return {
+                role: "assistant",
+                content: msg.content,
+                tool_call_id: msg.tool_call_id,
+                ...(msg.tool_name && { name: sanitizeToolName(msg.tool_name) })
+            };
+        }
+
+        return {
+            role: msg.role === "assistant" ? "assistant" : "user",
+            content: msg.content
+        };
+    });
 
     // Using the OpenAI-compatible Inference API endpoint
     const response = await fetch("https://router.huggingface.co/v1/chat/completions", {
