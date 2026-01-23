@@ -61,7 +61,8 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
         addMessageToThread,
         updateThreadMessage,
         fetchThreadMessages,
-        setThreadMessages
+        setThreadMessages,
+        refreshThread
     } = useAgentStore();
 
     const [input, setInput] = useState("");
@@ -259,6 +260,7 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
                 setIsSending(false);
                 setExecutionStatus(null, null, null);
                 refreshTokenUsage();
+                refreshThread(threadId);
             },
             onError: (error: string) => {
                 logger.error("SSE error", undefined, { error });
@@ -296,7 +298,8 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
         addMessageToThread,
         updateThreadMessage,
         setThreadMessages,
-        refreshTokenUsage
+        refreshTokenUsage,
+        refreshThread
     ]);
 
     const handleSend = async () => {
