@@ -12,7 +12,7 @@ interface ToolsSectionProps {
     onAddWorkflow: () => void;
     onAddKnowledgeBase: () => void;
     onAddMCP: () => void;
-    onAddCustomMCP: () => void;
+    onAddBuiltinTool: () => void;
 }
 
 export function ToolsSection({
@@ -22,7 +22,7 @@ export function ToolsSection({
     onAddWorkflow,
     onAddKnowledgeBase,
     onAddMCP,
-    onAddCustomMCP
+    onAddBuiltinTool
 }: ToolsSectionProps) {
     // Count tools by type for summary
     const toolCounts = tools.reduce(
@@ -82,8 +82,8 @@ export function ToolsSection({
                 <button onClick={onAddMCP} className={addButtonClass}>
                     + Add an MCP integration
                 </button>
-                <button onClick={onAddCustomMCP} className={addButtonClass}>
-                    + Connect your own MCP server
+                <button onClick={onAddBuiltinTool} className={addButtonClass}>
+                    + Add a builtin tool
                 </button>
             </div>
         </CollapsibleSection>

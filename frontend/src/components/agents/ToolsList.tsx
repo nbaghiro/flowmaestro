@@ -23,6 +23,8 @@ export function ToolsList({ tools, onRemove, isRemoving }: ToolsListProps) {
                 return "Knowledge Base";
             case "mcp":
                 return "MCP";
+            case "builtin":
+                return "Builtin";
         }
     };
 

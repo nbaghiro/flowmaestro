@@ -32,21 +32,18 @@ const DEFAULT_PANELS = {
         state: "expanded" as PanelState,
         width: 256,
         minWidth: 64,
-        maxWidth: 320,
         order: 0
     },
     config: {
         state: "expanded" as PanelState,
         width: 500,
         minWidth: 300,
-        maxWidth: 800,
         order: 1
     },
     chat: {
         state: "expanded" as PanelState,
         width: 0,
         minWidth: 400,
-        maxWidth: 0,
         order: 2
     }
 };
@@ -130,38 +127,6 @@ describe("agentBuilderLayoutStore", () => {
             useAgentBuilderLayoutStore.getState().setPanelState("navigation", "collapsed");
 
             expect(useAgentBuilderLayoutStore.getState().activePreset).toBeNull();
-        });
-    });
-
-    describe("setPanelWidth", () => {
-        it("sets panel width", () => {
-            useAgentBuilderLayoutStore.getState().setPanelWidth("config", 600);
-
-            expect(useAgentBuilderLayoutStore.getState().panels.config.width).toBe(600);
-        });
-
-        it("clamps width to minimum", () => {
-            useAgentBuilderLayoutStore.getState().setPanelWidth("config", 100);
-
-            expect(useAgentBuilderLayoutStore.getState().panels.config.width).toBe(300); // minWidth
-        });
-
-        it("clamps width to maximum", () => {
-            useAgentBuilderLayoutStore.getState().setPanelWidth("config", 1000);
-
-            expect(useAgentBuilderLayoutStore.getState().panels.config.width).toBe(800); // maxWidth
-        });
-
-        it("allows any width for flex panels (maxWidth = 0)", () => {
-            useAgentBuilderLayoutStore.getState().setPanelWidth("chat", 1200);
-
-            expect(useAgentBuilderLayoutStore.getState().panels.chat.width).toBe(1200);
-        });
-
-        it("still enforces minWidth for flex panels", () => {
-            useAgentBuilderLayoutStore.getState().setPanelWidth("chat", 200);
-
-            expect(useAgentBuilderLayoutStore.getState().panels.chat.width).toBe(400); // minWidth
         });
     });
 
@@ -280,7 +245,6 @@ describe("agentBuilderLayoutStore", () => {
     describe("resetLayout", () => {
         it("resets all panels to default", () => {
             useAgentBuilderLayoutStore.getState().setPanelState("navigation", "collapsed");
-            useAgentBuilderLayoutStore.getState().setPanelWidth("config", 700);
             useAgentBuilderLayoutStore.getState().setSectionExpanded("modelSection", false);
 
             useAgentBuilderLayoutStore.getState().resetLayout();
@@ -340,7 +304,6 @@ describe("agentBuilderLayoutStore", () => {
 
             // Customize layout
             useAgentBuilderLayoutStore.getState().setPanelState("navigation", "collapsed");
-            useAgentBuilderLayoutStore.getState().setPanelWidth("config", 600);
             useAgentBuilderLayoutStore.getState().toggleSection("toolsSection");
 
             // Preset should be invalidated

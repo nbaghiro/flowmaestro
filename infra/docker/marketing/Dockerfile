@@ -7,6 +7,19 @@ ARG VITE_APP_URL="https://app.flowmaestro.ai"
 
 WORKDIR /app
 
+# Install build dependencies for native modules (canvas)
+RUN apk add --no-cache \
+    python3 \
+    make \
+    g++ \
+    cairo-dev \
+    pango-dev \
+    libjpeg-turbo-dev \
+    giflib-dev \
+    librsvg-dev \
+    pixman-dev \
+    pkgconfig
+
 # Copy root package files and tsconfig
 COPY package*.json ./
 COPY tsconfig.base.json ./

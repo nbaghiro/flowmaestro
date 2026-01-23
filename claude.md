@@ -29,6 +29,41 @@ This document provides coding standards, architectural context, and best practic
 - **Shared Types**: All types that are used across frontend and backend MUST be defined in the `@flowmaestro/shared` package (`shared/src/`), not in frontend or backend. Import from `@flowmaestro/shared`.
 - **Generic Constraints**: Use proper generic constraints instead of `any`
 - **Compilation Checks**: ALWAYS run TypeScript compiler before committing changes
+- **No `void` operator for function calls**: Never use `void functionCall()` syntax to discard promise results. Just call the function directly.
+
+### Async Function Calls (Fire-and-Forget)
+
+**IMPORTANT**: Do not use the `void` operator to call async functions. This pattern is confusing and unnecessary.
+
+```typescript
+// ❌ BAD - Don't use void to discard promise
+void refreshData();
+void submitForm();
+
+// ✅ GOOD - Just call the function directly
+refreshData();
+submitForm();
+```
+
+If you need to handle errors from fire-and-forget async calls, add error handling inside the function itself or use `.catch()`:
+
+```typescript
+// ✅ GOOD - Error handling inside the function
+async function refreshData(): Promise<void> {
+    try {
+        const response = await fetch("/api/data");
+        // handle response
+    } catch (error) {
+        logger.error("Failed to refresh data", error);
+    }
+}
+
+// Then just call it
+refreshData();
+
+// ✅ ALSO GOOD - Use .catch() if you need external error handling
+refreshData().catch((error) => logger.error("Refresh failed", error));
+```
 
 ### HTTP Client Standards
 
@@ -1093,9 +1128,10 @@ When working on FlowMaestro:
 1. ✅ Use 4 spaces, double quotes, semicolons, and proper TypeScript typing
 2. ✅ Never use `any` type - use proper types or `unknown` with type guards
 3. ✅ Never use browser alerts - always use custom Dialog components
-4. ✅ Follow the established patterns for components, stores, routes, and repositories
-5. ✅ Use TanStack Query for server state, Zustand for client state
-6. ✅ Use Fastify patterns for backend, not Express patterns
-7. ✅ Use repository pattern for database access with proper multi-tenancy
-8. ✅ Test thoroughly and handle errors gracefully
-9. ✅ Only create markdown files when specifically requested
+4. ✅ Never use `void functionCall()` - just call async functions directly
+5. ✅ Follow the established patterns for components, stores, routes, and repositories
+6. ✅ Use TanStack Query for server state, Zustand for client state
+7. ✅ Use Fastify patterns for backend, not Express patterns
+8. ✅ Use repository pattern for database access with proper multi-tenancy
+9. ✅ Test thoroughly and handle errors gracefully
+10. ✅ Only create markdown files when specifically requested

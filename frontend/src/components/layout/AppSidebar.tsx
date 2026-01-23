@@ -146,7 +146,7 @@ function CreditProgressBar({ isCollapsed }: { isCollapsed: boolean }) {
                 <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors cursor-default">
                     <Zap className="w-5 h-5 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center justify-between mb-2">
                             <span className="text-sm font-medium">Credits</span>
                             <span className="text-xs tabular-nums">
                                 {availableCredits.toLocaleString()} /{" "}

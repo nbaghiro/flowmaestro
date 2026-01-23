@@ -40,6 +40,7 @@ export function ThreadList({
     const [editingThreadId, setEditingThreadId] = useState<string | null>(null);
     const [editTitle, setEditTitle] = useState("");
     const [isUpdating, setIsUpdating] = useState(false);
+    const [, setNow] = useState(Date.now());
     const menuRef = useRef<HTMLDivElement>(null);
     const editInputRef = useRef<HTMLInputElement>(null);
 
@@ -65,6 +66,13 @@ export function ThreadList({
             editInputRef.current.select();
         }
     }, [editingThreadId]);
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setNow(Date.now());
+        }, 60000);
+        return () => clearInterval(interval);
+    }, []);
 
     const handleStartEdit = (thread: Thread) => {
         setEditingThreadId(thread.id);

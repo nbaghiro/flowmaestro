@@ -40,6 +40,13 @@ export {
     type ProcessDocumentWorkflowResult
 } from "./document-processor";
 
+// Persona orchestrator workflow (background execution)
+export {
+    personaOrchestratorWorkflow,
+    type PersonaOrchestratorInput,
+    type PersonaOrchestratorResult
+} from "./persona-orchestrator";
+
 // Workflow logger (direct import, not from barrel)
 export { createWorkflowLogger } from "../core/workflow-logger";
 export type { WorkflowLogContext, WorkflowLogger } from "../core/workflow-logger";

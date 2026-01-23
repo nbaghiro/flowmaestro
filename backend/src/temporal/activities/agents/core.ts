@@ -17,6 +17,7 @@ import { AgentRepository } from "../../../storage/repositories/AgentRepository";
 import { ConnectionRepository } from "../../../storage/repositories/ConnectionRepository";
 import { SafetyLogRepository } from "../../../storage/repositories/SafetyLogRepository";
 import { WorkflowRepository } from "../../../storage/repositories/WorkflowRepository";
+import { executeTool } from "../../../tools";
 import { activityLogger, createActivityLogger } from "../../core";
 import { emitAgentToken } from "./events";
 import { searchThreadMemory as searchThreadMemoryActivity, injectThreadMemoryTool } from "./memory";
@@ -24,6 +25,7 @@ import type { SafetyContext, SafetyCheckResult, SafetyConfig } from "../../../co
 import type { AgentModel, Tool } from "../../../storage/models/Agent";
 import type { ThreadMessage, ToolCall } from "../../../storage/models/AgentExecution";
 import type { KnowledgeBaseModel } from "../../../storage/models/KnowledgeBase";
+import type { ToolExecutionContext } from "../../../tools";
 import type { AgentConfig, LLMResponse } from "../../workflows/agent-orchestrator";
 
 // =============================================================================
@@ -65,14 +67,15 @@ export interface CallLLMInput {
 }
 
 /**
- * Execute tool call (workflow, function, or knowledge base)
+ * Execute tool call (workflow, function, knowledge base, mcp, or builtin)
  */
 export interface ExecuteToolCallInput {
     executionId: string;
     toolCall: ToolCall;
     availableTools: Tool[];
     userId: string;
-    agentId?: string; // Optional for built-in tools
+    workspaceId: string;
+    agentId?: string;
 }
 
 /**
@@ -215,6 +218,14 @@ interface ExecuteMCPToolInput {
     tool: Tool;
     arguments: JsonObject;
     userId: string;
+}
+
+interface ExecuteBuiltInToolInput {
+    tool: Tool;
+    arguments: JsonObject;
+    userId: string;
+    workspaceId: string;
+    executionId?: string;
 }
 
 interface ExecuteSearchThreadMemoryInput {
@@ -382,7 +393,7 @@ export async function callLLM(input: CallLLMInput): Promise<LLMResponse> {
 // =============================================================================
 
 export async function executeToolCall(input: ExecuteToolCallInput): Promise<JsonObject> {
-    const { toolCall, availableTools, userId, agentId, executionId } = input;
+    const { toolCall, availableTools, userId, workspaceId, agentId, executionId } = input;
 
     // Find tool definition
     const tool = availableTools.find((t) => t.name === toolCall.name);
@@ -433,6 +444,14 @@ export async function executeToolCall(input: ExecuteToolCallInput): Promise<Json
             return await executeAgentTool({ tool, arguments: validatedArgs, userId });
         case "mcp":
             return await executeMCPToolCall({ tool, arguments: validatedArgs, userId });
+        case "builtin":
+            return await executeBuiltInTool({
+                tool,
+                arguments: validatedArgs,
+                userId,
+                workspaceId,
+                executionId
+            });
         default:
             throw new Error(`Unknown tool type: ${tool.type}`);
     }
@@ -2218,6 +2237,44 @@ async function executeFunctionTool(input: ExecuteFunctionToolInput): Promise<Jso
         default:
             throw new Error(`Unknown function: ${tool.config.functionName}`);
     }
+}
+
+async function executeBuiltInTool(input: ExecuteBuiltInToolInput): Promise<JsonObject> {
+    const { tool, arguments: args, userId, workspaceId, executionId } = input;
+
+    activityLogger.info("Executing built-in tool", {
+        toolName: tool.name,
+        userId,
+        workspaceId
+    });
+
+    // Create execution context for the tools module
+    const context: ToolExecutionContext = {
+        userId,
+        workspaceId,
+        mode: "agent",
+        traceId: executionId
+    };
+
+    // Execute via the tools module
+    const result = await executeTool(tool.name, args as Record<string, unknown>, context);
+
+    if (!result.success) {
+        const errorMessage = result.error?.message || `Built-in tool ${tool.name} execution failed`;
+        activityLogger.error("Built-in tool execution failed", new Error(errorMessage), {
+            toolName: tool.name,
+            code: result.error?.code
+        });
+        throw new Error(errorMessage);
+    }
+
+    activityLogger.info("Built-in tool execution completed", {
+        toolName: tool.name,
+        durationMs: result.metadata?.durationMs,
+        creditCost: result.metadata?.creditCost
+    });
+
+    return (result.data as JsonObject) || { success: true };
 }
 
 async function executeKnowledgeBaseTool(input: ExecuteKnowledgeBaseToolInput): Promise<JsonObject> {

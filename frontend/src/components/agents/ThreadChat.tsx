@@ -61,7 +61,8 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
         addMessageToThread,
         updateThreadMessage,
         fetchThreadMessages,
-        setThreadMessages
+        setThreadMessages,
+        refreshThread
     } = useAgentStore();
 
     const [input, setInput] = useState("");
@@ -375,7 +376,8 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
         addMessageToThread,
         updateThreadMessage,
         setThreadMessages,
-        refreshTokenUsage
+        refreshTokenUsage,
+        refreshThread
     ]);
 
     const handleSend = async () => {
@@ -595,7 +597,9 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
                                                             </ol>
                                                         ),
                                                         li: ({ children }) => (
-                                                            <li className="ml-2">{children}</li>
+                                                            <li className="ml-2 [&>p]:inline [&>p]:my-0">
+                                                                {children}
+                                                            </li>
                                                         ),
                                                         p: ({ children }) => (
                                                             <p className="my-1.5">{children}</p>
