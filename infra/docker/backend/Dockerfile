@@ -106,9 +106,12 @@ RUN sed -i 's|"main": "src/index.ts"|"main": "dist/index.js"|g' ./shared/package
 # Install production dependencies only (skip prepare scripts like husky)
 RUN npm ci --workspace=backend --workspace=shared --omit=dev --ignore-scripts
 
+# Rebuild native modules to ensure binaries are set up correctly
+RUN npm rebuild --workspace=backend --workspace=shared || true
+
 # Install Playwright browsers (Chromium only for screenshot capture)
 # This downloads the browser binary to a shared location
-RUN npx playwright install chromium
+RUN ./node_modules/.bin/playwright install chromium || true
 
 # Copy migrations
 COPY backend/migrations ./backend/migrations

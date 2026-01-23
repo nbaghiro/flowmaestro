@@ -183,16 +183,42 @@ async function executeOCRExtract(
             // Perform OCR
             const { data } = await worker.recognize(imageBuffer);
 
+            // Extract lines and words from the nested block structure
+            // Structure: blocks -> paragraphs -> lines -> words
+            type TesseractLine = { words: TesseractWord[]; text: string; confidence: number };
+            type TesseractWord = {
+                text: string;
+                confidence: number;
+                bbox: { x0: number; y0: number; x1: number; y1: number };
+            };
+
+            const allLines: TesseractLine[] = [];
+            const allWords: TesseractWord[] = [];
+
+            if (data.blocks) {
+                for (const block of data.blocks) {
+                    for (const paragraph of block.paragraphs || []) {
+                        for (const line of paragraph.lines || []) {
+                            allLines.push(line);
+                            for (const word of line.words || []) {
+                                allWords.push(word);
+                            }
+                        }
+                    }
+                }
+            }
+
             // Build output based on format
             let output: OCRExtractOutput;
 
             if (input.outputFormat === "json") {
                 // Build detailed word data
                 const words: OCRWord[] = [];
-                let wordNum = 0;
+                let globalLineNum = 0;
 
-                for (const line of data.lines || []) {
-                    wordNum = 0;
+                for (const line of allLines) {
+                    globalLineNum++;
+                    let wordNum = 0;
                     for (const word of line.words || []) {
                         if (word.confidence >= input.confidenceThreshold) {
                             words.push({
@@ -204,7 +230,7 @@ async function executeOCRExtract(
                                     width: word.bbox.x1 - word.bbox.x0,
                                     height: word.bbox.y1 - word.bbox.y0
                                 },
-                                lineNum: (data.lines || []).indexOf(line) + 1,
+                                lineNum: globalLineNum,
                                 wordNum: ++wordNum
                             });
                         }
@@ -215,7 +241,7 @@ async function executeOCRExtract(
                     text: data.text,
                     confidence: Math.round(data.confidence),
                     words,
-                    lineCount: (data.lines || []).length,
+                    lineCount: allLines.length,
                     wordCount: words.length,
                     characterCount: data.text.length,
                     language: input.language[0]
@@ -224,8 +250,8 @@ async function executeOCRExtract(
                 output = {
                     text: data.text,
                     confidence: Math.round(data.confidence),
-                    lineCount: (data.lines || []).length,
-                    wordCount: (data.words || []).length,
+                    lineCount: allLines.length,
+                    wordCount: allWords.length,
                     characterCount: data.text.length,
                     language: input.language[0]
                 };
@@ -241,7 +267,7 @@ async function executeOCRExtract(
                 ];
 
                 let lineNum = 0;
-                for (const line of data.lines || []) {
+                for (const line of allLines) {
                     lineNum++;
                     let wordNum = 0;
                     for (const word of line.words || []) {
@@ -268,8 +294,8 @@ async function executeOCRExtract(
                 output = {
                     text: data.text,
                     confidence: Math.round(data.confidence),
-                    lineCount: (data.lines || []).length,
-                    wordCount: (data.words || []).length,
+                    lineCount: allLines.length,
+                    wordCount: allWords.length,
                     characterCount: data.text.length,
                     language: input.language[0]
                 };
@@ -278,8 +304,8 @@ async function executeOCRExtract(
                 output = {
                     text: data.text,
                     confidence: Math.round(data.confidence),
-                    lineCount: (data.lines || []).length,
-                    wordCount: (data.words || []).length,
+                    lineCount: allLines.length,
+                    wordCount: allWords.length,
                     characterCount: data.text.length,
                     language: input.language[0]
                 };
