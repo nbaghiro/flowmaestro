@@ -83,7 +83,9 @@ export function ChatMessage({
                                             {children}
                                         </ol>
                                     ),
-                                    li: ({ children }) => <li className="ml-2">{children}</li>,
+                                    li: ({ children }) => (
+                                        <li className="ml-2 [&>p]:inline [&>p]:my-0">{children}</li>
+                                    ),
                                     p: ({ children }) => <p className="my-1.5">{children}</p>,
                                     strong: ({ children }) => (
                                         <strong className="font-semibold">{children}</strong>

@@ -959,6 +959,7 @@ export async function agentOrchestratorWorkflow(
                     toolCall,
                     availableTools: agent.available_tools,
                     userId,
+                    workspaceId: workspaceId || "",
                     agentId
                 });
 

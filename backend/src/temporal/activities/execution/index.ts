@@ -312,7 +312,6 @@ import {
 // Logic
 // Utils
 import { createHTTPNodeHandler, createDatabaseNodeHandler } from "./handlers/utils";
-// Integrations
 
 /**
  * Register all default handlers with the registry.

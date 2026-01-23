@@ -133,3 +133,13 @@ export {
     type MemoryStatsResult,
     type ClearExecutionMemoryInput
 } from "./agents";
+
+// Persona activities (separate from agents - background execution)
+export {
+    getPersonaConfig,
+    updatePersonaInstanceProgress,
+    updatePersonaInstanceStatus,
+    type GetPersonaConfigInput,
+    type UpdatePersonaInstanceProgressInput,
+    type UpdatePersonaInstanceStatusInput
+} from "./personas";

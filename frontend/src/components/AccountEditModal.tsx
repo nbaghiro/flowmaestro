@@ -151,11 +151,11 @@ export function AccountEditModal({
             return;
         }
 
-        void submitProfileChanges();
+        submitProfileChanges();
     };
 
     const handleConfirmEmailChange = () => {
-        void submitProfileChanges();
+        submitProfileChanges();
     };
 
     const handleSetPassword = async () => {

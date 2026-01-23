@@ -1690,6 +1690,45 @@ export async function getConnectionMCPTools(connectionId: string): Promise<{
     return response.json();
 }
 
+/**
+ * Get all available builtin tools
+ */
+export async function getBuiltinTools(category?: BuiltinToolCategory): Promise<{
+    success: boolean;
+    data: BuiltinTool[];
+    error?: string;
+}> {
+    const token = getAuthToken();
+    const workspaceId = getCurrentWorkspaceId();
+
+    if (!workspaceId) {
+        throw new Error("Workspace context required");
+    }
+
+    const params = new URLSearchParams();
+    if (category) {
+        params.set("category", category);
+    }
+
+    const url = `${API_BASE_URL}/tools/builtin${params.toString() ? `?${params.toString()}` : ""}`;
+
+    const response = await apiFetch(url, {
+        method: "GET",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` }),
+            "X-Workspace-Id": workspaceId
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
 // ===== AI Workflow Generation =====
 
 export interface GenerateWorkflowRequest {
@@ -1840,7 +1879,7 @@ export interface Tool {
     id: string;
     name: string;
     description: string;
-    type: "workflow" | "function" | "knowledge_base" | "mcp";
+    type: "workflow" | "function" | "knowledge_base" | "mcp" | "builtin";
     schema: JsonObject;
     config: ToolConfig;
 }
@@ -1851,6 +1890,8 @@ export interface ToolConfig {
     knowledgeBaseId?: string;
     connectionId?: string; // For MCP tools - references the connection
     provider?: string; // For MCP tools - provider name for display
+    category?: string; // For builtin tools - tool category
+    creditCost?: number; // For builtin tools - credit cost per use
 }
 
 /**
@@ -1871,6 +1912,31 @@ export interface ConnectionMCPToolsResponse {
     provider: string;
     connectionName: string;
     tools: MCPTool[];
+}
+
+/**
+ * Builtin tool category
+ */
+export type BuiltinToolCategory = "web" | "code" | "file" | "data" | "media" | "integration";
+
+/**
+ * Builtin tool risk level
+ */
+export type BuiltinToolRiskLevel = "none" | "low" | "medium" | "high";
+
+/**
+ * Builtin tool from the system
+ */
+export interface BuiltinTool {
+    name: string;
+    displayName: string;
+    description: string;
+    category: BuiltinToolCategory;
+    riskLevel: BuiltinToolRiskLevel;
+    inputSchema: JsonObject;
+    enabledByDefault: boolean;
+    creditCost: number;
+    tags?: string[];
 }
 
 export interface MemoryConfig {
@@ -2247,7 +2313,7 @@ export async function getAgentExecution(
  * Add a tool to an agent
  */
 export interface AddToolRequest {
-    type: "workflow" | "function" | "knowledge_base" | "mcp";
+    type: "workflow" | "function" | "knowledge_base" | "mcp" | "builtin";
     name: string;
     description: string;
     schema: JsonObject;

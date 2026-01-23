@@ -4,7 +4,7 @@ import { Tool } from "../../../storage/models/Agent";
 import { AgentRepository } from "../../../storage/repositories/AgentRepository";
 
 const toolSchema = z.object({
-    type: z.enum(["workflow", "function", "knowledge_base", "mcp", "agent"]),
+    type: z.enum(["workflow", "function", "knowledge_base", "mcp", "agent", "builtin"]),
     name: z.string().min(1).max(100),
     description: z.string(),
     schema: z.record(z.any()),
@@ -15,7 +15,10 @@ const toolSchema = z.object({
         agentId: z.string().optional(),
         agentName: z.string().optional(),
         connectionId: z.string().optional(),
-        provider: z.string().optional()
+        provider: z.string().optional(),
+        // Builtin tool config
+        category: z.string().optional(),
+        creditCost: z.number().optional()
     })
 });
 

@@ -56,7 +56,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
                         const user = JSON.parse(decodeURIComponent(userData));
                         set({ user, isAuthenticated: true, isLoading: false, isInitialized: true });
                         // Refresh to ensure we have the latest fields (including 2FA status)
-                        void get().refreshUser();
+                        get().refreshUser();
 
                         // Clear hash from URL
                         window.history.replaceState(null, "", window.location.pathname);

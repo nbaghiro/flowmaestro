@@ -170,7 +170,7 @@ export class SpanService {
 
         // Check if we need to flush
         if (this.spanBatch.length >= this.batchSize) {
-            void this.flush();
+            this.flush();
         }
 
         return new ActiveSpan(span, this);
@@ -520,7 +520,7 @@ export class SpanService {
      */
     private startFlushTimer(): void {
         this.flushTimer = setInterval(() => {
-            void this.flush();
+            this.flush();
         }, this.flushIntervalMs);
     }
 

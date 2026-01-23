@@ -9,7 +9,6 @@ export interface PanelConfig {
     state: PanelState;
     width: number;
     minWidth: number;
-    maxWidth: number;
     order: number; // 0=left, 1=middle, 2=right
 }
 
@@ -41,21 +40,18 @@ const DEFAULT_PANELS: Record<PanelId, PanelConfig> = {
         state: "expanded",
         width: 256,
         minWidth: 64,
-        maxWidth: 320,
         order: 0
     },
     config: {
         state: "expanded",
         width: 500,
         minWidth: 300,
-        maxWidth: 800,
         order: 1
     },
     chat: {
         state: "expanded",
         width: 0, // flex-1, no fixed width
         minWidth: 400,
-        maxWidth: 0, // no max, takes remaining space
         order: 2
     }
 };
@@ -78,7 +74,6 @@ interface AgentBuilderLayoutStore {
 
     // Actions - Panel management
     setPanelState: (panelId: PanelId, state: PanelState) => void;
-    setPanelWidth: (panelId: PanelId, width: number) => void;
     togglePanel: (panelId: PanelId) => void;
     swapPanels: (panelA: PanelId, panelB: PanelId) => void;
 
@@ -109,22 +104,6 @@ export const useAgentBuilderLayoutStore = create<AgentBuilderLayoutStore>()(
                         [panelId]: { ...s.panels[panelId], state }
                     },
                     activePreset: null // Custom layout invalidates preset
-                }));
-            },
-
-            setPanelWidth: (panelId, width) => {
-                const panel = get().panels[panelId];
-                // Skip clamping for panels without maxWidth (flex panels)
-                const clampedWidth =
-                    panel.maxWidth > 0
-                        ? Math.max(panel.minWidth, Math.min(panel.maxWidth, width))
-                        : Math.max(panel.minWidth, width);
-
-                set((s) => ({
-                    panels: {
-                        ...s.panels,
-                        [panelId]: { ...s.panels[panelId], width: clampedWidth }
-                    }
                 }));
             },
 
