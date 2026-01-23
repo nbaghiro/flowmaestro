@@ -10,6 +10,7 @@ export interface ValidationResult {
 
 interface ProviderValidationRules {
     minLength: number;
+    maxLength?: number;
     startsWith?: string[];
     noSpaces?: boolean;
     customValidator?: (key: string) => ValidationResult;
@@ -47,9 +48,8 @@ const PROVIDER_RULES: Record<string, ProviderValidationRules> = {
         noSpaces: true
     },
     cohere: {
-        minLength: 45,
-        // Cohere keys start with co_ followed by 48 characters (total 51)
-        startsWith: ["co_"],
+        minLength: 40,
+        maxLength: 45,
         noSpaces: true
     },
     github: {
@@ -102,6 +102,13 @@ export function validateApiKey(apiKey: string, provider: string): ValidationResu
         return {
             valid: false,
             error: `${keyLabel} is too short. It must be at least ${rules.minLength} characters long.`
+        };
+    }
+
+    if (rules.maxLength && trimmedKey.length > rules.maxLength) {
+        return {
+            valid: false,
+            error: `${keyLabel} is too long. It must be between ${rules.minLength} and ${rules.maxLength} characters long.`
         };
     }
 

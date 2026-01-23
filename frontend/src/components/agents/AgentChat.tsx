@@ -353,6 +353,10 @@ export function AgentChat({ agent }: AgentChatProps) {
                     });
                     void fetchThreadMessages(threadId);
                 }, 500);
+                refreshTokenUsage();
+                if (threadId) {
+                    refreshThread(threadId);
+                }
             },
             onError: (error: string) => {
                 logger.error("SSE error", undefined, { error });
@@ -610,14 +614,44 @@ export function AgentChat({ agent }: AgentChatProps) {
                                                             </ul>
                                                         ),
                                                         ol: ({ children }) => (
-                                                            <ol className="list-decimal list-inside my-2 space-y-1">
+                                                            <ol className="list-decimal list-outside my-2 space-y-1 ml-6">
                                                                 {children}
                                                             </ol>
                                                         ),
                                                         li: ({ children }) => (
-                                                            <li className="ml-2 [&>p]:inline [&>p]:my-0">
+                                                            <li className="[&>p]:my-0 [&>p:first-child]:inline">
                                                                 {children}
                                                             </li>
+                                                        ),
+                                                        table: ({ children }) => (
+                                                            <div className="overflow-x-auto my-4">
+                                                                <table className="min-w-full border-collapse border border-border">
+                                                                    {children}
+                                                                </table>
+                                                            </div>
+                                                        ),
+                                                        thead: ({ children }) => (
+                                                            <thead className="bg-muted">
+                                                                {children}
+                                                            </thead>
+                                                        ),
+                                                        tbody: ({ children }) => (
+                                                            <tbody>{children}</tbody>
+                                                        ),
+                                                        tr: ({ children }) => (
+                                                            <tr className="border-b border-border">
+                                                                {children}
+                                                            </tr>
+                                                        ),
+                                                        th: ({ children }) => (
+                                                            <th className="border border-border px-4 py-2 text-left font-semibold text-sm">
+                                                                {children}
+                                                            </th>
+                                                        ),
+                                                        td: ({ children }) => (
+                                                            <td className="border border-border px-4 py-2 text-sm">
+                                                                {children}
+                                                            </td>
                                                         ),
                                                         p: ({ children }) => (
                                                             <p className="my-1.5">{children}</p>
