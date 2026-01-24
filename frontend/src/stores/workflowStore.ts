@@ -4,11 +4,17 @@ import {
     type JsonValue,
     type JsonObject,
     type ValidationResult,
+    type WorkflowValidationResult,
+    type WorkflowValidationContext,
+    type WorkflowValidationIssue,
     getErrorMessage,
     validateNodeConfig,
     nodeValidationRules,
     ALL_PROVIDERS,
-    convertToReactFlowFormat
+    convertToReactFlowFormat,
+    toValidatableNodes,
+    toValidatableEdges,
+    validateWorkflow
 } from "@flowmaestro/shared";
 
 // Set of provider IDs that should use "integration" validation rules
@@ -35,6 +41,22 @@ function getValidationRuleKey(nodeType: string): string {
 
 import { executeWorkflow as executeWorkflowAPI, generateWorkflow } from "../lib/api";
 import { logger } from "../lib/logger";
+
+// Debounce timer for workflow validation
+let workflowValidationTimer: ReturnType<typeof setTimeout> | null = null;
+const VALIDATION_DEBOUNCE_MS = 300;
+
+// Helper to trigger debounced workflow validation from within store actions
+function debouncedWorkflowValidation(get: () => WorkflowStore): void {
+    if (workflowValidationTimer) {
+        clearTimeout(workflowValidationTimer);
+    }
+
+    workflowValidationTimer = setTimeout(() => {
+        get().runWorkflowValidation();
+        workflowValidationTimer = null;
+    }, VALIDATION_DEBOUNCE_MS);
+}
 
 export const INITIAL_NODE_WIDTH = 260;
 export const INITIAL_NODE_HEIGHT = 160;
@@ -111,6 +133,10 @@ interface WorkflowStore {
     // Node validation state
     nodeValidation: Record<string, ValidationResult>;
 
+    // Workflow validation state
+    workflowValidation: WorkflowValidationResult | null;
+    workflowValidationContext: WorkflowValidationContext | null;
+
     // Actions
     setNodes: (nodes: Node[]) => void;
     setEdges: (edges: Edge[]) => void;
@@ -138,6 +164,9 @@ interface WorkflowStore {
     // Validation actions
     validateNode: (nodeId: string) => void;
     validateAllNodes: () => void;
+    runWorkflowValidation: (context?: WorkflowValidationContext) => void;
+    setWorkflowValidationContext: (context: WorkflowValidationContext) => void;
+    getNodeWorkflowIssues: (nodeId: string) => WorkflowValidationIssue[];
 }
 
 export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
@@ -151,6 +180,8 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
     executionError: null,
     currentExecution: null,
     nodeValidation: {},
+    workflowValidation: null,
+    workflowValidationContext: null,
 
     setNodes: (nodes) => {
         const sizedNodes = nodes.map((node) => ({
@@ -163,9 +194,17 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
         }));
         set({ nodes: sizedNodes });
         // Validate all nodes after setting them
-        setTimeout(() => get().validateAllNodes(), 0);
+        setTimeout(() => {
+            get().validateAllNodes();
+            // Trigger debounced workflow validation
+            debouncedWorkflowValidation(get);
+        }, 0);
     },
-    setEdges: (edges) => set({ edges }),
+    setEdges: (edges) => {
+        set({ edges });
+        // Trigger debounced workflow validation
+        debouncedWorkflowValidation(get);
+    },
 
     setAIMetadata: (aiGenerated, aiPrompt) => set({ aiGenerated, aiPrompt }),
 
@@ -179,6 +218,8 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
         set({
             edges: applyEdgeChanges(changes, get().edges)
         });
+        // Trigger debounced workflow validation for edge changes
+        debouncedWorkflowValidation(get);
     },
 
     addNode: (node) => {
@@ -194,6 +235,8 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
         set({ nodes: [...get().nodes, sizedNode] });
         // Validate the node immediately after adding
         get().validateNode(node.id);
+        // Trigger debounced workflow validation
+        debouncedWorkflowValidation(get);
     },
 
     updateNode: (nodeId, data) => {
@@ -204,6 +247,8 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
         });
         // Validate the node after updating
         get().validateNode(nodeId);
+        // Trigger debounced workflow validation
+        debouncedWorkflowValidation(get);
     },
 
     updateNodeStyle: (nodeId, style) => {
@@ -222,6 +267,8 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
             // Clear selection if the deleted node was selected
             selectedNode: selectedNode === nodeId ? null : selectedNode
         });
+        // Trigger debounced workflow validation
+        debouncedWorkflowValidation(get);
     },
 
     selectNode: (nodeId) => set({ selectedNode: nodeId }),
@@ -479,7 +526,9 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
             executionResult: null,
             executionError: null,
             currentExecution: null,
-            nodeValidation: {}
+            nodeValidation: {},
+            workflowValidation: null,
+            workflowValidationContext: null
         });
     },
 
@@ -531,5 +580,56 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
         }
 
         set({ nodeValidation: newValidation });
+    },
+
+    runWorkflowValidation: (context?: WorkflowValidationContext) => {
+        const { nodes, edges, workflowValidationContext } = get();
+
+        // Use provided context or cached context
+        const validationContext = context ||
+            workflowValidationContext || {
+                connectionIds: [],
+                knowledgeBaseIds: [],
+                inputVariables: []
+            };
+
+        // Convert to validatable format
+        const validatableNodes = toValidatableNodes(nodes);
+        const validatableEdges = toValidatableEdges(edges);
+
+        // Run validation
+        const result = validateWorkflow(validatableNodes, validatableEdges, validationContext);
+
+        set({ workflowValidation: result });
+
+        logger.debug("Workflow validation completed", {
+            isValid: result.isValid,
+            errorCount: result.summary.errorCount,
+            warningCount: result.summary.warningCount
+        });
+    },
+
+    setWorkflowValidationContext: (context: WorkflowValidationContext) => {
+        set({ workflowValidationContext: context });
+        // Re-run validation with new context
+        get().runWorkflowValidation(context);
+    },
+
+    getNodeWorkflowIssues: (nodeId: string): WorkflowValidationIssue[] => {
+        const { workflowValidation } = get();
+        if (!workflowValidation) return [];
+        return workflowValidation.nodeIssues.get(nodeId) || [];
     }
 }));
+
+// Debounced workflow validation trigger
+export function triggerDebouncedWorkflowValidation(): void {
+    if (workflowValidationTimer) {
+        clearTimeout(workflowValidationTimer);
+    }
+
+    workflowValidationTimer = setTimeout(() => {
+        useWorkflowStore.getState().runWorkflowValidation();
+        workflowValidationTimer = null;
+    }, VALIDATION_DEBOUNCE_MS);
+}

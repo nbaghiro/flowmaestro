@@ -1,8 +1,11 @@
-import { LucideIcon, GripHorizontal, ArrowLeftRight, AlertTriangle } from "lucide-react";
-import { ReactNode, useState, useEffect } from "react";
+import { LucideIcon, GripHorizontal, ArrowLeftRight } from "lucide-react";
+import { ReactNode, useState, useEffect, useMemo } from "react";
 import { Handle, Position, useNodeId, useStore, useUpdateNodeInternals } from "reactflow";
-import { Tooltip } from "../../components/common/Tooltip";
 import { NodeExecutionPopover } from "../../components/execution/modals/NodeExecutionPopover";
+import {
+    NodeValidationBadge,
+    getNodeValidationBorderStyle
+} from "../../components/validation/NodeValidationBadge";
 import { cn } from "../../lib/utils";
 import {
     useWorkflowStore,
@@ -125,13 +128,26 @@ export function BaseNode({
 }: BaseNodeProps) {
     const [logoError, setLogoError] = useState(false);
     const nodeId = useNodeId();
-    const { currentExecution, selectedNode, nodeValidation } = useWorkflowStore();
+    const { currentExecution, selectedNode, nodeValidation, workflowValidation } =
+        useWorkflowStore();
     const categoryStyle = categoryConfig[category];
     const [showPopover, setShowPopover] = useState(false);
 
-    // Get validation state for this node
+    // Get validation state for this node (both node-level and workflow-level)
     const validation = nodeId ? nodeValidation[nodeId] : undefined;
-    const hasValidationErrors = validation && !validation.isValid;
+    const validationErrors = validation?.errors ?? [];
+
+    // Compute border style based on combined validation state
+    const {
+        hasIssues: hasValidationIssues,
+        borderClass: validationBorderClass,
+        leftBorderColor
+    } = useMemo(() => {
+        if (!nodeId) {
+            return { hasIssues: false, borderClass: "", leftBorderColor: undefined };
+        }
+        return getNodeValidationBorderStyle(nodeId, validationErrors, workflowValidation);
+    }, [nodeId, validationErrors, workflowValidation]);
 
     const connectorLayout =
         useWorkflowStore((s) => {
@@ -304,15 +320,13 @@ export function BaseNode({
             className={cn(
                 "group h-full flex flex-col bg-card rounded-lg transition-all duration-200 min-w-[260px] overflow-hidden",
                 "border-2 border-border",
-                hasValidationErrors
-                    ? "border-amber-500/70 dark:border-amber-400/70"
-                    : categoryStyle.borderColor,
+                hasValidationIssues ? validationBorderClass : categoryStyle.borderColor,
                 `node-${category}-category`,
                 selected ? "shadow-node-hover" : "shadow-node hover:shadow-node-hover"
             )}
             style={{
                 borderLeftWidth: "4px",
-                borderLeftColor: hasValidationErrors ? "rgb(245 158 11 / 0.7)" : undefined
+                borderLeftColor: leftBorderColor
             }}
         >
             {/* Header */}
@@ -340,16 +354,11 @@ export function BaseNode({
                         )}
                     </div>
                     <span className="font-medium text-sm text-foreground">{label}</span>
-                    {hasValidationErrors && (
-                        <Tooltip
-                            content={validation.errors.map((e) => `• ${e.message}`).join("\n")}
-                            position="bottom"
-                            delay={100}
-                        >
-                            <div className="flex items-center gap-1 text-amber-500 dark:text-amber-400 cursor-help">
-                                <AlertTriangle className="w-3.5 h-3.5" />
-                            </div>
-                        </Tooltip>
+                    {nodeId && (
+                        <NodeValidationBadge
+                            nodeId={nodeId}
+                            nodeValidationErrors={validationErrors}
+                        />
                     )}
                 </div>
                 {executionState && nodeId ? (
