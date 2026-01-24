@@ -748,6 +748,356 @@ export function validateOutputVariableConflicts(
 }
 
 // ============================================================================
+// SEMANTIC VALIDATION RULES
+// ============================================================================
+
+/**
+ * Common placeholder patterns to detect incomplete content.
+ */
+const PLACEHOLDER_PATTERNS = [
+    /^\s*$/, // Empty or whitespace only
+    /^(todo|fixme|xxx)[\s:]/i, // TODO markers
+    /^enter\s+(your|a|the)/i, // "Enter your prompt here"
+    /^(your|my)\s+prompt/i, // "Your prompt here"
+    /^example/i, // "Example..."
+    /^test\s*(prompt|text|input)?$/i, // "Test" or "Test prompt"
+    /^placeholder/i, // "Placeholder"
+    /^insert\s+/i, // "Insert text here"
+    /^type\s+(here|your)/i, // "Type here"
+    /^\[.*\]$/, // "[placeholder]"
+    /^<.*>$/, // "<placeholder>"
+    /^\.{3,}$/ // "..."
+];
+
+/**
+ * Check if a string appears to be placeholder content.
+ */
+function isPlaceholderContent(text: string): boolean {
+    if (!text || typeof text !== "string") return true;
+    const trimmed = text.trim();
+    if (trimmed.length === 0) return true;
+    if (trimmed.length < 5) return true; // Very short content is suspicious
+    return PLACEHOLDER_PATTERNS.some((pattern) => pattern.test(trimmed));
+}
+
+/**
+ * Node types that are considered "expensive" operations.
+ */
+const EXPENSIVE_NODE_TYPES = new Set([
+    "llm",
+    "vision",
+    "http",
+    "integration",
+    "imageGeneration",
+    "videoGeneration",
+    "audioInput",
+    "audioOutput"
+]);
+
+/**
+ * Node types that produce observable output (terminal nodes).
+ */
+const TERMINAL_NODE_TYPES = new Set(["output", "email", "webhook", "database", "integration"]);
+
+/**
+ * Check for empty or placeholder prompts in LLM and similar nodes.
+ */
+export function validateEmptyPrompts(nodes: ValidatableNode[]): WorkflowValidationIssue[] {
+    const issues: WorkflowValidationIssue[] = [];
+
+    // Node types that require prompt content
+    const promptNodeTypes = new Set(["llm", "vision", "router"]);
+
+    for (const node of nodes) {
+        if (!promptNodeTypes.has(node.type)) continue;
+
+        const prompt = node.data.prompt as string | undefined;
+        const systemPrompt = node.data.systemPrompt as string | undefined;
+
+        // Check main prompt
+        if (isPlaceholderContent(prompt || "")) {
+            issues.push(
+                createValidationIssue(
+                    "EMPTY_PROMPT",
+                    `Node "${node.data.label || node.type}" has an empty or placeholder prompt`,
+                    "error",
+                    "semantic",
+                    {
+                        nodeId: node.id,
+                        field: "prompt",
+                        suggestion: "Add a meaningful prompt that describes what the AI should do"
+                    }
+                )
+            );
+        }
+
+        // Check for placeholder in system prompt (warning, not error - system prompt is optional)
+        if (systemPrompt && PLACEHOLDER_PATTERNS.some((p) => p.test(systemPrompt.trim()))) {
+            issues.push(
+                createValidationIssue(
+                    "PLACEHOLDER_CONTENT",
+                    `Node "${node.data.label || node.type}" has placeholder text in system prompt`,
+                    "warning",
+                    "semantic",
+                    {
+                        nodeId: node.id,
+                        field: "systemPrompt",
+                        suggestion: "Replace placeholder text with actual instructions"
+                    }
+                )
+            );
+        }
+    }
+
+    // Check transform nodes for empty code
+    const transformNodes = nodes.filter((n) => n.type === "transform");
+    for (const node of transformNodes) {
+        const code = node.data.code as string | undefined;
+        if (!code || code.trim().length === 0 || code.trim() === "// Your code here") {
+            issues.push(
+                createValidationIssue(
+                    "EMPTY_PROMPT",
+                    `Transform node "${node.data.label || "Transform"}" has no code`,
+                    "error",
+                    "semantic",
+                    {
+                        nodeId: node.id,
+                        field: "code",
+                        suggestion: "Add JavaScript code to transform the data"
+                    }
+                )
+            );
+        }
+    }
+
+    // Check HTTP nodes for empty URL
+    const httpNodes = nodes.filter((n) => n.type === "http");
+    for (const node of httpNodes) {
+        const url = node.data.url as string | undefined;
+        if (!url || url.trim().length === 0) {
+            issues.push(
+                createValidationIssue(
+                    "EMPTY_PROMPT",
+                    `HTTP node "${node.data.label || "HTTP"}" has no URL configured`,
+                    "error",
+                    "semantic",
+                    {
+                        nodeId: node.id,
+                        field: "url",
+                        suggestion: "Add the URL for the HTTP request"
+                    }
+                )
+            );
+        }
+    }
+
+    return issues;
+}
+
+/**
+ * Check for expensive node outputs (LLM, HTTP) that are never used downstream.
+ */
+export function validateUnusedExpensiveOutputs(
+    nodes: ValidatableNode[],
+    edges: ValidatableEdge[]
+): WorkflowValidationIssue[] {
+    const issues: WorkflowValidationIssue[] = [];
+
+    // Build a map of all variable references in the workflow
+    const allReferencedVars = new Set<string>();
+    for (const node of nodes) {
+        const refs = extractNodeVariableReferences(node);
+        refs.forEach((v) => allReferencedVars.add(v));
+    }
+
+    // Find expensive nodes with output variables that are never referenced
+    for (const node of nodes) {
+        if (!EXPENSIVE_NODE_TYPES.has(node.type)) continue;
+
+        const outputVar = getOutputVariable(node);
+        if (!outputVar) continue;
+
+        // Check if this node has any outgoing edges (is connected)
+        const hasOutgoingEdges = edges.some((e) => e.source === node.id);
+        if (!hasOutgoingEdges) continue; // Orphan node - handled by structural validation
+
+        // Check if the output variable is referenced anywhere
+        if (!allReferencedVars.has(outputVar)) {
+            // Also check if the node connects to a terminal node (output might be implicit)
+            const downstreamNodeIds = edges
+                .filter((e) => e.source === node.id)
+                .map((e) => e.target);
+            const connectsToTerminal = downstreamNodeIds.some((id) => {
+                const targetNode = nodes.find((n) => n.id === id);
+                return targetNode && TERMINAL_NODE_TYPES.has(targetNode.type);
+            });
+
+            if (!connectsToTerminal) {
+                issues.push(
+                    createValidationIssue(
+                        "UNUSED_EXPENSIVE_OUTPUT",
+                        `${node.type.toUpperCase()} node "${node.data.label || node.type}" output "{{${outputVar}}}" is never used`,
+                        "warning",
+                        "semantic",
+                        {
+                            nodeId: node.id,
+                            field: "outputVariable",
+                            suggestion: `Reference {{${outputVar}}} in a downstream node or remove this node if not needed`,
+                            context: { outputVariable: outputVar }
+                        }
+                    )
+                );
+            }
+        }
+    }
+
+    return issues;
+}
+
+/**
+ * Check if workflow has no observable output (no terminal nodes).
+ */
+export function validateWorkflowHasOutput(
+    nodes: ValidatableNode[],
+    _edges: ValidatableEdge[]
+): WorkflowValidationIssue[] {
+    const issues: WorkflowValidationIssue[] = [];
+
+    // Filter out comment nodes
+    const executableNodes = nodes.filter((n) => n.type !== "comment");
+    if (executableNodes.length === 0) return issues;
+
+    // Check if any terminal node exists
+    const hasTerminalNode = executableNodes.some((n) => TERMINAL_NODE_TYPES.has(n.type));
+
+    // Also check for HTTP nodes that might be sending data (POST/PUT/PATCH/DELETE)
+    const hasHttpWrite = executableNodes.some((n) => {
+        if (n.type !== "http") return false;
+        const method = (n.data.method as string)?.toUpperCase();
+        return method && ["POST", "PUT", "PATCH", "DELETE"].includes(method);
+    });
+
+    if (!hasTerminalNode && !hasHttpWrite) {
+        // Only warn if there are actual processing nodes (not just inputs)
+        const hasProcessingNodes = executableNodes.some((n) =>
+            ["llm", "vision", "transform", "http", "conditional", "loop", "switch"].includes(n.type)
+        );
+
+        if (hasProcessingNodes) {
+            issues.push(
+                createValidationIssue(
+                    "NO_WORKFLOW_OUTPUT",
+                    "Workflow has no output - results are computed but never sent anywhere",
+                    "warning",
+                    "semantic",
+                    {
+                        suggestion:
+                            "Add an Output node to display results, or use Email/Webhook/Database to send data externally"
+                    }
+                )
+            );
+        }
+    }
+
+    return issues;
+}
+
+/**
+ * Check for expensive operations (LLM, HTTP) inside loop bodies.
+ */
+export function validateExpensiveLoopOperations(
+    nodes: ValidatableNode[],
+    edges: ValidatableEdge[]
+): WorkflowValidationIssue[] {
+    const issues: WorkflowValidationIssue[] = [];
+
+    const adjacency = buildAdjacencyList(edges);
+    const loopNodes = nodes.filter((n) => n.type === "loop");
+    const nodeMap = new Map(nodes.map((n) => [n.id, n]));
+
+    for (const loopNode of loopNodes) {
+        // Find the loop body edge
+        const bodyEdge = edges.find(
+            (e) =>
+                e.source === loopNode.id &&
+                (e.sourceHandle === "body" || e.sourceHandle === "output-body")
+        );
+
+        if (!bodyEdge) continue;
+
+        // Find all nodes reachable from the loop body (within the loop)
+        // We need to stop at nodes that connect back to the loop or exit the loop
+        const loopBodyNodes = findNodesInLoopBody(bodyEdge.target, loopNode.id, adjacency, nodeMap);
+
+        // Check for expensive nodes in the loop body
+        for (const nodeId of loopBodyNodes) {
+            const node = nodeMap.get(nodeId);
+            if (!node) continue;
+
+            if (EXPENSIVE_NODE_TYPES.has(node.type)) {
+                const nodeLabel = (node.data.label as string) || node.type;
+                issues.push(
+                    createValidationIssue(
+                        "EXPENSIVE_LOOP_OPERATION",
+                        `${node.type.toUpperCase()} node "${nodeLabel}" is inside a loop - this may be slow and costly`,
+                        "warning",
+                        "semantic",
+                        {
+                            nodeId: node.id,
+                            suggestion:
+                                node.type === "llm"
+                                    ? "Consider batching items and processing them in a single LLM call outside the loop"
+                                    : "Consider batching requests or using pagination to reduce the number of calls",
+                            context: { loopNodeId: loopNode.id }
+                        }
+                    )
+                );
+            }
+        }
+    }
+
+    return issues;
+}
+
+/**
+ * Find all nodes that are part of a loop body (reachable from body start, within the loop).
+ */
+function findNodesInLoopBody(
+    startNodeId: string,
+    loopNodeId: string,
+    adjacency: Map<string, string[]>,
+    _nodeMap: Map<string, ValidatableNode>
+): Set<string> {
+    const visited = new Set<string>();
+    const queue = [startNodeId];
+
+    while (queue.length > 0) {
+        const nodeId = queue.shift()!;
+
+        // Don't revisit nodes
+        if (visited.has(nodeId)) continue;
+
+        // Don't include the loop node itself
+        if (nodeId === loopNodeId) continue;
+
+        visited.add(nodeId);
+
+        // Get downstream nodes
+        const downstream = adjacency.get(nodeId) || [];
+        for (const targetId of downstream) {
+            // Stop if we reach the loop node (end of loop body)
+            if (targetId === loopNodeId) continue;
+
+            if (!visited.has(targetId)) {
+                queue.push(targetId);
+            }
+        }
+    }
+
+    return visited;
+}
+
+// ============================================================================
 // RULE AGGREGATION
 // ============================================================================
 
@@ -789,5 +1139,20 @@ export function runDataFlowValidation(
         ...validateUndefinedVariables(nodes, edges, context),
         ...validateLoopArraySource(nodes, edges, context),
         ...validateOutputVariableConflicts(nodes)
+    ];
+}
+
+/**
+ * Run all semantic validation rules.
+ */
+export function runSemanticValidation(
+    nodes: ValidatableNode[],
+    edges: ValidatableEdge[]
+): WorkflowValidationIssue[] {
+    return [
+        ...validateEmptyPrompts(nodes),
+        ...validateUnusedExpensiveOutputs(nodes, edges),
+        ...validateWorkflowHasOutput(nodes, edges),
+        ...validateExpensiveLoopOperations(nodes, edges)
     ];
 }

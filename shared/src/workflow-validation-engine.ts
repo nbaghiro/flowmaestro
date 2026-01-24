@@ -8,7 +8,8 @@
 import {
     runStructuralValidation,
     runConfigurationValidation,
-    runDataFlowValidation
+    runDataFlowValidation,
+    runSemanticValidation
 } from "./workflow-validation-rules";
 import { createEmptyValidationResult } from "./workflow-validation-types";
 import type {
@@ -35,6 +36,9 @@ export interface WorkflowValidationOptions {
 
     /** Skip data flow validation (undefined variables, conflicts) */
     skipDataFlow?: boolean;
+
+    /** Skip semantic validation (empty prompts, unused outputs, etc.) */
+    skipSemantic?: boolean;
 
     /** Only validate specific node IDs (partial validation) */
     nodeIds?: string[];
@@ -86,6 +90,12 @@ export class WorkflowValidationEngine {
         if (!options.skipDataFlow) {
             const dataFlowIssues = runDataFlowValidation(nodesToValidate, edges, context);
             allIssues.push(...dataFlowIssues);
+        }
+
+        // Run semantic validation
+        if (!options.skipSemantic) {
+            const semanticIssues = runSemanticValidation(nodesToValidate, edges);
+            allIssues.push(...semanticIssues);
         }
 
         return this.buildResult(allIssues);

@@ -23,12 +23,14 @@ export type WorkflowValidationSeverity = "error" | "warning" | "info";
  * - structural: Graph structure issues (orphan nodes, unreachable paths)
  * - configuration: Invalid references (connections, knowledge bases)
  * - dataFlow: Variable and data issues (undefined variables, conflicts)
+ * - semantic: Content quality and logic issues (empty prompts, unused outputs)
  * - optimization: Performance and best practice suggestions
  */
 export type WorkflowValidationCategory =
     | "structural"
     | "configuration"
     | "dataFlow"
+    | "semantic"
     | "optimization";
 
 // ============================================================================
@@ -65,12 +67,24 @@ export type DataFlowValidationCode =
     | "UNUSED_OUTPUT";
 
 /**
+ * Semantic validation codes
+ * These check content quality and logic issues that structural validation cannot catch.
+ */
+export type SemanticValidationCode =
+    | "EMPTY_PROMPT"
+    | "PLACEHOLDER_CONTENT"
+    | "NO_WORKFLOW_OUTPUT"
+    | "UNUSED_EXPENSIVE_OUTPUT"
+    | "EXPENSIVE_LOOP_OPERATION";
+
+/**
  * All validation codes
  */
 export type WorkflowValidationCode =
     | StructuralValidationCode
     | ConfigurationValidationCode
-    | DataFlowValidationCode;
+    | DataFlowValidationCode
+    | SemanticValidationCode;
 
 // ============================================================================
 // VALIDATION ISSUE
