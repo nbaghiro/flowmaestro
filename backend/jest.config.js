@@ -9,14 +9,15 @@
 const baseConfig = {
     preset: "ts-jest",
     testEnvironment: "node",
-    moduleFileExtensions: ["ts", "js", "json"],
+    moduleFileExtensions: ["ts", "tsx", "js", "json"],
     transform: {
-        "^.+\\.ts$": [
+        "^.+\\.tsx?$": [
             "ts-jest",
             {
                 tsconfig: {
                     esModuleInterop: true,
-                    allowSyntheticDefaultImports: true
+                    allowSyntheticDefaultImports: true,
+                    jsx: "react"
                 }
             }
         ]
