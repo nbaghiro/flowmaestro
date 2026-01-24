@@ -118,6 +118,6 @@ export {
     assertValidPythonCodeContains,
     createToolTestSuite,
     ToolTestSuite
-} from "./builtin/__tests__/test-helpers";
+} from "./builtin/tests/test-helpers";
 
-export type { TestContextOptions } from "./builtin/__tests__/test-helpers";
+export type { TestContextOptions } from "./builtin/tests/test-helpers";

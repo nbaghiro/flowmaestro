@@ -13,7 +13,7 @@ export default defineConfig({
             provider: "v8",
             reporter: ["text", "json", "html"],
             include: ["src/lib/**/*.ts", "src/stores/**/*.ts", "src/hooks/**/*.ts"],
-            exclude: ["src/**/*.test.ts", "src/test-setup.ts", "src/lib/__tests__/test-helpers.ts"]
+            exclude: ["src/**/*.test.ts", "src/test-setup.ts", "src/lib/tests/test-helpers.ts"]
         }
     }
 });
