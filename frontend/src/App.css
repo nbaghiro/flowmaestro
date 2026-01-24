@@ -111,8 +111,9 @@ input:-webkit-autofill::first-line {
 }
 
 /* React Flow Custom Styles */
+/* Light mode: slightly darker than page background (98%) for visual distinction */
 .react-flow {
-    background-color: hsl(var(--background));
+    background-color: hsl(0 0% 94%);
 }
 
 .dark .react-flow {
@@ -121,6 +122,28 @@ input:-webkit-autofill::first-line {
 
 .react-flow__node {
     @apply cursor-pointer;
+}
+
+/* Disable all interactive hover effects in workflow previews (cards, thumbnails, etc.) */
+.workflow-preview {
+    /* Isolate preview from parent group hover context */
+    isolation: isolate;
+}
+
+/* Force hide all elements that use group-hover:opacity within previews */
+.workflow-preview [class*="group-hover"] {
+    opacity: 0 !important;
+    visibility: hidden !important;
+}
+
+.workflow-preview .react-flow__node {
+    cursor: default;
+    pointer-events: none;
+}
+
+.workflow-preview .react-flow__handle {
+    pointer-events: none;
+    opacity: 0.5;
 }
 
 /* Override React Flow's default input/output node styling */

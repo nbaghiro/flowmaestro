@@ -118,14 +118,7 @@ export function WorkflowCanvas({ onInit: onInitProp }: WorkflowCanvasProps) {
     );
 
     return (
-        <div
-            ref={reactFlowWrapper}
-            style={{
-                width: "100%",
-                height: "100%",
-                backgroundColor: effectiveTheme === "dark" ? "#000000" : "#f2f2f2"
-            }}
-        >
+        <div ref={reactFlowWrapper} className="w-full h-full">
             <Flow
                 nodes={nodes}
                 edges={edges}

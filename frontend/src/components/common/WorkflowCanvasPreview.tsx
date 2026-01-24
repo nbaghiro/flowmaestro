@@ -103,7 +103,7 @@ export function WorkflowCanvasPreview({
         <div
             className={cn(
                 height,
-                "bg-muted dark:bg-muted relative overflow-hidden shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)]",
+                "workflow-preview bg-muted dark:bg-muted relative overflow-hidden shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)]",
                 className
             )}
         >
