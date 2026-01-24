@@ -39,6 +39,7 @@ import {
     compareWorkflowSnapshots
 } from "../lib/workflowTransformers";
 import { useChatStore } from "../stores/chatStore";
+import { useConnectionStore } from "../stores/connectionStore";
 import { useHistoryStore, initializeHistoryTracking } from "../stores/historyStore";
 import { useTriggerStore } from "../stores/triggerStore";
 import { useWorkflowStore } from "../stores/workflowStore";
@@ -114,14 +115,30 @@ export function FlowBuilder() {
         deleteNode,
         addNode,
         selectNode,
-        setNodes
+        setNodes,
+        autoFillMissingConnections
     } = useWorkflowStore();
 
     const { undo, redo, canUndo, canRedo, clear } = useHistoryStore();
 
     const { closePanel: closeChatPanel, openPanel: openChatPanel } = useChatStore();
 
+    const { connections, fetchConnections } = useConnectionStore();
+
     const { setDrawerOpen } = useTriggerStore();
+
+    // Fetch connections on mount
+    useEffect(() => {
+        fetchConnections();
+    }, [fetchConnections]);
+
+    // Auto-fill missing connectionIds whenever conditions are met
+    // The function is idempotent - it only updates nodes that need updating
+    useEffect(() => {
+        if (!isLoading && connections.length > 0 && nodes.length > 0) {
+            autoFillMissingConnections(connections);
+        }
+    }, [isLoading, connections, nodes, autoFillMissingConnections]);
 
     // Helper to open a right panel (closes any other open panel first)
     const openRightPanel = useCallback(

@@ -7,6 +7,8 @@
  * - Data Flow: Variable and data issues
  */
 
+import { nodeValidationRules } from "./node-validation-rules";
+import { validateNodeConfig } from "./validation";
 import { createValidationIssue } from "./workflow-validation-types";
 import type {
     WorkflowValidationIssue,
@@ -1098,6 +1100,47 @@ function findNodesInLoopBody(
 }
 
 // ============================================================================
+// NODE CONFIGURATION VALIDATION
+// ============================================================================
+
+/**
+ * Validate each node's required configuration using node-level validation rules.
+ * This surfaces node validation errors in the workflow validation panel.
+ */
+export function validateNodeRequiredConfig(nodes: ValidatableNode[]): WorkflowValidationIssue[] {
+    const issues: WorkflowValidationIssue[] = [];
+
+    for (const node of nodes) {
+        if (node.type === "comment") continue;
+
+        // Run node-level validation
+        const nodeConfig = node.data as Record<string, unknown>;
+        const validationResult = validateNodeConfig(node.type, nodeConfig, nodeValidationRules);
+
+        // Convert node validation errors to workflow issues
+        for (const error of validationResult.errors) {
+            if (error.severity !== "error") continue; // Only surface errors, not warnings
+
+            issues.push(
+                createValidationIssue(
+                    "MISSING_REQUIRED_CONFIG",
+                    `${node.data.label || node.type}: ${error.message}`,
+                    "error",
+                    "configuration",
+                    {
+                        nodeId: node.id,
+                        field: error.field,
+                        suggestion: `Configure the "${error.field}" field in the node settings`
+                    }
+                )
+            );
+        }
+    }
+
+    return issues;
+}
+
+// ============================================================================
 // RULE AGGREGATION
 // ============================================================================
 
@@ -1124,7 +1167,11 @@ export function runConfigurationValidation(
     nodes: ValidatableNode[],
     context: WorkflowValidationContext
 ): WorkflowValidationIssue[] {
-    return [...validateConnectionIds(nodes, context), ...validateKnowledgeBaseIds(nodes, context)];
+    return [
+        ...validateNodeRequiredConfig(nodes),
+        ...validateConnectionIds(nodes, context),
+        ...validateKnowledgeBaseIds(nodes, context)
+    ];
 }
 
 /**

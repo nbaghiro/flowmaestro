@@ -39,7 +39,7 @@ export function NodeValidationBadge({
         return workflowValidation.nodeIssues.get(nodeId) || [];
     }, [workflowValidation, nodeId]);
 
-    // Combine all issues
+    // Combine all issues (avoiding duplicates between node-level and workflow-level)
     const combinedIssues = useMemo<CombinedIssue[]>(() => {
         const issues: CombinedIssue[] = [];
 
@@ -52,8 +52,11 @@ export function NodeValidationBadge({
             });
         }
 
-        // Add workflow-level issues
+        // Add workflow-level issues, excluding MISSING_REQUIRED_CONFIG
+        // (those are duplicates of node-level errors already shown above)
         for (const issue of workflowIssues) {
+            if (issue.code === "MISSING_REQUIRED_CONFIG") continue;
+
             issues.push({
                 message: issue.message,
                 severity: issue.severity,
@@ -149,8 +152,10 @@ export function getNodeValidationBorderStyle(
     const hasNodeErrors = nodeValidationErrors.some((e) => e.severity === "error");
     const hasNodeWarnings = nodeValidationErrors.some((e) => e.severity === "warning");
 
-    // Check workflow-level issues
-    const workflowIssues = workflowValidation?.nodeIssues.get(nodeId) || [];
+    // Check workflow-level issues (excluding MISSING_REQUIRED_CONFIG which duplicates node-level)
+    const workflowIssues = (workflowValidation?.nodeIssues.get(nodeId) || []).filter(
+        (i) => i.code !== "MISSING_REQUIRED_CONFIG"
+    );
     const hasWorkflowErrors = workflowIssues.some((i) => i.severity === "error");
     const hasWorkflowWarnings = workflowIssues.some((i) => i.severity === "warning");
 

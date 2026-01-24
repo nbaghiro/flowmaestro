@@ -167,6 +167,11 @@ interface WorkflowStore {
     runWorkflowValidation: (context?: WorkflowValidationContext) => void;
     setWorkflowValidationContext: (context: WorkflowValidationContext) => void;
     getNodeWorkflowIssues: (nodeId: string) => WorkflowValidationIssue[];
+
+    // Connection auto-fill
+    autoFillMissingConnections: (
+        connections: Array<{ id: string; provider: string; status: string }>
+    ) => void;
 }
 
 export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
@@ -619,6 +624,74 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
         const { workflowValidation } = get();
         if (!workflowValidation) return [];
         return workflowValidation.nodeIssues.get(nodeId) || [];
+    },
+
+    autoFillMissingConnections: (
+        connections: Array<{ id: string; provider: string; status: string }>
+    ) => {
+        const { nodes } = get();
+        if (connections.length === 0) {
+            logger.debug("autoFillMissingConnections: no connections available");
+            return;
+        }
+
+        // Node types that require connectionId and have a provider field
+        const connectionNodeTypes = new Set([
+            "llm",
+            "vision",
+            "embeddings",
+            "router",
+            "audioInput",
+            "audioOutput",
+            "imageGeneration",
+            "videoGeneration"
+        ]);
+
+        let hasChanges = false;
+        const updatedNodes = nodes.map((node) => {
+            // Skip nodes that don't need connections or already have one
+            if (!connectionNodeTypes.has(node.type || "")) return node;
+            if (node.data?.connectionId) return node;
+
+            const provider = node.data?.provider as string | undefined;
+            if (!provider) return node;
+
+            // Find an active connection for this provider
+            const matchingConnection = connections.find(
+                (conn) => conn.provider === provider && conn.status === "active"
+            );
+
+            if (matchingConnection) {
+                hasChanges = true;
+                logger.debug("autoFillMissingConnections: filling connection", {
+                    nodeId: node.id,
+                    provider,
+                    connectionId: matchingConnection.id
+                });
+                return {
+                    ...node,
+                    data: {
+                        ...node.data,
+                        connectionId: matchingConnection.id
+                    }
+                };
+            } else {
+                logger.debug("autoFillMissingConnections: no matching connection", {
+                    nodeId: node.id,
+                    provider,
+                    availableProviders: connections.map((c) => c.provider)
+                });
+            }
+
+            return node;
+        });
+
+        if (hasChanges) {
+            set({ nodes: updatedNodes });
+            // Re-validate all nodes after auto-filling
+            get().validateAllNodes();
+            debouncedWorkflowValidation(get);
+        }
     }
 }));
 
