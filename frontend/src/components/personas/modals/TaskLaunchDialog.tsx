@@ -28,6 +28,7 @@ import {
     generateFromTemplate,
     grantPersonaInstanceConnection
 } from "../../../lib/api";
+import { logger } from "../../../lib/logger";
 import { usePersonaStore } from "../../../stores/personaStore";
 import { Select } from "../../common/Select";
 import { Tooltip } from "../../common/Tooltip";
@@ -298,7 +299,7 @@ export const TaskLaunchDialog: React.FC<TaskLaunchDialogProps> = ({
                     setTemplates(response.data.templates || []);
                 })
                 .catch((err) => {
-                    console.error("Failed to fetch templates:", err);
+                    logger.error("Failed to fetch templates", err);
                     setTemplates([]);
                 })
                 .finally(() => {
@@ -490,7 +491,7 @@ export const TaskLaunchDialog: React.FC<TaskLaunchDialogProps> = ({
                             conn.scopes
                         );
                     } catch (connErr) {
-                        console.error("Failed to grant connection:", connErr);
+                        logger.error("Failed to grant connection", connErr as Error);
                         // Continue with other connections even if one fails
                     }
                 }

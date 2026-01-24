@@ -75,8 +75,8 @@ describe("WorkflowChatService", () => {
 
             it("should include conversation history in context", async () => {
                 const history: ChatMessage[] = [
-                    { role: "user", content: "Hello" },
-                    { role: "assistant", content: "Hi!" }
+                    { id: "msg-1", timestamp: new Date(), role: "user", content: "Hello" },
+                    { id: "msg-2", timestamp: new Date(), role: "assistant", content: "Hi!" }
                 ];
 
                 await service.processChat(

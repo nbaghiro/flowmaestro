@@ -28,10 +28,11 @@ function generatePreview(type: DeliverableType, content: string | undefined): st
             // For text-based content, take first N characters
             return content.length > maxLength ? content.substring(0, maxLength) + "..." : content;
 
-        case "csv":
+        case "csv": {
             // For CSV, take first few lines
             const lines = content.split("\n").slice(0, 5);
             return lines.join("\n") + (content.split("\n").length > 5 ? "\n..." : "");
+        }
 
         case "json":
             // For JSON, try to pretty-print and truncate
