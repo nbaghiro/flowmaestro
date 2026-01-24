@@ -2734,6 +2734,69 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
         },
         refreshable: true,
         pkceEnabled: true
+    },
+
+    surveymonkey: {
+        name: "surveymonkey",
+        displayName: "SurveyMonkey",
+        authUrl: "https://api.surveymonkey.com/oauth/authorize",
+        tokenUrl: "https://api.surveymonkey.com/oauth/token",
+        scopes: [
+            "users_read",
+            "surveys_read",
+            "collectors_read",
+            "responses_read",
+            "responses_read_detail"
+        ],
+        clientId: config.oauth.surveymonkey.clientId,
+        clientSecret: config.oauth.surveymonkey.clientSecret,
+        redirectUri: getOAuthRedirectUri("surveymonkey"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://api.surveymonkey.com/v3/users/me", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                        "Content-Type": "application/json"
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    id?: string;
+                    username?: string;
+                    email?: string;
+                    first_name?: string;
+                    last_name?: string;
+                    account_type?: string;
+                };
+
+                const fullName =
+                    data.first_name && data.last_name
+                        ? `${data.first_name} ${data.last_name}`
+                        : data.username || "SurveyMonkey User";
+
+                return {
+                    userId: data.id || "unknown",
+                    email: data.email || "unknown@surveymonkey",
+                    name: fullName,
+                    user: data.username || fullName,
+                    account_type: data.account_type
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get SurveyMonkey user info");
+                return {
+                    userId: "unknown",
+                    email: "unknown@surveymonkey",
+                    name: "SurveyMonkey User",
+                    user: "SurveyMonkey User"
+                };
+            }
+        },
+        // SurveyMonkey tokens don't expire for authorized apps
+        refreshable: false
     }
 };
 

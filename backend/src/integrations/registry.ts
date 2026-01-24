@@ -394,7 +394,7 @@ const typeformEntry: ProviderRegistryEntry = {
     name: "typeform",
     displayName: "Typeform",
     authMethod: "oauth2",
-    category: "marketing",
+    category: "forms_surveys",
     loader: async () => {
         const { TypeformProvider } = await import("./providers/typeform/TypeformProvider");
         return new TypeformProvider();
@@ -402,6 +402,22 @@ const typeformEntry: ProviderRegistryEntry = {
 };
 
 providerRegistry.register(typeformEntry);
+
+// Register SurveyMonkey provider
+const surveymonkeyEntry: ProviderRegistryEntry = {
+    name: "surveymonkey",
+    displayName: "SurveyMonkey",
+    authMethod: "oauth2",
+    category: "forms_surveys",
+    loader: async () => {
+        const { SurveyMonkeyProvider } = await import(
+            "./providers/surveymonkey/SurveyMonkeyProvider"
+        );
+        return new SurveyMonkeyProvider();
+    }
+};
+
+providerRegistry.register(surveymonkeyEntry);
 
 // Register Dropbox provider
 const dropboxEntry: ProviderRegistryEntry = {

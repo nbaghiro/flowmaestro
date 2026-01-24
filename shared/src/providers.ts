@@ -139,7 +139,8 @@ export const PROVIDER_LOGO_DOMAINS: Record<string, string> = {
     amplitude: "amplitude.com",
     mixpanel: "mixpanel.com",
     hellosign: "hellosign.com",
-    docusign: "docusign.com"
+    docusign: "docusign.com",
+    surveymonkey: "surveymonkey.com"
 };
 
 /**
@@ -1075,7 +1076,7 @@ export const ALL_PROVIDERS: Provider[] = [
         displayName: "Typeform",
         description: "Online forms and surveys",
         logoUrl: getBrandLogo("typeform.com"),
-        category: "Marketing",
+        category: "Forms & Surveys",
         methods: ["oauth2"]
     },
     {
@@ -1083,9 +1084,8 @@ export const ALL_PROVIDERS: Provider[] = [
         displayName: "SurveyMonkey",
         description: "Online survey platform",
         logoUrl: getBrandLogo("surveymonkey.com"),
-        category: "Marketing",
-        methods: ["oauth2"],
-        comingSoon: true
+        category: "Forms & Surveys",
+        methods: ["oauth2"]
     },
     {
         provider: "klaviyo",

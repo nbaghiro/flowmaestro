@@ -396,6 +396,12 @@ export const config = {
         docusign: {
             clientId: process.env.DOCUSIGN_CLIENT_ID || "",
             clientSecret: process.env.DOCUSIGN_CLIENT_SECRET || ""
+        },
+
+        // SurveyMonkey
+        surveymonkey: {
+            clientId: process.env.SURVEYMONKEY_CLIENT_ID || "",
+            clientSecret: process.env.SURVEYMONKEY_CLIENT_SECRET || ""
         }
     }
 };
@@ -460,6 +466,7 @@ export function getOAuthRedirectUri(provider: string): string {
         pinterest: "/oauth/pinterest/callback",
         hellosign: "/oauth/hellosign/callback",
         docusign: "/oauth/docusign/callback",
+        surveymonkey: "/oauth/surveymonkey/callback",
 
         // OAuth 1.0a providers
         evernote: "/oauth1/evernote/callback"
@@ -524,7 +531,8 @@ export function getOAuthCredentials(provider: string): { clientId: string; clien
         tiktok: "tiktok",
         pinterest: "pinterest",
         hellosign: "hellosign",
-        docusign: "docusign"
+        docusign: "docusign",
+        surveymonkey: "surveymonkey"
     };
 
     const configKey = providerMap[provider];
