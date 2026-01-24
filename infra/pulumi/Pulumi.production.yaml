@@ -115,5 +115,9 @@ config:
       {"name":"twilio-auth-token","envVar":"TWILIO_AUTH_TOKEN","category":"service","deployments":["api"],"required":false,"description":"Twilio Auth Token"},
       {"name":"twilio-phone-number","envVar":"TWILIO_PHONE_NUMBER","category":"service","deployments":["api"],"required":false,"description":"Twilio Phone Number"},
       {"name":"pypi-api-token","envVar":"PYPI_API_TOKEN","category":"service","deployments":[],"required":false,"description":"PyPI API token for publishing Python SDK"},
-      {"name":"npm-token","envVar":"NPM_TOKEN","category":"service","deployments":[],"required":false,"description":"npm token for publishing JavaScript SDKs"}
+      {"name":"npm-token","envVar":"NPM_TOKEN","category":"service","deployments":[],"required":false,"description":"npm token for publishing JavaScript SDKs"},
+      {"name":"tiktok-client-id","envVar":"TIKTOK_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"TikTok OAuth client ID"},
+      {"name":"tiktok-client-secret","envVar":"TIKTOK_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"TikTok OAuth client secret"},
+      {"name":"pinterest-client-id","envVar":"PINTEREST_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Pinterest OAuth client ID"},
+      {"name":"pinterest-client-secret","envVar":"PINTEREST_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Pinterest OAuth client secret"}
     ]

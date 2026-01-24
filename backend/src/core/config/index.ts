@@ -372,6 +372,18 @@ export const config = {
         close: {
             clientId: process.env.CLOSE_CLIENT_ID || "",
             clientSecret: process.env.CLOSE_CLIENT_SECRET || ""
+        },
+
+        // TikTok
+        tiktok: {
+            clientId: process.env.TIKTOK_CLIENT_ID || "",
+            clientSecret: process.env.TIKTOK_CLIENT_SECRET || ""
+        },
+
+        // Pinterest
+        pinterest: {
+            clientId: process.env.PINTEREST_CLIENT_ID || "",
+            clientSecret: process.env.PINTEREST_CLIENT_SECRET || ""
         }
     }
 };
@@ -432,6 +444,8 @@ export function getOAuthRedirectUri(provider: string): string {
         monday: "/oauth/monday/callback",
         pipedrive: "/oauth/pipedrive/callback",
         close: "/oauth/close/callback",
+        tiktok: "/oauth/tiktok/callback",
+        pinterest: "/oauth/pinterest/callback",
 
         // OAuth 1.0a providers
         evernote: "/oauth1/evernote/callback"
@@ -492,7 +506,9 @@ export function getOAuthCredentials(provider: string): { clientId: string; clien
         asana: "asana",
         monday: "monday",
         pipedrive: "pipedrive",
-        close: "close"
+        close: "close",
+        tiktok: "tiktok",
+        pinterest: "pinterest"
     };
 
     const configKey = providerMap[provider];

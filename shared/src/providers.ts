@@ -133,7 +133,9 @@ export const PROVIDER_LOGO_DOMAINS: Record<string, string> = {
     trello: "trello.com",
     evernote: "evernote.com",
     pipedrive: "pipedrive.com",
-    close: "close.com"
+    close: "close.com",
+    tiktok: "tiktok.com",
+    pinterest: "pinterest.com"
 };
 
 /**
@@ -1556,20 +1558,18 @@ export const ALL_PROVIDERS: Provider[] = [
     {
         provider: "tiktok",
         displayName: "TikTok",
-        description: "Short-form video platform",
+        description: "Read profile info, list videos, and publish content to TikTok",
         logoUrl: getBrandLogo("tiktok.com"),
         category: "Social Media",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "pinterest",
         displayName: "Pinterest",
-        description: "Visual discovery platform",
+        description: "Read and create pins, boards, and manage your Pinterest account",
         logoUrl: getBrandLogo("pinterest.com"),
         category: "Social Media",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "reddit",

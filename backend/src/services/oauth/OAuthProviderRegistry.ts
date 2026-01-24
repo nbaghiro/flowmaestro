@@ -2480,6 +2480,128 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
         revokeUrl: "https://api.close.com/oauth2/revoke/",
         refreshable: true,
         pkceEnabled: false
+    },
+
+    // ==========================================================================
+    // TikTok - Social Media
+    // Uses OAuth 2.0 with client_key parameter (not standard client_id)
+    // ==========================================================================
+
+    tiktok: {
+        name: "tiktok",
+        displayName: "TikTok",
+        authUrl: "https://www.tiktok.com/v2/auth/authorize/",
+        tokenUrl: "https://open.tiktokapis.com/v2/oauth/token/",
+        scopes: ["user.info.basic", "user.info.profile", "video.list"],
+        clientId: config.oauth.tiktok.clientId,
+        clientSecret: config.oauth.tiktok.clientSecret,
+        redirectUri: getOAuthRedirectUri("tiktok"),
+        authParams: {
+            client_key: config.oauth.tiktok.clientId // TikTok uses client_key instead of client_id
+        },
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch(
+                    "https://open.tiktokapis.com/v2/user/info/?fields=open_id,union_id,avatar_url,display_name",
+                    {
+                        headers: {
+                            Authorization: `Bearer ${accessToken}`
+                        }
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const result = (await response.json()) as {
+                    data?: {
+                        user?: {
+                            open_id?: string;
+                            union_id?: string;
+                            avatar_url?: string;
+                            display_name?: string;
+                        };
+                    };
+                    error?: {
+                        code?: string;
+                        message?: string;
+                    };
+                };
+
+                if (result.error?.code) {
+                    throw new Error(result.error.message || "TikTok API error");
+                }
+
+                return {
+                    userId: result.data?.user?.open_id || "unknown",
+                    name: result.data?.user?.display_name || "TikTok User",
+                    user: result.data?.user?.display_name || "TikTok User",
+                    avatar: result.data?.user?.avatar_url
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get TikTok user info");
+                return {
+                    userId: "unknown",
+                    name: "TikTok User",
+                    user: "TikTok User"
+                };
+            }
+        },
+        refreshable: true
+    },
+
+    // ==========================================================================
+    // Pinterest - Social Media
+    // Uses OAuth 2.0 with Basic Auth for token exchange
+    // ==========================================================================
+
+    pinterest: {
+        name: "pinterest",
+        displayName: "Pinterest",
+        authUrl: "https://www.pinterest.com/oauth/",
+        tokenUrl: "https://api.pinterest.com/v5/oauth/token",
+        scopes: ["user_accounts:read", "boards:read", "pins:read", "pins:write"],
+        clientId: config.oauth.pinterest.clientId,
+        clientSecret: config.oauth.pinterest.clientSecret,
+        redirectUri: getOAuthRedirectUri("pinterest"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://api.pinterest.com/v5/user_account", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    id?: string;
+                    username?: string;
+                    profile_image?: string;
+                    website_url?: string;
+                };
+
+                return {
+                    userId: data.id || "unknown",
+                    name: data.username || "Pinterest User",
+                    user: data.username || "Pinterest User",
+                    avatar: data.profile_image
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get Pinterest user info");
+                return {
+                    userId: "unknown",
+                    name: "Pinterest User",
+                    user: "Pinterest User"
+                };
+            }
+        },
+        revokeUrl: "https://api.pinterest.com/v5/oauth/token/revoke",
+        refreshable: true,
+        pkceEnabled: true // Pinterest uses Basic Auth + PKCE for enhanced security
     }
 };
 
