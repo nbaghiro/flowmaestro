@@ -641,5 +641,33 @@ const posthogEntry: ProviderRegistryEntry = {
 
 providerRegistry.register(posthogEntry);
 
+// Register HelloSign provider
+const hellosignEntry: ProviderRegistryEntry = {
+    name: "hellosign",
+    displayName: "HelloSign",
+    authMethod: "oauth2",
+    category: "legal",
+    loader: async () => {
+        const { HelloSignProvider } = await import("./providers/hellosign/HelloSignProvider");
+        return new HelloSignProvider();
+    }
+};
+
+providerRegistry.register(hellosignEntry);
+
+// Register DocuSign provider
+const docusignEntry: ProviderRegistryEntry = {
+    name: "docusign",
+    displayName: "DocuSign",
+    authMethod: "oauth2",
+    category: "legal",
+    loader: async () => {
+        const { DocuSignProvider } = await import("./providers/docusign/DocuSignProvider");
+        return new DocuSignProvider();
+    }
+};
+
+providerRegistry.register(docusignEntry);
+
 // Export for use in application
 export { providerRegistry };

@@ -119,5 +119,9 @@ config:
       {"name":"tiktok-client-id","envVar":"TIKTOK_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"TikTok OAuth client ID"},
       {"name":"tiktok-client-secret","envVar":"TIKTOK_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"TikTok OAuth client secret"},
       {"name":"pinterest-client-id","envVar":"PINTEREST_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Pinterest OAuth client ID"},
-      {"name":"pinterest-client-secret","envVar":"PINTEREST_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Pinterest OAuth client secret"}
+      {"name":"pinterest-client-secret","envVar":"PINTEREST_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Pinterest OAuth client secret"},
+      {"name":"hellosign-client-id","envVar":"HELLOSIGN_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"HelloSign (Dropbox Sign) OAuth client ID"},
+      {"name":"hellosign-client-secret","envVar":"HELLOSIGN_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"HelloSign (Dropbox Sign) OAuth client secret"},
+      {"name":"docusign-client-id","envVar":"DOCUSIGN_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"DocuSign OAuth client ID"},
+      {"name":"docusign-client-secret","envVar":"DOCUSIGN_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"DocuSign OAuth client secret"}
     ]

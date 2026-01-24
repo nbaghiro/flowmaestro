@@ -384,6 +384,18 @@ export const config = {
         pinterest: {
             clientId: process.env.PINTEREST_CLIENT_ID || "",
             clientSecret: process.env.PINTEREST_CLIENT_SECRET || ""
+        },
+
+        // HelloSign (Dropbox Sign)
+        hellosign: {
+            clientId: process.env.HELLOSIGN_CLIENT_ID || "",
+            clientSecret: process.env.HELLOSIGN_CLIENT_SECRET || ""
+        },
+
+        // DocuSign
+        docusign: {
+            clientId: process.env.DOCUSIGN_CLIENT_ID || "",
+            clientSecret: process.env.DOCUSIGN_CLIENT_SECRET || ""
         }
     }
 };
@@ -446,6 +458,8 @@ export function getOAuthRedirectUri(provider: string): string {
         close: "/oauth/close/callback",
         tiktok: "/oauth/tiktok/callback",
         pinterest: "/oauth/pinterest/callback",
+        hellosign: "/oauth/hellosign/callback",
+        docusign: "/oauth/docusign/callback",
 
         // OAuth 1.0a providers
         evernote: "/oauth1/evernote/callback"
@@ -508,7 +522,9 @@ export function getOAuthCredentials(provider: string): { clientId: string; clien
         pipedrive: "pipedrive",
         close: "close",
         tiktok: "tiktok",
-        pinterest: "pinterest"
+        pinterest: "pinterest",
+        hellosign: "hellosign",
+        docusign: "docusign"
     };
 
     const configKey = providerMap[provider];

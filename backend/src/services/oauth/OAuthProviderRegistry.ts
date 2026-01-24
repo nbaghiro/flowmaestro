@@ -2602,6 +2602,138 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
         revokeUrl: "https://api.pinterest.com/v5/oauth/token/revoke",
         refreshable: true,
         pkceEnabled: true // Pinterest uses Basic Auth + PKCE for enhanced security
+    },
+
+    // ==========================================================================
+    // HelloSign (Dropbox Sign) - E-Signature
+    // OAuth 2.0 with refresh token support
+    // ==========================================================================
+
+    hellosign: {
+        name: "hellosign",
+        displayName: "HelloSign",
+        authUrl: "https://app.hellosign.com/oauth/authorize",
+        tokenUrl: "https://app.hellosign.com/oauth/token",
+        scopes: ["signature_request_access", "template_access", "account_access"],
+        clientId: config.oauth.hellosign.clientId,
+        clientSecret: config.oauth.hellosign.clientSecret,
+        redirectUri: getOAuthRedirectUri("hellosign"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://api.hellosign.com/v3/account", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const result = (await response.json()) as {
+                    account?: {
+                        account_id?: string;
+                        email_address?: string;
+                        role_code?: string;
+                        is_paid_hs?: boolean;
+                        is_paid_hf?: boolean;
+                    };
+                };
+
+                return {
+                    userId: result.account?.account_id || "unknown",
+                    email: result.account?.email_address || "unknown@hellosign",
+                    name: result.account?.email_address || "HelloSign User",
+                    user: result.account?.email_address || "HelloSign User",
+                    isPaid: result.account?.is_paid_hs || result.account?.is_paid_hf
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get HelloSign user info");
+                return {
+                    userId: "unknown",
+                    email: "unknown@hellosign",
+                    name: "HelloSign User",
+                    user: "HelloSign User"
+                };
+            }
+        },
+        refreshable: true
+    },
+
+    // ==========================================================================
+    // DocuSign - E-Signature
+    // OAuth 2.0 with PKCE, requires fetching accountId and base_uri after auth
+    // ==========================================================================
+
+    docusign: {
+        name: "docusign",
+        displayName: "DocuSign",
+        authUrl: "https://account.docusign.com/oauth/auth",
+        tokenUrl: "https://account.docusign.com/oauth/token",
+        scopes: ["signature", "extended"],
+        authParams: {
+            response_type: "code",
+            prompt: "login"
+        },
+        clientId: config.oauth.docusign.clientId,
+        clientSecret: config.oauth.docusign.clientSecret,
+        redirectUri: getOAuthRedirectUri("docusign"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                // DocuSign requires calling /oauth/userinfo to get accountId and base_uri
+                const response = await fetch("https://account.docusign.com/oauth/userinfo", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    sub?: string;
+                    name?: string;
+                    email?: string;
+                    accounts?: Array<{
+                        account_id: string;
+                        account_name: string;
+                        is_default: boolean;
+                        base_uri: string;
+                    }>;
+                };
+
+                // Get the default account or first available
+                const defaultAccount =
+                    data.accounts?.find((a) => a.is_default) || data.accounts?.[0];
+
+                if (!defaultAccount) {
+                    throw new Error("No DocuSign accounts found for this user");
+                }
+
+                return {
+                    userId: data.sub || "unknown",
+                    email: data.email || "unknown@docusign",
+                    name: data.name || "DocuSign User",
+                    user: data.name || data.email || "DocuSign User",
+                    // These are critical for API calls
+                    account_id: defaultAccount.account_id,
+                    account_name: defaultAccount.account_name,
+                    base_uri: defaultAccount.base_uri,
+                    accounts: data.accounts
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get DocuSign user info");
+                return {
+                    userId: "unknown",
+                    email: "unknown@docusign",
+                    name: "DocuSign User",
+                    user: "DocuSign User"
+                };
+            }
+        },
+        refreshable: true,
+        pkceEnabled: true
     }
 };
 

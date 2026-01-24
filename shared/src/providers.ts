@@ -137,7 +137,9 @@ export const PROVIDER_LOGO_DOMAINS: Record<string, string> = {
     tiktok: "tiktok.com",
     pinterest: "pinterest.com",
     amplitude: "amplitude.com",
-    mixpanel: "mixpanel.com"
+    mixpanel: "mixpanel.com",
+    hellosign: "hellosign.com",
+    docusign: "docusign.com"
 };
 
 /**
@@ -1839,8 +1841,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "E-signature and document management",
         logoUrl: getBrandLogo("docusign.com"),
         category: "Legal & Contracts",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "pandadoc",
@@ -1857,8 +1858,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "E-signature platform",
         logoUrl: getBrandLogo("hellosign.com"),
         category: "Legal & Contracts",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
 
     // Knowledge Base
