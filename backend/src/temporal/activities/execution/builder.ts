@@ -80,28 +80,31 @@ export function buildWorkflow(definition: WorkflowDefinition): BuildResult {
         // =========================================================================
         // Stage 1: Path Construction
         // =========================================================================
+        // Note: Structural validation (cycles, unreachable nodes) is now handled
+        // by the shared validation engine in pre-execution. These checks are
+        // defensive and log warnings rather than blocking errors.
         const pathResult = constructPaths(definition, triggerId);
 
-        // Check for cycles
+        // Defensive cycle check - should already be caught by shared validation
         const startNodes = [...pathResult.reachableNodes].filter(
             (nodeId) => (pathResult.reverseAdjacencyList.get(nodeId) || []).length === 0
         );
         const cycles = detectCycles(pathResult.adjacencyList, startNodes);
         if (cycles.length > 0) {
-            // Cycles might be valid loops - only error if they're not loop back-edges
+            // Only warn for non-loop cycles (loop back-edges are valid)
             for (const cycle of cycles) {
-                // Check if this is a loop back-edge (valid)
                 const isLoopCycle = cycle.includes("loop");
                 if (!isLoopCycle) {
-                    errors.push({
+                    // Log as warning since pre-execution validation should have caught this
+                    warnings.push({
                         code: "CYCLE_DETECTED",
-                        message: `Invalid cycle detected: ${cycle}`
+                        message: `Cycle detected (should have been caught by pre-validation): ${cycle}`
                     });
                 }
             }
         }
 
-        // Check for unreachable nodes
+        // Log unreachable nodes as warnings (non-blocking)
         const allNodes = Object.keys(definition.nodes);
         const unreachableNodes = allNodes.filter(
             (nodeId) => !pathResult.reachableNodes.has(nodeId)

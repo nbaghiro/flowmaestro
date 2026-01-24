@@ -3,7 +3,8 @@ import type { JsonValue, WorkflowDefinition } from "@flowmaestro/shared";
 import { createServiceLogger } from "../../../../core/logging";
 import {
     convertFrontendToBackend,
-    stripNonExecutableNodes
+    stripNonExecutableNodes,
+    validateWorkflowForExecution
 } from "../../../../core/utils/workflow-converter";
 import { ExecutionRepository } from "../../../../storage/repositories/ExecutionRepository";
 import { WorkflowRepository } from "../../../../storage/repositories/WorkflowRepository";
@@ -60,6 +61,22 @@ export async function executeWorkflowHandler(fastify: FastifyInstance): Promise<
                 // Validate workflow has a definition
                 if (!workflow.definition) {
                     return sendValidationError(reply, "Workflow has no definition");
+                }
+
+                // Pre-execution validation using shared validation engine
+                const validation = validateWorkflowForExecution(
+                    workflow.definition as WorkflowDefinition
+                );
+
+                if (!validation.isValid) {
+                    logger.warn(
+                        { workflowId, errors: validation.errors },
+                        "Workflow validation failed"
+                    );
+                    return sendValidationError(
+                        reply,
+                        `Workflow validation failed: ${validation.errors.join(", ")}`
+                    );
                 }
 
                 // Prepare inputs (use provided inputs or empty object)

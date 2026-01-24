@@ -2,7 +2,8 @@ import { FastifyInstance } from "fastify";
 import {
     convertFrontendToBackend,
     FrontendWorkflowDefinition,
-    stripNonExecutableNodes
+    stripNonExecutableNodes,
+    validateWorkflowForExecution
 } from "../../../core/utils/workflow-converter";
 import { getTemporalClient } from "../../../temporal/client";
 import { authMiddleware } from "../../middleware";
@@ -29,6 +30,19 @@ export async function executeWorkflowRoute(fastify: FastifyInstance) {
             }
 
             try {
+                // Pre-execution validation using shared validation engine
+                const validation = validateWorkflowForExecution(body.workflowDefinition);
+
+                if (!validation.isValid) {
+                    fastify.log.warn({ errors: validation.errors }, "Workflow validation failed");
+
+                    return reply.status(400).send({
+                        success: false,
+                        error: "Workflow validation failed",
+                        validationErrors: validation.errors
+                    });
+                }
+
                 const client = await getTemporalClient();
 
                 // Generate unique workflow ID

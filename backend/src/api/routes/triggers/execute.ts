@@ -3,7 +3,8 @@ import type { JsonValue } from "@flowmaestro/shared";
 import { WorkflowDefinition } from "@flowmaestro/shared";
 import {
     convertFrontendToBackend,
-    stripNonExecutableNodes
+    stripNonExecutableNodes,
+    validateWorkflowForExecution
 } from "../../../core/utils/workflow-converter";
 import { ManualTriggerConfig } from "../../../storage/models/Trigger";
 import { ExecutionRepository } from "../../../storage/repositories/ExecutionRepository";
@@ -43,6 +44,17 @@ export async function executeTriggerRoute(fastify: FastifyInstance) {
             const workflow = await workflowRepo.findById(trigger.workflow_id);
             if (!workflow) {
                 throw new NotFoundError("Workflow not found");
+            }
+
+            // Pre-execution validation using shared validation engine
+            const validation = validateWorkflowForExecution(
+                workflow.definition as WorkflowDefinition
+            );
+
+            if (!validation.isValid) {
+                throw new BadRequestError(
+                    `Workflow validation failed: ${validation.errors.join(", ")}`
+                );
             }
 
             // Determine inputs based on trigger type

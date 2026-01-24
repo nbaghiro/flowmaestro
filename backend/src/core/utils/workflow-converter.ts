@@ -5,7 +5,15 @@
  * and backend workflow format (Record-based with 'config' property)
  */
 
-import { WorkflowDefinition, WorkflowNode } from "@flowmaestro/shared";
+import {
+    WorkflowDefinition,
+    WorkflowNode,
+    validateWorkflow,
+    toValidatableNodes,
+    toValidatableEdges,
+    type WorkflowValidationContext,
+    type WorkflowValidationResult
+} from "@flowmaestro/shared";
 
 export interface FrontendWorkflowNode {
     id: string;
@@ -134,5 +142,92 @@ export function stripNonExecutableNodes(
         nodes,
         edges,
         entryPoint
+    };
+}
+
+/**
+ * Pre-execution validation result
+ */
+export interface PreExecutionValidationResult {
+    isValid: boolean;
+    errors: string[];
+    validationResult: WorkflowValidationResult;
+}
+
+/**
+ * Validate a workflow definition before execution using the shared validation engine.
+ * Works with both frontend format (array-based) and backend format (Record-based).
+ */
+export function validateWorkflowForExecution(
+    workflowDef: WorkflowDefinition | FrontendWorkflowDefinition,
+    context?: Partial<WorkflowValidationContext>
+): PreExecutionValidationResult {
+    // Determine format and convert to validatable format
+    let nodes: Array<{
+        id: string;
+        type: string;
+        data: Record<string, unknown>;
+        position: { x: number; y: number };
+    }>;
+    let edges: Array<{
+        id: string;
+        source: string;
+        target: string;
+        sourceHandle?: string;
+        targetHandle?: string;
+    }>;
+
+    if ("entryPoint" in workflowDef) {
+        // Backend format (Record-based)
+        nodes = Object.entries(workflowDef.nodes).map(([id, node]) => ({
+            id,
+            type: node.type || "default",
+            data: node.config || {},
+            position: node.position || { x: 0, y: 0 }
+        }));
+        edges = (workflowDef.edges || []).map((edge) => ({
+            id: edge.id || `${edge.source}-${edge.target}`,
+            source: edge.source,
+            target: edge.target,
+            sourceHandle: edge.sourceHandle,
+            targetHandle: edge.targetHandle
+        }));
+    } else {
+        // Frontend format (array-based)
+        nodes = (workflowDef.nodes || []).map((node) => ({
+            id: node.id,
+            type: node.type || "default",
+            data: node.data || {},
+            position: node.position || { x: 0, y: 0 }
+        }));
+        edges = (workflowDef.edges || []).map((edge) => ({
+            id: edge.id || `${edge.source}-${edge.target}`,
+            source: edge.source,
+            target: edge.target,
+            sourceHandle: edge.sourceHandle
+        }));
+    }
+
+    const validationContext: WorkflowValidationContext = {
+        connectionIds: context?.connectionIds || [],
+        knowledgeBaseIds: context?.knowledgeBaseIds || [],
+        inputVariables: context?.inputVariables || []
+    };
+
+    const validationResult = validateWorkflow(
+        toValidatableNodes(nodes),
+        toValidatableEdges(edges),
+        validationContext,
+        { skipConfiguration: true } // Skip connection/KB validation for now
+    );
+
+    const errors = validationResult.allIssues
+        .filter((i) => i.severity === "error")
+        .map((i) => i.message);
+
+    return {
+        isValid: validationResult.isValid,
+        errors,
+        validationResult
     };
 }

@@ -3,8 +3,10 @@ import type {
     ExtensionExecuteWorkflowResponse,
     PageContext,
     InputMapping,
-    JsonValue
+    JsonValue,
+    WorkflowDefinition
 } from "@flowmaestro/shared";
+import { validateWorkflowForExecution } from "../../../core/utils/workflow-converter";
 import { WorkflowRepository, ExecutionRepository } from "../../../storage/repositories";
 import { getTemporalClient } from "../../../temporal/client";
 import { orchestratorWorkflow } from "../../../temporal/workflows/workflow-orchestrator";
@@ -58,6 +60,18 @@ export async function executeWorkflowRoute(fastify: FastifyInstance) {
                 return reply.status(404).send({
                     success: false,
                     error: "Workflow not found"
+                });
+            }
+
+            // Pre-execution validation using shared validation engine
+            const validation = validateWorkflowForExecution(
+                workflow.definition as WorkflowDefinition
+            );
+
+            if (!validation.isValid) {
+                return reply.status(400).send({
+                    success: false,
+                    error: `Workflow validation failed: ${validation.errors.join(", ")}`
                 });
             }
 
