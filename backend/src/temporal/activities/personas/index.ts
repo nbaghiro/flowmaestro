@@ -12,5 +12,14 @@ export {
     type UpdatePersonaInstanceProgressInput,
     // Status updates
     updatePersonaInstanceStatus,
-    type UpdatePersonaInstanceStatusInput
+    type UpdatePersonaInstanceStatusInput,
+    // Clarification phase
+    getPersonaClarificationState,
+    type GetPersonaClarificationStateInput,
+    type PersonaClarificationState,
+    updatePersonaClarificationState,
+    type UpdatePersonaClarificationStateInput,
+    // Messages
+    addPersonaMessage,
+    type AddPersonaMessageInput
 } from "./persona";

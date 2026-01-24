@@ -11,8 +11,8 @@ import {
     File
 } from "lucide-react";
 import React, { useState } from "react";
-import { DeliverablePreviewModal } from "./DeliverablePreviewModal";
-import type { PersonaInstanceDeliverable, DeliverableType } from "../../lib/api";
+import { DeliverablePreviewModal } from "../modals/DeliverablePreviewModal";
+import type { PersonaInstanceDeliverable, DeliverableType } from "../../../lib/api";
 
 interface DeliverableCardProps {
     deliverable: PersonaInstanceDeliverable;
@@ -62,12 +62,23 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({ deliverable })
     const icon = typeIcons[deliverable.type] || <File className="w-5 h-5" />;
     const colorClass = typeColors[deliverable.type] || "bg-slate-100 text-slate-700";
     const hasPreview = canPreview(deliverable);
-    const hasDownload = !!deliverable.url;
+    const hasDownload = !!deliverable.file_url || !!deliverable.content;
 
     const handleDownload = (e: React.MouseEvent) => {
         e.stopPropagation();
-        if (deliverable.url) {
-            window.open(deliverable.url, "_blank");
+        if (deliverable.file_url) {
+            window.open(deliverable.file_url, "_blank");
+        } else if (deliverable.content) {
+            // Create a downloadable blob from content
+            const blob = new Blob([deliverable.content], { type: "text/plain" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `${deliverable.name}.${deliverable.file_extension || "txt"}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
         }
     };
 
@@ -127,9 +138,9 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({ deliverable })
                                 <Download className="w-4 h-4 text-muted-foreground" />
                             </button>
                         )}
-                        {deliverable.url && (
+                        {deliverable.file_url && (
                             <a
-                                href={deliverable.url}
+                                href={deliverable.file_url}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 onClick={(e) => e.stopPropagation()}
@@ -143,11 +154,14 @@ export const DeliverableCard: React.FC<DeliverableCardProps> = ({ deliverable })
                 </div>
 
                 {/* Content preview snippet */}
-                {deliverable.content && (
+                {(deliverable.preview || deliverable.content) && (
                     <div className="mt-2 pt-2 border-t border-border">
                         <p className="text-xs text-muted-foreground line-clamp-2 font-mono">
-                            {deliverable.content.slice(0, 150)}
-                            {deliverable.content.length > 150 ? "..." : ""}
+                            {deliverable.preview ||
+                                (deliverable.content
+                                    ? deliverable.content.slice(0, 150) +
+                                      (deliverable.content.length > 150 ? "..." : "")
+                                    : "")}
                         </p>
                     </div>
                 )}

@@ -2,6 +2,7 @@
  * Persona Orchestrator Workflow
  *
  * Designed for long-running background persona execution:
+ * - Clarifying phase for goal refinement
  * - No real-time streaming (background task)
  * - Progress tracking instead of token events
  * - Persona instance status updates
@@ -9,7 +10,13 @@
  * - Higher iteration limits for complex tasks
  */
 
-import { proxyActivities, continueAsNew } from "@temporalio/workflow";
+import {
+    proxyActivities,
+    continueAsNew,
+    defineSignal,
+    setHandler,
+    condition
+} from "@temporalio/workflow";
 import type { JsonObject } from "@flowmaestro/shared";
 import { SpanType } from "../core/types";
 import { createWorkflowLogger } from "../core/workflow-logger";
@@ -38,9 +45,13 @@ const {
 });
 
 // Persona-specific activities
-const { updatePersonaInstanceProgress, updatePersonaInstanceStatus } = proxyActivities<
-    typeof activities
->({
+const {
+    updatePersonaInstanceProgress,
+    updatePersonaInstanceStatus,
+    updatePersonaClarificationState,
+    getPersonaClarificationState,
+    addPersonaMessage
+} = proxyActivities<typeof activities>({
     startToCloseTimeout: "30 seconds",
     retry: {
         maximumAttempts: 3
@@ -57,6 +68,20 @@ const { shouldAllowExecution, reserveCredits, finalizeCredits, calculateLLMCredi
     });
 
 // =============================================================================
+// Signals
+// =============================================================================
+
+/**
+ * Signal for receiving user messages during clarification or execution
+ */
+export const personaUserMessageSignal = defineSignal<[string]>("personaUserMessage");
+
+/**
+ * Signal for skipping clarification phase
+ */
+export const skipClarificationSignal = defineSignal("skipClarification");
+
+// =============================================================================
 // Types and Interfaces
 // =============================================================================
 
@@ -67,11 +92,13 @@ export interface PersonaOrchestratorInput {
     workspaceId: string;
     threadId: string;
     initialMessage?: string; // Optional initial task clarification
+    skipClarification?: boolean; // Skip clarification phase
     // For continue-as-new
     serializedThread?: SerializedThread;
     iterations?: number;
     accumulatedCredits?: number;
     reservedCredits?: number;
+    clarificationComplete?: boolean;
 }
 
 export interface PersonaOrchestratorResult {
@@ -89,6 +116,54 @@ interface WorkflowMessageState {
     metadata: JsonObject;
 }
 
+interface ClarificationState {
+    complete: boolean;
+    exchangeCount: number;
+    maxExchanges: number;
+    skipped: boolean;
+}
+
+// =============================================================================
+// Clarification Prompt Builder
+// =============================================================================
+
+function buildClarificationSystemPrompt(personaName: string, taskDescription: string): string {
+    return `You are ${personaName}, beginning a new task. Before starting work, you need to clarify the requirements with the user.
+
+## Your Task
+${taskDescription}
+
+## Instructions
+Ask 2-4 focused clarifying questions to ensure you understand:
+1. The specific scope and boundaries of the task
+2. Any preferences for deliverable format or style
+3. Key priorities or constraints you should know about
+4. Any specific resources, data, or context you should use
+
+Keep your questions concise and actionable. After the user responds, either ask follow-up questions if critical information is still missing, or confirm your understanding and indicate you're ready to begin.
+
+When you have enough information, respond with "I'm ready to begin work on this task." to signal that clarification is complete.`;
+}
+
+function shouldEndClarification(assistantMessage: string): boolean {
+    const readyPhrases = [
+        "ready to begin",
+        "ready to start",
+        "i'll begin",
+        "i will begin",
+        "let me start",
+        "i'll get started",
+        "i will get started",
+        "starting now",
+        "proceeding with",
+        "i have enough information",
+        "that's all i need"
+    ];
+
+    const lowerMessage = assistantMessage.toLowerCase();
+    return readyPhrases.some((phrase) => lowerMessage.includes(phrase));
+}
+
 // =============================================================================
 // Main Workflow
 // =============================================================================
@@ -103,15 +178,22 @@ export async function personaOrchestratorWorkflow(
         workspaceId,
         threadId,
         initialMessage,
+        skipClarification: inputSkipClarification = false,
         serializedThread,
         iterations = 0,
         accumulatedCredits: previousCredits = 0,
-        reservedCredits: previousReserved = 0
+        reservedCredits: previousReserved = 0,
+        clarificationComplete: inputClarificationComplete = false
     } = input;
 
     // Credit tracking state
     let reservedCredits = previousReserved;
     let accumulatedCredits = previousCredits;
+
+    // Clarification state
+    let clarificationComplete = inputClarificationComplete || inputSkipClarification;
+    let pendingUserMessage: string | null = null;
+    let skipClarificationRequested = inputSkipClarification;
 
     const logger = createWorkflowLogger({
         executionId,
@@ -122,7 +204,20 @@ export async function personaOrchestratorWorkflow(
     logger.info("Starting persona orchestrator", {
         personaInstanceId,
         threadId,
-        iteration: iterations
+        iteration: iterations,
+        clarificationComplete
+    });
+
+    // Set up signal handlers
+    setHandler(personaUserMessageSignal, (message: string) => {
+        logger.info("Received user message signal", { messageLength: message.length });
+        pendingUserMessage = message;
+    });
+
+    setHandler(skipClarificationSignal, () => {
+        logger.info("Received skip clarification signal");
+        skipClarificationRequested = true;
+        clarificationComplete = true;
     });
 
     // Load persona configuration (includes all tools)
@@ -132,16 +227,26 @@ export async function personaOrchestratorWorkflow(
         workspaceId
     });
 
-    // Update persona instance status to running (only on first run)
+    // Get current clarification state from database (only on first run)
+    let clarificationState: ClarificationState | null = null;
+    if (iterations === 0 && !clarificationComplete) {
+        clarificationState = await getPersonaClarificationState({ personaInstanceId });
+        if (clarificationState) {
+            clarificationComplete = clarificationState.complete || clarificationState.skipped;
+        }
+    }
+
+    // Update persona instance status (only on first run)
     if (iterations === 0) {
+        const initialStatus = clarificationComplete ? "running" : "clarifying";
         try {
             await updatePersonaInstanceStatus({
                 personaInstanceId,
-                status: "running",
-                startedAt: new Date()
+                status: initialStatus,
+                startedAt: clarificationComplete ? new Date() : undefined
             });
         } catch (error) {
-            logger.warn("Failed to update persona status to running", {
+            logger.warn("Failed to update persona status", {
                 error: error instanceof Error ? error.message : "Unknown"
             });
         }
@@ -245,11 +350,15 @@ export async function personaOrchestratorWorkflow(
             metadata: {}
         };
 
-        // Add system prompt
+        // Add system prompt based on whether we're in clarification mode
+        const systemPromptContent = clarificationComplete
+            ? persona.system_prompt
+            : buildClarificationSystemPrompt(persona.name, initialMessage || "Task not specified");
+
         const systemMessage: ThreadMessage = {
             id: `sys-${Date.now()}`,
             role: "system",
-            content: persona.system_prompt,
+            content: systemPromptContent,
             timestamp: new Date()
         };
         messageState.messages.push(systemMessage);
@@ -296,10 +405,211 @@ export async function personaOrchestratorWorkflow(
         }
     }
 
+    // =============================================================================
+    // CLARIFICATION PHASE
+    // =============================================================================
+
+    if (!clarificationComplete && iterations === 0) {
+        logger.info("Entering clarification phase");
+
+        const maxClarificationExchanges = clarificationState?.maxExchanges || 3;
+        let clarificationExchanges = clarificationState?.exchangeCount || 0;
+
+        // Clarification loop
+        while (!clarificationComplete && clarificationExchanges < maxClarificationExchanges) {
+            // Check if skip was requested
+            if (skipClarificationRequested) {
+                logger.info("Clarification skipped by user request");
+                await updatePersonaClarificationState({
+                    personaInstanceId,
+                    skipped: true,
+                    complete: true
+                });
+                clarificationComplete = true;
+                break;
+            }
+
+            // Generate clarifying questions (LLM call without tools)
+            logger.info("Generating clarifying questions", { exchange: clarificationExchanges });
+
+            let clarificationResponse: LLMResponse;
+            try {
+                clarificationResponse = await callLLM({
+                    model: persona.model,
+                    provider: persona.provider,
+                    connectionId: persona.connection_id,
+                    messages: messageState.messages,
+                    tools: [], // No tools during clarification
+                    temperature: persona.temperature,
+                    maxTokens: 1024, // Shorter for clarification
+                    executionId,
+                    threadId
+                });
+
+                // Track credit usage
+                if (clarificationResponse.usage) {
+                    const callCredits = await calculateLLMCredits({
+                        model: persona.model,
+                        inputTokens: clarificationResponse.usage.promptTokens,
+                        outputTokens: clarificationResponse.usage.completionTokens
+                    });
+                    accumulatedCredits += callCredits;
+                }
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : "Unknown LLM error";
+                logger.error(
+                    "Clarification LLM call failed",
+                    error instanceof Error ? error : new Error(errorMessage)
+                );
+
+                // Continue without clarification on error
+                clarificationComplete = true;
+                break;
+            }
+
+            // Add assistant message
+            const assistantMessage: ThreadMessage = {
+                id: `asst-clarify-${Date.now()}-${clarificationExchanges}`,
+                role: "assistant",
+                content: clarificationResponse.content,
+                timestamp: new Date()
+            };
+            messageState.messages.push(assistantMessage);
+
+            // Save the clarification message to the database
+            await addPersonaMessage({
+                personaInstanceId,
+                threadId,
+                message: assistantMessage
+            });
+
+            // Check if persona indicates it's ready to proceed
+            if (shouldEndClarification(clarificationResponse.content)) {
+                logger.info("Persona ready to begin work");
+                await updatePersonaClarificationState({
+                    personaInstanceId,
+                    complete: true,
+                    exchangeCount: clarificationExchanges + 1
+                });
+                clarificationComplete = true;
+                break;
+            }
+
+            // Wait for user response
+            logger.info("Waiting for user response");
+
+            // Wait up to 24 hours for a response, checking periodically
+            const gotResponse = await condition(
+                () => pendingUserMessage !== null || skipClarificationRequested,
+                "24 hours"
+            );
+
+            if (!gotResponse) {
+                // Timeout - proceed with what we have
+                logger.info("Clarification timeout, proceeding with available info");
+                await updatePersonaClarificationState({
+                    personaInstanceId,
+                    complete: true,
+                    exchangeCount: clarificationExchanges + 1
+                });
+                clarificationComplete = true;
+                break;
+            }
+
+            if (skipClarificationRequested) {
+                logger.info("Clarification skipped via signal");
+                await updatePersonaClarificationState({
+                    personaInstanceId,
+                    skipped: true,
+                    complete: true
+                });
+                clarificationComplete = true;
+                break;
+            }
+
+            if (pendingUserMessage) {
+                // Validate and add user response
+                const userContent = pendingUserMessage;
+                pendingUserMessage = null;
+
+                const safetyResult = await validateInput({
+                    content: userContent,
+                    context: {
+                        userId,
+                        agentId: personaInstanceId,
+                        executionId,
+                        threadId,
+                        direction: "input",
+                        messageRole: "user"
+                    },
+                    config: persona.safety_config
+                });
+
+                if (safetyResult.shouldProceed) {
+                    const userMessage: ThreadMessage = {
+                        id: `user-clarify-${Date.now()}-${clarificationExchanges}`,
+                        role: "user",
+                        content: safetyResult.content,
+                        timestamp: new Date()
+                    };
+                    messageState.messages.push(userMessage);
+
+                    // Save user message
+                    await addPersonaMessage({
+                        personaInstanceId,
+                        threadId,
+                        message: userMessage
+                    });
+
+                    clarificationExchanges++;
+
+                    // Update exchange count in database
+                    await updatePersonaClarificationState({
+                        personaInstanceId,
+                        exchangeCount: clarificationExchanges
+                    });
+                }
+            }
+        }
+
+        // If we've exhausted exchanges, mark complete and proceed
+        if (!clarificationComplete) {
+            logger.info("Max clarification exchanges reached, proceeding");
+            await updatePersonaClarificationState({
+                personaInstanceId,
+                complete: true,
+                exchangeCount: clarificationExchanges
+            });
+            clarificationComplete = true;
+        }
+
+        // Update status to running and rebuild system prompt for execution
+        await updatePersonaInstanceStatus({
+            personaInstanceId,
+            status: "running",
+            startedAt: new Date()
+        });
+
+        // Replace system prompt with full execution prompt
+        const systemMessageIndex = messageState.messages.findIndex((m) => m.role === "system");
+        if (systemMessageIndex >= 0) {
+            messageState.messages[systemMessageIndex] = {
+                ...messageState.messages[systemMessageIndex],
+                content: persona.system_prompt
+            };
+        }
+
+        logger.info("Clarification phase complete, starting execution");
+    }
+
+    // =============================================================================
+    // MAIN EXECUTION LOOP
+    // =============================================================================
+
     const maxIterations = persona.max_iterations || 100;
     let currentIterations = iterations;
     const CONTINUE_AS_NEW_THRESHOLD = 50;
-    const PROGRESS_UPDATE_INTERVAL = 5; // Update progress every 5 iterations
+    const PROGRESS_UPDATE_INTERVAL = 5;
 
     // Track failed tools
     const failedToolNames = new Set<string>();
@@ -307,6 +617,41 @@ export async function personaOrchestratorWorkflow(
     // Main execution loop (ReAct pattern for background execution)
     while (currentIterations < maxIterations) {
         logger.info("Persona iteration", { iteration: currentIterations, maxIterations });
+
+        // Check for incoming user messages during execution
+        if (pendingUserMessage) {
+            const userContent = pendingUserMessage;
+            pendingUserMessage = null;
+
+            const safetyResult = await validateInput({
+                content: userContent,
+                context: {
+                    userId,
+                    agentId: personaInstanceId,
+                    executionId,
+                    threadId,
+                    direction: "input",
+                    messageRole: "user"
+                },
+                config: persona.safety_config
+            });
+
+            if (safetyResult.shouldProceed) {
+                const userMessage: ThreadMessage = {
+                    id: `user-exec-${Date.now()}-${currentIterations}`,
+                    role: "user",
+                    content: safetyResult.content,
+                    timestamp: new Date()
+                };
+                messageState.messages.push(userMessage);
+
+                await addPersonaMessage({
+                    personaInstanceId,
+                    threadId,
+                    message: userMessage
+                });
+            }
+        }
 
         // Continue-as-new every 50 iterations
         if (currentIterations > 0 && currentIterations % CONTINUE_AS_NEW_THRESHOLD === 0) {
@@ -336,7 +681,8 @@ export async function personaOrchestratorWorkflow(
                 serializedThread: summarizedState,
                 iterations: currentIterations,
                 accumulatedCredits,
-                reservedCredits
+                reservedCredits,
+                clarificationComplete: true
             });
         }
 
@@ -598,7 +944,10 @@ export async function personaOrchestratorWorkflow(
                     toolCall,
                     availableTools: persona.available_tools,
                     userId,
-                    workspaceId
+                    workspaceId,
+                    metadata: {
+                        personaInstanceId
+                    }
                 });
 
                 const toolMessage: ThreadMessage = {

@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: gcs-config
-  namespace: flowmaestro-staging
+  namespace: flowmaestro
 data:
   # Staging GCS buckets
   # Update these with actual staging bucket names from Pulumi

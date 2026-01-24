@@ -10,7 +10,7 @@ import {
     Globe
 } from "lucide-react";
 import React, { useState, useEffect } from "react";
-import type { PersonaInstanceDeliverable, DeliverableType } from "../../lib/api";
+import type { PersonaInstanceDeliverable, DeliverableType } from "../../../lib/api";
 
 interface DeliverablePreviewModalProps {
     deliverable: PersonaInstanceDeliverable;
@@ -61,11 +61,11 @@ export const DeliverablePreviewModal: React.FC<DeliverablePreviewModalProps> = (
     };
 
     const handleDownload = () => {
-        if (deliverable.url) {
-            window.open(deliverable.url, "_blank");
+        if (deliverable.file_url) {
+            window.open(deliverable.file_url, "_blank");
         } else if (deliverable.content) {
             // Create a blob and download
-            const extension = getFileExtension(deliverable.type);
+            const extension = deliverable.file_extension || getFileExtension(deliverable.type);
             const mimeType = getMimeType(deliverable.type);
             const blob = new Blob([deliverable.content], { type: mimeType });
             const url = URL.createObjectURL(blob);

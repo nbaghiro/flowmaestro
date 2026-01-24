@@ -5,6 +5,7 @@ import type {
     PersonaDeliverableSpec,
     PersonaEstimatedDuration
 } from "@flowmaestro/shared";
+import type { PersonaConnectionRequirement } from "./PersonaInstanceConnection";
 
 /**
  * Categories for organizing personas by domain
@@ -87,6 +88,9 @@ export interface PersonaDefinitionModel {
     autonomy_level: PersonaAutonomyLevel;
     tool_risk_overrides: JsonObject;
 
+    // Connection Requirements
+    connection_requirements: PersonaConnectionRequirement[];
+
     // Metadata
     featured: boolean;
     sort_order: number;
@@ -118,6 +122,7 @@ export interface PersonaDefinitionSummary {
     estimated_duration: PersonaEstimatedDuration;
     estimated_cost_credits: number;
     default_tools: AgentTemplateTool[];
+    connection_requirements: PersonaConnectionRequirement[];
     featured: boolean;
     status: PersonaStatus;
 }
@@ -153,6 +158,7 @@ export interface CreatePersonaDefinitionInput {
     default_max_cost_credits?: number;
     autonomy_level?: PersonaAutonomyLevel;
     tool_risk_overrides?: JsonObject;
+    connection_requirements?: PersonaConnectionRequirement[];
     featured?: boolean;
     sort_order?: number;
     status?: PersonaStatus;
@@ -188,6 +194,7 @@ export interface UpdatePersonaDefinitionInput {
     default_max_cost_credits?: number;
     autonomy_level?: PersonaAutonomyLevel;
     tool_risk_overrides?: JsonObject;
+    connection_requirements?: PersonaConnectionRequirement[];
     featured?: boolean;
     sort_order?: number;
     status?: PersonaStatus;

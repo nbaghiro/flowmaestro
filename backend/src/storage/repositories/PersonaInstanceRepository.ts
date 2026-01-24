@@ -45,6 +45,14 @@ interface PersonaInstanceRow {
     notification_config: PersonaNotificationConfig | string;
     sandbox_id: string | null;
     sandbox_state: string | null;
+    template_id: string | null;
+    template_variables: Record<string, string | number | boolean | string[]> | string;
+    parent_instance_id: string | null;
+    continuation_count: number | string;
+    clarification_complete: boolean;
+    clarification_exchange_count: number | string;
+    clarification_max_exchanges: number | string;
+    clarification_skipped: boolean;
     created_at: string | Date;
     updated_at: string | Date;
     deleted_at: string | Date | null;
@@ -78,9 +86,12 @@ export class PersonaInstanceRepository {
                 persona_definition_id, user_id, workspace_id,
                 task_title, task_description, additional_context,
                 structured_inputs,
-                max_duration_hours, max_cost_credits, notification_config
+                max_duration_hours, max_cost_credits, notification_config,
+                template_id, template_variables,
+                parent_instance_id, continuation_count,
+                clarification_max_exchanges, clarification_skipped
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
             RETURNING *
         `;
 
@@ -94,7 +105,13 @@ export class PersonaInstanceRepository {
             JSON.stringify(input.structured_inputs || {}),
             input.max_duration_hours || null,
             input.max_cost_credits || null,
-            JSON.stringify(defaultNotificationConfig)
+            JSON.stringify(defaultNotificationConfig),
+            input.template_id || null,
+            JSON.stringify(input.template_variables || {}),
+            input.parent_instance_id || null,
+            input.continuation_count || 0,
+            input.clarification_max_exchanges || 3,
+            input.skip_clarification || false
         ];
 
         const result = await db.query(query, values);
@@ -422,6 +439,26 @@ export class PersonaInstanceRepository {
             values.push(input.sandbox_state);
         }
 
+        if (input.clarification_complete !== undefined) {
+            updates.push(`clarification_complete = $${paramIndex++}`);
+            values.push(input.clarification_complete);
+        }
+
+        if (input.clarification_exchange_count !== undefined) {
+            updates.push(`clarification_exchange_count = $${paramIndex++}`);
+            values.push(input.clarification_exchange_count);
+        }
+
+        if (input.clarification_max_exchanges !== undefined) {
+            updates.push(`clarification_max_exchanges = $${paramIndex++}`);
+            values.push(input.clarification_max_exchanges);
+        }
+
+        if (input.clarification_skipped !== undefined) {
+            updates.push(`clarification_skipped = $${paramIndex++}`);
+            values.push(input.clarification_skipped);
+        }
+
         if (updates.length === 0) {
             return this.findById(id);
         }
@@ -498,6 +535,57 @@ export class PersonaInstanceRepository {
         `;
 
         const result = await db.query(query, [costIncrement, iterationIncrement, id]);
+        return result.rows.length > 0 ? this.mapRow(result.rows[0] as PersonaInstanceRow) : null;
+    }
+
+    /**
+     * Increment clarification exchange count and optionally mark as complete
+     */
+    async incrementClarificationExchange(
+        id: string,
+        markComplete: boolean = false
+    ): Promise<PersonaInstanceModel | null> {
+        const query = `
+            UPDATE flowmaestro.persona_instances
+            SET
+                clarification_exchange_count = clarification_exchange_count + 1,
+                clarification_complete = CASE
+                    WHEN $2 = true THEN true
+                    WHEN clarification_exchange_count + 1 >= clarification_max_exchanges THEN true
+                    ELSE clarification_complete
+                END,
+                status = CASE
+                    WHEN $2 = true OR clarification_exchange_count + 1 >= clarification_max_exchanges THEN 'running'
+                    ELSE status
+                END,
+                started_at = CASE
+                    WHEN ($2 = true OR clarification_exchange_count + 1 >= clarification_max_exchanges) AND started_at IS NULL THEN NOW()
+                    ELSE started_at
+                END
+            WHERE id = $1 AND deleted_at IS NULL
+            RETURNING *
+        `;
+
+        const result = await db.query(query, [id, markComplete]);
+        return result.rows.length > 0 ? this.mapRow(result.rows[0] as PersonaInstanceRow) : null;
+    }
+
+    /**
+     * Skip clarification and transition to running
+     */
+    async skipClarification(id: string): Promise<PersonaInstanceModel | null> {
+        const query = `
+            UPDATE flowmaestro.persona_instances
+            SET
+                clarification_skipped = true,
+                clarification_complete = true,
+                status = 'running',
+                started_at = COALESCE(started_at, NOW())
+            WHERE id = $1 AND deleted_at IS NULL
+            RETURNING *
+        `;
+
+        const result = await db.query(query, [id]);
         return result.rows.length > 0 ? this.mapRow(result.rows[0] as PersonaInstanceRow) : null;
     }
 
@@ -591,6 +679,26 @@ export class PersonaInstanceRepository {
                     : row.notification_config,
             sandbox_id: row.sandbox_id,
             sandbox_state: row.sandbox_state as SandboxState | null,
+            template_id: row.template_id,
+            template_variables:
+                typeof row.template_variables === "string"
+                    ? JSON.parse(row.template_variables)
+                    : row.template_variables || {},
+            parent_instance_id: row.parent_instance_id,
+            continuation_count:
+                typeof row.continuation_count === "string"
+                    ? parseInt(row.continuation_count)
+                    : row.continuation_count,
+            clarification_complete: row.clarification_complete,
+            clarification_exchange_count:
+                typeof row.clarification_exchange_count === "string"
+                    ? parseInt(row.clarification_exchange_count)
+                    : row.clarification_exchange_count,
+            clarification_max_exchanges:
+                typeof row.clarification_max_exchanges === "string"
+                    ? parseInt(row.clarification_max_exchanges)
+                    : row.clarification_max_exchanges,
+            clarification_skipped: row.clarification_skipped,
             created_at: new Date(row.created_at),
             updated_at: new Date(row.updated_at),
             deleted_at: row.deleted_at ? new Date(row.deleted_at) : null

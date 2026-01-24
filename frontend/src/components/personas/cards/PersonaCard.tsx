@@ -20,8 +20,8 @@ import {
     ClipboardList
 } from "lucide-react";
 import React from "react";
-import { usePersonaStore } from "../../stores/personaStore";
-import type { PersonaDefinitionSummary, PersonaCategory } from "../../lib/api";
+import { usePersonaStore } from "../../../stores/personaStore";
+import type { PersonaDefinitionSummary, PersonaCategory } from "../../../lib/api";
 
 interface PersonaCardProps {
     persona: PersonaDefinitionSummary;

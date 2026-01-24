@@ -62,6 +62,14 @@ interface PersonaEstimatedDuration {
     max_minutes: number;
 }
 
+// Connection requirement
+interface PersonaConnectionRequirement {
+    provider: string;
+    required: boolean;
+    reason: string;
+    suggested_scopes: string[];
+}
+
 // Persona data structure
 interface PersonaDefinitionData {
     name: string;
@@ -97,6 +105,7 @@ interface PersonaDefinitionData {
     default_max_duration_hours: number;
     default_max_cost_credits: number;
     autonomy_level: "full_auto" | "approve_high_risk" | "approve_all";
+    connection_requirements?: PersonaConnectionRequirement[];
     featured?: boolean;
     sort_order?: number;
 }
@@ -1710,6 +1719,20 @@ All financial and company information should be verified from primary sources wh
         default_max_duration_hours: 0.5,
         default_max_cost_credits: 40,
         autonomy_level: "approve_high_risk",
+        connection_requirements: [
+            {
+                provider: "slack",
+                required: false,
+                reason: "For sharing content drafts and getting team feedback",
+                suggested_scopes: ["chat:write", "files:write"]
+            },
+            {
+                provider: "google",
+                required: false,
+                reason: "For accessing Google Docs/Sheets with brand guidelines or content calendars",
+                suggested_scopes: ["drive:read"]
+            }
+        ],
         default_tools: [],
         system_prompt: `You are a Social Media Strategist persona - an expert in social content planning and creation.
 
@@ -2399,6 +2422,14 @@ For each post, provide:
         default_max_duration_hours: 0.5,
         default_max_cost_credits: 100,
         autonomy_level: "approve_high_risk",
+        connection_requirements: [
+            {
+                provider: "github",
+                required: false,
+                reason: "For reading repositories, pull requests, and creating review comments",
+                suggested_scopes: ["repo:read", "pull_request:read", "pull_request:write"]
+            }
+        ],
         default_tools: [
             {
                 name: "knowledge_base",
@@ -2575,6 +2606,14 @@ For each issue:
         default_max_duration_hours: 0.5,
         default_max_cost_credits: 100,
         autonomy_level: "approve_all",
+        connection_requirements: [
+            {
+                provider: "github",
+                required: false,
+                reason: "For reading repositories and creating pull requests with refactored code",
+                suggested_scopes: ["repo:read", "repo:write", "pull_request:write"]
+            }
+        ],
         default_tools: [
             {
                 name: "knowledge_base",
@@ -3117,6 +3156,14 @@ For each endpoint:
         default_max_duration_hours: 0.5,
         default_max_cost_credits: 100,
         autonomy_level: "approve_high_risk",
+        connection_requirements: [
+            {
+                provider: "google",
+                required: false,
+                reason: "For accessing Google Sheets data and exporting results to Drive",
+                suggested_scopes: ["spreadsheets:read", "drive:read", "drive:write"]
+            }
+        ],
         default_tools: [],
         system_prompt: `You are a Data Analyst persona - an expert in data exploration and insights extraction.
 
@@ -5469,9 +5516,9 @@ async function seedPersonas() {
                     input_fields, deliverables, sop_steps, estimated_duration, estimated_cost_credits,
                     system_prompt, model, provider, temperature, max_tokens,
                     default_tools, default_max_duration_hours, default_max_cost_credits,
-                    autonomy_level, tool_risk_overrides, featured, sort_order, status
+                    autonomy_level, tool_risk_overrides, connection_requirements, featured, sort_order, status
                 )
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30)
                 ON CONFLICT (slug) DO UPDATE SET
                     name = EXCLUDED.name,
                     title = EXCLUDED.title,
@@ -5498,6 +5545,7 @@ async function seedPersonas() {
                     default_max_cost_credits = EXCLUDED.default_max_cost_credits,
                     autonomy_level = EXCLUDED.autonomy_level,
                     tool_risk_overrides = EXCLUDED.tool_risk_overrides,
+                    connection_requirements = EXCLUDED.connection_requirements,
                     featured = EXCLUDED.featured,
                     sort_order = EXCLUDED.sort_order,
                     status = EXCLUDED.status,
@@ -5532,6 +5580,7 @@ async function seedPersonas() {
                 persona.default_max_cost_credits,
                 persona.autonomy_level,
                 JSON.stringify({}),
+                JSON.stringify(persona.connection_requirements || []),
                 persona.featured || false,
                 persona.sort_order || 0,
                 "active"

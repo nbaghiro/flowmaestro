@@ -2,14 +2,22 @@ import { FastifyRequest, FastifyReply } from "fastify";
 import { z } from "zod";
 import { createServiceLogger } from "../../../core/logging";
 import { AgentExecutionRepository } from "../../../storage/repositories/AgentExecutionRepository";
+import { ConnectionRepository } from "../../../storage/repositories/ConnectionRepository";
 import { PersonaDefinitionRepository } from "../../../storage/repositories/PersonaDefinitionRepository";
+import { PersonaInstanceConnectionRepository } from "../../../storage/repositories/PersonaInstanceConnectionRepository";
 import { PersonaInstanceRepository } from "../../../storage/repositories/PersonaInstanceRepository";
+import { PersonaTaskTemplateRepository } from "../../../storage/repositories/PersonaTaskTemplateRepository";
 import { ThreadRepository } from "../../../storage/repositories/ThreadRepository";
 import { getTemporalClient } from "../../../temporal/client";
 import { BadRequestError, NotFoundError } from "../../middleware";
 import type { PersonaAdditionalContext } from "../../../storage/models/PersonaInstance";
 
 const logger = createServiceLogger("PersonaInstances");
+
+const connectionGrantSchema = z.object({
+    connection_id: z.string().uuid(),
+    scopes: z.array(z.string()).optional()
+});
 
 const createPersonaInstanceSchema = z.object({
     persona_slug: z.string().min(1),
@@ -30,7 +38,16 @@ const createPersonaInstanceSchema = z.object({
             on_completion: z.boolean().optional(),
             slack_channel_id: z.string().nullable().optional()
         })
-        .optional()
+        .optional(),
+    // Template support
+    template_id: z.string().uuid().optional(),
+    template_variables: z
+        .record(z.union([z.string(), z.number(), z.boolean(), z.array(z.string())]))
+        .optional(),
+    // Clarification control
+    skip_clarification: z.boolean().optional(),
+    // Connection grants - connections this persona can access
+    connections: z.array(connectionGrantSchema).optional()
 });
 
 type CreatePersonaInstanceBody = z.infer<typeof createPersonaInstanceSchema>;
@@ -68,8 +85,56 @@ export async function createPersonaInstanceHandler(
         additional_context: body.additional_context as PersonaAdditionalContext | undefined,
         max_duration_hours: body.max_duration_hours || persona.default_max_duration_hours,
         max_cost_credits: body.max_cost_credits || persona.default_max_cost_credits,
-        notification_config: body.notification_config
+        notification_config: body.notification_config,
+        template_id: body.template_id,
+        template_variables: body.template_variables,
+        skip_clarification: body.skip_clarification
     });
+
+    // If a template was used, increment its usage count
+    if (body.template_id) {
+        const templateRepo = new PersonaTaskTemplateRepository();
+        await templateRepo.incrementUsageCount(body.template_id);
+    }
+
+    // Grant connections to the instance if provided
+    if (body.connections && body.connections.length > 0) {
+        const connRepo = new ConnectionRepository();
+        const instanceConnRepo = new PersonaInstanceConnectionRepository();
+
+        for (const connGrant of body.connections) {
+            // Verify connection exists and belongs to workspace
+            const connection = await connRepo.findByIdAndWorkspaceId(
+                connGrant.connection_id,
+                workspaceId
+            );
+
+            if (!connection) {
+                logger.warn(
+                    { connectionId: connGrant.connection_id, workspaceId },
+                    "Connection not found or not in workspace, skipping"
+                );
+                continue;
+            }
+
+            // Grant the connection to the instance
+            await instanceConnRepo.create({
+                instance_id: instance.id,
+                connection_id: connGrant.connection_id,
+                granted_scopes: connGrant.scopes
+            });
+
+            logger.info(
+                {
+                    personaInstanceId: instance.id,
+                    connectionId: connGrant.connection_id,
+                    provider: connection.provider,
+                    scopes: connGrant.scopes
+                },
+                "Connection granted to persona instance"
+            );
+        }
+    }
 
     try {
         // Create a thread for the persona conversation

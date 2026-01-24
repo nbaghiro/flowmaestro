@@ -26,9 +26,9 @@ import {
     Pencil
 } from "lucide-react";
 import React, { useState } from "react";
-import { usePersonaStore } from "../../stores/personaStore";
-import { AvatarPickerPopup } from "./AvatarPickerPopup";
-import type { PersonaDefinition, PersonaCategory } from "../../lib/api";
+import { usePersonaStore } from "../../../stores/personaStore";
+import { AvatarPickerPopup } from "../AvatarPickerPopup";
+import type { PersonaDefinition, PersonaCategory } from "../../../lib/api";
 
 interface PersonaDetailModalProps {
     persona: PersonaDefinition;

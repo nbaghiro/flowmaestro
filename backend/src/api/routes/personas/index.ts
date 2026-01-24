@@ -1,8 +1,11 @@
 import { FastifyInstance } from "fastify";
-import { optionalAuthMiddleware } from "../../middleware/auth";
+import { authMiddleware, optionalAuthMiddleware } from "../../middleware/auth";
+import { workspaceContextMiddleware } from "../../middleware/workspace-context";
+import { getAvailableConnectionsHandler } from "./available-connections";
 import { getPersonasByCategoryHandler } from "./categories";
 import { getPersonaHandler } from "./get";
 import { listPersonasHandler } from "./list";
+import { listTemplatesHandler, generateFromTemplateHandler } from "./templates";
 
 export async function personaRoutes(fastify: FastifyInstance) {
     // Persona definition routes - public (no auth required for browsing)
@@ -17,4 +20,15 @@ export async function personaRoutes(fastify: FastifyInstance) {
 
     // Get single persona by slug
     fastify.get("/:slug", getPersonaHandler);
+
+    // Template routes
+    fastify.get("/:slug/templates", listTemplatesHandler);
+    fastify.post("/:slug/templates/:templateId/generate", generateFromTemplateHandler);
+
+    // Available connections (requires auth + workspace context)
+    fastify.get(
+        "/:slug/available-connections",
+        { preHandler: [authMiddleware, workspaceContextMiddleware] },
+        getAvailableConnectionsHandler
+    );
 }

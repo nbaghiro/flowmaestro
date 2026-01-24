@@ -12,12 +12,15 @@ import {
     ListChecks,
     Circle,
     CheckCircle2,
-    SkipForward
+    SkipForward,
+    ArrowRight
 } from "lucide-react";
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ConfirmDialog } from "../components/common/ConfirmDialog";
-import { DeliverableCard } from "../components/personas/DeliverableCard";
+import { DeliverableCard } from "../components/personas/cards/DeliverableCard";
+import { ClarifyingPhaseUI } from "../components/personas/clarification";
+import { ContinueWorkDialog } from "../components/personas/modals/ContinueWorkDialog";
 import { usePersonaStore } from "../stores/personaStore";
 import type {
     PersonaCategory,
@@ -149,6 +152,8 @@ export const PersonaInstanceView: React.FC = () => {
     const [isSending, setIsSending] = useState(false);
     const [showCancelDialog, setShowCancelDialog] = useState(false);
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+    const [showContinueDialog, setShowContinueDialog] = useState(false);
+    const [clarificationError, setClarificationError] = useState<string | null>(null);
 
     useEffect(() => {
         if (id) {
@@ -320,6 +325,15 @@ export const PersonaInstanceView: React.FC = () => {
                         )}
                         {isTerminal && (
                             <button
+                                onClick={() => setShowContinueDialog(true)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 border border-primary text-primary rounded-lg text-sm font-medium hover:bg-primary/10 transition-colors"
+                            >
+                                <ArrowRight className="w-4 h-4" />
+                                Continue Work
+                            </button>
+                        )}
+                        {isTerminal && (
+                            <button
                                 onClick={() => setShowDeleteDialog(true)}
                                 className="p-2 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                             >
@@ -364,6 +378,25 @@ export const PersonaInstanceView: React.FC = () => {
                 <div className="flex-1 flex flex-col overflow-hidden">
                     {/* Messages */}
                     <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                        {/* Clarifying Phase UI */}
+                        {currentInstance.status === "clarifying" && (
+                            <ClarifyingPhaseUI
+                                instance={currentInstance}
+                                onSkipped={() => {
+                                    setClarificationError(null);
+                                    if (id) fetchInstance(id);
+                                }}
+                                onError={setClarificationError}
+                            />
+                        )}
+
+                        {/* Clarification Error */}
+                        {clarificationError && (
+                            <div className="p-3 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 rounded-lg text-sm">
+                                {clarificationError}
+                            </div>
+                        )}
+
                         {/* Initial Task Description */}
                         <div className="flex gap-3">
                             <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center flex-shrink-0">
@@ -615,6 +648,13 @@ export const PersonaInstanceView: React.FC = () => {
                 confirmText="Delete"
                 cancelText="Keep"
                 variant="danger"
+            />
+
+            {/* Continue Work Dialog */}
+            <ContinueWorkDialog
+                instance={currentInstance}
+                isOpen={showContinueDialog}
+                onClose={() => setShowContinueDialog(false)}
             />
         </div>
     );

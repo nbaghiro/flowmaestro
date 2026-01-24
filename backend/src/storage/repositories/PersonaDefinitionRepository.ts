@@ -17,6 +17,7 @@ import type {
     PersonaAutonomyLevel,
     LLMProvider
 } from "../models/PersonaDefinition";
+import type { PersonaConnectionRequirement } from "../models/PersonaInstanceConnection";
 
 /**
  * Database row interface for persona_definitions table
@@ -50,6 +51,7 @@ interface PersonaDefinitionRow {
     default_max_cost_credits: number | string;
     autonomy_level: string;
     tool_risk_overrides: JsonObject | string;
+    connection_requirements: unknown[] | string;
     featured: boolean;
     sort_order: number | string;
     status: string;
@@ -572,6 +574,9 @@ export class PersonaDefinitionRepository {
                 typeof row.tool_risk_overrides === "string"
                     ? JSON.parse(row.tool_risk_overrides)
                     : row.tool_risk_overrides,
+            connection_requirements: (typeof row.connection_requirements === "string"
+                ? JSON.parse(row.connection_requirements)
+                : row.connection_requirements || []) as PersonaConnectionRequirement[],
             featured: row.featured,
             sort_order:
                 typeof row.sort_order === "string" ? parseInt(row.sort_order) : row.sort_order,
@@ -609,6 +614,9 @@ export class PersonaDefinitionRepository {
                 typeof row.default_tools === "string"
                     ? JSON.parse(row.default_tools)
                     : row.default_tools,
+            connection_requirements: (typeof row.connection_requirements === "string"
+                ? JSON.parse(row.connection_requirements)
+                : row.connection_requirements || []) as PersonaConnectionRequirement[],
             featured: row.featured,
             status: row.status as PersonaStatus
         };

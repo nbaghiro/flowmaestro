@@ -97,6 +97,16 @@ export interface PersonaEstimatedDuration {
 }
 
 /**
+ * Connection requirement for a persona definition
+ */
+export interface PersonaConnectionRequirement {
+    provider: string; // 'github', 'slack', 'google', etc.
+    required: boolean; // Must be connected to launch
+    reason: string; // Shown to user: "For creating PRs"
+    suggested_scopes: string[]; // Recommended permission scopes
+}
+
+/**
  * Pre-built persona definition
  */
 export interface PersonaDefinition {
@@ -152,6 +162,9 @@ export interface PersonaDefinition {
     autonomy_level: PersonaAutonomyLevel;
     tool_risk_overrides: JsonObject;
 
+    // Connection Requirements
+    connection_requirements: PersonaConnectionRequirement[];
+
     // Metadata
     featured: boolean;
     sort_order: number;
@@ -184,6 +197,7 @@ export interface PersonaDefinitionSummary {
     // Legacy
     typical_deliverables: string[];
     default_tools: AgentTemplateTool[];
+    connection_requirements: PersonaConnectionRequirement[];
     featured: boolean;
     status: PersonaStatus;
 }
@@ -206,6 +220,27 @@ export interface PersonaDefinitionListParams {
 export interface PersonaDefinitionListResponse {
     personas: PersonaDefinitionSummary[];
     total: number;
+}
+
+// ============================================================================
+// PERSONA INSTANCE CONNECTION TYPES
+// ============================================================================
+
+/**
+ * Connection granted to a persona instance
+ */
+export interface PersonaInstanceConnection {
+    id: string;
+    instance_id: string;
+    connection_id: string;
+    granted_scopes: string[];
+    created_at: string;
+    connection?: {
+        id: string;
+        name: string;
+        provider: string;
+        connection_method: string;
+    };
 }
 
 // ============================================================================
@@ -319,10 +354,29 @@ export interface PersonaActivityEntry {
  */
 export interface PersonaInstanceDeliverable {
     id: string;
+    instance_id: string;
     name: string;
-    type: string;
-    url?: string;
-    content?: string;
+    description: string | null;
+    type: DeliverableType;
+    content: string | null;
+    file_url: string | null;
+    file_size_bytes: number | null;
+    file_extension: string | null;
+    preview: string | null;
+    created_at: string;
+}
+
+/**
+ * Summary of a deliverable (without full content)
+ */
+export interface PersonaInstanceDeliverableSummary {
+    id: string;
+    name: string;
+    description: string | null;
+    type: DeliverableType;
+    file_size_bytes: number | null;
+    file_extension: string | null;
+    preview: string | null;
     created_at: string;
 }
 
@@ -380,6 +434,16 @@ export interface PersonaInstance {
     // Sandbox Tracking
     sandbox_id: string | null;
     sandbox_state: SandboxState | null;
+
+    // Continuation Tracking
+    parent_instance_id: string | null;
+    continuation_count: number;
+
+    // Clarification Tracking
+    clarification_complete: boolean;
+    clarification_exchange_count: number;
+    clarification_max_exchanges: number;
+    clarification_skipped: boolean;
 
     // Timestamps
     created_at: string;
@@ -451,6 +515,11 @@ export interface CreatePersonaInstanceRequest {
     max_duration_hours?: number;
     max_cost_credits?: number;
     notification_config?: Partial<PersonaNotificationConfig>;
+    // Template support
+    template_id?: string;
+    template_variables?: Record<string, string | number | boolean | string[]>;
+    // Clarification control
+    skip_clarification?: boolean;
 }
 
 /**
@@ -589,3 +658,85 @@ export type PersonaWebSocketEvent =
     | PersonaInstanceCompletedEvent
     | PersonaInstanceFailedEvent
     | PersonaInstanceMessageEvent;
+
+// ============================================================================
+// PERSONA TASK TEMPLATE TYPES
+// ============================================================================
+
+/**
+ * Variable definition for task templates
+ * Reuses the same structure as PersonaInputField for consistency
+ */
+export type TemplateVariable = PersonaInputField;
+
+/**
+ * Status of a task template
+ */
+export type TaskTemplateStatus = "active" | "beta" | "deprecated";
+
+/**
+ * Task template for a persona
+ */
+export interface PersonaTaskTemplate {
+    id: string;
+    persona_definition_id: string;
+
+    // Template Identity
+    name: string;
+    description: string;
+    icon: string | null;
+
+    // Template Content
+    task_template: string;
+    variables: TemplateVariable[];
+
+    // Suggested defaults
+    suggested_duration_hours: number;
+    suggested_max_cost: number;
+
+    // Metadata
+    sort_order: number;
+    usage_count: number;
+    status: TaskTemplateStatus;
+
+    // Timestamps
+    created_at: string;
+    updated_at: string;
+}
+
+/**
+ * Summary of a task template for list views
+ */
+export interface PersonaTaskTemplateSummary {
+    id: string;
+    name: string;
+    description: string;
+    icon: string | null;
+    variables: TemplateVariable[];
+    suggested_duration_hours: number;
+    suggested_max_cost: number;
+    usage_count: number;
+}
+
+/**
+ * Request to generate task description from template
+ */
+export interface GenerateFromTemplateRequest {
+    variables: Record<string, string | number | boolean | string[]>;
+}
+
+/**
+ * Response from generating task description
+ */
+export interface GenerateFromTemplateResponse {
+    task_description: string;
+    suggested_duration_hours: number;
+    suggested_max_cost: number;
+}
+
+/**
+ * Response for listing templates
+ */
+export interface PersonaTaskTemplateListResponse {
+    templates: PersonaTaskTemplateSummary[];
+}

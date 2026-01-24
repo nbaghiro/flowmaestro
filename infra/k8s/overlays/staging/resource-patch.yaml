@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: api-server
+  namespace: flowmaestro
 spec:
   template:
     spec:
@@ -20,6 +21,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: temporal-worker
+  namespace: flowmaestro
 spec:
   template:
     spec:

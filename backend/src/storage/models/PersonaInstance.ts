@@ -99,6 +99,20 @@ export interface PersonaInstanceModel {
     sandbox_id: string | null;
     sandbox_state: SandboxState | null;
 
+    // Template Tracking
+    template_id: string | null;
+    template_variables: Record<string, string | number | boolean | string[]>;
+
+    // Continuation Tracking
+    parent_instance_id: string | null;
+    continuation_count: number;
+
+    // Clarification Tracking
+    clarification_complete: boolean;
+    clarification_exchange_count: number;
+    clarification_max_exchanges: number;
+    clarification_skipped: boolean;
+
     // Timestamps
     created_at: Date;
     updated_at: Date;
@@ -160,6 +174,15 @@ export interface CreatePersonaInstanceInput {
     max_duration_hours?: number;
     max_cost_credits?: number;
     notification_config?: Partial<PersonaNotificationConfig>;
+    // Template tracking
+    template_id?: string;
+    template_variables?: Record<string, string | number | boolean | string[]>;
+    // Continuation tracking
+    parent_instance_id?: string;
+    continuation_count?: number;
+    // Clarification tracking
+    clarification_max_exchanges?: number;
+    skip_clarification?: boolean;
 }
 
 /**
@@ -186,6 +209,11 @@ export interface UpdatePersonaInstanceInput {
     notification_config?: PersonaNotificationConfig;
     sandbox_id?: string;
     sandbox_state?: SandboxState;
+    // Clarification tracking
+    clarification_complete?: boolean;
+    clarification_exchange_count?: number;
+    clarification_max_exchanges?: number;
+    clarification_skipped?: boolean;
 }
 
 /**

@@ -1,6 +1,9 @@
 import { FastifyRequest, FastifyReply } from "fastify";
 import { z } from "zod";
+import { PersonaInstanceMessageRepository } from "../../../storage/repositories/PersonaInstanceMessageRepository";
 import { PersonaInstanceRepository } from "../../../storage/repositories/PersonaInstanceRepository";
+import { getTemporalClient } from "../../../temporal/client";
+import { personaUserMessageSignal } from "../../../temporal/workflows";
 import { BadRequestError, NotFoundError } from "../../middleware";
 
 const sendMessageSchema = z.object({
@@ -40,18 +43,37 @@ export async function sendPersonaInstanceMessageHandler(
         throw new BadRequestError(`Cannot send message to instance in "${instance.status}" state`);
     }
 
-    // TODO: In a full implementation, we would:
-    // 1. Add the message to the thread
-    // 2. Trigger the agent to process the message
-    // 3. Return the updated conversation state
-    // For now, we just acknowledge the message
+    // Check if we have an execution ID to send the signal to
+    if (!instance.execution_id) {
+        throw new BadRequestError("Instance does not have an active execution");
+    }
 
-    reply.send({
-        success: true,
-        data: {
-            message: "Message received",
+    try {
+        // Save the user message to the database for the conversation history
+        const messageRepo = new PersonaInstanceMessageRepository();
+        await messageRepo.create({
             instance_id: id,
+            thread_id: instance.thread_id || undefined,
+            role: "user",
             content: content
-        }
-    });
+        });
+
+        // Send signal to Temporal workflow
+        const client = await getTemporalClient();
+        const handle = client.workflow.getHandle(instance.execution_id);
+
+        await handle.signal(personaUserMessageSignal, content);
+
+        reply.send({
+            success: true,
+            data: {
+                message: "Message sent successfully",
+                instance_id: id
+            }
+        });
+    } catch (error) {
+        throw new BadRequestError(
+            error instanceof Error ? error.message : "Failed to send message to persona"
+        );
+    }
 }

@@ -18,19 +18,28 @@ import {
     Package,
     CheckCircle2,
     HelpCircle,
-    ArrowLeft
+    ArrowLeft,
+    Loader2
 } from "lucide-react";
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { usePersonaStore } from "../../stores/personaStore";
-import { Select } from "../common/Select";
-import { Tooltip } from "../common/Tooltip";
+import {
+    getPersonaTemplates,
+    generateFromTemplate,
+    grantPersonaInstanceConnection
+} from "../../../lib/api";
+import { usePersonaStore } from "../../../stores/personaStore";
+import { Select } from "../../common/Select";
+import { Tooltip } from "../../common/Tooltip";
+import { ConnectionSelector } from "../connections/ConnectionSelector";
+import { TemplateSelector } from "../templates/TemplateSelector";
 import type {
     PersonaDefinition,
     CreatePersonaInstanceRequest,
     PersonaInputField,
-    PersonaStructuredInputs
-} from "../../lib/api";
+    PersonaStructuredInputs,
+    PersonaTaskTemplateSummary
+} from "../../../lib/api";
 
 interface TaskLaunchDialogProps {
     persona: PersonaDefinition;
@@ -270,6 +279,71 @@ export const TaskLaunchDialog: React.FC<TaskLaunchDialogProps> = ({
     const navigate = useNavigate();
     const { createInstance } = usePersonaStore();
 
+    // Template state
+    const [templates, setTemplates] = useState<PersonaTaskTemplateSummary[]>([]);
+    const [templatesLoading, setTemplatesLoading] = useState(false);
+    const [selectedTemplate, setSelectedTemplate] = useState<PersonaTaskTemplateSummary | null>(
+        null
+    );
+    const [templateVariables, setTemplateVariables] = useState<
+        Record<string, string | number | boolean | string[]>
+    >({});
+
+    // Fetch templates when dialog opens
+    useEffect(() => {
+        if (isOpen && persona.slug) {
+            setTemplatesLoading(true);
+            getPersonaTemplates(persona.slug)
+                .then((response) => {
+                    setTemplates(response.data.templates || []);
+                })
+                .catch((err) => {
+                    console.error("Failed to fetch templates:", err);
+                    setTemplates([]);
+                })
+                .finally(() => {
+                    setTemplatesLoading(false);
+                });
+        }
+    }, [isOpen, persona.slug]);
+
+    // Handle template selection
+    const handleTemplateSelect = useCallback(
+        (template: PersonaTaskTemplateSummary | null) => {
+            setSelectedTemplate(template);
+            if (template) {
+                // Initialize template variables from defaults
+                const initialVars: Record<string, string | number | boolean | string[]> = {};
+                for (const variable of template.variables) {
+                    if (variable.default_value !== undefined) {
+                        initialVars[variable.name] = variable.default_value;
+                    }
+                }
+                setTemplateVariables(initialVars);
+                // Update duration/cost suggestions from template
+                setMaxDurationHours(template.suggested_duration_hours);
+                setMaxCostCredits(template.suggested_max_cost);
+            } else {
+                setTemplateVariables({});
+                // Reset to persona defaults
+                setMaxDurationHours(persona.default_max_duration_hours);
+                setMaxCostCredits(persona.default_max_cost_credits);
+            }
+        },
+        [persona.default_max_duration_hours, persona.default_max_cost_credits]
+    );
+
+    // Update template variable
+    const updateTemplateVariable = useCallback(
+        (name: string, value: string | number | boolean | string[]) => {
+            setTemplateVariables((prev) => ({
+                ...prev,
+                [name]: value
+            }));
+        },
+        []
+    );
+
     // Initialize form values from field defaults
     const initialInputs = useMemo(() => {
         const inputs: PersonaStructuredInputs = {};
@@ -285,6 +359,28 @@ export const TaskLaunchDialog: React.FC<TaskLaunchDialogProps> = ({
 
     const [structuredInputs, setStructuredInputs] =
         useState<PersonaStructuredInputs>(initialInputs);
+
+    const updateField = useCallback(
+        (fieldName: string, value: string | number | boolean | string[]) => {
+            setStructuredInputs((prev) => ({
+                ...prev,
+                [fieldName]: value
+            }));
+        },
+        []
+    );
+
+    // Determine which fields to show
+    const activeFields = useMemo(() => {
+        if (selectedTemplate) {
+            return selectedTemplate.variables;
+        }
+        return persona.input_fields || [];
+    }, [selectedTemplate, persona.input_fields]);
+
+    // Get current input values based on whether template is selected
+    const currentInputs = selectedTemplate ? templateVariables : structuredInputs;
+    const updateCurrentField = selectedTemplate ? updateTemplateVariable : updateField;
     const [maxDurationHours, setMaxDurationHours] = useState<number>(
         persona.default_max_duration_hours
     );
@@ -297,35 +393,43 @@ export const TaskLaunchDialog: React.FC<TaskLaunchDialogProps> = ({
     const [error, setError] = useState<string | null>(null);
     const [showAdvanced, setShowAdvanced] = useState(false);
 
-    // Check if form is valid (all required fields have values)
+    // Connection state
+    const [selectedConnections, setSelectedConnections] = useState<
+        { connection_id: string; scopes?: string[] }[]
+    >([]);
+
+    // Check if form is valid (all required fields and connections have values)
     const isFormValid = useMemo(() => {
-        if (!persona.input_fields || persona.input_fields.length === 0) {
-            return true; // No fields defined, allow submission
+        const fields = activeFields;
+        const inputs = currentInputs;
+
+        // Check required input fields
+        if (fields && fields.length > 0) {
+            for (const field of fields) {
+                if (!field.required) continue;
+
+                const value = inputs[field.name];
+                if (value === undefined || value === "" || value === null) {
+                    return false;
+                }
+                if (Array.isArray(value) && value.length === 0) {
+                    return false;
+                }
+            }
         }
 
-        for (const field of persona.input_fields) {
-            if (!field.required) continue;
-
-            const value = structuredInputs[field.name];
-            if (value === undefined || value === "" || value === null) {
-                return false;
-            }
-            if (Array.isArray(value) && value.length === 0) {
-                return false;
+        // Check required connections
+        const requirements = persona.connection_requirements || [];
+        for (const req of requirements) {
+            if (req.required) {
+                // Check if any selected connection matches this provider
+                // We don't have provider info on selectedConnections, so we'll skip this check
+                // and let the backend validate
             }
         }
+
         return true;
-    }, [persona.input_fields, structuredInputs]);
-
-    const updateField = useCallback(
-        (fieldName: string, value: string | number | boolean | string[]) => {
-            setStructuredInputs((prev) => ({
-                ...prev,
-                [fieldName]: value
-            }));
-        },
-        []
-    );
+    }, [activeFields, currentInputs, persona.connection_requirements]);
 
     const handleSubmit = useCallback(
         async (e?: React.FormEvent | React.MouseEvent) => {
@@ -340,25 +444,56 @@ export const TaskLaunchDialog: React.FC<TaskLaunchDialogProps> = ({
             setError(null);
 
             try {
-                // Build task description from structured inputs for backwards compatibility
-                const taskDescription = buildTaskDescription(
-                    persona.input_fields || [],
-                    structuredInputs
-                );
+                let taskDescription: string;
+
+                // If using a template, generate task description from template
+                if (selectedTemplate) {
+                    const generateResponse = await generateFromTemplate(
+                        persona.slug,
+                        selectedTemplate.id,
+                        templateVariables
+                    );
+                    taskDescription = generateResponse.data.task_description;
+                } else {
+                    // Build task description from structured inputs for backwards compatibility
+                    taskDescription = buildTaskDescription(
+                        persona.input_fields || [],
+                        structuredInputs
+                    );
+                }
 
                 const request: CreatePersonaInstanceRequest = {
                     persona_slug: persona.slug,
-                    structured_inputs: structuredInputs,
+                    structured_inputs: selectedTemplate ? templateVariables : structuredInputs,
                     task_description: taskDescription,
                     max_duration_hours: maxDurationHours,
                     max_cost_credits: maxCostCredits,
                     notification_config: {
                         on_approval_needed: notifyOnApproval,
                         on_completion: notifyOnCompletion
-                    }
+                    },
+                    // Include template info if using a template
+                    ...(selectedTemplate && {
+                        template_id: selectedTemplate.id,
+                        template_variables: templateVariables
+                    })
                 };
 
                 const instance = await createInstance(request);
+
+                // Grant selected connections to the instance
+                for (const conn of selectedConnections) {
+                    try {
+                        await grantPersonaInstanceConnection(
+                            instance.id,
+                            conn.connection_id,
+                            conn.scopes
+                        );
+                    } catch (connErr) {
+                        console.error("Failed to grant connection:", connErr);
+                        // Continue with other connections even if one fails
+                    }
+                }
 
                 // Navigate to the instance view
                 navigate(`/persona-instances/${instance.id}`);
@@ -372,6 +507,9 @@ export const TaskLaunchDialog: React.FC<TaskLaunchDialogProps> = ({
         [
             isFormValid,
             structuredInputs,
+            templateVariables,
+            selectedTemplate,
+            selectedConnections,
             maxDurationHours,
             maxCostCredits,
             notifyOnApproval,
@@ -395,8 +533,8 @@ export const TaskLaunchDialog: React.FC<TaskLaunchDialogProps> = ({
         persona.deliverables && persona.deliverables.length > 0 ? persona.deliverables : null;
     const guaranteedDeliverables = deliverables?.filter((d) => d.guaranteed) || [];
 
-    // Check if we have structured input fields
-    const hasInputFields = persona.input_fields && persona.input_fields.length > 0;
+    // Check if we have fields to show (either from template or persona)
+    const hasInputFields = activeFields && activeFields.length > 0;
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -506,10 +644,36 @@ export const TaskLaunchDialog: React.FC<TaskLaunchDialogProps> = ({
                             </div>
                         )}
 
+                        {/* Template Selector */}
+                        {templatesLoading ? (
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Loading templates...
+                            </div>
+                        ) : templates.length > 0 ? (
+                            <TemplateSelector
+                                templates={templates}
+                                selectedTemplateId={selectedTemplate?.id || null}
+                                onSelect={handleTemplateSelect}
+                                disabled={isSubmitting}
+                            />
+                        ) : null}
+
+                        {/* Divider when template is selected */}
+                        {selectedTemplate && (
+                            <div className="flex items-center gap-3">
+                                <div className="flex-1 h-px bg-border" />
+                                <span className="text-xs text-muted-foreground">
+                                    Fill in the details
+                                </span>
+                                <div className="flex-1 h-px bg-border" />
+                            </div>
+                        )}
+
                         {/* Dynamic Input Fields */}
                         {hasInputFields ? (
                             <div className="space-y-5">
-                                {persona.input_fields?.map((field) => (
+                                {activeFields?.map((field) => (
                                     <div key={field.name}>
                                         {field.type !== "checkbox" && (
                                             <label className="flex items-center gap-1.5 text-sm font-medium text-foreground mb-2">
@@ -531,8 +695,8 @@ export const TaskLaunchDialog: React.FC<TaskLaunchDialogProps> = ({
                                         )}
                                         <FormField
                                             field={field}
-                                            value={structuredInputs[field.name]}
-                                            onChange={(v) => updateField(field.name, v)}
+                                            value={currentInputs[field.name]}
+                                            onChange={(v) => updateCurrentField(field.name, v)}
                                             disabled={isSubmitting}
                                         />
                                         {field.help_text && field.type !== "checkbox" && (
@@ -543,8 +707,8 @@ export const TaskLaunchDialog: React.FC<TaskLaunchDialogProps> = ({
                                     </div>
                                 ))}
                             </div>
-                        ) : (
-                            /* Legacy: Single task description field */
+                        ) : !selectedTemplate ? (
+                            /* Legacy: Single task description field (only if no template selected) */
                             <div>
                                 <label className="block text-sm font-medium text-foreground mb-2">
                                     Brief your specialist
@@ -564,7 +728,7 @@ export const TaskLaunchDialog: React.FC<TaskLaunchDialogProps> = ({
                                     disabled={isSubmitting}
                                 />
                             </div>
-                        )}
+                        ) : null}
 
                         {/* Guaranteed Deliverables (v2) */}
                         {guaranteedDeliverables.length > 0 && (
@@ -619,6 +783,14 @@ export const TaskLaunchDialog: React.FC<TaskLaunchDialogProps> = ({
                                 </div>
                             </div>
                         )}
+
+                        {/* Connection Selector - only shows if persona has connection requirements */}
+                        <ConnectionSelector
+                            requirements={persona.connection_requirements || []}
+                            selectedConnections={selectedConnections}
+                            onConnectionsChange={setSelectedConnections}
+                            disabled={isSubmitting}
+                        />
 
                         {/* Advanced Options Toggle */}
                         <button

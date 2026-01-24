@@ -1,0 +1,78 @@
+name: Validate Kubernetes Manifests
+
+on:
+  pull_request:
+    paths:
+      - "infra/k8s/**"
+      - "infra/docker/**"
+  push:
+    branches: [main]
+    paths:
+      - "infra/k8s/**"
+      - "infra/docker/**"
+  workflow_dispatch:
+
+jobs:
+  validate:
+    name: Validate K8s Manifests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup kustomize
+        uses: imranismail/setup-kustomize@v2
+
+      - name: Install kubeconform
+        run: |
+          curl -L -o kubeconform.tar.gz \
+            https://github.com/yannh/kubeconform/releases/download/v0.6.4/kubeconform-linux-amd64.tar.gz
+          tar xzf kubeconform.tar.gz
+          sudo mv kubeconform /usr/local/bin/
+
+      - name: Validate production overlay
+        run: |
+          echo "Building production manifests..."
+          kustomize build infra/k8s/overlays/production > /tmp/production.yaml
+
+          echo "Validating with kubeconform..."
+          kubeconform -strict -summary \
+            -schema-location default \
+            -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' \
+            /tmp/production.yaml
+
+      - name: Validate staging overlay
+        run: |
+          echo "Building staging manifests..."
+          kustomize build infra/k8s/overlays/staging > /tmp/staging.yaml
+
+          echo "Validating with kubeconform..."
+          kubeconform -strict -summary \
+            -schema-location default \
+            -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' \
+            /tmp/staging.yaml
+
+      - name: kubectl dry-run validation
+        run: |
+          echo "Running kubectl dry-run..."
+          kubectl apply --dry-run=client -f /tmp/production.yaml 2>&1 | head -100
+
+      - name: Check for deprecated APIs
+        run: |
+          echo "Checking for deprecated Kubernetes APIs..."
+          # Check for known deprecated APIs
+          if grep -E "apiVersion:.*(extensions/v1beta1|apps/v1beta1|apps/v1beta2)" /tmp/production.yaml; then
+            echo "ERROR: Deprecated API versions found!"
+            exit 1
+          fi
+          echo "No deprecated APIs found."
+
+      - name: Output manifest summary
+        if: always()
+        run: |
+          echo "## Manifest Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Resources in production overlay:" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          grep "^kind:" /tmp/production.yaml | sort | uniq -c >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
