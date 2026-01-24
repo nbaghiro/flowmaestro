@@ -701,5 +701,33 @@ const googleFormsEntry: ProviderRegistryEntry = {
 
 providerRegistry.register(googleFormsEntry);
 
+// Register Looker provider
+const lookerEntry: ProviderRegistryEntry = {
+    name: "looker",
+    displayName: "Looker",
+    authMethod: "api_key",
+    category: "business_intelligence",
+    loader: async () => {
+        const { LookerProvider } = await import("./providers/looker/LookerProvider");
+        return new LookerProvider();
+    }
+};
+
+providerRegistry.register(lookerEntry);
+
+// Register Tableau provider
+const tableauEntry: ProviderRegistryEntry = {
+    name: "tableau",
+    displayName: "Tableau",
+    authMethod: "api_key",
+    category: "business_intelligence",
+    loader: async () => {
+        const { TableauProvider } = await import("./providers/tableau/TableauProvider");
+        return new TableauProvider();
+    }
+};
+
+providerRegistry.register(tableauEntry);
+
 // Export for use in application
 export { providerRegistry };

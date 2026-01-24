@@ -141,7 +141,9 @@ export const PROVIDER_LOGO_DOMAINS: Record<string, string> = {
     mixpanel: "mixpanel.com",
     hellosign: "hellosign.com",
     docusign: "docusign.com",
-    surveymonkey: "surveymonkey.com"
+    surveymonkey: "surveymonkey.com",
+    looker: "looker.com",
+    tableau: "tableau.com"
 };
 
 /**
@@ -2149,8 +2151,16 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Google business intelligence platform",
         logoUrl: getBrandLogo("looker.com"),
         category: "Business Intelligence",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["api_key"],
+        apiKeySettings: {
+            keyLabel: "Client ID",
+            keyPlaceholder: "xxxxxxxxxxxxxxxx",
+            requiresSecret: true,
+            secretLabel: "Client Secret",
+            secretPlaceholder: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            helpText: "Get API credentials from Looker Admin > Users > API Keys",
+            helpUrl: "https://cloud.google.com/looker/docs/api-auth"
+        }
     },
     {
         provider: "tableau",
@@ -2159,7 +2169,16 @@ export const ALL_PROVIDERS: Provider[] = [
         logoUrl: getBrandLogo("tableau.com"),
         category: "Business Intelligence",
         methods: ["api_key"],
-        comingSoon: true
+        apiKeySettings: {
+            keyLabel: "Personal Access Token Name",
+            keyPlaceholder: "my-token-name",
+            requiresSecret: true,
+            secretLabel: "Personal Access Token Secret",
+            secretPlaceholder: "qlE1g9MMh9vbrjjg==:rZTHhPpP2tUW1kfn4tjg8",
+            helpText: "Create a PAT in Tableau Account Settings > Personal Access Tokens",
+            helpUrl:
+                "https://help.tableau.com/current/server/en-us/security_personal_access_tokens.htm"
+        }
     },
     {
         provider: "power-bi",
