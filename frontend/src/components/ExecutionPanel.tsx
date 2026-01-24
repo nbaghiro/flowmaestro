@@ -22,6 +22,12 @@ interface ExecutionPanelProps {
     workflowId: string;
     renderButtonOnly?: boolean;
     renderPanelOnly?: boolean;
+    /** External control: whether the panel/button is active */
+    isActive?: boolean;
+    /** External control: toggle the panel */
+    onToggle?: () => void;
+    /** External control: close the panel */
+    onClose?: () => void;
 }
 
 const MIN_WIDTH = 400;
@@ -33,12 +39,14 @@ type TabType = "triggers" | "execution" | "history";
 export function ExecutionPanel({
     workflowId,
     renderButtonOnly,
-    renderPanelOnly
+    renderPanelOnly,
+    isActive,
+    onToggle,
+    onClose
 }: ExecutionPanelProps) {
-    const { isDrawerOpen, drawerWidth, setDrawerOpen, setDrawerWidth, triggers, clearTriggers } =
-        useTriggerStore();
+    const { drawerWidth, setDrawerWidth, triggers, clearTriggers } = useTriggerStore();
 
-    const { selectNode, selectedNode, currentExecution, clearExecution } = useWorkflowStore();
+    const { currentExecution, clearExecution } = useWorkflowStore();
 
     const [isResizing, setIsResizing] = useState(false);
     const [activeTab, setActiveTab] = useState<TabType>("triggers");
@@ -53,22 +61,12 @@ export function ExecutionPanel({
         setActiveTab("triggers"); // Reset to triggers tab
     }, [workflowId, clearExecution, clearTriggers]);
 
-    // Auto-close execution panel when a node is selected
-    useEffect(() => {
-        if (selectedNode && isDrawerOpen) {
-            setDrawerOpen(false);
-        }
-    }, [selectedNode, isDrawerOpen, setDrawerOpen]);
-
     // Auto-switch to execution tab when an execution starts
     useEffect(() => {
-        if (currentExecution && !isDrawerOpen) {
-            setDrawerOpen(true);
-            setActiveTab("execution");
-        } else if (currentExecution && isDrawerOpen && activeTab === "triggers") {
+        if (currentExecution && activeTab === "triggers") {
             setActiveTab("execution");
         }
-    }, [currentExecution?.id]);
+    }, [currentExecution?.id, activeTab]);
 
     // Handle resize start
     const handleResizeStart = (e: React.MouseEvent) => {
@@ -109,14 +107,17 @@ export function ExecutionPanel({
         return undefined;
     }, [isResizing, setDrawerWidth, drawerWidth]);
 
-    // Toggle drawer and deselect node when opening
-    const toggleDrawer = () => {
-        const newOpenState = !isDrawerOpen;
-        setDrawerOpen(newOpenState);
+    // Handle close - use external handler if provided
+    const handleClose = () => {
+        if (onClose) {
+            onClose();
+        }
+    };
 
-        // Deselect node when opening execution panel
-        if (newOpenState) {
-            selectNode(null);
+    // Handle toggle - use external handler if provided
+    const handleToggle = () => {
+        if (onToggle) {
+            onToggle();
         }
     };
 
@@ -191,10 +192,11 @@ export function ExecutionPanel({
     if (renderButtonOnly) {
         return (
             <button
-                onClick={toggleDrawer}
+                onClick={handleToggle}
+                data-opens-panel
                 className={cn(
                     "px-4 py-2 border rounded-lg shadow-lg transition-colors",
-                    isDrawerOpen
+                    isActive
                         ? "bg-primary text-primary-foreground border-primary hover:bg-primary/90"
                         : "bg-card border-border hover:bg-muted"
                 )}
@@ -206,7 +208,7 @@ export function ExecutionPanel({
                         <span
                             className={cn(
                                 "text-xs px-2 py-0.5 rounded-full",
-                                isDrawerOpen
+                                isActive
                                     ? "bg-primary-foreground/20 text-primary-foreground"
                                     : "bg-primary/10 text-primary"
                             )}
@@ -214,7 +216,7 @@ export function ExecutionPanel({
                             {enabledCount}
                         </span>
                     )}
-                    {isDrawerOpen ? (
+                    {isActive ? (
                         <ChevronRight className="w-4 h-4 opacity-70" />
                     ) : (
                         <ChevronLeft className="w-4 h-4 opacity-50" />
@@ -224,10 +226,10 @@ export function ExecutionPanel({
         );
     }
 
-    // Render only panel
+    // Render only panel (visibility controlled externally)
     if (renderPanelOnly) {
-        return isDrawerOpen ? (
-            <div className="fixed top-0 right-0 bottom-0 z-50">
+        return (
+            <div className="fixed top-0 right-0 bottom-0 z-50" data-right-panel>
                 <div
                     ref={drawerRef}
                     className="h-full bg-card border-l border-border shadow-2xl flex flex-col"
@@ -254,14 +256,7 @@ export function ExecutionPanel({
                         {/* Actions */}
                         <div className="flex items-center gap-2">
                             <button
-                                onClick={toggleDrawer}
-                                className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
-                                title="Collapse"
-                            >
-                                <ChevronRight className="w-4 h-4" />
-                            </button>
-                            <button
-                                onClick={() => setDrawerOpen(false)}
+                                onClick={handleClose}
                                 className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
                                 title="Close"
                             >
@@ -279,102 +274,9 @@ export function ExecutionPanel({
                     </div>
                 </div>
             </div>
-        ) : null;
+        );
     }
 
-    // Render both button and panel (default behavior)
-    return (
-        <>
-            {/* Bottom Button - Always Visible */}
-            <div>
-                <button
-                    onClick={toggleDrawer}
-                    className={cn(
-                        "px-4 py-2 border rounded-lg shadow-lg transition-colors",
-                        isDrawerOpen
-                            ? "bg-primary text-primary-foreground border-primary hover:bg-primary/90"
-                            : "bg-background border-border hover:bg-muted"
-                    )}
-                >
-                    <div className="flex items-center gap-2">
-                        <Zap className="w-4 h-4" />
-                        <span className="text-sm font-medium">Execution</span>
-                        {enabledCount > 0 && (
-                            <span
-                                className={cn(
-                                    "text-xs px-2 py-0.5 rounded-full",
-                                    isDrawerOpen
-                                        ? "bg-primary-foreground/20 text-primary-foreground"
-                                        : "bg-primary/10 text-primary"
-                                )}
-                            >
-                                {enabledCount}
-                            </span>
-                        )}
-                        {isDrawerOpen ? (
-                            <ChevronRight className="w-4 h-4 opacity-70" />
-                        ) : (
-                            <ChevronLeft className="w-4 h-4 opacity-50" />
-                        )}
-                    </div>
-                </button>
-            </div>
-
-            {/* Drawer Panel */}
-            {isDrawerOpen && (
-                <div className="fixed top-0 right-0 bottom-0 z-50">
-                    <div
-                        ref={drawerRef}
-                        className="h-full bg-card border-l border-border shadow-2xl flex flex-col"
-                        style={{ width: drawerWidth }}
-                    >
-                        {/* Resize Handle */}
-                        <div
-                            className={cn(
-                                "absolute top-0 left-0 bottom-0 w-1 cursor-ew-resize hover:bg-primary/20 transition-colors",
-                                isResizing && "bg-primary/30"
-                            )}
-                            onMouseDown={handleResizeStart}
-                        >
-                            <div className="absolute top-0 left-0 bottom-0 w-3 -translate-x-1/2" />
-                        </div>
-
-                        {/* Header */}
-                        <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
-                            <div className="flex items-center gap-2">
-                                <Zap className="w-4 h-4 text-primary" />
-                                <h3 className="text-sm font-semibold">Execution & Triggers</h3>
-                            </div>
-
-                            {/* Actions */}
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={toggleDrawer}
-                                    className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
-                                    title="Collapse"
-                                >
-                                    <ChevronRight className="w-4 h-4" />
-                                </button>
-                                <button
-                                    onClick={() => setDrawerOpen(false)}
-                                    className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
-                                    title="Close"
-                                >
-                                    <X className="w-4 h-4" />
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Tabs */}
-                        {renderTabs()}
-
-                        {/* Content */}
-                        <div className="flex-1 overflow-hidden">
-                            <ExecutionPanelContent workflowId={workflowId} activeTab={activeTab} />
-                        </div>
-                    </div>
-                </div>
-            )}
-        </>
-    );
+    // Default: return null (use renderButtonOnly or renderPanelOnly)
+    return null;
 }

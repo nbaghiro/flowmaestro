@@ -1,16 +1,19 @@
 import { Sparkles } from "lucide-react";
 import { cn } from "../lib/utils";
-import { useChatStore } from "../stores/chatStore";
 
-export function AIAskButton() {
-    const { isPanelOpen, togglePanel } = useChatStore();
+interface AIAskButtonProps {
+    isActive?: boolean;
+    onClick?: () => void;
+}
 
+export function AIAskButton({ isActive = false, onClick }: AIAskButtonProps) {
     return (
         <button
-            onClick={togglePanel}
+            onClick={onClick}
+            data-opens-panel
             className={cn(
                 "px-4 py-2 border rounded-lg shadow-lg transition-colors",
-                isPanelOpen
+                isActive
                     ? "bg-primary text-primary-foreground border-primary hover:bg-primary/90"
                     : "bg-card border-border hover:bg-muted"
             )}

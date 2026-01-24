@@ -52,11 +52,11 @@ function detectNodeAction(message: string, hasSelectedNode: boolean): ActionType
 
 interface AIChatPanelProps {
     workflowId?: string;
+    onClose?: () => void;
 }
 
-export function AIChatPanel({ workflowId }: AIChatPanelProps) {
+export function AIChatPanel({ workflowId, onClose }: AIChatPanelProps) {
     const {
-        isPanelOpen,
         panelWidth,
         messages,
         isStreaming,
@@ -66,7 +66,6 @@ export function AIChatPanel({ workflowId }: AIChatPanelProps) {
         enableThinking,
         thinkingBudget,
         setPanelWidth,
-        closePanel,
         addMessage,
         updateLastMessage,
         setStreaming,
@@ -77,6 +76,13 @@ export function AIChatPanel({ workflowId }: AIChatPanelProps) {
         setWorkflowContext,
         clearChat
     } = useChatStore();
+
+    // Handle close - use external handler if provided
+    const handleClose = () => {
+        if (onClose) {
+            onClose();
+        }
+    };
 
     // Check if current model supports thinking
     const currentModelSupportsThinking = selectedModel
@@ -282,12 +288,11 @@ export function AIChatPanel({ workflowId }: AIChatPanelProps) {
         setShowClearConfirm(false);
     };
 
-    // Update context when panel opens or workflow changes
+    // Update context when panel mounts or workflow changes
     useEffect(() => {
-        if (isPanelOpen) {
-            handleRefreshContext();
-        }
-    }, [isPanelOpen, nodes.length, edges.length, selectedNode]);
+        handleRefreshContext();
+        // eslint-disable-next-line
+    }, [nodes.length, edges.length, selectedNode]);
 
     // Calculate smart position for new nodes
     const calculateNodePosition = (index: number): { x: number; y: number } => {
@@ -399,10 +404,8 @@ export function AIChatPanel({ workflowId }: AIChatPanelProps) {
         clearProposedChanges();
     };
 
-    if (!isPanelOpen) return null;
-
     return (
-        <div className="fixed top-0 right-0 bottom-0 z-50">
+        <div className="fixed top-0 right-0 bottom-0 z-50" data-right-panel>
             <div
                 className="h-full bg-card border-l border-border shadow-2xl flex flex-col"
                 style={{ width: panelWidth }}
@@ -439,7 +442,7 @@ export function AIChatPanel({ workflowId }: AIChatPanelProps) {
                             <RotateCcw className="w-4 h-4" />
                         </button>
                         <button
-                            onClick={closePanel}
+                            onClick={handleClose}
                             className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
                             title="Close"
                         >

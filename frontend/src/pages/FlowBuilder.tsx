@@ -17,6 +17,7 @@ import { Tooltip } from "../components/common/Tooltip";
 import { ExecutionSSEManager } from "../components/execution/ExecutionSSEManager";
 import { ExecutionPanel } from "../components/ExecutionPanel";
 import { CreateFormInterfaceDialog } from "../components/forms/CreateFormInterfaceDialog";
+import { ValidationPanel } from "../components/validation/ValidationPanel";
 import { WorkflowSettingsDialog } from "../components/WorkflowSettingsDialog";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import {
@@ -48,6 +49,9 @@ const SAVE_ERROR_TIMEOUT = 3000;
 const FIT_VIEW_PADDING = 0.2;
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
+
+// Right panel types - only one can be open at a time
+type RightPanelType = "execution" | "chat" | "checkpoint" | "validation" | null;
 
 interface CopiedNode {
     type: string;
@@ -92,10 +96,12 @@ export function FlowBuilder() {
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [copiedNode, setCopiedNode] = useState<CopiedNode | null>(null);
     const reactFlowInstanceRef = useRef<ReturnType<typeof useReactFlow> | null>(null);
-    const [isCheckpointOpen, setIsCheckpointOpen] = useState(false);
     const [checkpoints, setCheckpoints] = useState<Checkpoint[]>([]);
     const [showMinorChangesDialog, setShowMinorChangesDialog] = useState(false);
     const [isFormInterfaceDialogOpen, setIsFormInterfaceDialogOpen] = useState(false);
+
+    // Unified right panel state - only one can be open at a time
+    const [activeRightPanel, setActiveRightPanel] = useState<RightPanelType>(null);
 
     const {
         selectedNode,
@@ -113,17 +119,59 @@ export function FlowBuilder() {
 
     const { undo, redo, canUndo, canRedo, clear } = useHistoryStore();
 
-    const {
-        isPanelOpen: isChatOpen,
-        closePanel: closeChatPanel,
-        openPanel: openChatPanel
-    } = useChatStore();
+    const { closePanel: closeChatPanel, openPanel: openChatPanel } = useChatStore();
 
-    const { isDrawerOpen, setDrawerOpen } = useTriggerStore();
+    const { setDrawerOpen } = useTriggerStore();
 
-    // Panel coordination state
-    const [lastActivePanel, setLastActivePanel] = useState<"chat" | "execution" | null>(null);
-    const sacrificedPanelRef = useRef<"chat" | "execution" | null>(null);
+    // Helper to open a right panel (closes any other open panel first)
+    const openRightPanel = useCallback(
+        (panel: RightPanelType) => {
+            // Close previous panel in its respective store if needed
+            if (activeRightPanel === "chat") {
+                closeChatPanel();
+            } else if (activeRightPanel === "execution") {
+                setDrawerOpen(false);
+            }
+
+            // Open new panel
+            setActiveRightPanel(panel);
+
+            // Sync with stores
+            if (panel === "chat") {
+                openChatPanel();
+            } else if (panel === "execution") {
+                setDrawerOpen(true);
+            }
+
+            // Deselect node when opening any panel
+            if (panel) {
+                selectNode(null);
+            }
+        },
+        [activeRightPanel, closeChatPanel, openChatPanel, setDrawerOpen, selectNode]
+    );
+
+    // Helper to close all right panels
+    const closeRightPanel = useCallback(() => {
+        if (activeRightPanel === "chat") {
+            closeChatPanel();
+        } else if (activeRightPanel === "execution") {
+            setDrawerOpen(false);
+        }
+        setActiveRightPanel(null);
+    }, [activeRightPanel, closeChatPanel, setDrawerOpen]);
+
+    // Toggle a right panel (open if closed, close if open)
+    const toggleRightPanel = useCallback(
+        (panel: RightPanelType) => {
+            if (activeRightPanel === panel) {
+                closeRightPanel();
+            } else {
+                openRightPanel(panel);
+            }
+        },
+        [activeRightPanel, closeRightPanel, openRightPanel]
+    );
 
     useEffect(() => {
         if (workflowId) {
@@ -137,60 +185,41 @@ export function FlowBuilder() {
         }
     }, [workflowId]);
 
-    // Close checkpoint panel when a node is selected
+    // Close all right panels when a node is selected
     useEffect(() => {
-        if (selectedNode && isCheckpointOpen) {
-            setIsCheckpointOpen(false);
+        if (selectedNode && activeRightPanel) {
+            closeRightPanel();
         }
+        // eslint-disable-next-line
     }, [selectedNode]);
 
-    // Panel coordination: Close chat panel when a node is selected
+    // Click-outside detection for right panels
+    // Uses mousedown to capture before other click handlers fire
     useEffect(() => {
-        if (selectedNode) {
-            if (isChatOpen) closeChatPanel();
-            sacrificedPanelRef.current = null; // Clear sacrificed panel on node selection
-        }
-    }, [selectedNode, isChatOpen, closeChatPanel]);
+        if (!activeRightPanel) return;
 
-    // Coordinate AI Chat and Execution panels
-    useEffect(() => {
-        if (isChatOpen && isDrawerOpen) {
-            // Both are open: one was already open and the other just opened
-            if (lastActivePanel === "execution") {
-                // Chat just opened while Execution was open
-                setDrawerOpen(false);
-                sacrificedPanelRef.current = "execution";
-                setLastActivePanel("chat");
-            } else {
-                // Execution just opened while Chat was open
-                closeChatPanel();
-                sacrificedPanelRef.current = "chat";
-                setLastActivePanel("execution");
-            }
-        } else if (isChatOpen) {
-            setLastActivePanel("chat");
-        } else if (isDrawerOpen) {
-            setLastActivePanel("execution");
-        } else if (sacrificedPanelRef.current) {
-            // Both are closed. If one was sacrificed, reopen it.
-            const toReopen = sacrificedPanelRef.current;
-            sacrificedPanelRef.current = null;
-            if (toReopen === "chat") {
-                openChatPanel();
-            } else {
-                setDrawerOpen(true);
-            }
-        } else {
-            setLastActivePanel(null);
-        }
-    }, [isChatOpen, isDrawerOpen, lastActivePanel, setDrawerOpen, closeChatPanel, openChatPanel]);
+        const handleClickOutside = (e: MouseEvent) => {
+            const target = e.target as HTMLElement;
 
-    // Panel coordination: Deselect node when chat panel opens
-    useEffect(() => {
-        if (isChatOpen && selectedNode) {
-            selectNode(null);
-        }
-    }, [isChatOpen]); // Only depend on isChatOpen to avoid infinite loop
+            // Don't close if clicking inside a right panel
+            if (target.closest("[data-right-panel]")) return;
+
+            // Don't close if clicking a React Flow node (will open node config)
+            if (target.closest(".react-flow__node")) return;
+
+            // Don't close if clicking elements that open panels (buttons, etc.)
+            if (target.closest("[data-opens-panel]")) return;
+
+            // Don't close if clicking inside the overflow menu
+            if (target.closest("[role='menu']")) return;
+
+            closeRightPanel();
+        };
+
+        // Use capture phase to run before other handlers
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [activeRightPanel, closeRightPanel]);
 
     useEffect(() => {
         const unsubscribe = initializeHistoryTracking();
@@ -608,7 +637,7 @@ export function FlowBuilder() {
         onSave: handleSave,
         onRun: handleRunWorkflow,
         onOpenSettings: () => setIsSettingsOpen(true),
-        onOpenCheckpoints: () => setIsCheckpointOpen((prev) => !prev),
+        onOpenCheckpoints: () => toggleRightPanel("checkpoint"),
         onUndo: undo,
         onRedo: redo,
         onDelete: handleDeleteNode,
@@ -653,9 +682,11 @@ export function FlowBuilder() {
                         onSave={handleSave}
                         onNameChange={handleNameChange}
                         onOpenSettings={() => setIsSettingsOpen(true)}
-                        onOpenCheckpoints={() => setIsCheckpointOpen((prev) => !prev)}
+                        onOpenCheckpoints={() => toggleRightPanel("checkpoint")}
                         onOpenFormInterface={() => setIsFormInterfaceDialogOpen(true)}
+                        onOpenValidation={() => toggleRightPanel("validation")}
                         onBack={handleBack}
+                        onOpenExecution={() => openRightPanel("execution")}
                     />
 
                     <WorkflowSettingsDialog
@@ -679,13 +710,17 @@ export function FlowBuilder() {
                         <div className="flex-1">
                             <WorkflowCanvas
                                 onInit={(instance) => (reactFlowInstanceRef.current = instance)}
+                                onPaneClick={closeRightPanel}
                             />
                         </div>
                         {selectedNode && selectedNodeType !== "comment" && <NodeInspector />}
 
                         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40">
                             <div className="flex items-center gap-2">
-                                <AIAskButton />
+                                <AIAskButton
+                                    isActive={activeRightPanel === "chat"}
+                                    onClick={() => toggleRightPanel("chat")}
+                                />
                                 <Tooltip content="Auto-layout nodes (Shift+L)" position="top">
                                     <button
                                         onClick={handleAutoLayout}
@@ -695,18 +730,32 @@ export function FlowBuilder() {
                                     </button>
                                 </Tooltip>
                                 {workflowId && (
-                                    <ExecutionPanel workflowId={workflowId} renderButtonOnly />
+                                    <ExecutionPanel
+                                        workflowId={workflowId}
+                                        renderButtonOnly
+                                        isActive={activeRightPanel === "execution"}
+                                        onToggle={() => toggleRightPanel("execution")}
+                                    />
                                 )}
                             </div>
                         </div>
 
-                        {workflowId && <ExecutionPanel workflowId={workflowId} renderPanelOnly />}
+                        {/* Right panels - only one visible at a time */}
+                        {workflowId && activeRightPanel === "execution" && (
+                            <ExecutionPanel
+                                workflowId={workflowId}
+                                renderPanelOnly
+                                onClose={closeRightPanel}
+                            />
+                        )}
                         {/* SSE manager for workflow executions - always mounted to maintain connection */}
                         <ExecutionSSEManager />
-                        <AIChatPanel workflowId={workflowId} />
+                        {activeRightPanel === "chat" && (
+                            <AIChatPanel workflowId={workflowId} onClose={closeRightPanel} />
+                        )}
                         <CheckpointPanel
-                            open={isCheckpointOpen}
-                            onClose={() => setIsCheckpointOpen(false)}
+                            open={activeRightPanel === "checkpoint"}
+                            onClose={closeRightPanel}
                             checkpoints={checkpoints}
                             onRestore={handleRestoreCheckpoint}
                             onDelete={handleDeleteCheckpoint}
@@ -725,6 +774,14 @@ export function FlowBuilder() {
                                 navigate(`/form-interfaces/${formInterface.id}/edit`);
                             }}
                             initialWorkflowId={workflowId}
+                        />
+                        <ValidationPanel
+                            isOpen={activeRightPanel === "validation"}
+                            onClose={closeRightPanel}
+                            onNodeClick={(nodeId) => {
+                                selectNode(nodeId);
+                                closeRightPanel();
+                            }}
                         />
                     </div>
 

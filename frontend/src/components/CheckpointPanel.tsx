@@ -55,6 +55,7 @@ export function CheckpointPanel({
     return (
         <>
             <div
+                data-right-panel
                 className={`
                     absolute right-0 h-full w-[360px] bg-card border-l border-border shadow-xl z-50
                     transform transition-transform duration-300

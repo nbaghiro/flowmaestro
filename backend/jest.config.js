@@ -24,8 +24,8 @@ const baseConfig = {
     },
     transformIgnorePatterns: ["node_modules/(?!(nanoid|uuid)/)"],
     moduleNameMapper: {
-        "^nanoid$": "<rootDir>/tests/__mocks__/nanoid.ts",
-        "^uuid$": "<rootDir>/tests/__mocks__/uuid.ts"
+        "^nanoid$": "<rootDir>/tests/mocks/nanoid.ts",
+        "^uuid$": "<rootDir>/tests/mocks/uuid.ts"
     },
     verbose: true
 };

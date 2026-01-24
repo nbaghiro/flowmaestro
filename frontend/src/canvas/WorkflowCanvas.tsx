@@ -24,9 +24,13 @@ const edgeTypes = {
 
 interface WorkflowCanvasProps {
     onInit?: (instance: ReactFlowInstance) => void;
+    onPaneClick?: () => void;
 }
 
-export function WorkflowCanvas({ onInit: onInitProp }: WorkflowCanvasProps) {
+export function WorkflowCanvas({
+    onInit: onInitProp,
+    onPaneClick: onPaneClickProp
+}: WorkflowCanvasProps) {
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
     const reactFlowInstance = useRef<ReactFlowInstance | null>(null);
     const isDragging = useRef(false);
@@ -73,7 +77,8 @@ export function WorkflowCanvas({ onInit: onInitProp }: WorkflowCanvasProps) {
 
     const onPaneClick = useCallback(() => {
         selectNode(null);
-    }, [selectNode]);
+        onPaneClickProp?.();
+    }, [selectNode, onPaneClickProp]);
 
     const onInit = useCallback(
         (instance: ReactFlowInstance) => {
