@@ -369,7 +369,8 @@ export async function agentOrchestratorWorkflow(
         await emitAgentExecutionStarted({
             executionId,
             agentId,
-            agentName: agent.name
+            agentName: agent.name,
+            threadId
         });
     }
 

@@ -1,111 +1,57 @@
 import { FastifyRequest, FastifyReply } from "fastify";
-import { createServiceLogger } from "../../core/logging";
+import { redis } from "../../services/redis";
 
-const logger = createServiceLogger("ChatInterfaceRateLimiter");
-
-// In-memory rate limit tracking
-// Note: In production with multiple instances, use Redis
-interface RateLimitEntry {
-    count: number;
-    resetAt: number;
-}
-
-// Track by session token for authenticated chat sessions
-const sessionLimits = new Map<string, RateLimitEntry>();
-// Fallback to IP for pre-session requests
-const ipLimits = new Map<string, RateLimitEntry>();
-
-// Clean up expired entries periodically
-setInterval(() => {
+export async function checkChatRateLimit(
+    interfaceId: string,
+    sessionToken: string,
+    limit: number = 10,
+    windowSeconds: number = 60
+): Promise<{ allowed: boolean; remaining: number; resetAt: number }> {
     const now = Date.now();
-    for (const [key, entry] of sessionLimits.entries()) {
-        if (entry.resetAt <= now) {
-            sessionLimits.delete(key);
-        }
-    }
-    for (const [key, entry] of ipLimits.entries()) {
-        if (entry.resetAt <= now) {
-            ipLimits.delete(key);
-        }
-    }
-}, 60000); // Clean up every minute
+    const windowMs = windowSeconds * 1000;
+    const key = `chat-rate:${interfaceId}:${sessionToken}`;
 
-export interface ChatRateLimitOptions {
-    limitPerMinute: number;
-    windowSeconds: number;
-}
+    // Cleanup first
+    await redis.zremrangebyscore(key, 0, now - windowMs);
 
-/**
- * Creates a rate limiter middleware for chat interface messages
- * Uses session token if available, otherwise falls back to IP
- * @param options Rate limit configuration
- */
-export function createChatInterfaceRateLimiter(
-    options: ChatRateLimitOptions = {
-        limitPerMinute: 10,
-        windowSeconds: 60
-    }
-) {
-    return async (request: FastifyRequest, reply: FastifyReply) => {
-        const now = Date.now();
-        const windowMs = options.windowSeconds * 1000;
+    // Get current count
+    const count = await redis.zcard(key);
 
-        // Get session token from header or body
-        const sessionToken =
-            (request.headers["x-session-token"] as string) ||
-            ((request.body as Record<string, unknown>)?.sessionToken as string);
-
-        // Determine the rate limit key
-        const limitKey = sessionToken || request.ip;
-        const limitsMap = sessionToken ? sessionLimits : ipLimits;
-
-        const entry = limitsMap.get(limitKey);
-
-        if (entry && entry.resetAt > now) {
-            // Within the rate limit window
-            if (entry.count >= options.limitPerMinute) {
-                logger.warn(
-                    {
-                        key: sessionToken ? "session" : "ip",
-                        limitKey: limitKey.substring(0, 8) + "...",
-                        count: entry.count
-                    },
-                    "Rate limit exceeded for chat message"
-                );
-                return reply.status(429).send({
-                    success: false,
-                    error: "Too many messages. Please wait before sending another.",
-                    retryAfter: Math.ceil((entry.resetAt - now) / 1000)
-                });
-            }
-            // Increment count
-            entry.count++;
-        } else {
-            // New window
-            limitsMap.set(limitKey, {
-                count: 1,
-                resetAt: now + windowMs
-            });
+    if (count >= limit) {
+        // Calculate reset time (timestamp of oldest request + window)
+        const oldest = await redis.zrange(key, 0, 0, "WITHSCORES");
+        let resetAt = now + windowMs;
+        if (oldest && oldest.length > 1) {
+            resetAt = parseInt(oldest[1]) + windowMs;
         }
 
-        // Continue to handler
+        return {
+            allowed: false,
+            remaining: 0,
+            resetAt
+        };
+    }
+
+    // Allowed - add current request
+    await redis.zadd(key, now, `${now}-${Math.random()}`);
+    await redis.expire(key, windowSeconds + 5);
+
+    return {
+        allowed: true,
+        remaining: limit - (count + 1),
+        resetAt: now + windowMs
     };
 }
 
-/**
- * Default rate limiter instance (10 messages per minute)
- */
-export const chatInterfaceRateLimiter = createChatInterfaceRateLimiter({
-    limitPerMinute: 10,
-    windowSeconds: 60
-});
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export const chatInterfaceRateLimiter = async (request: FastifyRequest, _reply: FastifyReply) => {
+    // Rate limiting is handled in the route handler after fetching the interface
+    // This middleware is kept for potential future use (e.g., IP-based rate limiting)
+    const body = request.body as { sessionToken?: string };
 
-/**
- * Get custom rate limiter based on chat interface settings
- */
-export function getChatInterfaceRateLimiter(limitMessages: number, windowSeconds: number) {
-    return createChatInterfaceRateLimiter({
-        limitPerMinute: limitMessages,
-        windowSeconds: windowSeconds
-    });
-}
+    // If no session token, skip - validation happens in the route handler
+    if (!body?.sessionToken) return;
+
+    // The route handler calls checkChatRateLimit after loading the interface config
+    return;
+};

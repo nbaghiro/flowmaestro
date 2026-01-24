@@ -1,4 +1,12 @@
-import type { JsonObject, WebSocketEvent } from "@flowmaestro/shared";
+import type {
+    JsonObject,
+    WebSocketEvent,
+    AgentExecutionStartedEvent,
+    AgentMessageNewEvent,
+    AgentThinkingEvent,
+    AgentTokenEvent,
+    AgentExecutionCompletedEvent
+} from "@flowmaestro/shared";
 import { redisEventBus } from "../../../services/events/RedisEventBus";
 import { createActivityLogger } from "../../core";
 import type { ThreadMessage } from "../../../storage/models/AgentExecution";
@@ -14,6 +22,7 @@ export interface EmitAgentExecutionStartedInput {
     executionId: string;
     agentId: string;
     agentName: string;
+    threadId: string;
 }
 
 export interface EmitAgentMessageInput {
@@ -30,6 +39,7 @@ export interface EmitAgentThinkingInput {
 export interface EmitAgentTokenInput {
     executionId: string;
     token: string;
+    threadId: string;
 }
 
 export interface EmitAgentToolCallStartedInput {
@@ -80,6 +90,16 @@ export async function emitAgentExecutionStarted(
         agentId,
         agentName
     });
+
+    // Also publish to thread stream
+    const threadEvent: AgentExecutionStartedEvent = {
+        type: "agent:execution:started",
+        timestamp: Date.now(),
+        executionId,
+        agentId,
+        agentName
+    };
+    await redisEventBus.publishThreadEvent(input.threadId, threadEvent);
 }
 
 /**
@@ -117,6 +137,16 @@ export async function emitAgentMessage(input: EmitAgentMessageInput): Promise<vo
         threadId,
         message: serializedMessage
     });
+
+    // Also publish to thread stream
+    const threadMessageEvent: AgentMessageNewEvent = {
+        type: "agent:message:new",
+        timestamp: Date.now(),
+        executionId,
+        threadId,
+        message: serializedMessage
+    };
+    await redisEventBus.publishThreadEvent(threadId, threadMessageEvent);
 }
 
 /**
@@ -130,6 +160,14 @@ export async function emitAgentThinking(input: EmitAgentThinkingInput): Promise<
         executionId,
         threadId
     });
+
+    const threadThinkingEvent: AgentThinkingEvent = {
+        type: "agent:thinking",
+        timestamp: Date.now(),
+        executionId,
+        threadId
+    };
+    await redisEventBus.publishThreadEvent(threadId, threadThinkingEvent);
 }
 
 /**
@@ -148,6 +186,15 @@ export async function emitAgentToken(input: EmitAgentTokenInput): Promise<void> 
         tokenLength: token.length
     });
     await redisEventBus.publish("agent:events:token", event);
+
+    // Also publish to thread stream
+    const threadTokenEvent: AgentTokenEvent = {
+        type: "agent:token",
+        timestamp: Date.now(),
+        executionId,
+        token
+    };
+    await redisEventBus.publishThreadEvent(input.threadId, threadTokenEvent);
 }
 
 /**
@@ -215,6 +262,17 @@ export async function emitAgentExecutionCompleted(
         finalMessage,
         iterations
     });
+
+    const threadCompletedEvent: AgentExecutionCompletedEvent = {
+        type: "agent:execution:completed",
+        timestamp: Date.now(),
+        executionId,
+        threadId,
+        status: "completed",
+        finalMessage,
+        iterations
+    };
+    await redisEventBus.publishThreadEvent(threadId, threadCompletedEvent);
 }
 
 /**

@@ -7,6 +7,7 @@ import { initializeLogger, shutdownLogger } from "../core/logging";
 import { initializeOTel, shutdownOTel } from "../core/observability";
 import { redisEventBus } from "../services/events/RedisEventBus";
 import { credentialRefreshScheduler } from "../services/oauth/CredentialRefreshScheduler";
+import { redis } from "../services/redis";
 import { webhookDispatcher } from "../services/webhooks";
 import { eventBridge } from "../services/websocket/EventBridge";
 import { db } from "../storage/database";
@@ -31,6 +32,8 @@ import { oauthRoutes } from "./routes/oauth";
 import { oauth1Routes } from "./routes/oauth1";
 import { personaInstanceRoutes } from "./routes/persona-instances";
 import { personaRoutes } from "./routes/personas";
+import { publicChatInterfaceFileRoutes } from "./routes/public/chat-interface-files";
+import { publicChatInterfaceStreamRoutes } from "./routes/public/chat-interface-stream";
 import { publicChatInterfaceRoutes } from "./routes/public/chat-interfaces";
 import { publicFormInterfaceRoutes } from "./routes/public/form-interfaces";
 import { templateRoutes } from "./routes/templates";
@@ -189,6 +192,8 @@ export async function buildServer() {
     // Public routes (widgets and public API - CORS allows any origin via dynamic origin check)
     await fastify.register(publicFormInterfaceRoutes, { prefix: "/public/form-interfaces" });
     await fastify.register(publicChatInterfaceRoutes, { prefix: "/public/chat-interfaces" });
+    await fastify.register(publicChatInterfaceStreamRoutes, { prefix: "/public/chat-interfaces" });
+    await fastify.register(publicChatInterfaceFileRoutes, { prefix: "/public/chat-interfaces" });
     await fastify.register(publicApiV1Routes, { prefix: "/api/v1" });
 
     // Error handler (must be last)
@@ -243,6 +248,7 @@ export async function startServer() {
             await shutdownLogger();
 
             await db.close();
+            await redis.quit();
             await redisEventBus.disconnect();
             process.exit(0);
         });

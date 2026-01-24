@@ -6,9 +6,16 @@ import type {
     SendChatMessageInput
 } from "@flowmaestro/shared";
 import { createServiceLogger } from "../../../core/logging";
+import { AgentExecutionRepository } from "../../../storage/repositories/AgentExecutionRepository";
 import { ChatInterfaceRepository } from "../../../storage/repositories/ChatInterfaceRepository";
 import { ChatInterfaceSessionRepository } from "../../../storage/repositories/ChatInterfaceSessionRepository";
-import { chatInterfaceRateLimiter } from "../../middleware/chatInterfaceRateLimiter";
+import { ThreadRepository } from "../../../storage/repositories/ThreadRepository";
+import { getTemporalClient } from "../../../temporal/client";
+import { agentOrchestratorWorkflow } from "../../../temporal/workflows/agent-orchestrator";
+import {
+    chatInterfaceRateLimiter,
+    checkChatRateLimit
+} from "../../middleware/chatInterfaceRateLimiter";
 
 const logger = createServiceLogger("PublicChatInterfaceRoutes");
 
@@ -168,9 +175,21 @@ export async function publicChatInterfaceRoutes(fastify: FastifyInstance) {
                 });
             }
 
-            // Phase 1: Return empty messages array
-            // Phase 2 will add thread message retrieval via ThreadRepository
-            const messages: PublicChatMessage[] = [];
+            // Phase 2: Return thread messages via ThreadRepository
+            let messages: PublicChatMessage[] = [];
+
+            if (session.threadId) {
+                const executionRepo = new AgentExecutionRepository();
+                const threadMessages = await executionRepo.getMessagesByThread(session.threadId);
+
+                messages = threadMessages.map((msg) => ({
+                    id: msg.id,
+                    role: msg.role as "user" | "assistant",
+                    content: msg.content,
+                    timestamp: msg.created_at.toISOString(),
+                    attachments: []
+                }));
+            }
 
             return reply.send({
                 success: true,
@@ -214,6 +233,24 @@ export async function publicChatInterfaceRoutes(fastify: FastifyInstance) {
                     });
                 }
 
+                // Check rate limit manually
+                if (body.sessionToken) {
+                    const limit = await checkChatRateLimit(
+                        chatInterface.id,
+                        body.sessionToken,
+                        chatInterface.rateLimitMessages || 10,
+                        chatInterface.rateLimitWindowSeconds || 60
+                    );
+
+                    if (!limit.allowed) {
+                        return reply.status(429).send({
+                            success: false,
+                            error: "Rate limit exceeded",
+                            resetAt: limit.resetAt
+                        });
+                    }
+                }
+
                 // Find session by token
                 const session = await sessionRepo.findBySessionToken(
                     chatInterface.id,
@@ -238,26 +275,94 @@ export async function publicChatInterfaceRoutes(fastify: FastifyInstance) {
                 // Increment message count
                 await sessionRepo.incrementMessageCount(session.id);
 
-                // Phase 1: Just acknowledge the message
-                // Phase 2 will add:
-                // - Create thread if needed
-                // - Execute agent
-                // - Stream response
+                // Phase 2 Implementation:
+                // 1. Get or create thread
+                const threadRepo = new ThreadRepository();
+
+                let threadId = session.threadId;
+                if (!threadId) {
+                    const thread = await threadRepo.create({
+                        user_id: chatInterface.userId,
+                        agent_id: chatInterface.agentId,
+                        workspace_id: chatInterface.workspaceId,
+                        title: `Chat: ${chatInterface.name}`,
+                        metadata: {
+                            source: "chat_interface",
+                            interfaceId: chatInterface.id,
+                            sessionId: session.id
+                        }
+                    });
+                    threadId = thread.id;
+                    await sessionRepo.updateThreadId(session.id, threadId);
+                }
+
+                // 2. Create execution record
+                const executionRepo = new AgentExecutionRepository();
+                // Load history for context
+                const threadMessages = await executionRepo.getMessagesByThread(threadId);
+
+                // Map AgentMessageModel properly to ThreadMessage for history
+                const mappedHistory = threadMessages.map((msg) => ({
+                    id: msg.id,
+                    role: msg.role,
+                    content: msg.content,
+                    tool_calls: msg.tool_calls || undefined,
+                    tool_name: msg.tool_name || undefined,
+                    tool_call_id: msg.tool_call_id || undefined,
+                    timestamp: msg.created_at
+                }));
+
+                const execution = await executionRepo.create({
+                    agent_id: chatInterface.agentId,
+                    user_id: chatInterface.userId,
+                    thread_id: threadId,
+                    status: "running",
+                    thread_history: mappedHistory,
+                    metadata: {
+                        source: "chat_interface",
+                        interfaceId: chatInterface.id,
+                        sessionToken: body.sessionToken
+                    }
+                });
+
+                // Update session with execution info
+                await sessionRepo.updateExecutionStatus(session.id, execution.id, "running");
+
+                // 3. Start Temporal workflow
+                const temporal = await getTemporalClient();
+                await temporal.workflow.start(agentOrchestratorWorkflow, {
+                    taskQueue: "agent-queue",
+                    workflowId: `agent-execution-${execution.id}`,
+                    args: [
+                        {
+                            executionId: execution.id,
+                            agentId: chatInterface.agentId,
+                            userId: chatInterface.userId,
+                            threadId,
+                            initialMessage: body.message,
+                            // Extra context stored in execution metadata and thread retrieval
+                            // not supported directly in workflow args yet.
+                            workspaceId: chatInterface.workspaceId
+                        }
+                    ]
+                });
 
                 logger.info(
                     {
                         sessionId: session.id,
                         chatInterfaceId: chatInterface.id,
-                        messageLength: body.message.length
+                        executionId: execution.id,
+                        threadId
                     },
-                    "Chat message received"
+                    "Chat execution started"
                 );
 
                 return reply.status(201).send({
                     success: true,
                     data: {
-                        messageId: `msg_${Date.now()}`, // Temporary ID for Phase 1
-                        status: "stored"
+                        executionId: execution.id,
+                        threadId,
+                        status: "running"
                     }
                 });
             } catch (error) {

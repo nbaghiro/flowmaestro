@@ -19,6 +19,8 @@ interface ChatInterfaceSessionRow {
     first_seen_at: string | Date;
     last_activity_at: string | Date;
     ended_at: string | Date | null;
+    current_execution_id: string | null;
+    execution_status: "idle" | "running" | "completed" | "failed";
 }
 
 // Input for creating a session
@@ -93,6 +95,26 @@ export class ChatInterfaceSessionRepository {
         `;
 
         const result = await db.query(query, [interfaceId, sessionToken]);
+        return result.rows.length > 0
+            ? this.mapRow(result.rows[0] as ChatInterfaceSessionRow)
+            : null;
+    }
+
+    /**
+     * Find session by interface slug and session token
+     */
+    async findBySlugAndToken(
+        slug: string,
+        sessionToken: string
+    ): Promise<ChatInterfaceSession | null> {
+        const query = `
+            SELECT s.*
+            FROM flowmaestro.chat_interface_sessions s
+            JOIN flowmaestro.chat_interfaces i ON s.interface_id = i.id
+            WHERE i.slug = $1 AND s.session_token = $2
+        `;
+
+        const result = await db.query(query, [slug, sessionToken]);
         return result.rows.length > 0
             ? this.mapRow(result.rows[0] as ChatInterfaceSessionRow)
             : null;
@@ -214,9 +236,6 @@ export class ChatInterfaceSessionRepository {
         await db.query(query, [id]);
     }
 
-    /**
-     * Update last activity timestamp
-     */
     async updateLastActivity(id: string): Promise<void> {
         const query = `
             UPDATE flowmaestro.chat_interface_sessions
@@ -225,6 +244,23 @@ export class ChatInterfaceSessionRepository {
         `;
 
         await db.query(query, [id]);
+    }
+
+    /**
+     * Update execution status
+     */
+    async updateExecutionStatus(
+        id: string,
+        executionId: string | null,
+        status: "idle" | "running" | "completed" | "failed"
+    ): Promise<void> {
+        const query = `
+            UPDATE flowmaestro.chat_interface_sessions
+            SET current_execution_id = $2, execution_status = $3, last_activity_at = CURRENT_TIMESTAMP
+            WHERE id = $1
+        `;
+
+        await db.query(query, [id, executionId, status]);
     }
 
     /**
@@ -346,7 +382,9 @@ export class ChatInterfaceSessionRepository {
             persistenceToken: row.persistence_token,
             firstSeenAt: new Date(row.first_seen_at),
             lastActivityAt: new Date(row.last_activity_at),
-            endedAt: row.ended_at ? new Date(row.ended_at) : null
+            endedAt: row.ended_at ? new Date(row.ended_at) : null,
+            currentExecutionId: row.current_execution_id,
+            executionStatus: row.execution_status
         };
     }
 }
