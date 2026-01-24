@@ -135,7 +135,9 @@ export const PROVIDER_LOGO_DOMAINS: Record<string, string> = {
     pipedrive: "pipedrive.com",
     close: "close.com",
     tiktok: "tiktok.com",
-    pinterest: "pinterest.com"
+    pinterest: "pinterest.com",
+    amplitude: "amplitude.com",
+    mixpanel: "mixpanel.com"
 };
 
 /**
@@ -576,7 +578,12 @@ export const ALL_PROVIDERS: Provider[] = [
         logoUrl: getBrandLogo("mixpanel.com"),
         category: "Analytics",
         methods: ["api_key"],
-        comingSoon: true
+        apiKeySettings: {
+            keyLabel: "Project Token",
+            keyPlaceholder: "your-project-token",
+            helpText: "Find your Project Token in Mixpanel Project Settings",
+            helpUrl: "https://mixpanel.com/settings/project"
+        }
     },
     {
         provider: "amplitude",
@@ -585,7 +592,15 @@ export const ALL_PROVIDERS: Provider[] = [
         logoUrl: getBrandLogo("amplitude.com"),
         category: "Analytics",
         methods: ["api_key"],
-        comingSoon: true
+        apiKeySettings: {
+            keyLabel: "API Key",
+            keyPlaceholder: "your-api-key",
+            requiresSecret: true,
+            secretLabel: "Secret Key",
+            secretPlaceholder: "your-secret-key",
+            helpText: "Find your API Key and Secret Key in Amplitude project settings",
+            helpUrl: "https://analytics.amplitude.com/settings/projects"
+        }
     },
     {
         provider: "segment",

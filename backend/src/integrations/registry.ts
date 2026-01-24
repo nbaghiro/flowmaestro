@@ -585,5 +585,33 @@ const closeEntry: ProviderRegistryEntry = {
 
 providerRegistry.register(closeEntry);
 
+// Register Amplitude provider
+const amplitudeEntry: ProviderRegistryEntry = {
+    name: "amplitude",
+    displayName: "Amplitude",
+    authMethod: "api_key",
+    category: "analytics",
+    loader: async () => {
+        const { AmplitudeProvider } = await import("./providers/amplitude/AmplitudeProvider");
+        return new AmplitudeProvider();
+    }
+};
+
+providerRegistry.register(amplitudeEntry);
+
+// Register Mixpanel provider
+const mixpanelEntry: ProviderRegistryEntry = {
+    name: "mixpanel",
+    displayName: "Mixpanel",
+    authMethod: "api_key",
+    category: "analytics",
+    loader: async () => {
+        const { MixpanelProvider } = await import("./providers/mixpanel/MixpanelProvider");
+        return new MixpanelProvider();
+    }
+};
+
+providerRegistry.register(mixpanelEntry);
+
 // Export for use in application
 export { providerRegistry };
