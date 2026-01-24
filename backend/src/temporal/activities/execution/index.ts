@@ -94,7 +94,17 @@ export {
     KnowledgeBaseQueryNodeHandler,
     createKnowledgeBaseQueryNodeHandler,
     type KnowledgeBaseQueryNodeConfig,
-    type KnowledgeBaseQueryNodeResult
+    type KnowledgeBaseQueryNodeResult,
+    // Audio Transcription
+    AudioTranscriptionNodeHandler,
+    createAudioTranscriptionNodeHandler,
+    type AudioTranscriptionNodeConfig,
+    type AudioTranscriptionNodeResult,
+    // OCR Extraction
+    OCRExtractionNodeHandler,
+    createOCRExtractionNodeHandler,
+    type OCRExtractionNodeConfig,
+    type OCRExtractionNodeResult
 } from "./handlers/ai";
 
 // ============================================================================
@@ -122,7 +132,32 @@ export {
     createAudioInputNodeHandler,
     type AudioInputNodeConfig,
     type AudioInputNodeResult,
-    type AudioInputData
+    type AudioInputData,
+    // Web Search
+    WebSearchNodeHandler,
+    createWebSearchNodeHandler,
+    type WebSearchNodeConfig,
+    type WebSearchNodeResult,
+    // Web Browse
+    WebBrowseNodeHandler,
+    createWebBrowseNodeHandler,
+    type WebBrowseNodeConfig,
+    type WebBrowseNodeResult,
+    // PDF Extract
+    PdfExtractNodeHandler,
+    createPdfExtractNodeHandler,
+    type PdfExtractNodeConfig,
+    type PdfExtractNodeResult,
+    // File Download
+    FileDownloadNodeHandler,
+    createFileDownloadNodeHandler,
+    type FileDownloadNodeConfig,
+    type FileDownloadNodeResult,
+    // File Read
+    FileReadNodeHandler,
+    createFileReadNodeHandler,
+    type FileReadNodeConfig,
+    type FileReadNodeResult
 } from "./handlers/inputs";
 
 // ============================================================================
@@ -151,7 +186,32 @@ export {
     TemplateOutputNodeHandler,
     createTemplateOutputNodeHandler,
     type TemplateOutputNodeConfig,
-    type TemplateOutputNodeResult
+    type TemplateOutputNodeResult,
+    // Chart Generation
+    ChartGenerationNodeHandler,
+    createChartGenerationNodeHandler,
+    type ChartGenerationNodeConfig,
+    type ChartGenerationNodeResult,
+    // Spreadsheet Generation
+    SpreadsheetGenerationNodeHandler,
+    createSpreadsheetGenerationNodeHandler,
+    type SpreadsheetGenerationNodeConfig,
+    type SpreadsheetGenerationNodeResult,
+    // PDF Generation
+    PdfGenerationNodeHandler,
+    createPdfGenerationNodeHandler,
+    type PdfGenerationNodeConfig,
+    type PdfGenerationNodeResult,
+    // Screenshot Capture
+    ScreenshotCaptureNodeHandler,
+    createScreenshotCaptureNodeHandler,
+    type ScreenshotCaptureNodeConfig,
+    type ScreenshotCaptureNodeResult,
+    // File Write
+    FileWriteNodeHandler,
+    createFileWriteNodeHandler,
+    type FileWriteNodeConfig,
+    type FileWriteNodeResult
 } from "./handlers/outputs";
 
 // ============================================================================
@@ -279,14 +339,21 @@ import {
     createAudioNodeHandler,
     createEmbeddingsNodeHandler,
     createRouterNodeHandler,
-    createKnowledgeBaseQueryNodeHandler
+    createKnowledgeBaseQueryNodeHandler,
+    createAudioTranscriptionNodeHandler,
+    createOCRExtractionNodeHandler
 } from "./handlers/ai";
 // Inputs
 import {
     createInputNodeHandler,
     createFilesNodeHandler,
     createURLNodeHandler,
-    createAudioInputNodeHandler
+    createAudioInputNodeHandler,
+    createWebSearchNodeHandler,
+    createWebBrowseNodeHandler,
+    createPdfExtractNodeHandler,
+    createFileDownloadNodeHandler,
+    createFileReadNodeHandler
 } from "./handlers/inputs";
 // Outputs
 import {
@@ -307,7 +374,12 @@ import {
     createOutputNodeHandler,
     createActionNodeHandler,
     createAudioOutputNodeHandler,
-    createTemplateOutputNodeHandler
+    createTemplateOutputNodeHandler,
+    createChartGenerationNodeHandler,
+    createSpreadsheetGenerationNodeHandler,
+    createPdfGenerationNodeHandler,
+    createScreenshotCaptureNodeHandler,
+    createFileWriteNodeHandler
 } from "./handlers/outputs";
 // Logic
 // Utils
@@ -325,18 +397,30 @@ export function registerDefaultHandlers(): void {
     registerHandler(createEmbeddingsNodeHandler(), "ai", 13);
     registerHandler(createRouterNodeHandler(), "ai", 14);
     registerHandler(createKnowledgeBaseQueryNodeHandler(), "ai", 15);
+    registerHandler(createAudioTranscriptionNodeHandler(), "ai", 16);
+    registerHandler(createOCRExtractionNodeHandler(), "ai", 17);
 
     // Inputs handlers (priority 20-29)
     registerHandler(createInputNodeHandler(), "inputs", 20);
     registerHandler(createFilesNodeHandler(), "inputs", 21);
     registerHandler(createURLNodeHandler(), "inputs", 22);
     registerHandler(createAudioInputNodeHandler(), "inputs", 23);
+    registerHandler(createWebSearchNodeHandler(), "inputs", 24);
+    registerHandler(createWebBrowseNodeHandler(), "inputs", 25);
+    registerHandler(createPdfExtractNodeHandler(), "inputs", 26);
+    registerHandler(createFileDownloadNodeHandler(), "inputs", 27);
+    registerHandler(createFileReadNodeHandler(), "inputs", 28);
 
     // Outputs handlers (priority 30-39)
     registerHandler(createOutputNodeHandler(), "outputs", 30);
     registerHandler(createActionNodeHandler(), "outputs", 31);
     registerHandler(createAudioOutputNodeHandler(), "outputs", 32);
     registerHandler(createTemplateOutputNodeHandler(), "outputs", 33);
+    registerHandler(createChartGenerationNodeHandler(), "outputs", 34);
+    registerHandler(createSpreadsheetGenerationNodeHandler(), "outputs", 35);
+    registerHandler(createPdfGenerationNodeHandler(), "outputs", 36);
+    registerHandler(createScreenshotCaptureNodeHandler(), "outputs", 37);
+    registerHandler(createFileWriteNodeHandler(), "outputs", 38);
 
     // Logic handlers (priority 40-49)
     registerHandler(createConditionalNodeHandler(), "logic", 40);

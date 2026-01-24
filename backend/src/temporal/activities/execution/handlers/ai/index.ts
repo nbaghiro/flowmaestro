@@ -60,3 +60,19 @@ export {
     type KnowledgeBaseQueryNodeConfig,
     type KnowledgeBaseQueryNodeResult
 } from "./kb-query";
+
+// Audio Transcription
+export {
+    AudioTranscriptionNodeHandler,
+    createAudioTranscriptionNodeHandler,
+    type AudioTranscriptionNodeConfig,
+    type AudioTranscriptionNodeResult
+} from "./audio-transcription";
+
+// OCR Extraction
+export {
+    OCRExtractionNodeHandler,
+    createOCRExtractionNodeHandler,
+    type OCRExtractionNodeConfig,
+    type OCRExtractionNodeResult
+} from "./ocr-extraction";

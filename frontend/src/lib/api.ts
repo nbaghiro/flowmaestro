@@ -74,6 +74,7 @@ import type {
     CreatePersonaInstanceRequest,
     PersonaInstanceMessage,
     PersonaInstanceDeliverable,
+    PersonaInstanceDeliverableSummary,
     PersonaInputField,
     PersonaDeliverableSpec,
     PersonaEstimatedDuration,
@@ -83,7 +84,13 @@ import type {
     DeliverableType,
     PersonaInstanceProgress,
     PersonaProgressStep,
-    ProgressStepStatus
+    ProgressStepStatus,
+    PersonaTaskTemplate,
+    PersonaTaskTemplateSummary,
+    PersonaTaskTemplateListResponse,
+    GenerateFromTemplateResponse,
+    PersonaConnectionRequirement,
+    PersonaInstanceConnection
 } from "@flowmaestro/shared";
 import { getCurrentWorkspaceId } from "../stores/workspaceStore";
 import { logger } from "./logger";
@@ -1950,7 +1957,7 @@ export interface Agent {
     name: string;
     description?: string;
     model: string;
-    provider: "openai" | "anthropic" | "google" | "cohere" | "huggingface";
+    provider: "openai" | "anthropic" | "google" | "xai" | "cohere" | "huggingface";
     connection_id: string | null;
     system_prompt: string;
     temperature: number;
@@ -1967,7 +1974,7 @@ export interface CreateAgentRequest {
     name: string;
     description?: string;
     model: string;
-    provider: "openai" | "anthropic" | "google" | "cohere" | "huggingface";
+    provider: "openai" | "anthropic" | "google" | "xai" | "cohere" | "huggingface";
     connection_id?: string | null;
     system_prompt?: string;
     temperature?: number;
@@ -1981,7 +1988,7 @@ export interface UpdateAgentRequest {
     name?: string;
     description?: string;
     model?: string;
-    provider?: "openai" | "anthropic" | "google" | "cohere" | "huggingface";
+    provider?: "openai" | "anthropic" | "google" | "xai" | "cohere" | "huggingface";
     connection_id?: string | null;
     system_prompt?: string;
     temperature?: number;
@@ -5832,6 +5839,288 @@ export async function completePersonaInstance(id: string): Promise<{
 }
 
 /**
+ * Continue work on a completed persona instance with additional instructions
+ */
+export async function continuePersonaInstance(
+    id: string,
+    data: {
+        additional_instructions: string;
+        max_duration_hours?: number;
+        max_cost_credits?: number;
+    }
+): Promise<{
+    success: boolean;
+    data: PersonaInstance;
+    message: string;
+}> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/persona-instances/${id}/continue`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` })
+        },
+        body: JSON.stringify(data)
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Skip clarification for a persona instance and proceed to running
+ */
+export async function skipPersonaInstanceClarification(id: string): Promise<{
+    success: boolean;
+    data: PersonaInstance;
+    message: string;
+}> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/persona-instances/${id}/skip-clarification`, {
+        method: "POST",
+        headers: {
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Get connections granted to a persona instance
+ */
+export async function getPersonaInstanceConnections(id: string): Promise<{
+    success: boolean;
+    data: PersonaInstanceConnection[];
+}> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/persona-instances/${id}/connections`, {
+        method: "GET",
+        headers: {
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Grant a connection to a persona instance
+ */
+export async function grantPersonaInstanceConnection(
+    id: string,
+    connectionId: string,
+    scopes?: string[]
+): Promise<{
+    success: boolean;
+    data: PersonaInstanceConnection;
+}> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/persona-instances/${id}/connections`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` })
+        },
+        body: JSON.stringify({ connection_id: connectionId, scopes })
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Revoke a connection from a persona instance
+ */
+export async function revokePersonaInstanceConnection(
+    id: string,
+    connectionId: string
+): Promise<{
+    success: boolean;
+    message: string;
+}> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(
+        `${API_BASE_URL}/persona-instances/${id}/connections/${connectionId}`,
+        {
+            method: "DELETE",
+            headers: {
+                ...(token && { Authorization: `Bearer ${token}` })
+            }
+        }
+    );
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+// =============================================================================
+// PERSONA INSTANCE DELIVERABLES
+// =============================================================================
+
+/**
+ * Get all deliverables for a persona instance
+ */
+export async function getPersonaInstanceDeliverables(instanceId: string): Promise<{
+    success: boolean;
+    data: PersonaInstanceDeliverableSummary[];
+}> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(
+        `${API_BASE_URL}/persona-instances/${instanceId}/deliverables`,
+        {
+            method: "GET",
+            headers: {
+                ...(token && { Authorization: `Bearer ${token}` })
+            }
+        }
+    );
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Get a specific deliverable with its full content
+ */
+export async function getPersonaInstanceDeliverable(
+    instanceId: string,
+    deliverableId: string
+): Promise<{
+    success: boolean;
+    data: PersonaInstanceDeliverable;
+}> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(
+        `${API_BASE_URL}/persona-instances/${instanceId}/deliverables/${deliverableId}`,
+        {
+            method: "GET",
+            headers: {
+                ...(token && { Authorization: `Bearer ${token}` })
+            }
+        }
+    );
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Download a deliverable as a file
+ * Returns the URL for download or initiates direct download
+ */
+export async function downloadPersonaInstanceDeliverable(
+    instanceId: string,
+    deliverableId: string
+): Promise<void> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(
+        `${API_BASE_URL}/persona-instances/${instanceId}/deliverables/${deliverableId}/download`,
+        {
+            method: "GET",
+            headers: {
+                ...(token && { Authorization: `Bearer ${token}` })
+            }
+        }
+    );
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    // Check if we got a redirect URL or direct content
+    const contentDisposition = response.headers.get("Content-Disposition");
+    if (contentDisposition) {
+        // Direct download - create blob and trigger download
+        const blob = await response.blob();
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+        const filename = filenameMatch ? filenameMatch[1] : "deliverable";
+
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    } else {
+        // Redirect - open in new tab
+        const redirectUrl = response.url;
+        window.open(redirectUrl, "_blank");
+    }
+}
+
+/**
+ * Delete a deliverable
+ */
+export async function deletePersonaInstanceDeliverable(
+    instanceId: string,
+    deliverableId: string
+): Promise<{
+    success: boolean;
+    message: string;
+}> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(
+        `${API_BASE_URL}/persona-instances/${instanceId}/deliverables/${deliverableId}`,
+        {
+            method: "DELETE",
+            headers: {
+                ...(token && { Authorization: `Bearer ${token}` })
+            }
+        }
+    );
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
  * Delete a persona instance
  */
 export async function deletePersonaInstance(id: string): Promise<void> {
@@ -5850,6 +6139,67 @@ export async function deletePersonaInstance(id: string): Promise<void> {
     }
 }
 
+// =============================================================================
+// PERSONA TASK TEMPLATES
+// =============================================================================
+
+/**
+ * Get all task templates for a persona
+ */
+export async function getPersonaTemplates(slug: string): Promise<{
+    success: boolean;
+    data: PersonaTaskTemplateListResponse;
+}> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(`${API_BASE_URL}/personas/${slug}/templates`, {
+        method: "GET",
+        headers: {
+            ...(token && { Authorization: `Bearer ${token}` })
+        }
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Generate a task description from a template with variables
+ */
+export async function generateFromTemplate(
+    slug: string,
+    templateId: string,
+    variables: Record<string, string | number | boolean | string[]>
+): Promise<{
+    success: boolean;
+    data: GenerateFromTemplateResponse;
+}> {
+    const token = getAuthToken();
+
+    const response = await apiFetch(
+        `${API_BASE_URL}/personas/${slug}/templates/${templateId}/generate`,
+        {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                ...(token && { Authorization: `Bearer ${token}` })
+            },
+            body: JSON.stringify({ variables })
+        }
+    );
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
 // Re-export persona types for components
 export type {
     PersonaDefinition,
@@ -5862,6 +6212,7 @@ export type {
     PersonaInstanceDashboardResponse,
     PersonaInstanceMessage,
     PersonaInstanceDeliverable,
+    PersonaInstanceDeliverableSummary,
     PersonaInputField,
     PersonaDeliverableSpec,
     PersonaEstimatedDuration,
@@ -5871,5 +6222,11 @@ export type {
     DeliverableType,
     PersonaInstanceProgress,
     PersonaProgressStep,
-    ProgressStepStatus
+    ProgressStepStatus,
+    PersonaTaskTemplate,
+    PersonaTaskTemplateSummary,
+    PersonaTaskTemplateListResponse,
+    GenerateFromTemplateResponse,
+    PersonaConnectionRequirement,
+    PersonaInstanceConnection
 };

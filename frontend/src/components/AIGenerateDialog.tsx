@@ -9,7 +9,8 @@ import { useState, useEffect } from "react";
 import {
     getRandomExamplePrompts,
     getModelsForProvider,
-    getDefaultModelForProvider
+    getDefaultModelForProvider,
+    isLLMProvider
 } from "@flowmaestro/shared";
 import { logger } from "../lib/logger";
 import { useConnectionStore } from "../stores/connectionStore";
@@ -37,9 +38,10 @@ export function AIGenerateDialog({ open, onOpenChange, onGenerate }: AIGenerateD
     const { connections, fetchConnections } = useConnectionStore();
 
     // Filter connections for LLM providers only (API key or OAuth)
+    // Uses centralized isLLMProvider from shared package
     const llmConnections = connections.filter(
         (conn) =>
-            ["openai", "anthropic", "google", "cohere"].includes(conn.provider.toLowerCase()) &&
+            isLLMProvider(conn.provider.toLowerCase()) &&
             conn.status === "active" &&
             (conn.connection_method === "api_key" || conn.connection_method === "oauth2")
     );

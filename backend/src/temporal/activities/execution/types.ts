@@ -403,7 +403,18 @@ export type ExecutableNodeType =
     | "imageGenerate"
     | "image_generate"
     | "pdfGenerate"
-    | "pdf_generate";
+    | "pdf_generate"
+    // New builtin tool nodes
+    | "chartGeneration"
+    | "spreadsheetGeneration"
+    | "audioTranscription"
+    | "ocrExtraction"
+    | "pdfGeneration"
+    | "screenshotCapture"
+    | "pdfExtract"
+    | "fileDownload"
+    | "fileRead"
+    | "fileWrite";
 
 /**
  * Loop context for nodes inside a loop

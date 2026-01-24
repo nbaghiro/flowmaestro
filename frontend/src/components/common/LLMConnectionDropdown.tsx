@@ -11,6 +11,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import {
     LLM_MODELS_BY_PROVIDER,
+    LLM_PROVIDERS,
     getDefaultModelForProvider,
     getModelNickname,
     modelSupportsThinking
@@ -22,8 +23,9 @@ import { cn } from "../../lib/utils";
 // Get list of provider values from the models registry
 const LLM_PROVIDER_VALUES = Object.keys(LLM_MODELS_BY_PROVIDER);
 
-// Define provider display order
-const PROVIDER_ORDER = ["openai", "anthropic", "google", "cohere", "huggingface"];
+// Provider display order - derived from centralized LLM_PROVIDERS
+// The order in LLM_PROVIDERS defines the preferred display order
+const PROVIDER_ORDER = LLM_PROVIDERS.map((p) => p.value);
 
 export interface ThinkingConfig {
     /** Whether extended thinking is enabled */

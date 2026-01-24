@@ -30,7 +30,8 @@ export const LLM_PROVIDERS: LLMProviderDefinition[] = [
     { value: "anthropic", label: "Anthropic" },
     { value: "google", label: "Google" },
     { value: "cohere", label: "Cohere" },
-    { value: "huggingface", label: "Hugging Face" }
+    { value: "huggingface", label: "Hugging Face" },
+    { value: "xai", label: "x.ai" }
 ];
 
 /**
@@ -309,6 +310,36 @@ export const LLM_MODELS_BY_PROVIDER: Record<string, LLMModelDefinition[]> = {
             supportsThinking: true,
             defaultThinkingBudget: 4096
         }
+    ],
+    xai: [
+        {
+            value: "grok-3",
+            label: "Grok 3 (Most Capable)",
+            provider: "xai",
+            contextWindow: 131072,
+            capabilities: ["text", "function-calling"]
+        },
+        {
+            value: "grok-3-fast",
+            label: "Grok 3 Fast (Speed Optimized)",
+            provider: "xai",
+            contextWindow: 131072,
+            capabilities: ["text", "function-calling"]
+        },
+        {
+            value: "grok-2-vision",
+            label: "Grok 2 Vision (Multimodal)",
+            provider: "xai",
+            contextWindow: 32768,
+            capabilities: ["text", "vision", "function-calling"]
+        },
+        {
+            value: "grok-2-vision-1212",
+            label: "Grok 2 Vision 1212",
+            provider: "xai",
+            contextWindow: 32768,
+            capabilities: ["text", "vision", "function-calling"]
+        }
     ]
 };
 
@@ -355,6 +386,8 @@ export function getTemperatureMaxForProvider(provider: string): number {
         case "replicate":
             return 2.0;
         case "stabilityai":
+            return 2.0;
+        case "xai":
             return 2.0;
         default:
             return 2.0;
@@ -425,3 +458,32 @@ export function getModelNickname(modelValue: string): string {
     // Fallback to model value if not found
     return modelValue;
 }
+
+/**
+ * Get array of LLM provider IDs (e.g., ["openai", "anthropic", "google", ...])
+ * Use this instead of hardcoding provider lists across the codebase.
+ */
+export function getLLMProviderIds(): string[] {
+    return LLM_PROVIDERS.map((p) => p.value);
+}
+
+/**
+ * Get the display label for an LLM provider
+ */
+export function getLLMProviderLabel(providerId: string): string {
+    const provider = LLM_PROVIDERS.find((p) => p.value === providerId);
+    return provider?.label || providerId;
+}
+
+/**
+ * Check if a provider ID is a valid LLM provider
+ */
+export function isLLMProvider(providerId: string): boolean {
+    return LLM_PROVIDERS.some((p) => p.value === providerId);
+}
+
+/**
+ * LLM provider IDs as a TypeScript type
+ * Use: typeof LLM_PROVIDER_IDS[number] for union type
+ */
+export const LLM_PROVIDER_IDS = LLM_PROVIDERS.map((p) => p.value) as readonly string[];

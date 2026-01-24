@@ -2255,3 +2255,82 @@ export const ALL_PROVIDERS: Provider[] = [
         comingSoon: true
     }
 ];
+
+// ============================================================================
+// Helper Functions - Use these instead of hardcoding provider lists
+// ============================================================================
+
+/**
+ * Get providers that support a specific connection method.
+ * Excludes "coming soon" providers by default.
+ *
+ * @example
+ * getProvidersByMethod("api_key") // ["openai", "anthropic", ...]
+ * getProvidersByMethod("oauth2") // ["slack", "google-drive", ...]
+ */
+export function getProvidersByMethod(
+    method: ConnectionMethod,
+    options: { includeComingSoon?: boolean } = {}
+): string[] {
+    return ALL_PROVIDERS.filter(
+        (p) => p.methods.includes(method) && (options.includeComingSoon || !p.comingSoon)
+    ).map((p) => p.provider);
+}
+
+/**
+ * Get providers by category.
+ * Excludes "coming soon" providers by default.
+ *
+ * @example
+ * getProvidersByCategory("AI & ML") // ["openai", "anthropic", ...]
+ * getProvidersByCategory("Communication") // ["slack", "discord", ...]
+ */
+export function getProvidersByCategory(
+    category: string,
+    options: { includeComingSoon?: boolean } = {}
+): string[] {
+    return ALL_PROVIDERS.filter(
+        (p) => p.category === category && (options.includeComingSoon || !p.comingSoon)
+    ).map((p) => p.provider);
+}
+
+/**
+ * Get display name for a provider.
+ *
+ * @example
+ * getProviderDisplayName("openai") // "OpenAI"
+ * getProviderDisplayName("xai") // "x.ai"
+ */
+export function getProviderDisplayName(providerId: string): string {
+    const provider = ALL_PROVIDERS.find((p) => p.provider === providerId);
+    return provider?.displayName || providerId;
+}
+
+/**
+ * Get full provider definition by ID.
+ */
+export function getProviderById(providerId: string): Provider | undefined {
+    return ALL_PROVIDERS.find((p) => p.provider === providerId);
+}
+
+/**
+ * Check if a provider is available (not coming soon).
+ */
+export function isProviderAvailable(providerId: string): boolean {
+    const provider = ALL_PROVIDERS.find((p) => p.provider === providerId);
+    return provider ? !provider.comingSoon : false;
+}
+
+/**
+ * Get all available (not coming soon) providers.
+ */
+export function getAvailableProviders(): Provider[] {
+    return ALL_PROVIDERS.filter((p) => !p.comingSoon);
+}
+
+/**
+ * Get all unique categories.
+ */
+export function getAllCategories(): string[] {
+    return [...new Set(ALL_PROVIDERS.map((p) => p.category))].sort();
+}
