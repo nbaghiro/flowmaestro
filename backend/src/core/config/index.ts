@@ -422,6 +422,8 @@ export function getOAuthRedirectUri(provider: string): string {
         "google-sheets": "/oauth/google/callback",
         "google-calendar": "/oauth/google/callback",
         "google-drive": "/oauth/google/callback",
+        "google-docs": "/oauth/google/callback",
+        "google-forms": "/oauth/google/callback",
         gmail: "/oauth/google/callback",
 
         // Microsoft services all use the same callback
@@ -488,6 +490,8 @@ export function getOAuthCredentials(provider: string): { clientId: string; clien
         "google-sheets": "google",
         "google-calendar": "google",
         "google-drive": "google",
+        "google-docs": "google",
+        "google-forms": "google",
         gmail: "google",
 
         // Microsoft services

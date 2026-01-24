@@ -685,5 +685,21 @@ const docusignEntry: ProviderRegistryEntry = {
 
 providerRegistry.register(docusignEntry);
 
+// Register Google Forms provider
+const googleFormsEntry: ProviderRegistryEntry = {
+    name: "google-forms",
+    displayName: "Google Forms",
+    authMethod: "oauth2",
+    category: "forms_surveys",
+    loader: async () => {
+        const { GoogleFormsProvider } = await import(
+            "./providers/google-forms/GoogleFormsProvider"
+        );
+        return new GoogleFormsProvider();
+    }
+};
+
+providerRegistry.register(googleFormsEntry);
+
 // Export for use in application
 export { providerRegistry };

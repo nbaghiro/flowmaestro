@@ -95,6 +95,7 @@ export const PROVIDER_LOGO_DOMAINS: Record<string, string> = {
     "google-calendar": "google.com",
     "google-drive": "google.com",
     "google-docs": "google.com",
+    "google-forms": "google.com",
     gmail: "google.com",
     shopify: "shopify.com",
     stripe: "stripe.com",
@@ -1952,11 +1953,10 @@ export const ALL_PROVIDERS: Provider[] = [
     {
         provider: "google-forms",
         displayName: "Google Forms",
-        description: "Survey and form builder",
+        description: "Create and manage forms, retrieve responses",
         logoUrl: getBrandLogo("forms.google.com"),
         category: "Forms & Surveys",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "jotform",
