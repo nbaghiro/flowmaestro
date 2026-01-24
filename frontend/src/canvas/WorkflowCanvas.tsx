@@ -278,7 +278,20 @@ function getDefaultLabel(type: string): string {
         audioInput: "Audio Input",
         action: "Action",
         audioOutput: "Audio Output",
-        templateOutput: "Template Output"
+        templateOutput: "Template Output",
+        // Builtin tool nodes
+        chartGeneration: "Chart",
+        spreadsheetGeneration: "Spreadsheet",
+        audioTranscription: "Transcribe",
+        ocrExtraction: "OCR",
+        pdfGeneration: "PDF Generate",
+        screenshotCapture: "Screenshot",
+        webSearch: "Web Search",
+        webBrowse: "Web Browse",
+        pdfExtract: "PDF Extract",
+        fileDownload: "File Download",
+        fileRead: "File Read",
+        fileWrite: "File Write"
     };
 
     // Check if it's a provider node first

@@ -38,10 +38,22 @@ import {
     Volume2,
     // Integration fallback icon
     Plug,
+    // New builtin tool node icons
+    BarChart2,
+    FileSpreadsheet,
+    AudioLines,
+    ScanText,
+    FileOutput,
+    Camera,
+    ExternalLink,
+    FileSearch,
+    FileDown,
+    FileInput,
+    FilePenLine,
     type LucideIcon
 } from "lucide-react";
 import { useCallback, useState } from "react";
-import { ALL_PROVIDERS } from "@flowmaestro/shared";
+import { ALL_PROVIDERS, getProvidersByCategory } from "@flowmaestro/shared";
 import { Button } from "../../components/common/Button";
 import { Input } from "../../components/common/Input";
 import { Tooltip } from "../../components/common/Tooltip";
@@ -93,7 +105,6 @@ const nodeLibrary: NodeDefinition[] = [
         category: "inputs",
         description: "Record or upload audio for processing"
     },
-
     // Outputs - workflow results and actions
     {
         type: "output",
@@ -188,6 +199,20 @@ const nodeLibrary: NodeDefinition[] = [
         category: "ai",
         description: "AI-powered routing based on content classification"
     },
+    {
+        type: "audioTranscription",
+        label: "Transcribe",
+        icon: AudioLines,
+        category: "ai",
+        description: "Transcribe audio to text using Whisper"
+    },
+    {
+        type: "ocrExtraction",
+        label: "OCR",
+        icon: ScanText,
+        category: "ai",
+        description: "Extract text from images using Tesseract OCR"
+    },
 
     // Integrations - third-party service connections (individual nodes added in Phase 4)
     // Note: Individual integration nodes (slack, gmail, etc.) will be added dynamically
@@ -250,6 +275,76 @@ const nodeLibrary: NodeDefinition[] = [
         icon: Database,
         category: "utils",
         description: "Query SQL or NoSQL databases"
+    },
+    {
+        type: "chartGeneration",
+        label: "Chart",
+        icon: BarChart2,
+        category: "utils",
+        description: "Generate charts and visualizations from data"
+    },
+    {
+        type: "spreadsheetGeneration",
+        label: "Spreadsheet",
+        icon: FileSpreadsheet,
+        category: "utils",
+        description: "Generate Excel or CSV files from data"
+    },
+    {
+        type: "webSearch",
+        label: "Web Search",
+        icon: Search,
+        category: "utils",
+        description: "Search the web using Tavily API"
+    },
+    {
+        type: "webBrowse",
+        label: "Web Browse",
+        icon: ExternalLink,
+        category: "utils",
+        description: "Fetch and extract content from web pages"
+    },
+    {
+        type: "pdfExtract",
+        label: "PDF Extract",
+        icon: FileSearch,
+        category: "utils",
+        description: "Extract text and metadata from PDF documents"
+    },
+    {
+        type: "pdfGeneration",
+        label: "PDF Generate",
+        icon: FileOutput,
+        category: "utils",
+        description: "Generate PDF documents from markdown or HTML"
+    },
+    {
+        type: "screenshotCapture",
+        label: "Screenshot",
+        icon: Camera,
+        category: "utils",
+        description: "Capture screenshots of web pages"
+    },
+    {
+        type: "fileDownload",
+        label: "File Download",
+        icon: FileDown,
+        category: "utils",
+        description: "Download files from URLs"
+    },
+    {
+        type: "fileRead",
+        label: "File Read",
+        icon: FileInput,
+        category: "utils",
+        description: "Read files from the execution workspace"
+    },
+    {
+        type: "fileWrite",
+        label: "File Write",
+        icon: FilePenLine,
+        category: "utils",
+        description: "Write files to the execution workspace"
     },
     {
         type: "comment",
@@ -315,8 +410,9 @@ const categories: CategoryDefinition[] = [
 ];
 
 // Generate integration node entries from implemented providers
-// Filter out AI providers (they use LLM node) and comingSoon providers
-const AI_PROVIDER_IDS = ["openai", "anthropic", "google", "huggingface", "cohere"];
+// Filter out AI & ML providers (they use specialized nodes like LLM, Image Generation)
+// Derived from centralized ALL_PROVIDERS in shared package
+const AI_PROVIDER_IDS = getProvidersByCategory("AI & ML");
 
 const integrationNodes: NodeDefinition[] = ALL_PROVIDERS.filter(
     (provider) => !provider.comingSoon && !AI_PROVIDER_IDS.includes(provider.provider)

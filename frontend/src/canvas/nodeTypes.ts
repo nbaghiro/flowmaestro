@@ -5,16 +5,21 @@
  * Import from here instead of defining nodeTypes locally to avoid missing node types.
  */
 
-import { ALL_PROVIDERS } from "@flowmaestro/shared";
+import { ALL_PROVIDERS, getProvidersByCategory } from "@flowmaestro/shared";
 import ActionNode from "./nodes/ActionNode";
 import AudioInputNode from "./nodes/AudioInputNode";
 import AudioOutputNode from "./nodes/AudioOutputNode";
+import AudioTranscriptionNode from "./nodes/AudioTranscriptionNode";
+import ChartGenerationNode from "./nodes/ChartGenerationNode";
 import CodeNode from "./nodes/CodeNode";
 import CommentNode from "./nodes/CommentNode";
 import ConditionalNode from "./nodes/ConditionalNode";
 import DatabaseNode from "./nodes/DatabaseNode";
 import EmbeddingsNode from "./nodes/EmbeddingsNode";
+import FileDownloadNode from "./nodes/FileDownloadNode";
+import FileReadNode from "./nodes/FileReadNode";
 import FilesNode from "./nodes/FilesNode";
+import FileWriteNode from "./nodes/FileWriteNode";
 import HTTPNode from "./nodes/HTTPNode";
 import HumanReviewNode from "./nodes/HumanReviewNode";
 import ImageGenerationNode from "./nodes/ImageGenerationNode";
@@ -23,9 +28,14 @@ import IntegrationNode from "./nodes/IntegrationNode";
 import KnowledgeBaseQueryNode from "./nodes/KnowledgeBaseQueryNode";
 import LLMNode from "./nodes/LLMNode";
 import LoopNode from "./nodes/LoopNode";
+import OCRExtractionNode from "./nodes/OCRExtractionNode";
 import OutputNode from "./nodes/OutputNode";
+import PdfExtractNode from "./nodes/PdfExtractNode";
+import PdfGenerationNode from "./nodes/PdfGenerationNode";
 import RouterNode from "./nodes/RouterNode";
+import ScreenshotCaptureNode from "./nodes/ScreenshotCaptureNode";
 import SharedMemoryNode from "./nodes/SharedMemoryNode";
+import SpreadsheetGenerationNode from "./nodes/SpreadsheetGenerationNode";
 import SwitchNode from "./nodes/SwitchNode";
 import TemplateOutputNode from "./nodes/TemplateOutputNode";
 import TransformNode from "./nodes/TransformNode";
@@ -34,14 +44,17 @@ import URLNode from "./nodes/URLNode";
 import VideoGenerationNode from "./nodes/VideoGenerationNode";
 import VisionNode from "./nodes/VisionNode";
 import WaitNode from "./nodes/WaitNode";
+import WebBrowseNode from "./nodes/WebBrowseNode";
+import WebSearchNode from "./nodes/WebSearchNode";
 import type { ComponentType } from "react";
 import type { NodeProps } from "reactflow";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type NodeComponent = ComponentType<NodeProps<any>>;
 
-// AI provider IDs (these use the LLM node, not Integration node)
-const AI_PROVIDER_IDS = ["openai", "anthropic", "google", "huggingface", "cohere"];
+// AI & ML providers use specialized nodes (LLM, Image Generation, etc.), not Integration node
+// Derived from centralized ALL_PROVIDERS in shared package
+const AI_PROVIDER_IDS = getProvidersByCategory("AI & ML");
 
 // Generate integration provider node types dynamically
 // Each provider type maps to the IntegrationNode component
@@ -88,6 +101,19 @@ export const nodeTypes: Record<string, NodeComponent> = {
     audioInput: AudioInputNode,
     audioOutput: AudioOutputNode,
     action: ActionNode,
+    // Builtin tool nodes
+    chartGeneration: ChartGenerationNode,
+    spreadsheetGeneration: SpreadsheetGenerationNode,
+    audioTranscription: AudioTranscriptionNode,
+    ocrExtraction: OCRExtractionNode,
+    pdfGeneration: PdfGenerationNode,
+    screenshotCapture: ScreenshotCaptureNode,
+    webSearch: WebSearchNode,
+    webBrowse: WebBrowseNode,
+    pdfExtract: PdfExtractNode,
+    fileDownload: FileDownloadNode,
+    fileRead: FileReadNode,
+    fileWrite: FileWriteNode,
     // Integration provider nodes (dynamically generated)
     ...integrationProviderNodeTypes
 };
@@ -143,5 +169,17 @@ export const previewNodeTypes: Record<string, NodeComponent> = {
     url: URLNode,
     audioInput: AudioInputNode,
     audioOutput: AudioOutputNode,
-    action: ActionNode
+    action: ActionNode,
+    chartGeneration: ChartGenerationNode,
+    spreadsheetGeneration: SpreadsheetGenerationNode,
+    audioTranscription: AudioTranscriptionNode,
+    ocrExtraction: OCRExtractionNode,
+    pdfGeneration: PdfGenerationNode,
+    screenshotCapture: ScreenshotCaptureNode,
+    webSearch: WebSearchNode,
+    webBrowse: WebBrowseNode,
+    pdfExtract: PdfExtractNode,
+    fileDownload: FileDownloadNode,
+    fileRead: FileReadNode,
+    fileWrite: FileWriteNode
 };

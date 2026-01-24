@@ -1,6 +1,6 @@
 import { X } from "lucide-react";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { ALL_PROVIDERS, type ValidationError } from "@flowmaestro/shared";
+import { ALL_PROVIDERS, getLLMProviderIds, type ValidationError } from "@flowmaestro/shared";
 import { Button } from "../../components/common/Button";
 import { Input } from "../../components/common/Input";
 import { cn } from "../../lib/utils";
@@ -12,7 +12,8 @@ const MAX_WIDTH = 700;
 const DEFAULT_WIDTH = 384; // 24rem = 384px (w-96)
 
 // AI provider IDs (these use the LLM node, not Integration node)
-const AI_PROVIDER_IDS = ["openai", "anthropic", "google", "huggingface", "cohere"];
+// Derived from centralized LLM_PROVIDERS in shared package
+const AI_PROVIDER_IDS = getLLMProviderIds();
 
 // Check if a node type is an integration provider
 const isProviderNodeType = (type: string): boolean => {
@@ -24,6 +25,8 @@ const isProviderNodeType = (type: string): boolean => {
 import { ActionNodeConfig } from "./configs/ActionNodeConfig";
 import { AudioInputNodeConfig } from "./configs/AudioInputNodeConfig";
 import { AudioOutputNodeConfig } from "./configs/AudioOutputNodeConfig";
+import { AudioTranscriptionNodeConfig } from "./configs/AudioTranscriptionNodeConfig";
+import { ChartGenerationNodeConfig } from "./configs/ChartGenerationNodeConfig";
 // Logic & Code
 import { CodeNodeConfig } from "./configs/CodeNodeConfig";
 import { ConditionalNodeConfig } from "./configs/ConditionalNodeConfig";
@@ -31,7 +34,10 @@ import { ConditionalNodeConfig } from "./configs/ConditionalNodeConfig";
 // Connect
 import { DatabaseNodeConfig } from "./configs/DatabaseNodeConfig";
 import { EmbeddingsNodeConfig } from "./configs/EmbeddingsNodeConfig";
+import { FileDownloadNodeConfig } from "./configs/FileDownloadNodeConfig";
+import { FileReadNodeConfig } from "./configs/FileReadNodeConfig";
 import { FilesNodeConfig } from "./configs/FilesNodeConfig";
+import { FileWriteNodeConfig } from "./configs/FileWriteNodeConfig";
 import { HTTPNodeConfig } from "./configs/HTTPNodeConfig";
 import { HumanReviewNodeConfig } from "./configs/HumanReviewNodeConfig";
 import { ImageGenerationNodeConfig } from "./configs/ImageGenerationNodeConfig";
@@ -40,9 +46,14 @@ import { IntegrationNodeConfig } from "./configs/IntegrationNodeConfig";
 import { KnowledgeBaseQueryNodeConfig } from "./configs/KnowledgeBaseQueryNodeConfig";
 import { LLMNodeConfig } from "./configs/LLMNodeConfig";
 import { LoopNodeConfig } from "./configs/LoopNodeConfig";
+import { OCRExtractionNodeConfig } from "./configs/OCRExtractionNodeConfig";
 import { OutputNodeConfig } from "./configs/OutputNodeConfig";
+import { PdfExtractNodeConfig } from "./configs/PdfExtractNodeConfig";
+import { PdfGenerationNodeConfig } from "./configs/PdfGenerationNodeConfig";
 import { RouterNodeConfig } from "./configs/RouterNodeConfig";
+import { ScreenshotCaptureNodeConfig } from "./configs/ScreenshotCaptureNodeConfig";
 import { SharedMemoryNodeConfig } from "./configs/SharedMemoryNodeConfig";
+import { SpreadsheetGenerationNodeConfig } from "./configs/SpreadsheetGenerationNodeConfig";
 import { SwitchNodeConfig } from "./configs/SwitchNodeConfig";
 import { TemplateOutputNodeConfig } from "./configs/TemplateOutputNodeConfig";
 import { TransformNodeConfig } from "./configs/TransformNodeConfig";
@@ -51,6 +62,8 @@ import { URLNodeConfig } from "./configs/URLNodeConfig";
 import { VideoGenerationNodeConfig } from "./configs/VideoGenerationNodeConfig";
 import { VisionNodeConfig } from "./configs/VisionNodeConfig";
 import { WaitNodeConfig } from "./configs/WaitNodeConfig";
+import { WebBrowseNodeConfig } from "./configs/WebBrowseNodeConfig";
+import { WebSearchNodeConfig } from "./configs/WebSearchNodeConfig";
 
 export function NodeInspector() {
     const { nodes, selectedNode, selectNode, updateNode, nodeValidation } = useWorkflowStore();
@@ -337,6 +350,116 @@ export function NodeInspector() {
             case "action":
                 return (
                     <ActionNodeConfig
+                        nodeId={node.id}
+                        data={node.data}
+                        onUpdate={handleUpdate}
+                        errors={validationErrors}
+                    />
+                );
+            case "chartGeneration":
+                return (
+                    <ChartGenerationNodeConfig
+                        nodeId={node.id}
+                        data={node.data}
+                        onUpdate={handleUpdate}
+                        errors={validationErrors}
+                    />
+                );
+            case "spreadsheetGeneration":
+                return (
+                    <SpreadsheetGenerationNodeConfig
+                        nodeId={node.id}
+                        data={node.data}
+                        onUpdate={handleUpdate}
+                        errors={validationErrors}
+                    />
+                );
+
+            // AI tool nodes
+            case "audioTranscription":
+                return (
+                    <AudioTranscriptionNodeConfig
+                        nodeId={node.id}
+                        data={node.data}
+                        onUpdate={handleUpdate}
+                        errors={validationErrors}
+                    />
+                );
+            case "ocrExtraction":
+                return (
+                    <OCRExtractionNodeConfig
+                        nodeId={node.id}
+                        data={node.data}
+                        onUpdate={handleUpdate}
+                        errors={validationErrors}
+                    />
+                );
+            case "pdfGeneration":
+                return (
+                    <PdfGenerationNodeConfig
+                        nodeId={node.id}
+                        data={node.data}
+                        onUpdate={handleUpdate}
+                        errors={validationErrors}
+                    />
+                );
+            case "screenshotCapture":
+                return (
+                    <ScreenshotCaptureNodeConfig
+                        nodeId={node.id}
+                        data={node.data}
+                        onUpdate={handleUpdate}
+                        errors={validationErrors}
+                    />
+                );
+            case "webSearch":
+                return (
+                    <WebSearchNodeConfig
+                        nodeId={node.id}
+                        data={node.data}
+                        onUpdate={handleUpdate}
+                        errors={validationErrors}
+                    />
+                );
+            case "webBrowse":
+                return (
+                    <WebBrowseNodeConfig
+                        nodeId={node.id}
+                        data={node.data}
+                        onUpdate={handleUpdate}
+                        errors={validationErrors}
+                    />
+                );
+            case "pdfExtract":
+                return (
+                    <PdfExtractNodeConfig
+                        nodeId={node.id}
+                        data={node.data}
+                        onUpdate={handleUpdate}
+                        errors={validationErrors}
+                    />
+                );
+            case "fileDownload":
+                return (
+                    <FileDownloadNodeConfig
+                        nodeId={node.id}
+                        data={node.data}
+                        onUpdate={handleUpdate}
+                        errors={validationErrors}
+                    />
+                );
+            case "fileRead":
+                return (
+                    <FileReadNodeConfig
+                        nodeId={node.id}
+                        data={node.data}
+                        onUpdate={handleUpdate}
+                        errors={validationErrors}
+                    />
+                );
+            case "fileWrite":
+                return (
+                    <FileWriteNodeConfig
                         nodeId={node.id}
                         data={node.data}
                         onUpdate={handleUpdate}

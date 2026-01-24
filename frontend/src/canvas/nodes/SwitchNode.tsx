@@ -25,10 +25,19 @@ function SwitchNode({ data, selected }: NodeProps<SwitchNodeData>) {
         if (nodeId) {
             updateNodeInternals(nodeId);
         }
-    }, [connectorLayout, nodeId, updateNodeInternals]);
+    }, [connectorLayout, nodeId, updateNodeInternals, data.cases]);
 
     const variable = data.variable || "${value}";
-    const caseCount = data.cases?.length || 3;
+    // Use configured cases or create default placeholder cases for handle positioning
+    const cases =
+        data.cases && data.cases.length > 0
+            ? data.cases.slice(0, 4)
+            : [
+                  { value: "", label: "Case 1" },
+                  { value: "", label: "Case 2" },
+                  { value: "", label: "Case 3" }
+              ];
+    const caseCount = data.cases?.length || cases.length;
 
     const isHorizontal = connectorLayout === "horizontal";
     const inputPosition = isHorizontal ? Position.Left : Position.Top;
@@ -49,12 +58,12 @@ function SwitchNode({ data, selected }: NodeProps<SwitchNodeData>) {
                         position={inputPosition}
                         className="!w-2.5 !h-2.5 !bg-white !border-2 !border-border !shadow-sm"
                     />
-                    {Array.from({ length: Math.min(caseCount, 4) }).map((_, i) => (
+                    {cases.map((caseItem, i) => (
                         <Handle
-                            key={i}
+                            key={caseItem.value || `case-${i}`}
                             type="source"
                             position={outputPosition}
-                            id={`case-${i}`}
+                            id={caseItem.value || `case-${i}`}
                             className="!w-2.5 !h-2.5 !bg-white !border-2 !border-border !shadow-sm"
                             style={
                                 isHorizontal
@@ -63,6 +72,25 @@ function SwitchNode({ data, selected }: NodeProps<SwitchNodeData>) {
                             }
                         />
                     ))}
+                    {/* Backward compatibility: hidden handles for legacy case-N format edges */}
+                    {cases.map((caseItem, i) => {
+                        // Only create legacy handle if value exists (otherwise the primary already uses case-N)
+                        if (!caseItem.value) return null;
+                        return (
+                            <Handle
+                                key={`legacy-case-${i}`}
+                                type="source"
+                                position={outputPosition}
+                                id={`case-${i}`}
+                                className="!w-2.5 !h-2.5 !bg-white !border-2 !border-border !shadow-sm !opacity-0 !pointer-events-none"
+                                style={
+                                    isHorizontal
+                                        ? { top: `${30 + i * 17}%` }
+                                        : { left: `${25 + i * 17}%` }
+                                }
+                            />
+                        );
+                    })}
                 </>
             }
         >
