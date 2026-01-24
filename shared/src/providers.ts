@@ -310,7 +310,13 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Interact with Coda documents and tables",
         logoUrl: getBrandLogo("coda.io"),
         category: "Productivity",
-        methods: ["api_key"]
+        methods: ["api_key"],
+        apiKeySettings: {
+            keyLabel: "API Token",
+            keyPlaceholder: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+            helpText: "Find your API token in Coda Account Settings > API Settings",
+            helpUrl: "https://coda.io/account#apiSettings"
+        }
     },
 
     // Developer Tools
@@ -627,7 +633,13 @@ export const ALL_PROVIDERS: Provider[] = [
         logoUrl: getBrandLogo("heap.io"),
         category: "Analytics",
         methods: ["api_key"],
-        comingSoon: true
+        apiKeySettings: {
+            keyLabel: "App ID",
+            keyPlaceholder: "your-app-id",
+            helpText:
+                "Find your App ID in Heap Administration > Account > Manage > Privacy & Security",
+            helpUrl: "https://developers.heap.io/reference/server-side-apis-overview"
+        }
     },
     {
         provider: "chartmogul",
@@ -663,7 +675,16 @@ export const ALL_PROVIDERS: Provider[] = [
         logoUrl: getBrandLogo("posthog.com"),
         category: "Analytics",
         methods: ["api_key"],
-        comingSoon: true
+        apiKeySettings: {
+            keyLabel: "Project API Key",
+            keyPlaceholder: "phc_xxxxx",
+            requiresSecret: true,
+            secretLabel: "Host URL (optional)",
+            secretPlaceholder: "https://us.i.posthog.com",
+            helpText:
+                "Find your Project API Key in PostHog Project Settings. Leave host blank for US Cloud.",
+            helpUrl: "https://posthog.com/docs/api"
+        }
     },
 
     // Accounting & Finance

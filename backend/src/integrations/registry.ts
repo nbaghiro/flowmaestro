@@ -613,5 +613,33 @@ const mixpanelEntry: ProviderRegistryEntry = {
 
 providerRegistry.register(mixpanelEntry);
 
+// Register Heap provider
+const heapEntry: ProviderRegistryEntry = {
+    name: "heap",
+    displayName: "Heap",
+    authMethod: "api_key",
+    category: "analytics",
+    loader: async () => {
+        const { HeapProvider } = await import("./providers/heap/HeapProvider");
+        return new HeapProvider();
+    }
+};
+
+providerRegistry.register(heapEntry);
+
+// Register PostHog provider
+const posthogEntry: ProviderRegistryEntry = {
+    name: "posthog",
+    displayName: "PostHog",
+    authMethod: "api_key",
+    category: "analytics",
+    loader: async () => {
+        const { PostHogProvider } = await import("./providers/posthog/PostHogProvider");
+        return new PostHogProvider();
+    }
+};
+
+providerRegistry.register(posthogEntry);
+
 // Export for use in application
 export { providerRegistry };
