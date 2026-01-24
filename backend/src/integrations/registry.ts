@@ -515,5 +515,47 @@ const mondayEntry: ProviderRegistryEntry = {
 
 providerRegistry.register(mondayEntry);
 
+// Register Trello provider
+const trelloEntry: ProviderRegistryEntry = {
+    name: "trello",
+    displayName: "Trello",
+    authMethod: "api_key",
+    category: "project_management",
+    loader: async () => {
+        const { TrelloProvider } = await import("./providers/trello/TrelloProvider");
+        return new TrelloProvider();
+    }
+};
+
+providerRegistry.register(trelloEntry);
+
+// Register Telegram provider
+const telegramEntry: ProviderRegistryEntry = {
+    name: "telegram",
+    displayName: "Telegram",
+    authMethod: "api_key",
+    category: "communication",
+    loader: async () => {
+        const { TelegramProvider } = await import("./providers/telegram/TelegramProvider");
+        return new TelegramProvider();
+    }
+};
+
+providerRegistry.register(telegramEntry);
+
+// Register Evernote provider (OAuth 1.0a)
+const evernoteEntry: ProviderRegistryEntry = {
+    name: "evernote",
+    displayName: "Evernote",
+    authMethod: "oauth1",
+    category: "productivity",
+    loader: async () => {
+        const { EvernoteProvider } = await import("./providers/evernote/EvernoteProvider");
+        return new EvernoteProvider();
+    }
+};
+
+providerRegistry.register(evernoteEntry);
+
 // Export for use in application
 export { providerRegistry };

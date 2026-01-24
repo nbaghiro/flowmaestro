@@ -30,6 +30,27 @@ export interface OAuthField {
     patternError?: string;
 }
 
+/**
+ * API Key field configuration
+ * Used to customize the API key form for providers that need additional fields
+ */
+export interface ApiKeySettings {
+    /** Custom label for the primary API key field (default: "API Key") */
+    keyLabel?: string;
+    /** Custom placeholder for the API key field */
+    keyPlaceholder?: string;
+    /** Whether the provider requires an api_secret field (e.g., Trello token) */
+    requiresSecret?: boolean;
+    /** Custom label for the api_secret field (default: "API Token") */
+    secretLabel?: string;
+    /** Custom placeholder for the secret field */
+    secretPlaceholder?: string;
+    /** Help text or instructions for users */
+    helpText?: string;
+    /** URL where users can get their credentials */
+    helpUrl?: string;
+}
+
 export interface Provider {
     provider: string;
     displayName: string;
@@ -40,6 +61,8 @@ export interface Provider {
     comingSoon?: boolean;
     /** Fields to collect before initiating OAuth flow (e.g., subdomain for Zendesk) */
     oauthSettings?: OAuthField[];
+    /** API key form customization (labels, secret field, help text) */
+    apiKeySettings?: ApiKeySettings;
 }
 
 // Brandfetch Logo API client ID
@@ -63,6 +86,7 @@ export const PROVIDER_LOGO_DOMAINS: Record<string, string> = {
     github: "github.com",
     slack: "slack.com",
     discord: "discord.com",
+    telegram: "telegram.org",
     whatsapp: "whatsapp.com",
     airtable: "airtable.com",
     asana: "asana.com",
@@ -104,7 +128,10 @@ export const PROVIDER_LOGO_DOMAINS: Record<string, string> = {
     stabilityai: "stability.ai",
     runway: "runwayml.com",
     luma: "lumalabs.ai",
-    elevenlabs: "elevenlabs.io"
+    elevenlabs: "elevenlabs.io",
+    xai: "x.ai",
+    trello: "trello.com",
+    evernote: "evernote.com"
 };
 
 /**
@@ -162,6 +189,14 @@ export const ALL_PROVIDERS: Provider[] = [
         category: "AI & ML",
         methods: ["api_key"]
     },
+    {
+        provider: "xai",
+        displayName: "x.ai",
+        description: "Grok models with powerful reasoning and real-time knowledge",
+        logoUrl: getBrandLogo("x.ai"),
+        category: "AI & ML",
+        methods: ["api_key"]
+    },
 
     // Communication
     {
@@ -184,11 +219,16 @@ export const ALL_PROVIDERS: Provider[] = [
     {
         provider: "telegram",
         displayName: "Telegram",
-        description: "Send messages via Telegram bots",
+        description: "Send messages, media, and manage chats via Telegram Bot API",
         logoUrl: getBrandLogo("telegram.org"),
         category: "Communication",
         methods: ["api_key"],
-        comingSoon: true
+        apiKeySettings: {
+            keyLabel: "Bot Token",
+            keyPlaceholder: "123456789:ABCdefGHIjklMNOpqrSTUvwxYZ",
+            helpText: "Get your bot token from @BotFather on Telegram",
+            helpUrl: "https://t.me/botfather"
+        }
     },
     {
         provider: "microsoft-teams",
@@ -315,11 +355,17 @@ export const ALL_PROVIDERS: Provider[] = [
     {
         provider: "trello",
         displayName: "Trello",
-        description: "Manage boards and cards",
+        description: "Manage boards, lists, and cards for project organization",
         logoUrl: getBrandLogo("trello.com"),
         category: "Project Management",
-        methods: ["api_key", "oauth2"],
-        comingSoon: true
+        methods: ["api_key"],
+        apiKeySettings: {
+            keyLabel: "API Key",
+            secretLabel: "API Token",
+            requiresSecret: true,
+            helpText: "Get your API key and generate a token from the Power-Ups admin page",
+            helpUrl: "https://trello.com/power-ups/admin"
+        }
     },
     {
         provider: "monday",
@@ -1209,11 +1255,10 @@ export const ALL_PROVIDERS: Provider[] = [
     {
         provider: "evernote",
         displayName: "Evernote",
-        description: "Note-taking and organization",
+        description: "Note-taking, organization, and search across notes, notebooks, and tags",
         logoUrl: getBrandLogo("evernote.com"),
         category: "Productivity",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth1"]
     },
     {
         provider: "figma",

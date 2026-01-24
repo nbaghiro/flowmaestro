@@ -179,6 +179,9 @@ export const config = {
         },
         fal: {
             apiKey: process.env.FAL_API_KEY || ""
+        },
+        xai: {
+            apiKey: process.env.XAI_API_KEY || ""
         }
     },
 
@@ -350,6 +353,13 @@ export const config = {
         monday: {
             clientId: process.env.MONDAY_CLIENT_ID || "",
             clientSecret: process.env.MONDAY_CLIENT_SECRET || ""
+        },
+
+        // Evernote (OAuth 1.0a)
+        evernote: {
+            consumerKey: process.env.EVERNOTE_CONSUMER_KEY || "",
+            consumerSecret: process.env.EVERNOTE_CONSUMER_SECRET || "",
+            sandbox: process.env.EVERNOTE_SANDBOX === "true"
         }
     }
 };
@@ -407,7 +417,10 @@ export function getOAuthRedirectUri(provider: string): string {
         reddit: "/oauth/reddit/callback",
         discord: "/oauth/discord/callback",
         asana: "/oauth/asana/callback",
-        monday: "/oauth/monday/callback"
+        monday: "/oauth/monday/callback",
+
+        // OAuth 1.0a providers
+        evernote: "/oauth1/evernote/callback"
     };
 
     const callbackPath = callbackPaths[provider] || `/oauth/${provider}/callback`;
@@ -505,6 +518,7 @@ export function getAIProviderApiKey(
         | "runway"
         | "luma"
         | "fal"
+        | "xai"
 ): string {
     return config.ai[provider]?.apiKey || "";
 }

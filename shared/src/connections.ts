@@ -5,7 +5,7 @@
 
 import type { JsonValue } from "./types";
 
-export type ConnectionMethod = "api_key" | "oauth2" | "basic_auth" | "custom";
+export type ConnectionMethod = "api_key" | "oauth2" | "oauth1" | "basic_auth" | "custom";
 export type ConnectionStatus = "active" | "invalid" | "expired" | "revoked";
 
 /**
@@ -31,6 +31,21 @@ export interface OAuth2TokenData {
     token_type: string;
     expires_in?: number;
     scope?: string;
+}
+
+/**
+ * OAuth 1.0a token data
+ */
+export interface OAuth1TokenData {
+    oauth_token: string;
+    oauth_token_secret: string;
+    user_id?: string;
+    // Evernote-specific fields
+    edam_shard?: string;
+    edam_userId?: string;
+    edam_expires?: string;
+    edam_noteStoreUrl?: string;
+    edam_webApiUrlPrefix?: string;
 }
 
 /**
@@ -102,6 +117,7 @@ export interface DatabaseConnectionData {
 export type ConnectionData =
     | ApiKeyData
     | OAuth2TokenData
+    | OAuth1TokenData
     | BasicAuthData
     | CustomHeaderData
     | TelnyxConnectionData
@@ -156,6 +172,13 @@ export interface ConnectionSummary {
  */
 export function isOAuth2TokenData(data: ConnectionData): data is OAuth2TokenData {
     return "access_token" in data && "token_type" in data;
+}
+
+/**
+ * Type guard to check if connection data is OAuth 1.0a
+ */
+export function isOAuth1TokenData(data: ConnectionData): data is OAuth1TokenData {
+    return "oauth_token" in data && "oauth_token_secret" in data;
 }
 
 /**

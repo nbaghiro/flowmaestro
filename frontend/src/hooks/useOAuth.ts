@@ -4,6 +4,12 @@ import { getCurrentWorkspaceId } from "../stores/workspaceStore";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
+/**
+ * OAuth 1.0a providers that require a different flow
+ * These providers use request tokens instead of authorization codes
+ */
+const OAUTH1_PROVIDERS = ["evernote"];
+
 interface OAuthProvider {
     name: string;
     displayName: string;
@@ -76,6 +82,10 @@ export function useOAuth() {
      * Opens a popup window with the OAuth authorization URL,
      * then waits for the callback to post a message back.
      *
+     * Supports both OAuth 2.0 and OAuth 1.0a providers:
+     * - OAuth 2.0: Uses /oauth/:provider/authorize
+     * - OAuth 1.0a: Uses /oauth1/:provider/request-token
+     *
      * @param provider - The OAuth provider name
      * @param settings - Optional provider-specific settings (e.g., subdomain for Zendesk)
      */
@@ -91,8 +101,14 @@ export function useOAuth() {
                 throw new Error("Not authenticated. Please log in first.");
             }
 
+            // Determine the correct endpoint based on OAuth version
+            const isOAuth1 = OAUTH1_PROVIDERS.includes(provider.toLowerCase());
+            const endpoint = isOAuth1
+                ? `${API_BASE_URL}/oauth1/${provider}/request-token`
+                : `${API_BASE_URL}/oauth/${provider}/authorize`;
+
             // Build URL with optional settings as query params
-            const url = new URL(`${API_BASE_URL}/oauth/${provider}/authorize`);
+            const url = new URL(endpoint);
             if (settings) {
                 Object.entries(settings).forEach(([key, value]) => {
                     if (value) {

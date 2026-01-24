@@ -28,6 +28,7 @@ import { integrationRoutes } from "./routes/integrations";
 import { knowledgeBaseRoutes } from "./routes/knowledge-bases";
 import { logRoutes } from "./routes/logs";
 import { oauthRoutes } from "./routes/oauth";
+import { oauth1Routes } from "./routes/oauth1";
 import { personaInstanceRoutes } from "./routes/persona-instances";
 import { personaRoutes } from "./routes/personas";
 import { publicChatInterfaceRoutes } from "./routes/public/chat-interfaces";
@@ -69,12 +70,25 @@ export async function buildServer() {
                 callback(null, true);
                 return;
             }
-            // Allow all origins - security is handled by route-level auth (JWT, API keys)
-            callback(null, true);
+            // Return the actual origin string (required when credentials: true)
+            // Security is handled by route-level auth (JWT, API keys)
+            callback(null, origin);
         },
         // Credentials (cookies) are needed for authenticated routes from known origins
         credentials: true,
-        methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"]
+        methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+        // Explicitly allow headers used by the frontend
+        allowedHeaders: [
+            "Content-Type",
+            "Authorization",
+            "X-Session-ID",
+            "X-Workspace-Id",
+            "X-Requested-With",
+            "Accept",
+            "Origin"
+        ],
+        // Expose headers that the frontend may need to read
+        exposedHeaders: ["X-Correlation-ID"]
     });
 
     // Register JWT
@@ -156,6 +170,7 @@ export async function buildServer() {
     await fastify.register(integrationRoutes, { prefix: "/integrations" });
     await fastify.register(logRoutes);
     await fastify.register(oauthRoutes, { prefix: "/oauth" });
+    await fastify.register(oauth1Routes, { prefix: "/oauth1" });
     await fastify.register(knowledgeBaseRoutes, { prefix: "/knowledge-bases" });
     await fastify.register(agentRoutes, { prefix: "/agents" });
     await fastify.register(apiKeyRoutes, { prefix: "/api-keys" });
