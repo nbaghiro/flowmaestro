@@ -360,6 +360,18 @@ export const config = {
             consumerKey: process.env.EVERNOTE_CONSUMER_KEY || "",
             consumerSecret: process.env.EVERNOTE_CONSUMER_SECRET || "",
             sandbox: process.env.EVERNOTE_SANDBOX === "true"
+        },
+
+        // Pipedrive
+        pipedrive: {
+            clientId: process.env.PIPEDRIVE_CLIENT_ID || "",
+            clientSecret: process.env.PIPEDRIVE_CLIENT_SECRET || ""
+        },
+
+        // Close CRM
+        close: {
+            clientId: process.env.CLOSE_CLIENT_ID || "",
+            clientSecret: process.env.CLOSE_CLIENT_SECRET || ""
         }
     }
 };
@@ -418,6 +430,8 @@ export function getOAuthRedirectUri(provider: string): string {
         discord: "/oauth/discord/callback",
         asana: "/oauth/asana/callback",
         monday: "/oauth/monday/callback",
+        pipedrive: "/oauth/pipedrive/callback",
+        close: "/oauth/close/callback",
 
         // OAuth 1.0a providers
         evernote: "/oauth1/evernote/callback"
@@ -476,7 +490,9 @@ export function getOAuthCredentials(provider: string): { clientId: string; clien
         reddit: "reddit",
         discord: "discord",
         asana: "asana",
-        monday: "monday"
+        monday: "monday",
+        pipedrive: "pipedrive",
+        close: "close"
     };
 
     const configKey = providerMap[provider];

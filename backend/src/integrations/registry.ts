@@ -557,5 +557,33 @@ const evernoteEntry: ProviderRegistryEntry = {
 
 providerRegistry.register(evernoteEntry);
 
+// Register Pipedrive provider
+const pipedriveEntry: ProviderRegistryEntry = {
+    name: "pipedrive",
+    displayName: "Pipedrive",
+    authMethod: "oauth2",
+    category: "crm",
+    loader: async () => {
+        const { PipedriveProvider } = await import("./providers/pipedrive/PipedriveProvider");
+        return new PipedriveProvider();
+    }
+};
+
+providerRegistry.register(pipedriveEntry);
+
+// Register Close CRM provider
+const closeEntry: ProviderRegistryEntry = {
+    name: "close",
+    displayName: "Close",
+    authMethod: "oauth2",
+    category: "crm",
+    loader: async () => {
+        const { CloseProvider } = await import("./providers/close/CloseProvider");
+        return new CloseProvider();
+    }
+};
+
+providerRegistry.register(closeEntry);
+
 // Export for use in application
 export { providerRegistry };

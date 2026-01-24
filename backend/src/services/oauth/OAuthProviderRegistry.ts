@@ -2360,6 +2360,126 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
         revokeUrl: "https://discord.com/api/oauth2/token/revoke",
         refreshable: true,
         pkceEnabled: false
+    },
+
+    pipedrive: {
+        name: "pipedrive",
+        displayName: "Pipedrive",
+        authUrl: "https://oauth.pipedrive.com/oauth/authorize",
+        tokenUrl: "https://oauth.pipedrive.com/oauth/token",
+        scopes: [
+            "base",
+            "deals:full",
+            "contacts:full",
+            "organizations:full",
+            "leads:full",
+            "activities:full",
+            "products:read"
+        ],
+        clientId: config.oauth.pipedrive.clientId,
+        clientSecret: config.oauth.pipedrive.clientSecret,
+        redirectUri: getOAuthRedirectUri("pipedrive"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://api.pipedrive.com/v1/users/me", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const result = (await response.json()) as {
+                    success: boolean;
+                    data?: {
+                        id?: number;
+                        name?: string;
+                        email?: string;
+                        company_id?: number;
+                        company_name?: string;
+                    };
+                };
+
+                if (!result.success || !result.data) {
+                    throw new Error("Failed to get user info from Pipedrive");
+                }
+
+                return {
+                    userId: String(result.data.id || "unknown"),
+                    name: result.data.name || "Pipedrive User",
+                    email: result.data.email || "unknown@pipedrive",
+                    companyId: result.data.company_id,
+                    companyName: result.data.company_name,
+                    user: result.data.name || result.data.email || "Pipedrive User"
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to fetch Pipedrive user info");
+                return {
+                    userId: "unknown",
+                    name: "Pipedrive User",
+                    email: "unknown@pipedrive",
+                    user: "Pipedrive User"
+                };
+            }
+        },
+        refreshable: true,
+        pkceEnabled: false
+    },
+
+    close: {
+        name: "close",
+        displayName: "Close",
+        authUrl: "https://app.close.com/oauth2/authorize/",
+        tokenUrl: "https://api.close.com/oauth2/token/",
+        scopes: ["all.full_access", "offline_access"],
+        clientId: config.oauth.close.clientId,
+        clientSecret: config.oauth.close.clientSecret,
+        redirectUri: getOAuthRedirectUri("close"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://api.close.com/api/v1/me/", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    id?: string;
+                    email?: string;
+                    first_name?: string;
+                    last_name?: string;
+                    organizations?: Array<{ id: string; name: string }>;
+                };
+
+                const fullName =
+                    [data.first_name, data.last_name].filter(Boolean).join(" ") || "Close User";
+
+                return {
+                    userId: data.id || "unknown",
+                    name: fullName,
+                    email: data.email || "unknown@close",
+                    organizations: data.organizations,
+                    user: fullName
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to fetch Close user info");
+                return {
+                    userId: "unknown",
+                    name: "Close User",
+                    email: "unknown@close",
+                    user: "Close User"
+                };
+            }
+        },
+        revokeUrl: "https://api.close.com/oauth2/revoke/",
+        refreshable: true,
+        pkceEnabled: false
     }
 };
 

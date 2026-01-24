@@ -131,7 +131,9 @@ export const PROVIDER_LOGO_DOMAINS: Record<string, string> = {
     elevenlabs: "elevenlabs.io",
     xai: "x.ai",
     trello: "trello.com",
-    evernote: "evernote.com"
+    evernote: "evernote.com",
+    pipedrive: "pipedrive.com",
+    close: "close.com"
 };
 
 /**
@@ -449,11 +451,10 @@ export const ALL_PROVIDERS: Provider[] = [
     {
         provider: "pipedrive",
         displayName: "Pipedrive",
-        description: "Manage sales pipelines",
+        description: "Manage sales pipelines, deals, contacts, and activities",
         logoUrl: getBrandLogo("pipedrive.com"),
         category: "CRM & Sales",
-        methods: ["api_key", "oauth2"],
-        comingSoon: true
+        methods: ["api_key", "oauth2"]
     },
 
     // E-commerce & Payments
@@ -1139,13 +1140,12 @@ export const ALL_PROVIDERS: Provider[] = [
         comingSoon: true
     },
     {
-        provider: "closeio",
+        provider: "close",
         displayName: "Close",
-        description: "Sales engagement CRM",
+        description: "Sales engagement CRM for managing leads, contacts, and opportunities",
         logoUrl: getBrandLogo("close.com"),
         category: "CRM & Sales",
-        methods: ["api_key"],
-        comingSoon: true
+        methods: ["api_key", "oauth2"]
     },
     {
         provider: "capsule",
