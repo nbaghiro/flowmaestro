@@ -16,7 +16,7 @@ import { useRef, useEffect, useState } from "react";
 import { cn } from "../lib/utils";
 import { useTriggerStore } from "../stores/triggerStore";
 import { useWorkflowStore } from "../stores/workflowStore";
-import { ExecutionPanelContent } from "./execution/ExecutionPanelContent";
+import { ExecutionPanelContent } from "./execution/panels/ExecutionPanelContent";
 
 interface ExecutionPanelProps {
     workflowId: string;

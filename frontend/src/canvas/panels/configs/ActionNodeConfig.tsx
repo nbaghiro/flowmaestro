@@ -15,7 +15,7 @@ import { FormField, FormSection } from "../../../components/common/FormField";
 import { Input } from "../../../components/common/Input";
 import { Select } from "../../../components/common/Select";
 import { Textarea } from "../../../components/common/Textarea";
-import { NewConnectionDialog } from "../../../components/connections/NewConnectionDialog";
+import { NewConnectionDialog } from "../../../components/connections/dialogs/NewConnectionDialog";
 import { OutputSettingsSection } from "../../../components/OutputSettingsSection";
 import { cn } from "../../../lib/utils";
 import { useConnectionStore } from "../../../stores/connectionStore";

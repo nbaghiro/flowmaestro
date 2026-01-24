@@ -17,10 +17,10 @@ import { useFolderStore } from "../../stores/folderStore";
 import { useUIPreferencesStore } from "../../stores/uiPreferencesStore";
 import { ConfirmDialog } from "../common/ConfirmDialog";
 import { Tooltip } from "../common/Tooltip";
-import { CreateFolderDialog } from "../folders/CreateFolderDialog";
-import { DuplicateItemWarningDialog } from "../folders/DuplicateItemWarningDialog";
+import { CreateFolderDialog } from "../folders/dialogs/CreateFolderDialog";
+import { DuplicateItemWarningDialog } from "../folders/dialogs/DuplicateItemWarningDialog";
 import { SidebarFolderItem } from "./SidebarFolderItem";
-import type { DuplicateItemWarning } from "../folders/DuplicateItemWarningDialog";
+import type { DuplicateItemWarning } from "../folders/dialogs/DuplicateItemWarningDialog";
 
 interface SidebarFoldersProps {
     isCollapsed: boolean;

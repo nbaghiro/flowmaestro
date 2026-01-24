@@ -21,8 +21,8 @@ import {
     FolderBreadcrumb,
     FolderGridSection
 } from "../components/folders";
-import { DuplicateItemWarningDialog } from "../components/folders/DuplicateItemWarningDialog";
-import { CreateKnowledgeBaseModal } from "../components/knowledgebases";
+import { DuplicateItemWarningDialog } from "../components/folders/dialogs/DuplicateItemWarningDialog";
+import { CreateKnowledgeBaseModal } from "../components/knowledge-bases";
 import { useFolderManagement } from "../hooks/useFolderManagement";
 import { useSearch } from "../hooks/useSearch";
 import { getKnowledgeBaseStats, type KnowledgeBaseStats, type KnowledgeBase } from "../lib/api";

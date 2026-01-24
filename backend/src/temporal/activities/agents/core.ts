@@ -76,6 +76,8 @@ export interface ExecuteToolCallInput {
     userId: string;
     workspaceId: string;
     agentId?: string;
+    /** Additional metadata for tool context (e.g., personaInstanceId) */
+    metadata?: Record<string, unknown>;
 }
 
 /**
@@ -226,6 +228,8 @@ interface ExecuteBuiltInToolInput {
     userId: string;
     workspaceId: string;
     executionId?: string;
+    /** Additional metadata for tool context (e.g., personaInstanceId) */
+    metadata?: Record<string, unknown>;
 }
 
 interface ExecuteSearchThreadMemoryInput {
@@ -393,7 +397,7 @@ export async function callLLM(input: CallLLMInput): Promise<LLMResponse> {
 // =============================================================================
 
 export async function executeToolCall(input: ExecuteToolCallInput): Promise<JsonObject> {
-    const { toolCall, availableTools, userId, workspaceId, agentId, executionId } = input;
+    const { toolCall, availableTools, userId, workspaceId, agentId, executionId, metadata } = input;
 
     // Find tool definition
     const tool = availableTools.find((t) => t.name === toolCall.name);
@@ -450,7 +454,8 @@ export async function executeToolCall(input: ExecuteToolCallInput): Promise<Json
                 arguments: validatedArgs,
                 userId,
                 workspaceId,
-                executionId
+                executionId,
+                metadata
             });
         default:
             throw new Error(`Unknown tool type: ${tool.type}`);
@@ -1885,7 +1890,7 @@ async function executeFunctionTool(input: ExecuteFunctionToolInput): Promise<Jso
 }
 
 async function executeBuiltInTool(input: ExecuteBuiltInToolInput): Promise<JsonObject> {
-    const { tool, arguments: args, userId, workspaceId, executionId } = input;
+    const { tool, arguments: args, userId, workspaceId, executionId, metadata } = input;
 
     activityLogger.info("Executing built-in tool", {
         toolName: tool.name,
@@ -1893,12 +1898,16 @@ async function executeBuiltInTool(input: ExecuteBuiltInToolInput): Promise<JsonO
         workspaceId
     });
 
+    // Determine execution mode based on metadata
+    const mode = metadata?.personaInstanceId ? "persona" : "agent";
+
     // Create execution context for the tools module
     const context: ToolExecutionContext = {
         userId,
         workspaceId,
-        mode: "agent",
-        traceId: executionId
+        mode,
+        traceId: executionId,
+        metadata
     };
 
     // Execute via the tools module

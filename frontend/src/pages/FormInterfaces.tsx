@@ -23,7 +23,7 @@ import {
     FolderBreadcrumb,
     FolderGridSection
 } from "../components/folders";
-import { DuplicateItemWarningDialog } from "../components/folders/DuplicateItemWarningDialog";
+import { DuplicateItemWarningDialog } from "../components/folders/dialogs/DuplicateItemWarningDialog";
 import { CreateFormInterfaceDialog } from "../components/forms/CreateFormInterfaceDialog";
 import { useFolderManagement } from "../hooks/useFolderManagement";
 import { useSearch } from "../hooks/useSearch";

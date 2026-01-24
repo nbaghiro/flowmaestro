@@ -7,6 +7,7 @@
 // Import all built-in tools
 import { audioTranscribeTool } from "./audio-transcribe";
 import { chartGenerateTool } from "./chart-generate";
+import { deliverableCreateTool } from "./deliverable-create";
 import { fileDownloadTool } from "./file-download";
 import { fileReadTool } from "./file-read";
 import { fileWriteTool } from "./file-write";
@@ -38,6 +39,7 @@ export const builtInTools: BuiltInTool[] = [
     fileReadTool,
     fileWriteTool,
     fileDownloadTool,
+    deliverableCreateTool,
 
     // Data tools
     chartGenerateTool,
@@ -104,6 +106,7 @@ export function isBuiltInToolName(name: string): boolean {
 // Re-export individual tools for direct import
 export { audioTranscribeTool } from "./audio-transcribe";
 export { chartGenerateTool } from "./chart-generate";
+export { deliverableCreateTool } from "./deliverable-create";
 export { fileDownloadTool } from "./file-download";
 export { fileReadTool } from "./file-read";
 export { fileWriteTool } from "./file-write";

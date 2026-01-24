@@ -15,15 +15,15 @@ import {
     ModelSection,
     InstructionsSection,
     ToolsSection,
-    LayoutPresetButtons
-} from "../components/agent-builder";
-import { AddBuiltinToolDialog } from "../components/agents/AddBuiltinToolDialog";
-import { AddKnowledgeBaseDialog } from "../components/agents/AddKnowledgeBaseDialog";
-import { AddMCPIntegrationDialog } from "../components/agents/AddMCPIntegrationDialog";
-import { AddWorkflowDialog } from "../components/agents/AddWorkflowDialog";
-import { AgentChat } from "../components/agents/AgentChat";
-import { ThreadChat } from "../components/agents/ThreadChat";
-import { ThreadList } from "../components/agents/ThreadList";
+    LayoutPresetButtons,
+    AddBuiltinToolDialog,
+    AddKnowledgeBaseDialog,
+    AddMCPIntegrationDialog,
+    AddWorkflowDialog,
+    AgentChat,
+    ThreadChat,
+    ThreadList
+} from "../components/agent";
 import { CreateChatInterfaceDialog } from "../components/chat/builder/CreateChatInterfaceDialog";
 import { Button } from "../components/common/Button";
 import { ConfirmDialog } from "../components/common/ConfirmDialog";
@@ -39,7 +39,7 @@ import { logger } from "../lib/logger";
 import { cn } from "../lib/utils";
 import { useAgentStore } from "../stores/agentStore";
 import { useConnectionStore } from "../stores/connectionStore";
-import type { AgentTab } from "../components/agent-builder";
+import type { AgentTab } from "../components/agent";
 import type { UpdateAgentRequest, AddToolRequest, Tool, KnowledgeBase, Agent } from "../lib/api";
 
 export function AgentBuilder() {

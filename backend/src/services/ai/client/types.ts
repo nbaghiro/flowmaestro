@@ -20,7 +20,8 @@ export type AIProvider =
     | "fal"
     | "runway"
     | "luma"
-    | "elevenlabs";
+    | "elevenlabs"
+    | "xai";
 
 /**
  * Configuration for a specific provider

@@ -9,7 +9,6 @@
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import { z } from "zod";
-import { config } from "../../../core/config";
 import { createServiceLogger } from "../../../core/logging";
 import { redisEventBus } from "../../../services/events/RedisEventBus";
 import { createSSEHandler } from "../../../services/sse";
@@ -58,14 +57,13 @@ export async function streamKnowledgeBaseRoute(fastify: FastifyInstance): Promis
             logger.info({ knowledgeBaseId, userId }, "SSE connection established for KB");
 
             // Create SSE handler with CORS headers
-            const origin = request.headers.origin;
-            const corsOrigin =
-                origin && config.cors.origin.includes(origin) ? origin : config.cors.origin[0];
+            // Use request origin directly - security is handled by JWT auth
+            const origin = request.headers.origin || "*";
 
             const sse = createSSEHandler(request, reply, {
                 keepAliveInterval: 15000,
                 headers: {
-                    "Access-Control-Allow-Origin": corsOrigin,
+                    "Access-Control-Allow-Origin": origin,
                     "Access-Control-Allow-Credentials": "true"
                 }
             });

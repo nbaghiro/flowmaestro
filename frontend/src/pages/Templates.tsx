@@ -6,11 +6,11 @@ import type { Template, TemplateCategory, CategoryInfo, AgentTemplate } from "@f
 import { TEMPLATE_CATEGORY_META } from "@flowmaestro/shared";
 import { Input } from "../components/common/Input";
 import { PageHeader } from "../components/common/PageHeader";
-import { AgentTemplateCard } from "../components/templates/AgentTemplateCard";
-import { AgentTemplatePreviewDialog } from "../components/templates/AgentTemplatePreviewDialog";
+import { AgentTemplateCard } from "../components/templates/cards/AgentTemplateCard";
+import { TemplateCard } from "../components/templates/cards/TemplateCard";
 import { CategoryFilter } from "../components/templates/CategoryFilter";
-import { TemplateCard } from "../components/templates/TemplateCard";
-import { TemplatePreviewDialog } from "../components/templates/TemplatePreviewDialog";
+import { AgentTemplatePreviewDialog } from "../components/templates/dialogs/AgentTemplatePreviewDialog";
+import { TemplatePreviewDialog } from "../components/templates/dialogs/TemplatePreviewDialog";
 import { TemplateTypeToggle, type TemplateType } from "../components/templates/TemplateTypeToggle";
 import {
     getTemplates,

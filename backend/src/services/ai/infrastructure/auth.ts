@@ -19,7 +19,8 @@ export const PROVIDER_ENV_VARS: Record<AIProvider, string> = {
     fal: "FAL_API_KEY",
     runway: "RUNWAY_API_KEY",
     luma: "LUMA_API_KEY",
-    elevenlabs: "ELEVENLABS_API_KEY"
+    elevenlabs: "ELEVENLABS_API_KEY",
+    xai: "XAI_API_KEY"
 };
 
 /**
@@ -116,7 +117,8 @@ export function getConfiguredProviders(
         "fal",
         "runway",
         "luma",
-        "elevenlabs"
+        "elevenlabs",
+        "xai"
     ];
 
     return allProviders.filter((provider) => hasApiKey(provider, providerConfigs));

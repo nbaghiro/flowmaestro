@@ -14,7 +14,7 @@ import { checkItemsInFolder } from "../lib/folderUtils";
 import { logger } from "../lib/logger";
 import { buildFolderTree, useFolderStore } from "../stores/folderStore";
 import { useUIPreferencesStore } from "../stores/uiPreferencesStore";
-import type { DuplicateItemWarning } from "../components/folders/DuplicateItemWarningDialog";
+import type { DuplicateItemWarning } from "../components/folders/dialogs/DuplicateItemWarningDialog";
 
 export interface UseFolderManagementOptions {
     /** The item type this folder management is for */

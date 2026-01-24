@@ -11,7 +11,7 @@ import { Input } from "../../../components/common/Input";
 import { Select } from "../../../components/common/Select";
 import { Slider } from "../../../components/common/Slider";
 import { Textarea } from "../../../components/common/Textarea";
-import { ProviderConnectionDialog } from "../../../components/connections/ProviderConnectionDialog";
+import { ProviderConnectionDialog } from "../../../components/connections/dialogs/ProviderConnectionDialog";
 import { OutputSettingsSection } from "../../../components/OutputSettingsSection";
 import { useConnectionStore } from "../../../stores/connectionStore";
 

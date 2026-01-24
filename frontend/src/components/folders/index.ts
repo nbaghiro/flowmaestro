@@ -1,6 +1,8 @@
-export { FolderCard } from "./FolderCard";
-export { CreateFolderDialog } from "./CreateFolderDialog";
-export { MoveToFolderDialog } from "./MoveToFolderDialog";
+// Dialogs
+export { CreateFolderDialog, DuplicateItemWarningDialog, MoveToFolderDialog } from "./dialogs";
+
+// Components
 export { FolderBreadcrumb } from "./FolderBreadcrumb";
-export { FolderItemSection } from "./FolderItemSection";
+export { FolderCard } from "./FolderCard";
 export { FolderGridSection } from "./FolderGridSection";
+export { FolderItemSection } from "./FolderItemSection";

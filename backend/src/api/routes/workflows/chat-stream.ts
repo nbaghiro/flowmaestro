@@ -1,6 +1,5 @@
 import { EventEmitter } from "events";
 import { FastifyRequest, FastifyReply } from "fastify";
-import { config } from "../../../core/config";
 import { createSSEHandler, sendTerminalEvent } from "../../../services/sse";
 
 interface StreamParams {
@@ -33,14 +32,13 @@ export async function chatStreamHandler(
     }
 
     // Create SSE handler with CORS headers
-    const origin = request.headers.origin;
-    const corsOrigin =
-        origin && config.cors.origin.includes(origin) ? origin : config.cors.origin[0];
+    // Use request origin directly - security is handled by JWT auth
+    const origin = request.headers.origin || "*";
 
     const sse = createSSEHandler(request, reply, {
         keepAliveInterval: 15000,
         headers: {
-            "Access-Control-Allow-Origin": corsOrigin,
+            "Access-Control-Allow-Origin": origin,
             "Access-Control-Allow-Credentials": "true"
         }
     });

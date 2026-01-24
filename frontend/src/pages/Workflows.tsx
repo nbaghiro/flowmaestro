@@ -26,7 +26,7 @@ import {
     FolderBreadcrumb,
     FolderGridSection
 } from "../components/folders";
-import { DuplicateItemWarningDialog } from "../components/folders/DuplicateItemWarningDialog";
+import { DuplicateItemWarningDialog } from "../components/folders/dialogs/DuplicateItemWarningDialog";
 import { WorkflowGenerationChatPanel } from "../components/WorkflowGenerationChatPanel";
 import { useFolderManagement } from "../hooks/useFolderManagement";
 import { useSearch } from "../hooks/useSearch";

@@ -22,7 +22,7 @@ import {
     KBSettingsSection,
     SearchSection,
     UploadSection
-} from "../components/knowledgebases";
+} from "../components/knowledge-bases";
 import { logger } from "../lib/logger";
 import { streamKnowledgeBase } from "../lib/sse";
 import { useKnowledgeBaseStore } from "../stores/knowledgeBaseStore";

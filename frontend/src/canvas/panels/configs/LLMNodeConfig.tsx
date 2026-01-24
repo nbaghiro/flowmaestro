@@ -11,7 +11,7 @@ import { Input } from "../../../components/common/Input";
 import { LLMModelSelect } from "../../../components/common/LLMModelSelect";
 import { Slider } from "../../../components/common/Slider";
 import { VariableInput } from "../../../components/common/VariableInput";
-import { ProviderConnectionDialog } from "../../../components/connections/ProviderConnectionDialog";
+import { ProviderConnectionDialog } from "../../../components/connections/dialogs/ProviderConnectionDialog";
 import { OutputSettingsSection } from "../../../components/OutputSettingsSection";
 import { useConnectionStore } from "../../../stores/connectionStore";
 

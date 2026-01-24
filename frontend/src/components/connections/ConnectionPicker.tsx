@@ -6,7 +6,7 @@ import { cn } from "../../lib/utils";
 import { useConnectionStore } from "../../stores/connectionStore";
 import { Button } from "../common/Button";
 import { Select } from "../common/Select";
-import { NewConnectionDialog } from "./NewConnectionDialog";
+import { NewConnectionDialog } from "./dialogs/NewConnectionDialog";
 
 interface ConnectionPickerProps {
     provider: string;

@@ -39,7 +39,7 @@ export const KeyValuePairSchema = z.object({
  * LLM Node Configuration.
  */
 export const LLMNodeConfigSchema = z.object({
-    provider: z.enum(["openai", "anthropic", "google", "cohere", "huggingface"], {
+    provider: z.enum(["openai", "anthropic", "google", "cohere", "huggingface", "xai"], {
         required_error: "LLM provider is required. Please select an LLM connection.",
         invalid_type_error: "Invalid LLM provider"
     }),
@@ -601,6 +601,238 @@ export const URLNodeConfigSchema = z.object({
 export type URLNodeConfig = z.infer<typeof URLNodeConfigSchema>;
 
 // ============================================================================
+// BUILTIN TOOL NODE SCHEMAS
+// ============================================================================
+
+/**
+ * Chart Generation Node Configuration.
+ * Generates charts from data using Chart.js.
+ */
+export const ChartGenerationNodeConfigSchema = z.object({
+    chartType: z
+        .enum([
+            "bar",
+            "line",
+            "pie",
+            "scatter",
+            "area",
+            "donut",
+            "histogram",
+            "heatmap",
+            "horizontal_bar"
+        ])
+        .default("bar"),
+    dataSource: z.string().min(1, "Data source is required"),
+    dataLabels: z.string().optional(),
+    title: z.string().optional(),
+    subtitle: z.string().optional(),
+    xAxisLabel: z.string().optional(),
+    yAxisLabel: z.string().optional(),
+    width: z.number().int().min(200).max(2000).default(800),
+    height: z.number().int().min(200).max(2000).default(600),
+    theme: z.enum(["light", "dark"]).default("light"),
+    legend: z.union([z.boolean(), z.enum(["top", "bottom", "left", "right"])]).default("top"),
+    showGrid: z.boolean().default(true),
+    showValues: z.boolean().default(false),
+    filename: z.string().default("chart"),
+    outputVariable: OutputVariableSchema
+});
+
+export type ChartGenerationNodeConfig = z.infer<typeof ChartGenerationNodeConfigSchema>;
+
+/**
+ * Spreadsheet Generation Node Configuration.
+ * Generates Excel/CSV files from data.
+ */
+export const SpreadsheetGenerationNodeConfigSchema = z.object({
+    format: z.enum(["xlsx", "csv"]).default("xlsx"),
+    filename: z.string().default("spreadsheet"),
+    dataSource: z.string().min(1, "Data source is required"),
+    sheetName: z.string().max(31).default("Sheet1"),
+    headerBold: z.boolean().default(true),
+    headerBackgroundColor: z.string().optional(),
+    headerFontColor: z.string().optional(),
+    alternateRows: z.boolean().default(false),
+    freezeHeader: z.boolean().default(true),
+    outputVariable: OutputVariableSchema
+});
+
+export type SpreadsheetGenerationNodeConfig = z.infer<typeof SpreadsheetGenerationNodeConfigSchema>;
+
+/**
+ * Audio Transcription Node Configuration.
+ * Transcribes audio using OpenAI Whisper.
+ */
+export const AudioTranscriptionNodeConfigSchema = z.object({
+    audioSource: z.string().min(1, "Audio source is required"),
+    model: z.enum(["whisper-1"]).default("whisper-1"),
+    task: z.enum(["transcribe", "translate"]).default("transcribe"),
+    language: z.string().length(2).optional(),
+    outputFormat: z.enum(["text", "json", "srt", "vtt"]).default("text"),
+    timestamps: z.boolean().default(false),
+    prompt: z.string().max(224).optional(),
+    temperature: z.number().min(0).max(1).default(0),
+    outputVariable: OutputVariableSchema
+});
+
+export type AudioTranscriptionNodeConfig = z.infer<typeof AudioTranscriptionNodeConfigSchema>;
+
+/**
+ * OCR Extraction Node Configuration.
+ * Extracts text from images using Tesseract.
+ */
+export const OCRExtractionNodeConfigSchema = z.object({
+    imageSource: z.string().min(1, "Image source is required"),
+    languages: z.array(z.string()).default(["eng"]),
+    psm: z.number().int().min(0).max(13).default(3),
+    outputFormat: z.enum(["text", "hocr", "tsv", "json"]).default("text"),
+    confidenceThreshold: z.number().min(0).max(100).default(0),
+    preprocessing: z
+        .object({
+            grayscale: z.boolean().default(true),
+            denoise: z.boolean().default(false),
+            deskew: z.boolean().default(false),
+            threshold: z.boolean().default(false)
+        })
+        .optional(),
+    outputVariable: OutputVariableSchema
+});
+
+export type OCRExtractionNodeConfig = z.infer<typeof OCRExtractionNodeConfigSchema>;
+
+/**
+ * PDF Generation Node Configuration.
+ * Generates PDF documents from markdown or HTML content.
+ */
+export const PdfGenerationNodeConfigSchema = z.object({
+    content: z.string().min(1, "PDF content is required"),
+    format: z.enum(["markdown", "html"]).default("markdown"),
+    filename: z.string().default("document"),
+    pageSize: z.enum(["a4", "letter", "legal"]).default("a4"),
+    orientation: z.enum(["portrait", "landscape"]).default("portrait"),
+    marginTop: z.string().default("20mm"),
+    marginRight: z.string().default("20mm"),
+    marginBottom: z.string().default("20mm"),
+    marginLeft: z.string().default("20mm"),
+    headerText: z.string().optional(),
+    footerText: z.string().optional(),
+    includePageNumbers: z.boolean().default(false),
+    outputVariable: OutputVariableSchema
+});
+
+export type PdfGenerationNodeConfig = z.infer<typeof PdfGenerationNodeConfigSchema>;
+
+/**
+ * Screenshot Capture Node Configuration.
+ * Captures screenshots of web pages.
+ */
+export const ScreenshotCaptureNodeConfigSchema = z.object({
+    url: z.string().min(1, "URL is required"),
+    fullPage: z.boolean().default(false),
+    width: z.number().int().min(320).max(3840).default(1280),
+    height: z.number().int().min(240).max(2160).default(720),
+    deviceScale: z.number().min(0.5).max(3).default(1),
+    format: z.enum(["png", "jpeg", "webp"]).default("png"),
+    quality: z.number().int().min(1).max(100).default(80),
+    delay: z.number().int().min(0).max(30000).default(0),
+    selector: z.string().optional(),
+    darkMode: z.boolean().default(false),
+    timeout: z.number().int().min(5000).max(120000).default(30000),
+    filename: z.string().optional(),
+    outputVariable: OutputVariableSchema
+});
+
+export type ScreenshotCaptureNodeConfig = z.infer<typeof ScreenshotCaptureNodeConfigSchema>;
+
+/**
+ * Web Search Node Configuration.
+ * Performs web searches using search APIs.
+ */
+export const WebSearchNodeConfigSchema = z.object({
+    query: z.string().min(1, "Search query is required"),
+    maxResults: z.number().int().min(1).max(20).default(5),
+    searchType: z.enum(["general", "news", "images"]).default("general"),
+    outputVariable: OutputVariableSchema
+});
+
+export type WebSearchNodeConfig = z.infer<typeof WebSearchNodeConfigSchema>;
+
+/**
+ * Web Browse Node Configuration.
+ * Fetches and reads web page content.
+ */
+export const WebBrowseNodeConfigSchema = z.object({
+    url: z.string().min(1, "URL is required"),
+    extractText: z.boolean().default(true),
+    maxLength: z.number().int().min(100).max(50000).default(10000),
+    outputVariable: OutputVariableSchema
+});
+
+export type WebBrowseNodeConfig = z.infer<typeof WebBrowseNodeConfigSchema>;
+
+/**
+ * PDF Extract Node Configuration.
+ * Extracts text and metadata from PDF documents.
+ */
+export const PdfExtractNodeConfigSchema = z.object({
+    path: z.string().min(1, "PDF file path is required"),
+    extractText: z.boolean().default(true),
+    extractMetadata: z.boolean().default(true),
+    pageStart: z.number().int().min(1).optional(),
+    pageEnd: z.number().int().min(1).optional(),
+    specificPages: z.array(z.number().int().positive()).optional(),
+    outputFormat: z.enum(["text", "markdown", "json"]).default("text"),
+    password: z.string().optional(),
+    outputVariable: OutputVariableSchema
+});
+
+export type PdfExtractNodeConfig = z.infer<typeof PdfExtractNodeConfigSchema>;
+
+/**
+ * File Download Node Configuration.
+ * Downloads files from URLs.
+ */
+export const FileDownloadNodeConfigSchema = z.object({
+    url: z.string().min(1, "URL is required"),
+    filename: z.string().optional(),
+    maxSize: z.number().int().min(1).max(100000000).default(52428800),
+    timeout: z.number().int().min(5000).max(300000).default(60000),
+    followRedirects: z.boolean().default(true),
+    allowedContentTypes: z.array(z.string()).optional(),
+    outputVariable: OutputVariableSchema
+});
+
+export type FileDownloadNodeConfig = z.infer<typeof FileDownloadNodeConfigSchema>;
+
+/**
+ * File Read Node Configuration.
+ * Reads files from the execution workspace.
+ */
+export const FileReadNodeConfigSchema = z.object({
+    path: z.string().min(1, "File path is required"),
+    encoding: z.enum(["utf-8", "base64", "binary"]).default("utf-8"),
+    maxSize: z.number().int().min(1).max(10000000).default(1000000),
+    outputVariable: OutputVariableSchema
+});
+
+export type FileReadNodeConfig = z.infer<typeof FileReadNodeConfigSchema>;
+
+/**
+ * File Write Node Configuration.
+ * Writes files to the execution workspace.
+ */
+export const FileWriteNodeConfigSchema = z.object({
+    path: z.string().min(1, "File path is required"),
+    content: z.string().min(1, "Content is required"),
+    encoding: z.enum(["utf-8", "base64"]).default("utf-8"),
+    createDirectories: z.boolean().default(true),
+    overwrite: z.boolean().default(true),
+    outputVariable: OutputVariableSchema
+});
+
+export type FileWriteNodeConfig = z.infer<typeof FileWriteNodeConfigSchema>;
+
+// ============================================================================
 // VALIDATION UTILITIES
 // ============================================================================
 
@@ -712,7 +944,20 @@ export const NodeSchemaRegistry: Record<string, z.ZodSchema> = {
     // Control
     input: InputNodeConfigSchema,
     files: FilesNodeConfigSchema,
-    url: URLNodeConfigSchema
+    url: URLNodeConfigSchema,
+    // Builtin tool nodes
+    chartGeneration: ChartGenerationNodeConfigSchema,
+    spreadsheetGeneration: SpreadsheetGenerationNodeConfigSchema,
+    audioTranscription: AudioTranscriptionNodeConfigSchema,
+    ocrExtraction: OCRExtractionNodeConfigSchema,
+    pdfGeneration: PdfGenerationNodeConfigSchema,
+    screenshotCapture: ScreenshotCaptureNodeConfigSchema,
+    webSearch: WebSearchNodeConfigSchema,
+    webBrowse: WebBrowseNodeConfigSchema,
+    pdfExtract: PdfExtractNodeConfigSchema,
+    fileDownload: FileDownloadNodeConfigSchema,
+    fileRead: FileReadNodeConfigSchema,
+    fileWrite: FileWriteNodeConfigSchema
 };
 
 /**

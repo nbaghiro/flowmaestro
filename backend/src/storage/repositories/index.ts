@@ -16,3 +16,6 @@ export * from "./WorkspaceRepository";
 export * from "./WorkspaceMemberRepository";
 export * from "./WorkspaceInvitationRepository";
 export * from "./WorkspaceCreditRepository";
+export * from "./PersonaDefinitionRepository";
+export * from "./PersonaInstanceRepository";
+export * from "./PersonaTaskTemplateRepository";

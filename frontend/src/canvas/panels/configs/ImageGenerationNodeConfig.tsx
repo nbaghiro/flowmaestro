@@ -20,7 +20,7 @@ import { FormField, FormSection } from "../../../components/common/FormField";
 import { Input } from "../../../components/common/Input";
 import { Select } from "../../../components/common/Select";
 import { Textarea } from "../../../components/common/Textarea";
-import { ProviderConnectionDialog } from "../../../components/connections/ProviderConnectionDialog";
+import { ProviderConnectionDialog } from "../../../components/connections/dialogs/ProviderConnectionDialog";
 import { OutputSettingsSection } from "../../../components/OutputSettingsSection";
 import { useConnectionStore } from "../../../stores/connectionStore";
 

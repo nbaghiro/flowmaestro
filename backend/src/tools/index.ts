@@ -94,19 +94,30 @@ export { executeTool, getAllToolsForUser, getToolsForAgent } from "./executor";
 // Testing utilities
 export {
     createTestContext,
+    createMockContext,
     testTool,
     testToolValidation,
+    testInvalidInput,
     assertions,
     assertSuccess,
     assertFailure,
+    assertError,
     assertErrorCode,
     assertDataMatches,
     assertHasMetadata,
     assertCreditCost,
+    assertToolProperties,
     createMockTool,
     createMockResult,
+    isPythonAvailable,
+    getPythonVersion,
+    requirePython,
+    validatePythonSyntax,
+    assertPythonCodeContains,
+    assertValidPythonSyntax,
+    assertValidPythonCodeContains,
     createToolTestSuite,
     ToolTestSuite
-} from "./testing";
+} from "./builtin/__tests__/test-helpers";
 
-export type { TestContextOptions } from "./testing";
+export type { TestContextOptions } from "./builtin/__tests__/test-helpers";

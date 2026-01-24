@@ -50,6 +50,9 @@ export interface ToolExecutionContext {
 
     /** Trace/correlation ID for logging and file isolation */
     traceId?: string;
+
+    /** Additional metadata for specific contexts (e.g., personaInstanceId) */
+    metadata?: Record<string, unknown>;
 }
 
 /**

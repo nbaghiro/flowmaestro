@@ -32,7 +32,8 @@ import {
     AnthropicTextProvider,
     GoogleTextProvider,
     CohereTextProvider,
-    HuggingFaceTextProvider
+    HuggingFaceTextProvider,
+    XAITextProvider
 } from "../providers/text/index";
 import {
     ReplicateVideoProvider,
@@ -141,6 +142,7 @@ export class AIClient {
             "huggingface",
             (logger) => new HuggingFaceTextProvider(logger)
         );
+        this.registry.registerTextProvider("xai", (logger) => new XAITextProvider(logger));
 
         // Embedding providers
         this.registry.registerEmbeddingProvider(

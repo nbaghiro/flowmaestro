@@ -6,8 +6,8 @@ import { FormField, FormSection } from "../../../components/common/FormField";
 import { Input } from "../../../components/common/Input";
 import { Select } from "../../../components/common/Select";
 import { Textarea } from "../../../components/common/Textarea";
-import { NewConnectionDialog } from "../../../components/connections/NewConnectionDialog";
-import { ProviderConnectionDialog } from "../../../components/connections/ProviderConnectionDialog";
+import { NewConnectionDialog } from "../../../components/connections/dialogs/NewConnectionDialog";
+import { ProviderConnectionDialog } from "../../../components/connections/dialogs/ProviderConnectionDialog";
 import { OutputSettingsSection } from "../../../components/OutputSettingsSection";
 import {
     getProviderOperations,

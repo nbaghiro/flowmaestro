@@ -27,7 +27,7 @@ function RouterNode({ data, selected }: NodeProps<RouterNodeData>) {
         if (nodeId) {
             updateNodeInternals(nodeId);
         }
-    }, [connectorLayout, nodeId, updateNodeInternals]);
+    }, [connectorLayout, nodeId, updateNodeInternals, data.routes]);
 
     const provider = data.provider || "OpenAI";
     const model = data.model || "gpt-4";
@@ -55,12 +55,12 @@ function RouterNode({ data, selected }: NodeProps<RouterNodeData>) {
                         position={inputPosition}
                         className="!w-2.5 !h-2.5 !bg-white !border-2 !border-border !shadow-sm"
                     />
-                    {Array.from({ length: Math.min(routeCount, 5) }).map((_, i) => (
+                    {(data.routes || []).slice(0, 5).map((route, i) => (
                         <Handle
-                            key={i}
+                            key={route.value}
                             type="source"
                             position={outputPosition}
-                            id={`route-${i}`}
+                            id={route.value}
                             className="!w-2.5 !h-2.5 !bg-white !border-2 !border-border !shadow-sm"
                             style={
                                 isHorizontal

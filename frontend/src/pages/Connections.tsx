@@ -4,8 +4,8 @@ import { ALL_PROVIDERS, type Provider } from "@flowmaestro/shared";
 import { Input } from "../components/common/Input";
 import { PageHeader } from "../components/common/PageHeader";
 import { Select } from "../components/common/Select";
-import { ConnectionDetailsDialog } from "../components/connections/ConnectionDetailsDialog";
-import { NewConnectionDialog } from "../components/connections/NewConnectionDialog";
+import { ConnectionDetailsDialog } from "../components/connections/dialogs/ConnectionDetailsDialog";
+import { NewConnectionDialog } from "../components/connections/dialogs/NewConnectionDialog";
 import { useConnectionStore } from "../stores/connectionStore";
 import type { Connection } from "../lib/api";
 

@@ -8,7 +8,7 @@ import { useState, useEffect, useCallback } from "react";
 import { getTriggers } from "../../lib/api";
 import { logger } from "../../lib/logger";
 import { useTriggerStore } from "../../stores/triggerStore";
-import { CreateTriggerDialog } from "./CreateTriggerDialog";
+import { CreateTriggerDialog } from "./dialogs/CreateTriggerDialog";
 import { TriggerCard } from "./TriggerCard";
 
 interface TriggerPanelContentProps {

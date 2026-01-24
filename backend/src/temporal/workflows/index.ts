@@ -43,6 +43,8 @@ export {
 // Persona orchestrator workflow (background execution)
 export {
     personaOrchestratorWorkflow,
+    personaUserMessageSignal,
+    skipClarificationSignal,
     type PersonaOrchestratorInput,
     type PersonaOrchestratorResult
 } from "./persona-orchestrator";

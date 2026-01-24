@@ -2,7 +2,7 @@ import { LucideIcon, GripHorizontal, ArrowLeftRight, AlertTriangle } from "lucid
 import { ReactNode, useState, useEffect } from "react";
 import { Handle, Position, useNodeId, useStore, useUpdateNodeInternals } from "reactflow";
 import { Tooltip } from "../../components/common/Tooltip";
-import { NodeExecutionPopover } from "../../components/execution/NodeExecutionPopover";
+import { NodeExecutionPopover } from "../../components/execution/modals/NodeExecutionPopover";
 import { cn } from "../../lib/utils";
 import {
     useWorkflowStore,
