@@ -152,18 +152,37 @@ function CreditProgressBar({ targetCollapsed }: { targetCollapsed: boolean }) {
         </div>
     );
 
+    // Collapsed view: icon with progress bar below
+    if (targetCollapsed) {
+        return (
+            <div className="px-2 py-2">
+                <Tooltip content={tooltipContent} delay={200} position="right">
+                    <div className="flex flex-col items-center gap-2.5 px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors cursor-default">
+                        <Zap className="w-5 h-5" />
+                        <div
+                            className={cn("w-6 h-1 rounded-full overflow-hidden", getProgressBg())}
+                        >
+                            <div
+                                className={cn(
+                                    "h-full rounded-full transition-all",
+                                    getProgressColor()
+                                )}
+                                style={{ width: `${Math.min(percentageRemaining, 100)}%` }}
+                            />
+                        </div>
+                    </div>
+                </Tooltip>
+            </div>
+        );
+    }
+
+    // Expanded view: full layout with text
     return (
         <div className="px-2 py-2">
             <Tooltip content={tooltipContent} delay={200} position="right">
                 <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors cursor-default overflow-hidden">
                     <Zap className="w-5 h-5 flex-shrink-0" />
-                    <div
-                        className={cn(
-                            "flex-1 min-w-0",
-                            COLLAPSE_TRANSITION,
-                            targetCollapsed ? COLLAPSED_TEXT : "opacity-100 max-w-[200px]"
-                        )}
-                    >
+                    <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-2.5 whitespace-nowrap">
                             <span className="text-sm font-medium">Credits</span>
                             <span className="text-xs tabular-nums">
@@ -432,8 +451,15 @@ export function AppSidebar() {
                                                 </Tooltip>
                                             )}
                                         </div>
-                                        {/* Separate theme toggle item when collapsed */}
-                                        {isCollapsed && (
+                                        {/* Separate theme toggle item when collapsed - always rendered with animation */}
+                                        <div
+                                            className={cn(
+                                                "overflow-hidden transition-all duration-300",
+                                                isCollapsed
+                                                    ? "max-h-12 opacity-100"
+                                                    : "max-h-0 opacity-0"
+                                            )}
+                                        >
                                             <Tooltip
                                                 content={getThemeTooltip()}
                                                 delay={200}
@@ -446,7 +472,7 @@ export function AppSidebar() {
                                                     <ThemeIcon className="w-5 h-5 flex-shrink-0" />
                                                 </button>
                                             </Tooltip>
-                                        )}
+                                        </div>
                                     </div>
                                 );
                             }
