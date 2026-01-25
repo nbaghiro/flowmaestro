@@ -384,51 +384,69 @@ export function AppSidebar() {
                             const isAccountItem = item.path === "/account";
                             const ThemeIcon = getThemeIcon();
 
-                            // Account row with theme toggle
+                            // Account row with theme toggle (expanded) or separate theme item (collapsed)
                             if (isAccountItem) {
                                 return (
-                                    <div key={item.path}>
-                                        <div className="flex items-center gap-1 overflow-hidden">
-                                            <Tooltip
-                                                content={item.label}
-                                                delay={200}
-                                                position="right"
-                                                disabled={!isCollapsed}
-                                            >
-                                                <Link
-                                                    to={item.path}
-                                                    className={cn(
-                                                        "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors relative flex-1 overflow-hidden",
-                                                        active
-                                                            ? "bg-primary/10 text-primary"
-                                                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                                                    )}
+                                    <div key={item.path} className="space-y-1">
+                                        {/* Account link with theme toggle pinned to right when expanded */}
+                                        <div className="flex items-center gap-1">
+                                            <div className="flex-1">
+                                                <Tooltip
+                                                    content={item.label}
+                                                    delay={200}
+                                                    position="right"
+                                                    disabled={!isCollapsed}
                                                 >
-                                                    {active && <ActiveIndicator />}
-                                                    <Icon className="w-5 h-5 flex-shrink-0" />
-                                                    <CollapsibleText collapsed={targetCollapsed}>
-                                                        {item.label}
-                                                    </CollapsibleText>
-                                                </Link>
-                                            </Tooltip>
+                                                    <Link
+                                                        to={item.path}
+                                                        className={cn(
+                                                            "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors relative overflow-hidden",
+                                                            active
+                                                                ? "bg-primary/10 text-primary"
+                                                                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                                                        )}
+                                                    >
+                                                        {active && <ActiveIndicator />}
+                                                        <Icon className="w-5 h-5 flex-shrink-0" />
+                                                        <CollapsibleText
+                                                            collapsed={targetCollapsed}
+                                                        >
+                                                            {item.label}
+                                                        </CollapsibleText>
+                                                    </Link>
+                                                </Tooltip>
+                                            </div>
+                                            {/* Theme toggle pinned to right - only visible when expanded */}
+                                            {!targetCollapsed && (
+                                                <Tooltip
+                                                    content={getThemeTooltip()}
+                                                    delay={200}
+                                                    position="top"
+                                                >
+                                                    <button
+                                                        onClick={toggleTheme}
+                                                        className="p-1 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                                                    >
+                                                        <ThemeIcon className="w-4 h-4" />
+                                                    </button>
+                                                </Tooltip>
+                                            )}
+                                        </div>
+                                        {/* Separate theme toggle item when collapsed */}
+                                        {isCollapsed && (
                                             <Tooltip
                                                 content={getThemeTooltip()}
                                                 delay={200}
-                                                position="top"
+                                                position="right"
                                             >
                                                 <button
                                                     onClick={toggleTheme}
-                                                    className={cn(
-                                                        "rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-300 flex-shrink-0",
-                                                        targetCollapsed
-                                                            ? "opacity-0 w-0 p-0"
-                                                            : "opacity-100 p-2"
-                                                    )}
+                                                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-muted-foreground hover:bg-muted hover:text-foreground w-full"
                                                 >
-                                                    <ThemeIcon className="w-4 h-4" />
+                                                    <ThemeIcon className="w-5 h-5 flex-shrink-0" />
                                                 </button>
                                             </Tooltip>
-                                        </div>
+                                        )}
                                     </div>
                                 );
                             }
