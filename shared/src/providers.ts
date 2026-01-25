@@ -143,7 +143,9 @@ export const PROVIDER_LOGO_DOMAINS: Record<string, string> = {
     docusign: "docusign.com",
     surveymonkey: "surveymonkey.com",
     looker: "looker.com",
-    tableau: "tableau.com"
+    tableau: "tableau.com",
+    intercom: "intercom.com",
+    freshdesk: "freshdesk.com"
 };
 
 /**
@@ -857,20 +859,36 @@ export const ALL_PROVIDERS: Provider[] = [
     {
         provider: "intercom",
         displayName: "Intercom",
-        description: "Customer messaging platform",
+        description: "Customer messaging and engagement platform",
         logoUrl: getBrandLogo("intercom.com"),
         category: "Customer Support",
-        methods: ["api_key"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "freshdesk",
         displayName: "Freshdesk",
-        description: "Customer support software",
+        description: "Customer support and ticketing software",
         logoUrl: getBrandLogo("freshdesk.com"),
         category: "Customer Support",
         methods: ["api_key"],
-        comingSoon: true
+        oauthSettings: [
+            {
+                name: "subdomain",
+                label: "Freshdesk Subdomain",
+                placeholder: "your-company",
+                helpText: "Enter your Freshdesk subdomain (e.g., 'acme' from acme.freshdesk.com)",
+                required: true,
+                type: "text",
+                pattern: "^[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]$|^[a-zA-Z0-9]$",
+                patternError: "Subdomain must start and end with a letter or number"
+            }
+        ],
+        apiKeySettings: {
+            keyLabel: "API Key",
+            keyPlaceholder: "your-api-key",
+            helpText: "Find your API key in Freshdesk Profile Settings",
+            helpUrl: "https://support.freshdesk.com/en/support/solutions/articles/215517"
+        }
     },
     {
         provider: "helpscout",

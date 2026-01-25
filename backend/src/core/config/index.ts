@@ -402,6 +402,12 @@ export const config = {
         surveymonkey: {
             clientId: process.env.SURVEYMONKEY_CLIENT_ID || "",
             clientSecret: process.env.SURVEYMONKEY_CLIENT_SECRET || ""
+        },
+
+        // Intercom
+        intercom: {
+            clientId: process.env.INTERCOM_CLIENT_ID || "",
+            clientSecret: process.env.INTERCOM_CLIENT_SECRET || ""
         }
     }
 };
@@ -469,6 +475,7 @@ export function getOAuthRedirectUri(provider: string): string {
         hellosign: "/oauth/hellosign/callback",
         docusign: "/oauth/docusign/callback",
         surveymonkey: "/oauth/surveymonkey/callback",
+        intercom: "/oauth/intercom/callback",
 
         // OAuth 1.0a providers
         evernote: "/oauth1/evernote/callback"
@@ -536,7 +543,8 @@ export function getOAuthCredentials(provider: string): { clientId: string; clien
         pinterest: "pinterest",
         hellosign: "hellosign",
         docusign: "docusign",
-        surveymonkey: "surveymonkey"
+        surveymonkey: "surveymonkey",
+        intercom: "intercom"
     };
 
     const configKey = providerMap[provider];

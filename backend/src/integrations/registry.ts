@@ -729,5 +729,33 @@ const tableauEntry: ProviderRegistryEntry = {
 
 providerRegistry.register(tableauEntry);
 
+// Register Intercom provider
+const intercomEntry: ProviderRegistryEntry = {
+    name: "intercom",
+    displayName: "Intercom",
+    authMethod: "oauth2",
+    category: "support",
+    loader: async () => {
+        const { IntercomProvider } = await import("./providers/intercom/IntercomProvider");
+        return new IntercomProvider();
+    }
+};
+
+providerRegistry.register(intercomEntry);
+
+// Register Freshdesk provider
+const freshdeskEntry: ProviderRegistryEntry = {
+    name: "freshdesk",
+    displayName: "Freshdesk",
+    authMethod: "api_key",
+    category: "support",
+    loader: async () => {
+        const { FreshdeskProvider } = await import("./providers/freshdesk/FreshdeskProvider");
+        return new FreshdeskProvider();
+    }
+};
+
+providerRegistry.register(freshdeskEntry);
+
 // Export for use in application
 export { providerRegistry };
