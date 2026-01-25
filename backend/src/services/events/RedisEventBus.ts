@@ -159,15 +159,27 @@ export class RedisEventBus {
             await this.connect();
         }
 
-        // Add handler to map
-        if (!this.handlers.has(pattern)) {
+        // Check if this is a new pattern subscription
+        const isNewPattern = !this.handlers.has(pattern);
+
+        if (isNewPattern) {
             this.handlers.set(pattern, new Set());
-            // Subscribe to pattern in Redis
+        }
+
+        // Add handler - re-check after await since map could have been modified
+        let handlers = this.handlers.get(pattern);
+        if (!handlers) {
+            // Handler set was removed during concurrent operation, recreate it
+            handlers = new Set();
+            this.handlers.set(pattern, handlers);
+        }
+        handlers.add(handler);
+
+        // Subscribe to Redis pattern after adding handler (only for new patterns)
+        if (isNewPattern) {
             await this.subscriber.psubscribe(pattern);
             logger.info({ pattern }, "Subscribed to pattern");
         }
-
-        this.handlers.get(pattern)!.add(handler);
     }
 
     /**
