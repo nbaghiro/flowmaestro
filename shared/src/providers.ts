@@ -149,7 +149,9 @@ export const PROVIDER_LOGO_DOMAINS: Record<string, string> = {
     buffer: "buffer.com",
     hootsuite: "hootsuite.com",
     calendly: "calendly.com",
-    clickup: "clickup.com"
+    clickup: "clickup.com",
+    marketo: "marketo.com",
+    klaviyo: "klaviyo.com"
 };
 
 /**
@@ -1075,7 +1077,30 @@ export const ALL_PROVIDERS: Provider[] = [
         logoUrl: getBrandLogo("marketo.com"),
         category: "Marketing",
         methods: ["api_key"],
-        comingSoon: true
+        apiKeySettings: {
+            keyLabel: "Client ID",
+            keyPlaceholder: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+            requiresSecret: true,
+            secretLabel: "Client Secret",
+            secretPlaceholder: "your-client-secret",
+            helpText:
+                "Enter your Marketo REST API credentials. Also provide your Instance URL (e.g., 123-ABC-456.mktorest.com) in the connection settings.",
+            helpUrl: "https://developers.marketo.com/rest-api/authentication/"
+        },
+        oauthSettings: [
+            {
+                name: "instanceUrl",
+                label: "Instance URL",
+                placeholder: "123-ABC-456.mktorest.com",
+                helpText:
+                    "Your Marketo instance URL (e.g., 123-ABC-456.mktorest.com). Find this in Admin > Integration > Web Services",
+                required: true,
+                type: "text",
+                pattern: "^[a-zA-Z0-9-]+\\.mktorest\\.com$",
+                patternError:
+                    "Must be a valid Marketo instance URL (e.g., 123-ABC-456.mktorest.com)"
+            }
+        ]
     },
     {
         provider: "activecampaign",
@@ -1117,8 +1142,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "E-commerce marketing automation",
         logoUrl: getBrandLogo("klaviyo.com"),
         category: "Marketing",
-        methods: ["api_key"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "pardot",

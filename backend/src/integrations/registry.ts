@@ -813,5 +813,33 @@ const clickupEntry: ProviderRegistryEntry = {
 
 providerRegistry.register(clickupEntry);
 
+// Register Marketo provider
+const marketoEntry: ProviderRegistryEntry = {
+    name: "marketo",
+    displayName: "Marketo",
+    authMethod: "api_key",
+    category: "marketing",
+    loader: async () => {
+        const { MarketoProvider } = await import("./providers/marketo/MarketoProvider");
+        return new MarketoProvider();
+    }
+};
+
+providerRegistry.register(marketoEntry);
+
+// Register Klaviyo provider
+const klaviyoEntry: ProviderRegistryEntry = {
+    name: "klaviyo",
+    displayName: "Klaviyo",
+    authMethod: "oauth2",
+    category: "marketing",
+    loader: async () => {
+        const { KlaviyoProvider } = await import("./providers/klaviyo/KlaviyoProvider");
+        return new KlaviyoProvider();
+    }
+};
+
+providerRegistry.register(klaviyoEntry);
+
 // Export for use in application
 export { providerRegistry };

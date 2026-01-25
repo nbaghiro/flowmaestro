@@ -432,6 +432,12 @@ export const config = {
         clickup: {
             clientId: process.env.CLICKUP_CLIENT_ID || "",
             clientSecret: process.env.CLICKUP_CLIENT_SECRET || ""
+        },
+
+        // Klaviyo
+        klaviyo: {
+            clientId: process.env.KLAVIYO_CLIENT_ID || "",
+            clientSecret: process.env.KLAVIYO_CLIENT_SECRET || ""
         }
     }
 };
@@ -504,6 +510,7 @@ export function getOAuthRedirectUri(provider: string): string {
         hootsuite: "/oauth/hootsuite/callback",
         calendly: "/oauth/calendly/callback",
         clickup: "/oauth/clickup/callback",
+        klaviyo: "/oauth/klaviyo/callback",
 
         // OAuth 1.0a providers
         evernote: "/oauth1/evernote/callback"
@@ -575,7 +582,9 @@ export function getOAuthCredentials(provider: string): { clientId: string; clien
         intercom: "intercom",
         buffer: "buffer",
         hootsuite: "hootsuite",
-        calendly: "calendly"
+        calendly: "calendly",
+        clickup: "clickup",
+        klaviyo: "klaviyo"
     };
 
     const configKey = providerMap[provider];

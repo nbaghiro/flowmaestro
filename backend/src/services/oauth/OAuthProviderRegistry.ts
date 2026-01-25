@@ -3075,6 +3075,94 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
         },
         refreshable: false, // ClickUp tokens don't currently expire
         pkceEnabled: false
+    },
+
+    // ==========================================================================
+    // Marketing Automation
+    // ==========================================================================
+
+    klaviyo: {
+        name: "klaviyo",
+        displayName: "Klaviyo",
+        authUrl: "https://www.klaviyo.com/oauth/authorize",
+        tokenUrl: "https://a.klaviyo.com/oauth/token",
+        scopes: [
+            "lists:read",
+            "lists:write",
+            "profiles:read",
+            "profiles:write",
+            "campaigns:read",
+            "events:read",
+            "events:write",
+            "segments:read",
+            "metrics:read"
+        ],
+        clientId: config.oauth.klaviyo.clientId,
+        clientSecret: config.oauth.klaviyo.clientSecret,
+        redirectUri: getOAuthRedirectUri("klaviyo"),
+        pkceEnabled: true, // Klaviyo requires PKCE
+        getUserInfo: async (accessToken: string) => {
+            try {
+                // Klaviyo API uses revision header for versioning
+                const response = await fetch("https://a.klaviyo.com/api/accounts/", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                        revision: "2024-10-15",
+                        Accept: "application/json"
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    data?: Array<{
+                        type?: string;
+                        id?: string;
+                        attributes?: {
+                            test_account?: boolean;
+                            contact_information?: {
+                                default_sender_name?: string;
+                                default_sender_email?: string;
+                                website_url?: string;
+                            };
+                            industry?: string;
+                            timezone?: string;
+                            preferred_currency?: string;
+                            public_api_key?: string;
+                        };
+                    }>;
+                };
+
+                const account = data.data?.[0];
+                const attrs = account?.attributes;
+                const contactInfo = attrs?.contact_information;
+
+                return {
+                    accountId: account?.id,
+                    accountName:
+                        contactInfo?.default_sender_name ||
+                        contactInfo?.default_sender_email ||
+                        "Klaviyo Account",
+                    email: contactInfo?.default_sender_email || "unknown@klaviyo",
+                    user: contactInfo?.default_sender_name || "Klaviyo User",
+                    website: contactInfo?.website_url,
+                    industry: attrs?.industry,
+                    timezone: attrs?.timezone,
+                    currency: attrs?.preferred_currency,
+                    isTestAccount: attrs?.test_account || false
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get Klaviyo account info");
+                return {
+                    email: "unknown@klaviyo",
+                    user: "Klaviyo User",
+                    accountName: "Klaviyo Account"
+                };
+            }
+        },
+        refreshable: true
     }
 };
 

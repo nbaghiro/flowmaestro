@@ -133,5 +133,7 @@ config:
       {"name":"calendly-client-id","envVar":"CALENDLY_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Calendly OAuth client ID"},
       {"name":"calendly-client-secret","envVar":"CALENDLY_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Calendly OAuth client secret"},
       {"name":"clickup-client-id","envVar":"CLICKUP_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"ClickUp OAuth client ID"},
-      {"name":"clickup-client-secret","envVar":"CLICKUP_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"ClickUp OAuth client secret"}
+      {"name":"clickup-client-secret","envVar":"CLICKUP_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"ClickUp OAuth client secret"},
+      {"name":"klaviyo-client-id","envVar":"KLAVIYO_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Klaviyo OAuth client ID"},
+      {"name":"klaviyo-client-secret","envVar":"KLAVIYO_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Klaviyo OAuth client secret"}
     ]
