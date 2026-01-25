@@ -15,8 +15,8 @@ import { Dialog } from "../components/common/Dialog";
 import { ExpandableSearch } from "../components/common/ExpandableSearch";
 import { FolderDropdown } from "../components/common/FolderDropdown";
 import { PageHeader } from "../components/common/PageHeader";
+import { SkeletonGrid } from "../components/common/SkeletonGrid";
 import { SortDropdown } from "../components/common/SortDropdown";
-import { LoadingState } from "../components/common/Spinner";
 import {
     CreateFolderDialog,
     MoveToFolderDialog,
@@ -25,6 +25,7 @@ import {
 } from "../components/folders";
 import { DuplicateItemWarningDialog } from "../components/folders/dialogs/DuplicateItemWarningDialog";
 import { CreateFormInterfaceDialog } from "../components/forms/CreateFormInterfaceDialog";
+import { FormInterfaceCardSkeleton } from "../components/skeletons";
 import { useFolderManagement } from "../hooks/useFolderManagement";
 import { useSearch } from "../hooks/useSearch";
 import { useSort, FORM_INTERFACE_SORT_FIELDS } from "../hooks/useSort";
@@ -388,7 +389,11 @@ export function FormInterfaces() {
     if (isLoading || isLoadingFolders) {
         return (
             <div className="max-w-7xl mx-auto px-4 py-6 md:px-6 md:py-8">
-                <LoadingState message="Loading form interfaces..." />
+                <PageHeader
+                    title="Form Interfaces"
+                    description="Create public forms that connect to your workflows and agents"
+                />
+                <SkeletonGrid count={6} CardSkeleton={FormInterfaceCardSkeleton} />
             </div>
         );
     }

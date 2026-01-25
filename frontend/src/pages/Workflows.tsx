@@ -17,8 +17,8 @@ import { ErrorDialog } from "../components/common/ErrorDialog";
 import { ExpandableSearch } from "../components/common/ExpandableSearch";
 import { FolderDropdown } from "../components/common/FolderDropdown";
 import { PageHeader } from "../components/common/PageHeader";
+import { SkeletonGrid } from "../components/common/SkeletonGrid";
 import { SortDropdown } from "../components/common/SortDropdown";
-import { LoadingState } from "../components/common/Spinner";
 import { CreateWorkflowDialog } from "../components/CreateWorkflowDialog";
 import {
     CreateFolderDialog,
@@ -27,6 +27,7 @@ import {
     FolderGridSection
 } from "../components/folders";
 import { DuplicateItemWarningDialog } from "../components/folders/dialogs/DuplicateItemWarningDialog";
+import { WorkflowCardSkeleton } from "../components/skeletons";
 import { WorkflowGenerationChatPanel } from "../components/WorkflowGenerationChatPanel";
 import { useFolderManagement } from "../hooks/useFolderManagement";
 import { useSearch } from "../hooks/useSearch";
@@ -664,7 +665,7 @@ export function Workflows() {
 
             {/* Loading State */}
             {isLoading || isLoadingFolders ? (
-                <LoadingState message="Loading workflows..." />
+                <SkeletonGrid count={6} CardSkeleton={WorkflowCardSkeleton} />
             ) : (
                 <>
                     {/* Folders Section */}

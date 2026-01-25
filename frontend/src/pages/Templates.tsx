@@ -1,11 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Search, Loader2, FileText, AlertCircle, Bot } from "lucide-react";
+import { Search, FileText, AlertCircle, Bot } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Template, TemplateCategory, CategoryInfo, AgentTemplate } from "@flowmaestro/shared";
 import { TEMPLATE_CATEGORY_META } from "@flowmaestro/shared";
 import { Input } from "../components/common/Input";
 import { PageHeader } from "../components/common/PageHeader";
+import { SkeletonGrid } from "../components/common/SkeletonGrid";
+import { TemplateCardSkeleton } from "../components/skeletons";
 import { AgentTemplateCard } from "../components/templates/cards/AgentTemplateCard";
 import { TemplateCard } from "../components/templates/cards/TemplateCard";
 import { CategoryFilter } from "../components/templates/CategoryFilter";
@@ -201,12 +203,7 @@ export function Templates() {
 
             {/* Content */}
             {isLoading ? (
-                <div className="flex flex-col items-center justify-center py-20">
-                    <Loader2 className="w-8 h-8 text-primary animate-spin mb-4" />
-                    <p className="text-sm text-muted-foreground dark:text-muted-foreground">
-                        Loading {templateType === "workflows" ? "workflow" : "agent"} templates...
-                    </p>
-                </div>
+                <SkeletonGrid count={6} CardSkeleton={TemplateCardSkeleton} />
             ) : templatesError ? (
                 <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed border-red-200 dark:border-red-900 rounded-lg bg-red-50 dark:bg-red-900/20">
                     <AlertCircle className="w-12 h-12 text-red-500 mb-4" />

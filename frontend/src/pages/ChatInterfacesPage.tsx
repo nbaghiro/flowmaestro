@@ -16,8 +16,8 @@ import { Dialog } from "../components/common/Dialog";
 import { ExpandableSearch } from "../components/common/ExpandableSearch";
 import { FolderDropdown } from "../components/common/FolderDropdown";
 import { PageHeader } from "../components/common/PageHeader";
+import { SkeletonGrid } from "../components/common/SkeletonGrid";
 import { SortDropdown } from "../components/common/SortDropdown";
-import { LoadingState } from "../components/common/Spinner";
 import {
     CreateFolderDialog,
     MoveToFolderDialog,
@@ -25,6 +25,7 @@ import {
     FolderGridSection
 } from "../components/folders";
 import { DuplicateItemWarningDialog } from "../components/folders/dialogs/DuplicateItemWarningDialog";
+import { ChatInterfaceCardSkeleton } from "../components/skeletons";
 import { useFolderManagement } from "../hooks/useFolderManagement";
 import { useSearch } from "../hooks/useSearch";
 import { useSort, CHAT_INTERFACE_SORT_FIELDS } from "../hooks/useSort";
@@ -390,7 +391,11 @@ export function ChatInterfacesPage() {
     if (isLoading || isLoadingFolders) {
         return (
             <div className="max-w-7xl mx-auto px-4 py-6 md:px-6 md:py-8">
-                <LoadingState message="Loading chat interfaces..." />
+                <PageHeader
+                    title="Chat Interfaces"
+                    description="Create embeddable chat interfaces that connect to your agents"
+                />
+                <SkeletonGrid count={6} CardSkeleton={ChatInterfaceCardSkeleton} />
             </div>
         );
     }

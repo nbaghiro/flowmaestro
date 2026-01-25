@@ -1,11 +1,13 @@
-import { Loader2, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ALL_PROVIDERS, type Provider } from "@flowmaestro/shared";
 import { Input } from "../components/common/Input";
 import { PageHeader } from "../components/common/PageHeader";
 import { Select } from "../components/common/Select";
+import { SkeletonGrid } from "../components/common/SkeletonGrid";
 import { ConnectionDetailsDialog } from "../components/connections/dialogs/ConnectionDetailsDialog";
 import { NewConnectionDialog } from "../components/connections/dialogs/NewConnectionDialog";
+import { ConnectionCardSkeleton } from "../components/skeletons";
 import { useConnectionStore } from "../stores/connectionStore";
 import type { Connection } from "../lib/api";
 
@@ -242,9 +244,7 @@ export function Connections() {
             </div>
 
             {loading ? (
-                <div className="flex items-center justify-center py-12">
-                    <Loader2 className="w-8 h-8 text-primary animate-spin" />
-                </div>
+                <SkeletonGrid count={9} CardSkeleton={ConnectionCardSkeleton} />
             ) : (
                 <div className="space-y-10">
                     {/* Show results count */}

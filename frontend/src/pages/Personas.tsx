@@ -2,9 +2,11 @@ import { Search, Sparkles } from "lucide-react";
 import React, { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Select } from "../components/common/Select";
+import { SkeletonGrid } from "../components/common/SkeletonGrid";
 import { PersonaCard } from "../components/personas/cards/PersonaCard";
 import { PersonaDetailModal } from "../components/personas/modals/PersonaDetailModal";
 import { TaskLaunchDialog } from "../components/personas/modals/TaskLaunchDialog";
+import { PersonaCardSkeleton } from "../components/skeletons";
 import { getPersona } from "../lib/api";
 import { usePersonaStore } from "../stores/personaStore";
 import type { PersonaDefinition, PersonaDefinitionSummary, PersonaCategory } from "../lib/api";
@@ -199,11 +201,7 @@ export const Personas: React.FC = () => {
                 </div>
 
                 {/* Loading State */}
-                {isLoadingPersonas && (
-                    <div className="flex items-center justify-center py-20">
-                        <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-                    </div>
-                )}
+                {isLoadingPersonas && <SkeletonGrid count={6} CardSkeleton={PersonaCardSkeleton} />}
 
                 {/* Error State */}
                 {personasError && (

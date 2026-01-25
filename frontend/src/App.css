@@ -558,3 +558,165 @@ input:-webkit-autofill::first-line {
         user-select: none;
     }
 }
+
+/* ============================================
+   Abstract Background - Gradient Mesh Design
+   ============================================ */
+
+.abstract-bg {
+    position: relative;
+    background-color: hsl(var(--background));
+}
+
+/* Gradient mesh overlay */
+.abstract-bg::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background:
+        radial-gradient(ellipse 80% 60% at 10% 20%, hsl(var(--foreground) / 0.06) 0%, transparent 50%),
+        radial-gradient(ellipse 60% 80% at 90% 80%, hsl(var(--foreground) / 0.05) 0%, transparent 50%),
+        radial-gradient(ellipse 50% 50% at 50% 50%, hsl(var(--foreground) / 0.03) 0%, transparent 60%),
+        radial-gradient(ellipse 70% 40% at 80% 10%, hsl(var(--foreground) / 0.04) 0%, transparent 50%),
+        radial-gradient(ellipse 40% 60% at 20% 90%, hsl(var(--foreground) / 0.04) 0%, transparent 50%);
+}
+
+.abstract-content {
+    position: relative;
+    z-index: 1;
+    min-height: 100%;
+}
+
+/* Soft Gray Blobs */
+.abstract-blob {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(120px);
+    pointer-events: none;
+    z-index: 0;
+}
+
+
+/* ---- Auth Variant (More Dramatic) ---- */
+.abstract-bg--auth {
+    min-height: 100vh;
+    overflow: hidden;
+}
+
+.abstract-bg--auth .abstract-content {
+    min-height: 100vh;
+}
+
+.abstract-bg--auth .abstract-blob--1 {
+    width: 600px;
+    height: 600px;
+    background: hsl(var(--foreground) / 0.12);
+    top: -200px;
+    right: -150px;
+}
+
+.abstract-bg--auth .abstract-blob--2 {
+    width: 500px;
+    height: 500px;
+    background: hsl(var(--foreground) / 0.10);
+    bottom: -200px;
+    left: -150px;
+}
+
+.abstract-bg--auth .abstract-blob--3 {
+    width: 350px;
+    height: 350px;
+    background: hsl(var(--foreground) / 0.06);
+    top: 40%;
+    left: 20%;
+}
+
+/* Auth variant - slightly more visible noise */
+.abstract-bg--auth::before {
+    opacity: 0.5;
+}
+
+/* ---- App Variant (Subtle) ---- */
+.abstract-bg--app {
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+.abstract-bg--app .abstract-blob--1 {
+    width: 800px;
+    height: 800px;
+    background: hsl(var(--foreground) / 0.08);
+    top: -350px;
+    right: -200px;
+}
+
+.abstract-bg--app .abstract-blob--2 {
+    width: 600px;
+    height: 600px;
+    background: hsl(var(--foreground) / 0.06);
+    bottom: -250px;
+    left: -150px;
+}
+
+/* App variant - subtler noise */
+.abstract-bg--app::before {
+    opacity: 0.3;
+}
+
+/* ---- Dark Mode Adjustments ---- */
+.dark .abstract-bg--auth .abstract-blob--1 {
+    background: hsl(var(--foreground) / 0.15);
+}
+.dark .abstract-bg--auth .abstract-blob--2 {
+    background: hsl(var(--foreground) / 0.12);
+}
+.dark .abstract-bg--auth .abstract-blob--3 {
+    background: hsl(var(--foreground) / 0.08);
+}
+/* Dark mode - slightly reduce noise visibility */
+.dark .abstract-bg--auth::before {
+    opacity: 0.35;
+}
+
+.dark .abstract-bg--app .abstract-blob--1 {
+    background: hsl(var(--foreground) / 0.10);
+}
+.dark .abstract-bg--app .abstract-blob--2 {
+    background: hsl(var(--foreground) / 0.08);
+}
+.dark .abstract-bg--app::before {
+    opacity: 0.25;
+}
+
+/* =============================================================================
+   SKELETON SHIMMER ANIMATION
+   ============================================================================= */
+
+@keyframes skeleton-shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+.skeleton-shimmer {
+    background: linear-gradient(
+        90deg,
+        hsl(var(--muted)) 0%,
+        hsl(var(--muted-foreground) / 0.08) 50%,
+        hsl(var(--muted)) 100%
+    );
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .skeleton-shimmer {
+        animation: none;
+        background: hsl(var(--muted));
+    }
+}

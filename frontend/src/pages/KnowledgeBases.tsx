@@ -14,7 +14,7 @@ import { ContextMenu, type ContextMenuItem } from "../components/common/ContextM
 import { ExpandableSearch } from "../components/common/ExpandableSearch";
 import { FolderDropdown } from "../components/common/FolderDropdown";
 import { PageHeader } from "../components/common/PageHeader";
-import { LoadingState } from "../components/common/Spinner";
+import { SkeletonGrid } from "../components/common/SkeletonGrid";
 import {
     CreateFolderDialog,
     MoveToFolderDialog,
@@ -23,6 +23,7 @@ import {
 } from "../components/folders";
 import { DuplicateItemWarningDialog } from "../components/folders/dialogs/DuplicateItemWarningDialog";
 import { CreateKnowledgeBaseModal } from "../components/knowledge-bases";
+import { KnowledgeBaseCardSkeleton } from "../components/skeletons";
 import { useFolderManagement } from "../hooks/useFolderManagement";
 import { useSearch } from "../hooks/useSearch";
 import { getKnowledgeBaseStats, type KnowledgeBaseStats, type KnowledgeBase } from "../lib/api";
@@ -467,7 +468,7 @@ export function KnowledgeBases() {
 
             {/* Loading State */}
             {loading || isLoadingFolders ? (
-                <LoadingState message="Loading knowledge bases..." />
+                <SkeletonGrid count={6} CardSkeleton={KnowledgeBaseCardSkeleton} />
             ) : (
                 <>
                     {/* Folders Section */}
