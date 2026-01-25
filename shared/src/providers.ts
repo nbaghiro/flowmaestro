@@ -154,7 +154,9 @@ export const PROVIDER_LOGO_DOMAINS: Record<string, string> = {
     marketo: "marketo.com",
     klaviyo: "klaviyo.com",
     mailchimp: "mailchimp.com",
-    sendgrid: "sendgrid.com"
+    sendgrid: "sendgrid.com",
+    datadog: "datadoghq.com",
+    sentry: "sentry.io"
 };
 
 /**
@@ -1490,20 +1492,63 @@ export const ALL_PROVIDERS: Provider[] = [
     {
         provider: "datadog",
         displayName: "Datadog",
-        description: "Monitoring and analytics",
+        description: "Monitoring and analytics platform for cloud-scale applications",
         logoUrl: getBrandLogo("datadoghq.com"),
         category: "Developer Tools",
         methods: ["api_key"],
-        comingSoon: true
+        apiKeySettings: {
+            keyLabel: "API Key",
+            keyPlaceholder: "Enter your Datadog API Key",
+            requiresSecret: true,
+            secretLabel: "Application Key",
+            secretPlaceholder: "Enter your Datadog Application Key",
+            helpText: "Both API Key and Application Key are required",
+            helpUrl: "https://docs.datadoghq.com/account_management/api-app-keys/"
+        },
+        oauthSettings: [
+            {
+                name: "site",
+                label: "Datadog Site",
+                type: "select",
+                required: true,
+                options: [
+                    { value: "datadoghq.com", label: "US1 (datadoghq.com)" },
+                    { value: "us3.datadoghq.com", label: "US3 (us3.datadoghq.com)" },
+                    { value: "us5.datadoghq.com", label: "US5 (us5.datadoghq.com)" },
+                    { value: "datadoghq.eu", label: "EU (datadoghq.eu)" },
+                    { value: "ap1.datadoghq.com", label: "AP1 (ap1.datadoghq.com)" }
+                ],
+                helpText: "Select your Datadog site (shown in your Datadog URL)"
+            }
+        ]
     },
     {
         provider: "sentry",
         displayName: "Sentry",
-        description: "Error tracking and monitoring",
+        description: "Error tracking and performance monitoring for developers",
         logoUrl: getBrandLogo("sentry.io"),
         category: "Developer Tools",
         methods: ["api_key"],
-        comingSoon: true
+        apiKeySettings: {
+            keyLabel: "Auth Token",
+            keyPlaceholder: "Enter your Sentry Auth Token",
+            helpText: "Use an Organization Auth Token for best results",
+            helpUrl: "https://docs.sentry.io/api/guides/create-auth-token/"
+        },
+        oauthSettings: [
+            {
+                name: "region",
+                label: "Sentry Region",
+                type: "select",
+                required: true,
+                options: [
+                    { value: "sentry.io", label: "US (sentry.io)" },
+                    { value: "us.sentry.io", label: "US (us.sentry.io)" },
+                    { value: "de.sentry.io", label: "EU/Germany (de.sentry.io)" }
+                ],
+                helpText: "Select your Sentry data region"
+            }
+        ]
     },
     {
         provider: "pagerduty",

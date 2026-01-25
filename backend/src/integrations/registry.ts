@@ -883,5 +883,33 @@ const sendgridEntry: ProviderRegistryEntry = {
 
 providerRegistry.register(sendgridEntry);
 
+// Register Datadog provider
+const datadogEntry: ProviderRegistryEntry = {
+    name: "datadog",
+    displayName: "Datadog",
+    authMethod: "api_key",
+    category: "developer_tools",
+    loader: async () => {
+        const { DatadogProvider } = await import("./providers/datadog/DatadogProvider");
+        return new DatadogProvider();
+    }
+};
+
+providerRegistry.register(datadogEntry);
+
+// Register Sentry provider
+const sentryEntry: ProviderRegistryEntry = {
+    name: "sentry",
+    displayName: "Sentry",
+    authMethod: "api_key",
+    category: "developer_tools",
+    loader: async () => {
+        const { SentryProvider } = await import("./providers/sentry/SentryProvider");
+        return new SentryProvider();
+    }
+};
+
+providerRegistry.register(sentryEntry);
+
 // Export for use in application
 export { providerRegistry };
