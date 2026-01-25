@@ -79,6 +79,11 @@ input:-webkit-autofill::first-line {
 
         /* Canvas background dots */
         --canvas-dots: #71717a; /* zinc-500 - visible on light backgrounds */
+
+        /* Circuit board background pattern */
+        --circuit-color: 0 0% 0%; /* black base for light mode */
+        --circuit-node-opacity: 0.06;
+        --circuit-line-opacity: 0.05;
     }
 
     .dark {
@@ -104,6 +109,11 @@ input:-webkit-autofill::first-line {
 
         /* Canvas background dots */
         --canvas-dots: #52525b; /* zinc-600 - subtle on dark backgrounds */
+
+        /* Circuit board background pattern */
+        --circuit-color: 0 0% 100%; /* white base for dark mode */
+        --circuit-node-opacity: 0.06;
+        --circuit-line-opacity: 0.05;
     }
 }
 
@@ -560,27 +570,27 @@ input:-webkit-autofill::first-line {
 }
 
 /* ============================================
-   Abstract Background - Gradient Mesh Design
+   Abstract Background - Circuit Board Design
+
+   CSS Variables (defined in :root and .dark):
+   --circuit-color: base color (black/white)
+   --circuit-node-opacity: opacity for nodes
+   --circuit-line-opacity: opacity for lines
+
+   Pattern uses background-image for proper scrolling.
+   Light/dark mode handled via separate selectors.
    ============================================ */
 
 .abstract-bg {
     position: relative;
     background-color: hsl(var(--background));
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Ccircle cx='10' cy='10' r='2' fill='%23000' fill-opacity='0.06'/%3E%3Ccircle cx='50' cy='30' r='2' fill='%23000' fill-opacity='0.06'/%3E%3Ccircle cx='90' cy='10' r='2' fill='%23000' fill-opacity='0.06'/%3E%3Ccircle cx='30' cy='70' r='2' fill='%23000' fill-opacity='0.06'/%3E%3Ccircle cx='70' cy='90' r='2' fill='%23000' fill-opacity='0.06'/%3E%3Ccircle cx='90' cy='60' r='2' fill='%23000' fill-opacity='0.06'/%3E%3Cpath d='M10 10 L50 10 L50 30' fill='none' stroke='%23000' stroke-opacity='0.05' stroke-width='1'/%3E%3Cpath d='M50 30 L90 30 L90 10' fill='none' stroke='%23000' stroke-opacity='0.05' stroke-width='1'/%3E%3Cpath d='M50 30 L50 70 L30 70' fill='none' stroke='%23000' stroke-opacity='0.05' stroke-width='1'/%3E%3Cpath d='M30 70 L30 90 L70 90' fill='none' stroke='%23000' stroke-opacity='0.05' stroke-width='1'/%3E%3Cpath d='M90 60 L70 60 L70 90' fill='none' stroke='%23000' stroke-opacity='0.05' stroke-width='1'/%3E%3C/svg%3E");
+    background-size: 100px 100px;
 }
 
-/* Gradient mesh overlay */
-.abstract-bg::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    z-index: 0;
-    background:
-        radial-gradient(ellipse 80% 60% at 10% 20%, hsl(var(--foreground) / 0.06) 0%, transparent 50%),
-        radial-gradient(ellipse 60% 80% at 90% 80%, hsl(var(--foreground) / 0.05) 0%, transparent 50%),
-        radial-gradient(ellipse 50% 50% at 50% 50%, hsl(var(--foreground) / 0.03) 0%, transparent 60%),
-        radial-gradient(ellipse 70% 40% at 80% 10%, hsl(var(--foreground) / 0.04) 0%, transparent 50%),
-        radial-gradient(ellipse 40% 60% at 20% 90%, hsl(var(--foreground) / 0.04) 0%, transparent 50%);
+/* Dark mode base */
+.dark .abstract-bg {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Ccircle cx='10' cy='10' r='2' fill='%23fff' fill-opacity='0.06'/%3E%3Ccircle cx='50' cy='30' r='2' fill='%23fff' fill-opacity='0.06'/%3E%3Ccircle cx='90' cy='10' r='2' fill='%23fff' fill-opacity='0.06'/%3E%3Ccircle cx='30' cy='70' r='2' fill='%23fff' fill-opacity='0.06'/%3E%3Ccircle cx='70' cy='90' r='2' fill='%23fff' fill-opacity='0.06'/%3E%3Ccircle cx='90' cy='60' r='2' fill='%23fff' fill-opacity='0.06'/%3E%3Cpath d='M10 10 L50 10 L50 30' fill='none' stroke='%23fff' stroke-opacity='0.05' stroke-width='1'/%3E%3Cpath d='M50 30 L90 30 L90 10' fill='none' stroke='%23fff' stroke-opacity='0.05' stroke-width='1'/%3E%3Cpath d='M50 30 L50 70 L30 70' fill='none' stroke='%23fff' stroke-opacity='0.05' stroke-width='1'/%3E%3Cpath d='M30 70 L30 90 L70 90' fill='none' stroke='%23fff' stroke-opacity='0.05' stroke-width='1'/%3E%3Cpath d='M90 60 L70 60 L70 90' fill='none' stroke='%23fff' stroke-opacity='0.05' stroke-width='1'/%3E%3C/svg%3E");
 }
 
 .abstract-content {
@@ -589,17 +599,7 @@ input:-webkit-autofill::first-line {
     min-height: 100%;
 }
 
-/* Soft Gray Blobs */
-.abstract-blob {
-    position: fixed;
-    border-radius: 50%;
-    filter: blur(120px);
-    pointer-events: none;
-    z-index: 0;
-}
-
-
-/* ---- Auth Variant (More Dramatic) ---- */
+/* ---- Auth Variant ---- */
 .abstract-bg--auth {
     min-height: 100vh;
     overflow: hidden;
@@ -607,87 +607,21 @@ input:-webkit-autofill::first-line {
 
 .abstract-bg--auth .abstract-content {
     min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.abstract-bg--auth .abstract-blob--1 {
-    width: 600px;
-    height: 600px;
-    background: hsl(var(--foreground) / 0.12);
-    top: -200px;
-    right: -150px;
+/* Auth variant - larger pattern */
+.abstract-bg--auth {
+    background-size: 120px 120px;
 }
 
-.abstract-bg--auth .abstract-blob--2 {
-    width: 500px;
-    height: 500px;
-    background: hsl(var(--foreground) / 0.10);
-    bottom: -200px;
-    left: -150px;
-}
-
-.abstract-bg--auth .abstract-blob--3 {
-    width: 350px;
-    height: 350px;
-    background: hsl(var(--foreground) / 0.06);
-    top: 40%;
-    left: 20%;
-}
-
-/* Auth variant - slightly more visible noise */
-.abstract-bg--auth::before {
-    opacity: 0.5;
-}
-
-/* ---- App Variant (Subtle) ---- */
+/* ---- App Variant ---- */
 .abstract-bg--app {
     overflow-x: hidden;
     overflow-y: auto;
-}
-
-.abstract-bg--app .abstract-blob--1 {
-    width: 800px;
-    height: 800px;
-    background: hsl(var(--foreground) / 0.08);
-    top: -350px;
-    right: -200px;
-}
-
-.abstract-bg--app .abstract-blob--2 {
-    width: 600px;
-    height: 600px;
-    background: hsl(var(--foreground) / 0.06);
-    bottom: -250px;
-    left: -150px;
-}
-
-/* App variant - subtler noise */
-.abstract-bg--app::before {
-    opacity: 0.3;
-}
-
-/* ---- Dark Mode Adjustments ---- */
-.dark .abstract-bg--auth .abstract-blob--1 {
-    background: hsl(var(--foreground) / 0.15);
-}
-.dark .abstract-bg--auth .abstract-blob--2 {
-    background: hsl(var(--foreground) / 0.12);
-}
-.dark .abstract-bg--auth .abstract-blob--3 {
-    background: hsl(var(--foreground) / 0.08);
-}
-/* Dark mode - slightly reduce noise visibility */
-.dark .abstract-bg--auth::before {
-    opacity: 0.35;
-}
-
-.dark .abstract-bg--app .abstract-blob--1 {
-    background: hsl(var(--foreground) / 0.10);
-}
-.dark .abstract-bg--app .abstract-blob--2 {
-    background: hsl(var(--foreground) / 0.08);
-}
-.dark .abstract-bg--app::before {
-    opacity: 0.25;
+    background-size: 80px 80px;
 }
 
 /* =============================================================================

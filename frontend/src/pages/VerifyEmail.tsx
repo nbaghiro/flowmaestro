@@ -44,7 +44,7 @@ export function VerifyEmail() {
     return (
         <div className="min-h-screen flex items-center justify-center bg-background dark:bg-[#222222] px-4">
             <div className="w-full max-w-md">
-                <div className="bg-card rounded-lg shadow-lg p-8">
+                <div className="bg-card rounded-lg shadow-lg border border-border p-8">
                     {/* Logo and Title */}
                     <div className="text-center mb-8">
                         <div className="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-lg mb-4">

@@ -9,18 +9,18 @@ import {
     Settings,
     User,
     ChevronLeft,
-    ChevronRight,
     Sun,
     Moon,
     Zap,
     Users
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { WORKSPACE_LIMITS } from "@flowmaestro/shared";
 import { cn } from "../../lib/utils";
 import { usePersonaStore } from "../../stores/personaStore";
 import { useThemeStore } from "../../stores/themeStore";
+import { useUIPreferencesStore } from "../../stores/uiPreferencesStore";
 import { useWorkspaceStore } from "../../stores/workspaceStore";
 import { Logo } from "../common/Logo";
 import { Tooltip } from "../common/Tooltip";
@@ -36,7 +36,42 @@ interface NavItem {
     section?: "primary" | "settings";
 }
 
-function CreditProgressBar({ isCollapsed }: { isCollapsed: boolean }) {
+// Base classes for collapsible text that animates with sidebar
+const COLLAPSE_TRANSITION = "whitespace-nowrap overflow-hidden transition-all duration-300";
+const COLLAPSED_TEXT = "opacity-0 max-w-0";
+const EXPANDED_TEXT = "opacity-100 max-w-[150px]";
+
+// Active indicator bar shown on left of active nav items
+function ActiveIndicator() {
+    return (
+        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-primary rounded-r-full" />
+    );
+}
+
+// Collapsible text label that fades and shrinks when sidebar collapses
+function CollapsibleText({
+    children,
+    collapsed,
+    className
+}: {
+    children: React.ReactNode;
+    collapsed: boolean;
+    className?: string;
+}) {
+    return (
+        <span
+            className={cn(
+                COLLAPSE_TRANSITION,
+                collapsed ? COLLAPSED_TEXT : EXPANDED_TEXT,
+                className
+            )}
+        >
+            {children}
+        </span>
+    );
+}
+
+function CreditProgressBar({ targetCollapsed }: { targetCollapsed: boolean }) {
     const { currentWorkspace, creditBalance, fetchCredits } = useWorkspaceStore();
 
     useEffect(() => {
@@ -117,36 +152,19 @@ function CreditProgressBar({ isCollapsed }: { isCollapsed: boolean }) {
         </div>
     );
 
-    if (isCollapsed) {
-        return (
-            <div className="px-2 py-2">
-                <Tooltip content={tooltipContent} delay={200} position="right">
-                    <div className="flex flex-col items-center gap-1 px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors cursor-default">
-                        <Zap className="w-5 h-5" />
-                        <div
-                            className={cn("w-6 h-1 rounded-full overflow-hidden", getProgressBg())}
-                        >
-                            <div
-                                className={cn(
-                                    "h-full rounded-full transition-all",
-                                    getProgressColor()
-                                )}
-                                style={{ width: `${Math.min(percentageRemaining, 100)}%` }}
-                            />
-                        </div>
-                    </div>
-                </Tooltip>
-            </div>
-        );
-    }
-
     return (
         <div className="px-2 py-2">
             <Tooltip content={tooltipContent} delay={200} position="right">
-                <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors cursor-default">
+                <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors cursor-default overflow-hidden">
                     <Zap className="w-5 h-5 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-2">
+                    <div
+                        className={cn(
+                            "flex-1 min-w-0",
+                            COLLAPSE_TRANSITION,
+                            targetCollapsed ? COLLAPSED_TEXT : "opacity-100 max-w-[200px]"
+                        )}
+                    >
+                        <div className="flex items-center justify-between mb-2.5 whitespace-nowrap">
                             <span className="text-sm font-medium">Credits</span>
                             <span className="text-xs tabular-nums">
                                 {availableCredits.toLocaleString()} /{" "}
@@ -192,9 +210,26 @@ const navItems: NavItem[] = [
 
 export function AppSidebar() {
     const location = useLocation();
-    const [isCollapsed, setIsCollapsed] = useState(false);
+    const { sidebarCollapsed: targetCollapsed, setSidebarCollapsed: setTargetCollapsed } =
+        useUIPreferencesStore();
     const { theme, setTheme } = useThemeStore();
     const { needsAttentionCount, fetchNeedsAttentionCount } = usePersonaStore();
+
+    // isCollapsed state with delayed transition for smooth animations
+    // When collapsing: delay until width animation completes
+    // When expanding: change immediately so content appears as sidebar expands
+    const [isCollapsed, setIsCollapsed] = useState(targetCollapsed);
+
+    useEffect(() => {
+        if (targetCollapsed) {
+            // Collapsing: wait for animation to complete before switching layout
+            const timer = setTimeout(() => setIsCollapsed(true), 300);
+            return () => clearTimeout(timer);
+        }
+        // Expanding: switch layout immediately
+        setIsCollapsed(false);
+        return undefined;
+    }, [targetCollapsed]);
 
     // Fetch persona attention count on mount and periodically
     useEffect(() => {
@@ -229,47 +264,35 @@ export function AppSidebar() {
         <aside
             className={cn(
                 "h-screen bg-card border-r border-border flex flex-col transition-all duration-300 overflow-x-hidden",
-                isCollapsed ? "w-16" : "w-60"
+                targetCollapsed ? "w-16" : "w-60"
             )}
         >
             {/* Logo & Toggle */}
-            <div className="h-16 border-b border-border flex items-center justify-between px-4">
-                {!isCollapsed && (
-                    <div className="flex items-center gap-2">
-                        <Logo size="md" />
-                        <span className="font-semibold text-foreground">FlowMaestro</span>
-                    </div>
-                )}
-
-                {isCollapsed && (
-                    <div className="mx-auto">
-                        <Logo size="md" />
-                    </div>
-                )}
-
-                {!isCollapsed && (
-                    <button
-                        onClick={() => setIsCollapsed(!isCollapsed)}
-                        className="p-1.5 hover:bg-muted rounded-md text-muted-foreground hover:text-foreground transition-colors"
-                        title="Collapse sidebar"
-                    >
-                        <ChevronLeft className="w-4 h-4" />
-                    </button>
-                )}
+            <div className="h-16 border-b border-border flex items-center px-4 overflow-hidden">
+                <button
+                    onClick={() => setTargetCollapsed(!targetCollapsed)}
+                    className="flex items-center gap-2 p-1 hover:bg-muted rounded-md transition-colors flex-shrink-0"
+                    title={targetCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                >
+                    <Logo size="md" />
+                </button>
+                <CollapsibleText
+                    collapsed={targetCollapsed}
+                    className="font-semibold text-foreground ml-2"
+                >
+                    FlowMaestro
+                </CollapsibleText>
+                <button
+                    onClick={() => setTargetCollapsed(true)}
+                    className={cn(
+                        "ml-auto hover:bg-muted rounded-md text-muted-foreground hover:text-foreground transition-all duration-300 flex-shrink-0",
+                        targetCollapsed ? "opacity-0 w-0 p-0" : "opacity-100 p-1.5"
+                    )}
+                    title="Collapse sidebar"
+                >
+                    <ChevronLeft className="w-4 h-4" />
+                </button>
             </div>
-
-            {/* Expand button when collapsed */}
-            {isCollapsed && (
-                <div className="px-2 py-2">
-                    <button
-                        onClick={() => setIsCollapsed(false)}
-                        className="w-full p-1.5 hover:bg-muted rounded-md text-muted-foreground hover:text-foreground transition-colors"
-                        title="Expand sidebar"
-                    >
-                        <ChevronRight className="w-4 h-4 mx-auto" />
-                    </button>
-                </div>
-            )}
 
             {/* Workspace Switcher */}
             <WorkspaceSwitcher isCollapsed={isCollapsed} />
@@ -296,55 +319,47 @@ export function AppSidebar() {
                                 <Link
                                     to={item.path}
                                     className={cn(
-                                        "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all relative",
+                                        "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors relative overflow-hidden",
                                         active
                                             ? "bg-primary/10 text-primary"
                                             : "text-muted-foreground hover:bg-muted hover:text-foreground"
                                     )}
                                 >
-                                    {/* Active indicator */}
-                                    {active && (
-                                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-primary rounded-r-full" />
-                                    )}
+                                    {active && <ActiveIndicator />}
 
-                                    <Icon
-                                        className={cn(
-                                            "w-5 h-5 flex-shrink-0",
-                                            isCollapsed && "mx-auto"
-                                        )}
-                                    />
+                                    <Icon className="w-5 h-5 flex-shrink-0" />
 
-                                    {!isCollapsed && (
-                                        <>
-                                            <span className="flex-1">{item.label}</span>
-                                            {dynamicBadge && (
-                                                <span
-                                                    className={cn(
-                                                        "px-1.5 py-0.5 text-xs font-medium rounded",
-                                                        isPersonas && needsAttentionCount > 0
-                                                            ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
-                                                            : "bg-muted text-muted-foreground"
-                                                    )}
-                                                >
-                                                    {dynamicBadge}
-                                                </span>
+                                    <CollapsibleText collapsed={targetCollapsed}>
+                                        {item.label}
+                                    </CollapsibleText>
+                                    {dynamicBadge && (
+                                        <span
+                                            className={cn(
+                                                "text-xs font-medium rounded flex-shrink-0 transition-all duration-300",
+                                                isPersonas && needsAttentionCount > 0
+                                                    ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+                                                    : "bg-muted text-muted-foreground",
+                                                targetCollapsed
+                                                    ? "opacity-0 w-0 px-0 py-0"
+                                                    : "opacity-100 px-1.5 py-0.5"
                                             )}
-                                        </>
+                                        >
+                                            {dynamicBadge}
+                                        </span>
                                     )}
                                 </Link>
                             );
 
-                            return isCollapsed ? (
+                            return (
                                 <Tooltip
                                     key={item.path}
                                     content={tooltipContent}
                                     delay={200}
                                     position="right"
+                                    disabled={!isCollapsed}
                                 >
                                     {linkContent}
                                 </Tooltip>
-                            ) : (
-                                <div key={item.path}>{linkContent}</div>
                             );
                         })}
                     </div>
@@ -357,7 +372,7 @@ export function AppSidebar() {
 
                 {/* Section 3: Credit Progress Bar */}
                 <div className="border-t border-border">
-                    <CreditProgressBar isCollapsed={isCollapsed} />
+                    <CreditProgressBar targetCollapsed={targetCollapsed} />
                 </div>
 
                 {/* Section 4: Settings Navigation */}
@@ -371,31 +386,31 @@ export function AppSidebar() {
 
                             // Account row with theme toggle
                             if (isAccountItem) {
-                                const accountContent = (
-                                    <div className="flex items-center gap-1">
-                                        <Link
-                                            to={item.path}
-                                            className={cn(
-                                                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all relative flex-1",
-                                                active
-                                                    ? "bg-primary/10 text-primary"
-                                                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                                            )}
-                                        >
-                                            {active && (
-                                                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-primary rounded-r-full" />
-                                            )}
-                                            <Icon
-                                                className={cn(
-                                                    "w-5 h-5 flex-shrink-0",
-                                                    isCollapsed && "mx-auto"
-                                                )}
-                                            />
-                                            {!isCollapsed && (
-                                                <span className="flex-1">{item.label}</span>
-                                            )}
-                                        </Link>
-                                        {!isCollapsed && (
+                                return (
+                                    <div key={item.path}>
+                                        <div className="flex items-center gap-1 overflow-hidden">
+                                            <Tooltip
+                                                content={item.label}
+                                                delay={200}
+                                                position="right"
+                                                disabled={!isCollapsed}
+                                            >
+                                                <Link
+                                                    to={item.path}
+                                                    className={cn(
+                                                        "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors relative flex-1 overflow-hidden",
+                                                        active
+                                                            ? "bg-primary/10 text-primary"
+                                                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                                                    )}
+                                                >
+                                                    {active && <ActiveIndicator />}
+                                                    <Icon className="w-5 h-5 flex-shrink-0" />
+                                                    <CollapsibleText collapsed={targetCollapsed}>
+                                                        {item.label}
+                                                    </CollapsibleText>
+                                                </Link>
+                                            </Tooltip>
                                             <Tooltip
                                                 content={getThemeTooltip()}
                                                 delay={200}
@@ -403,48 +418,18 @@ export function AppSidebar() {
                                             >
                                                 <button
                                                     onClick={toggleTheme}
-                                                    className="p-2 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                                                    className={cn(
+                                                        "rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-300 flex-shrink-0",
+                                                        targetCollapsed
+                                                            ? "opacity-0 w-0 p-0"
+                                                            : "opacity-100 p-2"
+                                                    )}
                                                 >
                                                     <ThemeIcon className="w-4 h-4" />
                                                 </button>
                                             </Tooltip>
-                                        )}
+                                        </div>
                                     </div>
-                                );
-
-                                return isCollapsed ? (
-                                    <div key={item.path} className="flex flex-col gap-1">
-                                        <Tooltip content={item.label} delay={200} position="right">
-                                            <Link
-                                                to={item.path}
-                                                className={cn(
-                                                    "flex items-center justify-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all relative",
-                                                    active
-                                                        ? "bg-primary/10 text-primary"
-                                                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                                                )}
-                                            >
-                                                {active && (
-                                                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-primary rounded-r-full" />
-                                                )}
-                                                <Icon className="w-5 h-5" />
-                                            </Link>
-                                        </Tooltip>
-                                        <Tooltip
-                                            content={getThemeTooltip()}
-                                            delay={200}
-                                            position="right"
-                                        >
-                                            <button
-                                                onClick={toggleTheme}
-                                                className="flex items-center justify-center px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                                            >
-                                                <ThemeIcon className="w-5 h-5" />
-                                            </button>
-                                        </Tooltip>
-                                    </div>
-                                ) : (
-                                    <div key={item.path}>{accountContent}</div>
                                 );
                             }
 
@@ -453,36 +438,30 @@ export function AppSidebar() {
                                 <Link
                                     to={item.path}
                                     className={cn(
-                                        "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all relative",
+                                        "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors relative overflow-hidden",
                                         active
                                             ? "bg-primary/10 text-primary"
                                             : "text-muted-foreground hover:bg-muted hover:text-foreground"
                                     )}
                                 >
-                                    {active && (
-                                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-primary rounded-r-full" />
-                                    )}
-                                    <Icon
-                                        className={cn(
-                                            "w-5 h-5 flex-shrink-0",
-                                            isCollapsed && "mx-auto"
-                                        )}
-                                    />
-                                    {!isCollapsed && <span className="flex-1">{item.label}</span>}
+                                    {active && <ActiveIndicator />}
+                                    <Icon className="w-5 h-5 flex-shrink-0" />
+                                    <CollapsibleText collapsed={targetCollapsed}>
+                                        {item.label}
+                                    </CollapsibleText>
                                 </Link>
                             );
 
-                            return isCollapsed ? (
+                            return (
                                 <Tooltip
                                     key={item.path}
                                     content={item.label}
                                     delay={200}
                                     position="right"
+                                    disabled={!isCollapsed}
                                 >
                                     {linkContent}
                                 </Tooltip>
-                            ) : (
-                                <div key={item.path}>{linkContent}</div>
                             );
                         })}
                     </div>

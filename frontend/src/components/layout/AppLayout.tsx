@@ -1,6 +1,7 @@
 import { Outlet } from "react-router-dom";
 import { useMobile } from "../../hooks/useMobile";
 import { useMobileNavStore } from "../../stores/mobileNavStore";
+import { AbstractBackground } from "../common/AbstractBackground";
 import { AppHeader } from "./AppHeader";
 import { AppSidebar } from "./AppSidebar";
 import { MobileDrawer } from "./MobileDrawer";
@@ -23,9 +24,9 @@ export function AppLayout() {
                 <AppHeader isMobile={isMobile} />
 
                 {/* Page content */}
-                <main className="flex-1 overflow-y-auto">
+                <AbstractBackground variant="app" className="flex-1 overflow-y-auto">
                     <Outlet />
-                </main>
+                </AbstractBackground>
             </div>
         </div>
     );

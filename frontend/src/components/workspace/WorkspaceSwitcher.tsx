@@ -1,3 +1,4 @@
+import * as Popover from "@radix-ui/react-popover";
 import { Check, ChevronsUpDown, Plus, Building2, Users, Crown, Loader2, User } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -67,6 +68,87 @@ function WorkspaceItem({
             </div>
             {isSelected && <Check className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />}
         </button>
+    );
+}
+
+function WorkspaceDropdownContent({
+    ownedWorkspaces,
+    memberWorkspaces,
+    currentWorkspaceId,
+    onSelectWorkspace,
+    onCreateWorkspace,
+    onManageWorkspace
+}: {
+    ownedWorkspaces: WorkspaceWithStats[];
+    memberWorkspaces: WorkspaceWithStats[];
+    currentWorkspaceId: string;
+    onSelectWorkspace: (id: string) => void;
+    onCreateWorkspace: () => void;
+    onManageWorkspace: () => void;
+}) {
+    const hasMultipleWorkspaces = ownedWorkspaces.length + memberWorkspaces.length > 1;
+
+    return (
+        <>
+            {/* Workspace List */}
+            <div className="py-1 max-h-[300px] overflow-y-auto">
+                {/* Owned Workspaces */}
+                {ownedWorkspaces.length > 0 && (
+                    <>
+                        {hasMultipleWorkspaces && (
+                            <div className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                                Your Workspaces
+                            </div>
+                        )}
+                        {ownedWorkspaces.map((workspace) => (
+                            <WorkspaceItem
+                                key={workspace.id}
+                                workspace={workspace}
+                                isSelected={workspace.id === currentWorkspaceId}
+                                isOwned={true}
+                                onClick={() => onSelectWorkspace(workspace.id)}
+                            />
+                        ))}
+                    </>
+                )}
+
+                {/* Member Workspaces */}
+                {memberWorkspaces.length > 0 && (
+                    <>
+                        <div className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                            Shared With You
+                        </div>
+                        {memberWorkspaces.map((workspace) => (
+                            <WorkspaceItem
+                                key={workspace.id}
+                                workspace={workspace}
+                                isSelected={workspace.id === currentWorkspaceId}
+                                isOwned={false}
+                                onClick={() => onSelectWorkspace(workspace.id)}
+                            />
+                        ))}
+                    </>
+                )}
+            </div>
+
+            {/* Actions */}
+            <div className="border-t border-border py-1">
+                <button
+                    onClick={onCreateWorkspace}
+                    className="w-full flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                >
+                    <Plus className="h-4 w-4" />
+                    <span>Create workspace</span>
+                </button>
+                <button
+                    onClick={onManageWorkspace}
+                    className="w-full flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                >
+                    <Users className="h-4 w-4" />
+                    <span>Manage workspace</span>
+                </button>
+            </div>
+        </>
     );
 }
 
@@ -153,121 +235,92 @@ export function WorkspaceSwitcher({ isCollapsed = false }: WorkspaceSwitcherProp
         );
     }
 
-    // Collapsed view - just show icon with tooltip
+    const TriggerIcon = currentWorkspace.category === "personal" ? User : Building2;
+
+    // Collapsed view - icon with popover to the right
     if (isCollapsed) {
-        const CollapsedIcon = currentWorkspace.category === "personal" ? User : Building2;
         return (
             <div className="px-2 py-2 border-b border-border">
-                <Tooltip
-                    content={`${currentWorkspace.name} (${currentWorkspace.type})`}
-                    position="right"
-                    delay={200}
-                >
-                    <button
-                        onClick={() => setIsOpen(!isOpen)}
-                        className="w-full p-2 hover:bg-muted rounded-lg transition-colors flex items-center justify-center text-muted-foreground hover:text-foreground"
+                <Popover.Root open={isOpen} onOpenChange={setIsOpen}>
+                    <Tooltip
+                        content={`${currentWorkspace.name} (${currentWorkspace.type})`}
+                        position="right"
+                        delay={200}
+                        disabled={isOpen}
                     >
-                        <CollapsedIcon className="w-5 h-5" />
-                    </button>
-                </Tooltip>
+                        <Popover.Trigger asChild>
+                            <button
+                                className={cn(
+                                    "w-full p-2 rounded-lg transition-colors flex items-center justify-center",
+                                    isOpen
+                                        ? "bg-muted text-foreground"
+                                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                                )}
+                            >
+                                <TriggerIcon className="w-5 h-5" />
+                            </button>
+                        </Popover.Trigger>
+                    </Tooltip>
+                    <Popover.Portal>
+                        <Popover.Content
+                            side="right"
+                            align="center"
+                            sideOffset={8}
+                            className="z-50 w-56 bg-popover border border-border rounded-lg shadow-lg overflow-hidden"
+                        >
+                            <WorkspaceDropdownContent
+                                ownedWorkspaces={ownedWorkspaces}
+                                memberWorkspaces={memberWorkspaces}
+                                currentWorkspaceId={currentWorkspace.id}
+                                onSelectWorkspace={handleWorkspaceSelect}
+                                onCreateWorkspace={handleCreateWorkspace}
+                                onManageWorkspace={handleManageMembers}
+                            />
+                        </Popover.Content>
+                    </Popover.Portal>
+                </Popover.Root>
             </div>
         );
     }
 
-    const allWorkspaces = [...ownedWorkspaces, ...memberWorkspaces];
-    const hasMultipleWorkspaces = allWorkspaces.length > 1;
-    const TriggerIcon = currentWorkspace.category === "personal" ? User : Building2;
-
-    // Expanded view - compact dropdown trigger
+    // Expanded view - dropdown below trigger
     return (
         <div className="px-2 py-2 border-b border-border">
-            <div className="relative">
-                <button
-                    onClick={() => setIsOpen(!isOpen)}
-                    className={cn(
-                        "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors",
-                        isOpen
-                            ? "bg-muted text-foreground"
-                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                    )}
-                >
-                    <TriggerIcon className="w-5 h-5 flex-shrink-0" />
-                    <span className="flex-1 text-left font-medium truncate">
-                        {currentWorkspace.name}
-                    </span>
-                    <ChevronsUpDown className="h-4 w-4 flex-shrink-0 opacity-50" />
-                </button>
-
-                {/* Dropdown Menu */}
-                {isOpen && (
-                    <>
-                        {/* Backdrop */}
-                        <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
-
-                        {/* Dropdown */}
-                        <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-popover border border-border rounded-lg shadow-lg overflow-hidden">
-                            {/* Workspace List */}
-                            <div className="py-1 max-h-[300px] overflow-y-auto">
-                                {/* Owned Workspaces */}
-                                {ownedWorkspaces.length > 0 && (
-                                    <>
-                                        {hasMultipleWorkspaces && (
-                                            <div className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                                                Your Workspaces
-                                            </div>
-                                        )}
-                                        {ownedWorkspaces.map((workspace) => (
-                                            <WorkspaceItem
-                                                key={workspace.id}
-                                                workspace={workspace}
-                                                isSelected={workspace.id === currentWorkspace.id}
-                                                isOwned={true}
-                                                onClick={() => handleWorkspaceSelect(workspace.id)}
-                                            />
-                                        ))}
-                                    </>
-                                )}
-
-                                {/* Member Workspaces */}
-                                {memberWorkspaces.length > 0 && (
-                                    <>
-                                        <div className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                                            Shared With You
-                                        </div>
-                                        {memberWorkspaces.map((workspace) => (
-                                            <WorkspaceItem
-                                                key={workspace.id}
-                                                workspace={workspace}
-                                                isSelected={workspace.id === currentWorkspace.id}
-                                                isOwned={false}
-                                                onClick={() => handleWorkspaceSelect(workspace.id)}
-                                            />
-                                        ))}
-                                    </>
-                                )}
-                            </div>
-
-                            {/* Actions */}
-                            <div className="border-t border-border py-1">
-                                <button
-                                    onClick={handleCreateWorkspace}
-                                    className="w-full flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                                >
-                                    <Plus className="h-4 w-4" />
-                                    <span>Create workspace</span>
-                                </button>
-                                <button
-                                    onClick={handleManageMembers}
-                                    className="w-full flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                                >
-                                    <Users className="h-4 w-4" />
-                                    <span>Manage workspace</span>
-                                </button>
-                            </div>
-                        </div>
-                    </>
-                )}
-            </div>
+            <Popover.Root open={isOpen} onOpenChange={setIsOpen}>
+                <Popover.Trigger asChild>
+                    <button
+                        className={cn(
+                            "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors",
+                            isOpen
+                                ? "bg-muted text-foreground"
+                                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                        )}
+                    >
+                        <TriggerIcon className="w-5 h-5 flex-shrink-0" />
+                        <span className="flex-1 text-left font-medium truncate">
+                            {currentWorkspace.name}
+                        </span>
+                        <ChevronsUpDown className="h-4 w-4 flex-shrink-0 opacity-50" />
+                    </button>
+                </Popover.Trigger>
+                <Popover.Portal>
+                    <Popover.Content
+                        side="bottom"
+                        align="start"
+                        sideOffset={4}
+                        className="z-50 w-[var(--radix-popover-trigger-width)] bg-popover border border-border rounded-lg shadow-lg overflow-hidden"
+                    >
+                        <WorkspaceDropdownContent
+                            ownedWorkspaces={ownedWorkspaces}
+                            memberWorkspaces={memberWorkspaces}
+                            currentWorkspaceId={currentWorkspace.id}
+                            onSelectWorkspace={handleWorkspaceSelect}
+                            onCreateWorkspace={handleCreateWorkspace}
+                            onManageWorkspace={handleManageMembers}
+                        />
+                    </Popover.Content>
+                </Popover.Portal>
+            </Popover.Root>
         </div>
     );
 }

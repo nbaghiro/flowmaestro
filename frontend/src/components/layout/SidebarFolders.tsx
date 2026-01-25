@@ -1,6 +1,6 @@
 import * as Popover from "@radix-ui/react-popover";
 import { useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, ChevronUp, Folder, Edit2, Trash2, Plus } from "lucide-react";
+import { ChevronDown, ChevronUp, ChevronRight, Folder, Edit2, Trash2, Plus } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import type {
@@ -321,6 +321,76 @@ export function SidebarFolders({ isCollapsed }: SidebarFoldersProps) {
 
     const navigate = useNavigate();
     const [isCollapsedPopoverOpen, setIsCollapsedPopoverOpen] = useState(false);
+    const [popoverExpandedFolders, setPopoverExpandedFolders] = useState<Set<string>>(new Set());
+
+    const togglePopoverFolderExpanded = (folderId: string) => {
+        setPopoverExpandedFolders((prev) => {
+            const next = new Set(prev);
+            if (next.has(folderId)) {
+                next.delete(folderId);
+            } else {
+                next.add(folderId);
+            }
+            return next;
+        });
+    };
+
+    // Recursive function to render folder tree in popover
+    const renderPopoverFolderTree = useCallback(
+        (nodes: FolderTreeNode[], depth: number = 0): React.ReactNode => {
+            return nodes.map((folder) => {
+                const hasChildren = folder.children && folder.children.length > 0;
+                const isExpanded = popoverExpandedFolders.has(folder.id);
+
+                return (
+                    <div key={folder.id}>
+                        <div
+                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+                            style={{ paddingLeft: `${12 + depth * 16}px` }}
+                        >
+                            {hasChildren ? (
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        togglePopoverFolderExpanded(folder.id);
+                                    }}
+                                    className="p-0.5 -ml-1 text-muted-foreground hover:text-foreground transition-colors"
+                                >
+                                    <ChevronRight
+                                        className={`w-3 h-3 transition-transform ${isExpanded ? "rotate-90" : ""}`}
+                                    />
+                                </button>
+                            ) : (
+                                <span className="w-4" />
+                            )}
+                            <button
+                                onClick={() => {
+                                    setIsCollapsedPopoverOpen(false);
+                                    navigate(`/folders/${folder.id}`);
+                                }}
+                                className="flex-1 flex items-center gap-2 min-w-0"
+                            >
+                                <div
+                                    className="w-3 h-3 rounded-sm flex-shrink-0"
+                                    style={{ backgroundColor: folder.color }}
+                                />
+                                <span className="truncate">{folder.name}</span>
+                                {folder.itemCounts.total > 0 && (
+                                    <span className="ml-auto text-xs text-muted-foreground">
+                                        {folder.itemCounts.total}
+                                    </span>
+                                )}
+                            </button>
+                        </div>
+                        {hasChildren && isExpanded && (
+                            <div>{renderPopoverFolderTree(folder.children, depth + 1)}</div>
+                        )}
+                    </div>
+                );
+            });
+        },
+        [popoverExpandedFolders, navigate]
+    );
 
     // Collapsed sidebar: show folder icon that opens popover with folder list
     if (isCollapsed) {
@@ -338,7 +408,7 @@ export function SidebarFolders({ isCollapsed }: SidebarFoldersProps) {
                     <Popover.Portal>
                         <Popover.Content
                             side="right"
-                            align="start"
+                            align="center"
                             sideOffset={8}
                             className="z-50 w-56 bg-popover border border-border rounded-lg shadow-lg overflow-hidden"
                         >
@@ -363,33 +433,13 @@ export function SidebarFolders({ isCollapsed }: SidebarFoldersProps) {
                                     <div className="px-3 py-2 text-sm text-muted-foreground">
                                         Loading...
                                     </div>
-                                ) : !folders || folders.length === 0 ? (
+                                ) : !folderTree || folderTree.length === 0 ? (
                                     <div className="px-3 py-4 text-sm text-muted-foreground text-center">
                                         No folders yet
                                     </div>
                                 ) : (
                                     <div className="py-1">
-                                        {folders.map((folder) => (
-                                            <button
-                                                key={folder.id}
-                                                onClick={() => {
-                                                    setIsCollapsedPopoverOpen(false);
-                                                    navigate(`/folders/${folder.id}`);
-                                                }}
-                                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
-                                            >
-                                                <div
-                                                    className="w-3 h-3 rounded-sm flex-shrink-0"
-                                                    style={{ backgroundColor: folder.color }}
-                                                />
-                                                <span className="truncate">{folder.name}</span>
-                                                {folder.itemCounts.total > 0 && (
-                                                    <span className="ml-auto text-xs text-muted-foreground">
-                                                        {folder.itemCounts.total}
-                                                    </span>
-                                                )}
-                                            </button>
-                                        ))}
+                                        {renderPopoverFolderTree(folderTree, 0)}
                                     </div>
                                 )}
                             </div>
