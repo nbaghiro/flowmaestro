@@ -1,4 +1,5 @@
 import {
+    Home,
     LayoutGrid,
     Plug,
     BookOpen,
@@ -213,7 +214,8 @@ function CreditProgressBar({ targetCollapsed }: { targetCollapsed: boolean }) {
 
 const navItems: NavItem[] = [
     // Primary navigation
-    { icon: LayoutGrid, label: "Workflows", path: "/", section: "primary" },
+    { icon: Home, label: "Home", path: "/", section: "primary" },
+    { icon: LayoutGrid, label: "Workflows", path: "/workflows", section: "primary" },
     { icon: Bot, label: "Agents", path: "/agents", section: "primary" },
     { icon: Users, label: "Personas", path: "/personas", section: "primary" },
     { icon: ClipboardList, label: "Form Interfaces", path: "/form-interfaces", section: "primary" },
@@ -384,10 +386,11 @@ export function AppSidebar() {
                     </div>
                 </nav>
 
-                {/* Section 2: Folders - anchored to bottom, expands upward */}
-                <div className="flex-1 overflow-y-auto min-h-0 flex flex-col justify-end">
-                    <SidebarFolders isCollapsed={isCollapsed} />
-                </div>
+                {/* Spacer - pushes folders to bottom */}
+                <div className="flex-1" />
+
+                {/* Section 2: Folders - constrained height with scrolling */}
+                <SidebarFolders isCollapsed={isCollapsed} />
 
                 {/* Section 3: Credit Progress Bar */}
                 <div className="border-t border-border">

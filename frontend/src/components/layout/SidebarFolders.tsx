@@ -458,9 +458,9 @@ export function SidebarFolders({ isCollapsed }: SidebarFoldersProps) {
     }
 
     return (
-        <div className="border-t border-border">
-            {/* Section Header */}
-            <div className="px-2">
+        <div className="border-t border-border flex flex-col max-h-[200px] overflow-hidden">
+            {/* Section Header - fixed height */}
+            <div className="px-2 flex-shrink-0">
                 <div className="flex items-center justify-between px-3 py-3">
                     <button
                         onClick={toggleSidebarFoldersExpanded}
@@ -488,9 +488,9 @@ export function SidebarFolders({ isCollapsed }: SidebarFoldersProps) {
                 </div>
             </div>
 
-            {/* Folder List */}
+            {/* Folder List - scrollable */}
             {sidebarFoldersExpanded && (
-                <div className="px-2 pb-3">
+                <div className="px-2 pb-3 min-h-0 flex-1 overflow-y-auto">
                     {isLoadingFolders ? (
                         <div className="px-3 py-2 text-sm text-muted-foreground">Loading...</div>
                     ) : !folders || folders.length === 0 ? (
@@ -498,7 +498,7 @@ export function SidebarFolders({ isCollapsed }: SidebarFoldersProps) {
                             No folders yet
                         </div>
                     ) : (
-                        <div className="max-h-64 overflow-y-auto space-y-0.5">
+                        <div className="space-y-0.5">
                             {/* Render folder tree (root level only, children are rendered recursively) */}
                             {renderFolderTree(folderTree, 0)}
                         </div>
