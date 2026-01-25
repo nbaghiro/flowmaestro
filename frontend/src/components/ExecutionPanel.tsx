@@ -54,19 +54,35 @@ export function ExecutionPanel({
     const resizeStartX = useRef(0);
     const resizeStartWidth = useRef(DEFAULT_WIDTH);
 
-    // Clear execution and triggers when workflow changes
+    // Track previous workflow ID to only clear on actual workflow change
+    const prevWorkflowIdRef = useRef<string | null>(null);
+
+    // Clear execution and triggers when workflow changes (not on initial mount)
     useEffect(() => {
-        clearExecution();
-        clearTriggers();
-        setActiveTab("triggers"); // Reset to triggers tab
+        // Only clear if this is a workflow change, not initial mount
+        if (prevWorkflowIdRef.current !== null && prevWorkflowIdRef.current !== workflowId) {
+            clearExecution();
+            clearTriggers();
+            setActiveTab("triggers"); // Reset to triggers tab
+        }
+        prevWorkflowIdRef.current = workflowId;
     }, [workflowId, clearExecution, clearTriggers]);
 
-    // Auto-switch to execution tab when an execution starts
+    // Track previous execution ID to detect new executions
+    const prevExecutionIdRef = useRef<string | null>(null);
+
+    // Auto-switch to execution tab only when a NEW execution starts
     useEffect(() => {
-        if (currentExecution && activeTab === "triggers") {
+        const currentId = currentExecution?.id ?? null;
+        const prevId = prevExecutionIdRef.current;
+
+        // Only switch if this is a new execution (ID changed from null or different ID)
+        if (currentId && currentId !== prevId) {
             setActiveTab("execution");
         }
-    }, [currentExecution?.id, activeTab]);
+
+        prevExecutionIdRef.current = currentId;
+    }, [currentExecution?.id]);
 
     // Handle resize start
     const handleResizeStart = (e: React.MouseEvent) => {
@@ -126,15 +142,15 @@ export function ExecutionPanel({
 
     // Render tabs
     const renderTabs = () => (
-        <div className="flex items-center justify-between gap-1 px-4 py-2 border-b border-border bg-muted/20">
-            <div className="flex items-center gap-1">
+        <div className="flex items-center justify-between gap-1 px-4 py-2 border-b border-border bg-muted/30">
+            <div className="flex items-center gap-1 p-1 bg-muted/50 rounded-lg">
                 <button
                     onClick={() => setActiveTab("triggers")}
                     className={cn(
-                        "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors",
+                        "flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors",
                         activeTab === "triggers"
-                            ? "bg-background text-foreground shadow-sm"
-                            : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+                            ? "bg-background text-foreground shadow-sm border border-border"
+                            : "text-muted-foreground hover:text-foreground"
                     )}
                 >
                     <Zap className="w-4 h-4" />
@@ -149,10 +165,10 @@ export function ExecutionPanel({
                 <button
                     onClick={() => setActiveTab("execution")}
                     className={cn(
-                        "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors",
+                        "flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors",
                         activeTab === "execution"
-                            ? "bg-background text-foreground shadow-sm"
-                            : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+                            ? "bg-background text-foreground shadow-sm border border-border"
+                            : "text-muted-foreground hover:text-foreground"
                     )}
                 >
                     <Play className="w-4 h-4" />
@@ -162,10 +178,10 @@ export function ExecutionPanel({
                 <button
                     onClick={() => setActiveTab("history")}
                     className={cn(
-                        "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors",
+                        "flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors",
                         activeTab === "history"
-                            ? "bg-background text-foreground shadow-sm"
-                            : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+                            ? "bg-background text-foreground shadow-sm border border-border"
+                            : "text-muted-foreground hover:text-foreground"
                     )}
                 >
                     <HistoryIcon className="w-4 h-4" />
