@@ -799,5 +799,19 @@ const freshdeskEntry: ProviderRegistryEntry = {
 
 providerRegistry.register(freshdeskEntry);
 
+// Register ClickUp provider
+const clickupEntry: ProviderRegistryEntry = {
+    name: "clickup",
+    displayName: "ClickUp",
+    authMethod: "oauth2",
+    category: "project_management",
+    loader: async () => {
+        const { ClickUpProvider } = await import("./providers/clickup/ClickUpProvider");
+        return new ClickUpProvider();
+    }
+};
+
+providerRegistry.register(clickupEntry);
+
 // Export for use in application
 export { providerRegistry };

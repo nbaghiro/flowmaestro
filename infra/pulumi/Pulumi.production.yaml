@@ -131,5 +131,7 @@ config:
       {"name":"hootsuite-client-id","envVar":"HOOTSUITE_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Hootsuite OAuth client ID"},
       {"name":"hootsuite-client-secret","envVar":"HOOTSUITE_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Hootsuite OAuth client secret"},
       {"name":"calendly-client-id","envVar":"CALENDLY_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Calendly OAuth client ID"},
-      {"name":"calendly-client-secret","envVar":"CALENDLY_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Calendly OAuth client secret"}
+      {"name":"calendly-client-secret","envVar":"CALENDLY_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Calendly OAuth client secret"},
+      {"name":"clickup-client-id","envVar":"CLICKUP_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"ClickUp OAuth client ID"},
+      {"name":"clickup-client-secret","envVar":"CLICKUP_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"ClickUp OAuth client secret"}
     ]

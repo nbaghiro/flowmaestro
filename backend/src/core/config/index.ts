@@ -426,6 +426,12 @@ export const config = {
         calendly: {
             clientId: process.env.CALENDLY_CLIENT_ID || "",
             clientSecret: process.env.CALENDLY_CLIENT_SECRET || ""
+        },
+
+        // ClickUp
+        clickup: {
+            clientId: process.env.CLICKUP_CLIENT_ID || "",
+            clientSecret: process.env.CLICKUP_CLIENT_SECRET || ""
         }
     }
 };
@@ -497,6 +503,7 @@ export function getOAuthRedirectUri(provider: string): string {
         buffer: "/oauth/buffer/callback",
         hootsuite: "/oauth/hootsuite/callback",
         calendly: "/oauth/calendly/callback",
+        clickup: "/oauth/clickup/callback",
 
         // OAuth 1.0a providers
         evernote: "/oauth1/evernote/callback"

@@ -148,7 +148,8 @@ export const PROVIDER_LOGO_DOMAINS: Record<string, string> = {
     freshdesk: "freshdesk.com",
     buffer: "buffer.com",
     hootsuite: "hootsuite.com",
-    calendly: "calendly.com"
+    calendly: "calendly.com",
+    clickup: "clickup.com"
 };
 
 /**
@@ -401,11 +402,10 @@ export const ALL_PROVIDERS: Provider[] = [
     {
         provider: "clickup",
         displayName: "ClickUp",
-        description: "Manage tasks and docs",
+        description: "Manage tasks, lists, folders, and spaces in your ClickUp workspace",
         logoUrl: getBrandLogo("clickup.com"),
         category: "Project Management",
-        methods: ["api_key"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "basecamp",

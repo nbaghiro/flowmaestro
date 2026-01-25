@@ -3020,6 +3020,61 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
         },
         refreshable: true,
         pkceEnabled: false
+    },
+
+    clickup: {
+        name: "clickup",
+        displayName: "ClickUp",
+        authUrl: "https://app.clickup.com/api",
+        tokenUrl: "https://api.clickup.com/api/v2/oauth/token",
+        scopes: [], // ClickUp doesn't use traditional scopes - access is workspace-based
+        clientId: config.oauth.clickup.clientId,
+        clientSecret: config.oauth.clickup.clientSecret,
+        redirectUri: getOAuthRedirectUri("clickup"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                // Note: ClickUp uses raw access token, no "Bearer" prefix
+                const response = await fetch("https://api.clickup.com/api/v2/user", {
+                    headers: {
+                        Authorization: accessToken,
+                        "Content-Type": "application/json"
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const result = (await response.json()) as {
+                    user?: {
+                        id?: number;
+                        username?: string;
+                        email?: string;
+                        color?: string;
+                        profilePicture?: string;
+                    };
+                };
+
+                return {
+                    userId: result.user?.id?.toString() || "unknown",
+                    name: result.user?.username || "ClickUp User",
+                    email: result.user?.email || "unknown@clickup",
+                    user: result.user?.username || result.user?.email || "ClickUp User",
+                    color: result.user?.color,
+                    profilePicture: result.user?.profilePicture
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get ClickUp user info");
+                return {
+                    userId: "unknown",
+                    name: "ClickUp User",
+                    email: "unknown@clickup",
+                    user: "ClickUp User"
+                };
+            }
+        },
+        refreshable: false, // ClickUp tokens don't currently expire
+        pkceEnabled: false
     }
 };
 
