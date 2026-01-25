@@ -1,5 +1,5 @@
 import { Plus } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
     getDefaultModelForProvider,
     getTemperatureMaxForProvider,
@@ -23,6 +23,7 @@ interface LLMNodeConfigProps {
 }
 
 export function LLMNodeConfig({ nodeId, data, onUpdate, errors = [] }: LLMNodeConfigProps) {
+    const isInitialMount = useRef(true);
     const getError = (field: string) => errors.find((e) => e.field === field)?.message;
     const [provider, setProvider] = useState((data.provider as string) || "");
     const [model, setModel] = useState(
@@ -72,6 +73,12 @@ export function LLMNodeConfig({ nodeId, data, onUpdate, errors = [] }: LLMNodeCo
     }, [provider]);
 
     useEffect(() => {
+        // Skip the initial mount - don't push unchanged data to store
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return;
+        }
+
         onUpdate({
             provider,
             model,

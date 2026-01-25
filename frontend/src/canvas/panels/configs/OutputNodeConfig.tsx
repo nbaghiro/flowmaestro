@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { ValidationError } from "@flowmaestro/shared";
 import { FormField, FormSection } from "../../../components/common/FormField";
 import { Input } from "../../../components/common/Input";
@@ -25,6 +25,7 @@ export function OutputNodeConfig({
     onUpdate,
     errors = []
 }: OutputNodeConfigProps) {
+    const isInitialMount = useRef(true);
     const getError = (field: string) => errors.find((e) => e.field === field)?.message;
     const [outputName, setOutputName] = useState((data.outputName as string) || "result");
     const [value, setValue] = useState((data.value as string) || "");
@@ -32,6 +33,12 @@ export function OutputNodeConfig({
     const [description, setDescription] = useState((data.description as string) || "");
 
     useEffect(() => {
+        // Skip the initial mount - don't push unchanged data to store
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return;
+        }
+
         onUpdate({
             outputName,
             value,

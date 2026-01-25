@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { ValidationError } from "@flowmaestro/shared";
 import { FormField, FormSection } from "../../../components/common/FormField";
 import { Select } from "../../../components/common/Select";
@@ -19,6 +19,7 @@ export function KnowledgeBaseQueryNodeConfig({
     onUpdate,
     errors: _errors = []
 }: KnowledgeBaseQueryNodeConfigProps) {
+    const isInitialMount = useRef(true);
     const [knowledgeBaseId, setKnowledgeBaseId] = useState((data.knowledgeBaseId as string) || "");
     const [queryText, setQueryText] = useState((data.queryText as string) || "");
     const [outputVariable, setOutputVariable] = useState((data.outputVariable as string) || "");
@@ -33,6 +34,12 @@ export function KnowledgeBaseQueryNodeConfig({
     });
 
     useEffect(() => {
+        // Skip the initial mount - don't push unchanged data to store
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return;
+        }
+
         // Find the selected KB name
         const selectedKB = kbData?.find((kb) => kb.id === knowledgeBaseId);
 

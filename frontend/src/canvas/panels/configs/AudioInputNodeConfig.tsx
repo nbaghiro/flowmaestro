@@ -55,6 +55,7 @@ export function AudioInputNodeConfig({
     onUpdate,
     errors = []
 }: AudioInputNodeConfigProps) {
+    const isInitialMount = useRef(true);
     const getError = (field: string) => errors.find((e) => e.field === field)?.message;
 
     // State
@@ -176,6 +177,12 @@ export function AudioInputNodeConfig({
 
     // Sync state to parent
     useEffect(() => {
+        // Skip the initial mount - don't push unchanged data to store
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return;
+        }
+
         onUpdate({
             provider,
             model,

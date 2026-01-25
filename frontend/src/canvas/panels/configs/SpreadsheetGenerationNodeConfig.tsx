@@ -4,7 +4,7 @@
  * Configuration for generating Excel/CSV files from data.
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { ValidationError } from "@flowmaestro/shared";
 import { FormField, FormSection } from "../../../components/common/FormField";
 import { Input } from "../../../components/common/Input";
@@ -29,6 +29,7 @@ export function SpreadsheetGenerationNodeConfig({
     onUpdate,
     errors = []
 }: SpreadsheetGenerationNodeConfigProps) {
+    const isInitialMount = useRef(true);
     const getError = (field: string) => errors.find((e) => e.field === field)?.message;
 
     // Core settings
@@ -61,6 +62,12 @@ export function SpreadsheetGenerationNodeConfig({
 
     // Update parent on state change
     useEffect(() => {
+        // Skip the initial mount - don't push unchanged data to store
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return;
+        }
+
         onUpdate({
             format,
             filename,

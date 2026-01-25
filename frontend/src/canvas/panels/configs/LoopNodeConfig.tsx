@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { ValidationError } from "@flowmaestro/shared";
 import { CodeInput } from "../../../components/CodeInput";
 import { FormField, FormSection } from "../../../components/common/FormField";
@@ -26,6 +26,7 @@ export function LoopNodeConfig({
     onUpdate,
     errors: _errors = []
 }: LoopNodeConfigProps) {
+    const isInitialMount = useRef(true);
     const [loopType, setLoopType] = useState((data.loopType as string) || "forEach");
     const [arrayVariable, setArrayVariable] = useState((data.arrayVariable as string) || "");
     const [itemVariable, setItemVariable] = useState((data.itemVariable as string) || "item");
@@ -40,6 +41,12 @@ export function LoopNodeConfig({
     const [showVariableDialog, setShowVariableDialog] = useState(false);
 
     useEffect(() => {
+        // Skip the initial mount - don't push unchanged data to store
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return;
+        }
+
         onUpdate({
             loopType,
             arrayVariable,

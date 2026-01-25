@@ -35,6 +35,8 @@ export function TriggerNodeConfig({
     const onUpdateRef = useRef(onUpdate);
     onUpdateRef.current = onUpdate;
 
+    const isInitialMount = useRef(true);
+
     // Provider trigger state
     const [selectedProvider, setSelectedProvider] = useState<TriggerProviderSummary | null>(
         data.providerId
@@ -73,6 +75,12 @@ export function TriggerNodeConfig({
 
     // Build and send config to parent
     const updateConfig = useCallback(() => {
+        // Skip the initial mount - don't push unchanged data to store
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return;
+        }
+
         const config: Record<string, unknown> = {
             triggerType: "provider"
         };

@@ -84,8 +84,15 @@ export function IntegrationNodeConfig({
     // Update parent component whenever config changes
     // Use useRef to track previous values and avoid infinite loops
     const prevConfigRef = useRef<string>("");
+    const isInitialMount = useRef(true);
 
     useEffect(() => {
+        // Skip the initial mount - don't push unchanged data to store
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return;
+        }
+
         const config = {
             provider,
             operation,

@@ -4,7 +4,7 @@
  * Configuration for generating PDF documents from markdown or HTML.
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { ValidationError } from "@flowmaestro/shared";
 import { FormField, FormSection } from "../../../components/common/FormField";
 import { Input } from "../../../components/common/Input";
@@ -40,6 +40,7 @@ export function PdfGenerationNodeConfig({
     onUpdate,
     errors = []
 }: PdfGenerationNodeConfigProps) {
+    const isInitialMount = useRef(true);
     const getError = (field: string) => errors.find((e) => e.field === field)?.message;
 
     // Content
@@ -75,6 +76,12 @@ export function PdfGenerationNodeConfig({
 
     // Update parent on state change
     useEffect(() => {
+        // Skip the initial mount - don't push unchanged data to store
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return;
+        }
+
         onUpdate({
             content,
             format,

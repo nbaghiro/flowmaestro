@@ -4,7 +4,7 @@
  * Configuration for fetching and extracting web page content.
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { ValidationError } from "@flowmaestro/shared";
 import { FormField, FormSection } from "../../../components/common/FormField";
 import { Input } from "../../../components/common/Input";
@@ -18,6 +18,7 @@ interface WebBrowseNodeConfigProps {
 }
 
 export function WebBrowseNodeConfig({ data, onUpdate, errors = [] }: WebBrowseNodeConfigProps) {
+    const isInitialMount = useRef(true);
     const getError = (field: string) => errors.find((e) => e.field === field)?.message;
 
     // URL
@@ -34,6 +35,12 @@ export function WebBrowseNodeConfig({ data, onUpdate, errors = [] }: WebBrowseNo
 
     // Update parent on state change
     useEffect(() => {
+        // Skip the initial mount - don't push unchanged data to store
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return;
+        }
+
         onUpdate({
             url,
             extractText,

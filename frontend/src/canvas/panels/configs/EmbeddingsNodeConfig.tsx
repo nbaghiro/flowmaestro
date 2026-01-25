@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
     LLM_PROVIDERS,
     LLM_MODELS_BY_PROVIDER,
@@ -35,6 +35,7 @@ export function EmbeddingsNodeConfig({
     onUpdate,
     errors: _errors = []
 }: EmbeddingsNodeConfigProps) {
+    const isInitialMount = useRef(true);
     const [provider, setProvider] = useState((data.provider as string) || "openai");
     const [model, setModel] = useState(
         (data.model as string) || getDefaultModelForProvider((data.provider as string) || "openai")
@@ -46,6 +47,12 @@ export function EmbeddingsNodeConfig({
     const dimensions = dimensionsByModel[model as keyof typeof dimensionsByModel] || 1536;
 
     useEffect(() => {
+        // Skip the initial mount - don't push unchanged data to store
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return;
+        }
+
         onUpdate({
             provider,
             model,

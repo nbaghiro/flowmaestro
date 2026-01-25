@@ -1,5 +1,5 @@
 import { Plus } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
     VIDEO_GENERATION_PROVIDERS,
     getVideoGenerationModelsForProvider,
@@ -32,6 +32,7 @@ export function VideoGenerationNodeConfig({
     onUpdate,
     errors = []
 }: VideoGenerationNodeConfigProps) {
+    const isInitialMount = useRef(true);
     const getError = (field: string) => errors.find((e) => e.field === field)?.message;
 
     // Core state
@@ -71,6 +72,12 @@ export function VideoGenerationNodeConfig({
 
     // Update parent on state change
     useEffect(() => {
+        // Skip the initial mount - don't push unchanged data to store
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return;
+        }
+
         onUpdate({
             provider,
             model,

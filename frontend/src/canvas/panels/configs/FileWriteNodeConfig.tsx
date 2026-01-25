@@ -2,7 +2,7 @@
  * File Write Node Configuration Panel
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { ValidationError } from "@flowmaestro/shared";
 import { FormField, FormSection } from "../../../components/common/FormField";
 import { Input } from "../../../components/common/Input";
@@ -23,6 +23,7 @@ const ENCODING_OPTIONS = [
 ];
 
 export function FileWriteNodeConfig({ data, onUpdate, errors = [] }: FileWriteNodeConfigProps) {
+    const isInitialMount = useRef(true);
     const getError = (field: string) => errors.find((e) => e.field === field)?.message;
     const [path, setPath] = useState<string>((data.path as string) || "");
     const [content, setContent] = useState<string>((data.content as string) || "");
@@ -36,6 +37,12 @@ export function FileWriteNodeConfig({ data, onUpdate, errors = [] }: FileWriteNo
     );
 
     useEffect(() => {
+        // Skip the initial mount - don't push unchanged data to store
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return;
+        }
+
         onUpdate({ path, content, encoding, createDirectories, overwrite, outputVariable });
     }, [path, content, encoding, createDirectories, overwrite, outputVariable]);
 

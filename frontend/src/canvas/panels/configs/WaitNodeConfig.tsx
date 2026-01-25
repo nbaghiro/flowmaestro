@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { ValidationError } from "@flowmaestro/shared";
 import { CodeInput } from "../../../components/CodeInput";
 import { FormField, FormSection } from "../../../components/common/FormField";
@@ -32,6 +32,7 @@ export function WaitNodeConfig({
     onUpdate,
     errors: _errors = []
 }: WaitNodeConfigProps) {
+    const isInitialMount = useRef(true);
     const [waitType, setWaitType] = useState((data.waitType as string) || "duration");
     const [duration, setDuration] = useState((data.duration as number) || 5);
     const [unit, setUnit] = useState((data.unit as string) || "seconds");
@@ -41,6 +42,12 @@ export function WaitNodeConfig({
     const [outputVariable, setOutputVariable] = useState((data.outputVariable as string) || "");
 
     useEffect(() => {
+        // Skip the initial mount - don't push unchanged data to store
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return;
+        }
+
         onUpdate({
             waitType,
             duration,

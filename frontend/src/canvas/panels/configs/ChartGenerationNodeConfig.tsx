@@ -4,7 +4,7 @@
  * Configuration for generating charts from data using Chart.js.
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { ValidationError } from "@flowmaestro/shared";
 import { FormField, FormSection } from "../../../components/common/FormField";
 import { Input } from "../../../components/common/Input";
@@ -49,6 +49,7 @@ export function ChartGenerationNodeConfig({
     onUpdate,
     errors = []
 }: ChartGenerationNodeConfigProps) {
+    const isInitialMount = useRef(true);
     const getError = (field: string) => errors.find((e) => e.field === field)?.message;
 
     // Chart type
@@ -78,6 +79,12 @@ export function ChartGenerationNodeConfig({
 
     // Update parent on state change
     useEffect(() => {
+        // Skip the initial mount - don't push unchanged data to store
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return;
+        }
+
         onUpdate({
             chartType,
             dataLabels,

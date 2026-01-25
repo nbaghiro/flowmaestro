@@ -14,7 +14,7 @@ import {
     Settings,
     SlidersHorizontal
 } from "lucide-react";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Select } from "../../../components/common/Select";
 import { Tooltip } from "../../../components/common/Tooltip";
 
@@ -164,6 +164,8 @@ function SliderWithValue({
 }
 
 export function URLNodeConfig({ nodeId: _nodeId, data, onUpdate }: URLNodeConfigProps) {
+    const isInitialMount = useRef(true);
+
     // URL State
     const [urls, setUrls] = useState<string[]>((data.urls as string[]) || []);
     const [newUrl, setNewUrl] = useState("");
@@ -189,6 +191,12 @@ export function URLNodeConfig({ nodeId: _nodeId, data, onUpdate }: URLNodeConfig
 
     // Sync state to parent
     useEffect(() => {
+        // Skip the initial mount - don't push unchanged data to store
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return;
+        }
+
         onUpdate({
             urls,
             scrapingMode,

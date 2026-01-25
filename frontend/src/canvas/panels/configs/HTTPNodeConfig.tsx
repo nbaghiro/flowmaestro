@@ -1,5 +1,5 @@
 import { Plus, Trash2 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { ValidationError } from "@flowmaestro/shared";
 import { Button } from "../../../components/common/Button";
 import { FormField, FormSection } from "../../../components/common/FormField";
@@ -42,6 +42,7 @@ interface KeyValue {
 }
 
 export function HTTPNodeConfig({ nodeId, data, onUpdate, errors = [] }: HTTPNodeConfigProps) {
+    const isInitialMount = useRef(true);
     const getError = (field: string) => errors.find((e) => e.field === field)?.message;
     // Helper function to convert object to KeyValue array
     const toKeyValueArray = (obj: unknown): KeyValue[] => {
@@ -71,6 +72,12 @@ export function HTTPNodeConfig({ nodeId, data, onUpdate, errors = [] }: HTTPNode
     const [outputVariable, setOutputVariable] = useState((data.outputVariable as string) || "");
 
     useEffect(() => {
+        // Skip the initial mount - don't push unchanged data to store
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return;
+        }
+
         onUpdate({
             method,
             url,

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
     LLM_PROVIDERS,
     getDefaultModelForProvider,
@@ -31,6 +31,7 @@ export function VisionNodeConfig({
     onUpdate,
     errors: _errors = []
 }: VisionNodeConfigProps) {
+    const isInitialMount = useRef(true);
     const [operation, setOperation] = useState((data.operation as string) || "analyze");
     const [provider, setProvider] = useState((data.provider as string) || "openai");
     const [model, setModel] = useState(
@@ -43,6 +44,12 @@ export function VisionNodeConfig({
     const [outputVariable, setOutputVariable] = useState((data.outputVariable as string) || "");
 
     useEffect(() => {
+        // Skip the initial mount - don't push unchanged data to store
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return;
+        }
+
         onUpdate({
             operation,
             provider,

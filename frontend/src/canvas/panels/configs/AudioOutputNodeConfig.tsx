@@ -5,7 +5,7 @@
  * voice, speed, and output format.
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { ValidationError } from "@flowmaestro/shared";
 import { FormField, FormSection } from "../../../components/common/FormField";
 import { Input } from "../../../components/common/Input";
@@ -73,6 +73,7 @@ export function AudioOutputNodeConfig({
     onUpdate,
     errors = []
 }: AudioOutputNodeConfigProps) {
+    const isInitialMount = useRef(true);
     const getError = (field: string) => errors.find((e) => e.field === field)?.message;
 
     // State
@@ -127,6 +128,12 @@ export function AudioOutputNodeConfig({
 
     // Sync state to parent
     useEffect(() => {
+        // Skip the initial mount - don't push unchanged data to store
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return;
+        }
+
         onUpdate({
             provider,
             model,

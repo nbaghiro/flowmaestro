@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { ValidationError } from "@flowmaestro/shared";
 import { CodeInput } from "../../../components/CodeInput";
 import { FormField, FormSection } from "../../../components/common/FormField";
@@ -25,6 +25,7 @@ export function CodeNodeConfig({
     onUpdate,
     errors: _errors = []
 }: CodeNodeConfigProps) {
+    const isInitialMount = useRef(true);
     const [language, setLanguage] = useState((data.language as string) || "javascript");
     const [code, setCode] = useState((data.code as string) || "");
     const [timeout, setTimeout] = useState((data.timeout as number) || 30);
@@ -32,6 +33,12 @@ export function CodeNodeConfig({
     const [outputVariable, setOutputVariable] = useState((data.outputVariable as string) || "");
 
     useEffect(() => {
+        // Skip the initial mount - don't push unchanged data to store
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return;
+        }
+
         onUpdate({
             language,
             code,

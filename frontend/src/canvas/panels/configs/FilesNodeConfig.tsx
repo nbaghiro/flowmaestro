@@ -168,6 +168,8 @@ export function FilesNodeConfig({
     onUpdate,
     errors: _errors = []
 }: FilesNodeConfigProps) {
+    const isInitialMount = useRef(true);
+
     // State
     const [chunkingAlgorithm, setChunkingAlgorithm] = useState(
         (data.chunkingAlgorithm as string) || "sentence"
@@ -193,6 +195,12 @@ export function FilesNodeConfig({
 
     // Sync state to parent
     useEffect(() => {
+        // Skip the initial mount - don't push unchanged data to store
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return;
+        }
+
         onUpdate({
             chunkingAlgorithm,
             chunkOverlap,

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { ValidationError } from "@flowmaestro/shared";
 import { FormField, FormSection } from "../../../components/common/FormField";
 import { Input } from "../../../components/common/Input";
@@ -23,12 +23,19 @@ export function InputNodeConfig({
     onUpdate,
     errors: _errors = []
 }: InputNodeConfigProps) {
+    const isInitialMount = useRef(true);
     const [variableName, setVariableName] = useState((data.variableName as string) || "userInput");
     const [inputType, setInputType] = useState((data.inputType as string) || "text");
     const [description, setDescription] = useState((data.description as string) || "");
     const [value, setValue] = useState((data.value as string) || "");
 
     useEffect(() => {
+        // Skip the initial mount - don't push unchanged data to store
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return;
+        }
+
         onUpdate({
             variableName,
             inputType,

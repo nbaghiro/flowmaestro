@@ -4,7 +4,7 @@
  * Configuration for capturing screenshots of web pages.
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { ValidationError } from "@flowmaestro/shared";
 import { FormField, FormSection } from "../../../components/common/FormField";
 import { Input } from "../../../components/common/Input";
@@ -29,6 +29,7 @@ export function ScreenshotCaptureNodeConfig({
     onUpdate,
     errors = []
 }: ScreenshotCaptureNodeConfigProps) {
+    const isInitialMount = useRef(true);
     const getError = (field: string) => errors.find((e) => e.field === field)?.message;
 
     // URL
@@ -58,6 +59,12 @@ export function ScreenshotCaptureNodeConfig({
 
     // Update parent on state change
     useEffect(() => {
+        // Skip the initial mount - don't push unchanged data to store
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return;
+        }
+
         onUpdate({
             url,
             width,

@@ -2,7 +2,7 @@
  * File Read Node Configuration Panel
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { ValidationError } from "@flowmaestro/shared";
 import { FormField, FormSection } from "../../../components/common/FormField";
 import { Input } from "../../../components/common/Input";
@@ -23,6 +23,7 @@ const ENCODING_OPTIONS = [
 ];
 
 export function FileReadNodeConfig({ data, onUpdate, errors = [] }: FileReadNodeConfigProps) {
+    const isInitialMount = useRef(true);
     const getError = (field: string) => errors.find((e) => e.field === field)?.message;
     const [path, setPath] = useState<string>((data.path as string) || "");
     const [encoding, setEncoding] = useState<string>((data.encoding as string) || "utf-8");
@@ -32,6 +33,12 @@ export function FileReadNodeConfig({ data, onUpdate, errors = [] }: FileReadNode
     );
 
     useEffect(() => {
+        // Skip the initial mount - don't push unchanged data to store
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return;
+        }
+
         onUpdate({ path, encoding, maxSize: maxSize * 1024 * 1024, outputVariable });
     }, [path, encoding, maxSize, outputVariable]);
 

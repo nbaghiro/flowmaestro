@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { ValidationError } from "@flowmaestro/shared";
 import { CodeInput } from "../../../components/CodeInput";
 import { FormField, FormSection } from "../../../components/common/FormField";
@@ -29,6 +29,7 @@ export function TransformNodeConfig({
     onUpdate,
     errors: _errors = []
 }: TransformNodeConfigProps) {
+    const isInitialMount = useRef(true);
     const [operation, setOperation] = useState((data.operation as string) || "map");
     const [inputData, setInputData] = useState((data.inputData as string) || "");
     const [expression, setExpression] = useState((data.expression as string) || "");
@@ -43,6 +44,12 @@ export function TransformNodeConfig({
     }, [data.operation, data.inputData, data.expression, data.outputVariable]);
 
     useEffect(() => {
+        // Skip the initial mount - don't push unchanged data to store
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return;
+        }
+
         onUpdate({
             operation,
             inputData,

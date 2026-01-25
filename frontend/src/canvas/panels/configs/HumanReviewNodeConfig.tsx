@@ -1,5 +1,5 @@
 import { Info } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { ValidationError } from "@flowmaestro/shared";
 import { FormField, FormSection } from "../../../components/common/FormField";
 import { Input } from "../../../components/common/Input";
@@ -54,6 +54,7 @@ export function HumanReviewNodeConfig({
     onUpdate,
     errors: _errors = []
 }: HumanReviewNodeConfigProps) {
+    const isInitialMount = useRef(true);
     const [prompt, setPrompt] = useState((data.prompt as string) || "");
     const [description, setDescription] = useState((data.description as string) || "");
     const [variableName, setVariableName] = useState((data.variableName as string) || "");
@@ -66,6 +67,12 @@ export function HumanReviewNodeConfig({
     const [maxValue, setMaxValue] = useState((data.maxValue as string) || "");
 
     useEffect(() => {
+        // Skip the initial mount - don't push unchanged data to store
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return;
+        }
+
         onUpdate({
             prompt,
             description,

@@ -4,7 +4,7 @@
  * Configuration for extracting text and metadata from PDF documents.
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { ValidationError } from "@flowmaestro/shared";
 import { FormField, FormSection } from "../../../components/common/FormField";
 import { Input } from "../../../components/common/Input";
@@ -25,6 +25,7 @@ const OUTPUT_FORMAT_OPTIONS = [
 ];
 
 export function PdfExtractNodeConfig({ data, onUpdate, errors = [] }: PdfExtractNodeConfigProps) {
+    const isInitialMount = useRef(true);
     const getError = (field: string) => errors.find((e) => e.field === field)?.message;
 
     const [path, setPath] = useState<string>((data.path as string) || "");
@@ -43,6 +44,12 @@ export function PdfExtractNodeConfig({ data, onUpdate, errors = [] }: PdfExtract
     );
 
     useEffect(() => {
+        // Skip the initial mount - don't push unchanged data to store
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return;
+        }
+
         onUpdate({
             path,
             extractText,

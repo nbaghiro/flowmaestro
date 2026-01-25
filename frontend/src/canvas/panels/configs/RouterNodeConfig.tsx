@@ -1,5 +1,5 @@
 import { Plus, Trash2 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
     LLM_MODELS_BY_PROVIDER,
     getDefaultModelForProvider,
@@ -34,6 +34,7 @@ export function RouterNodeConfig({
     onUpdate,
     errors: _errors = []
 }: RouterNodeConfigProps) {
+    const isInitialMount = useRef(true);
     const [provider, setProvider] = useState((data.provider as string) || "");
     const [model, setModel] = useState(
         (data.model as string) || getDefaultModelForProvider((data.provider as string) || "openai")
@@ -62,6 +63,12 @@ export function RouterNodeConfig({
     const providerInfo = ALL_PROVIDERS.find((p) => p.provider === provider);
 
     useEffect(() => {
+        // Skip the initial mount - don't push unchanged data to store
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return;
+        }
+
         onUpdate({
             provider,
             model,

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { ValidationError } from "@flowmaestro/shared";
 import { Checkbox } from "../../../components/common/Checkbox";
 import { FormField, FormSection } from "../../../components/common/FormField";
@@ -23,6 +23,7 @@ export function SharedMemoryNodeConfig({
     onUpdate,
     errors: _errors = []
 }: SharedMemoryNodeConfigProps) {
+    const isInitialMount = useRef(true);
     const [operation, setOperation] = useState((data.operation as string) || "store");
     const [key, setKey] = useState((data.key as string) || "");
     const [value, setValue] = useState((data.value as string) || "");
@@ -36,6 +37,12 @@ export function SharedMemoryNodeConfig({
     );
 
     useEffect(() => {
+        // Skip the initial mount - don't push unchanged data to store
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return;
+        }
+
         const config: Record<string, unknown> = {
             operation
         };

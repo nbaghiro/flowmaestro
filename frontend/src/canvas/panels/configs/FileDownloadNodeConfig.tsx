@@ -2,7 +2,7 @@
  * File Download Node Configuration Panel
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { ValidationError } from "@flowmaestro/shared";
 import { FormField, FormSection } from "../../../components/common/FormField";
 import { Input } from "../../../components/common/Input";
@@ -20,6 +20,7 @@ export function FileDownloadNodeConfig({
     onUpdate,
     errors = []
 }: FileDownloadNodeConfigProps) {
+    const isInitialMount = useRef(true);
     const getError = (field: string) => errors.find((e) => e.field === field)?.message;
     const [url, setUrl] = useState<string>((data.url as string) || "");
     const [filename, setFilename] = useState<string>((data.filename as string) || "");
@@ -33,6 +34,12 @@ export function FileDownloadNodeConfig({
     );
 
     useEffect(() => {
+        // Skip the initial mount - don't push unchanged data to store
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return;
+        }
+
         onUpdate({
             url,
             filename: filename || undefined,

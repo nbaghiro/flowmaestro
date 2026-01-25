@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { ValidationError } from "@flowmaestro/shared";
@@ -24,6 +24,7 @@ export function TemplateOutputNodeConfig({
     onUpdate,
     errors = []
 }: TemplateOutputNodeConfigProps) {
+    const isInitialMount = useRef(true);
     const getError = (field: string) => errors.find((e) => e.field === field)?.message;
 
     const [outputName, setOutputName] = useState((data.outputName as string) || "templateOutput");
@@ -33,6 +34,12 @@ export function TemplateOutputNodeConfig({
     const [showPreview, setShowPreview] = useState(true);
 
     useEffect(() => {
+        // Skip the initial mount - don't push unchanged data to store
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return;
+        }
+
         onUpdate({
             outputName,
             template,

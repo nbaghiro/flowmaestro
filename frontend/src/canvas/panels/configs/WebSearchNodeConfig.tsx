@@ -4,7 +4,7 @@
  * Configuration for web search using Tavily API.
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { ValidationError } from "@flowmaestro/shared";
 import { FormField, FormSection } from "../../../components/common/FormField";
 import { Input } from "../../../components/common/Input";
@@ -25,6 +25,7 @@ const SEARCH_TYPE_OPTIONS = [
 ];
 
 export function WebSearchNodeConfig({ data, onUpdate, errors = [] }: WebSearchNodeConfigProps) {
+    const isInitialMount = useRef(true);
     const getError = (field: string) => errors.find((e) => e.field === field)?.message;
 
     // Search settings
@@ -39,6 +40,12 @@ export function WebSearchNodeConfig({ data, onUpdate, errors = [] }: WebSearchNo
 
     // Update parent on state change
     useEffect(() => {
+        // Skip the initial mount - don't push unchanged data to store
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return;
+        }
+
         onUpdate({
             query,
             maxResults,

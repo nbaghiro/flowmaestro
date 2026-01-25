@@ -1,5 +1,5 @@
 import { Plus, Trash2 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { ValidationError } from "@flowmaestro/shared";
 import { FormField, FormSection } from "../../../components/common/FormField";
 import { Input } from "../../../components/common/Input";
@@ -30,6 +30,7 @@ export function SwitchNodeConfig({
     onUpdate,
     errors: _errors = []
 }: SwitchNodeConfigProps) {
+    const isInitialMount = useRef(true);
     const [inputVariable, setInputVariable] = useState((data.inputVariable as string) || "");
     const [matchType, setMatchType] = useState((data.matchType as string) || "exact");
     const [cases, setCases] = useState<SwitchCase[]>(
@@ -39,6 +40,12 @@ export function SwitchNodeConfig({
     const [outputVariable, setOutputVariable] = useState((data.outputVariable as string) || "");
 
     useEffect(() => {
+        // Skip the initial mount - don't push unchanged data to store
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return;
+        }
+
         onUpdate({
             inputVariable,
             matchType,

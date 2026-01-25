@@ -1,5 +1,5 @@
 import { Plus } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ALL_PROVIDERS, type ValidationError } from "@flowmaestro/shared";
 import { CodeInput } from "../../../components/CodeInput";
 import { FormField, FormSection } from "../../../components/common/FormField";
@@ -61,6 +61,7 @@ export function DatabaseNodeConfig({
     onUpdate,
     errors: _errors = []
 }: DatabaseNodeConfigProps) {
+    const isInitialMount = useRef(true);
     const [connectionId, setConnectionId] = useState((data.connectionId as string) || "");
     const [provider, setProvider] = useState((data.provider as string) || "");
     const [operation, setOperation] = useState((data.operation as string) || "");
@@ -117,6 +118,12 @@ export function DatabaseNodeConfig({
     };
 
     useEffect(() => {
+        // Skip the initial mount - don't push unchanged data to store
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return;
+        }
+
         // Parse JSON parameters
         const parseJSON = (str: string, fallback: unknown = {}) => {
             try {

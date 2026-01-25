@@ -1,5 +1,5 @@
 import { Plus } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
     IMAGE_GENERATION_PROVIDERS,
     getImageGenerationModelsForProvider,
@@ -36,6 +36,7 @@ export function ImageGenerationNodeConfig({
     onUpdate,
     errors = []
 }: ImageGenerationNodeConfigProps) {
+    const isInitialMount = useRef(true);
     const getError = (field: string) => errors.find((e) => e.field === field)?.message;
 
     // Core state
@@ -90,6 +91,12 @@ export function ImageGenerationNodeConfig({
 
     // Update parent on state change
     useEffect(() => {
+        // Skip the initial mount - don't push unchanged data to store
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return;
+        }
+
         onUpdate({
             provider,
             model,

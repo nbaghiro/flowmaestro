@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { ValidationError } from "@flowmaestro/shared";
 import { CodeInput } from "../../../components/CodeInput";
 import { FormField, FormSection } from "../../../components/common/FormField";
@@ -36,6 +36,7 @@ export function ConditionalNodeConfig({
     onUpdate,
     errors: _errors = []
 }: ConditionalNodeConfigProps) {
+    const isInitialMount = useRef(true);
     const [conditionType, setConditionType] = useState((data.conditionType as string) || "simple");
     const [leftValue, setLeftValue] = useState((data.leftValue as string) || "");
     const [operator, setOperator] = useState((data.operator as string) || "==");
@@ -44,6 +45,12 @@ export function ConditionalNodeConfig({
     const [outputVariable, setOutputVariable] = useState((data.outputVariable as string) || "");
 
     useEffect(() => {
+        // Skip the initial mount - don't push unchanged data to store
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return;
+        }
+
         onUpdate({
             conditionType,
             leftValue,

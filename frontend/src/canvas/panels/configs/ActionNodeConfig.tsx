@@ -41,6 +41,8 @@ export function ActionNodeConfig({
     const onUpdateRef = useRef(onUpdate);
     onUpdateRef.current = onUpdate;
 
+    const isInitialMount = useRef(true);
+
     // Provider and operation state
     const [selectedProvider, setSelectedProvider] = useState<ActionProviderSummary | null>(
         data.provider
@@ -111,6 +113,12 @@ export function ActionNodeConfig({
 
     // Build and send config to parent
     const updateConfig = useCallback(() => {
+        // Skip the initial mount - don't push unchanged data to store
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return;
+        }
+
         const config: Record<string, unknown> = {};
 
         if (selectedProvider && selectedOperation) {
