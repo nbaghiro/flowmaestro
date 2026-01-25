@@ -2846,6 +2846,116 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
         },
         // SurveyMonkey tokens don't expire for authorized apps
         refreshable: false
+    },
+
+    // ==========================================================================
+    // Buffer - Social Media Management
+    // Uses OAuth 2.0 with no specific scopes (implicit full access)
+    // ==========================================================================
+
+    buffer: {
+        name: "buffer",
+        displayName: "Buffer",
+        authUrl: "https://bufferapp.com/oauth2/authorize",
+        tokenUrl: "https://api.bufferapp.com/1/oauth2/token.json",
+        scopes: [], // Buffer uses implicit full access, no scopes needed
+        clientId: config.oauth.buffer.clientId,
+        clientSecret: config.oauth.buffer.clientSecret,
+        redirectUri: getOAuthRedirectUri("buffer"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch(
+                    `https://api.bufferapp.com/1/user.json?access_token=${accessToken}`
+                );
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    id?: string;
+                    name?: string;
+                    activity_at?: number;
+                    plan?: string;
+                };
+
+                return {
+                    userId: data.id || "unknown",
+                    name: data.name || "Buffer User",
+                    user: data.name || "Buffer User",
+                    plan: data.plan
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get Buffer user info");
+                return {
+                    userId: "unknown",
+                    name: "Buffer User",
+                    user: "Buffer User"
+                };
+            }
+        },
+        refreshable: true,
+        pkceEnabled: false
+    },
+
+    // ==========================================================================
+    // Hootsuite - Social Media Management
+    // Uses OAuth 2.0 with Basic Auth for token exchange
+    // Tokens expire in ~1 hour, requires refresh token
+    // ==========================================================================
+
+    hootsuite: {
+        name: "hootsuite",
+        displayName: "Hootsuite",
+        authUrl: "https://platform.hootsuite.com/oauth2/auth",
+        tokenUrl: "https://platform.hootsuite.com/oauth2/token",
+        scopes: ["offline"], // Required for refresh token
+        clientId: config.oauth.hootsuite.clientId,
+        clientSecret: config.oauth.hootsuite.clientSecret,
+        redirectUri: getOAuthRedirectUri("hootsuite"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://platform.hootsuite.com/v1/me", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const result = (await response.json()) as {
+                    data?: {
+                        id?: string;
+                        fullName?: string;
+                        email?: string;
+                        companyName?: string;
+                        timezone?: string;
+                        language?: string;
+                    };
+                };
+
+                return {
+                    userId: result.data?.id || "unknown",
+                    name: result.data?.fullName || "Hootsuite User",
+                    email: result.data?.email || "unknown@hootsuite",
+                    user: result.data?.fullName || result.data?.email || "Hootsuite User",
+                    companyName: result.data?.companyName,
+                    timezone: result.data?.timezone
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get Hootsuite user info");
+                return {
+                    userId: "unknown",
+                    name: "Hootsuite User",
+                    email: "unknown@hootsuite",
+                    user: "Hootsuite User"
+                };
+            }
+        },
+        refreshable: true,
+        pkceEnabled: false
     }
 };
 

@@ -145,7 +145,9 @@ export const PROVIDER_LOGO_DOMAINS: Record<string, string> = {
     looker: "looker.com",
     tableau: "tableau.com",
     intercom: "intercom.com",
-    freshdesk: "freshdesk.com"
+    freshdesk: "freshdesk.com",
+    buffer: "buffer.com",
+    hootsuite: "hootsuite.com"
 };
 
 /**
@@ -1897,20 +1899,18 @@ export const ALL_PROVIDERS: Provider[] = [
     {
         provider: "buffer",
         displayName: "Buffer",
-        description: "Social media scheduling",
+        description: "Schedule and publish social media posts across multiple platforms",
         logoUrl: getBrandLogo("buffer.com"),
-        category: "Social Media Management",
-        methods: ["oauth2"],
-        comingSoon: true
+        category: "Social Media",
+        methods: ["oauth2"]
     },
     {
         provider: "hootsuite",
         displayName: "Hootsuite",
-        description: "Social media management platform",
+        description: "Social media management and scheduling platform",
         logoUrl: getBrandLogo("hootsuite.com"),
-        category: "Social Media Management",
-        methods: ["oauth2"],
-        comingSoon: true
+        category: "Social Media",
+        methods: ["oauth2"]
     },
     {
         provider: "later",

@@ -125,5 +125,9 @@ config:
       {"name":"docusign-client-id","envVar":"DOCUSIGN_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"DocuSign OAuth client ID"},
       {"name":"docusign-client-secret","envVar":"DOCUSIGN_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"DocuSign OAuth client secret"},
       {"name":"surveymonkey-client-id","envVar":"SURVEYMONKEY_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"SurveyMonkey OAuth client ID"},
-      {"name":"surveymonkey-client-secret","envVar":"SURVEYMONKEY_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"SurveyMonkey OAuth client secret"}
+      {"name":"surveymonkey-client-secret","envVar":"SURVEYMONKEY_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"SurveyMonkey OAuth client secret"},
+      {"name":"buffer-client-id","envVar":"BUFFER_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Buffer OAuth client ID"},
+      {"name":"buffer-client-secret","envVar":"BUFFER_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Buffer OAuth client secret"},
+      {"name":"hootsuite-client-id","envVar":"HOOTSUITE_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Hootsuite OAuth client ID"},
+      {"name":"hootsuite-client-secret","envVar":"HOOTSUITE_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Hootsuite OAuth client secret"}
     ]

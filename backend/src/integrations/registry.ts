@@ -375,6 +375,34 @@ providerRegistry.register(zendeskEntry);
 providerRegistry.register(apolloEntry);
 providerRegistry.register(jiraEntry);
 
+// Register Buffer provider
+const bufferEntry: ProviderRegistryEntry = {
+    name: "buffer",
+    displayName: "Buffer",
+    authMethod: "oauth2",
+    category: "social_media",
+    loader: async () => {
+        const { BufferProvider } = await import("./providers/buffer/BufferProvider");
+        return new BufferProvider();
+    }
+};
+
+providerRegistry.register(bufferEntry);
+
+// Register Hootsuite provider
+const hootsuiteEntry: ProviderRegistryEntry = {
+    name: "hootsuite",
+    displayName: "Hootsuite",
+    authMethod: "oauth2",
+    category: "social_media",
+    loader: async () => {
+        const { HootsuiteProvider } = await import("./providers/hootsuite/HootsuiteProvider");
+        return new HootsuiteProvider();
+    }
+};
+
+providerRegistry.register(hootsuiteEntry);
+
 // Register Shopify provider
 const shopifyEntry: ProviderRegistryEntry = {
     name: "shopify",

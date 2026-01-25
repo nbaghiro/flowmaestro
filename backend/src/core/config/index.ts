@@ -408,6 +408,18 @@ export const config = {
         intercom: {
             clientId: process.env.INTERCOM_CLIENT_ID || "",
             clientSecret: process.env.INTERCOM_CLIENT_SECRET || ""
+        },
+
+        // Buffer
+        buffer: {
+            clientId: process.env.BUFFER_CLIENT_ID || "",
+            clientSecret: process.env.BUFFER_CLIENT_SECRET || ""
+        },
+
+        // Hootsuite
+        hootsuite: {
+            clientId: process.env.HOOTSUITE_CLIENT_ID || "",
+            clientSecret: process.env.HOOTSUITE_CLIENT_SECRET || ""
         }
     }
 };
@@ -476,6 +488,8 @@ export function getOAuthRedirectUri(provider: string): string {
         docusign: "/oauth/docusign/callback",
         surveymonkey: "/oauth/surveymonkey/callback",
         intercom: "/oauth/intercom/callback",
+        buffer: "/oauth/buffer/callback",
+        hootsuite: "/oauth/hootsuite/callback",
 
         // OAuth 1.0a providers
         evernote: "/oauth1/evernote/callback"
@@ -544,7 +558,9 @@ export function getOAuthCredentials(provider: string): { clientId: string; clien
         hellosign: "hellosign",
         docusign: "docusign",
         surveymonkey: "surveymonkey",
-        intercom: "intercom"
+        intercom: "intercom",
+        buffer: "buffer",
+        hootsuite: "hootsuite"
     };
 
     const configKey = providerMap[provider];
