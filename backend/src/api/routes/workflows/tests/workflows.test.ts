@@ -63,6 +63,7 @@ jest.mock("../../../../core/utils/workflow-converter", () => ({
         entryPoint: "input"
     })),
     stripNonExecutableNodes: jest.fn().mockImplementation((def) => def),
+    validateWorkflowForExecution: jest.fn().mockReturnValue({ isValid: true, errors: [] }),
     FrontendWorkflowDefinition: {}
 }));
 

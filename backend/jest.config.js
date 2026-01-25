@@ -26,25 +26,23 @@ const baseConfig = {
     moduleNameMapper: {
         "^nanoid$": "<rootDir>/tests/mocks/nanoid.ts",
         "^uuid$": "<rootDir>/tests/mocks/uuid.ts"
-    },
-    verbose: true
+    }
 };
 
 module.exports = {
-    ...baseConfig,
+    verbose: true,
+    testTimeout: 30000,
     projects: [
         {
             ...baseConfig,
             displayName: "unit",
-            testMatch: ["<rootDir>/src/**/tests/*.test.ts"],
-            testTimeout: 10000
+            testMatch: ["<rootDir>/src/**/tests/*.test.ts"]
         },
         {
             ...baseConfig,
             displayName: "integration",
             testMatch: ["<rootDir>/tests/integration/**/*.test.ts"],
-            setupFilesAfterEnv: ["<rootDir>/tests/integration/setup.ts"],
-            testTimeout: 30000
+            setupFilesAfterEnv: ["<rootDir>/tests/integration/setup.ts"]
         }
     ],
     collectCoverageFrom: [

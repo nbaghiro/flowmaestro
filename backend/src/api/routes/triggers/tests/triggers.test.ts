@@ -108,7 +108,8 @@ jest.mock("../../../../core/utils/workflow-converter", () => ({
         edges: def.edges || [],
         entryPoint: "input"
     })),
-    stripNonExecutableNodes: jest.fn().mockImplementation((def) => def)
+    stripNonExecutableNodes: jest.fn().mockImplementation((def) => def),
+    validateWorkflowForExecution: jest.fn().mockReturnValue({ isValid: true, errors: [] })
 }));
 
 // Import test helpers after mocks
