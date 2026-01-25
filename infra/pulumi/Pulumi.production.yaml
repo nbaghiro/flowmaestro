@@ -129,5 +129,7 @@ config:
       {"name":"buffer-client-id","envVar":"BUFFER_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Buffer OAuth client ID"},
       {"name":"buffer-client-secret","envVar":"BUFFER_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Buffer OAuth client secret"},
       {"name":"hootsuite-client-id","envVar":"HOOTSUITE_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Hootsuite OAuth client ID"},
-      {"name":"hootsuite-client-secret","envVar":"HOOTSUITE_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Hootsuite OAuth client secret"}
+      {"name":"hootsuite-client-secret","envVar":"HOOTSUITE_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Hootsuite OAuth client secret"},
+      {"name":"calendly-client-id","envVar":"CALENDLY_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Calendly OAuth client ID"},
+      {"name":"calendly-client-secret","envVar":"CALENDLY_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Calendly OAuth client secret"}
     ]

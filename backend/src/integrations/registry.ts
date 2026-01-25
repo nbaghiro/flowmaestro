@@ -403,6 +403,20 @@ const hootsuiteEntry: ProviderRegistryEntry = {
 
 providerRegistry.register(hootsuiteEntry);
 
+// Register Calendly provider
+const calendlyEntry: ProviderRegistryEntry = {
+    name: "calendly",
+    displayName: "Calendly",
+    authMethod: "oauth2",
+    category: "productivity",
+    loader: async () => {
+        const { CalendlyProvider } = await import("./providers/calendly/CalendlyProvider");
+        return new CalendlyProvider();
+    }
+};
+
+providerRegistry.register(calendlyEntry);
+
 // Register Shopify provider
 const shopifyEntry: ProviderRegistryEntry = {
     name: "shopify",

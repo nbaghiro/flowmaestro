@@ -2956,6 +2956,70 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
         },
         refreshable: true,
         pkceEnabled: false
+    },
+
+    // ==========================================================================
+    // Calendly - Scheduling & Meeting Management
+    // Uses OAuth 2.0 with Bearer token for API access
+    // Calendly doesn't use traditional scopes - access based on user role
+    // ==========================================================================
+
+    calendly: {
+        name: "calendly",
+        displayName: "Calendly",
+        authUrl: "https://auth.calendly.com/oauth/authorize",
+        tokenUrl: "https://auth.calendly.com/oauth/token",
+        scopes: [], // Calendly doesn't use traditional scopes - access based on user role
+        clientId: config.oauth.calendly.clientId,
+        clientSecret: config.oauth.calendly.clientSecret,
+        redirectUri: getOAuthRedirectUri("calendly"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://api.calendly.com/users/me", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                        "Content-Type": "application/json"
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const result = (await response.json()) as {
+                    resource?: {
+                        uri?: string;
+                        name?: string;
+                        email?: string;
+                        slug?: string;
+                        timezone?: string;
+                        avatar_url?: string;
+                        current_organization?: string;
+                    };
+                };
+
+                return {
+                    userId: result.resource?.uri || "unknown",
+                    name: result.resource?.name || "Calendly User",
+                    email: result.resource?.email || "unknown@calendly",
+                    user: result.resource?.name || result.resource?.email || "Calendly User",
+                    slug: result.resource?.slug,
+                    timezone: result.resource?.timezone,
+                    avatarUrl: result.resource?.avatar_url,
+                    organization: result.resource?.current_organization
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get Calendly user info");
+                return {
+                    userId: "unknown",
+                    name: "Calendly User",
+                    email: "unknown@calendly",
+                    user: "Calendly User"
+                };
+            }
+        },
+        refreshable: true,
+        pkceEnabled: false
     }
 };
 

@@ -147,7 +147,8 @@ export const PROVIDER_LOGO_DOMAINS: Record<string, string> = {
     intercom: "intercom.com",
     freshdesk: "freshdesk.com",
     buffer: "buffer.com",
-    hootsuite: "hootsuite.com"
+    hootsuite: "hootsuite.com",
+    calendly: "calendly.com"
 };
 
 /**
@@ -1354,11 +1355,10 @@ export const ALL_PROVIDERS: Provider[] = [
     {
         provider: "calendly",
         displayName: "Calendly",
-        description: "Meeting scheduling tool",
+        description: "Schedule meetings and manage calendar bookings",
         logoUrl: getBrandLogo("calendly.com"),
         category: "Productivity",
-        methods: ["api_key"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "loom",

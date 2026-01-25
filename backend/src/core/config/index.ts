@@ -420,6 +420,12 @@ export const config = {
         hootsuite: {
             clientId: process.env.HOOTSUITE_CLIENT_ID || "",
             clientSecret: process.env.HOOTSUITE_CLIENT_SECRET || ""
+        },
+
+        // Calendly
+        calendly: {
+            clientId: process.env.CALENDLY_CLIENT_ID || "",
+            clientSecret: process.env.CALENDLY_CLIENT_SECRET || ""
         }
     }
 };
@@ -490,6 +496,7 @@ export function getOAuthRedirectUri(provider: string): string {
         intercom: "/oauth/intercom/callback",
         buffer: "/oauth/buffer/callback",
         hootsuite: "/oauth/hootsuite/callback",
+        calendly: "/oauth/calendly/callback",
 
         // OAuth 1.0a providers
         evernote: "/oauth1/evernote/callback"
@@ -560,7 +567,8 @@ export function getOAuthCredentials(provider: string): { clientId: string; clien
         surveymonkey: "surveymonkey",
         intercom: "intercom",
         buffer: "buffer",
-        hootsuite: "hootsuite"
+        hootsuite: "hootsuite",
+        calendly: "calendly"
     };
 
     const configKey = providerMap[provider];
