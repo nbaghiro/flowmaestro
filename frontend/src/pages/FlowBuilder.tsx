@@ -355,15 +355,25 @@ export function FlowBuilder() {
         if (hasUnsavedChanges) {
             setShowUnsavedDialog(true);
         } else {
-            navigate(getBackUrl());
+            // Use browser back if no specific folder, otherwise go to folder
+            if (fromFolderId) {
+                navigate(`/folders/${fromFolderId}`);
+            } else {
+                navigate(-1);
+            }
         }
-    }, [hasUnsavedChanges, navigate, getBackUrl]);
+    }, [hasUnsavedChanges, navigate, fromFolderId]);
 
     const handleDiscardChanges = useCallback(() => {
         setShowUnsavedDialog(false);
         resetWorkflow();
-        navigate(getBackUrl());
-    }, [navigate, resetWorkflow, getBackUrl]);
+        // Use browser back if no specific folder, otherwise go to folder
+        if (fromFolderId) {
+            navigate(`/folders/${fromFolderId}`);
+        } else {
+            navigate(-1);
+        }
+    }, [navigate, resetWorkflow, fromFolderId]);
 
     const handleSave = useCallback(async () => {
         if (!workflowId) return;
@@ -444,13 +454,18 @@ export function FlowBuilder() {
             await updateWorkflow(workflowId, updatePayload as Parameters<typeof updateWorkflow>[1]);
 
             setShowUnsavedDialog(false);
-            navigate(getBackUrl());
+            // Use browser back if no specific folder, otherwise go to folder
+            if (fromFolderId) {
+                navigate(`/folders/${fromFolderId}`);
+            } else {
+                navigate(-1);
+            }
         } catch (error: unknown) {
             logger.error("Failed to save workflow", error);
             setSaveStatus("error");
             setTimeout(() => setSaveStatus("idle"), SAVE_ERROR_TIMEOUT);
         }
-    }, [workflowId, nodes, edges, workflowName, navigate, getBackUrl]);
+    }, [workflowId, nodes, edges, workflowName, navigate, fromFolderId]);
 
     const handleDuplicateNode = useCallback(() => {
         if (!selectedNode) return;

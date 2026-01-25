@@ -460,15 +460,25 @@ export function AgentBuilder() {
         if (hasUnsavedChanges) {
             setShowUnsavedDialog(true);
         } else {
-            navigate(getBackUrl());
+            // Use browser back if no specific folder, otherwise go to folder
+            if (fromFolderId) {
+                navigate(`/folders/${fromFolderId}`);
+            } else {
+                navigate(-1);
+            }
         }
-    }, [hasUnsavedChanges, navigate, getBackUrl]);
+    }, [hasUnsavedChanges, navigate, fromFolderId]);
 
     const handleDiscardChanges = useCallback(() => {
         setShowUnsavedDialog(false);
         resetAgentState();
-        navigate(getBackUrl());
-    }, [navigate, resetAgentState, getBackUrl]);
+        // Use browser back if no specific folder, otherwise go to folder
+        if (fromFolderId) {
+            navigate(`/folders/${fromFolderId}`);
+        } else {
+            navigate(-1);
+        }
+    }, [navigate, resetAgentState, fromFolderId]);
 
     const handleSaveAndLeave = useCallback(async () => {
         if (!name.trim() || !model) return;
@@ -523,7 +533,12 @@ export function AgentBuilder() {
             }
 
             setShowUnsavedDialog(false);
-            navigate(getBackUrl());
+            // Use browser back if no specific folder, otherwise go to folder
+            if (fromFolderId) {
+                navigate(`/folders/${fromFolderId}`);
+            } else {
+                navigate(-1);
+            }
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to save agent");
             setIsSaving(false);
@@ -541,7 +556,7 @@ export function AgentBuilder() {
         currentAgent,
         updateAgent,
         navigate,
-        getBackUrl
+        fromFolderId
     ]);
 
     // Inline name editing handlers

@@ -197,7 +197,7 @@ export function AgentCard({
             </div>
 
             {/* Footer - Always at bottom */}
-            <div className="mt-auto px-5 pb-5">
+            <div className="mt-auto pt-4 px-5 pb-5">
                 {/* Tool Icons Row - only show if full Tool objects are provided */}
                 {tools && tools.length > 0 && (
                     <AgentToolIconList

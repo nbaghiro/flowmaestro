@@ -19,6 +19,7 @@ import { ForgotPassword } from "./pages/ForgotPassword";
 import { FormInterfaceEditor } from "./pages/FormInterfaceEditor";
 import { FormInterfaces } from "./pages/FormInterfaces";
 import { FormInterfaceSubmissions } from "./pages/FormInterfaceSubmissions";
+import { Home } from "./pages/Home";
 import { KnowledgeBaseDetail } from "./pages/KnowledgeBaseDetail";
 import { KnowledgeBases } from "./pages/KnowledgeBases";
 import { Login } from "./pages/Login";
@@ -57,7 +58,8 @@ function App() {
                         </ProtectedRoute>
                     }
                 >
-                    <Route index element={<Workflows />} />
+                    <Route index element={<Home />} />
+                    <Route path="workflows" element={<Workflows />} />
                     <Route path="agents" element={<Agents />} />
                     <Route path="form-interfaces" element={<FormInterfaces />} />
                     <Route

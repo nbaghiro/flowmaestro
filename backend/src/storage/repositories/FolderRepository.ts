@@ -532,7 +532,9 @@ export class FolderRepository {
 
     private async getAgentsInFolder(folderId: string): Promise<AgentSummary[]> {
         const query = `
-            SELECT id, name, description, provider, model, available_tools, created_at, updated_at
+            SELECT id, name, description, provider, model, available_tools,
+                   LEFT(system_prompt, 200) as system_prompt, temperature,
+                   created_at, updated_at
             FROM flowmaestro.agents
             WHERE $1 = ANY(COALESCE(folder_ids, ARRAY[]::UUID[])) AND deleted_at IS NULL
             ORDER BY updated_at DESC
@@ -544,6 +546,8 @@ export class FolderRepository {
             provider: string;
             model: string;
             available_tools: string[] | null;
+            system_prompt: string | null;
+            temperature: number | null;
             created_at: string;
             updated_at: string;
         }>(query, [folderId]);
@@ -555,6 +559,8 @@ export class FolderRepository {
             provider: row.provider,
             model: row.model,
             availableTools: row.available_tools || [],
+            systemPrompt: row.system_prompt || undefined,
+            temperature: row.temperature ?? undefined,
             createdAt: new Date(row.created_at),
             updatedAt: new Date(row.updated_at)
         }));
