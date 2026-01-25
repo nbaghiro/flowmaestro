@@ -408,7 +408,7 @@ const calendlyEntry: ProviderRegistryEntry = {
     name: "calendly",
     displayName: "Calendly",
     authMethod: "oauth2",
-    category: "productivity",
+    category: "scheduling",
     loader: async () => {
         const { CalendlyProvider } = await import("./providers/calendly/CalendlyProvider");
         return new CalendlyProvider();
@@ -416,6 +416,20 @@ const calendlyEntry: ProviderRegistryEntry = {
 };
 
 providerRegistry.register(calendlyEntry);
+
+// Register Cal.com provider
+const calcomEntry: ProviderRegistryEntry = {
+    name: "cal-com",
+    displayName: "Cal.com",
+    authMethod: "oauth2",
+    category: "scheduling",
+    loader: async () => {
+        const { CalComProvider } = await import("./providers/cal-com/CalComProvider");
+        return new CalComProvider();
+    }
+};
+
+providerRegistry.register(calcomEntry);
 
 // Register Shopify provider
 const shopifyEntry: ProviderRegistryEntry = {
@@ -840,6 +854,34 @@ const klaviyoEntry: ProviderRegistryEntry = {
 };
 
 providerRegistry.register(klaviyoEntry);
+
+// Register Mailchimp provider
+const mailchimpEntry: ProviderRegistryEntry = {
+    name: "mailchimp",
+    displayName: "Mailchimp",
+    authMethod: "oauth2",
+    category: "marketing",
+    loader: async () => {
+        const { MailchimpProvider } = await import("./providers/mailchimp/MailchimpProvider");
+        return new MailchimpProvider();
+    }
+};
+
+providerRegistry.register(mailchimpEntry);
+
+// Register SendGrid provider
+const sendgridEntry: ProviderRegistryEntry = {
+    name: "sendgrid",
+    displayName: "SendGrid",
+    authMethod: "api_key",
+    category: "communication",
+    loader: async () => {
+        const { SendGridProvider } = await import("./providers/sendgrid/SendGridProvider");
+        return new SendGridProvider();
+    }
+};
+
+providerRegistry.register(sendgridEntry);
 
 // Export for use in application
 export { providerRegistry };

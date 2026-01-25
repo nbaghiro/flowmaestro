@@ -149,9 +149,12 @@ export const PROVIDER_LOGO_DOMAINS: Record<string, string> = {
     buffer: "buffer.com",
     hootsuite: "hootsuite.com",
     calendly: "calendly.com",
+    "cal-com": "cal.com",
     clickup: "clickup.com",
     marketo: "marketo.com",
-    klaviyo: "klaviyo.com"
+    klaviyo: "klaviyo.com",
+    mailchimp: "mailchimp.com",
+    sendgrid: "sendgrid.com"
 };
 
 /**
@@ -495,20 +498,20 @@ export const ALL_PROVIDERS: Provider[] = [
     {
         provider: "mailchimp",
         displayName: "Mailchimp",
-        description: "Manage email campaigns and lists",
+        description: "Manage email campaigns, audiences, members, and templates",
         logoUrl: getBrandLogo("mailchimp.com"),
         category: "Marketing",
-        methods: ["api_key", "oauth2"],
-        comingSoon: true
+        methods: ["oauth2"],
+        comingSoon: false
     },
     {
         provider: "sendgrid",
         displayName: "SendGrid",
-        description: "Send transactional emails",
+        description: "Send transactional emails, manage contacts and lists",
         logoUrl: getBrandLogo("sendgrid.com"),
         category: "Marketing",
         methods: ["api_key"],
-        comingSoon: true
+        comingSoon: false
     },
     {
         provider: "twilio",
@@ -1381,7 +1384,7 @@ export const ALL_PROVIDERS: Provider[] = [
         displayName: "Calendly",
         description: "Schedule meetings and manage calendar bookings",
         logoUrl: getBrandLogo("calendly.com"),
-        category: "Productivity",
+        category: "Scheduling",
         methods: ["oauth2"]
     },
     {
@@ -1968,11 +1971,11 @@ export const ALL_PROVIDERS: Provider[] = [
     {
         provider: "cal-com",
         displayName: "Cal.com",
-        description: "Open source scheduling platform",
+        description:
+            "Open source scheduling platform for managing event types, bookings, and availability",
         logoUrl: getBrandLogo("cal.com"),
         category: "Scheduling",
-        methods: ["api_key"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "chili-piper",

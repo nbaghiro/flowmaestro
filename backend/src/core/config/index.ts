@@ -428,6 +428,12 @@ export const config = {
             clientSecret: process.env.CALENDLY_CLIENT_SECRET || ""
         },
 
+        // Cal.com
+        calcom: {
+            clientId: process.env.CALCOM_CLIENT_ID || "",
+            clientSecret: process.env.CALCOM_CLIENT_SECRET || ""
+        },
+
         // ClickUp
         clickup: {
             clientId: process.env.CLICKUP_CLIENT_ID || "",
@@ -438,6 +444,12 @@ export const config = {
         klaviyo: {
             clientId: process.env.KLAVIYO_CLIENT_ID || "",
             clientSecret: process.env.KLAVIYO_CLIENT_SECRET || ""
+        },
+
+        // Mailchimp
+        mailchimp: {
+            clientId: process.env.MAILCHIMP_CLIENT_ID || "",
+            clientSecret: process.env.MAILCHIMP_CLIENT_SECRET || ""
         }
     }
 };
@@ -509,8 +521,10 @@ export function getOAuthRedirectUri(provider: string): string {
         buffer: "/oauth/buffer/callback",
         hootsuite: "/oauth/hootsuite/callback",
         calendly: "/oauth/calendly/callback",
+        "cal-com": "/oauth/cal-com/callback",
         clickup: "/oauth/clickup/callback",
         klaviyo: "/oauth/klaviyo/callback",
+        mailchimp: "/oauth/mailchimp/callback",
 
         // OAuth 1.0a providers
         evernote: "/oauth1/evernote/callback"
@@ -583,8 +597,10 @@ export function getOAuthCredentials(provider: string): { clientId: string; clien
         buffer: "buffer",
         hootsuite: "hootsuite",
         calendly: "calendly",
+        "cal-com": "calcom",
         clickup: "clickup",
-        klaviyo: "klaviyo"
+        klaviyo: "klaviyo",
+        mailchimp: "mailchimp"
     };
 
     const configKey = providerMap[provider];
