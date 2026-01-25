@@ -1,19 +1,11 @@
 import { useCallback, useRef } from "react";
-import Flow, {
-    Background,
-    Controls,
-    ConnectionMode,
-    addEdge,
-    Connection,
-    BackgroundVariant,
-    ReactFlowInstance
-} from "reactflow";
+import Flow, { Controls, ConnectionMode, addEdge, Connection, ReactFlowInstance } from "reactflow";
 import "reactflow/dist/style.css";
 import { getDefaultModelForProvider } from "@flowmaestro/shared";
 import { generateId } from "../lib/utils";
 import { useConnectionStore } from "../stores/connectionStore";
-import { useThemeStore } from "../stores/themeStore";
 import { useWorkflowStore } from "../stores/workflowStore";
+import { ZoomCompensatedBackground } from "./components/ZoomCompensatedBackground";
 import { CustomEdge } from "./edges/CustomEdge";
 import { nodeTypes, isProviderNodeType, getProviderInfo, AI_PROVIDER_IDS } from "./nodeTypes";
 
@@ -36,7 +28,6 @@ export function WorkflowCanvas({
     const isDragging = useRef(false);
 
     const { nodes, edges, onNodesChange, onEdgesChange, addNode, selectNode } = useWorkflowStore();
-    const effectiveTheme = useThemeStore((state) => state.effectiveTheme);
 
     const onConnect = useCallback(
         (connection: Connection) => {
@@ -145,12 +136,7 @@ export function WorkflowCanvas({
                 fitViewOptions={{ padding: 0.05, maxZoom: 1 }}
                 proOptions={{ hideAttribution: true }}
             >
-                <Background
-                    variant={BackgroundVariant.Dots}
-                    gap={12}
-                    size={1}
-                    color={effectiveTheme === "dark" ? "#555" : "#aaa"}
-                />
+                <ZoomCompensatedBackground baseGap={12} baseSize={1} />
                 <Controls />
             </Flow>
         </div>

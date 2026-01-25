@@ -25,12 +25,10 @@ import {
     BookOpen,
     type LucideIcon
 } from "lucide-react";
-import { useMemo } from "react";
-import Flow, { Background, BackgroundVariant, type Edge, type Node } from "reactflow";
-import "reactflow/dist/style.css";
 import type { WorkflowPattern } from "@flowmaestro/shared";
-import { previewNodeTypes } from "../canvas/nodeTypes";
 import { cn } from "../lib/utils";
+import { ProviderIconList } from "./common/ProviderIconList";
+import { WorkflowCanvasPreview, type WorkflowDefinition } from "./common/WorkflowCanvasPreview";
 
 // Icon mapping
 const iconMap: Record<string, LucideIcon> = {
@@ -75,83 +73,27 @@ interface PatternCardProps {
 function PatternCard({ pattern, isSelected, onClick }: PatternCardProps) {
     const Icon = iconMap[pattern.icon] || Plus;
 
-    // Parse nodes and edges for React Flow preview
-    const { nodes, edges } = useMemo(() => {
-        if (!pattern?.definition) {
-            return { nodes: [], edges: [] };
-        }
-
-        const def = pattern.definition;
-
-        // Convert nodes
-        const nodeEntries = Object.entries(def.nodes || {});
-        const flowNodes: Node[] = nodeEntries.map(([id, node]) => ({
-            id,
-            type: (node as { type: string }).type,
-            position: (node as { position: { x: number; y: number } }).position || { x: 0, y: 0 },
-            data: {
-                label: (node as { name: string }).name || (node as { type: string }).type,
-                ...(node as { config?: Record<string, unknown> }).config,
-                status: "idle"
-            },
-            // Set fixed dimensions for preview - prevents content from expanding nodes
-            style: { width: 260, height: 160 }
-        }));
-
-        const flowEdges: Edge[] = (def.edges || []).map((edge) => ({
-            id: edge.id || `${edge.source}-${edge.target}`,
-            source: edge.source,
-            target: edge.target,
-            sourceHandle: edge.sourceHandle,
-            targetHandle: edge.targetHandle,
-            animated: false
-        }));
-
-        return { nodes: flowNodes, edges: flowEdges };
-    }, [pattern?.definition]);
-
     return (
         <div
             onClick={onClick}
             className={cn(
-                "bg-card rounded-xl border-2 transition-all duration-200 cursor-pointer overflow-hidden group",
+                "bg-card rounded-xl border-2 transition-all duration-200 cursor-pointer overflow-hidden group flex flex-col",
                 isSelected
                     ? "border-primary ring-2 ring-primary/20 shadow-lg"
                     : "border-border hover:border-border/60 hover:shadow-md"
             )}
         >
             {/* React Flow Preview */}
-            <div className="h-52 bg-muted/30 relative overflow-hidden">
-                <Flow
-                    nodes={nodes}
-                    edges={edges}
-                    nodeTypes={previewNodeTypes}
-                    fitView
-                    fitViewOptions={{ padding: 0.1, maxZoom: 1.5 }}
-                    minZoom={0.1}
-                    maxZoom={1.5}
-                    nodesDraggable={false}
-                    nodesConnectable={false}
-                    elementsSelectable={false}
-                    panOnDrag={false}
-                    zoomOnScroll={false}
-                    zoomOnPinch={false}
-                    zoomOnDoubleClick={false}
-                    preventScrolling={true}
-                    proOptions={{ hideAttribution: true }}
-                    className="pointer-events-none"
-                >
-                    <Background
-                        variant={BackgroundVariant.Dots}
-                        gap={16}
-                        size={1}
-                        color="#e5e7eb"
-                    />
-                </Flow>
+            <div className="h-52 relative overflow-hidden flex-shrink-0">
+                <WorkflowCanvasPreview
+                    definition={pattern.definition as WorkflowDefinition}
+                    height="h-full"
+                    className="!shadow-none"
+                />
 
                 {/* Selection indicator */}
                 {isSelected && (
-                    <div className="absolute top-2 right-2">
+                    <div className="absolute top-2 right-2 z-10">
                         <div className="w-5 h-5 bg-primary rounded-full flex items-center justify-center">
                             <CheckCircle className="w-3 h-3 text-primary-foreground" />
                         </div>
@@ -160,12 +102,12 @@ function PatternCard({ pattern, isSelected, onClick }: PatternCardProps) {
             </div>
 
             {/* Content */}
-            <div className="p-4">
+            <div className="p-4 flex flex-col flex-1">
                 {/* Header with icon */}
                 <div className="flex items-center gap-2 mb-2">
                     <div
                         className={cn(
-                            "w-8 h-8 rounded-lg flex items-center justify-center",
+                            "w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0",
                             isSelected ? "bg-primary/10" : "bg-muted"
                         )}
                     >
@@ -184,28 +126,26 @@ function PatternCard({ pattern, isSelected, onClick }: PatternCardProps) {
                     {pattern.description}
                 </p>
 
-                {/* Footer */}
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span className="bg-muted px-2 py-0.5 rounded-full">
-                        {pattern.nodeCount} nodes
-                    </span>
-                    <span>{pattern.useCase}</span>
-                </div>
-
-                {/* Integration badges for advanced patterns */}
-                {pattern.integrations && pattern.integrations.length > 0 && (
-                    <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-border">
-                        <span className="text-xs text-muted-foreground">Integrations:</span>
-                        {pattern.integrations.map((integration) => (
-                            <span
-                                key={integration}
-                                className="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-primary/10 text-primary rounded-full"
-                            >
-                                {integration}
-                            </span>
-                        ))}
+                {/* Footer - pinned to bottom */}
+                <div className="mt-auto">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span className="bg-muted px-2 py-0.5 rounded-full">
+                            {pattern.nodeCount} nodes
+                        </span>
+                        <span>{pattern.useCase}</span>
                     </div>
-                )}
+
+                    {/* Integration icons for intermediate/advanced patterns */}
+                    {pattern.integrations && pattern.integrations.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-border">
+                            <ProviderIconList
+                                providers={pattern.integrations}
+                                maxVisible={5}
+                                iconSize="sm"
+                            />
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );

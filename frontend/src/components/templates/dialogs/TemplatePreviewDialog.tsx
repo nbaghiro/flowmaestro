@@ -1,16 +1,14 @@
 import { Check, Copy, ExternalLink, Eye, User, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import Flow, { Background, BackgroundVariant, Controls, Edge, Node } from "reactflow";
-import "reactflow/dist/style.css";
 import {
     ALL_PROVIDERS,
     getProviderLogo,
     TEMPLATE_CATEGORY_META,
     type Template
 } from "@flowmaestro/shared";
-import { previewNodeTypes } from "../../../canvas/nodeTypes";
 import { cn } from "../../../lib/utils";
 import { Button } from "../../common/Button";
+import { WorkflowCanvasPreview, type WorkflowDefinition } from "../../common/WorkflowCanvasPreview";
 
 // Get logo URL for an integration - uses shared providers or Brandfetch fallback
 const getIntegrationLogo = (integration: string): string => {
@@ -63,74 +61,24 @@ export function TemplatePreviewDialog({
         };
     }, [isOpen]);
 
-    // Parse nodes and edges from definition
-    // The definition may store nodes as a Record or array depending on source
-    const { nodes, edges } = useMemo(() => {
+    // Count nodes and edges for stats display
+    const { nodeCount, edgeCount } = useMemo(() => {
         if (!template?.definition) {
-            return { nodes: [], edges: [] };
+            return { nodeCount: 0, edgeCount: 0 };
         }
 
-        const def = template.definition as {
-            nodes?:
-                | Record<string, unknown>
-                | Array<{
-                      id: string;
-                      type: string;
-                      position?: { x: number; y: number };
-                      data?: Record<string, unknown>;
-                  }>;
-            edges?: Array<{
-                id?: string;
-                source: string;
-                target: string;
-                sourceHandle?: string;
-                targetHandle?: string;
-            }>;
-        };
+        const def = template.definition as WorkflowDefinition;
+        const nodes = def.nodes;
+        const edges = def.edges || [];
 
-        // Convert nodes - handle both Record and Array formats
-        let nodeEntries: Array<{
-            id: string;
-            type: string;
-            position?: { x: number; y: number };
-            data?: Record<string, unknown>;
-        }> = [];
-
-        if (Array.isArray(def.nodes)) {
-            nodeEntries = def.nodes;
-        } else if (def.nodes && typeof def.nodes === "object") {
-            nodeEntries = Object.entries(def.nodes).map(([id, node]) => ({
-                id,
-                ...(node as object)
-            })) as typeof nodeEntries;
+        let nodeCount = 0;
+        if (Array.isArray(nodes)) {
+            nodeCount = nodes.length;
+        } else if (nodes && typeof nodes === "object") {
+            nodeCount = Object.keys(nodes).length;
         }
 
-        const flowNodes: Node[] = nodeEntries.map((node, index) => ({
-            id: node.id,
-            type: node.type,
-            position: node.position || {
-                x: 100 + (index % 4) * 250,
-                y: 100 + Math.floor(index / 4) * 150
-            },
-            data: {
-                label: node.data?.label || node.type,
-                ...node.data,
-                status: "idle"
-            },
-            // Set fixed dimensions for preview - prevents content from expanding nodes
-            style: { width: 260, height: 160 }
-        }));
-
-        const flowEdges: Edge[] = (def.edges || []).map((edge) => ({
-            id: edge.id || `${edge.source}-${edge.target}`,
-            source: edge.source,
-            target: edge.target,
-            sourceHandle: edge.sourceHandle,
-            targetHandle: edge.targetHandle,
-            animated: true
-        }));
-
-        return { nodes: flowNodes, edges: flowEdges };
+        return { nodeCount, edgeCount: edges.length };
     }, [template?.definition]);
 
     const handleCopyId = async () => {
@@ -207,23 +155,16 @@ export function TemplatePreviewDialog({
                 <div className="flex-1 flex overflow-hidden">
                     {/* Left - Preview canvas */}
                     <div className="flex-1 border-r border-border">
-                        <div className="h-full w-full bg-muted/30">
-                            <Flow
-                                nodes={nodes}
-                                edges={edges}
-                                nodeTypes={previewNodeTypes}
-                                fitView
-                                nodesDraggable={false}
-                                nodesConnectable={false}
-                                elementsSelectable={false}
-                                panOnDrag={true}
-                                zoomOnScroll={true}
-                                proOptions={{ hideAttribution: true }}
-                            >
-                                <Background variant={BackgroundVariant.Dots} gap={12} size={1} />
-                                <Controls showInteractive={false} />
-                            </Flow>
-                        </div>
+                        <WorkflowCanvasPreview
+                            definition={template.definition as WorkflowDefinition}
+                            height="h-full"
+                            interactive
+                            showControls
+                            animateEdges
+                            fitViewPadding={0.2}
+                            backgroundGap={12}
+                            renderEmpty
+                        />
                     </div>
 
                     {/* Right - Details panel */}
@@ -295,13 +236,13 @@ export function TemplatePreviewDialog({
                             <div className="grid grid-cols-2 gap-3">
                                 <div className="p-3 bg-muted/30 rounded-lg">
                                     <div className="text-2xl font-bold text-foreground">
-                                        {nodes.length}
+                                        {nodeCount}
                                     </div>
                                     <div className="text-xs text-muted-foreground">Nodes</div>
                                 </div>
                                 <div className="p-3 bg-muted/30 rounded-lg">
                                     <div className="text-2xl font-bold text-foreground">
-                                        {edges.length}
+                                        {edgeCount}
                                     </div>
                                     <div className="text-xs text-muted-foreground">Connections</div>
                                 </div>

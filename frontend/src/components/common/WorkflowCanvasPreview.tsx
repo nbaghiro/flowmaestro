@@ -1,10 +1,11 @@
 import { useMemo } from "react";
-import Flow, { Background, BackgroundVariant, Edge, Node } from "reactflow";
+import Flow, { Controls, Edge, Node } from "reactflow";
 import "reactflow/dist/style.css";
+import { ZoomCompensatedBackground } from "../../canvas/components/ZoomCompensatedBackground";
 import { previewNodeTypes } from "../../canvas/nodeTypes";
 import { cn } from "../../lib/utils";
 
-interface WorkflowDefinition {
+export interface WorkflowDefinition {
     nodes?:
         | Record<
               string,
@@ -31,15 +32,40 @@ interface WorkflowDefinition {
 }
 
 interface WorkflowCanvasPreviewProps {
+    /** Workflow definition containing nodes and edges */
     definition?: WorkflowDefinition;
+    /** Height class (Tailwind), e.g. "h-40", "h-52", "h-full" */
     height?: string;
+    /** Additional CSS classes */
     className?: string;
+    /** Enable pan and zoom interactions */
+    interactive?: boolean;
+    /** Show zoom controls (only visible when interactive) */
+    showControls?: boolean;
+    /** Animate edges */
+    animateEdges?: boolean;
+    /** Padding for fitView */
+    fitViewPadding?: number;
+    /** Gap between background dots */
+    backgroundGap?: number;
+    /** Render even if no nodes (shows empty canvas) */
+    renderEmpty?: boolean;
 }
 
+/**
+ * Shared workflow canvas preview component.
+ * Used for workflow cards, template cards, template preview dialogs, and pattern pickers.
+ */
 export function WorkflowCanvasPreview({
     definition,
     height = "h-40",
-    className
+    className,
+    interactive = false,
+    showControls = false,
+    animateEdges = false,
+    fitViewPadding = 0.1,
+    backgroundGap = 16,
+    renderEmpty = false
 }: WorkflowCanvasPreviewProps) {
     const { nodes, edges } = useMemo(() => {
         if (!definition) {
@@ -88,14 +114,14 @@ export function WorkflowCanvasPreview({
             target: edge.target,
             sourceHandle: edge.sourceHandle,
             targetHandle: edge.targetHandle,
-            animated: false
+            animated: animateEdges
         }));
 
         return { nodes: flowNodes, edges: flowEdges };
-    }, [definition]);
+    }, [definition, animateEdges]);
 
-    // Don't render if no nodes
-    if (nodes.length === 0) {
+    // Don't render if no nodes (unless renderEmpty is true)
+    if (nodes.length === 0 && !renderEmpty) {
         return null;
     }
 
@@ -112,21 +138,22 @@ export function WorkflowCanvasPreview({
                 edges={edges}
                 nodeTypes={previewNodeTypes}
                 fitView
-                fitViewOptions={{ padding: 0.1 }}
+                fitViewOptions={{ padding: fitViewPadding }}
                 minZoom={0.1}
-                maxZoom={1}
+                maxZoom={interactive ? 1 : 1}
                 nodesDraggable={false}
                 nodesConnectable={false}
                 elementsSelectable={false}
-                panOnDrag={false}
-                zoomOnScroll={false}
-                zoomOnPinch={false}
+                panOnDrag={interactive}
+                zoomOnScroll={interactive}
+                zoomOnPinch={interactive}
                 zoomOnDoubleClick={false}
-                preventScrolling={true}
+                preventScrolling={!interactive}
                 proOptions={{ hideAttribution: true }}
-                className="pointer-events-none"
+                className={interactive ? "" : "pointer-events-none"}
             >
-                <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="#9ca3af" />
+                <ZoomCompensatedBackground baseGap={backgroundGap} baseSize={1} />
+                {showControls && interactive && <Controls showInteractive={false} />}
             </Flow>
         </div>
     );

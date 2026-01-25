@@ -988,132 +988,110 @@ const blankWorkflowPattern: WorkflowPattern = {
 // Integration-focused patterns with external services
 // ============================================================================
 
-// Intermediate Pattern 1: Slack Support Bot
-const slackSupportBotPattern: WorkflowPattern = {
-    id: "slack-support-bot",
-    name: "Slack Support Bot",
+// Intermediate Pattern 1: Discord Community Bot
+const discordCommunityBotPattern: WorkflowPattern = {
+    id: "discord-community-bot",
+    name: "Discord Community Bot",
     description:
-        "Auto-respond to Slack messages by classifying intent and routing to specialized handlers",
-    useCase: "Customer support automation",
+        "Monitor Discord channels for community feedback, categorize with AI, and log insights to Notion",
+    useCase: "Community management",
     icon: "MessageCircle",
     nodeCount: 6,
     category: "intermediate",
-    integrations: ["Slack"],
+    integrations: ["Discord", "Notion"],
     definition: {
-        name: "Slack Support Bot",
+        name: "Discord Community Bot",
         nodes: {
             "trigger-1": {
                 type: "trigger",
-                name: "Slack Message",
+                name: "Discord Message",
                 config: {
                     triggerType: "webhook",
-                    provider: "slack",
+                    provider: "discord",
                     event: "message",
-                    outputVariable: "slackMessage",
-                    description: "Triggered when a message is received in Slack"
+                    outputVariable: "discordMessage",
+                    description: "Triggered when a message is received in Discord"
                 },
-                position: { x: 100, y: 300 }
+                position: { x: 100, y: 200 }
             },
-            "router-1": {
-                type: "router",
-                name: "Intent Router",
-                config: {
-                    provider: "openai",
-                    model: "gpt-4o-mini",
-                    systemPrompt:
-                        "You are a customer support classifier. Analyze the message and classify it into exactly one category based on the primary intent.",
-                    prompt: "{{slackMessage.text}}",
-                    temperature: 0.1,
-                    routes: [
-                        {
-                            value: "tech_support",
-                            label: "Technical Support",
-                            description:
-                                "Technical issues, bugs, errors, how-to questions, troubleshooting"
-                        },
-                        {
-                            value: "sales",
-                            label: "Sales Inquiry",
-                            description: "Pricing, purchasing, upgrades, billing, subscriptions"
-                        },
-                        {
-                            value: "general",
-                            label: "General Inquiry",
-                            description: "General questions, feedback, other inquiries"
-                        }
-                    ],
-                    defaultRoute: "general",
-                    outputVariable: "routeResult"
-                },
-                position: { x: 480, y: 340 }
-            },
-            "llm-tech": {
+            "llm-categorize": {
                 type: "llm",
-                name: "Tech Support",
+                name: "Categorize Feedback",
                 config: {
                     provider: "openai",
                     model: "gpt-4o",
                     systemPrompt:
-                        "You are a technical support specialist. Provide clear, step-by-step solutions. Be concise since this will be sent as a Slack message.",
-                    prompt: "User's technical issue:\n\n{{slackMessage.text}}\n\nProvide a helpful response.",
-                    temperature: 0.3,
-                    maxTokens: 1000,
-                    outputVariable: "techResponse"
+                        "You are a community feedback analyst. Categorize Discord messages and extract insights.",
+                    prompt: 'Analyze this Discord message:\n\n{{discordMessage.content}}\n\nReturn JSON: {"category": "bug/feature/question/praise/complaint", "sentiment": "positive/neutral/negative", "priority": "high/medium/low", "summary": "brief summary"}',
+                    temperature: 0.2,
+                    maxTokens: 500,
+                    outputVariable: "categorization"
                 },
-                position: { x: 860, y: 500 }
+                position: { x: 480, y: 200 }
             },
-            "llm-sales": {
-                type: "llm",
-                name: "Sales Handler",
+            "conditional-1": {
+                type: "conditional",
+                name: "Action Required?",
                 config: {
-                    provider: "openai",
-                    model: "gpt-4o",
-                    systemPrompt:
-                        "You are a sales assistant. Help with pricing and purchasing questions. Be helpful and professional without being pushy. Be concise for Slack.",
-                    prompt: "User's sales inquiry:\n\n{{slackMessage.text}}\n\nProvide helpful information.",
-                    temperature: 0.5,
-                    maxTokens: 1000,
-                    outputVariable: "salesResponse"
+                    conditionType: "expression",
+                    expression:
+                        'categorization.text.includes(\'"priority": "high"\') || categorization.text.includes(\'"category": "bug"\')',
+                    outputVariable: "needsAction"
                 },
-                position: { x: 860, y: 300 }
+                position: { x: 860, y: 200 }
             },
-            "llm-general": {
-                type: "llm",
-                name: "General Handler",
-                config: {
-                    provider: "openai",
-                    model: "gpt-4o",
-                    systemPrompt:
-                        "You are a helpful customer service representative. Assist with general inquiries in a friendly manner. Be concise for Slack.",
-                    prompt: "User's inquiry:\n\n{{slackMessage.text}}\n\nProvide a helpful response.",
-                    temperature: 0.7,
-                    maxTokens: 1000,
-                    outputVariable: "generalResponse"
-                },
-                position: { x: 860, y: 100 }
-            },
-            "action-reply": {
+            "action-notion": {
                 type: "action",
-                name: "Reply to Slack",
+                name: "Log to Notion",
                 config: {
-                    provider: "slack",
-                    action: "postMessage",
-                    channel: "{{slackMessage.channel}}",
-                    text: "{{techResponse.text || salesResponse.text || generalResponse.text}}",
-                    threadTs: "{{slackMessage.ts}}",
-                    outputVariable: "slackReply"
+                    provider: "notion",
+                    action: "createPage",
+                    databaseId: "{{env.NOTION_FEEDBACK_DB}}",
+                    properties: {
+                        title: "{{categorization.summary}}",
+                        category: "{{categorization.category}}",
+                        sentiment: "{{categorization.sentiment}}"
+                    },
+                    outputVariable: "notionPage"
                 },
-                position: { x: 1240, y: 260 }
+                position: { x: 1240, y: 100 }
+            },
+            "action-discord": {
+                type: "action",
+                name: "Send Acknowledgment",
+                config: {
+                    provider: "discord",
+                    action: "sendMessage",
+                    channelId: "{{discordMessage.channelId}}",
+                    content: "Thanks for your feedback! We've logged this and will follow up.",
+                    outputVariable: "discordReply"
+                },
+                position: { x: 1240, y: 300 }
+            },
+            "output-1": {
+                type: "output",
+                name: "Result",
+                config: {
+                    outputName: "result",
+                    value: '{"logged": true, "category": "{{categorization.category}}", "notionUrl": "{{notionPage.url}}"}',
+                    format: "json",
+                    description: "Processing result"
+                },
+                position: { x: 1620, y: 200 }
             }
         },
         edges: [
-            { id: "edge-1", source: "trigger-1", target: "router-1" },
-            { id: "edge-2", source: "router-1", target: "llm-tech", sourceHandle: "tech_support" },
-            { id: "edge-3", source: "router-1", target: "llm-sales", sourceHandle: "sales" },
-            { id: "edge-4", source: "router-1", target: "llm-general", sourceHandle: "general" },
-            { id: "edge-5", source: "llm-tech", target: "action-reply" },
-            { id: "edge-6", source: "llm-sales", target: "action-reply" },
-            { id: "edge-7", source: "llm-general", target: "action-reply" }
+            { id: "edge-1", source: "trigger-1", target: "llm-categorize" },
+            { id: "edge-2", source: "llm-categorize", target: "conditional-1" },
+            {
+                id: "edge-3",
+                source: "conditional-1",
+                target: "action-notion",
+                sourceHandle: "true"
+            },
+            { id: "edge-4", source: "action-notion", target: "action-discord" },
+            { id: "edge-5", source: "conditional-1", target: "output-1", sourceHandle: "false" },
+            { id: "edge-6", source: "action-discord", target: "output-1" }
         ],
         entryPoint: "trigger-1"
     }
@@ -1330,2084 +1308,1207 @@ const leadEnrichmentPattern: WorkflowPattern = {
     }
 };
 
-// Intermediate Pattern 4: Email Autoresponder
-const emailAutoresponderPattern: WorkflowPattern = {
-    id: "email-autoresponder",
-    name: "Email Autoresponder",
-    description: "Classify incoming emails, draft AI responses, and send after human review",
-    useCase: "Email automation with approval",
-    icon: "Mail",
-    nodeCount: 7,
+// Intermediate Pattern 4: Figma Design Handoff
+const figmaDesignHandoffPattern: WorkflowPattern = {
+    id: "figma-design-handoff",
+    name: "Figma Design Handoff",
+    description:
+        "Extract component specs from Figma updates, create Jira tickets, and notify developers on Slack",
+    useCase: "Design-to-development automation",
+    icon: "Layers",
+    nodeCount: 6,
     category: "intermediate",
-    integrations: ["Email", "HTTP"],
+    integrations: ["Figma", "Jira", "Slack"],
     definition: {
-        name: "Email Autoresponder",
+        name: "Figma Design Handoff",
         nodes: {
-            "input-1": {
-                type: "input",
-                name: "Email Input",
+            "trigger-1": {
+                type: "trigger",
+                name: "Figma Update",
                 config: {
-                    inputName: "emailData",
-                    inputVariable: "emailData",
-                    inputType: "json",
-                    required: true,
-                    description: "Incoming email data",
-                    defaultValue: '{"from": "", "subject": "", "body": "", "replyTo": ""}'
+                    triggerType: "webhook",
+                    provider: "figma",
+                    event: "file_update",
+                    outputVariable: "figmaEvent",
+                    description: "Triggered when a Figma file is published"
                 },
                 position: { x: 100, y: 200 }
             },
-            "router-1": {
-                type: "router",
-                name: "Email Classifier",
+            "action-figma": {
+                type: "action",
+                name: "Get File Details",
                 config: {
-                    provider: "openai",
-                    model: "gpt-4o-mini",
-                    systemPrompt:
-                        "You are an email classifier. Categorize the email into exactly one category based on its content and intent.",
-                    prompt: "Subject: {{emailData.subject}}\n\nBody:\n{{emailData.body}}",
-                    temperature: 0.1,
-                    routes: [
-                        {
-                            value: "support",
-                            label: "Support Request",
-                            description: "Technical support, product issues, how-to questions"
-                        },
-                        {
-                            value: "sales",
-                            label: "Sales Inquiry",
-                            description: "Pricing, demos, purchasing questions"
-                        },
-                        {
-                            value: "info",
-                            label: "Information Request",
-                            description: "General information, company questions"
-                        },
-                        {
-                            value: "spam",
-                            label: "Spam/Unsubscribe",
-                            description: "Spam, marketing, unsubscribe requests"
-                        }
-                    ],
-                    defaultRoute: "info",
-                    outputVariable: "emailCategory"
+                    provider: "figma",
+                    action: "getFile",
+                    fileKey: "{{figmaEvent.fileKey}}",
+                    outputVariable: "figmaFile"
                 },
-                position: { x: 480, y: 240 }
+                position: { x: 480, y: 200 }
             },
-            "llm-draft": {
+            "llm-extract": {
                 type: "llm",
-                name: "Draft Response",
+                name: "Extract Components",
                 config: {
                     provider: "openai",
                     model: "gpt-4o",
                     systemPrompt:
-                        "You are a professional email assistant. Draft appropriate email responses based on the category. Be professional, helpful, and concise. Include a greeting and sign-off.",
-                    prompt: "Category: {{emailCategory.selectedRoute}}\n\nOriginal Email:\nFrom: {{emailData.from}}\nSubject: {{emailData.subject}}\nBody: {{emailData.body}}\n\nDraft a professional response email.",
-                    temperature: 0.5,
-                    maxTokens: 1500,
-                    outputVariable: "draftResponse"
+                        "You are a design systems expert. Analyze Figma file data and extract component specifications for developers.",
+                    prompt: 'Analyze this Figma file update:\n\n{{figmaFile}}\n\nExtract new/updated components as JSON:\n{"components": [{"name": "", "type": "new/update", "specs": {}, "implementationNotes": ""}]}',
+                    temperature: 0.2,
+                    maxTokens: 2000,
+                    outputVariable: "componentSpecs"
                 },
                 position: { x: 860, y: 200 }
             },
-            "human-review": {
-                type: "humanReview",
-                name: "Review Draft",
+            "action-jira": {
+                type: "action",
+                name: "Create Jira Tickets",
                 config: {
-                    prompt: "Please review and edit the draft email response before sending.",
-                    description: "Review the AI-generated response. Edit if needed.",
-                    variableName: "approvedResponse",
-                    inputType: "text",
-                    required: true,
-                    placeholder: "Edit the response here...",
-                    prefillValue: "{{draftResponse.text}}"
+                    provider: "jira",
+                    action: "createIssue",
+                    projectKey: "{{env.JIRA_PROJECT_KEY}}",
+                    issueType: "Task",
+                    summary: "Implement Figma component: {{componentSpecs.components[0].name}}",
+                    description: "{{componentSpecs.components[0].specs}}",
+                    outputVariable: "jiraTicket"
                 },
                 position: { x: 1240, y: 200 }
             },
-            "conditional-send": {
-                type: "conditional",
-                name: "Send Check",
+            "action-slack": {
+                type: "action",
+                name: "Notify Developers",
                 config: {
-                    conditionType: "expression",
-                    expression:
-                        "emailCategory.selectedRoute !== 'spam' && approvedResponse.trim().length > 0",
-                    outputVariable: "shouldSend"
+                    provider: "slack",
+                    action: "postMessage",
+                    channel: "#design-engineering",
+                    text: "🎨 New design handoff from Figma!\n\nFile: {{figmaFile.name}}\nComponents: {{componentSpecs.components.length}}\nJira: {{jiraTicket.key}}",
+                    outputVariable: "slackNotification"
                 },
                 position: { x: 1620, y: 200 }
             },
-            "http-send": {
-                type: "http",
-                name: "Send Email",
+            "output-1": {
+                type: "output",
+                name: "Handoff Result",
                 config: {
-                    method: "POST",
-                    url: "https://api.resend.com/emails",
-                    headers: {
-                        Authorization: "Bearer {{env.RESEND_API_KEY}}",
-                        "Content-Type": "application/json"
-                    },
-                    body: '{"from": "support@company.com", "to": "{{emailData.from}}", "subject": "Re: {{emailData.subject}}", "text": "{{approvedResponse}}"}',
-                    outputVariable: "sendResult",
-                    timeout: 30000
+                    outputName: "result",
+                    value: '{"figmaFile": "{{figmaFile.name}}", "jiraTicket": "{{jiraTicket.key}}", "componentCount": "{{componentSpecs.components.length}}"}',
+                    format: "json",
+                    description: "Design handoff result"
                 },
-                position: { x: 2000, y: 100 }
+                position: { x: 2000, y: 200 }
+            }
+        },
+        edges: [
+            { id: "edge-1", source: "trigger-1", target: "action-figma" },
+            { id: "edge-2", source: "action-figma", target: "llm-extract" },
+            { id: "edge-3", source: "llm-extract", target: "action-jira" },
+            { id: "edge-4", source: "action-jira", target: "action-slack" },
+            { id: "edge-5", source: "action-slack", target: "output-1" }
+        ],
+        entryPoint: "trigger-1"
+    }
+};
+
+// Intermediate Pattern 5: Trello Project Sync
+const trelloProjectSyncPattern: WorkflowPattern = {
+    id: "trello-project-sync",
+    name: "Trello Project Sync",
+    description: "Sync Trello card movements to PostgreSQL database and notify team on Slack",
+    useCase: "Project tracking automation",
+    icon: "Database",
+    nodeCount: 5,
+    category: "intermediate",
+    integrations: ["Trello", "PostgreSQL", "Slack"],
+    definition: {
+        name: "Trello Project Sync",
+        nodes: {
+            "trigger-1": {
+                type: "trigger",
+                name: "Card Moved",
+                config: {
+                    triggerType: "webhook",
+                    provider: "trello",
+                    event: "updateCard",
+                    outputVariable: "trelloEvent",
+                    description: "Triggered when a Trello card moves between lists"
+                },
+                position: { x: 100, y: 200 }
+            },
+            "action-trello": {
+                type: "action",
+                name: "Get Card Details",
+                config: {
+                    provider: "trello",
+                    action: "getCard",
+                    cardId: "{{trelloEvent.cardId}}",
+                    outputVariable: "cardDetails"
+                },
+                position: { x: 480, y: 200 }
+            },
+            "llm-transform": {
+                type: "llm",
+                name: "Transform for DB",
+                config: {
+                    provider: "openai",
+                    model: "gpt-4o-mini",
+                    systemPrompt: "Transform Trello card data into a database record format.",
+                    prompt: 'Transform this Trello card for database:\n\n{{cardDetails}}\n\nReturn JSON: {"id": "", "title": "", "status": "", "assignee": "", "due_date": "", "labels": [], "last_activity": ""}',
+                    temperature: 0.1,
+                    maxTokens: 500,
+                    outputVariable: "dbRecord"
+                },
+                position: { x: 860, y: 200 }
+            },
+            "action-postgresql": {
+                type: "action",
+                name: "Upsert to Database",
+                config: {
+                    provider: "postgresql",
+                    action: "upsert",
+                    table: "project_tasks",
+                    data: "{{dbRecord}}",
+                    conflictColumn: "id",
+                    outputVariable: "dbResult"
+                },
+                position: { x: 1240, y: 200 }
+            },
+            "action-slack": {
+                type: "action",
+                name: "Notify Team",
+                config: {
+                    provider: "slack",
+                    action: "postMessage",
+                    channel: "#project-updates",
+                    text: "📋 Card moved: {{cardDetails.name}}\nNew status: {{trelloEvent.listAfter}}\nAssigned to: {{cardDetails.members}}",
+                    outputVariable: "slackNotification"
+                },
+                position: { x: 1620, y: 200 }
+            },
+            "output-1": {
+                type: "output",
+                name: "Sync Result",
+                config: {
+                    outputName: "result",
+                    value: '{"cardId": "{{cardDetails.id}}", "synced": true, "newStatus": "{{trelloEvent.listAfter}}"}',
+                    format: "json",
+                    description: "Trello sync result"
+                },
+                position: { x: 2000, y: 200 }
+            }
+        },
+        edges: [
+            { id: "edge-1", source: "trigger-1", target: "action-trello" },
+            { id: "edge-2", source: "action-trello", target: "llm-transform" },
+            { id: "edge-3", source: "llm-transform", target: "action-postgresql" },
+            { id: "edge-4", source: "action-postgresql", target: "action-slack" },
+            { id: "edge-5", source: "action-slack", target: "output-1" }
+        ],
+        entryPoint: "trigger-1"
+    }
+};
+
+// Intermediate Pattern 6: Calendly Meeting Prep
+const calendlyMeetingPrepPattern: WorkflowPattern = {
+    id: "calendly-meeting-prep",
+    name: "Calendly Meeting Prep",
+    description:
+        "When meetings are booked via Calendly, research attendees and create prep notes for Google Calendar",
+    useCase: "Meeting preparation automation",
+    icon: "ClipboardCheck",
+    nodeCount: 6,
+    category: "intermediate",
+    integrations: ["Calendly", "Google Calendar", "Slack"],
+    definition: {
+        name: "Calendly Meeting Prep",
+        nodes: {
+            "trigger-1": {
+                type: "trigger",
+                name: "Meeting Booked",
+                config: {
+                    triggerType: "webhook",
+                    provider: "calendly",
+                    event: "invitee.created",
+                    outputVariable: "calendlyEvent",
+                    description: "Triggered when a new meeting is scheduled"
+                },
+                position: { x: 100, y: 200 }
+            },
+            "action-calendly": {
+                type: "action",
+                name: "Get Event Details",
+                config: {
+                    provider: "calendly",
+                    action: "getEvent",
+                    eventUri: "{{calendlyEvent.event}}",
+                    outputVariable: "eventDetails"
+                },
+                position: { x: 480, y: 200 }
+            },
+            "llm-research": {
+                type: "llm",
+                name: "Research Attendee",
+                config: {
+                    provider: "openai",
+                    model: "gpt-4o",
+                    systemPrompt:
+                        "You are a meeting preparation assistant. Research the attendee and prepare talking points.",
+                    prompt: "Prepare meeting notes for:\n\nAttendee: {{eventDetails.invitee}}\nMeeting Type: {{eventDetails.eventType}}\nScheduled Questions: {{eventDetails.questions}}\n\nProvide:\n1. Background brief\n2. Key talking points\n3. Questions to ask\n4. Potential objections",
+                    temperature: 0.3,
+                    maxTokens: 1500,
+                    outputVariable: "prepNotes"
+                },
+                position: { x: 860, y: 200 }
+            },
+            "action-calendar": {
+                type: "action",
+                name: "Update Calendar Event",
+                config: {
+                    provider: "google-calendar",
+                    action: "updateEvent",
+                    calendarId: "primary",
+                    eventId: "{{eventDetails.googleEventId}}",
+                    description: "{{prepNotes.text}}",
+                    outputVariable: "calendarUpdate"
+                },
+                position: { x: 1240, y: 200 }
+            },
+            "action-slack": {
+                type: "action",
+                name: "Send Prep Reminder",
+                config: {
+                    provider: "slack",
+                    action: "postMessage",
+                    channel: "@{{env.SLACK_USER_ID}}",
+                    text: "📅 Meeting prep ready!\n\nWith: {{eventDetails.invitee.name}}\nTime: {{eventDetails.startTime}}\n\nKey points:\n{{prepNotes.text}}",
+                    outputVariable: "slackNotification"
+                },
+                position: { x: 1620, y: 200 }
+            },
+            "output-1": {
+                type: "output",
+                name: "Prep Result",
+                config: {
+                    outputName: "result",
+                    value: '{"meeting": "{{eventDetails.name}}", "attendee": "{{eventDetails.invitee.name}}", "calendarUpdated": true}',
+                    format: "json",
+                    description: "Meeting prep result"
+                },
+                position: { x: 2000, y: 200 }
+            }
+        },
+        edges: [
+            { id: "edge-1", source: "trigger-1", target: "action-calendly" },
+            { id: "edge-2", source: "action-calendly", target: "llm-research" },
+            { id: "edge-3", source: "llm-research", target: "action-calendar" },
+            { id: "edge-4", source: "action-calendar", target: "action-slack" },
+            { id: "edge-5", source: "action-slack", target: "output-1" }
+        ],
+        entryPoint: "trigger-1"
+    }
+};
+
+// ============================================================================
+// ADVANCED PATTERNS (8 patterns)
+// Complex multi-branched workflows with diverse integrations
+// ============================================================================
+
+// Advanced Pattern 1: WhatsApp Customer Support Bot
+const whatsappSupportBotPattern: WorkflowPattern = {
+    id: "whatsapp-support-bot",
+    name: "WhatsApp Customer Support Bot",
+    description:
+        "Receive WhatsApp messages, classify with AI, create Zendesk tickets for complex issues, and update HubSpot contacts",
+    useCase: "Multi-channel customer support",
+    icon: "MessageCircle",
+    nodeCount: 8,
+    category: "advanced",
+    integrations: ["WhatsApp", "Zendesk", "HubSpot"],
+    definition: {
+        name: "WhatsApp Customer Support Bot",
+        nodes: {
+            "trigger-1": {
+                type: "trigger",
+                name: "WhatsApp Message",
+                config: {
+                    triggerType: "webhook",
+                    provider: "whatsapp",
+                    event: "message",
+                    outputVariable: "whatsappMessage",
+                    description: "Triggered on incoming WhatsApp message"
+                },
+                position: { x: 100, y: 200 }
+            },
+            "action-hubspot-get": {
+                type: "action",
+                name: "Get Customer Context",
+                config: {
+                    provider: "hubspot",
+                    action: "getContactByPhone",
+                    phone: "{{whatsappMessage.from}}",
+                    outputVariable: "customerData"
+                },
+                position: { x: 480, y: 200 }
+            },
+            "llm-classify": {
+                type: "llm",
+                name: "Classify & Respond",
+                config: {
+                    provider: "openai",
+                    model: "gpt-4o",
+                    systemPrompt:
+                        "You are a customer support AI. Classify the message intent and draft an appropriate response.",
+                    prompt: 'Analyze this WhatsApp support message:\n\nMessage: {{whatsappMessage.text}}\nCustomer History: {{customerData}}\n\nReturn JSON:\n{"intent": "question/complaint/request/feedback", "complexity": "simple/medium/complex", "sentiment": "positive/neutral/negative", "suggestedResponse": "", "requiresHumanHandoff": true/false}',
+                    temperature: 0.3,
+                    maxTokens: 1000,
+                    outputVariable: "classification"
+                },
+                position: { x: 860, y: 200 }
+            },
+            "router-1": {
+                type: "router",
+                name: "Route by Complexity",
+                config: {
+                    provider: "openai",
+                    model: "gpt-4o-mini",
+                    prompt: "{{classification.complexity}}",
+                    routes: [
+                        { value: "simple", label: "Simple", description: "Auto-respond" },
+                        { value: "medium", label: "Medium", description: "Respond + log" },
+                        { value: "complex", label: "Complex", description: "Create ticket" }
+                    ],
+                    defaultRoute: "medium",
+                    outputVariable: "routeResult"
+                },
+                position: { x: 1240, y: 200 }
+            },
+            "action-zendesk": {
+                type: "action",
+                name: "Create Ticket",
+                config: {
+                    provider: "zendesk",
+                    action: "createTicket",
+                    subject: "WhatsApp: {{classification.intent}}",
+                    description: "{{whatsappMessage.text}}",
+                    priority: "high",
+                    outputVariable: "zendeskTicket"
+                },
+                position: { x: 1620, y: 100 }
+            },
+            "action-whatsapp": {
+                type: "action",
+                name: "Send Response",
+                config: {
+                    provider: "whatsapp",
+                    action: "sendMessage",
+                    to: "{{whatsappMessage.from}}",
+                    text: "{{classification.suggestedResponse}}",
+                    outputVariable: "whatsappReply"
+                },
+                position: { x: 1620, y: 300 }
+            },
+            "action-hubspot-update": {
+                type: "action",
+                name: "Update Contact",
+                config: {
+                    provider: "hubspot",
+                    action: "updateContact",
+                    email: "{{customerData.email}}",
+                    properties: { last_support_interaction: "{{$now}}" },
+                    outputVariable: "hubspotUpdate"
+                },
+                position: { x: 2000, y: 200 }
             },
             "output-1": {
                 type: "output",
                 name: "Result",
                 config: {
                     outputName: "result",
-                    value: '{"category": "{{emailCategory.selectedRoute}}", "draft": "{{draftResponse.text}}", "sent": true, "to": "{{emailData.from}}"}',
+                    value: '{"handled": true, "intent": "{{classification.intent}}", "ticketCreated": "{{zendeskTicket.id || null}}"}',
                     format: "json",
-                    description: "Email processing result"
+                    description: "Support interaction result"
                 },
-                position: { x: 2380, y: 300 }
+                position: { x: 2380, y: 200 }
             }
         },
         edges: [
-            { id: "edge-1", source: "input-1", target: "router-1" },
-            { id: "edge-2", source: "router-1", target: "llm-draft" },
-            { id: "edge-3", source: "llm-draft", target: "human-review" },
-            { id: "edge-4", source: "human-review", target: "conditional-send" },
-            { id: "edge-5", source: "conditional-send", target: "http-send", sourceHandle: "true" },
-            { id: "edge-6", source: "conditional-send", target: "output-1", sourceHandle: "false" },
-            { id: "edge-7", source: "http-send", target: "output-1" }
+            { id: "e1", source: "trigger-1", target: "action-hubspot-get" },
+            { id: "e2", source: "action-hubspot-get", target: "llm-classify" },
+            { id: "e3", source: "llm-classify", target: "router-1" },
+            { id: "e4", source: "router-1", target: "action-whatsapp", sourceHandle: "simple" },
+            { id: "e5", source: "router-1", target: "action-whatsapp", sourceHandle: "medium" },
+            { id: "e6", source: "router-1", target: "action-zendesk", sourceHandle: "complex" },
+            { id: "e7", source: "action-zendesk", target: "action-whatsapp" },
+            { id: "e8", source: "action-whatsapp", target: "action-hubspot-update" },
+            { id: "e9", source: "action-hubspot-update", target: "output-1" }
         ],
-        entryPoint: "input-1"
+        entryPoint: "trigger-1"
     }
 };
 
-// Intermediate Pattern 5: Jira Bug Triage
-const jiraBugTriagePattern: WorkflowPattern = {
-    id: "jira-bug-triage",
-    name: "Jira Bug Triage",
+// Advanced Pattern 2: DocuSign Contract Automation
+const docusignContractPattern: WorkflowPattern = {
+    id: "docusign-contract-automation",
+    name: "DocuSign Contract Automation",
     description:
-        "Auto-analyze bug reports, determine priority and component, and create Jira issues",
-    useCase: "Bug management automation",
-    icon: "Bug",
-    nodeCount: 5,
-    category: "intermediate",
-    integrations: ["Jira"],
-    definition: {
-        name: "Jira Bug Triage",
-        nodes: {
-            "input-1": {
-                type: "input",
-                name: "Bug Report",
-                config: {
-                    inputName: "bugReport",
-                    inputVariable: "bugReport",
-                    inputType: "json",
-                    required: true,
-                    description: "Bug report from user or system",
-                    defaultValue:
-                        '{"title": "", "description": "", "steps": "", "expected": "", "actual": "", "reporter": ""}'
-                },
-                position: { x: 100, y: 140 }
-            },
-            "llm-analyze": {
-                type: "llm",
-                name: "Analyze Bug",
-                config: {
-                    provider: "openai",
-                    model: "gpt-4o",
-                    systemPrompt:
-                        "You are a bug triage specialist. Analyze bug reports and determine:\n- Severity (critical/high/medium/low)\n- Component (frontend/backend/database/api/auth/other)\n- Priority (P1/P2/P3/P4)\n- Estimated effort (hours)\n\nBase severity on user impact and system stability risks.",
-                    prompt: 'Bug Report:\nTitle: {{bugReport.title}}\nDescription: {{bugReport.description}}\nSteps to Reproduce: {{bugReport.steps}}\nExpected: {{bugReport.expected}}\nActual: {{bugReport.actual}}\n\nAnalyze and respond with JSON:\n{"severity": "...", "component": "...", "priority": "...", "effort": "...", "summary": "...", "suggestedLabels": [...]}',
-                    temperature: 0.2,
-                    maxTokens: 1000,
-                    outputVariable: "analysis"
-                },
-                position: { x: 480, y: 180 }
-            },
-            "transform-1": {
-                type: "transform",
-                name: "Format for Jira",
-                config: {
-                    operations: [
-                        {
-                            type: "parseJson",
-                            input: "{{analysis.text}}",
-                            output: "parsedAnalysis"
-                        },
-                        {
-                            type: "template",
-                            template:
-                                "h2. Summary\n{{parsedAnalysis.summary}}\n\nh2. Reproduction Steps\n{{bugReport.steps}}\n\nh2. Expected vs Actual\n*Expected:* {{bugReport.expected}}\n*Actual:* {{bugReport.actual}}\n\nh2. Analysis\n*Severity:* {{parsedAnalysis.severity}}\n*Component:* {{parsedAnalysis.component}}\n*Estimated Effort:* {{parsedAnalysis.effort}} hours",
-                            output: "jiraDescription"
-                        }
-                    ],
-                    outputVariable: "formatted"
-                },
-                position: { x: 860, y: 140 }
-            },
-            "action-jira": {
-                type: "action",
-                name: "Create Jira Issue",
-                config: {
-                    provider: "jira",
-                    action: "createIssue",
-                    project: "{{env.JIRA_PROJECT_KEY}}",
-                    issueType: "Bug",
-                    summary: "[{{parsedAnalysis.priority}}] {{bugReport.title}}",
-                    description: "{{formatted.jiraDescription}}",
-                    priority: "{{parsedAnalysis.priority}}",
-                    labels: "{{parsedAnalysis.suggestedLabels}}",
-                    components: ["{{parsedAnalysis.component}}"],
-                    outputVariable: "jiraIssue"
-                },
-                position: { x: 1240, y: 100 }
-            },
-            "output-1": {
-                type: "output",
-                name: "Triage Result",
-                config: {
-                    outputName: "result",
-                    value: '{"issueKey": "{{jiraIssue.key}}", "analysis": {{analysis.text}}, "url": "{{jiraIssue.url}}"}',
-                    format: "json",
-                    description: "Bug triage result with Jira link"
-                },
-                position: { x: 1620, y: 140 }
-            }
-        },
-        edges: [
-            { id: "edge-1", source: "input-1", target: "llm-analyze" },
-            { id: "edge-2", source: "llm-analyze", target: "transform-1" },
-            { id: "edge-3", source: "transform-1", target: "action-jira" },
-            { id: "edge-4", source: "action-jira", target: "output-1" }
-        ],
-        entryPoint: "input-1"
-    }
-};
-
-// Intermediate Pattern 6: Content to Social Posts
-const contentToSocialPattern: WorkflowPattern = {
-    id: "content-to-social",
-    name: "Content to Social Posts",
-    description: "Generate platform-specific social media posts from blog content or announcements",
-    useCase: "Content repurposing",
-    icon: "Share2",
-    nodeCount: 5,
-    category: "intermediate",
-    integrations: [],
-    definition: {
-        name: "Content to Social Posts",
-        nodes: {
-            "input-1": {
-                type: "input",
-                name: "Content Input",
-                config: {
-                    inputName: "content",
-                    inputVariable: "content",
-                    inputType: "json",
-                    required: true,
-                    description: "Blog post or announcement content",
-                    defaultValue: '{"title": "", "body": "", "url": "", "tags": []}'
-                },
-                position: { x: 100, y: 300 }
-            },
-            "llm-twitter": {
-                type: "llm",
-                name: "Twitter Post",
-                config: {
-                    provider: "openai",
-                    model: "gpt-4o",
-                    systemPrompt:
-                        "You are a social media expert. Create engaging Twitter/X posts. Stay under 280 characters. Use relevant hashtags (2-3 max). Be punchy and attention-grabbing. Include a call to action.",
-                    prompt: "Create a Twitter post for this content:\n\nTitle: {{content.title}}\n\nContent:\n{{content.body}}\n\nURL: {{content.url}}\n\nTags: {{content.tags}}",
-                    temperature: 0.7,
-                    maxTokens: 200,
-                    outputVariable: "twitterPost"
-                },
-                position: { x: 480, y: 500 }
-            },
-            "llm-linkedin": {
-                type: "llm",
-                name: "LinkedIn Post",
-                config: {
-                    provider: "openai",
-                    model: "gpt-4o",
-                    systemPrompt:
-                        "You are a LinkedIn content expert. Create professional posts that drive engagement. Use line breaks for readability. Include 3-5 relevant hashtags at the end. Posts should be 100-200 words for optimal engagement.",
-                    prompt: "Create a LinkedIn post for this content:\n\nTitle: {{content.title}}\n\nContent:\n{{content.body}}\n\nURL: {{content.url}}\n\nTags: {{content.tags}}",
-                    temperature: 0.6,
-                    maxTokens: 500,
-                    outputVariable: "linkedinPost"
-                },
-                position: { x: 480, y: 340 }
-            },
-            "llm-summary": {
-                type: "llm",
-                name: "Short Summary",
-                config: {
-                    provider: "openai",
-                    model: "gpt-4o",
-                    systemPrompt:
-                        "You are a content summarizer. Create a 1-2 sentence summary suitable for email newsletters, Slack announcements, or meta descriptions.",
-                    prompt: "Create a brief 1-2 sentence summary of this content:\n\nTitle: {{content.title}}\n\nContent:\n{{content.body}}",
-                    temperature: 0.4,
-                    maxTokens: 150,
-                    outputVariable: "summary"
-                },
-                position: { x: 480, y: 100 }
-            },
-            "template-output": {
-                type: "templateOutput",
-                name: "Combined Output",
-                config: {
-                    template: {
-                        title: "{{content.title}}",
-                        url: "{{content.url}}",
-                        platforms: {
-                            twitter: "{{twitterPost.text}}",
-                            linkedin: "{{linkedinPost.text}}"
-                        },
-                        summary: "{{summary.text}}",
-                        generatedAt: "{{$now}}"
-                    },
-                    outputVariable: "socialPosts"
-                },
-                position: { x: 860, y: 300 }
-            }
-        },
-        edges: [
-            { id: "edge-1", source: "input-1", target: "llm-twitter" },
-            { id: "edge-2", source: "input-1", target: "llm-linkedin" },
-            { id: "edge-3", source: "input-1", target: "llm-summary" },
-            { id: "edge-4", source: "llm-twitter", target: "template-output" },
-            { id: "edge-5", source: "llm-linkedin", target: "template-output" },
-            { id: "edge-6", source: "llm-summary", target: "template-output" }
-        ],
-        entryPoint: "input-1"
-    }
-};
-
-// ============================================================================
-// ADVANCED PATTERNS (8 patterns)
-// Complex multi-branched workflows with advanced features
-// ============================================================================
-
-// Advanced Pattern 1: Real-Time Customer Support Translation
-const customerSupportTranslationPattern: WorkflowPattern = {
-    id: "customer-support-translation",
-    name: "Real-Time Customer Support Translation",
-    description:
-        "Bi-directional message translation for multi-language customer support with language preference storage",
-    useCase: "Multi-language support",
-    icon: "Languages",
-    nodeCount: 13,
+        "When deals close in Salesforce, generate contracts and send via DocuSign for e-signature",
+    useCase: "Contract automation",
+    icon: "FileStack",
+    nodeCount: 7,
     category: "advanced",
-    integrations: [],
+    integrations: ["DocuSign", "Salesforce", "Slack"],
     definition: {
-        name: "Real-Time Customer Support Translation",
+        name: "DocuSign Contract Automation",
         nodes: {
-            "input-message": {
-                type: "input",
-                name: "Message Input",
+            "trigger-1": {
+                type: "trigger",
+                name: "Deal Closed Won",
                 config: {
-                    inputName: "messageText",
-                    inputVariable: "messageText",
-                    inputType: "text",
-                    required: true,
-                    description: "The message to be translated",
-                    defaultValue: ""
+                    triggerType: "webhook",
+                    provider: "salesforce",
+                    event: "opportunity.closed_won",
+                    outputVariable: "sfOpportunity",
+                    description: "Triggered when opportunity stage = Closed Won"
                 },
-                position: { x: 100, y: 100 }
+                position: { x: 100, y: 200 }
             },
-            "input-customer": {
-                type: "input",
-                name: "Customer ID",
+            "action-salesforce": {
+                type: "action",
+                name: "Get Deal Details",
                 config: {
-                    inputName: "customerId",
-                    inputVariable: "customerId",
-                    inputType: "text",
-                    required: true,
-                    description: "Unique customer identifier",
-                    defaultValue: ""
+                    provider: "salesforce",
+                    action: "getOpportunity",
+                    opportunityId: "{{sfOpportunity.id}}",
+                    outputVariable: "dealDetails"
                 },
-                position: { x: 100, y: 500 }
+                position: { x: 480, y: 200 }
             },
-            "input-sender": {
-                type: "input",
-                name: "Sender Role",
-                config: {
-                    inputName: "senderRole",
-                    inputVariable: "senderRole",
-                    inputType: "text",
-                    required: true,
-                    description: "Either 'customer' or 'agent'",
-                    defaultValue: "customer"
-                },
-                position: { x: 100, y: 300 }
-            },
-            "conditional-role": {
-                type: "conditional",
-                name: "Check Sender Role",
-                config: {
-                    conditionType: "simple",
-                    leftValue: "{{senderRole}}",
-                    operator: "==",
-                    rightValue: "customer",
-                    outputVariable: "isCustomer"
-                },
-                position: { x: 480, y: 340 }
-            },
-            "memory-get": {
-                type: "shared-memory",
-                name: "Get Customer Language",
-                config: {
-                    operation: "get",
-                    key: "customer_lang_{{customerId}}",
-                    outputVariable: "storedLanguage"
-                },
-                position: { x: 860, y: 400 }
-            },
-            "llm-detect": {
+            "llm-contract": {
                 type: "llm",
-                name: "Detect Language",
+                name: "Prepare Contract Data",
                 config: {
                     provider: "openai",
-                    model: "gpt-4o-mini",
-                    systemPrompt:
-                        "You are a language detection expert. Detect the language of the given text and respond with ONLY the ISO 639-1 language code (e.g., 'en', 'es', 'fr', 'de', 'zh', 'ja', 'ko'). If unsure, respond with 'en'.",
-                    prompt: "{{messageText}}",
+                    model: "gpt-4o",
+                    systemPrompt: "Extract contract details from deal data.",
+                    prompt: 'Prepare contract from deal:\n\n{{dealDetails}}\n\nReturn JSON:\n{"clientName": "", "clientEmail": "", "contractValue": "", "startDate": "", "services": [], "paymentTerms": ""}',
                     temperature: 0.1,
-                    maxTokens: 10,
-                    outputVariable: "detectedLanguage"
+                    maxTokens: 500,
+                    outputVariable: "contractData"
                 },
                 position: { x: 860, y: 200 }
             },
-            "memory-set": {
-                type: "shared-memory",
-                name: "Store Language",
+            "action-docusign-create": {
+                type: "action",
+                name: "Create Envelope",
                 config: {
-                    operation: "set",
-                    key: "customer_lang_{{customerId}}",
-                    value: "{{detectedLanguage.text}}",
-                    outputVariable: "languageStored"
+                    provider: "docusign",
+                    action: "createEnvelope",
+                    templateId: "{{env.DOCUSIGN_TEMPLATE_ID}}",
+                    recipients: [
+                        {
+                            email: "{{contractData.clientEmail}}",
+                            name: "{{contractData.clientName}}"
+                        }
+                    ],
+                    outputVariable: "envelope"
                 },
                 position: { x: 1240, y: 200 }
             },
-            "conditional-english": {
-                type: "conditional",
-                name: "Is English?",
+            "action-docusign-send": {
+                type: "action",
+                name: "Send for Signature",
                 config: {
-                    conditionType: "expression",
-                    expression:
-                        "detectedLanguage.text.trim().toLowerCase() === 'en' || storedLanguage === 'en'",
-                    outputVariable: "isEnglish"
-                },
-                position: { x: 1620, y: 300 }
-            },
-            "transform-passthrough": {
-                type: "transform",
-                name: "Pass Through (English)",
-                config: {
-                    operations: [
-                        {
-                            type: "set",
-                            path: "translatedMessage",
-                            value: "{{messageText}}"
-                        }
-                    ],
-                    outputVariable: "passthrough"
-                },
-                position: { x: 2000, y: 200 }
-            },
-            "llm-translate-to-english": {
-                type: "llm",
-                name: "Translate to English",
-                config: {
-                    provider: "openai",
-                    model: "gpt-4o",
-                    systemPrompt:
-                        "You are a professional translator. Translate the given text to English. Preserve the tone and meaning. Output only the translated text, nothing else.",
-                    prompt: "{{messageText}}",
-                    temperature: 0.3,
-                    maxTokens: 2000,
-                    outputVariable: "toEnglish"
-                },
-                position: { x: 2000, y: 400 }
-            },
-            "llm-translate-from-english": {
-                type: "llm",
-                name: "Translate from English",
-                config: {
-                    provider: "openai",
-                    model: "gpt-4o",
-                    systemPrompt:
-                        "You are a professional translator. Translate the given English text to the target language specified. Preserve the tone and meaning. Output only the translated text, nothing else.",
-                    prompt: "Translate to language code '{{storedLanguage}}':\n\n{{messageText}}",
-                    temperature: 0.3,
-                    maxTokens: 2000,
-                    outputVariable: "fromEnglish"
-                },
-                position: { x: 1240, y: 440 }
-            },
-            "output-text": {
-                type: "output",
-                name: "Translated Message",
-                config: {
-                    outputName: "translatedMessage",
-                    value: "{{passthrough.translatedMessage || toEnglish.text || fromEnglish.text}}",
-                    format: "string",
-                    description: "The translated message"
-                },
-                position: { x: 2380, y: 260 }
-            },
-            "output-meta": {
-                type: "output",
-                name: "Translation Metadata",
-                config: {
-                    outputName: "metadata",
-                    value: '{"originalLanguage": "{{detectedLanguage.text}}", "customerLanguage": "{{storedLanguage}}", "senderRole": "{{senderRole}}"}',
-                    format: "json",
-                    description: "Translation metadata"
-                },
-                position: { x: 2760, y: 300 }
-            }
-        },
-        edges: [
-            { id: "e1", source: "input-message", target: "conditional-role" },
-            { id: "e2", source: "input-customer", target: "conditional-role" },
-            { id: "e3", source: "input-sender", target: "conditional-role" },
-            { id: "e4", source: "conditional-role", target: "memory-get", sourceHandle: "false" },
-            { id: "e5", source: "conditional-role", target: "llm-detect", sourceHandle: "true" },
-            { id: "e6", source: "llm-detect", target: "memory-set" },
-            { id: "e7", source: "memory-set", target: "conditional-english" },
-            { id: "e8", source: "memory-get", target: "conditional-english" },
-            {
-                id: "e9",
-                source: "conditional-english",
-                target: "transform-passthrough",
-                sourceHandle: "true"
-            },
-            {
-                id: "e10",
-                source: "conditional-english",
-                target: "llm-translate-to-english",
-                sourceHandle: "false"
-            },
-            { id: "e11", source: "memory-get", target: "llm-translate-from-english" },
-            { id: "e12", source: "transform-passthrough", target: "output-text" },
-            { id: "e13", source: "llm-translate-to-english", target: "output-text" },
-            { id: "e14", source: "llm-translate-from-english", target: "output-text" },
-            { id: "e15", source: "output-text", target: "output-meta" }
-        ],
-        entryPoint: "input-message"
-    }
-};
-
-// Advanced Pattern 2: E-commerce Order Processing Pipeline
-const ecommerceOrderProcessingPattern: WorkflowPattern = {
-    id: "ecommerce-order-processing",
-    name: "E-commerce Order Processing Pipeline",
-    description:
-        "Automated order validation with fraud detection, inventory check, and payment processing",
-    useCase: "Order fulfillment automation",
-    icon: "ShoppingCart",
-    nodeCount: 12,
-    category: "advanced",
-    integrations: ["Stripe", "Inventory API"],
-    definition: {
-        name: "E-commerce Order Processing Pipeline",
-        nodes: {
-            "input-order": {
-                type: "input",
-                name: "Order Data",
-                config: {
-                    inputName: "orderData",
-                    inputVariable: "orderData",
-                    inputType: "json",
-                    required: true,
-                    description: "Complete order details",
-                    defaultValue:
-                        '{"orderId": "", "customerId": "", "items": [], "totalAmount": 0, "shippingAddress": {}, "paymentMethod": {}}'
-                },
-                position: { x: 100, y: 240 }
-            },
-            "transform-validate": {
-                type: "transform",
-                name: "Validate Order",
-                config: {
-                    operations: [
-                        {
-                            type: "validate",
-                            rules: [
-                                { field: "orderId", required: true },
-                                { field: "items", minLength: 1 },
-                                { field: "totalAmount", min: 0.01 }
-                            ],
-                            output: "validationResult"
-                        }
-                    ],
-                    outputVariable: "validation"
-                },
-                position: { x: 480, y: 340 }
-            },
-            "http-inventory": {
-                type: "http",
-                name: "Check Inventory",
-                config: {
-                    method: "POST",
-                    url: "{{env.INVENTORY_API_URL}}/check",
-                    headers: {
-                        Authorization: "Bearer {{env.INVENTORY_API_KEY}}",
-                        "Content-Type": "application/json"
-                    },
-                    body: '{"items": {{orderData.items}}}',
-                    outputVariable: "inventoryCheck",
-                    timeout: 15000
-                },
-                position: { x: 480, y: 140 }
-            },
-            "llm-fraud": {
-                type: "llm",
-                name: "Fraud Analysis",
-                config: {
-                    provider: "openai",
-                    model: "gpt-4o",
-                    systemPrompt:
-                        "You are a fraud detection specialist. Analyze the order data and provide a fraud risk score (0-100) and risk factors. Consider: shipping/billing mismatch, unusual order patterns, high-value orders from new customers, suspicious address patterns.",
-                    prompt: 'Order Data:\n- Order ID: {{orderData.orderId}}\n- Customer ID: {{orderData.customerId}}\n- Total: ${{orderData.totalAmount}}\n- Items: {{orderData.items}}\n- Shipping: {{orderData.shippingAddress}}\n\nProvide analysis as JSON:\n{"riskScore": 0-100, "riskLevel": "low/medium/high", "factors": [...], "recommendation": "approve/review/decline"}',
-                    temperature: 0.2,
-                    maxTokens: 500,
-                    outputVariable: "fraudAnalysis"
-                },
-                position: { x: 860, y: 380 }
-            },
-            "conditional-inventory": {
-                type: "conditional",
-                name: "Inventory Available?",
-                config: {
-                    conditionType: "expression",
-                    expression: "inventoryCheck.body.available === true",
-                    outputVariable: "hasInventory"
-                },
-                position: { x: 860, y: 180 }
-            },
-            "conditional-fraud": {
-                type: "conditional",
-                name: "Fraud Check",
-                config: {
-                    conditionType: "expression",
-                    expression:
-                        'fraudAnalysis.text.includes(\'"riskLevel": "low"\') || fraudAnalysis.text.includes(\'"riskLevel": "medium"\')',
-                    outputVariable: "passedFraudCheck"
-                },
-                position: { x: 1240, y: 240 }
-            },
-            "human-review": {
-                type: "humanReview",
-                name: "Manual Review",
-                config: {
-                    prompt: "High-risk order requires manual review",
-                    description:
-                        "Review the fraud analysis and decide whether to approve or decline this order.",
-                    variableName: "manualDecision",
-                    inputType: "json",
-                    required: true,
-                    placeholder: '{"decision": "approve", "notes": ""}'
-                },
-                position: { x: 1620, y: 340 }
-            },
-            "http-payment": {
-                type: "http",
-                name: "Process Payment",
-                config: {
-                    method: "POST",
-                    url: "https://api.stripe.com/v1/payment_intents",
-                    headers: {
-                        Authorization: "Bearer {{env.STRIPE_SECRET_KEY}}",
-                        "Content-Type": "application/x-www-form-urlencoded"
-                    },
-                    body: "amount={{orderData.totalAmount}}&currency=usd&customer={{orderData.customerId}}",
-                    outputVariable: "paymentResult",
-                    timeout: 30000
-                },
-                position: { x: 1620, y: 140 }
-            },
-            "conditional-payment": {
-                type: "conditional",
-                name: "Payment Success?",
-                config: {
-                    conditionType: "expression",
-                    expression:
-                        "paymentResult.body.status === 'succeeded' || paymentResult.body.status === 'requires_capture'",
-                    outputVariable: "paymentSuccess"
-                },
-                position: { x: 2000, y: 100 }
-            },
-            "output-success": {
-                type: "output",
-                name: "Order Confirmed",
-                config: {
-                    outputName: "result",
-                    value: '{"status": "confirmed", "orderId": "{{orderData.orderId}}", "paymentId": "{{paymentResult.body.id}}", "fraudScore": "{{fraudAnalysis.text}}"}',
-                    format: "json",
-                    description: "Successful order confirmation"
-                },
-                position: { x: 2380, y: 140 }
-            },
-            "output-declined": {
-                type: "output",
-                name: "Order Declined",
-                config: {
-                    outputName: "result",
-                    value: '{"status": "declined", "orderId": "{{orderData.orderId}}", "reason": "fraud_risk", "fraudAnalysis": "{{fraudAnalysis.text}}"}',
-                    format: "json",
-                    description: "Order declined due to fraud risk"
-                },
-                position: { x: 2000, y: 300 }
-            },
-            "output-failed": {
-                type: "output",
-                name: "Order Failed",
-                config: {
-                    outputName: "result",
-                    value: '{"status": "failed", "orderId": "{{orderData.orderId}}", "reason": "{{inventoryCheck.body.reason || paymentResult.body.error}}"}',
-                    format: "json",
-                    description: "Order failed due to inventory or payment issues"
-                },
-                position: { x: 2380, y: 340 }
-            }
-        },
-        edges: [
-            { id: "e1", source: "input-order", target: "transform-validate" },
-            { id: "e2", source: "input-order", target: "http-inventory" },
-            { id: "e3", source: "transform-validate", target: "llm-fraud" },
-            { id: "e4", source: "http-inventory", target: "conditional-inventory" },
-            { id: "e5", source: "llm-fraud", target: "conditional-fraud" },
-            {
-                id: "e6",
-                source: "conditional-fraud",
-                target: "http-payment",
-                sourceHandle: "true"
-            },
-            {
-                id: "e7",
-                source: "conditional-fraud",
-                target: "human-review",
-                sourceHandle: "false"
-            },
-            { id: "e8", source: "human-review", target: "output-declined" },
-            {
-                id: "e9",
-                source: "conditional-inventory",
-                target: "http-payment",
-                sourceHandle: "true"
-            },
-            {
-                id: "e10",
-                source: "conditional-inventory",
-                target: "output-failed",
-                sourceHandle: "false"
-            },
-            { id: "e11", source: "http-payment", target: "conditional-payment" },
-            {
-                id: "e12",
-                source: "conditional-payment",
-                target: "output-success",
-                sourceHandle: "true"
-            },
-            {
-                id: "e13",
-                source: "conditional-payment",
-                target: "output-failed",
-                sourceHandle: "false"
-            }
-        ],
-        entryPoint: "input-order"
-    }
-};
-
-// Advanced Pattern 3: Document Classification & Extraction Pipeline
-const documentClassificationPattern: WorkflowPattern = {
-    id: "document-classification",
-    name: "Document Classification & Extraction",
-    description:
-        "Batch document processing with AI classification, type-based routing, and structured data extraction",
-    useCase: "Document processing automation",
-    icon: "FileStack",
-    nodeCount: 11,
-    category: "advanced",
-    integrations: [],
-    definition: {
-        name: "Document Classification & Extraction",
-        nodes: {
-            "input-files": {
-                type: "files",
-                name: "Document Upload",
-                config: {
-                    inputName: "documents",
-                    outputVariable: "uploadedDocs",
-                    chunkSize: 4000,
-                    allowedTypes: [".pdf", ".docx", ".txt", ".png", ".jpg"]
-                },
-                position: { x: 100, y: 300 }
-            },
-            "loop-docs": {
-                type: "loop",
-                name: "Process Each Document",
-                config: {
-                    loopType: "forEach",
-                    arrayPath: "uploadedDocs.files",
-                    iterationVariable: "currentDoc",
-                    maxIterations: 50
-                },
-                position: { x: 480, y: 300 }
-            },
-            "llm-classify": {
-                type: "llm",
-                name: "Classify Document",
-                config: {
-                    provider: "openai",
-                    model: "gpt-4o",
-                    systemPrompt:
-                        "You are a document classification expert. Analyze the document content and classify it into exactly one category. Respond with ONLY the category name in lowercase.",
-                    prompt: "Document content:\n{{currentDoc.content}}\n\nCategories:\n- invoice (bills, receipts, payment requests)\n- contract (agreements, legal documents, terms)\n- resume (CVs, job applications)\n- report (analysis, summaries, findings)\n- correspondence (emails, letters, memos)\n- other (anything else)",
-                    temperature: 0.1,
-                    maxTokens: 20,
-                    outputVariable: "docType"
-                },
-                position: { x: 860, y: 300 }
-            },
-            "switch-type": {
-                type: "switch",
-                name: "Route by Type",
-                config: {
-                    expression: "{{docType.text.trim().toLowerCase()}}",
-                    cases: [
-                        { value: "invoice", label: "Invoice" },
-                        { value: "contract", label: "Contract" },
-                        { value: "resume", label: "Resume" },
-                        { value: "report", label: "Report" }
-                    ],
-                    defaultCase: "other"
-                },
-                position: { x: 1240, y: 300 }
-            },
-            "llm-extract-invoice": {
-                type: "llm",
-                name: "Extract Invoice Data",
-                config: {
-                    provider: "openai",
-                    model: "gpt-4o",
-                    systemPrompt:
-                        "Extract structured data from invoices. Always respond with valid JSON.",
-                    prompt: '{{currentDoc.content}}\n\nExtract:\n{"vendorName": "", "invoiceNumber": "", "date": "", "dueDate": "", "lineItems": [], "subtotal": 0, "tax": 0, "total": 0}',
-                    temperature: 0.2,
-                    maxTokens: 1000,
-                    outputVariable: "invoiceData"
-                },
-                position: { x: 1620, y: 600 }
-            },
-            "llm-extract-contract": {
-                type: "llm",
-                name: "Extract Contract Data",
-                config: {
-                    provider: "openai",
-                    model: "gpt-4o",
-                    systemPrompt:
-                        "Extract structured data from contracts. Always respond with valid JSON.",
-                    prompt: '{{currentDoc.content}}\n\nExtract:\n{"parties": [], "effectiveDate": "", "expirationDate": "", "keyTerms": [], "obligations": [], "signatures": []}',
-                    temperature: 0.2,
-                    maxTokens: 1000,
-                    outputVariable: "contractData"
-                },
-                position: { x: 1620, y: 400 }
-            },
-            "llm-extract-resume": {
-                type: "llm",
-                name: "Extract Resume Data",
-                config: {
-                    provider: "openai",
-                    model: "gpt-4o",
-                    systemPrompt:
-                        "Extract structured data from resumes/CVs. Always respond with valid JSON.",
-                    prompt: '{{currentDoc.content}}\n\nExtract:\n{"name": "", "email": "", "phone": "", "skills": [], "experience": [], "education": [], "summary": ""}',
-                    temperature: 0.2,
-                    maxTokens: 1000,
-                    outputVariable: "resumeData"
+                    provider: "docusign",
+                    action: "sendEnvelope",
+                    envelopeId: "{{envelope.envelopeId}}",
+                    outputVariable: "sentEnvelope"
                 },
                 position: { x: 1620, y: 200 }
             },
-            "llm-extract-report": {
-                type: "llm",
-                name: "Extract Report Data",
+            "action-slack": {
+                type: "action",
+                name: "Notify Sales Team",
                 config: {
-                    provider: "openai",
-                    model: "gpt-4o",
-                    systemPrompt:
-                        "Extract structured data from reports. Always respond with valid JSON.",
-                    prompt: '{{currentDoc.content}}\n\nExtract:\n{"title": "", "author": "", "date": "", "executiveSummary": "", "keyFindings": [], "recommendations": [], "conclusions": ""}',
-                    temperature: 0.2,
-                    maxTokens: 1000,
-                    outputVariable: "reportData"
+                    provider: "slack",
+                    action: "postMessage",
+                    channel: "#sales-contracts",
+                    text: "📝 Contract sent for signature!\n\nDeal: {{dealDetails.name}}\nClient: {{contractData.clientName}}\nValue: {{contractData.contractValue}}",
+                    outputVariable: "slackNotification"
                 },
-                position: { x: 1620, y: 0 }
+                position: { x: 2000, y: 200 }
             },
-            "memory-store": {
-                type: "shared-memory",
-                name: "Store Results",
-                config: {
-                    operation: "set",
-                    key: "doc_{{currentDoc.name}}",
-                    value: '{"type": "{{docType.text}}", "data": "{{invoiceData.text || contractData.text || resumeData.text || reportData.text}}", "filename": "{{currentDoc.name}}"}',
-                    outputVariable: "stored"
-                },
-                position: { x: 2000, y: 300 }
-            },
-            "transform-aggregate": {
-                type: "transform",
-                name: "Aggregate Results",
-                config: {
-                    operations: [
-                        {
-                            type: "collect",
-                            from: "stored",
-                            output: "allResults"
-                        }
-                    ],
-                    outputVariable: "aggregated"
-                },
-                position: { x: 2380, y: 300 }
-            },
-            "output-results": {
+            "output-1": {
                 type: "output",
-                name: "Processing Results",
+                name: "Contract Result",
                 config: {
-                    outputName: "results",
-                    value: '{"processedCount": {{uploadedDocs.fileCount}}, "documents": {{aggregated.allResults}}}',
+                    outputName: "result",
+                    value: '{"envelopeId": "{{envelope.envelopeId}}", "status": "sent", "client": "{{contractData.clientName}}"}',
                     format: "json",
-                    description: "All processed documents with extracted data"
+                    description: "Contract automation result"
                 },
-                position: { x: 2760, y: 300 }
+                position: { x: 2380, y: 200 }
             }
         },
         edges: [
-            { id: "e1", source: "input-files", target: "loop-docs" },
-            { id: "e2", source: "loop-docs", target: "llm-classify", sourceHandle: "loop-body" },
-            { id: "e3", source: "llm-classify", target: "switch-type" },
-            {
-                id: "e4",
-                source: "switch-type",
-                target: "llm-extract-invoice",
-                sourceHandle: "invoice"
-            },
-            {
-                id: "e5",
-                source: "switch-type",
-                target: "llm-extract-contract",
-                sourceHandle: "contract"
-            },
-            {
-                id: "e6",
-                source: "switch-type",
-                target: "llm-extract-resume",
-                sourceHandle: "resume"
-            },
-            {
-                id: "e7",
-                source: "switch-type",
-                target: "llm-extract-report",
-                sourceHandle: "report"
-            },
-            { id: "e8", source: "llm-extract-invoice", target: "memory-store" },
-            { id: "e9", source: "llm-extract-contract", target: "memory-store" },
-            { id: "e10", source: "llm-extract-resume", target: "memory-store" },
-            { id: "e11", source: "llm-extract-report", target: "memory-store" },
-            { id: "e12", source: "memory-store", target: "loop-docs" },
-            {
-                id: "e13",
-                source: "loop-docs",
-                target: "transform-aggregate",
-                sourceHandle: "loop-exit"
-            },
-            { id: "e14", source: "transform-aggregate", target: "output-results" }
+            { id: "e1", source: "trigger-1", target: "action-salesforce" },
+            { id: "e2", source: "action-salesforce", target: "llm-contract" },
+            { id: "e3", source: "llm-contract", target: "action-docusign-create" },
+            { id: "e4", source: "action-docusign-create", target: "action-docusign-send" },
+            { id: "e5", source: "action-docusign-send", target: "action-slack" },
+            { id: "e6", source: "action-slack", target: "output-1" }
         ],
-        entryPoint: "input-files"
+        entryPoint: "trigger-1"
     }
 };
 
-// Advanced Pattern 4: Multi-Stage Content Moderation
-const contentModerationPattern: WorkflowPattern = {
-    id: "content-moderation",
-    name: "Multi-Stage Content Moderation",
+// Advanced Pattern 3: TikTok Content Performance Tracker
+const tiktokPerformancePattern: WorkflowPattern = {
+    id: "tiktok-performance-tracker",
+    name: "TikTok Content Performance Tracker",
     description:
-        "Comprehensive content safety pipeline with parallel text/image analysis, severity routing, and human escalation",
-    useCase: "Content safety automation",
-    icon: "Shield",
-    nodeCount: 14,
+        "Fetch TikTok video metrics daily, analyze trends with AI, update spreadsheet, and track in PostHog",
+    useCase: "Social media analytics",
+    icon: "Share2",
+    nodeCount: 6,
     category: "advanced",
-    integrations: [],
+    integrations: ["TikTok", "Google Sheets", "PostHog"],
     definition: {
-        name: "Multi-Stage Content Moderation",
+        name: "TikTok Content Performance Tracker",
         nodes: {
-            "input-content": {
-                type: "input",
-                name: "Content Input",
+            "trigger-1": {
+                type: "trigger",
+                name: "Daily Schedule",
                 config: {
-                    inputName: "content",
-                    inputVariable: "content",
-                    inputType: "json",
-                    required: true,
-                    description: "Content to moderate",
-                    defaultValue:
-                        '{"userId": "", "text": "", "imageUrl": "", "contentType": "post", "platform": ""}'
+                    triggerType: "schedule",
+                    schedule: "0 10 * * *",
+                    outputVariable: "scheduleEvent",
+                    description: "Runs daily at 10am"
                 },
-                position: { x: 100, y: 400 }
+                position: { x: 100, y: 200 }
             },
-            "memory-history": {
-                type: "shared-memory",
-                name: "Get User History",
+            "action-tiktok": {
+                type: "action",
+                name: "Fetch Video Metrics",
                 config: {
-                    operation: "get",
-                    key: "mod_history_{{content.userId}}",
-                    outputVariable: "userHistory"
+                    provider: "tiktok",
+                    action: "getVideoMetrics",
+                    dateRange: "last_24_hours",
+                    outputVariable: "tiktokMetrics"
                 },
-                position: { x: 480, y: 600 }
+                position: { x: 480, y: 200 }
             },
-            "llm-text-analysis": {
+            "llm-analyze": {
                 type: "llm",
-                name: "Analyze Text",
+                name: "Analyze Performance",
                 config: {
                     provider: "openai",
                     model: "gpt-4o",
-                    systemPrompt:
-                        "You are a content moderation expert. Analyze text for policy violations. Categories: hate_speech, harassment, violence, sexual_content, spam, misinformation, self_harm, none. Provide severity (0-100) for each detected issue.",
-                    prompt: 'Text: "{{content.text}}"\n\nPrevious violations by user: {{userHistory}}\n\nAnalyze and respond with JSON:\n{"violations": [{"category": "", "severity": 0, "excerpt": ""}], "overallSeverity": 0, "recommendation": "approve/flag/remove/escalate"}',
-                    temperature: 0.1,
-                    maxTokens: 500,
-                    outputVariable: "textAnalysis"
-                },
-                position: { x: 480, y: 440 }
-            },
-            "conditional-has-image": {
-                type: "conditional",
-                name: "Has Image?",
-                config: {
-                    conditionType: "expression",
-                    expression: "content.imageUrl && content.imageUrl.trim().length > 0",
-                    outputVariable: "hasImage"
+                    systemPrompt: "You are a social media analytics expert.",
+                    prompt: 'Analyze these TikTok metrics:\n\n{{tiktokMetrics}}\n\nReturn JSON:\n{"topVideos": [], "trends": [], "viralPotential": [], "recommendations": [], "alertWorthy": []}',
+                    temperature: 0.2,
+                    maxTokens: 1500,
+                    outputVariable: "analysis"
                 },
                 position: { x: 860, y: 200 }
             },
-            "vision-analyze": {
-                type: "vision",
-                name: "Analyze Image",
-                config: {
-                    provider: "openai",
-                    model: "gpt-4o",
-                    prompt: 'Analyze this image for content policy violations. Check for: explicit content, violence, hate symbols, dangerous activities, spam/scam indicators. Respond with JSON: {"violations": [], "overallSeverity": 0, "description": ""}',
-                    imageUrl: "{{content.imageUrl}}",
-                    outputVariable: "imageAnalysis"
-                },
-                position: { x: 860, y: 300 }
-            },
-            "code-combine": {
-                type: "code",
-                name: "Combine Analysis",
-                config: {
-                    language: "javascript",
-                    code: "const textSeverity = parseInt(inputs.textAnalysis?.overallSeverity) || 0;\nconst imageSeverity = parseInt(inputs.imageAnalysis?.overallSeverity) || 0;\nconst combinedSeverity = Math.max(textSeverity, imageSeverity);\nconst previousViolations = inputs.userHistory?.count || 0;\nconst adjustedSeverity = Math.min(100, combinedSeverity + (previousViolations * 10));\nreturn { combinedSeverity: adjustedSeverity, textSeverity, imageSeverity, previousViolations };",
-                    timeout: 5,
-                    outputVariable: "combined"
-                },
-                position: { x: 1240, y: 500 }
-            },
-            "switch-severity": {
-                type: "switch",
-                name: "Severity Routing",
-                config: {
-                    expression:
-                        "{{combined.combinedSeverity >= 80 ? 'critical' : combined.combinedSeverity >= 50 ? 'high' : combined.combinedSeverity >= 20 ? 'medium' : 'low'}}",
-                    cases: [
-                        { value: "critical", label: "Critical (80+)" },
-                        { value: "high", label: "High (50-79)" },
-                        { value: "medium", label: "Medium (20-49)" },
-                        { value: "low", label: "Low (<20)" }
-                    ],
-                    defaultCase: "low"
-                },
-                position: { x: 1620, y: 400 }
-            },
-            "human-review": {
-                type: "humanReview",
-                name: "Human Review",
-                config: {
-                    prompt: "Critical content requires human review before action",
-                    description: "Review the content and AI analysis. Decide on final action.",
-                    variableName: "humanDecision",
-                    inputType: "json",
-                    required: true,
-                    placeholder: '{"action": "remove", "reason": "", "banUser": false}'
-                },
-                position: { x: 1960, y: 700 }
-            },
-            "action-auto-remove": {
+            "action-sheets": {
                 type: "action",
-                name: "Auto-Remove Content",
+                name: "Update Tracker",
                 config: {
-                    provider: "internal",
-                    action: "removeContent",
-                    contentId: "{{content.id}}",
-                    reason: "Automated removal: {{textAnalysis.text}}",
-                    outputVariable: "removeResult"
+                    provider: "google-sheets",
+                    action: "appendRow",
+                    spreadsheetId: "{{env.TIKTOK_TRACKER_SHEET_ID}}",
+                    sheetName: "Performance",
+                    values: ["{{$now}}", "{{tiktokMetrics.totalViews}}", "{{analysis.topVideos}}"],
+                    outputVariable: "sheetsResult"
                 },
-                position: { x: 2000, y: 500 }
+                position: { x: 1240, y: 200 }
             },
-            "action-flag": {
+            "action-posthog": {
                 type: "action",
-                name: "Flag for Review",
+                name: "Track in PostHog",
                 config: {
-                    provider: "internal",
-                    action: "flagContent",
-                    contentId: "{{content.id}}",
-                    priority: "medium",
-                    reason: "{{textAnalysis.text}}",
-                    outputVariable: "flagResult"
+                    provider: "posthog",
+                    action: "capture",
+                    event: "tiktok_daily_metrics",
+                    properties: "{{analysis}}",
+                    outputVariable: "posthogResult"
                 },
-                position: { x: 2040, y: 300 }
+                position: { x: 1620, y: 200 }
             },
-            "transform-approve": {
-                type: "transform",
-                name: "Approve Content",
-                config: {
-                    operations: [
-                        {
-                            type: "set",
-                            path: "status",
-                            value: "approved"
-                        }
-                    ],
-                    outputVariable: "approved"
-                },
-                position: { x: 2000, y: 100 }
-            },
-            "memory-update": {
-                type: "shared-memory",
-                name: "Update History",
-                config: {
-                    operation: "set",
-                    key: "mod_history_{{content.userId}}",
-                    value: '{"count": {{userHistory.count || 0}} + 1, "lastViolation": "{{$now}}", "severity": {{combined.combinedSeverity}}}',
-                    outputVariable: "historyUpdated"
-                },
-                position: { x: 2380, y: 360 }
-            },
-            "output-result": {
+            "output-1": {
                 type: "output",
-                name: "Moderation Result",
+                name: "Analysis Result",
                 config: {
                     outputName: "result",
-                    value: '{"contentId": "{{content.id}}", "userId": "{{content.userId}}", "action": "{{humanDecision.action || removeResult.action || flagResult.action || approved.status}}", "severity": {{combined.combinedSeverity}}, "textViolations": "{{textAnalysis.text}}", "imageViolations": "{{imageAnalysis.text}}"}',
+                    value: "{{analysis}}",
                     format: "json",
-                    description: "Moderation decision and details"
+                    description: "TikTok performance analysis"
                 },
-                position: { x: 2760, y: 400 }
+                position: { x: 2000, y: 200 }
             }
         },
         edges: [
-            { id: "e1", source: "input-content", target: "memory-history" },
-            { id: "e2", source: "input-content", target: "llm-text-analysis" },
-            { id: "e3", source: "input-content", target: "conditional-has-image" },
-            {
-                id: "e4",
-                source: "conditional-has-image",
-                target: "vision-analyze",
-                sourceHandle: "true"
-            },
-            { id: "e5", source: "memory-history", target: "code-combine" },
-            { id: "e6", source: "llm-text-analysis", target: "code-combine" },
-            { id: "e7", source: "vision-analyze", target: "code-combine" },
-            {
-                id: "e8",
-                source: "conditional-has-image",
-                target: "code-combine",
-                sourceHandle: "false"
-            },
-            { id: "e9", source: "code-combine", target: "switch-severity" },
-            {
-                id: "e10",
-                source: "switch-severity",
-                target: "human-review",
-                sourceHandle: "critical"
-            },
-            {
-                id: "e11",
-                source: "switch-severity",
-                target: "action-auto-remove",
-                sourceHandle: "high"
-            },
-            { id: "e12", source: "switch-severity", target: "action-flag", sourceHandle: "medium" },
-            {
-                id: "e13",
-                source: "switch-severity",
-                target: "transform-approve",
-                sourceHandle: "low"
-            },
-            { id: "e14", source: "human-review", target: "memory-update" },
-            { id: "e15", source: "action-auto-remove", target: "memory-update" },
-            { id: "e16", source: "action-flag", target: "memory-update" },
-            { id: "e17", source: "transform-approve", target: "output-result" },
-            { id: "e18", source: "memory-update", target: "output-result" }
+            { id: "e1", source: "trigger-1", target: "action-tiktok" },
+            { id: "e2", source: "action-tiktok", target: "llm-analyze" },
+            { id: "e3", source: "llm-analyze", target: "action-sheets" },
+            { id: "e4", source: "action-sheets", target: "action-posthog" },
+            { id: "e5", source: "action-posthog", target: "output-1" }
         ],
-        entryPoint: "input-content"
+        entryPoint: "trigger-1"
     }
 };
 
-// Advanced Pattern 5: Customer Journey Orchestration
-const customerJourneyPattern: WorkflowPattern = {
-    id: "customer-journey",
-    name: "Customer Journey Orchestration",
+// Advanced Pattern 4: MongoDB Pipeline Monitor
+const mongodbPipelineMonitorPattern: WorkflowPattern = {
+    id: "mongodb-pipeline-monitor",
+    name: "MongoDB Data Pipeline Monitor",
     description:
-        "Personalized customer engagement with journey state management and multi-channel touchpoints",
-    useCase: "Marketing automation",
-    icon: "Route",
-    nodeCount: 12,
-    category: "advanced",
-    integrations: ["HubSpot", "SendGrid", "Twilio"],
-    definition: {
-        name: "Customer Journey Orchestration",
-        nodes: {
-            "input-event": {
-                type: "input",
-                name: "Customer Event",
-                config: {
-                    inputName: "event",
-                    inputVariable: "event",
-                    inputType: "json",
-                    required: true,
-                    description: "Customer interaction event",
-                    defaultValue:
-                        '{"customerId": "", "eventType": "", "data": {}, "channel": "", "timestamp": ""}'
-                },
-                position: { x: 100, y: 400 }
-            },
-            "memory-state": {
-                type: "shared-memory",
-                name: "Get Journey State",
-                config: {
-                    operation: "get",
-                    key: "journey_{{event.customerId}}",
-                    outputVariable: "journeyState"
-                },
-                position: { x: 480, y: 500 }
-            },
-            "http-profile": {
-                type: "http",
-                name: "Fetch Profile",
-                config: {
-                    method: "GET",
-                    url: "{{env.CRM_API_URL}}/customers/{{event.customerId}}",
-                    headers: {
-                        Authorization: "Bearer {{env.CRM_API_KEY}}"
-                    },
-                    outputVariable: "customerProfile",
-                    timeout: 10000
-                },
-                position: { x: 480, y: 300 }
-            },
-            "switch-stage": {
-                type: "switch",
-                name: "Journey Stage",
-                config: {
-                    expression: "{{journeyState.stage || 'awareness'}}",
-                    cases: [
-                        { value: "awareness", label: "Awareness" },
-                        { value: "consideration", label: "Consideration" },
-                        { value: "decision", label: "Decision" },
-                        { value: "retention", label: "Retention" }
-                    ],
-                    defaultCase: "awareness"
-                },
-                position: { x: 860, y: 440 }
-            },
-            "llm-awareness": {
-                type: "llm",
-                name: "Awareness Response",
-                config: {
-                    provider: "openai",
-                    model: "gpt-4o",
-                    systemPrompt:
-                        "Generate personalized awareness-stage content. Focus on education and problem awareness. Keep messages friendly and informative.",
-                    prompt: "Customer: {{customerProfile.body}}\nEvent: {{event.eventType}}\nPrevious interactions: {{journeyState.interactions}}\n\nGenerate an appropriate response to nurture this prospect.",
-                    temperature: 0.7,
-                    maxTokens: 500,
-                    outputVariable: "awarenessContent"
-                },
-                position: { x: 1200, y: 700 }
-            },
-            "llm-consideration": {
-                type: "llm",
-                name: "Consideration Response",
-                config: {
-                    provider: "openai",
-                    model: "gpt-4o",
-                    systemPrompt:
-                        "Generate personalized consideration-stage content. Focus on product benefits and comparisons. Include relevant case studies or testimonials.",
-                    prompt: "Customer: {{customerProfile.body}}\nEvent: {{event.eventType}}\nInterest areas: {{journeyState.interests}}\n\nGenerate content to help this prospect evaluate our solution.",
-                    temperature: 0.6,
-                    maxTokens: 600,
-                    outputVariable: "considerationContent"
-                },
-                position: { x: 1240, y: 500 }
-            },
-            "llm-decision": {
-                type: "llm",
-                name: "Decision Response",
-                config: {
-                    provider: "openai",
-                    model: "gpt-4o",
-                    systemPrompt:
-                        "Generate personalized decision-stage content. Focus on urgency, special offers, and removing obstacles. Be persuasive but not pushy.",
-                    prompt: "Customer: {{customerProfile.body}}\nEvent: {{event.eventType}}\nPrevious objections: {{journeyState.objections}}\n\nGenerate content to help close this deal.",
-                    temperature: 0.5,
-                    maxTokens: 500,
-                    outputVariable: "decisionContent"
-                },
-                position: { x: 1280, y: 300 }
-            },
-            "llm-retention": {
-                type: "llm",
-                name: "Retention Response",
-                config: {
-                    provider: "openai",
-                    model: "gpt-4o",
-                    systemPrompt:
-                        "Generate personalized retention-stage content. Focus on maximizing value, upsells, and loyalty rewards. Celebrate milestones.",
-                    prompt: "Customer: {{customerProfile.body}}\nEvent: {{event.eventType}}\nPurchase history: {{journeyState.purchases}}\n\nGenerate content to delight this customer and encourage loyalty.",
-                    temperature: 0.6,
-                    maxTokens: 500,
-                    outputVariable: "retentionContent"
-                },
-                position: { x: 1240, y: 100 }
-            },
-            "router-channel": {
-                type: "router",
-                name: "Channel Selector",
-                config: {
-                    provider: "openai",
-                    model: "gpt-4o-mini",
-                    systemPrompt:
-                        "Select the best communication channel based on customer preferences and event context.",
-                    prompt: "Customer preferences: {{customerProfile.body.preferences}}\nEvent channel: {{event.channel}}\nMessage urgency: {{journeyState.stage}}\n\nSelect channel: email, sms, or push",
-                    temperature: 0.1,
-                    routes: [
-                        { value: "email", label: "Email", description: "Detailed content" },
-                        { value: "sms", label: "SMS", description: "Urgent, short messages" },
-                        { value: "push", label: "Push", description: "In-app notifications" }
-                    ],
-                    defaultRoute: "email",
-                    outputVariable: "channelSelection"
-                },
-                position: { x: 1620, y: 400 }
-            },
-            "memory-update": {
-                type: "shared-memory",
-                name: "Update Journey",
-                config: {
-                    operation: "set",
-                    key: "journey_{{event.customerId}}",
-                    value: '{"stage": "{{journeyState.stage}}", "interactions": {{journeyState.interactions || 0}} + 1, "lastContact": "{{$now}}", "lastChannel": "{{channelSelection.selectedRoute}}"}',
-                    outputVariable: "journeyUpdated"
-                },
-                position: { x: 2000, y: 360 }
-            },
-            "output-action": {
-                type: "output",
-                name: "Journey Action",
-                config: {
-                    outputName: "action",
-                    value: '{"customerId": "{{event.customerId}}", "stage": "{{journeyState.stage}}", "channel": "{{channelSelection.selectedRoute}}", "content": "{{awarenessContent.text || considerationContent.text || decisionContent.text || retentionContent.text}}", "nextAction": "schedule_followup"}',
-                    format: "json",
-                    description: "Orchestrated customer journey action"
-                },
-                position: { x: 2380, y: 400 }
-            }
-        },
-        edges: [
-            { id: "e1", source: "input-event", target: "memory-state" },
-            { id: "e2", source: "input-event", target: "http-profile" },
-            { id: "e3", source: "memory-state", target: "switch-stage" },
-            { id: "e4", source: "http-profile", target: "switch-stage" },
-            {
-                id: "e5",
-                source: "switch-stage",
-                target: "llm-awareness",
-                sourceHandle: "awareness"
-            },
-            {
-                id: "e6",
-                source: "switch-stage",
-                target: "llm-consideration",
-                sourceHandle: "consideration"
-            },
-            { id: "e7", source: "switch-stage", target: "llm-decision", sourceHandle: "decision" },
-            {
-                id: "e8",
-                source: "switch-stage",
-                target: "llm-retention",
-                sourceHandle: "retention"
-            },
-            { id: "e9", source: "llm-awareness", target: "router-channel" },
-            { id: "e10", source: "llm-consideration", target: "router-channel" },
-            { id: "e11", source: "llm-decision", target: "router-channel" },
-            { id: "e12", source: "llm-retention", target: "router-channel" },
-            { id: "e13", source: "router-channel", target: "memory-update" },
-            { id: "e14", source: "memory-update", target: "output-action" }
-        ],
-        entryPoint: "input-event"
-    }
-};
-
-// Advanced Pattern 6: Intelligent Data Validation Pipeline
-const dataValidationPattern: WorkflowPattern = {
-    id: "data-validation-pipeline",
-    name: "Intelligent Data Validation Pipeline",
-    description:
-        "Batch data validation with AI-powered anomaly detection, quality scoring, and error categorization",
-    useCase: "Data quality automation",
+        "Query MongoDB for pipeline metrics, detect anomalies with AI, alert on issues, and log to Mixpanel",
+    useCase: "Data engineering monitoring",
     icon: "Database",
-    nodeCount: 11,
+    nodeCount: 6,
     category: "advanced",
-    integrations: [],
+    integrations: ["MongoDB", "Slack", "Mixpanel"],
     definition: {
-        name: "Intelligent Data Validation Pipeline",
+        name: "MongoDB Data Pipeline Monitor",
         nodes: {
-            "input-data": {
-                type: "input",
-                name: "Data Batch",
+            "trigger-1": {
+                type: "trigger",
+                name: "Every 15 Minutes",
                 config: {
-                    inputName: "dataBatch",
-                    inputVariable: "dataBatch",
-                    inputType: "json",
-                    required: true,
-                    description: "Array of records to validate",
-                    defaultValue: '{"records": [], "schema": {}, "source": ""}'
+                    triggerType: "schedule",
+                    schedule: "*/15 * * * *",
+                    outputVariable: "scheduleEvent",
+                    description: "Runs every 15 minutes"
                 },
-                position: { x: 100, y: 300 }
+                position: { x: 100, y: 200 }
             },
-            "transform-parse": {
-                type: "transform",
-                name: "Parse & Normalize",
+            "action-mongodb": {
+                type: "action",
+                name: "Query Pipeline Metrics",
                 config: {
-                    operations: [
-                        {
-                            type: "normalize",
-                            fields: ["email", "phone", "date"],
-                            output: "normalizedRecords"
-                        },
-                        {
-                            type: "deduplicate",
-                            key: "id",
-                            output: "uniqueRecords"
-                        }
-                    ],
-                    outputVariable: "parsed"
+                    provider: "mongodb",
+                    action: "aggregate",
+                    collection: "pipeline_metrics",
+                    pipeline: [{ $match: { timestamp: { $gte: "{{$now - 900000}}" } } }],
+                    outputVariable: "pipelineMetrics"
                 },
-                position: { x: 480, y: 340 }
+                position: { x: 480, y: 200 }
             },
-            "loop-validate": {
-                type: "loop",
-                name: "Validate Each Record",
-                config: {
-                    loopType: "forEach",
-                    arrayPath: "parsed.uniqueRecords",
-                    iterationVariable: "record",
-                    maxIterations: 1000
-                },
-                position: { x: 860, y: 300 }
-            },
-            "code-schema-check": {
-                type: "code",
-                name: "Schema Validation",
-                config: {
-                    language: "javascript",
-                    code: 'const schema = inputs.dataBatch.schema;\nconst record = inputs.record;\nconst errors = [];\nfor (const [field, rules] of Object.entries(schema)) {\n  if (rules.required && !record[field]) errors.push({field, error: "required"});\n  if (rules.type && typeof record[field] !== rules.type) errors.push({field, error: "type_mismatch"});\n  if (rules.pattern && !new RegExp(rules.pattern).test(record[field])) errors.push({field, error: "pattern_mismatch"});\n}\nreturn { valid: errors.length === 0, errors, recordId: record.id };',
-                    timeout: 5,
-                    outputVariable: "schemaResult"
-                },
-                position: { x: 1240, y: 400 }
-            },
-            "llm-anomaly": {
+            "llm-analyze": {
                 type: "llm",
                 name: "Detect Anomalies",
                 config: {
                     provider: "openai",
-                    model: "gpt-4o-mini",
+                    model: "gpt-4o",
                     systemPrompt:
-                        "You are a data quality expert. Analyze the record for anomalies, outliers, or suspicious patterns. Consider business logic violations and data consistency.",
-                    prompt: 'Record: {{record}}\nSchema: {{dataBatch.schema}}\nSource: {{dataBatch.source}}\n\nAnalyze for anomalies. Respond with JSON:\n{"isAnomaly": true/false, "anomalyScore": 0-100, "issues": [], "confidence": 0-100}',
-                    temperature: 0.2,
-                    maxTokens: 300,
-                    outputVariable: "anomalyResult"
+                        "You are a data pipeline monitoring expert. Detect anomalies in metrics.",
+                    prompt: 'Analyze pipeline metrics:\n\n{{pipelineMetrics}}\n\nCheck for throughput deviations, latency spikes, error rates.\n\nReturn JSON:\n{"status": "healthy/warning/critical", "anomalies": [], "recommendations": [], "alertRequired": true/false}',
+                    temperature: 0.1,
+                    maxTokens: 1000,
+                    outputVariable: "analysis"
+                },
+                position: { x: 860, y: 200 }
+            },
+            "action-mixpanel": {
+                type: "action",
+                name: "Log to Mixpanel",
+                config: {
+                    provider: "mixpanel",
+                    action: "track",
+                    event: "pipeline_health_check",
+                    properties: "{{analysis}}",
+                    outputVariable: "mixpanelResult"
                 },
                 position: { x: 1240, y: 200 }
             },
-            "conditional-valid": {
+            "conditional-1": {
                 type: "conditional",
-                name: "Is Valid?",
+                name: "Alert Needed?",
                 config: {
                     conditionType: "expression",
-                    expression:
-                        "schemaResult.valid && !anomalyResult.text.includes('\"isAnomaly\": true')",
-                    outputVariable: "isValid"
+                    expression: "analysis.text.includes('\"alertRequired\": true')",
+                    outputVariable: "needsAlert"
                 },
-                position: { x: 1620, y: 300 }
+                position: { x: 1620, y: 200 }
             },
-            "memory-valid": {
-                type: "shared-memory",
-                name: "Store Valid",
+            "action-slack": {
+                type: "action",
+                name: "Alert Engineering",
                 config: {
-                    operation: "set",
-                    key: "valid_{{record.id}}",
-                    value: '{"record": {{record}}, "qualityScore": 100}',
-                    outputVariable: "validStored"
+                    provider: "slack",
+                    action: "postMessage",
+                    channel: "#data-engineering-alerts",
+                    text: "🚨 Pipeline Alert!\n\nStatus: {{analysis.status}}\nAnomalies: {{analysis.anomalies}}",
+                    outputVariable: "slackAlert"
+                },
+                position: { x: 2000, y: 100 }
+            }
+        },
+        edges: [
+            { id: "e1", source: "trigger-1", target: "action-mongodb" },
+            { id: "e2", source: "action-mongodb", target: "llm-analyze" },
+            { id: "e3", source: "llm-analyze", target: "action-mixpanel" },
+            { id: "e4", source: "action-mixpanel", target: "conditional-1" },
+            { id: "e5", source: "conditional-1", target: "action-slack", sourceHandle: "true" }
+        ],
+        entryPoint: "trigger-1"
+    }
+};
+
+// Advanced Pattern 5: Microsoft Teams Sales Standup
+const teamsSalesStandupPattern: WorkflowPattern = {
+    id: "teams-sales-standup",
+    name: "Microsoft Teams Sales Standup",
+    description:
+        "Daily automated sales standup: pull HubSpot pipeline, AI summarizes, post to Teams, log to Excel",
+    useCase: "Enterprise sales reporting",
+    icon: "ListTodo",
+    nodeCount: 6,
+    category: "advanced",
+    integrations: ["Microsoft Teams", "HubSpot", "Microsoft Excel"],
+    definition: {
+        name: "Microsoft Teams Sales Standup",
+        nodes: {
+            "trigger-1": {
+                type: "trigger",
+                name: "Daily at 8:30am",
+                config: {
+                    triggerType: "schedule",
+                    schedule: "30 8 * * 1-5",
+                    outputVariable: "scheduleEvent",
+                    description: "Runs Mon-Fri at 8:30am"
+                },
+                position: { x: 100, y: 200 }
+            },
+            "action-hubspot": {
+                type: "action",
+                name: "Fetch Pipeline Data",
+                config: {
+                    provider: "hubspot",
+                    action: "getDeals",
+                    filters: { stage: "not_closed" },
+                    outputVariable: "pipelineData"
+                },
+                position: { x: 480, y: 200 }
+            },
+            "llm-analyze": {
+                type: "llm",
+                name: "Analyze Pipeline",
+                config: {
+                    provider: "openai",
+                    model: "gpt-4o",
+                    systemPrompt: "You are a sales analytics assistant.",
+                    prompt: 'Analyze sales pipeline for standup:\n\n{{pipelineData}}\n\nReturn JSON:\n{"pipelineValue": 0, "dealsClosingThisWeek": [], "stuckDeals": [], "topPriorityActions": [], "riskAlerts": []}',
+                    temperature: 0.2,
+                    maxTokens: 1500,
+                    outputVariable: "analysis"
+                },
+                position: { x: 860, y: 200 }
+            },
+            "action-teams": {
+                type: "action",
+                name: "Post to Teams",
+                config: {
+                    provider: "microsoft-teams",
+                    action: "sendMessage",
+                    channel: "Sales Team",
+                    text: "📊 Daily Sales Standup\n\nPipeline: ${{analysis.pipelineValue}}\nClosing This Week: {{analysis.dealsClosingThisWeek.length}}\n\nPriorities:\n{{analysis.topPriorityActions}}",
+                    outputVariable: "teamsPost"
+                },
+                position: { x: 1240, y: 200 }
+            },
+            "action-excel": {
+                type: "action",
+                name: "Log to Excel",
+                config: {
+                    provider: "microsoft-excel",
+                    action: "appendRow",
+                    workbookId: "{{env.SALES_TRACKER_WORKBOOK_ID}}",
+                    sheetName: "Daily Metrics",
+                    values: [
+                        "{{$now}}",
+                        "{{analysis.pipelineValue}}",
+                        "{{analysis.dealsClosingThisWeek.length}}"
+                    ],
+                    outputVariable: "excelResult"
+                },
+                position: { x: 1620, y: 200 }
+            },
+            "output-1": {
+                type: "output",
+                name: "Standup Result",
+                config: {
+                    outputName: "result",
+                    value: '{"posted": true, "pipelineValue": "{{analysis.pipelineValue}}"}',
+                    format: "json",
+                    description: "Sales standup result"
                 },
                 position: { x: 2000, y: 200 }
-            },
-            "memory-invalid": {
-                type: "shared-memory",
-                name: "Store Invalid",
+            }
+        },
+        edges: [
+            { id: "e1", source: "trigger-1", target: "action-hubspot" },
+            { id: "e2", source: "action-hubspot", target: "llm-analyze" },
+            { id: "e3", source: "llm-analyze", target: "action-teams" },
+            { id: "e4", source: "action-teams", target: "action-excel" },
+            { id: "e5", source: "action-excel", target: "output-1" }
+        ],
+        entryPoint: "trigger-1"
+    }
+};
+
+// Advanced Pattern 6: Stripe Payment Reconciliation
+const stripeReconciliationPattern: WorkflowPattern = {
+    id: "stripe-payment-reconciliation",
+    name: "Stripe Payment Reconciliation",
+    description:
+        "Daily fetch Stripe transactions, AI categorizes and detects anomalies, updates spreadsheet, alerts on issues",
+    useCase: "Finance automation",
+    icon: "ClipboardCheck",
+    nodeCount: 7,
+    category: "advanced",
+    integrations: ["Stripe", "Google Sheets", "Slack"],
+    definition: {
+        name: "Stripe Payment Reconciliation",
+        nodes: {
+            "trigger-1": {
+                type: "trigger",
+                name: "Daily at 6am",
                 config: {
-                    operation: "set",
-                    key: "invalid_{{record.id}}",
-                    value: '{"record": {{record}}, "schemaErrors": {{schemaResult.errors}}, "anomalies": "{{anomalyResult.text}}"}',
-                    outputVariable: "invalidStored"
+                    triggerType: "schedule",
+                    schedule: "0 6 * * *",
+                    outputVariable: "scheduleEvent",
+                    description: "Runs daily at 6am"
                 },
-                position: { x: 2000, y: 400 }
+                position: { x: 100, y: 200 }
             },
-            "transform-summary": {
-                type: "transform",
-                name: "Generate Summary",
+            "action-stripe": {
+                type: "action",
+                name: "Fetch Transactions",
                 config: {
-                    operations: [
-                        {
-                            type: "aggregate",
-                            metrics: ["validCount", "invalidCount", "anomalyCount"],
-                            output: "summary"
-                        }
-                    ],
-                    outputVariable: "summaryData"
+                    provider: "stripe",
+                    action: "listCharges",
+                    dateRange: "last_24_hours",
+                    outputVariable: "stripeCharges"
                 },
-                position: { x: 2380, y: 300 }
+                position: { x: 480, y: 200 }
             },
-            "llm-report": {
+            "llm-analyze": {
                 type: "llm",
-                name: "Generate Report",
+                name: "Analyze & Categorize",
                 config: {
                     provider: "openai",
                     model: "gpt-4o",
                     systemPrompt:
-                        "Generate a concise data quality report summarizing the validation results. Include recommendations for data quality improvements.",
-                    prompt: "Validation Summary:\n- Total records: {{parsed.uniqueRecords.length}}\n- Valid: {{summaryData.summary.validCount}}\n- Invalid: {{summaryData.summary.invalidCount}}\n- Anomalies: {{summaryData.summary.anomalyCount}}\n\nGenerate a brief quality report with recommendations.",
-                    temperature: 0.4,
-                    maxTokens: 500,
-                    outputVariable: "qualityReport"
+                        "You are a financial analyst. Categorize transactions and detect anomalies.",
+                    prompt: 'Analyze Stripe transactions:\n\n{{stripeCharges}}\n\nReturn JSON:\n{"totalVolume": 0, "transactionCount": 0, "byCategory": {}, "anomalies": [], "failedPayments": [], "refundRate": 0}',
+                    temperature: 0.1,
+                    maxTokens: 1500,
+                    outputVariable: "analysis"
                 },
-                position: { x: 2760, y: 300 }
+                position: { x: 860, y: 200 }
             },
-            "output-results": {
-                type: "output",
-                name: "Validation Results",
+            "action-sheets": {
+                type: "action",
+                name: "Update Tracker",
                 config: {
-                    outputName: "results",
-                    value: '{"totalRecords": {{parsed.uniqueRecords.length}}, "validCount": {{summaryData.summary.validCount}}, "invalidCount": {{summaryData.summary.invalidCount}}, "qualityScore": {{(summaryData.summary.validCount / parsed.uniqueRecords.length) * 100}}, "report": "{{qualityReport.text}}"}',
-                    format: "json",
-                    description: "Complete validation results with quality report"
-                },
-                position: { x: 3140, y: 300 }
-            }
-        },
-        edges: [
-            { id: "e1", source: "input-data", target: "transform-parse" },
-            { id: "e2", source: "transform-parse", target: "loop-validate" },
-            {
-                id: "e3",
-                source: "loop-validate",
-                target: "code-schema-check",
-                sourceHandle: "loop-body"
-            },
-            { id: "e4", source: "loop-validate", target: "llm-anomaly", sourceHandle: "loop-body" },
-            { id: "e5", source: "code-schema-check", target: "conditional-valid" },
-            { id: "e6", source: "llm-anomaly", target: "conditional-valid" },
-            { id: "e7", source: "conditional-valid", target: "memory-valid", sourceHandle: "true" },
-            {
-                id: "e8",
-                source: "conditional-valid",
-                target: "memory-invalid",
-                sourceHandle: "false"
-            },
-            { id: "e9", source: "memory-valid", target: "loop-validate" },
-            { id: "e10", source: "memory-invalid", target: "loop-validate" },
-            {
-                id: "e11",
-                source: "loop-validate",
-                target: "transform-summary",
-                sourceHandle: "loop-exit"
-            },
-            { id: "e12", source: "transform-summary", target: "llm-report" },
-            { id: "e13", source: "llm-report", target: "output-results" }
-        ],
-        entryPoint: "input-data"
-    }
-};
-
-// Advanced Pattern 7: Multi-Level Approval Workflow
-const approvalWorkflowPattern: WorkflowPattern = {
-    id: "approval-workflow",
-    name: "Multi-Level Approval Workflow",
-    description:
-        "Complex approval process with threshold-based routing, escalation logic, and complete audit trail",
-    useCase: "Approval process automation",
-    icon: "ClipboardCheck",
-    nodeCount: 13,
-    category: "advanced",
-    integrations: ["Slack", "Email"],
-    definition: {
-        name: "Multi-Level Approval Workflow",
-        nodes: {
-            "input-request": {
-                type: "input",
-                name: "Approval Request",
-                config: {
-                    inputName: "request",
-                    inputVariable: "request",
-                    inputType: "json",
-                    required: true,
-                    description: "Item requiring approval",
-                    defaultValue:
-                        '{"requestId": "", "type": "", "amount": 0, "requesterId": "", "description": "", "urgency": "normal"}'
-                },
-                position: { x: 100, y: 400 }
-            },
-            "memory-init": {
-                type: "shared-memory",
-                name: "Init Audit Trail",
-                config: {
-                    operation: "set",
-                    key: "approval_{{request.requestId}}",
-                    value: '{"status": "pending", "created": "{{$now}}", "approvals": [], "currentLevel": 1}',
-                    outputVariable: "auditInit"
-                },
-                position: { x: 480, y: 300 }
-            },
-            "switch-amount": {
-                type: "switch",
-                name: "Amount Threshold",
-                config: {
-                    expression:
-                        "{{request.amount >= 50000 ? 'executive' : request.amount >= 10000 ? 'director' : request.amount >= 1000 ? 'manager' : 'auto'}}",
-                    cases: [
-                        { value: "executive", label: "Executive ($50K+)" },
-                        { value: "director", label: "Director ($10K-$50K)" },
-                        { value: "manager", label: "Manager ($1K-$10K)" },
-                        { value: "auto", label: "Auto-Approve (<$1K)" }
+                    provider: "google-sheets",
+                    action: "appendRow",
+                    spreadsheetId: "{{env.PAYMENT_TRACKER_SHEET_ID}}",
+                    sheetName: "Reconciliation",
+                    values: [
+                        "{{$now}}",
+                        "{{analysis.totalVolume}}",
+                        "{{analysis.transactionCount}}"
                     ],
-                    defaultCase: "manager"
+                    outputVariable: "sheetsResult"
                 },
-                position: { x: 480, y: 500 }
+                position: { x: 1240, y: 200 }
             },
-            "human-manager": {
-                type: "humanReview",
-                name: "Manager Approval",
-                config: {
-                    prompt: "Manager approval required for {{request.type}}",
-                    description:
-                        "Review and approve/reject this request. Amount: ${{request.amount}}",
-                    variableName: "managerDecision",
-                    inputType: "json",
-                    required: true,
-                    placeholder: '{"decision": "approve", "comments": ""}'
-                },
-                position: { x: 900, y: 340 }
-            },
-            "human-director": {
-                type: "humanReview",
-                name: "Director Approval",
-                config: {
-                    prompt: "Director approval required for {{request.type}}",
-                    description:
-                        "High-value request requiring director review. Amount: ${{request.amount}}",
-                    variableName: "directorDecision",
-                    inputType: "json",
-                    required: true,
-                    placeholder: '{"decision": "approve", "comments": ""}'
-                },
-                position: { x: 860, y: 540 }
-            },
-            "human-executive": {
-                type: "humanReview",
-                name: "Executive Approval",
-                config: {
-                    prompt: "Executive approval required for {{request.type}}",
-                    description:
-                        "Critical request requiring executive sign-off. Amount: ${{request.amount}}",
-                    variableName: "executiveDecision",
-                    inputType: "json",
-                    required: true,
-                    placeholder: '{"decision": "approve", "comments": "", "conditions": ""}'
-                },
-                position: { x: 820, y: 700 }
-            },
-            "transform-auto": {
-                type: "transform",
-                name: "Auto-Approve",
-                config: {
-                    operations: [
-                        {
-                            type: "set",
-                            path: "decision",
-                            value: "approve"
-                        },
-                        {
-                            type: "set",
-                            path: "approver",
-                            value: "system"
-                        }
-                    ],
-                    outputVariable: "autoApproval"
-                },
-                position: { x: 860, y: 100 }
-            },
-            "conditional-approved": {
+            "conditional-1": {
                 type: "conditional",
-                name: "Is Approved?",
+                name: "Anomalies Found?",
                 config: {
                     conditionType: "expression",
-                    expression:
-                        "autoApproval?.decision === 'approve' || managerDecision?.decision === 'approve' || directorDecision?.decision === 'approve' || executiveDecision?.decision === 'approve'",
-                    outputVariable: "isApproved"
+                    expression: "!analysis.text.includes('\"anomalies\": []')",
+                    outputVariable: "hasAnomalies"
                 },
-                position: { x: 1240, y: 440 }
+                position: { x: 1620, y: 200 }
             },
-            "memory-approved": {
-                type: "shared-memory",
-                name: "Record Approval",
-                config: {
-                    operation: "set",
-                    key: "approval_{{request.requestId}}",
-                    value: '{"status": "approved", "approvedAt": "{{$now}}", "approver": "{{executiveDecision.approver || directorDecision.approver || managerDecision.approver || autoApproval.approver}}", "comments": "{{executiveDecision.comments || directorDecision.comments || managerDecision.comments || \'\'}}"}',
-                    outputVariable: "approvalRecord"
-                },
-                position: { x: 1620, y: 300 }
-            },
-            "memory-rejected": {
-                type: "shared-memory",
-                name: "Record Rejection",
-                config: {
-                    operation: "set",
-                    key: "approval_{{request.requestId}}",
-                    value: '{"status": "rejected", "rejectedAt": "{{$now}}", "reason": "{{executiveDecision.comments || directorDecision.comments || managerDecision.comments}}"}',
-                    outputVariable: "rejectionRecord"
-                },
-                position: { x: 1620, y: 500 }
-            },
-            "action-notify-approved": {
+            "action-slack": {
                 type: "action",
-                name: "Notify Approved",
+                name: "Alert Finance Team",
                 config: {
                     provider: "slack",
                     action: "postMessage",
-                    channel: "{{env.APPROVALS_CHANNEL}}",
-                    text: "Request {{request.requestId}} APPROVED for ${{request.amount}}",
-                    outputVariable: "approvedNotification"
+                    channel: "#finance-alerts",
+                    text: "⚠️ Payment Anomalies Detected!\n\nVolume: ${{analysis.totalVolume}}\nAnomalies: {{analysis.anomalies}}",
+                    outputVariable: "slackAlert"
                 },
-                position: { x: 2000, y: 460 }
+                position: { x: 2000, y: 100 }
             },
-            "action-notify-rejected": {
-                type: "action",
-                name: "Notify Rejected",
-                config: {
-                    provider: "slack",
-                    action: "postMessage",
-                    channel: "{{env.APPROVALS_CHANNEL}}",
-                    text: "Request {{request.requestId}} REJECTED. Reason: {{rejectionRecord.reason}}",
-                    outputVariable: "rejectedNotification"
-                },
-                position: { x: 2000, y: 260 }
-            },
-            "output-result": {
+            "output-1": {
                 type: "output",
-                name: "Approval Result",
+                name: "Reconciliation Result",
                 config: {
                     outputName: "result",
-                    value: '{"requestId": "{{request.requestId}}", "status": "{{approvalRecord.status || rejectionRecord.status}}", "amount": {{request.amount}}, "processedAt": "{{$now}}", "auditTrail": "{{approvalRecord || rejectionRecord}}"}',
+                    value: "{{analysis}}",
                     format: "json",
-                    description: "Complete approval workflow result"
+                    description: "Payment reconciliation result"
                 },
-                position: { x: 2380, y: 400 }
+                position: { x: 2000, y: 300 }
             }
         },
         edges: [
-            { id: "e1", source: "input-request", target: "memory-init" },
-            { id: "e2", source: "input-request", target: "switch-amount" },
-            {
-                id: "e3",
-                source: "switch-amount",
-                target: "human-executive",
-                sourceHandle: "executive"
-            },
-            {
-                id: "e4",
-                source: "switch-amount",
-                target: "human-director",
-                sourceHandle: "director"
-            },
-            { id: "e5", source: "switch-amount", target: "human-manager", sourceHandle: "manager" },
-            { id: "e6", source: "switch-amount", target: "transform-auto", sourceHandle: "auto" },
-            { id: "e7", source: "human-executive", target: "conditional-approved" },
-            { id: "e8", source: "human-director", target: "conditional-approved" },
-            { id: "e9", source: "human-manager", target: "conditional-approved" },
-            { id: "e10", source: "transform-auto", target: "conditional-approved" },
-            {
-                id: "e11",
-                source: "conditional-approved",
-                target: "memory-approved",
-                sourceHandle: "true"
-            },
-            {
-                id: "e12",
-                source: "conditional-approved",
-                target: "memory-rejected",
-                sourceHandle: "false"
-            },
-            { id: "e13", source: "memory-approved", target: "action-notify-approved" },
-            { id: "e14", source: "memory-rejected", target: "action-notify-rejected" },
-            { id: "e15", source: "action-notify-approved", target: "output-result" },
-            { id: "e16", source: "action-notify-rejected", target: "output-result" }
+            { id: "e1", source: "trigger-1", target: "action-stripe" },
+            { id: "e2", source: "action-stripe", target: "llm-analyze" },
+            { id: "e3", source: "llm-analyze", target: "action-sheets" },
+            { id: "e4", source: "action-sheets", target: "conditional-1" },
+            { id: "e5", source: "conditional-1", target: "action-slack", sourceHandle: "true" },
+            { id: "e6", source: "conditional-1", target: "output-1", sourceHandle: "false" },
+            { id: "e7", source: "action-slack", target: "output-1" }
         ],
-        entryPoint: "input-request"
+        entryPoint: "trigger-1"
     }
 };
 
-// Advanced Pattern 8: AI-Powered Research Assistant
-const researchAssistantPattern: WorkflowPattern = {
-    id: "research-assistant",
-    name: "AI-Powered Research Assistant",
+// Advanced Pattern 7: Intercom Conversation Analyzer
+const intercomAnalyzerPattern: WorkflowPattern = {
+    id: "intercom-conversation-analyzer",
+    name: "Intercom Conversation Analyzer",
     description:
-        "Multi-source research with parallel knowledge base and web retrieval, synthesis, and iterative refinement",
-    useCase: "Research automation",
-    icon: "BookOpen",
-    nodeCount: 14,
+        "When Intercom conversations close, extract insights with AI, log to Sheets, alert on escalation patterns",
+    useCase: "Support analytics",
+    icon: "MessageSquare",
+    nodeCount: 6,
     category: "advanced",
-    integrations: ["Web Search"],
+    integrations: ["Intercom", "Slack", "Google Sheets"],
     definition: {
-        name: "AI-Powered Research Assistant",
+        name: "Intercom Conversation Analyzer",
         nodes: {
-            "input-query": {
-                type: "input",
-                name: "Research Query",
+            "trigger-1": {
+                type: "trigger",
+                name: "Conversation Closed",
                 config: {
-                    inputName: "query",
-                    inputVariable: "query",
+                    triggerType: "webhook",
+                    provider: "intercom",
+                    event: "conversation.closed",
+                    outputVariable: "intercomEvent",
+                    description: "Triggered when conversation is closed"
+                },
+                position: { x: 100, y: 200 }
+            },
+            "action-intercom": {
+                type: "action",
+                name: "Get Conversation",
+                config: {
+                    provider: "intercom",
+                    action: "getConversation",
+                    conversationId: "{{intercomEvent.conversationId}}",
+                    outputVariable: "conversation"
+                },
+                position: { x: 480, y: 200 }
+            },
+            "llm-analyze": {
+                type: "llm",
+                name: "Extract Insights",
+                config: {
+                    provider: "openai",
+                    model: "gpt-4o",
+                    systemPrompt:
+                        "You are a customer support analyst. Extract insights from conversations.",
+                    prompt: 'Analyze this Intercom conversation:\n\n{{conversation}}\n\nReturn JSON:\n{"topic": "", "resolution": "resolved/unresolved/escalated", "sentiment": "satisfied/neutral/frustrated", "rootCause": "", "productFeedback": "", "escalationRisk": "low/medium/high"}',
+                    temperature: 0.2,
+                    maxTokens: 1000,
+                    outputVariable: "insights"
+                },
+                position: { x: 860, y: 200 }
+            },
+            "action-sheets": {
+                type: "action",
+                name: "Log Insights",
+                config: {
+                    provider: "google-sheets",
+                    action: "appendRow",
+                    spreadsheetId: "{{env.SUPPORT_ANALYTICS_SHEET_ID}}",
+                    sheetName: "Conversation Analytics",
+                    values: [
+                        "{{$now}}",
+                        "{{insights.topic}}",
+                        "{{insights.resolution}}",
+                        "{{insights.sentiment}}"
+                    ],
+                    outputVariable: "sheetsResult"
+                },
+                position: { x: 1240, y: 200 }
+            },
+            "conditional-1": {
+                type: "conditional",
+                name: "High Risk?",
+                config: {
+                    conditionType: "expression",
+                    expression: 'insights.text.includes(\'"escalationRisk": "high"\')',
+                    outputVariable: "isHighRisk"
+                },
+                position: { x: 1620, y: 200 }
+            },
+            "action-slack": {
+                type: "action",
+                name: "Alert Team",
+                config: {
+                    provider: "slack",
+                    action: "postMessage",
+                    channel: "#support-insights",
+                    text: "🔍 High-Risk Conversation Alert!\n\nTopic: {{insights.topic}}\nResolution: {{insights.resolution}}\nRoot Cause: {{insights.rootCause}}",
+                    outputVariable: "slackAlert"
+                },
+                position: { x: 2000, y: 100 }
+            }
+        },
+        edges: [
+            { id: "e1", source: "trigger-1", target: "action-intercom" },
+            { id: "e2", source: "action-intercom", target: "llm-analyze" },
+            { id: "e3", source: "llm-analyze", target: "action-sheets" },
+            { id: "e4", source: "action-sheets", target: "conditional-1" },
+            { id: "e5", source: "conditional-1", target: "action-slack", sourceHandle: "true" }
+        ],
+        entryPoint: "trigger-1"
+    }
+};
+
+// Advanced Pattern 8: Multi-Channel Content Publisher
+const multiChannelPublisherPattern: WorkflowPattern = {
+    id: "multi-channel-publisher",
+    name: "Multi-Channel Content Publisher",
+    description:
+        "Publish content across YouTube, TikTok, and Reddit simultaneously with platform-optimized formats",
+    useCase: "Content distribution",
+    icon: "Share2",
+    nodeCount: 8,
+    category: "advanced",
+    integrations: ["YouTube", "TikTok", "Reddit", "Slack"],
+    definition: {
+        name: "Multi-Channel Content Publisher",
+        nodes: {
+            "input-1": {
+                type: "input",
+                name: "Content Input",
+                config: {
+                    inputName: "content",
+                    inputVariable: "content",
                     inputType: "json",
                     required: true,
-                    description: "Research question and parameters",
-                    defaultValue:
-                        '{"question": "", "depth": "comprehensive", "sources": ["kb", "web"], "maxResults": 10}'
+                    description: "Content to publish",
+                    defaultValue: '{"title": "", "description": "", "videoUrl": "", "tags": []}'
                 },
                 position: { x: 100, y: 300 }
             },
-            "llm-plan": {
+            "llm-youtube": {
                 type: "llm",
-                name: "Research Plan",
+                name: "YouTube Description",
                 config: {
                     provider: "openai",
                     model: "gpt-4o",
-                    systemPrompt:
-                        "You are a research planning expert. Break down the research question into specific sub-queries that can be searched independently. Output a JSON array of search queries.",
-                    prompt: 'Question: {{query.question}}\nDepth: {{query.depth}}\n\nGenerate 3-5 specific search queries as JSON:\n{"queries": ["query1", "query2", ...], "keywords": ["key1", "key2", ...]}',
-                    temperature: 0.3,
+                    systemPrompt: "Create SEO-optimized YouTube descriptions.",
+                    prompt: "Create YouTube description for:\n\n{{content}}\n\nInclude hooks, timestamps placeholder, CTAs, and hashtags.",
+                    temperature: 0.5,
+                    maxTokens: 1000,
+                    outputVariable: "youtubeDesc"
+                },
+                position: { x: 480, y: 100 }
+            },
+            "llm-tiktok": {
+                type: "llm",
+                name: "TikTok Caption",
+                config: {
+                    provider: "openai",
+                    model: "gpt-4o",
+                    systemPrompt: "Create viral TikTok captions.",
+                    prompt: "Create TikTok caption for:\n\n{{content}}\n\nMax 150 chars, trending hashtags, engaging hook.",
+                    temperature: 0.7,
+                    maxTokens: 200,
+                    outputVariable: "tiktokCaption"
+                },
+                position: { x: 480, y: 300 }
+            },
+            "llm-reddit": {
+                type: "llm",
+                name: "Reddit Post",
+                config: {
+                    provider: "openai",
+                    model: "gpt-4o",
+                    systemPrompt: "Create Reddit-appropriate posts that won't get downvoted.",
+                    prompt: "Create Reddit post for:\n\n{{content}}\n\nBe authentic, provide value, no self-promotion vibes.",
+                    temperature: 0.5,
                     maxTokens: 500,
-                    outputVariable: "researchPlan"
+                    outputVariable: "redditPost"
                 },
-                position: { x: 480, y: 340 }
+                position: { x: 480, y: 500 }
             },
-            "kb-search-1": {
-                type: "knowledgeBaseQuery",
-                name: "KB Search Primary",
+            "action-youtube": {
+                type: "action",
+                name: "Post to YouTube",
                 config: {
-                    knowledgeBaseId: "{{env.PRIMARY_KB_ID}}",
-                    queryText: "{{query.question}}",
-                    topK: 5,
-                    similarityThreshold: 0.7,
-                    outputVariable: "kbResults1"
-                },
-                position: { x: 860, y: 500 }
-            },
-            "kb-search-2": {
-                type: "knowledgeBaseQuery",
-                name: "KB Search Secondary",
-                config: {
-                    knowledgeBaseId: "{{env.SECONDARY_KB_ID}}",
-                    queryText: "{{query.question}}",
-                    topK: 5,
-                    similarityThreshold: 0.7,
-                    outputVariable: "kbResults2"
-                },
-                position: { x: 860, y: 300 }
-            },
-            "http-web-search": {
-                type: "http",
-                name: "Web Search",
-                config: {
-                    method: "GET",
-                    url: "{{env.SEARCH_API_URL}}?q={{query.question}}&limit={{query.maxResults}}",
-                    headers: {
-                        Authorization: "Bearer {{env.SEARCH_API_KEY}}"
-                    },
-                    outputVariable: "webResults",
-                    timeout: 20000
+                    provider: "youtube",
+                    action: "updateVideo",
+                    videoId: "{{content.videoId}}",
+                    description: "{{youtubeDesc.text}}",
+                    outputVariable: "youtubeResult"
                 },
                 position: { x: 860, y: 100 }
             },
-            "http-fetch-urls": {
-                type: "http",
-                name: "Fetch Top URLs",
+            "action-tiktok": {
+                type: "action",
+                name: "Post to TikTok",
                 config: {
-                    method: "POST",
-                    url: "{{env.SCRAPER_API_URL}}/batch",
-                    headers: {
-                        Authorization: "Bearer {{env.SCRAPER_API_KEY}}",
-                        "Content-Type": "application/json"
-                    },
-                    body: '{"urls": {{webResults.body.results.slice(0, 3).map(r => r.url)}}}',
-                    outputVariable: "fetchedContent",
-                    timeout: 30000
+                    provider: "tiktok",
+                    action: "publishVideo",
+                    caption: "{{tiktokCaption.text}}",
+                    outputVariable: "tiktokResult"
                 },
-                position: { x: 1240, y: 260 }
+                position: { x: 860, y: 300 }
             },
-            "code-merge": {
-                type: "code",
-                name: "Merge Sources",
+            "action-reddit": {
+                type: "action",
+                name: "Post to Reddit",
                 config: {
-                    language: "javascript",
-                    code: 'const kb1 = inputs.kbResults1?.results || [];\nconst kb2 = inputs.kbResults2?.results || [];\nconst web = inputs.fetchedContent?.body?.contents || [];\nconst allSources = [...kb1.map(r => ({source: "kb1", content: r.content, score: r.score})), ...kb2.map(r => ({source: "kb2", content: r.content, score: r.score})), ...web.map(r => ({source: "web", content: r.text, url: r.url}))];\nreturn { sources: allSources, totalCount: allSources.length };',
-                    timeout: 10,
-                    outputVariable: "mergedSources"
+                    provider: "reddit",
+                    action: "submitPost",
+                    subreddit: "{{content.targetSubreddit}}",
+                    title: "{{content.title}}",
+                    text: "{{redditPost.text}}",
+                    outputVariable: "redditResult"
                 },
-                position: { x: 1620, y: 300 }
+                position: { x: 860, y: 500 }
             },
-            "llm-synthesize": {
-                type: "llm",
-                name: "Synthesize Research",
+            "action-slack": {
+                type: "action",
+                name: "Notify Team",
                 config: {
-                    provider: "openai",
-                    model: "gpt-4o",
-                    systemPrompt:
-                        "You are a research synthesis expert. Analyze all provided sources and synthesize a comprehensive answer to the research question. Cite sources, identify consensus and conflicts, and note confidence levels.",
-                    prompt: "Research Question: {{query.question}}\n\nSources ({{mergedSources.totalCount}} total):\n{{mergedSources.sources}}\n\nProvide a comprehensive synthesis with citations.",
-                    temperature: 0.4,
-                    maxTokens: 3000,
-                    outputVariable: "synthesis"
+                    provider: "slack",
+                    action: "postMessage",
+                    channel: "#content-published",
+                    text: "🚀 Content Published!\n\n📺 YouTube: {{youtubeResult.status}}\n📱 TikTok: {{tiktokResult.status}}\n🔗 Reddit: {{redditResult.url}}",
+                    outputVariable: "slackNotification"
                 },
-                position: { x: 2000, y: 340 }
-            },
-            "llm-evaluate": {
-                type: "llm",
-                name: "Evaluate Quality",
-                config: {
-                    provider: "openai",
-                    model: "gpt-4o",
-                    systemPrompt:
-                        "Evaluate the quality of the research synthesis. Score completeness, accuracy, source diversity, and citation quality.",
-                    prompt: 'Original question: {{query.question}}\n\nSynthesis:\n{{synthesis.text}}\n\nEvaluate and respond with JSON:\n{"completeness": 0-10, "sourceQuality": 0-10, "needsRefinement": true/false, "gaps": [], "overallScore": 0-10}',
-                    temperature: 0.2,
-                    maxTokens: 500,
-                    outputVariable: "evaluation"
-                },
-                position: { x: 2380, y: 300 }
-            },
-            "conditional-quality": {
-                type: "conditional",
-                name: "Quality Check",
-                config: {
-                    conditionType: "expression",
-                    expression:
-                        "evaluation.text.includes('\"overallScore\": 8') || evaluation.text.includes('\"overallScore\": 9') || evaluation.text.includes('\"overallScore\": 10') || evaluation.text.includes('\"needsRefinement\": false')",
-                    outputVariable: "qualityPassed"
-                },
-                position: { x: 2760, y: 260 }
-            },
-            "llm-refine": {
-                type: "llm",
-                name: "Refine Research",
-                config: {
-                    provider: "openai",
-                    model: "gpt-4o",
-                    systemPrompt:
-                        "Refine the research synthesis based on the evaluation feedback. Fill identified gaps and improve weak areas.",
-                    prompt: "Original synthesis:\n{{synthesis.text}}\n\nEvaluation feedback:\n{{evaluation.text}}\n\nProvide a refined, improved synthesis addressing the identified gaps.",
-                    temperature: 0.4,
-                    maxTokens: 3000,
-                    outputVariable: "refinedSynthesis"
-                },
-                position: { x: 3140, y: 400 }
-            },
-            "memory-store": {
-                type: "shared-memory",
-                name: "Cache Results",
-                config: {
-                    operation: "set",
-                    key: "research_{{query.question}}",
-                    value: '{"synthesis": "{{refinedSynthesis.text || synthesis.text}}", "evaluation": "{{evaluation.text}}", "sources": {{mergedSources.totalCount}}, "timestamp": "{{$now}}"}',
-                    outputVariable: "cached"
-                },
-                position: { x: 3520, y: 200 }
-            },
-            "output-research": {
-                type: "output",
-                name: "Research Results",
-                config: {
-                    outputName: "research",
-                    value: '{"question": "{{query.question}}", "synthesis": "{{refinedSynthesis.text || synthesis.text}}", "sourcesUsed": {{mergedSources.totalCount}}, "qualityScore": "{{evaluation.text}}", "refinementApplied": {{!qualityPassed}}}',
-                    format: "json",
-                    description: "Complete research results with synthesis"
-                },
-                position: { x: 3900, y: 300 }
+                position: { x: 1240, y: 300 }
             }
         },
         edges: [
-            { id: "e1", source: "input-query", target: "llm-plan" },
-            { id: "e2", source: "llm-plan", target: "kb-search-1" },
-            { id: "e3", source: "llm-plan", target: "kb-search-2" },
-            { id: "e4", source: "llm-plan", target: "http-web-search" },
-            { id: "e5", source: "http-web-search", target: "http-fetch-urls" },
-            { id: "e6", source: "kb-search-1", target: "code-merge" },
-            { id: "e7", source: "kb-search-2", target: "code-merge" },
-            { id: "e8", source: "http-fetch-urls", target: "code-merge" },
-            { id: "e9", source: "code-merge", target: "llm-synthesize" },
-            { id: "e10", source: "llm-synthesize", target: "llm-evaluate" },
-            { id: "e11", source: "llm-evaluate", target: "conditional-quality" },
-            {
-                id: "e12",
-                source: "conditional-quality",
-                target: "memory-store",
-                sourceHandle: "true"
-            },
-            {
-                id: "e13",
-                source: "conditional-quality",
-                target: "llm-refine",
-                sourceHandle: "false"
-            },
-            { id: "e14", source: "llm-refine", target: "memory-store" },
-            { id: "e15", source: "memory-store", target: "output-research" }
+            { id: "e1", source: "input-1", target: "llm-youtube" },
+            { id: "e2", source: "input-1", target: "llm-tiktok" },
+            { id: "e3", source: "input-1", target: "llm-reddit" },
+            { id: "e4", source: "llm-youtube", target: "action-youtube" },
+            { id: "e5", source: "llm-tiktok", target: "action-tiktok" },
+            { id: "e6", source: "llm-reddit", target: "action-reddit" },
+            { id: "e7", source: "action-youtube", target: "action-slack" },
+            { id: "e8", source: "action-tiktok", target: "action-slack" },
+            { id: "e9", source: "action-reddit", target: "action-slack" }
         ],
-        entryPoint: "input-query"
+        entryPoint: "input-1"
     }
 };
-
-export const ADVANCED_WORKFLOW_PATTERNS: WorkflowPattern[] = [
-    customerSupportTranslationPattern,
-    ecommerceOrderProcessingPattern,
-    documentClassificationPattern,
-    contentModerationPattern,
-    customerJourneyPattern,
-    dataValidationPattern,
-    approvalWorkflowPattern,
-    researchAssistantPattern
-];
 
 // ============================================================================
 // PATTERN ARRAYS AND EXPORTS
@@ -3428,12 +2529,23 @@ export const BASIC_WORKFLOW_PATTERNS: WorkflowPattern[] = [
 ];
 
 export const INTERMEDIATE_WORKFLOW_PATTERNS: WorkflowPattern[] = [
-    slackSupportBotPattern,
+    discordCommunityBotPattern,
     githubPrReviewerPattern,
     leadEnrichmentPattern,
-    emailAutoresponderPattern,
-    jiraBugTriagePattern,
-    contentToSocialPattern
+    figmaDesignHandoffPattern,
+    trelloProjectSyncPattern,
+    calendlyMeetingPrepPattern
+];
+
+export const ADVANCED_WORKFLOW_PATTERNS: WorkflowPattern[] = [
+    whatsappSupportBotPattern,
+    docusignContractPattern,
+    tiktokPerformancePattern,
+    mongodbPipelineMonitorPattern,
+    teamsSalesStandupPattern,
+    stripeReconciliationPattern,
+    intercomAnalyzerPattern,
+    multiChannelPublisherPattern
 ];
 
 // Helper functions

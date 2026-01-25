@@ -76,6 +76,9 @@ input:-webkit-autofill::first-line {
         --input: 0 0% 95%;
         --ring: 0 0% 9%;
         --radius: 0.5rem;
+
+        /* Canvas background dots */
+        --canvas-dots: #71717a; /* zinc-500 - visible on light backgrounds */
     }
 
     .dark {
@@ -98,6 +101,9 @@ input:-webkit-autofill::first-line {
         --border: 0 0% 20%;
         --input: 0 0% 20%;
         --ring: 0 0% 80%;
+
+        /* Canvas background dots */
+        --canvas-dots: #52525b; /* zinc-600 - subtle on dark backgrounds */
     }
 }
 
