@@ -1,5 +1,5 @@
 import {
-    FileText,
+    Workflow,
     Calendar,
     Trash2,
     MoreVertical,
@@ -104,7 +104,7 @@ export function WorkflowCard({
 
             <div className="flex-1 p-5">
                 <div className="flex items-center justify-between mb-3">
-                    <FileText className="w-5 h-5 text-primary" />
+                    <Workflow className="w-5 h-5 text-primary" />
                     <div className="flex items-center gap-1">
                         <Badge variant="default" size="sm">
                             Workflow
