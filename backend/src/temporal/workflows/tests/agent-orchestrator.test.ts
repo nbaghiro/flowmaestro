@@ -559,10 +559,7 @@ describe("Agent Orchestrator Workflow", () => {
             expect(mockValidateOutput).toHaveBeenCalled();
         });
 
-        // Note: These tests are skipped because the Temporal test environment
-        // has issues with workflow rejection scenarios in mock mode.
-        // The safety check blocking logic is tested at the activity level instead.
-        it.skip("should block execution if input safety check fails", async () => {
+        it("should block execution if input safety check fails", async () => {
             mockValidateInput.mockResolvedValue({
                 shouldProceed: false,
                 content: "blocked",
@@ -573,18 +570,21 @@ describe("Agent Orchestrator Workflow", () => {
 
             const input = createMockInput();
 
-            await expect(
-                worker.runUntil(
-                    testEnv.client.workflow.execute("agentOrchestratorWorkflow", {
-                        workflowId: "test-safety-block-" + Date.now(),
-                        taskQueue: "test-agent-queue",
-                        args: [input]
-                    })
-                )
-            ).rejects.toThrow();
+            const result = await worker.runUntil(
+                testEnv.client.workflow.execute("agentOrchestratorWorkflow", {
+                    workflowId: "test-safety-block-" + Date.now(),
+                    taskQueue: "test-agent-queue",
+                    args: [input]
+                })
+            );
+
+            expect(result.success).toBe(false);
+            expect(result.error).toContain("Input blocked by safety check");
+            expect(result.error).toContain("Injection detected");
+            expect(mockEmitAgentExecutionFailed).toHaveBeenCalled();
         });
 
-        it.skip("should block execution if output safety check fails", async () => {
+        it("should block execution if output safety check fails", async () => {
             mockValidateOutput.mockResolvedValue({
                 shouldProceed: false,
                 content: "blocked",
@@ -595,15 +595,18 @@ describe("Agent Orchestrator Workflow", () => {
 
             const input = createMockInput();
 
-            await expect(
-                worker.runUntil(
-                    testEnv.client.workflow.execute("agentOrchestratorWorkflow", {
-                        workflowId: "test-output-block-" + Date.now(),
-                        taskQueue: "test-agent-queue",
-                        args: [input]
-                    })
-                )
-            ).rejects.toThrow();
+            const result = await worker.runUntil(
+                testEnv.client.workflow.execute("agentOrchestratorWorkflow", {
+                    workflowId: "test-output-block-" + Date.now(),
+                    taskQueue: "test-agent-queue",
+                    args: [input]
+                })
+            );
+
+            expect(result.success).toBe(false);
+            expect(result.error).toContain("Output blocked by safety check");
+            expect(result.error).toContain("Harmful content");
+            expect(mockEmitAgentExecutionFailed).toHaveBeenCalled();
         });
 
         it("should use redacted content from safety check", async () => {

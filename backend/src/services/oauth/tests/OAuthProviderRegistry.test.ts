@@ -118,7 +118,7 @@ describe("OAuthProviderRegistry", () => {
                 (p) => p.scopes.length > 0
             );
             // At least 90% of providers should have scopes defined
-            expect(providersWithScopes.length).toBeGreaterThan(
+            expect(providersWithScopes.length).toBeGreaterThanOrEqual(
                 Object.keys(OAUTH_PROVIDERS).length * 0.9
             );
         });

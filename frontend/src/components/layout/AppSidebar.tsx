@@ -1,9 +1,9 @@
 import {
     Home,
-    LayoutGrid,
+    Workflow,
     Plug,
     BookOpen,
-    FileText,
+    LayoutTemplate,
     Bot,
     ClipboardList,
     MessageSquare,
@@ -215,14 +215,14 @@ function CreditProgressBar({ targetCollapsed }: { targetCollapsed: boolean }) {
 const navItems: NavItem[] = [
     // Primary navigation
     { icon: Home, label: "Home", path: "/", section: "primary" },
-    { icon: LayoutGrid, label: "Workflows", path: "/workflows", section: "primary" },
+    { icon: Workflow, label: "Workflows", path: "/workflows", section: "primary" },
     { icon: Bot, label: "Agents", path: "/agents", section: "primary" },
     { icon: Users, label: "Personas", path: "/personas", section: "primary" },
     { icon: ClipboardList, label: "Form Interfaces", path: "/form-interfaces", section: "primary" },
     { icon: MessageSquare, label: "Chat Interfaces", path: "/chat-interfaces", section: "primary" },
     { icon: Plug, label: "Connections", path: "/connections", section: "primary" },
     { icon: BookOpen, label: "Knowledge Bases", path: "/knowledge-bases", section: "primary" },
-    { icon: FileText, label: "Templates", path: "/templates", section: "primary" },
+    { icon: LayoutTemplate, label: "Templates", path: "/templates", section: "primary" },
 
     // Settings navigation
     { icon: Settings, label: "Settings", path: "/settings", section: "settings" },
