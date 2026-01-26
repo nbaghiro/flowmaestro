@@ -5,12 +5,16 @@
 # Runs database migrations against local or production database.
 #
 # Usage:
-#   ./db-migrate.sh [local|prod]
+#   ./db-migrate.sh [local|prod] [--yes]
+#
+# Options:
+#   --yes, -y    Skip confirmation prompts (for CI/CD or scripted usage)
 #
 # Examples:
 #   ./db-migrate.sh           # Runs against local database (default)
 #   ./db-migrate.sh local     # Runs against local database
 #   ./db-migrate.sh prod      # Runs migrations in Kubernetes cluster (requires confirmation)
+#   ./db-migrate.sh prod --yes # Runs production migrations without confirmation
 #
 
 set -e
@@ -20,6 +24,15 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 # Parse arguments
 TARGET="${1:-local}"
+SKIP_CONFIRM=false
+
+for arg in "$@"; do
+    case "$arg" in
+        --yes|-y)
+            SKIP_CONFIRM=true
+            ;;
+    esac
+done
 
 # Colors for output
 RED='\033[0;31m'
@@ -58,11 +71,13 @@ case "$TARGET" in
         echo "  2. Push to Google Artifact Registry"
         echo "  3. Run migrations against the PRODUCTION database"
         echo ""
-        read -p "Are you sure you want to continue? (y/N): " confirm
+        if [[ "$SKIP_CONFIRM" != "true" ]]; then
+            read -p "Are you sure you want to continue? (y/N): " confirm
 
-        if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
-            echo_info "Aborted."
-            exit 0
+            if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
+                echo_info "Aborted."
+                exit 0
+            fi
         fi
 
         echo ""
@@ -70,11 +85,14 @@ case "$TARGET" in
         CONTEXT=$(kubectl config current-context)
         echo "Current context: $CONTEXT"
         echo ""
-        read -p "Is this the correct cluster? (y/N): " confirm_cluster
 
-        if [[ "$confirm_cluster" != "y" && "$confirm_cluster" != "Y" ]]; then
-            echo_info "Aborted. Please switch to the correct kubectl context."
-            exit 0
+        if [[ "$SKIP_CONFIRM" != "true" ]]; then
+            read -p "Is this the correct cluster? (y/N): " confirm_cluster
+
+            if [[ "$confirm_cluster" != "y" && "$confirm_cluster" != "Y" ]]; then
+                echo_info "Aborted. Please switch to the correct kubectl context."
+                exit 0
+            fi
         fi
 
         # Configuration
@@ -125,11 +143,14 @@ case "$TARGET" in
         ;;
 
     *)
-        echo "Usage: $0 [local|prod]"
+        echo "Usage: $0 [local|prod] [--yes]"
         echo ""
         echo "Arguments:"
         echo "  local    Run migrations against local database (default)"
         echo "  prod     Run migrations in Kubernetes cluster (production)"
+        echo ""
+        echo "Options:"
+        echo "  --yes, -y    Skip confirmation prompts"
         exit 1
         ;;
 esac
