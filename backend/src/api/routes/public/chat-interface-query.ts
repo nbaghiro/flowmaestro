@@ -64,20 +64,38 @@ export const publicChatInterfaceQueryRoutes: FastifyPluginAsync = async (fastify
             }
 
             // 4. Generate embedding for the query
-            const embeddingService = new EmbeddingService();
-            const embeddingResult = await embeddingService.generateEmbeddings([query], {
-                model: "text-embedding-3-small",
-                provider: "openai"
-            });
-            const queryEmbedding = embeddingResult.embeddings[0];
+            let queryEmbedding: number[];
+            try {
+                const embeddingService = new EmbeddingService();
+                const embeddingResult = await embeddingService.generateEmbeddings([query], {
+                    model: "text-embedding-3-small",
+                    provider: "openai"
+                });
+                queryEmbedding = embeddingResult.embeddings[0];
+            } catch (embeddingError) {
+                logger.error({ slug, error: embeddingError }, "Failed to generate query embedding");
+                return reply.status(503).send({
+                    success: false,
+                    error: "Unable to process query. Please try again later."
+                });
+            }
 
             // 5. Search for similar chunks
-            const searchResults = await chunkRepo.searchSimilar({
-                sessionId: session.id,
-                queryEmbedding,
-                topK,
-                similarityThreshold
-            });
+            let searchResults;
+            try {
+                searchResults = await chunkRepo.searchSimilar({
+                    sessionId: session.id,
+                    queryEmbedding,
+                    topK,
+                    similarityThreshold
+                });
+            } catch (searchError) {
+                logger.error({ slug, error: searchError }, "Failed to search chunks");
+                return reply.status(500).send({
+                    success: false,
+                    error: "Failed to search documents. Please try again."
+                });
+            }
 
             // 6. Format results
             const results: QueryResult[] = searchResults.map((result) => ({

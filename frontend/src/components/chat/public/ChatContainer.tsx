@@ -67,6 +67,9 @@ export function ChatContainer({
     // Track reconnection timeout to prevent multiple reconnects
     const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+    // Track if reconnection is in progress to prevent race conditions
+    const isReconnectingRef = useRef(false);
+
     // Effect to handle SSE connection - only connect when threadId exists
     useEffect(() => {
         if (!session || !chatInterface || !session.threadId) return;
@@ -165,6 +168,10 @@ export function ChatContainer({
             eventSource.close();
             eventSourceRef.current = null;
 
+            // Prevent multiple simultaneous reconnection attempts
+            if (isReconnectingRef.current) return;
+            isReconnectingRef.current = true;
+
             // Clear any existing reconnect timeout
             if (reconnectTimeoutRef.current) {
                 clearTimeout(reconnectTimeoutRef.current);
@@ -172,6 +179,7 @@ export function ChatContainer({
 
             // Reconnect after delay by incrementing the key
             reconnectTimeoutRef.current = setTimeout(() => {
+                isReconnectingRef.current = false;
                 if (session?.threadId) {
                     setSseReconnectKey((prev) => prev + 1);
                 }
@@ -182,6 +190,7 @@ export function ChatContainer({
             eventSource.close();
             eventSourceRef.current = null;
             streamingMessageIdRef.current = null;
+            isReconnectingRef.current = false;
             if (reconnectTimeoutRef.current) {
                 clearTimeout(reconnectTimeoutRef.current);
             }

@@ -2,16 +2,19 @@ import { FastifyInstance } from "fastify";
 import type {
     CreateChatSessionInput,
     ChatSessionResponse,
+    ChatMessageAttachment,
     JsonObject,
     PublicChatMessage,
     SendChatMessageInput
 } from "@flowmaestro/shared";
 import { createServiceLogger } from "../../../core/logging";
+import { ChatInterfaceAttachmentProcessor } from "../../../services/ChatInterfaceAttachmentProcessor";
 import { AgentExecutionRepository } from "../../../storage/repositories/AgentExecutionRepository";
 import { ChatInterfaceRepository } from "../../../storage/repositories/ChatInterfaceRepository";
 import { ChatInterfaceSessionRepository } from "../../../storage/repositories/ChatInterfaceSessionRepository";
 import { ThreadRepository } from "../../../storage/repositories/ThreadRepository";
 import { getTemporalClient } from "../../../temporal/client";
+import { TASK_QUEUES } from "../../../temporal/core";
 import { agentOrchestratorWorkflow } from "../../../temporal/workflows/agent-orchestrator";
 import {
     chatInterfaceRateLimiter,
@@ -76,8 +79,8 @@ export async function publicChatInterfaceRoutes(fastify: FastifyInstance) {
             // Try to resume existing session
             let session = null;
 
-            // First, try to resume by persistence token (localStorage)
-            if (body.persistenceToken && chatInterface.persistenceType === "local_storage") {
+            // First, try to resume by persistence token (both session and local_storage types)
+            if (body.persistenceToken) {
                 session = await sessionRepo.findByPersistenceToken(
                     chatInterface.id,
                     body.persistenceToken
@@ -103,10 +106,8 @@ export async function publicChatInterfaceRoutes(fastify: FastifyInstance) {
 
             // Create new session if none found
             if (!session) {
-                const persistenceToken =
-                    chatInterface.persistenceType === "local_storage"
-                        ? sessionRepo.generatePersistenceToken()
-                        : undefined;
+                // Generate persistence token for both session and local_storage types
+                const persistenceToken = sessionRepo.generatePersistenceToken();
 
                 session = await sessionRepo.create({
                     interfaceId: chatInterface.id,
@@ -123,14 +124,38 @@ export async function publicChatInterfaceRoutes(fastify: FastifyInstance) {
                 );
             }
 
+            // Load existing messages if resuming a session with a thread
+            let existingMessages: PublicChatMessage[] = [];
+            if (session.threadId) {
+                const executionRepo = new AgentExecutionRepository();
+                const messages = await executionRepo.getMessagesByThread(session.threadId);
+                existingMessages = messages
+                    .filter((m) => m.role === "user" || m.role === "assistant")
+                    .map((m) => ({
+                        id: m.id,
+                        role: m.role as "user" | "assistant",
+                        content: m.content,
+                        timestamp: m.created_at.toISOString(),
+                        ...(m.attachments &&
+                            m.attachments.length > 0 && {
+                                attachments: m.attachments.map((att: ChatMessageAttachment) => ({
+                                    fileName: att.fileName || "unknown",
+                                    fileSize: att.fileSize || 0,
+                                    mimeType: att.mimeType || "application/octet-stream",
+                                    url: att.downloadUrl || att.url || ""
+                                }))
+                            })
+                    }));
+            }
+
             const response: ChatSessionResponse = {
                 sessionId: session.id,
                 sessionToken: session.sessionToken,
-                threadId: session.threadId
-                // Phase 2 will add: existingMessages from thread
+                threadId: session.threadId,
+                existingMessages: existingMessages.length > 0 ? existingMessages : undefined
             };
 
-            // Include persistence token for localStorage sessions
+            // Include persistence token for session resumption (both session and local_storage types)
             if (session.persistenceToken) {
                 response.persistenceToken = session.persistenceToken;
             }
@@ -304,6 +329,41 @@ export async function publicChatInterfaceRoutes(fastify: FastifyInstance) {
                     await sessionRepo.updateThreadId(session.id, threadId);
                 }
 
+                // 1.5. Process file attachments for RAG (if any)
+                if (body.attachments && body.attachments.length > 0) {
+                    try {
+                        const attachmentProcessor = new ChatInterfaceAttachmentProcessor();
+                        const processingResults = await attachmentProcessor.processAttachments({
+                            attachments: body.attachments,
+                            sessionId: session.id,
+                            threadId,
+                            userId: chatInterface.userId
+                        });
+
+                        const successCount = processingResults.filter((r) => r.success).length;
+                        const totalChunks = processingResults.reduce(
+                            (sum, r) => sum + r.chunksCreated,
+                            0
+                        );
+
+                        logger.info(
+                            {
+                                sessionId: session.id,
+                                attachmentCount: body.attachments.length,
+                                successCount,
+                                totalChunks
+                            },
+                            "Attachment processing completed"
+                        );
+                    } catch (error) {
+                        // Log but don't fail the request - attachments are optional enhancement
+                        logger.error(
+                            { sessionId: session.id, error },
+                            "Failed to process attachments (continuing without RAG)"
+                        );
+                    }
+                }
+
                 // 2. Create execution record
                 const executionRepo = new AgentExecutionRepository();
                 // Load history for context
@@ -343,7 +403,7 @@ export async function publicChatInterfaceRoutes(fastify: FastifyInstance) {
                 // 3. Start Temporal workflow
                 const temporal = await getTemporalClient();
                 await temporal.workflow.start(agentOrchestratorWorkflow, {
-                    taskQueue: "agent-queue",
+                    taskQueue: TASK_QUEUES.ORCHESTRATOR,
                     workflowId: `agent-execution-${execution.id}`,
                     args: [
                         {

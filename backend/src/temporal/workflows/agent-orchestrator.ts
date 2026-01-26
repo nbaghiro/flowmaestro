@@ -347,14 +347,21 @@ export async function agentOrchestratorWorkflow(
                     .map((v) => v.message || v.type)
                     .join(", ");
 
+                const errorMessage = `Input blocked by safety check: ${blockReasons}`;
+
                 await emitAgentExecutionFailed({
                     executionId,
                     threadId,
-                    error: `Input blocked by safety check: ${blockReasons}`,
+                    error: errorMessage,
                     threadOnly
                 });
 
-                throw new Error(`Input blocked by safety check: ${blockReasons}`);
+                return {
+                    success: false,
+                    serializedThread: { messages: [], savedMessageIds: [], metadata: {} },
+                    iterations: 0,
+                    error: errorMessage
+                };
             }
 
             // Build message content with attachments if present

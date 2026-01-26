@@ -69,21 +69,30 @@ interface PublicChatStore {
     reset: () => void;
 }
 
-// Helper to get persistence token from localStorage
-function getPersistenceToken(slug: string): string | null {
+// Helper to get persistence token based on persistence type
+function getPersistenceToken(
+    slug: string,
+    persistenceType: "session" | "local_storage"
+): string | null {
     try {
-        return localStorage.getItem(`${PERSISTENCE_TOKEN_PREFIX}${slug}`);
+        const storage = persistenceType === "session" ? sessionStorage : localStorage;
+        return storage.getItem(`${PERSISTENCE_TOKEN_PREFIX}${slug}`);
     } catch {
         return null;
     }
 }
 
-// Helper to save persistence token to localStorage
-function savePersistenceToken(slug: string, token: string): void {
+// Helper to save persistence token based on persistence type
+function savePersistenceToken(
+    slug: string,
+    token: string,
+    persistenceType: "session" | "local_storage"
+): void {
     try {
-        localStorage.setItem(`${PERSISTENCE_TOKEN_PREFIX}${slug}`, token);
+        const storage = persistenceType === "session" ? sessionStorage : localStorage;
+        storage.setItem(`${PERSISTENCE_TOKEN_PREFIX}${slug}`, token);
     } catch {
-        // localStorage not available
+        // Storage not available
     }
 }
 
@@ -177,11 +186,8 @@ export const usePublicChatStore = create<PublicChatStore>((set, get) => ({
         set({ isCreatingSession: true, error: null });
 
         try {
-            // Check for existing persistence token
-            const persistenceToken =
-                chatInterface.persistenceType === "local_storage"
-                    ? getPersistenceToken(slug)
-                    : undefined;
+            // Check for existing persistence token (both session and local_storage types)
+            const persistenceToken = getPersistenceToken(slug, chatInterface.persistenceType);
 
             const response = await createChatSession(slug, {
                 browserFingerprint: generateBrowserFingerprint(),
@@ -192,9 +198,13 @@ export const usePublicChatStore = create<PublicChatStore>((set, get) => ({
             if (response.success && response.data) {
                 const session = response.data;
 
-                // Save persistence token if provided
+                // Save persistence token if provided (to sessionStorage or localStorage)
                 if (session.persistenceToken) {
-                    savePersistenceToken(slug, session.persistenceToken);
+                    savePersistenceToken(
+                        slug,
+                        session.persistenceToken,
+                        chatInterface.persistenceType
+                    );
                 }
 
                 // Load existing messages if resuming
