@@ -40,7 +40,14 @@ export const publicChatInterfaceStreamRoutes: FastifyPluginAsync = async (fastif
         // 4. Send initial connection event
         reply.raw.write(`data: ${JSON.stringify({ type: "connection:established" })}\n\n`);
 
-        // 5. Subscribe to Redis events for this thread
+        // 5. Start keepalive heartbeat (15s interval to prevent proxy timeouts)
+        const keepaliveInterval = setInterval(() => {
+            if (!reply.raw.destroyed) {
+                reply.raw.write(":keepalive\n\n");
+            }
+        }, 15000);
+
+        // 6. Subscribe to Redis events for this thread
         const handleEvent = (event: ThreadStreamingEvent) => {
             // Check if connection is still open
             if (reply.raw.destroyed) {
@@ -59,20 +66,20 @@ export const publicChatInterfaceStreamRoutes: FastifyPluginAsync = async (fastif
             await redisEventBus.subscribeToThread(threadId, handleEvent);
             request.log.info({ threadId }, "Client subscribed to thread stream");
 
-            // 6. Handle client disconnect
-            request.raw.on("close", () => {
-                request.log.info({ threadId }, "Client disconnected from thread stream");
-                redisEventBus.unsubscribeFromThread(threadId, handleEvent).catch((err: unknown) => {
-                    request.log.error({ err, threadId }, "Failed to unsubscribe from Redis");
-                });
-            });
-
-            // Keep connection open (return promise that never resolves, or just don't return)
-            // Fastify with async handler waits for promise resolution.
-            // But for SSE we handle the stream manually via reply.raw.
-            // To prevent Fastify from finishing the request, we can return a promise that waits for close.
+            // 7. Keep connection open and handle cleanup on disconnect
+            // Return a promise that resolves when the client disconnects
             return new Promise<void>((resolve) => {
                 request.raw.on("close", () => {
+                    request.log.info({ threadId }, "Client disconnected from thread stream");
+                    clearInterval(keepaliveInterval);
+                    redisEventBus
+                        .unsubscribeFromThread(threadId, handleEvent)
+                        .catch((err: unknown) => {
+                            request.log.error(
+                                { err, threadId },
+                                "Failed to unsubscribe from Redis"
+                            );
+                        });
                     resolve();
                 });
             });

@@ -5,6 +5,7 @@ import { ChatMessageAttachment } from "@flowmaestro/shared";
 import { getUploadsStorageService } from "../../../services/GCSStorageService";
 import { ChatInterfaceRepository } from "../../../storage/repositories/ChatInterfaceRepository";
 import { ChatInterfaceSessionRepository } from "../../../storage/repositories/ChatInterfaceSessionRepository";
+import { checkChatRateLimit } from "../../middleware/chatInterfaceRateLimiter";
 
 const chatInterfaceSessionRepo = new ChatInterfaceSessionRepository();
 const chatInterfaceRepo = new ChatInterfaceRepository();
@@ -22,18 +23,33 @@ export const publicChatInterfaceFileRoutes: FastifyPluginAsync = async (fastify)
             return reply.status(404).send({ error: "Session not found" });
         }
 
-        // 2. Get chat interface config for validation rules
+        // 2. Check rate limit (20 uploads per minute per session)
+        const rateLimit = await checkChatRateLimit(
+            `file-upload:${session.interfaceId}`,
+            token,
+            20, // 20 uploads
+            60 // per 60 seconds
+        );
+        if (!rateLimit.allowed) {
+            return reply.status(429).send({
+                error: "Too many file uploads. Please wait before uploading more files.",
+                remaining: rateLimit.remaining,
+                resetAt: rateLimit.resetAt
+            });
+        }
+
+        // 3. Get chat interface config for validation rules
         const chatInterface = await chatInterfaceRepo.findBySlug(slug);
         if (!chatInterface) {
             return reply.status(404).send({ error: "Chat interface not found" });
         }
 
-        // 3. Check if file uploads are enabled
+        // 4. Check if file uploads are enabled
         if (!chatInterface.allowFileUpload) {
             return reply.status(403).send({ error: "File uploads are not allowed for this chat" });
         }
 
-        // 4. Get file
+        // 5. Get file
         let data;
         try {
             data = await request.file();
@@ -49,7 +65,7 @@ export const publicChatInterfaceFileRoutes: FastifyPluginAsync = async (fastify)
             return reply.status(400).send({ error: "No file uploaded" });
         }
 
-        // 5. Validate file type
+        // 6. Validate file type
         const allowedTypes = chatInterface.allowedFileTypes;
         if (allowedTypes && allowedTypes.length > 0) {
             const mimeType = data.mimetype;
@@ -79,7 +95,7 @@ export const publicChatInterfaceFileRoutes: FastifyPluginAsync = async (fastify)
             }
         }
 
-        // 6. Buffer the file to check size
+        // 7. Buffer the file to check size
         const chunks: Buffer[] = [];
         for await (const chunk of data.file) {
             chunks.push(chunk);
@@ -88,7 +104,7 @@ export const publicChatInterfaceFileRoutes: FastifyPluginAsync = async (fastify)
         const fileSizeBytes = fileBuffer.length;
         const fileSizeMb = fileSizeBytes / (1024 * 1024);
 
-        // 7. Validate file size
+        // 8. Validate file size
         if (chatInterface.maxFileSizeMb && fileSizeMb > chatInterface.maxFileSizeMb) {
             return reply.status(400).send({
                 error: `File too large. Maximum size is ${chatInterface.maxFileSizeMb}MB`
@@ -96,7 +112,7 @@ export const publicChatInterfaceFileRoutes: FastifyPluginAsync = async (fastify)
         }
 
         try {
-            // 8. Upload to GCS using the buffered file
+            // 9. Upload to GCS using the buffered file
             const filename = data.filename;
             const attachmentId = nanoid();
 
@@ -109,10 +125,10 @@ export const publicChatInterfaceFileRoutes: FastifyPluginAsync = async (fastify)
                 filename: filename
             });
 
-            // 9. Generate signed URL for access
-            const signedUrl = await storageService.getSignedDownloadUrl(gcsUri, 7 * 24 * 60 * 60); // 7 days
+            // 10. Generate signed URL for access
+            const signedUrl = await storageService.getSignedDownloadUrl(gcsUri, 24 * 60 * 60); // 24 hours
 
-            // 10. Create attachment object with known size
+            // 11. Create attachment object with known size
             const attachment: ChatMessageAttachment = {
                 id: attachmentId,
                 type: "file",

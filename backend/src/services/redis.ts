@@ -24,3 +24,15 @@ redis.on("connect", () => {
 redis.on("error", (error) => {
     logger.error({ err: error.message }, "Redis error");
 });
+
+/**
+ * Explicitly connect to Redis.
+ * Should be called during server startup to ensure connection is ready
+ * before any rate limiting or caching operations.
+ */
+export async function connectRedis(): Promise<void> {
+    if (redis.status === "ready") {
+        return;
+    }
+    await redis.connect();
+}

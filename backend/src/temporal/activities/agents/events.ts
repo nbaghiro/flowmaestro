@@ -5,7 +5,8 @@ import type {
     AgentMessageNewEvent,
     AgentThinkingEvent,
     AgentTokenEvent,
-    AgentExecutionCompletedEvent
+    AgentExecutionCompletedEvent,
+    AgentExecutionFailedEvent
 } from "@flowmaestro/shared";
 import { redisEventBus } from "../../../services/events/RedisEventBus";
 import { createActivityLogger } from "../../core";
@@ -23,23 +24,31 @@ export interface EmitAgentExecutionStartedInput {
     agentId: string;
     agentName: string;
     threadId: string;
+    /** Skip global channel, only publish to thread-specific channel (for chat interfaces) */
+    threadOnly?: boolean;
 }
 
 export interface EmitAgentMessageInput {
     executionId: string;
     threadId: string;
     message: ThreadMessage;
+    /** Skip global channel, only publish to thread-specific channel (for chat interfaces) */
+    threadOnly?: boolean;
 }
 
 export interface EmitAgentThinkingInput {
     executionId: string;
     threadId: string;
+    /** Skip global channel, only publish to thread-specific channel (for chat interfaces) */
+    threadOnly?: boolean;
 }
 
 export interface EmitAgentTokenInput {
     executionId: string;
     token: string;
     threadId: string;
+    /** Skip global channel, only publish to thread-specific channel (for chat interfaces) */
+    threadOnly?: boolean;
 }
 
 export interface EmitAgentToolCallStartedInput {
@@ -68,12 +77,16 @@ export interface EmitAgentExecutionCompletedInput {
     threadId: string;
     finalMessage: string;
     iterations: number;
+    /** Skip global channel, only publish to thread-specific channel (for chat interfaces) */
+    threadOnly?: boolean;
 }
 
 export interface EmitAgentExecutionFailedInput {
     executionId: string;
     threadId: string;
     error: string;
+    /** Skip global channel, only publish to thread-specific channel (for chat interfaces) */
+    threadOnly?: boolean;
 }
 
 /**
@@ -82,16 +95,20 @@ export interface EmitAgentExecutionFailedInput {
 export async function emitAgentExecutionStarted(
     input: EmitAgentExecutionStartedInput
 ): Promise<void> {
-    const { executionId, agentId, agentName } = input;
-    await redisEventBus.publish("agent:events:execution:started", {
-        type: "agent:execution:started",
-        timestamp: Date.now(),
-        executionId,
-        agentId,
-        agentName
-    });
+    const { executionId, agentId, agentName, threadOnly } = input;
 
-    // Also publish to thread stream
+    // Publish to global channel (for main app WebSocket streaming)
+    if (!threadOnly) {
+        await redisEventBus.publish("agent:events:execution:started", {
+            type: "agent:execution:started",
+            timestamp: Date.now(),
+            executionId,
+            agentId,
+            agentName
+        });
+    }
+
+    // Publish to thread stream (for chat interface SSE streaming)
     const threadEvent: AgentExecutionStartedEvent = {
         type: "agent:execution:started",
         timestamp: Date.now(),
@@ -106,7 +123,7 @@ export async function emitAgentExecutionStarted(
  * Emit new message event (user, assistant, or tool)
  */
 export async function emitAgentMessage(input: EmitAgentMessageInput): Promise<void> {
-    const { executionId, threadId, message } = input;
+    const { executionId, threadId, message, threadOnly } = input;
 
     // Handle timestamp which might be Date, string, or number after Temporal serialization
     const timestamp =
@@ -130,15 +147,18 @@ export async function emitAgentMessage(input: EmitAgentMessageInput): Promise<vo
         ...(message.tool_call_id && { tool_call_id: message.tool_call_id })
     };
 
-    await redisEventBus.publish("agent:events:message:new", {
-        type: "agent:message:new",
-        timestamp: Date.now(),
-        executionId,
-        threadId,
-        message: serializedMessage
-    });
+    // Publish to global channel (for main app WebSocket streaming)
+    if (!threadOnly) {
+        await redisEventBus.publish("agent:events:message:new", {
+            type: "agent:message:new",
+            timestamp: Date.now(),
+            executionId,
+            threadId,
+            message: serializedMessage
+        });
+    }
 
-    // Also publish to thread stream
+    // Publish to thread stream (for chat interface SSE streaming)
     const threadMessageEvent: AgentMessageNewEvent = {
         type: "agent:message:new",
         timestamp: Date.now(),
@@ -153,14 +173,19 @@ export async function emitAgentMessage(input: EmitAgentMessageInput): Promise<vo
  * Emit agent thinking event
  */
 export async function emitAgentThinking(input: EmitAgentThinkingInput): Promise<void> {
-    const { executionId, threadId } = input;
-    await redisEventBus.publish("agent:events:thinking", {
-        type: "agent:thinking",
-        timestamp: Date.now(),
-        executionId,
-        threadId
-    });
+    const { executionId, threadId, threadOnly } = input;
 
+    // Publish to global channel (for main app WebSocket streaming)
+    if (!threadOnly) {
+        await redisEventBus.publish("agent:events:thinking", {
+            type: "agent:thinking",
+            timestamp: Date.now(),
+            executionId,
+            threadId
+        });
+    }
+
+    // Publish to thread stream (for chat interface SSE streaming)
     const threadThinkingEvent: AgentThinkingEvent = {
         type: "agent:thinking",
         timestamp: Date.now(),
@@ -174,27 +199,31 @@ export async function emitAgentThinking(input: EmitAgentThinkingInput): Promise<
  * Emit token for streaming responses
  */
 export async function emitAgentToken(input: EmitAgentTokenInput): Promise<void> {
-    const { executionId, token } = input;
-    const event = {
-        type: "agent:token",
-        timestamp: Date.now(),
-        executionId,
-        token
-    } as unknown as WebSocketEvent;
-    logger.debug("Publishing agent token event", {
-        executionId,
-        tokenLength: token.length
-    });
-    await redisEventBus.publish("agent:events:token", event);
+    const { executionId, token, threadId, threadOnly } = input;
 
-    // Also publish to thread stream
+    // Publish to global channel (for main app WebSocket streaming)
+    if (!threadOnly) {
+        const event = {
+            type: "agent:token",
+            timestamp: Date.now(),
+            executionId,
+            token
+        } as unknown as WebSocketEvent;
+        logger.debug("Publishing agent token event", {
+            executionId,
+            tokenLength: token.length
+        });
+        await redisEventBus.publish("agent:events:token", event);
+    }
+
+    // Publish to thread stream (for chat interface SSE streaming)
     const threadTokenEvent: AgentTokenEvent = {
         type: "agent:token",
         timestamp: Date.now(),
         executionId,
         token
     };
-    await redisEventBus.publishThreadEvent(input.threadId, threadTokenEvent);
+    await redisEventBus.publishThreadEvent(threadId, threadTokenEvent);
 }
 
 /**
@@ -252,17 +281,22 @@ export async function emitAgentToolCallFailed(input: EmitAgentToolCallFailedInpu
 export async function emitAgentExecutionCompleted(
     input: EmitAgentExecutionCompletedInput
 ): Promise<void> {
-    const { executionId, threadId, finalMessage, iterations } = input;
-    await redisEventBus.publish("agent:events:execution:completed", {
-        type: "agent:execution:completed",
-        timestamp: Date.now(),
-        executionId,
-        threadId,
-        status: "completed",
-        finalMessage,
-        iterations
-    });
+    const { executionId, threadId, finalMessage, iterations, threadOnly } = input;
 
+    // Publish to global channel (for main app WebSocket streaming)
+    if (!threadOnly) {
+        await redisEventBus.publish("agent:events:execution:completed", {
+            type: "agent:execution:completed",
+            timestamp: Date.now(),
+            executionId,
+            threadId,
+            status: "completed",
+            finalMessage,
+            iterations
+        });
+    }
+
+    // Publish to thread stream (for chat interface SSE streaming)
     const threadCompletedEvent: AgentExecutionCompletedEvent = {
         type: "agent:execution:completed",
         timestamp: Date.now(),
@@ -281,13 +315,28 @@ export async function emitAgentExecutionCompleted(
 export async function emitAgentExecutionFailed(
     input: EmitAgentExecutionFailedInput
 ): Promise<void> {
-    const { executionId, threadId, error } = input;
-    await redisEventBus.publish("agent:events:execution:failed", {
+    const { executionId, threadId, error, threadOnly } = input;
+
+    // Publish to global channel (for main app WebSocket streaming)
+    if (!threadOnly) {
+        await redisEventBus.publish("agent:events:execution:failed", {
+            type: "agent:execution:failed",
+            timestamp: Date.now(),
+            executionId,
+            threadId,
+            status: "failed",
+            error
+        });
+    }
+
+    // Publish to thread stream (for chat interface SSE streaming)
+    const threadFailedEvent: AgentExecutionFailedEvent = {
         type: "agent:execution:failed",
         timestamp: Date.now(),
         executionId,
         threadId,
         status: "failed",
         error
-    });
+    };
+    await redisEventBus.publishThreadEvent(threadId, threadFailedEvent);
 }

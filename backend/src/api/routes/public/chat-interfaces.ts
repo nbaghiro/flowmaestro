@@ -2,6 +2,7 @@ import { FastifyInstance } from "fastify";
 import type {
     CreateChatSessionInput,
     ChatSessionResponse,
+    JsonObject,
     PublicChatMessage,
     SendChatMessageInput
 } from "@flowmaestro/shared";
@@ -187,7 +188,14 @@ export async function publicChatInterfaceRoutes(fastify: FastifyInstance) {
                     role: msg.role as "user" | "assistant",
                     content: msg.content,
                     timestamp: msg.created_at.toISOString(),
-                    attachments: []
+                    attachments: (msg.attachments || [])
+                        .filter((a) => a.fileName && a.url && a.mimeType)
+                        .map((a) => ({
+                            fileName: a.fileName!,
+                            fileSize: a.fileSize || 0,
+                            mimeType: a.mimeType!,
+                            url: a.downloadUrl || a.url!
+                        }))
                 }));
             }
 
@@ -321,8 +329,12 @@ export async function publicChatInterfaceRoutes(fastify: FastifyInstance) {
                     metadata: {
                         source: "chat_interface",
                         interfaceId: chatInterface.id,
-                        sessionToken: body.sessionToken
-                    }
+                        sessionToken: body.sessionToken,
+                        ...(body.attachments &&
+                            body.attachments.length > 0 && {
+                                attachments: JSON.parse(JSON.stringify(body.attachments))
+                            })
+                    } as JsonObject
                 });
 
                 // Update session with execution info
@@ -340,9 +352,9 @@ export async function publicChatInterfaceRoutes(fastify: FastifyInstance) {
                             userId: chatInterface.userId,
                             threadId,
                             initialMessage: body.message,
-                            // Extra context stored in execution metadata and thread retrieval
-                            // not supported directly in workflow args yet.
-                            workspaceId: chatInterface.workspaceId
+                            attachments: body.attachments,
+                            workspaceId: chatInterface.workspaceId,
+                            threadOnly: true // Skip global event channel, use thread-only for SSE
                         }
                     ]
                 });

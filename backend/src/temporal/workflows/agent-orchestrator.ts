@@ -9,7 +9,7 @@ import {
     setHandler,
     continueAsNew
 } from "@temporalio/workflow";
-import type { JsonObject } from "@flowmaestro/shared";
+import type { JsonObject, ChatMessageAttachment } from "@flowmaestro/shared";
 import { SpanType } from "../core/types";
 import { createWorkflowLogger } from "../core/workflow-logger";
 import type { SerializedThread } from "../../services/agents/ThreadManager";
@@ -71,6 +71,8 @@ export interface AgentOrchestratorInput {
     userId: string;
     threadId: string; // Thread this execution belongs to
     initialMessage?: string;
+    /** File/URL attachments included with the message */
+    attachments?: ChatMessageAttachment[];
     // Override agent's default connection/model
     connectionId?: string;
     model?: string;
@@ -85,6 +87,8 @@ export interface AgentOrchestratorInput {
     accumulatedCredits?: number;
     /** Reserved credits for this execution */
     reservedCredits?: number;
+    /** Only publish events to thread channel (skip global channel for chat interfaces) */
+    threadOnly?: boolean;
 }
 
 export interface AgentOrchestratorResult {
@@ -175,12 +179,14 @@ export async function agentOrchestratorWorkflow(
         userId,
         threadId,
         initialMessage,
+        attachments,
         serializedThread,
         iterations = 0,
         workspaceId,
         skipCreditCheck,
         accumulatedCredits: previousCredits = 0,
-        reservedCredits: previousReserved = 0
+        reservedCredits: previousReserved = 0,
+        threadOnly
     } = input;
 
     // Credit tracking state
@@ -222,7 +228,8 @@ export async function agentOrchestratorWorkflow(
             await emitAgentExecutionFailed({
                 executionId,
                 threadId,
-                error: errorMessage
+                error: errorMessage,
+                threadOnly
             });
 
             return {
@@ -245,7 +252,8 @@ export async function agentOrchestratorWorkflow(
             await emitAgentExecutionFailed({
                 executionId,
                 threadId,
-                error: errorMessage
+                error: errorMessage,
+                threadOnly
             });
 
             return {
@@ -344,22 +352,35 @@ export async function agentOrchestratorWorkflow(
                 await emitAgentExecutionFailed({
                     executionId,
                     threadId,
-                    error: errorMessage
+                    error: `Input blocked by safety check: ${blockReasons}`,
+                    threadOnly
                 });
 
-                return {
-                    success: false,
-                    serializedThread: { messages: [], savedMessageIds: [], metadata: {} },
-                    iterations: 0,
-                    error: errorMessage
-                };
+                throw new Error(`Input blocked by safety check: ${blockReasons}`);
+            }
+
+            // Build message content with attachments if present
+            let messageContent = safetyResult.content;
+            if (attachments && attachments.length > 0) {
+                const attachmentInfo = attachments
+                    .map((att) => {
+                        const parts = [`- ${att.fileName || "Unnamed file"}`];
+                        if (att.mimeType) parts.push(`(${att.mimeType})`);
+                        if (att.downloadUrl || att.url) {
+                            parts.push(`URL: ${att.downloadUrl || att.url}`);
+                        }
+                        return parts.join(" ");
+                    })
+                    .join("\n");
+                messageContent = `${safetyResult.content}\n\n[Attached files]\n${attachmentInfo}`;
             }
 
             // Use potentially redacted content
             const userMessage: ThreadMessage = {
                 id: `user-${Date.now()}`,
                 role: "user",
-                content: safetyResult.content,
+                content: messageContent,
+                attachments: attachments,
                 timestamp: new Date()
             };
             messageState.messages.push(userMessage);
@@ -370,7 +391,8 @@ export async function agentOrchestratorWorkflow(
             executionId,
             agentId,
             agentName: agent.name,
-            threadId
+            threadId,
+            threadOnly
         });
     }
 
@@ -451,7 +473,7 @@ export async function agentOrchestratorWorkflow(
         }
 
         // Emit thinking event
-        await emitAgentThinking({ executionId, threadId });
+        await emitAgentThinking({ executionId, threadId, threadOnly });
 
         // Create MODEL_GENERATION span for LLM call
         const modelGenContext = await createSpan({
@@ -568,7 +590,8 @@ export async function agentOrchestratorWorkflow(
             await emitAgentExecutionFailed({
                 executionId,
                 threadId,
-                error: errorMessage
+                error: errorMessage,
+                threadOnly
             });
 
             // End AGENT_RUN span with error
@@ -637,7 +660,8 @@ export async function agentOrchestratorWorkflow(
             await emitAgentExecutionFailed({
                 executionId,
                 threadId,
-                error: errorMessage
+                error: `Output blocked by safety check: ${blockReasons}`,
+                threadOnly
             });
 
             // End AGENT_RUN span with error
@@ -692,7 +716,8 @@ export async function agentOrchestratorWorkflow(
                     await emitAgentExecutionFailed({
                         executionId,
                         threadId,
-                        error: timeoutError
+                        error: timeoutError,
+                        threadOnly
                     });
 
                     // End AGENT_ITERATION span with error
@@ -767,7 +792,8 @@ export async function agentOrchestratorWorkflow(
                     await emitAgentExecutionFailed({
                         executionId,
                         threadId,
-                        error: `User message blocked by safety check: ${blockReasons}`
+                        error: `User message blocked by safety check: ${blockReasons}`,
+                        threadOnly
                     });
 
                     // End AGENT_ITERATION span with error
@@ -831,7 +857,8 @@ export async function agentOrchestratorWorkflow(
                 await emitAgentMessage({
                     executionId,
                     threadId,
-                    message: userMessage
+                    message: userMessage,
+                    threadOnly
                 });
 
                 // Reset pending message
@@ -880,7 +907,8 @@ export async function agentOrchestratorWorkflow(
                 executionId,
                 threadId,
                 finalMessage: llmResponse.content,
-                iterations: currentIterations
+                iterations: currentIterations,
+                threadOnly
             });
 
             // End AGENT_ITERATION span on completion
@@ -1090,7 +1118,8 @@ export async function agentOrchestratorWorkflow(
     await emitAgentExecutionFailed({
         executionId,
         threadId,
-        error: maxIterError
+        error: maxIterError,
+        threadOnly
     });
 
     // End AGENT_RUN span with error

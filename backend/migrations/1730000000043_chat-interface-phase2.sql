@@ -2,6 +2,13 @@
 -- Use the flowmaestro schema explicitly
 SET search_path TO flowmaestro, public;
 
+-- =====================================================
+-- ADD ATTACHMENTS TO AGENT MESSAGES
+-- =====================================================
+-- Store file attachments with messages for history retrieval
+ALTER TABLE flowmaestro.agent_messages
+ADD COLUMN IF NOT EXISTS attachments JSONB DEFAULT '[]';
+
 -- Ensure vector extension exists at the database level
 -- This may require superuser privileges
 DO $$ 
