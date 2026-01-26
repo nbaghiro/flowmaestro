@@ -1,10 +1,5 @@
 #!/bin/sh
 
-# Use Node 22
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-nvm use 22
-
 # Run lint-staged to check and fix only staged files
 npx lint-staged
 
