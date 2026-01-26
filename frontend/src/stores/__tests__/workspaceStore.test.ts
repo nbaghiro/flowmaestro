@@ -460,13 +460,21 @@ describe("workspaceStore", () => {
             });
 
             mockFetchOnce(
-                createMockFetchResponse(createMockApiResponse({ balance: 100, used: 25 }))
+                createMockFetchResponse(
+                    createMockApiResponse({
+                        available: 100,
+                        subscription: 75,
+                        purchased: 20,
+                        bonus: 5,
+                        reserved: 0
+                    })
+                )
             );
 
             await useWorkspaceStore.getState().fetchCredits();
 
             const state = useWorkspaceStore.getState();
-            expect(state.creditBalance?.balance).toBe(100);
+            expect(state.creditBalance?.available).toBe(100);
             expect(state.creditsLoading).toBe(false);
         });
 

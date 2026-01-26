@@ -12,15 +12,21 @@ import { useTriggerStore } from "../triggerStore";
 function createMockTrigger(overrides?: Record<string, unknown>) {
     const defaults = {
         id: "trigger-123",
-        workflowId: "workflow-123",
-        type: "schedule" as const,
+        workflow_id: "workflow-123",
         name: "Test Trigger",
+        trigger_type: "schedule" as const,
         config: {
-            schedule: "0 * * * *"
+            cronExpression: "0 * * * *"
         },
-        isActive: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        enabled: true,
+        last_triggered_at: null,
+        next_scheduled_at: null,
+        trigger_count: 0,
+        temporal_schedule_id: null,
+        webhook_secret: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        deleted_at: null
     };
     return { ...defaults, ...overrides };
 }
@@ -140,12 +146,12 @@ describe("triggerStore", () => {
 
             useTriggerStore.getState().updateTrigger("trigger-123", {
                 name: "Updated Trigger",
-                isActive: false
+                enabled: false
             });
 
             const state = useTriggerStore.getState();
             expect(state.triggers[0].name).toBe("Updated Trigger");
-            expect(state.triggers[0].isActive).toBe(false);
+            expect(state.triggers[0].enabled).toBe(false);
         });
 
         it("updates only the matching trigger", () => {
@@ -262,31 +268,31 @@ describe("trigger types", () => {
     });
 
     it("supports schedule trigger type", () => {
-        const trigger = createMockTrigger({ type: "schedule" });
+        const trigger = createMockTrigger({ trigger_type: "schedule" });
         useTriggerStore.getState().addTrigger(trigger);
 
-        expect(useTriggerStore.getState().triggers[0].type).toBe("schedule");
+        expect(useTriggerStore.getState().triggers[0].trigger_type).toBe("schedule");
     });
 
     it("supports webhook trigger type", () => {
         const trigger = createMockTrigger({
-            type: "webhook",
-            config: { endpoint: "/api/webhook" }
+            trigger_type: "webhook",
+            config: { method: "POST" }
         });
         useTriggerStore.getState().addTrigger(trigger);
 
-        expect(useTriggerStore.getState().triggers[0].type).toBe("webhook");
+        expect(useTriggerStore.getState().triggers[0].trigger_type).toBe("webhook");
     });
 
-    it("supports active/inactive status", () => {
-        const activeTrigger = createMockTrigger({ isActive: true });
-        const inactiveTrigger = createMockTrigger({ id: "trigger-2", isActive: false });
+    it("supports enabled/disabled status", () => {
+        const enabledTrigger = createMockTrigger({ enabled: true });
+        const disabledTrigger = createMockTrigger({ id: "trigger-2", enabled: false });
 
-        useTriggerStore.getState().addTrigger(activeTrigger);
-        useTriggerStore.getState().addTrigger(inactiveTrigger);
+        useTriggerStore.getState().addTrigger(enabledTrigger);
+        useTriggerStore.getState().addTrigger(disabledTrigger);
 
         const state = useTriggerStore.getState();
-        expect(state.triggers[0].isActive).toBe(true);
-        expect(state.triggers[1].isActive).toBe(false);
+        expect(state.triggers[0].enabled).toBe(true);
+        expect(state.triggers[1].enabled).toBe(false);
     });
 });

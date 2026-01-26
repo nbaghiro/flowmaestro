@@ -343,7 +343,7 @@ describe("Checkbox", () => {
                     <>
                         <Checkbox
                             checked={checked}
-                            onCheckedChange={setChecked}
+                            onCheckedChange={(value) => setChecked(value === true)}
                             label="Accept terms"
                         />
                         <span data-testid="state">{checked ? "checked" : "unchecked"}</span>

@@ -25,7 +25,7 @@ import {
     teardownHttpMocking,
     clearHttpMocks
 } from "../../../../../../__tests__/helpers/http-mock";
-import { AuthenticationError, resetAIClient } from "../../../../../services/ai";
+import { AuthenticationError, resetAIClient } from "../../../../../services/llm";
 import { LLMNodeHandler, createLLMNodeHandler } from "../ai/llm";
 
 // Mock the connection repository
@@ -458,7 +458,7 @@ describe("LLMNodeHandler", () => {
                 );
 
             // eslint-disable-next-line @typescript-eslint/no-require-imports
-            jest.spyOn(require("../../../../../services/ai"), "getAIClient").mockReturnValue({
+            jest.spyOn(require("../../../../../services/llm"), "getAIClient").mockReturnValue({
                 text: { complete: mockComplete, stream: jest.fn() }
             });
 

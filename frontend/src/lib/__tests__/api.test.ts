@@ -772,7 +772,9 @@ describe("API Client", () => {
 
                 const result = await createAgent({
                     name: "New Agent",
-                    systemPrompt: "You are helpful"
+                    model: "gpt-4",
+                    provider: "openai",
+                    system_prompt: "You are helpful"
                 });
 
                 expect(result.success).toBe(true);
@@ -784,14 +786,16 @@ describe("API Client", () => {
 
                 await createAgent({
                     name: "Test Agent",
-                    systemPrompt: "Be helpful",
+                    model: "gpt-4",
+                    provider: "openai",
+                    system_prompt: "Be helpful",
                     temperature: 0.7
                 });
 
                 const fetchCall = vi.mocked(fetch).mock.calls[0];
                 const body = JSON.parse(fetchCall[1]?.body as string);
                 expect(body.name).toBe("Test Agent");
-                expect(body.systemPrompt).toBe("Be helpful");
+                expect(body.system_prompt).toBe("Be helpful");
             });
         });
 
@@ -834,20 +838,16 @@ describe("API Client", () => {
                     { id: "kb-2", name: "KB 2" }
                 ];
 
-                mockFetchOnce(
-                    createMockFetchResponse(createMockApiResponse({ knowledgeBases: mockKBs }))
-                );
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse(mockKBs)));
 
                 const result = await getKnowledgeBases();
 
                 expect(result.success).toBe(true);
-                expect(result.data.knowledgeBases).toHaveLength(2);
+                expect(result.data).toHaveLength(2);
             });
 
             it("supports pagination", async () => {
-                mockFetchOnce(
-                    createMockFetchResponse(createMockApiResponse({ knowledgeBases: [] }))
-                );
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse([])));
 
                 await getKnowledgeBases({ limit: 10, offset: 20 });
 
@@ -1024,18 +1024,16 @@ describe("API Client", () => {
                     { id: "conn-2", name: "Anthropic" }
                 ];
 
-                mockFetchOnce(
-                    createMockFetchResponse(createMockApiResponse({ connections: mockConnections }))
-                );
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse(mockConnections)));
 
                 const result = await getConnections();
 
                 expect(result.success).toBe(true);
-                expect(result.data.connections).toHaveLength(2);
+                expect(result.data).toHaveLength(2);
             });
 
             it("filters by provider", async () => {
-                mockFetchOnce(createMockFetchResponse(createMockApiResponse({ connections: [] })));
+                mockFetchOnce(createMockFetchResponse(createMockApiResponse([])));
 
                 await getConnections({ provider: "openai" });
 
@@ -1067,7 +1065,8 @@ describe("API Client", () => {
                 const result = await createConnection({
                     name: "New Connection",
                     provider: "openai",
-                    credentials: { apiKey: "sk-test" }
+                    connection_method: "api_key",
+                    data: { api_key: "sk-test" }
                 });
 
                 expect(result.success).toBe(true);
@@ -1505,7 +1504,7 @@ describe("API Client", () => {
 
                 const result = await createTrigger({
                     workflowId: "workflow-123",
-                    type: "webhook",
+                    triggerType: "webhook",
                     name: "API Webhook",
                     enabled: true,
                     config: {}
@@ -1523,16 +1522,16 @@ describe("API Client", () => {
 
                 await createTrigger({
                     workflowId: "workflow-123",
-                    type: "schedule",
+                    triggerType: "schedule",
                     name: "Daily Job",
                     enabled: true,
-                    config: { cron: "0 9 * * *" }
+                    config: { cronExpression: "0 9 * * *" }
                 });
 
                 const fetchCall = vi.mocked(fetch).mock.calls[0];
                 const body = JSON.parse(fetchCall[1]?.body as string);
-                expect(body.type).toBe("schedule");
-                expect(body.config.cron).toBe("0 9 * * *");
+                expect(body.triggerType).toBe("schedule");
+                expect(body.config.cronExpression).toBe("0 9 * * *");
             });
 
             it("throws error on invalid cron expression", async () => {
@@ -1547,10 +1546,10 @@ describe("API Client", () => {
                 await expect(
                     createTrigger({
                         workflowId: "workflow-123",
-                        type: "schedule",
+                        triggerType: "schedule",
                         name: "Bad Schedule",
                         enabled: true,
-                        config: { cron: "invalid" }
+                        config: { cronExpression: "invalid" }
                     })
                 ).rejects.toThrow("Invalid cron expression");
             });
@@ -1617,16 +1616,14 @@ describe("API Client", () => {
 
         describe("getWorkspaces", () => {
             it("returns list of workspaces", async () => {
-                const mockWorkspaces = [
-                    { id: "ws-1", name: "Personal", role: "owner" },
-                    { id: "ws-2", name: "Team", role: "member" }
-                ];
+                const mockOwnedWorkspaces = [{ id: "ws-1", name: "Personal" }];
+                const mockMemberWorkspaces = [{ id: "ws-2", name: "Team" }];
 
                 mockFetchOnce(
                     createMockFetchResponse(
                         createMockApiResponse({
-                            workspaces: mockWorkspaces,
-                            defaultWorkspaceId: "ws-1"
+                            owned: mockOwnedWorkspaces,
+                            member: mockMemberWorkspaces
                         })
                     )
                 );
@@ -1634,22 +1631,24 @@ describe("API Client", () => {
                 const result = await getWorkspaces();
 
                 expect(result.success).toBe(true);
-                expect(result.data?.workspaces).toHaveLength(2);
+                expect(result.data?.owned).toHaveLength(1);
+                expect(result.data?.member).toHaveLength(1);
             });
 
-            it("includes default workspace ID", async () => {
+            it("returns owned and member workspaces separately", async () => {
                 mockFetchOnce(
                     createMockFetchResponse(
                         createMockApiResponse({
-                            workspaces: [{ id: "ws-1", name: "Personal" }],
-                            defaultWorkspaceId: "ws-1"
+                            owned: [{ id: "ws-1", name: "Personal" }],
+                            member: []
                         })
                     )
                 );
 
                 const result = await getWorkspaces();
 
-                expect(result.data?.defaultWorkspaceId).toBe("ws-1");
+                expect(result.data?.owned).toHaveLength(1);
+                expect(result.data?.member).toHaveLength(0);
             });
         });
 
@@ -1936,6 +1935,9 @@ describe("API Client", () => {
 
                 const result = await createFormInterface({
                     name: "New Form",
+                    slug: "new-form",
+                    title: "New Form",
+                    targetType: "agent",
                     agentId: "agent-123"
                 });
 
@@ -1947,6 +1949,9 @@ describe("API Client", () => {
 
                 await createFormInterface({
                     name: "Contact Form",
+                    slug: "contact-form",
+                    title: "Contact Form",
+                    targetType: "agent",
                     agentId: "agent-123",
                     description: "A contact form"
                 });
@@ -2125,6 +2130,8 @@ describe("API Client", () => {
 
                 const result = await createChatInterface({
                     name: "New Chat",
+                    slug: "new-chat",
+                    title: "New Chat",
                     agentId: "agent-123"
                 });
 
@@ -2256,7 +2263,7 @@ describe("API Client", () => {
 
                 const result = await createApiKey({
                     name: "New Key",
-                    scopes: ["workflows:read", "workflows:write"]
+                    scopes: ["workflows:read", "workflows:execute"]
                 });
 
                 expect(result.success).toBe(true);
@@ -2268,7 +2275,7 @@ describe("API Client", () => {
                 await createApiKey({
                     name: "Production Key",
                     scopes: ["workflows:read"],
-                    expiresAt: "2025-12-31"
+                    expires_in_days: 365
                 });
 
                 const fetchCall = vi.mocked(fetch).mock.calls[0];

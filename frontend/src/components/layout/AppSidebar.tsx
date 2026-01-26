@@ -289,7 +289,12 @@ export function AppSidebar() {
             )}
         >
             {/* Logo & Toggle */}
-            <div className="h-16 border-b border-border flex items-center px-4 overflow-hidden">
+            <div
+                className={cn(
+                    "h-16 border-b border-border flex items-center overflow-hidden",
+                    targetCollapsed ? "px-3" : "px-4"
+                )}
+            >
                 <button
                     onClick={() => setTargetCollapsed(!targetCollapsed)}
                     className="flex items-center gap-2 p-1 hover:bg-muted rounded-md transition-colors flex-shrink-0"

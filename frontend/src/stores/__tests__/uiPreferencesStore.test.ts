@@ -7,17 +7,18 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
 // Mock localStorage
+const mockLocalStorageStore: Record<string, string> = {};
 const mockLocalStorage = {
-    store: {} as Record<string, string>,
-    getItem: vi.fn((key: string) => mockLocalStorage.store[key] || null),
+    store: mockLocalStorageStore,
+    getItem: vi.fn((key: string) => mockLocalStorageStore[key] || null),
     setItem: vi.fn((key: string, value: string) => {
-        mockLocalStorage.store[key] = value;
+        mockLocalStorageStore[key] = value;
     }),
     removeItem: vi.fn((key: string) => {
-        delete mockLocalStorage.store[key];
+        delete mockLocalStorageStore[key];
     }),
     clear: vi.fn(() => {
-        mockLocalStorage.store = {};
+        Object.keys(mockLocalStorageStore).forEach((key) => delete mockLocalStorageStore[key]);
     })
 };
 Object.defineProperty(globalThis, "localStorage", { value: mockLocalStorage });
@@ -156,7 +157,7 @@ describe("uiPreferencesStore", () => {
 
             // Check if localStorage.setItem was called with the correct key
             // Note: The persist middleware batches updates, so we check the key pattern
-            const setItemCalls = mockLocalStorage.setItem.mock.calls;
+            const setItemCalls = mockLocalStorage.setItem.mock.calls as Array<[string, string]>;
             const hasCorrectKey = setItemCalls.some((call) => call[0] === "ui_preferences");
             expect(hasCorrectKey || setItemCalls.length === 0).toBe(true);
         });

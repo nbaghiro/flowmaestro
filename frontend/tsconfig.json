@@ -20,9 +20,9 @@
         "rootDir": "./src",
         "paths": {
             "@/*": ["./src/*"]
-        }
+        },
+        "types": ["vitest/globals", "@testing-library/jest-dom"]
     },
     "include": ["src"],
-    "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/test-setup.ts"],
     "references": [{ "path": "./tsconfig.node.json" }]
 }

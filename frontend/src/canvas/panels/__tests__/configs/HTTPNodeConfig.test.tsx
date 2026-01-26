@@ -4,6 +4,7 @@
 
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { HTTPNodeConfig } from "../../configs/HTTPNodeConfig";
 
@@ -377,7 +378,7 @@ describe("HTTPNodeConfig", () => {
             render(
                 <HTTPNodeConfig
                     {...defaultProps}
-                    errors={[{ field: "url", message: "URL is required" }]}
+                    errors={[{ field: "url", message: "URL is required", severity: "error" }]}
                 />
             );
 

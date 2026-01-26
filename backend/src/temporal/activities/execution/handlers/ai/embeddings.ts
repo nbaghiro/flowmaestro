@@ -8,7 +8,7 @@
  */
 
 import type { JsonObject } from "@flowmaestro/shared";
-import { getAIClient, type AIProvider } from "../../../../../services/ai";
+import { getAIClient, type AIProvider } from "../../../../../services/llm";
 import {
     ValidationError,
     withHeartbeat,

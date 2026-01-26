@@ -22,6 +22,7 @@ import {
     deleteConnection
 } from "../../lib/api";
 import { useConnectionStore } from "../connectionStore";
+import type { Connection } from "../../lib/api";
 
 // Mock connection data factory
 function createMockConnection(overrides?: Record<string, unknown>) {
@@ -31,10 +32,11 @@ function createMockConnection(overrides?: Record<string, unknown>) {
         provider: "openai",
         connection_method: "api_key" as const,
         status: "active" as const,
-        credentials: { api_key: "sk-***" },
         metadata: {},
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        capabilities: {},
+        last_used_at: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
     };
     return { ...defaults, ...overrides };
 }
@@ -80,7 +82,8 @@ describe("connectionStore", () => {
 
             vi.mocked(getConnections).mockResolvedValue({
                 success: true,
-                data: mockConnections
+                data: mockConnections,
+                pagination: { total: 2, limit: 50, offset: 0 }
             });
 
             await useConnectionStore.getState().fetchConnections();
@@ -94,7 +97,7 @@ describe("connectionStore", () => {
         it("sets loading state during fetch", async () => {
             vi.mocked(getConnections).mockImplementation(async () => {
                 expect(useConnectionStore.getState().loading).toBe(true);
-                return { success: true, data: [] };
+                return { success: true, data: [], pagination: { total: 0, limit: 50, offset: 0 } };
             });
 
             await useConnectionStore.getState().fetchConnections();
@@ -103,18 +106,19 @@ describe("connectionStore", () => {
         it("passes filter params to API", async () => {
             vi.mocked(getConnections).mockResolvedValue({
                 success: true,
-                data: []
+                data: [],
+                pagination: { total: 0, limit: 50, offset: 0 }
             });
 
             await useConnectionStore.getState().fetchConnections({
                 provider: "anthropic",
-                connection_method: "oauth",
+                connection_method: "oauth2",
                 status: "active"
             });
 
             expect(getConnections).toHaveBeenCalledWith({
                 provider: "anthropic",
-                connection_method: "oauth",
+                connection_method: "oauth2",
                 status: "active"
             });
         });
@@ -154,7 +158,7 @@ describe("connectionStore", () => {
                 name: "Test Connection",
                 provider: "openai",
                 connection_method: "api_key",
-                credentials: { api_key: "sk-test" }
+                data: { api_key: "sk-test" }
             });
 
             const state = useConnectionStore.getState();
@@ -178,7 +182,7 @@ describe("connectionStore", () => {
                 name: "New Connection",
                 provider: "anthropic",
                 connection_method: "api_key",
-                credentials: {}
+                data: {}
             });
 
             const state = useConnectionStore.getState();
@@ -189,7 +193,8 @@ describe("connectionStore", () => {
 
         it("throws on failed response", async () => {
             vi.mocked(createConnection).mockResolvedValue({
-                success: false
+                success: false,
+                data: undefined as unknown as Connection
             });
 
             await expect(
@@ -197,7 +202,7 @@ describe("connectionStore", () => {
                     name: "Test",
                     provider: "openai",
                     connection_method: "api_key",
-                    credentials: {}
+                    data: {}
                 })
             ).rejects.toThrow("Failed to create connection");
         });
@@ -210,7 +215,7 @@ describe("connectionStore", () => {
                     name: "Test",
                     provider: "openai",
                     connection_method: "api_key",
-                    credentials: {}
+                    data: {}
                 })
             ).rejects.toThrow("API Error");
 
@@ -355,7 +360,7 @@ describe("connectionStore", () => {
             useConnectionStore.setState({
                 connections: [
                     createMockConnection({ id: "conn-1", connection_method: "api_key" }),
-                    createMockConnection({ id: "conn-2", connection_method: "oauth" }),
+                    createMockConnection({ id: "conn-2", connection_method: "oauth2" }),
                     createMockConnection({ id: "conn-3", connection_method: "api_key" })
                 ]
             });
@@ -372,7 +377,7 @@ describe("connectionStore", () => {
                 connections: [createMockConnection({ connection_method: "api_key" })]
             });
 
-            const result = useConnectionStore.getState().getByMethod("oauth");
+            const result = useConnectionStore.getState().getByMethod("oauth2");
 
             expect(result).toEqual([]);
         });

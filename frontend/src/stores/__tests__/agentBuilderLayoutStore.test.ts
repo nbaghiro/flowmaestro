@@ -8,17 +8,18 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // Mock localStorage for persist middleware
+const mockLocalStorageStore: Record<string, string> = {};
 const mockLocalStorage = {
-    store: {} as Record<string, string>,
-    getItem: vi.fn((key: string) => mockLocalStorage.store[key] || null),
+    store: mockLocalStorageStore,
+    getItem: vi.fn((key: string) => mockLocalStorageStore[key] || null),
     setItem: vi.fn((key: string, value: string) => {
-        mockLocalStorage.store[key] = value;
+        mockLocalStorageStore[key] = value;
     }),
     removeItem: vi.fn((key: string) => {
-        delete mockLocalStorage.store[key];
+        delete mockLocalStorageStore[key];
     }),
     clear: vi.fn(() => {
-        mockLocalStorage.store = {};
+        Object.keys(mockLocalStorageStore).forEach((key) => delete mockLocalStorageStore[key]);
     })
 };
 Object.defineProperty(globalThis, "localStorage", { value: mockLocalStorage });

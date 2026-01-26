@@ -133,7 +133,7 @@ describe("historyStore", () => {
                 nodes: currentSnapshot.nodes,
                 edges: currentSnapshot.edges,
                 selectedNode: currentSnapshot.selectedNode
-            } as ReturnType<typeof useWorkflowStore.getState>);
+            } as unknown as ReturnType<typeof useWorkflowStore.getState>);
 
             useHistoryStore.getState().undo();
 

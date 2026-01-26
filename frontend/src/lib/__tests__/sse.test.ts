@@ -756,7 +756,7 @@ describe("SSE streaming", () => {
                 onError: vi.fn()
             };
 
-            const _cleanup = streamAgentExecution("agent-123", "exec-456", callbacks);
+            streamAgentExecution("agent-123", "exec-456", callbacks);
 
             // Complete the stream
             MockEventSource.instances[0].dispatchEvent(

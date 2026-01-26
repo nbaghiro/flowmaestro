@@ -14,7 +14,7 @@
 const mockEmbeddingGenerate = jest.fn();
 
 // Mock the unified AI SDK
-jest.mock("../../../../../services/ai", () => ({
+jest.mock("../../../../../services/llm", () => ({
     getAIClient: jest.fn(() => ({
         embedding: {
             generate: mockEmbeddingGenerate

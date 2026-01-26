@@ -26,17 +26,18 @@ vi.mock("../../lib/logger", () => ({
 }));
 
 // Mock localStorage
+const mockLocalStorageStore: Record<string, string> = {};
 const mockLocalStorage = {
-    store: {} as Record<string, string>,
-    getItem: vi.fn((key: string) => mockLocalStorage.store[key] || null),
-    setItem: vi.fn((key: string, value: string) => {
-        mockLocalStorage.store[key] = value;
+    store: mockLocalStorageStore,
+    getItem: vi.fn((key: string): string | null => mockLocalStorageStore[key] || null),
+    setItem: vi.fn((key: string, value: string): void => {
+        mockLocalStorageStore[key] = value;
     }),
-    removeItem: vi.fn((key: string) => {
-        delete mockLocalStorage.store[key];
+    removeItem: vi.fn((key: string): void => {
+        delete mockLocalStorageStore[key];
     }),
-    clear: vi.fn(() => {
-        mockLocalStorage.store = {};
+    clear: vi.fn((): void => {
+        Object.keys(mockLocalStorageStore).forEach((key) => delete mockLocalStorageStore[key]);
     })
 };
 Object.defineProperty(globalThis, "localStorage", { value: mockLocalStorage });
@@ -70,12 +71,26 @@ function createMockChatInterface(overrides?: Record<string, unknown>) {
     const defaults = {
         id: "interface-123",
         slug: "test-chat",
-        name: "Test Chat",
-        workflowId: "workflow-123",
+        title: "Test Chat",
+        description: null,
+        coverType: "color" as const,
+        coverValue: "#3B82F6",
+        iconUrl: null,
+        primaryColor: "#3B82F6",
+        fontFamily: "Inter",
+        borderRadius: 8,
+        welcomeMessage: "Hello! How can I help you today?",
+        placeholderText: "Type a message...",
+        suggestedPrompts: [],
+        allowFileUpload: false,
+        maxFiles: 5,
+        maxFileSizeMb: 10,
+        allowedFileTypes: [],
         persistenceType: "session" as const,
-        widgetInitialState: "collapsed" as const,
-        theme: {},
-        createdAt: new Date().toISOString()
+        widgetPosition: "bottom-right" as const,
+        widgetButtonIcon: "chat",
+        widgetButtonText: null,
+        widgetInitialState: "collapsed" as const
     };
     return { ...defaults, ...overrides };
 }
@@ -84,6 +99,7 @@ function createMockSession(overrides?: Record<string, unknown>) {
     const defaults = {
         sessionId: "session-123",
         sessionToken: "token-abc",
+        threadId: null,
         persistenceToken: "persist-xyz",
         existingMessages: []
     };
@@ -203,6 +219,7 @@ describe("publicChatStore", () => {
         it("handles unsuccessful response", async () => {
             vi.mocked(getPublicChatInterface).mockResolvedValue({
                 success: false,
+                data: null as unknown as ReturnType<typeof createMockChatInterface>,
                 error: "Interface not found"
             });
 
@@ -310,7 +327,7 @@ describe("publicChatStore", () => {
 
             vi.mocked(getChatSessionMessages).mockResolvedValue({
                 success: true,
-                data: { messages: mockMessages }
+                data: { messages: mockMessages, sessionId: "session-123", messageCount: 2 }
             });
 
             const result = await usePublicChatStore.getState().loadMessages();
@@ -351,7 +368,7 @@ describe("publicChatStore", () => {
         it("sends message successfully with optimistic update", async () => {
             vi.mocked(sendChatMessage).mockResolvedValue({
                 success: true,
-                data: { messageId: "real-msg-id" }
+                data: { messageId: "real-msg-id", status: "stored" }
             });
 
             const result = await usePublicChatStore.getState().sendMessage("Hello!");
@@ -369,7 +386,7 @@ describe("publicChatStore", () => {
 
             vi.mocked(sendChatMessage).mockResolvedValue({
                 success: true,
-                data: { messageId: "msg-id" }
+                data: { messageId: "msg-id", status: "stored" }
             });
 
             await usePublicChatStore.getState().sendMessage("Hello!");
@@ -405,6 +422,7 @@ describe("publicChatStore", () => {
         it("reverts on unsuccessful response", async () => {
             vi.mocked(sendChatMessage).mockResolvedValue({
                 success: false,
+                data: null as unknown as { messageId: string; status: string },
                 error: "Rate limited"
             });
 

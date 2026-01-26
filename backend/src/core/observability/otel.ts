@@ -15,12 +15,7 @@ import { resourceFromAttributes } from "@opentelemetry/resources";
 import { PeriodicExportingMetricReader } from "@opentelemetry/sdk-metrics";
 import { NodeSDK } from "@opentelemetry/sdk-node";
 import { BatchSpanProcessor } from "@opentelemetry/sdk-trace-base";
-import {
-    SEMRESATTRS_SERVICE_NAME,
-    SEMRESATTRS_SERVICE_VERSION,
-    SEMRESATTRS_CLOUD_PROVIDER,
-    SEMRESATTRS_CLOUD_PLATFORM
-} from "@opentelemetry/semantic-conventions";
+import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from "@opentelemetry/semantic-conventions";
 import { createServiceLogger } from "../logging";
 
 const logger = createServiceLogger("otel");
@@ -87,10 +82,8 @@ export function initializeOTel(config: OTelConfig): NodeSDK {
 
     // Resource attributes for service identification
     const resource = resourceFromAttributes({
-        [SEMRESATTRS_SERVICE_NAME]: serviceName,
-        [SEMRESATTRS_SERVICE_VERSION]: serviceVersion,
-        [SEMRESATTRS_CLOUD_PROVIDER]: "gcp",
-        [SEMRESATTRS_CLOUD_PLATFORM]: "gcp_kubernetes_engine",
+        [ATTR_SERVICE_NAME]: serviceName,
+        [ATTR_SERVICE_VERSION]: serviceVersion,
         // Add environment for filtering in GCP Console
         "deployment.environment": process.env.NODE_ENV || "development"
     });

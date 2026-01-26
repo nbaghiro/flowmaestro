@@ -8,27 +8,29 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // Mock localStorage
+const mockLocalStorageStore: Record<string, string> = {};
 const mockLocalStorage = {
-    store: {} as Record<string, string>,
-    getItem: vi.fn((key: string) => mockLocalStorage.store[key] || null),
+    store: mockLocalStorageStore,
+    getItem: vi.fn((key: string) => mockLocalStorageStore[key] || null),
     setItem: vi.fn((key: string, value: string) => {
-        mockLocalStorage.store[key] = value;
+        mockLocalStorageStore[key] = value;
     }),
     removeItem: vi.fn((key: string) => {
-        delete mockLocalStorage.store[key];
+        delete mockLocalStorageStore[key];
     }),
     clear: vi.fn(() => {
-        mockLocalStorage.store = {};
+        Object.keys(mockLocalStorageStore).forEach((key) => delete mockLocalStorageStore[key]);
     })
 };
 Object.defineProperty(globalThis, "localStorage", { value: mockLocalStorage });
 
 // Mock document.documentElement
+const mockClassListClasses = new Set<string>();
 const mockClassList = {
-    classes: new Set<string>(),
-    add: vi.fn((cls: string) => mockClassList.classes.add(cls)),
-    remove: vi.fn((cls: string) => mockClassList.classes.delete(cls)),
-    contains: vi.fn((cls: string) => mockClassList.classes.has(cls))
+    classes: mockClassListClasses,
+    add: vi.fn((cls: string) => mockClassListClasses.add(cls)),
+    remove: vi.fn((cls: string) => mockClassListClasses.delete(cls)),
+    contains: vi.fn((cls: string) => mockClassListClasses.has(cls))
 };
 
 Object.defineProperty(globalThis, "document", {
@@ -156,7 +158,7 @@ describe("themeStore", () => {
     // ===== initializeTheme =====
     describe("initializeTheme", () => {
         it("loads saved theme from localStorage", () => {
-            mockLocalStorage.store["theme"] = "dark";
+            mockLocalStorageStore["theme"] = "dark";
 
             useThemeStore.getState().initializeTheme();
 
@@ -174,7 +176,7 @@ describe("themeStore", () => {
         });
 
         it("applies theme to DOM immediately", () => {
-            mockLocalStorage.store["theme"] = "dark";
+            mockLocalStorageStore["theme"] = "dark";
 
             useThemeStore.getState().initializeTheme();
 
@@ -182,7 +184,7 @@ describe("themeStore", () => {
         });
 
         it("loads system theme and respects dark preference", () => {
-            mockLocalStorage.store["theme"] = "system";
+            mockLocalStorageStore["theme"] = "system";
             mockDarkModePreference = true;
 
             useThemeStore.getState().initializeTheme();
@@ -193,7 +195,7 @@ describe("themeStore", () => {
         });
 
         it("loads system theme and respects light preference", () => {
-            mockLocalStorage.store["theme"] = "system";
+            mockLocalStorageStore["theme"] = "system";
             mockDarkModePreference = false;
 
             useThemeStore.getState().initializeTheme();
@@ -204,7 +206,7 @@ describe("themeStore", () => {
         });
 
         it("registers listener for system theme changes", () => {
-            mockLocalStorage.store["theme"] = "system";
+            mockLocalStorageStore["theme"] = "system";
 
             useThemeStore.getState().initializeTheme();
 

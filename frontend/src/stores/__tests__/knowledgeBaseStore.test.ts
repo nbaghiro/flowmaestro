@@ -43,14 +43,18 @@ import { useKnowledgeBaseStore } from "../knowledgeBaseStore";
 function createMockKnowledgeBase(overrides?: Record<string, unknown>) {
     const defaults = {
         id: "kb-123",
+        user_id: "user-123",
         name: "Test Knowledge Base",
         description: "A test KB",
-        workspaceId: "workspace-123",
-        folderId: null,
-        embeddingModel: "text-embedding-3-small",
-        chunkingStrategy: "semantic",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        config: {
+            embeddingModel: "text-embedding-3-small",
+            embeddingProvider: "openai",
+            chunkSize: 1000,
+            chunkOverlap: 200,
+            embeddingDimensions: 1536
+        },
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
     };
     return { ...defaults, ...overrides };
 }
@@ -58,25 +62,33 @@ function createMockKnowledgeBase(overrides?: Record<string, unknown>) {
 function createMockDocument(overrides?: Record<string, unknown>) {
     const defaults = {
         id: "doc-123",
-        knowledgeBaseId: "kb-123",
+        knowledge_base_id: "kb-123",
         name: "Test Document",
-        sourceType: "file" as const,
-        status: "processed" as const,
-        chunkCount: 10,
+        source_type: "file" as const,
+        source_url: null,
+        file_path: "/uploads/test.txt",
+        file_type: "text/plain",
+        file_size: null,
+        content: null,
         metadata: {},
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        status: "ready" as const,
+        error_message: null,
+        processing_started_at: null,
+        processing_completed_at: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
     };
     return { ...defaults, ...overrides };
 }
 
 function createMockStats(overrides?: Record<string, unknown>) {
     const defaults = {
-        totalDocuments: 5,
-        totalChunks: 150,
-        processingDocuments: 1,
-        failedDocuments: 0,
-        storageUsedBytes: 1024000
+        id: "kb-123",
+        name: "Test Knowledge Base",
+        document_count: 5,
+        chunk_count: 150,
+        total_size_bytes: 1024000,
+        last_updated: new Date().toISOString()
     };
     return { ...defaults, ...overrides };
 }
@@ -475,7 +487,7 @@ describe("knowledgeBaseStore", () => {
             });
             vi.mocked(getKnowledgeDocuments).mockResolvedValue({
                 success: true,
-                data: [createMockDocument({ sourceType: "url" })]
+                data: [createMockDocument({ source_type: "url" })]
             });
 
             await useKnowledgeBaseStore
@@ -511,7 +523,7 @@ describe("knowledgeBaseStore", () => {
             });
             vi.mocked(getKnowledgeBaseStats).mockResolvedValue({
                 success: true,
-                data: createMockStats({ totalDocuments: 0 })
+                data: createMockStats({ document_count: 0 })
             });
 
             await useKnowledgeBaseStore.getState().deleteDoc("kb-123", "doc-123");
@@ -560,22 +572,38 @@ describe("knowledgeBaseStore", () => {
     describe("query", () => {
         it("queries knowledge base successfully", async () => {
             const mockResults = [
-                { id: "chunk-1", content: "Result 1", score: 0.95, documentId: "doc-1" },
-                { id: "chunk-2", content: "Result 2", score: 0.85, documentId: "doc-1" }
+                {
+                    id: "chunk-1",
+                    document_id: "doc-1",
+                    document_name: "Test Document",
+                    chunk_index: 0,
+                    content: "Result 1",
+                    metadata: {},
+                    similarity: 0.95
+                },
+                {
+                    id: "chunk-2",
+                    document_id: "doc-1",
+                    document_name: "Test Document",
+                    chunk_index: 1,
+                    content: "Result 2",
+                    metadata: {},
+                    similarity: 0.85
+                }
             ];
 
             vi.mocked(queryKnowledgeBase).mockResolvedValue({
                 success: true,
-                data: { results: mockResults }
+                data: { query: "search term", results: mockResults, count: 2 }
             });
 
             const results = await useKnowledgeBaseStore.getState().query("kb-123", {
                 query: "search term",
-                limit: 10
+                top_k: 10
             });
 
             expect(results).toHaveLength(2);
-            expect(results[0].score).toBe(0.95);
+            expect(results[0].similarity).toBe(0.95);
         });
 
         it("handles query error", async () => {

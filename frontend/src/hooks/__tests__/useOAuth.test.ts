@@ -144,7 +144,7 @@ describe("useOAuth", () => {
         });
 
         it("throws when no workspace context", async () => {
-            mockGetCurrentWorkspaceId.mockReturnValue(null);
+            mockGetCurrentWorkspaceId.mockReturnValue(null as unknown as string);
 
             const { result } = renderHook(() => useOAuth());
 
@@ -169,7 +169,7 @@ describe("useOAuth", () => {
             const { result } = renderHook(() => useOAuth());
 
             // Start OAuth but don't wait (it will hang waiting for callback)
-            const _promise = result.current.initiateOAuth("zendesk", { subdomain: "mycompany" });
+            result.current.initiateOAuth("zendesk", { subdomain: "mycompany" }).catch(() => {});
 
             // Check the URL was constructed correctly
             await waitFor(() => {
@@ -274,7 +274,7 @@ describe("useOAuth", () => {
         });
 
         it("throws when no workspace context", async () => {
-            mockGetCurrentWorkspaceId.mockReturnValue(null);
+            mockGetCurrentWorkspaceId.mockReturnValue(null as unknown as string);
 
             const { result } = renderHook(() => useOAuth());
 

@@ -36,25 +36,50 @@ import { useFolderStore, buildFolderTree } from "../folderStore";
 function createMockFolder(overrides?: Record<string, unknown>) {
     return {
         id: "folder-123",
+        userId: "user-123",
         name: "Test Folder",
-        description: "A test folder",
+        color: "#6366f1",
         parentId: null,
         position: 0,
-        workflowCount: 0,
-        agentCount: 0,
-        kbCount: 0,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        depth: 0,
+        path: "/",
+        itemCounts: {
+            workflows: 0,
+            agents: 0,
+            formInterfaces: 0,
+            chatInterfaces: 0,
+            knowledgeBases: 0,
+            total: 0
+        },
+        createdAt: new Date(),
+        updatedAt: new Date(),
         ...overrides
     };
 }
 
 function createMockFolderContents() {
+    const folder = createMockFolder();
     return {
-        folder: createMockFolder(),
-        workflows: [],
-        agents: [],
-        knowledgeBases: []
+        folder: {
+            ...folder,
+            ancestors: [] // FolderWithAncestors requires ancestors array
+        },
+        items: {
+            workflows: [],
+            agents: [],
+            formInterfaces: [],
+            chatInterfaces: [],
+            knowledgeBases: []
+        },
+        itemCounts: {
+            workflows: 0,
+            agents: 0,
+            formInterfaces: 0,
+            chatInterfaces: 0,
+            knowledgeBases: 0,
+            total: 0
+        },
+        subfolders: []
     };
 }
 
@@ -263,7 +288,7 @@ describe("folderStore", () => {
         it("throws error when creation fails", async () => {
             vi.mocked(api.createFolder).mockResolvedValueOnce({
                 success: true,
-                data: null
+                data: undefined
             });
 
             await expect(

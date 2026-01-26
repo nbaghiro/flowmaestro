@@ -149,19 +149,23 @@ const originalAddEventListener = window.addEventListener.bind(window);
 const originalRemoveEventListener = window.removeEventListener.bind(window);
 
 // Override specific methods for testing
-window.addEventListener = vi.fn((type: string, handler: EventListener) => {
-    if (type === "message") {
-        messageHandlers.add(handler as (event: MessageEvent) => void);
+(window as { addEventListener: typeof window.addEventListener }).addEventListener = vi.fn(
+    (type: string, handler: EventListener) => {
+        if (type === "message") {
+            messageHandlers.add(handler as (event: MessageEvent) => void);
+        }
+        originalAddEventListener(type, handler);
     }
-    originalAddEventListener(type, handler);
-});
+) as typeof window.addEventListener;
 
-window.removeEventListener = vi.fn((type: string, handler: EventListener) => {
-    if (type === "message") {
-        messageHandlers.delete(handler as (event: MessageEvent) => void);
+(window as { removeEventListener: typeof window.removeEventListener }).removeEventListener = vi.fn(
+    (type: string, handler: EventListener) => {
+        if (type === "message") {
+            messageHandlers.delete(handler as (event: MessageEvent) => void);
+        }
+        originalRemoveEventListener(type, handler);
     }
-    originalRemoveEventListener(type, handler);
-});
+) as typeof window.removeEventListener;
 
 // Mock window.open for OAuth popup tests
 window.open = vi.fn(() => ({

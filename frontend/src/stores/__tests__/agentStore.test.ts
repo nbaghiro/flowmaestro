@@ -40,41 +40,66 @@ vi.mock("../../lib/logger", () => ({
 
 import * as api from "../../lib/api";
 import { useAgentStore } from "../agentStore";
+import type { Agent, Thread, ThreadMessage, Tool } from "../../lib/api";
 
 // Mock agent data
-function createMockAgent(overrides?: Partial<ReturnType<typeof createMockAgent>>) {
+function createMockAgent(overrides?: Partial<Agent>): Agent {
     return {
         id: "agent-123",
+        user_id: "user-123",
         name: "Test Agent",
         description: "A test agent",
-        systemPrompt: "You are a helpful assistant",
+        model: "gpt-4",
+        provider: "openai",
+        connection_id: null,
+        system_prompt: "You are a helpful assistant",
         temperature: 0.7,
-        maxTokens: 1000,
-        tools: [],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        max_tokens: 1000,
+        max_iterations: 10,
+        available_tools: [],
+        memory_config: { type: "buffer", max_messages: 100 },
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        deleted_at: null,
         ...overrides
     };
 }
 
-function createMockThread(overrides?: Partial<ReturnType<typeof createMockThread>>) {
+function createMockThread(overrides?: Partial<Thread>): Thread {
     return {
         id: "thread-123",
+        user_id: "user-123",
         agent_id: "agent-123",
         title: "Test Thread",
         status: "active",
+        metadata: {},
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
+        last_message_at: null,
+        archived_at: null,
+        deleted_at: null,
         ...overrides
     };
 }
 
-function createMockMessage(overrides?: Partial<ReturnType<typeof createMockMessage>>) {
+function createMockMessage(overrides?: Partial<ThreadMessage>): ThreadMessage {
     return {
         id: "msg-123",
-        role: "user" as const,
+        role: "user",
         content: "Hello",
         timestamp: new Date().toISOString(),
+        ...overrides
+    };
+}
+
+function createMockTool(overrides?: Partial<Tool>): Tool {
+    return {
+        id: "tool-123",
+        name: "Test Tool",
+        description: "A test tool",
+        type: "workflow",
+        schema: {},
+        config: { workflowId: "wf-123" },
         ...overrides
     };
 }
@@ -129,7 +154,7 @@ describe("agentStore", () => {
             const mockAgents = [createMockAgent(), createMockAgent({ id: "agent-456" })];
             vi.mocked(api.getAgents).mockResolvedValueOnce({
                 success: true,
-                data: { agents: mockAgents }
+                data: { agents: mockAgents, total: 2 }
             });
 
             await useAgentStore.getState().fetchAgents();
@@ -143,7 +168,7 @@ describe("agentStore", () => {
         it("fetches agents with folder filter", async () => {
             vi.mocked(api.getAgents).mockResolvedValueOnce({
                 success: true,
-                data: { agents: [] }
+                data: { agents: [], total: 0 }
             });
 
             await useAgentStore.getState().fetchAgents({ folderId: "folder-123" });
@@ -200,7 +225,9 @@ describe("agentStore", () => {
 
             const result = await useAgentStore.getState().createAgent({
                 name: "Test Agent",
-                systemPrompt: "You are helpful"
+                model: "gpt-4",
+                provider: "openai",
+                system_prompt: "You are helpful"
             });
 
             expect(result.id).toBe("agent-123");
@@ -216,7 +243,9 @@ describe("agentStore", () => {
             await expect(
                 useAgentStore.getState().createAgent({
                     name: "",
-                    systemPrompt: ""
+                    model: "gpt-4",
+                    provider: "openai",
+                    system_prompt: ""
                 })
             ).rejects.toThrow("Validation error");
 
@@ -288,49 +317,71 @@ describe("agentStore", () => {
     describe("tool management", () => {
         it("adds a tool to an agent", async () => {
             const agent = createMockAgent();
-            const updatedAgent = { ...agent, tools: [{ id: "tool-1", name: "Calculator" }] };
+            const newTool = createMockTool({ id: "tool-1", name: "Calculator" });
+            const updatedAgent = {
+                ...agent,
+                available_tools: [newTool]
+            };
 
             useAgentStore.setState({ agents: [agent], currentAgent: agent });
 
             vi.mocked(api.addAgentTool).mockResolvedValueOnce({
                 success: true,
-                data: { agent: updatedAgent, tool: { id: "tool-1" } }
+                data: { agent: updatedAgent, tool: newTool }
             });
 
             await useAgentStore.getState().addTool("agent-123", {
                 type: "workflow",
-                workflowId: "wf-123"
+                name: "Calculator",
+                description: "A calculator tool",
+                schema: {},
+                config: { workflowId: "wf-123" }
             });
 
             const state = useAgentStore.getState();
-            expect(state.currentAgent?.tools).toHaveLength(1);
+            expect(state.currentAgent?.available_tools).toHaveLength(1);
         });
 
         it("adds multiple tools in batch", async () => {
             const agent = createMockAgent();
+            const tool1 = createMockTool({ id: "tool-1", name: "Tool 1" });
+            const tool2 = createMockTool({ id: "tool-2", name: "Tool 2" });
             const updatedAgent = {
                 ...agent,
-                tools: [{ id: "tool-1" }, { id: "tool-2" }]
+                available_tools: [tool1, tool2]
             };
 
             useAgentStore.setState({ agents: [agent], currentAgent: agent });
 
             vi.mocked(api.addAgentToolsBatch).mockResolvedValueOnce({
                 success: true,
-                data: { agent: updatedAgent, tools: [{ id: "tool-1" }, { id: "tool-2" }] }
+                data: { agent: updatedAgent, added: [tool1, tool2], skipped: [] }
             });
 
             const result = await useAgentStore.getState().addToolsBatch("agent-123", [
-                { type: "workflow", workflowId: "wf-1" },
-                { type: "workflow", workflowId: "wf-2" }
+                {
+                    type: "workflow",
+                    name: "Tool 1",
+                    description: "First tool",
+                    schema: {},
+                    config: { workflowId: "wf-1" }
+                },
+                {
+                    type: "workflow",
+                    name: "Tool 2",
+                    description: "Second tool",
+                    schema: {},
+                    config: { workflowId: "wf-2" }
+                }
             ]);
 
-            expect(result.data.tools).toHaveLength(2);
+            expect(result.data.added).toHaveLength(2);
         });
 
         it("removes a tool from an agent", async () => {
-            const agent = createMockAgent({ tools: [{ id: "tool-1" }] });
-            const updatedAgent = { ...agent, tools: [] };
+            const existingTool = createMockTool({ id: "tool-1" });
+            const agent = createMockAgent({ available_tools: [existingTool] });
+            const updatedAgent = { ...agent, available_tools: [] };
 
             useAgentStore.setState({ agents: [agent], currentAgent: agent });
 
@@ -342,7 +393,7 @@ describe("agentStore", () => {
             await useAgentStore.getState().removeTool("agent-123", "tool-1");
 
             const state = useAgentStore.getState();
-            expect(state.currentAgent?.tools).toHaveLength(0);
+            expect(state.currentAgent?.available_tools).toHaveLength(0);
         });
     });
 
@@ -352,7 +403,7 @@ describe("agentStore", () => {
             const mockThreads = [createMockThread(), createMockThread({ id: "thread-456" })];
             vi.mocked(api.getThreads).mockResolvedValueOnce({
                 success: true,
-                data: { threads: mockThreads }
+                data: { threads: mockThreads, total: 2 }
             });
 
             await useAgentStore.getState().fetchThreads("agent-123");
@@ -395,9 +446,13 @@ describe("agentStore", () => {
 
         it("archives a thread", async () => {
             const thread = createMockThread();
+            const archivedThread = { ...thread, status: "archived" as const };
             useAgentStore.setState({ threads: [thread], currentThread: thread });
 
-            vi.mocked(api.archiveThread).mockResolvedValueOnce({ success: true });
+            vi.mocked(api.archiveThread).mockResolvedValueOnce({
+                success: true,
+                data: archivedThread
+            });
 
             await useAgentStore.getState().archiveThread("thread-123");
 
@@ -512,7 +567,12 @@ describe("agentStore", () => {
 
             vi.mocked(api.executeAgent).mockResolvedValueOnce({
                 success: true,
-                data: { executionId: "exec-123", threadId: "thread-123" }
+                data: {
+                    executionId: "exec-123",
+                    threadId: "thread-123",
+                    agentId: "agent-123",
+                    status: "running"
+                }
             });
 
             vi.mocked(api.getThread).mockResolvedValueOnce({

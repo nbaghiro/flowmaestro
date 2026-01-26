@@ -71,12 +71,13 @@ export function createMockUser(overrides?: Partial<ApiUser>): ApiUser {
 }
 
 /**
- * Create a mock workspace object
+ * Create a mock workspace object that matches WorkspaceWithStats type
  */
 export function createMockWorkspace(overrides?: Record<string, unknown>) {
     return {
         id: "workspace-123",
         name: "Test Workspace",
+        slug: "test-workspace",
         description: "A test workspace",
         ownerId: "user-123",
         type: "free" as const,
@@ -88,12 +89,14 @@ export function createMockWorkspace(overrides?: Record<string, unknown>) {
         maxMembers: 1,
         maxConnections: 5,
         executionHistoryDays: 7,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        deletedAt: null,
+        stripeSubscriptionId: null,
+        billingEmail: null,
+        settings: {},
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        memberCount: 1,
         workflowCount: 0,
         agentCount: 0,
-        memberCount: 1,
         ...overrides
     };
 }

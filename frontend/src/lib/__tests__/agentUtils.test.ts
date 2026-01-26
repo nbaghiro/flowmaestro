@@ -8,13 +8,25 @@
 import { describe, it, expect } from "vitest";
 
 import { extractToolIconsFromAgent } from "../agentUtils";
+import type { Tool } from "../api";
 
-// Mock tool types matching the API types
-interface MockTool {
-    type: "mcp" | "workflow" | "knowledge_base" | "function";
-    config: {
-        provider?: string;
-        [key: string]: unknown;
+/**
+ * Helper to create a mock Tool with required properties.
+ * Only type and config need to be specified; other properties get defaults.
+ */
+function createMockTool(
+    type: Tool["type"],
+    config: Tool["config"] = {},
+    overrides: Partial<Tool> = {}
+): Tool {
+    return {
+        id: `tool-${Math.random().toString(36).substring(7)}`,
+        name: `Mock ${type} tool`,
+        description: `A mock ${type} tool for testing`,
+        type,
+        schema: {},
+        config,
+        ...overrides
     };
 }
 
@@ -43,7 +55,7 @@ describe("agentUtils", () => {
         });
 
         it("extracts MCP provider", () => {
-            const tools: MockTool[] = [{ type: "mcp", config: { provider: "slack" } }];
+            const tools: Tool[] = [createMockTool("mcp", { provider: "slack" })];
 
             const result = extractToolIconsFromAgent(tools);
 
@@ -52,10 +64,10 @@ describe("agentUtils", () => {
         });
 
         it("extracts multiple MCP providers", () => {
-            const tools: MockTool[] = [
-                { type: "mcp", config: { provider: "slack" } },
-                { type: "mcp", config: { provider: "github" } },
-                { type: "mcp", config: { provider: "jira" } }
+            const tools: Tool[] = [
+                createMockTool("mcp", { provider: "slack" }),
+                createMockTool("mcp", { provider: "github" }),
+                createMockTool("mcp", { provider: "jira" })
             ];
 
             const result = extractToolIconsFromAgent(tools);
@@ -67,10 +79,10 @@ describe("agentUtils", () => {
         });
 
         it("deduplicates MCP providers", () => {
-            const tools: MockTool[] = [
-                { type: "mcp", config: { provider: "slack" } },
-                { type: "mcp", config: { provider: "slack" } },
-                { type: "mcp", config: { provider: "github" } }
+            const tools: Tool[] = [
+                createMockTool("mcp", { provider: "slack" }),
+                createMockTool("mcp", { provider: "slack" }),
+                createMockTool("mcp", { provider: "github" })
             ];
 
             const result = extractToolIconsFromAgent(tools);
@@ -81,10 +93,10 @@ describe("agentUtils", () => {
         });
 
         it("counts workflow tools", () => {
-            const tools: MockTool[] = [
-                { type: "workflow", config: {} },
-                { type: "workflow", config: {} },
-                { type: "workflow", config: {} }
+            const tools: Tool[] = [
+                createMockTool("workflow"),
+                createMockTool("workflow"),
+                createMockTool("workflow")
             ];
 
             const result = extractToolIconsFromAgent(tools);
@@ -93,9 +105,9 @@ describe("agentUtils", () => {
         });
 
         it("counts knowledge base tools", () => {
-            const tools: MockTool[] = [
-                { type: "knowledge_base", config: {} },
-                { type: "knowledge_base", config: {} }
+            const tools: Tool[] = [
+                createMockTool("knowledge_base"),
+                createMockTool("knowledge_base")
             ];
 
             const result = extractToolIconsFromAgent(tools);
@@ -104,11 +116,11 @@ describe("agentUtils", () => {
         });
 
         it("counts function tools", () => {
-            const tools: MockTool[] = [
-                { type: "function", config: {} },
-                { type: "function", config: {} },
-                { type: "function", config: {} },
-                { type: "function", config: {} }
+            const tools: Tool[] = [
+                createMockTool("function"),
+                createMockTool("function"),
+                createMockTool("function"),
+                createMockTool("function")
             ];
 
             const result = extractToolIconsFromAgent(tools);
@@ -117,15 +129,15 @@ describe("agentUtils", () => {
         });
 
         it("handles mixed tool types", () => {
-            const tools: MockTool[] = [
-                { type: "mcp", config: { provider: "slack" } },
-                { type: "mcp", config: { provider: "github" } },
-                { type: "workflow", config: {} },
-                { type: "workflow", config: {} },
-                { type: "knowledge_base", config: {} },
-                { type: "function", config: {} },
-                { type: "function", config: {} },
-                { type: "function", config: {} }
+            const tools: Tool[] = [
+                createMockTool("mcp", { provider: "slack" }),
+                createMockTool("mcp", { provider: "github" }),
+                createMockTool("workflow"),
+                createMockTool("workflow"),
+                createMockTool("knowledge_base"),
+                createMockTool("function"),
+                createMockTool("function"),
+                createMockTool("function")
             ];
 
             const result = extractToolIconsFromAgent(tools);
@@ -137,7 +149,7 @@ describe("agentUtils", () => {
         });
 
         it("handles MCP tool without provider", () => {
-            const tools: MockTool[] = [{ type: "mcp", config: {} }];
+            const tools: Tool[] = [createMockTool("mcp")];
 
             const result = extractToolIconsFromAgent(tools);
 
@@ -145,10 +157,11 @@ describe("agentUtils", () => {
         });
 
         it("ignores unknown tool types", () => {
+            // Use type assertion to simulate unknown tool types coming from API
             const tools = [
-                { type: "unknown", config: {} },
-                { type: "custom", config: {} }
-            ] as unknown as MockTool[];
+                { ...createMockTool("mcp"), type: "unknown" },
+                { ...createMockTool("mcp"), type: "custom" }
+            ] as unknown as Tool[];
 
             const result = extractToolIconsFromAgent(tools);
 
@@ -160,17 +173,17 @@ describe("agentUtils", () => {
 
         // Real-world scenarios
         it("handles typical agent with various tools", () => {
-            const tools: MockTool[] = [
+            const tools: Tool[] = [
                 // MCP integrations
-                { type: "mcp", config: { provider: "slack" } },
-                { type: "mcp", config: { provider: "gmail" } },
+                createMockTool("mcp", { provider: "slack" }),
+                createMockTool("mcp", { provider: "gmail" }),
                 // Workflow tools
-                { type: "workflow", config: { workflowId: "wf-1" } },
+                createMockTool("workflow", { workflowId: "wf-1" }),
                 // Knowledge bases
-                { type: "knowledge_base", config: { kbId: "kb-1" } },
-                { type: "knowledge_base", config: { kbId: "kb-2" } },
+                createMockTool("knowledge_base", { knowledgeBaseId: "kb-1" }),
+                createMockTool("knowledge_base", { knowledgeBaseId: "kb-2" }),
                 // Custom functions
-                { type: "function", config: { name: "calculate" } }
+                createMockTool("function", { functionName: "calculate" })
             ];
 
             const result = extractToolIconsFromAgent(tools);
@@ -182,10 +195,10 @@ describe("agentUtils", () => {
         });
 
         it("handles agent with only MCP tools", () => {
-            const tools: MockTool[] = [
-                { type: "mcp", config: { provider: "slack" } },
-                { type: "mcp", config: { provider: "notion" } },
-                { type: "mcp", config: { provider: "linear" } }
+            const tools: Tool[] = [
+                createMockTool("mcp", { provider: "slack" }),
+                createMockTool("mcp", { provider: "notion" }),
+                createMockTool("mcp", { provider: "linear" })
             ];
 
             const result = extractToolIconsFromAgent(tools);
@@ -197,10 +210,10 @@ describe("agentUtils", () => {
         });
 
         it("handles agent with only knowledge bases", () => {
-            const tools: MockTool[] = [
-                { type: "knowledge_base", config: {} },
-                { type: "knowledge_base", config: {} },
-                { type: "knowledge_base", config: {} }
+            const tools: Tool[] = [
+                createMockTool("knowledge_base"),
+                createMockTool("knowledge_base"),
+                createMockTool("knowledge_base")
             ];
 
             const result = extractToolIconsFromAgent(tools);

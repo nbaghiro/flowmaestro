@@ -31,31 +31,38 @@ import { useFormInterfaceBuilderStore } from "../formInterfaceBuilderStore";
 function createMockFormInterface(overrides?: Record<string, unknown>) {
     const defaults = {
         id: "form-123",
-        workflowId: "workflow-123",
-        workspaceId: "workspace-123",
+        userId: "user-123",
         name: "Test Form",
         slug: "test-form",
-        title: "Test Form Interface",
-        description: "A test form interface",
+        targetType: "workflow" as const,
+        workflowId: "workflow-123",
+        agentId: null,
         coverType: "color" as const,
         coverValue: "#3B82F6",
         iconUrl: null,
+        title: "Test Form Interface",
+        description: "A test form interface",
         inputPlaceholder: "Enter your text...",
         inputLabel: "Input",
+        fileUploadLabel: "Attach files",
+        urlInputLabel: "Add URLs",
         allowFileUpload: false,
         allowUrlInput: false,
         maxFiles: 3,
         maxFileSizeMb: 10,
         allowedFileTypes: [],
-        submitButtonText: "Submit",
-        submitLoadingText: "Processing...",
         outputLabel: "Output",
         showCopyButton: true,
         showDownloadButton: false,
         allowOutputEdit: false,
-        isPublished: false,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        submitButtonText: "Submit",
+        submitLoadingText: "Processing...",
+        status: "draft" as const,
+        publishedAt: null,
+        submissionCount: 0,
+        lastSubmissionAt: null,
+        createdAt: new Date(),
+        updatedAt: new Date()
     };
     return { ...defaults, ...overrides };
 }
@@ -217,6 +224,7 @@ describe("formInterfaceBuilderStore", () => {
 
             vi.mocked(updateFormInterface).mockResolvedValue({
                 success: false,
+                data: undefined as never,
                 error: "Validation error"
             });
 
@@ -230,7 +238,7 @@ describe("formInterfaceBuilderStore", () => {
     // ===== Publish =====
     describe("publish", () => {
         it("publishes form interface successfully", async () => {
-            const mockInterface = createMockFormInterface({ isPublished: false });
+            const mockInterface = createMockFormInterface({ status: "draft" });
             useFormInterfaceBuilderStore.setState({
                 formInterface: mockInterface,
                 isDirty: false
@@ -238,13 +246,13 @@ describe("formInterfaceBuilderStore", () => {
 
             vi.mocked(publishFormInterface).mockResolvedValue({
                 success: true,
-                data: { ...mockInterface, isPublished: true }
+                data: { ...mockInterface, status: "published" }
             });
 
             const result = await useFormInterfaceBuilderStore.getState().publish();
 
             expect(result).toBe(true);
-            expect(useFormInterfaceBuilderStore.getState().formInterface?.isPublished).toBe(true);
+            expect(useFormInterfaceBuilderStore.getState().formInterface?.status).toBe("published");
         });
 
         it("saves before publishing if dirty", async () => {
@@ -260,7 +268,7 @@ describe("formInterfaceBuilderStore", () => {
             });
             vi.mocked(publishFormInterface).mockResolvedValue({
                 success: true,
-                data: { ...mockInterface, isPublished: true }
+                data: { ...mockInterface, status: "published" }
             });
 
             await useFormInterfaceBuilderStore.getState().publish();
@@ -277,6 +285,7 @@ describe("formInterfaceBuilderStore", () => {
 
             vi.mocked(updateFormInterface).mockResolvedValue({
                 success: false,
+                data: undefined as never,
                 error: "Save failed"
             });
 
@@ -304,20 +313,20 @@ describe("formInterfaceBuilderStore", () => {
     // ===== Unpublish =====
     describe("unpublish", () => {
         it("unpublishes form interface successfully", async () => {
-            const mockInterface = createMockFormInterface({ isPublished: true });
+            const mockInterface = createMockFormInterface({ status: "published" });
             useFormInterfaceBuilderStore.setState({
                 formInterface: mockInterface
             });
 
             vi.mocked(unpublishFormInterface).mockResolvedValue({
                 success: true,
-                data: { ...mockInterface, isPublished: false }
+                data: { ...mockInterface, status: "draft" }
             });
 
             const result = await useFormInterfaceBuilderStore.getState().unpublish();
 
             expect(result).toBe(true);
-            expect(useFormInterfaceBuilderStore.getState().formInterface?.isPublished).toBe(false);
+            expect(useFormInterfaceBuilderStore.getState().formInterface?.status).toBe("draft");
         });
 
         it("handles unpublish error", async () => {

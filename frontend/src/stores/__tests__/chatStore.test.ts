@@ -8,6 +8,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import { useChatStore } from "../chatStore";
+import type { ActionType } from "../chatStore";
 
 // Reset store before each test
 function resetStore() {
@@ -364,7 +365,7 @@ describe("chatStore", () => {
 // ===== Type Definitions =====
 describe("chat types", () => {
     it("defines valid action types", () => {
-        const validActions = ["add", "modify", "remove", null];
+        const validActions: (ActionType | null)[] = ["add", "modify", "remove", null];
 
         validActions.forEach((action) => {
             resetStore();

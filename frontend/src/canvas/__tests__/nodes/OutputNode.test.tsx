@@ -54,7 +54,7 @@ vi.mock("../../../components/validation/NodeValidationBadge", () => ({
 interface OutputNodeData {
     label: string;
     status?: "idle" | "pending" | "running" | "success" | "error";
-    value?: string | object;
+    value?: string;
     format?: string;
 }
 

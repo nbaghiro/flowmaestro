@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import type { FolderWithCounts } from "@flowmaestro/shared";
+import type { FolderTreeNode, FolderWithCounts } from "@flowmaestro/shared";
 
 // ===== URL Parsing Logic =====
 describe("folder ID extraction from URL", () => {
@@ -38,9 +38,9 @@ describe("folder ID extraction from URL", () => {
 
 // ===== Folder Tree Building =====
 describe("folder tree building", () => {
-    const buildFolderTree = (folders: FolderWithCounts[]): FolderWithCounts[] => {
-        const folderMap = new Map<string, FolderWithCounts>();
-        const rootFolders: FolderWithCounts[] = [];
+    const buildFolderTree = (folders: FolderWithCounts[]): FolderTreeNode[] => {
+        const folderMap = new Map<string, FolderTreeNode>();
+        const rootFolders: FolderTreeNode[] = [];
 
         // First pass: create map and initialize children
         folders.forEach((folder) => {
@@ -67,20 +67,22 @@ describe("folder tree building", () => {
         parentId: string | null = null
     ): FolderWithCounts => ({
         id,
+        userId: "user-1",
         name,
         color: "#000",
+        position: 0,
         depth,
+        path: parentId ? `/${parentId}/${id}` : `/${id}`,
         parentId,
-        createdAt: "",
-        updatedAt: "",
-        workspaceId: "ws-1",
-        children: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
         itemCounts: {
             workflows: 0,
             agents: 0,
             chatInterfaces: 0,
             formInterfaces: 0,
-            knowledgeBases: 0
+            knowledgeBases: 0,
+            total: 0
         }
     });
 
@@ -259,20 +261,22 @@ describe("drag-drop auto-move decision", () => {
 describe("computed folder values", () => {
     const createFolder = (id: string, depth: number): FolderWithCounts => ({
         id,
+        userId: "user-1",
         name: `Folder ${id}`,
         color: "#000",
+        position: 0,
         depth,
+        path: `/${id}`,
         parentId: null,
-        createdAt: "",
-        updatedAt: "",
-        workspaceId: "ws-1",
-        children: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
         itemCounts: {
             workflows: 0,
             agents: 0,
             chatInterfaces: 0,
             formInterfaces: 0,
-            knowledgeBases: 0
+            knowledgeBases: 0,
+            total: 0
         }
     });
 

@@ -4,6 +4,7 @@
 
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { LLMNodeConfig } from "../../configs/LLMNodeConfig";
 
@@ -420,7 +421,13 @@ describe("LLMNodeConfig", () => {
             render(
                 <LLMNodeConfig
                     {...defaultProps}
-                    errors={[{ field: "connectionId", message: "Connection is required" }]}
+                    errors={[
+                        {
+                            field: "connectionId",
+                            message: "Connection is required",
+                            severity: "error"
+                        }
+                    ]}
                 />
             );
             expect(screen.getByText("Connection is required")).toBeInTheDocument();
@@ -431,7 +438,7 @@ describe("LLMNodeConfig", () => {
                 <LLMNodeConfig
                     {...defaultProps}
                     data={{ provider: "openai", connectionId: "conn-1" }}
-                    errors={[{ field: "model", message: "Model is required" }]}
+                    errors={[{ field: "model", message: "Model is required", severity: "error" }]}
                 />
             );
             expect(screen.getByText("Model is required")).toBeInTheDocument();
@@ -441,7 +448,7 @@ describe("LLMNodeConfig", () => {
             render(
                 <LLMNodeConfig
                     {...defaultProps}
-                    errors={[{ field: "prompt", message: "Prompt is required" }]}
+                    errors={[{ field: "prompt", message: "Prompt is required", severity: "error" }]}
                 />
             );
             expect(screen.getByText("Prompt is required")).toBeInTheDocument();

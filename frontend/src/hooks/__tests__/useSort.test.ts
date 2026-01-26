@@ -184,7 +184,7 @@ describe("useSort", () => {
             const { result } = renderHook(() =>
                 useSort({
                     items,
-                    fields: { name: "name" } as typeof fieldMappings,
+                    fields: { name: "name", created: "name", modified: "name" },
                     availableFields: COMMON_SORT_FIELDS,
                     defaultField: "name"
                 })

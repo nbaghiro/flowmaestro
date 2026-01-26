@@ -31,36 +31,40 @@ import { useChatInterfaceBuilderStore } from "../chatInterfaceBuilderStore";
 function createMockChatInterface(overrides?: Record<string, unknown>) {
     const defaults = {
         id: "chat-123",
-        workflowId: "workflow-123",
-        workspaceId: "workspace-123",
+        userId: "user-123",
         name: "Test Chat",
         slug: "test-chat",
+        agentId: "agent-123",
         title: "Test Chat Interface",
-        description: "A test chat interface",
+        description: "A test chat interface" as string | null,
         coverType: "color" as const,
         coverValue: "#3B82F6",
-        iconUrl: null,
+        iconUrl: null as string | null,
         primaryColor: "#3B82F6",
         fontFamily: "Inter",
-        borderRadius: "md",
+        borderRadius: 8,
         welcomeMessage: "Hello!",
         placeholderText: "Type a message...",
         suggestedPrompts: [],
         allowFileUpload: false,
         maxFiles: 3,
         maxFileSizeMb: 10,
-        allowedFileTypes: [],
+        allowedFileTypes: [] as string[],
         persistenceType: "session" as const,
         sessionTimeoutMinutes: 30,
         widgetPosition: "bottom-right" as const,
         widgetButtonIcon: "chat",
-        widgetButtonText: "Chat",
+        widgetButtonText: "Chat" as string | null,
         widgetInitialState: "collapsed" as const,
         rateLimitMessages: 10,
         rateLimitWindowSeconds: 60,
-        isPublished: false,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        status: "draft" as const,
+        publishedAt: null as Date | null,
+        sessionCount: 0,
+        messageCount: 0,
+        lastActivityAt: null as Date | null,
+        createdAt: new Date(),
+        updatedAt: new Date()
     };
     return { ...defaults, ...overrides };
 }
@@ -220,9 +224,15 @@ describe("chatInterfaceBuilderStore", () => {
                 chatInterface: createMockChatInterface()
             });
 
+            // Mock an unsuccessful API response (data is not present when success is false)
             vi.mocked(updateChatInterface).mockResolvedValue({
                 success: false,
-                error: "Validation error"
+                error: "Validation error",
+                data: undefined as unknown
+            } as {
+                success: boolean;
+                data: ReturnType<typeof createMockChatInterface>;
+                error?: string;
             });
 
             const result = await useChatInterfaceBuilderStore.getState().save();
@@ -235,7 +245,7 @@ describe("chatInterfaceBuilderStore", () => {
     // ===== Publish =====
     describe("publish", () => {
         it("publishes chat interface successfully", async () => {
-            const mockInterface = createMockChatInterface({ isPublished: false });
+            const mockInterface = createMockChatInterface({ status: "draft" });
             useChatInterfaceBuilderStore.setState({
                 chatInterface: mockInterface,
                 isDirty: false
@@ -243,13 +253,13 @@ describe("chatInterfaceBuilderStore", () => {
 
             vi.mocked(publishChatInterface).mockResolvedValue({
                 success: true,
-                data: { ...mockInterface, isPublished: true }
+                data: { ...mockInterface, status: "published" }
             });
 
             const result = await useChatInterfaceBuilderStore.getState().publish();
 
             expect(result).toBe(true);
-            expect(useChatInterfaceBuilderStore.getState().chatInterface?.isPublished).toBe(true);
+            expect(useChatInterfaceBuilderStore.getState().chatInterface?.status).toBe("published");
         });
 
         it("saves before publishing if dirty", async () => {
@@ -265,7 +275,7 @@ describe("chatInterfaceBuilderStore", () => {
             });
             vi.mocked(publishChatInterface).mockResolvedValue({
                 success: true,
-                data: { ...mockInterface, isPublished: true }
+                data: { ...mockInterface, status: "published" }
             });
 
             await useChatInterfaceBuilderStore.getState().publish();
@@ -280,9 +290,15 @@ describe("chatInterfaceBuilderStore", () => {
                 isDirty: true
             });
 
+            // Mock an unsuccessful API response (data is not present when success is false)
             vi.mocked(updateChatInterface).mockResolvedValue({
                 success: false,
-                error: "Save failed"
+                error: "Save failed",
+                data: undefined as unknown
+            } as {
+                success: boolean;
+                data: ReturnType<typeof createMockChatInterface>;
+                error?: string;
             });
 
             const result = await useChatInterfaceBuilderStore.getState().publish();
@@ -309,20 +325,20 @@ describe("chatInterfaceBuilderStore", () => {
     // ===== Unpublish =====
     describe("unpublish", () => {
         it("unpublishes chat interface successfully", async () => {
-            const mockInterface = createMockChatInterface({ isPublished: true });
+            const mockInterface = createMockChatInterface({ status: "published" });
             useChatInterfaceBuilderStore.setState({
                 chatInterface: mockInterface
             });
 
             vi.mocked(unpublishChatInterface).mockResolvedValue({
                 success: true,
-                data: { ...mockInterface, isPublished: false }
+                data: { ...mockInterface, status: "draft" }
             });
 
             const result = await useChatInterfaceBuilderStore.getState().unpublish();
 
             expect(result).toBe(true);
-            expect(useChatInterfaceBuilderStore.getState().chatInterface?.isPublished).toBe(false);
+            expect(useChatInterfaceBuilderStore.getState().chatInterface?.status).toBe("draft");
         });
 
         it("handles unpublish error", async () => {

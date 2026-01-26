@@ -6,7 +6,7 @@
  *
  * @example
  * ```typescript
- * import { getAIClient } from "../services/ai";
+ * import { getAIClient } from "../services/llm";
  *
  * const ai = getAIClient();
  *
@@ -248,7 +248,7 @@ let aiClientInstance: AIClient | null = null;
  *
  * @example
  * ```typescript
- * import { getAIClient } from "../services/ai";
+ * import { getAIClient } from "../services/llm";
  *
  * const ai = getAIClient();
  *

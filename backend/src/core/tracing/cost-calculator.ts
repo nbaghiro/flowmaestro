@@ -480,20 +480,3 @@ export function formatCost(cost: number): string {
     }
     return `$${cost.toFixed(4)}`;
 }
-
-/**
- * Estimate cost for a given token count before making a call
- */
-export function estimateCost(
-    provider: string,
-    model: string,
-    estimatedPromptTokens: number,
-    estimatedCompletionTokens: number
-): CostCalculationResult {
-    return calculateCost({
-        provider,
-        model,
-        promptTokens: estimatedPromptTokens,
-        completionTokens: estimatedCompletionTokens
-    });
-}

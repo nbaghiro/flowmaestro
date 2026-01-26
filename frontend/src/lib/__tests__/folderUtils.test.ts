@@ -31,19 +31,22 @@ function createMockFolder(overrides?: Record<string, unknown>): FolderWithCounts
     const defaults = {
         id: "folder-123",
         name: "Test Folder",
-        workspaceId: "workspace-123",
+        userId: "user-123",
+        color: "#6366f1",
+        position: 0,
         parentId: null,
-        path: "/Test Folder",
+        path: "/folder-123",
         depth: 0,
         itemCounts: {
             workflows: 5,
             agents: 3,
             formInterfaces: 2,
             chatInterfaces: 1,
-            knowledgeBases: 4
+            knowledgeBases: 4,
+            total: 15
         },
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        createdAt: new Date(),
+        updatedAt: new Date()
     };
     return { ...defaults, ...overrides } as FolderWithCounts;
 }
@@ -54,7 +57,16 @@ function createMockFolderContentsResponse(overrides?: Record<string, unknown>) {
         data: {
             folder: {
                 id: "folder-123",
-                name: "Test Folder"
+                name: "Test Folder",
+                userId: "user-123",
+                color: "#6366f1",
+                position: 0,
+                parentId: null,
+                path: "/folder-123",
+                depth: 0,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+                ancestors: []
             },
             items: {
                 workflows: [],
@@ -63,14 +75,30 @@ function createMockFolderContentsResponse(overrides?: Record<string, unknown>) {
                 chatInterfaces: [],
                 knowledgeBases: []
             },
+            itemCounts: {
+                workflows: 0,
+                agents: 0,
+                formInterfaces: 0,
+                chatInterfaces: 0,
+                knowledgeBases: 0,
+                total: 0
+            },
             subfolders: []
         }
     };
 
     if (overrides?.data) {
+        const overrideData = overrides.data as Record<string, unknown>;
         return {
             ...defaults,
-            data: { ...defaults.data, ...(overrides.data as Record<string, unknown>) }
+            data: {
+                ...defaults.data,
+                ...overrideData,
+                folder: {
+                    ...defaults.data.folder,
+                    ...((overrideData.folder as Record<string, unknown>) || {})
+                }
+            }
         };
     }
 
@@ -85,7 +113,16 @@ describe("folderUtils", () => {
     // ===== getFolderCountIncludingSubfolders =====
     describe("getFolderCountIncludingSubfolders", () => {
         it("returns count for folder with no children", () => {
-            const folder = createMockFolder({ itemCounts: { workflows: 5 } });
+            const folder = createMockFolder({
+                itemCounts: {
+                    workflows: 5,
+                    agents: 0,
+                    formInterfaces: 0,
+                    chatInterfaces: 0,
+                    knowledgeBases: 0,
+                    total: 5
+                }
+            });
             const getFolderChildren = vi.fn(() => []);
 
             const count = getFolderCountIncludingSubfolders(folder, "workflow", getFolderChildren);
@@ -102,7 +139,8 @@ describe("folderUtils", () => {
                     agents: 0,
                     formInterfaces: 0,
                     chatInterfaces: 0,
-                    knowledgeBases: 0
+                    knowledgeBases: 0,
+                    total: 3
                 }
             });
             const childFolder = createMockFolder({
@@ -112,7 +150,8 @@ describe("folderUtils", () => {
                     agents: 0,
                     formInterfaces: 0,
                     chatInterfaces: 0,
-                    knowledgeBases: 0
+                    knowledgeBases: 0,
+                    total: 2
                 }
             });
             const grandchildFolder = createMockFolder({
@@ -122,7 +161,8 @@ describe("folderUtils", () => {
                     agents: 0,
                     formInterfaces: 0,
                     chatInterfaces: 0,
-                    knowledgeBases: 0
+                    knowledgeBases: 0,
+                    total: 1
                 }
             });
 
@@ -148,7 +188,8 @@ describe("folderUtils", () => {
                     agents: 7,
                     formInterfaces: 0,
                     chatInterfaces: 0,
-                    knowledgeBases: 0
+                    knowledgeBases: 0,
+                    total: 7
                 }
             });
             const getFolderChildren = vi.fn(() => []);
@@ -165,7 +206,8 @@ describe("folderUtils", () => {
                     agents: 0,
                     formInterfaces: 4,
                     chatInterfaces: 0,
-                    knowledgeBases: 0
+                    knowledgeBases: 0,
+                    total: 4
                 }
             });
             const getFolderChildren = vi.fn(() => []);
@@ -186,7 +228,8 @@ describe("folderUtils", () => {
                     agents: 0,
                     formInterfaces: 0,
                     chatInterfaces: 8,
-                    knowledgeBases: 0
+                    knowledgeBases: 0,
+                    total: 8
                 }
             });
             const getFolderChildren = vi.fn(() => []);
@@ -207,7 +250,8 @@ describe("folderUtils", () => {
                     agents: 0,
                     formInterfaces: 0,
                     chatInterfaces: 0,
-                    knowledgeBases: 10
+                    knowledgeBases: 10,
+                    total: 10
                 }
             });
             const getFolderChildren = vi.fn(() => []);
@@ -229,7 +273,8 @@ describe("folderUtils", () => {
                     agents: 0,
                     formInterfaces: 0,
                     chatInterfaces: 0,
-                    knowledgeBases: 0
+                    knowledgeBases: 0,
+                    total: 1
                 }
             });
             const child1 = createMockFolder({
@@ -239,7 +284,8 @@ describe("folderUtils", () => {
                     agents: 0,
                     formInterfaces: 0,
                     chatInterfaces: 0,
-                    knowledgeBases: 0
+                    knowledgeBases: 0,
+                    total: 2
                 }
             });
             const child2 = createMockFolder({
@@ -249,7 +295,8 @@ describe("folderUtils", () => {
                     agents: 0,
                     formInterfaces: 0,
                     chatInterfaces: 0,
-                    knowledgeBases: 0
+                    knowledgeBases: 0,
+                    total: 3
                 }
             });
 
@@ -284,7 +331,7 @@ describe("folderUtils", () => {
         it("returns not found when folder data is missing", async () => {
             vi.mocked(getFolderContents).mockResolvedValue({
                 success: true,
-                data: null
+                data: undefined
             });
 
             const result = await checkItemsInFolder("folder-123", ["item-1"], "workflow");
@@ -398,7 +445,7 @@ describe("folderUtils", () => {
                                 chatInterfaces: [],
                                 knowledgeBases: []
                             },
-                            subfolders: [{ id: "child" }]
+                            subfolders: [createMockFolder({ id: "child", name: "Child Folder" })]
                         }
                     })
                 )

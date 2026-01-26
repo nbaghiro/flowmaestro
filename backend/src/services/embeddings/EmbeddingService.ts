@@ -7,7 +7,7 @@
 
 import { getLogger } from "../../core/logging";
 import { ConnectionRepository } from "../../storage/repositories/ConnectionRepository";
-import { getAIClient, type AIProvider } from "../ai";
+import { getAIClient, type AIProvider } from "../llm";
 
 const logger = getLogger();
 
