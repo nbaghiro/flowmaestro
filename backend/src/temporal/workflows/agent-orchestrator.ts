@@ -347,8 +347,6 @@ export async function agentOrchestratorWorkflow(
                     .map((v) => v.message || v.type)
                     .join(", ");
 
-                const errorMessage = `Input blocked by safety check: ${blockReasons}`;
-
                 await emitAgentExecutionFailed({
                     executionId,
                     threadId,
