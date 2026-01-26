@@ -95,7 +95,7 @@ export interface EmitAgentExecutionFailedInput {
 export async function emitAgentExecutionStarted(
     input: EmitAgentExecutionStartedInput
 ): Promise<void> {
-    const { executionId, agentId, agentName, threadOnly } = input;
+    const { executionId, agentId, agentName, threadId, threadOnly } = input;
 
     // Publish to global channel (for main app WebSocket streaming)
     if (!threadOnly) {
@@ -103,6 +103,7 @@ export async function emitAgentExecutionStarted(
             type: "agent:execution:started",
             timestamp: Date.now(),
             executionId,
+            threadId,
             agentId,
             agentName
         });
@@ -207,6 +208,7 @@ export async function emitAgentToken(input: EmitAgentTokenInput): Promise<void> 
             type: "agent:token",
             timestamp: Date.now(),
             executionId,
+            threadId,
             token
         } as unknown as WebSocketEvent;
         logger.debug("Publishing agent token event", {
