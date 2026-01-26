@@ -9,7 +9,7 @@ function HorizontalRowSkeleton({ cardCount = 5 }: { cardCount?: number }) {
             </div>
             <div className="flex gap-4 overflow-hidden">
                 {Array.from({ length: cardCount }).map((_, i) => (
-                    <div key={i} className="flex-shrink-0 w-[300px]">
+                    <div key={i} className="flex-shrink-0 w-[380px]">
                         <div className="bg-card border border-border rounded-lg overflow-hidden">
                             <Skeleton className="h-32 rounded-none" />
                             <div className="p-5">

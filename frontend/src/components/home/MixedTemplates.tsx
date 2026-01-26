@@ -40,7 +40,7 @@ export function MixedTemplates({
             {templates.map((item, index) => (
                 <div
                     key={`${item.type}-${item.template.id}-${index}`}
-                    className="flex-shrink-0 w-[280px]"
+                    className="flex-shrink-0 w-[380px]"
                 >
                     {item.type === "workflow" ? (
                         <TemplateCard template={item.template} onClick={onWorkflowTemplateClick} />

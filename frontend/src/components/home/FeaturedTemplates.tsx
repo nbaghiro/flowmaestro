@@ -19,7 +19,7 @@ export function FeaturedTemplates({ templates, onTemplateClick }: FeaturedTempla
             viewAllText="Browse templates"
         >
             {templates.map((template) => (
-                <div key={template.id} className="flex-shrink-0 w-[280px]">
+                <div key={template.id} className="flex-shrink-0 w-[380px]">
                     <TemplateCard template={template} onClick={onTemplateClick} />
                 </div>
             ))}

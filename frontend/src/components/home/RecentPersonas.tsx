@@ -28,7 +28,7 @@ export function RecentPersonas({ personas, onPersonaClick, onPersonaLaunch }: Re
             emptyState={emptyState}
         >
             {personas.map((persona) => (
-                <div key={persona.id} className="flex-shrink-0 w-[320px]">
+                <div key={persona.id} className="flex-shrink-0 w-[380px]">
                     <PersonaCard
                         persona={persona}
                         onClick={() => onPersonaClick(persona)}

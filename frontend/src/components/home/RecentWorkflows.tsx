@@ -33,7 +33,7 @@ export function RecentWorkflows({ workflows }: RecentWorkflowsProps) {
             emptyState={emptyState}
         >
             {workflows.map((workflow) => (
-                <div key={workflow.id} className="flex-shrink-0 w-[300px]">
+                <div key={workflow.id} className="flex-shrink-0 w-[380px]">
                     <WorkflowCard workflow={workflow} onClick={() => handleCardClick(workflow)} />
                 </div>
             ))}

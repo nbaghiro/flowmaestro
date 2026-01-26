@@ -45,7 +45,7 @@ export function MixedInterfaces({ interfaces }: MixedInterfacesProps) {
             {interfaces.map((item, index) => (
                 <div
                     key={`${item.type}-${item.interface.id}-${index}`}
-                    className="flex-shrink-0 w-[300px]"
+                    className="flex-shrink-0 w-[380px]"
                 >
                     {item.type === "form" ? (
                         <FormInterfaceCard

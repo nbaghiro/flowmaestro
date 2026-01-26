@@ -33,7 +33,7 @@ export function RecentAgents({ agents }: RecentAgentsProps) {
             emptyState={emptyState}
         >
             {agents.map((agent) => (
-                <div key={agent.id} className="flex-shrink-0 w-[300px]">
+                <div key={agent.id} className="flex-shrink-0 w-[380px]">
                     <AgentCard agent={agent} onClick={() => handleCardClick(agent)} />
                 </div>
             ))}
