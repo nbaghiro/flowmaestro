@@ -18,7 +18,7 @@ jest.mock("../../../core/logging", () => ({
 
 // Mock the AI client
 const mockEmbeddingGenerate = jest.fn();
-jest.mock("../../ai", () => ({
+jest.mock("../../llm", () => ({
     getAIClient: jest.fn().mockReturnValue({
         embedding: {
             generate: mockEmbeddingGenerate

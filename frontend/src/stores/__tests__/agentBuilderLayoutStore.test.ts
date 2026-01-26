@@ -218,7 +218,7 @@ describe("agentBuilderLayoutStore", () => {
             const state = useAgentBuilderLayoutStore.getState();
             expect(state.panels.navigation.state).toBe("expanded");
             expect(state.panels.config.state).toBe("expanded");
-            expect(state.panels.chat.state).toBe("expanded");
+            expect(state.panels.chat.state).toBe("collapsed");
             expect(state.activePreset).toBe("default");
         });
 

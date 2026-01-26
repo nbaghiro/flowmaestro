@@ -159,7 +159,9 @@ export const PROVIDER_LOGO_DOMAINS: Record<string, string> = {
     sendgrid: "sendgrid.com",
     datadog: "datadoghq.com",
     sentry: "sentry.io",
-    pagerduty: "pagerduty.com"
+    pagerduty: "pagerduty.com",
+    vercel: "vercel.com",
+    circleci: "circleci.com"
 };
 
 /**
@@ -1500,11 +1502,17 @@ export const ALL_PROVIDERS: Provider[] = [
     {
         provider: "vercel",
         displayName: "Vercel",
-        description: "Frontend deployment platform",
+        description:
+            "Frontend deployment platform for managing projects, deployments, domains, and environment variables",
         logoUrl: getBrandLogo("vercel.com"),
         category: "Developer Tools",
         methods: ["api_key"],
-        comingSoon: true
+        apiKeySettings: {
+            keyLabel: "Access Token",
+            keyPlaceholder: "Enter your Vercel Access Token",
+            helpText: "Create an Access Token in Vercel Account Settings > Tokens",
+            helpUrl: "https://vercel.com/account/tokens"
+        }
     },
     {
         provider: "netlify",
@@ -1620,11 +1628,17 @@ export const ALL_PROVIDERS: Provider[] = [
     {
         provider: "circleci",
         displayName: "CircleCI",
-        description: "Continuous integration platform",
+        description:
+            "Continuous integration platform for managing pipelines, workflows, and build jobs",
         logoUrl: getBrandLogo("circleci.com"),
         category: "Developer Tools",
         methods: ["api_key"],
-        comingSoon: true
+        apiKeySettings: {
+            keyLabel: "Personal API Token",
+            keyPlaceholder: "Enter your CircleCI Personal API Token",
+            helpText: "Create a Personal API Token in CircleCI User Settings",
+            helpUrl: "https://circleci.com/docs/managing-api-tokens/"
+        }
     },
     {
         provider: "cloudflare",

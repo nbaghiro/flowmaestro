@@ -953,5 +953,33 @@ const bitbucketEntry: ProviderRegistryEntry = {
 
 providerRegistry.register(bitbucketEntry);
 
+// Register Vercel provider
+const vercelEntry: ProviderRegistryEntry = {
+    name: "vercel",
+    displayName: "Vercel",
+    authMethod: "api_key",
+    category: "developer_tools",
+    loader: async () => {
+        const { VercelProvider } = await import("./providers/vercel/VercelProvider");
+        return new VercelProvider();
+    }
+};
+
+providerRegistry.register(vercelEntry);
+
+// Register CircleCI provider
+const circleCIEntry: ProviderRegistryEntry = {
+    name: "circleci",
+    displayName: "CircleCI",
+    authMethod: "api_key",
+    category: "developer_tools",
+    loader: async () => {
+        const { CircleCIProvider } = await import("./providers/circleci/CircleCIProvider");
+        return new CircleCIProvider();
+    }
+};
+
+providerRegistry.register(circleCIEntry);
+
 // Export for use in application
 export { providerRegistry };
