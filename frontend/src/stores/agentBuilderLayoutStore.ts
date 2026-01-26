@@ -29,7 +29,7 @@ interface LayoutPresetConfig {
 }
 
 const LAYOUT_PRESETS: Record<LayoutPreset, LayoutPresetConfig> = {
-    default: { navigation: "expanded", config: "expanded", chat: "expanded" },
+    default: { navigation: "expanded", config: "expanded", chat: "collapsed" },
     "chat-focused": { navigation: "collapsed", config: "minimized", chat: "expanded" },
     "config-focused": { navigation: "collapsed", config: "expanded", chat: "minimized" }
 };
@@ -49,7 +49,7 @@ const DEFAULT_PANELS: Record<PanelId, PanelConfig> = {
         order: 1
     },
     chat: {
-        state: "expanded",
+        state: "collapsed",
         width: 0, // flex-1, no fixed width
         minWidth: 400,
         order: 2

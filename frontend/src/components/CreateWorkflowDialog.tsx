@@ -374,7 +374,7 @@ export function CreateWorkflowDialog({ isOpen, onClose, onCreate }: CreateWorkfl
                                         type="button"
                                         onClick={() => setActiveTab("basic")}
                                         className={cn(
-                                            "px-3 py-1 text-sm font-medium rounded-md transition-colors",
+                                            "min-w-[7rem] px-3 py-1 text-sm font-medium text-center rounded-md transition-colors",
                                             activeTab === "basic"
                                                 ? "bg-card text-foreground shadow-sm"
                                                 : "text-muted-foreground hover:text-foreground"
@@ -386,7 +386,7 @@ export function CreateWorkflowDialog({ isOpen, onClose, onCreate }: CreateWorkfl
                                         type="button"
                                         onClick={() => setActiveTab("intermediate")}
                                         className={cn(
-                                            "px-3 py-1 text-sm font-medium rounded-md transition-colors",
+                                            "min-w-[7rem] px-3 py-1 text-sm font-medium text-center rounded-md transition-colors",
                                             activeTab === "intermediate"
                                                 ? "bg-card text-foreground shadow-sm"
                                                 : "text-muted-foreground hover:text-foreground"
@@ -398,7 +398,7 @@ export function CreateWorkflowDialog({ isOpen, onClose, onCreate }: CreateWorkfl
                                         type="button"
                                         onClick={() => setActiveTab("advanced")}
                                         className={cn(
-                                            "px-3 py-1 text-sm font-medium rounded-md transition-colors",
+                                            "min-w-[7rem] px-3 py-1 text-sm font-medium text-center rounded-md transition-colors",
                                             activeTab === "advanced"
                                                 ? "bg-card text-foreground shadow-sm"
                                                 : "text-muted-foreground hover:text-foreground"
