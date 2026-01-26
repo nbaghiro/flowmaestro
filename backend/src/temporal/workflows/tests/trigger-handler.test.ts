@@ -455,7 +455,8 @@ describe("Triggered Workflow", () => {
                 workflowDefinition: {
                     name: "Empty Workflow",
                     nodes: {},
-                    edges: []
+                    edges: [],
+                    entryPoint: ""
                 } as WorkflowDefinition,
                 inputs: {}
             };

@@ -12,8 +12,21 @@ export default defineConfig({
         coverage: {
             provider: "v8",
             reporter: ["text", "json", "html"],
-            include: ["src/lib/**/*.ts", "src/stores/**/*.ts", "src/hooks/**/*.ts"],
-            exclude: ["src/**/*.test.ts", "src/test-setup.ts", "src/lib/tests/test-helpers.ts"]
+            include: [
+                "src/lib/**/*.ts",
+                "src/stores/**/*.ts",
+                "src/hooks/**/*.ts",
+                "src/canvas/**/*.ts",
+                "src/canvas/**/*.tsx"
+            ],
+            exclude: [
+                "src/**/*.test.ts",
+                "src/**/*.test.tsx",
+                "src/test-setup.ts",
+                "src/lib/tests/test-helpers.ts",
+                "src/canvas/__mocks__/**",
+                "src/canvas/tests/test-utils.tsx"
+            ]
         }
     }
 });

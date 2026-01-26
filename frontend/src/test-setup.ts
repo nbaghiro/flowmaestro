@@ -189,6 +189,113 @@ Object.defineProperty(globalThis, "ResizeObserver", {
     writable: true
 });
 
+// Mock DOMMatrix for React Flow transforms (jsdom doesn't support this)
+class MockDOMMatrix {
+    a = 1;
+    b = 0;
+    c = 0;
+    d = 1;
+    e = 0;
+    f = 0;
+    m11 = 1;
+    m12 = 0;
+    m13 = 0;
+    m14 = 0;
+    m21 = 0;
+    m22 = 1;
+    m23 = 0;
+    m24 = 0;
+    m31 = 0;
+    m32 = 0;
+    m33 = 1;
+    m34 = 0;
+    m41 = 0;
+    m42 = 0;
+    m43 = 0;
+    m44 = 1;
+    is2D = true;
+    isIdentity = true;
+
+    inverse() {
+        return new MockDOMMatrix();
+    }
+    multiply() {
+        return new MockDOMMatrix();
+    }
+    translate() {
+        return new MockDOMMatrix();
+    }
+    scale() {
+        return new MockDOMMatrix();
+    }
+    rotate() {
+        return new MockDOMMatrix();
+    }
+    transformPoint(point: { x: number; y: number }) {
+        return point;
+    }
+}
+
+Object.defineProperty(globalThis, "DOMMatrix", {
+    value: MockDOMMatrix,
+    writable: true
+});
+
+// Mock getBoundingClientRect with configurable return values for canvas testing
+const mockBoundingClientRect = {
+    x: 0,
+    y: 0,
+    width: 800,
+    height: 600,
+    top: 0,
+    right: 800,
+    bottom: 600,
+    left: 0,
+    toJSON: () => ({})
+};
+
+Element.prototype.getBoundingClientRect = vi.fn(() => mockBoundingClientRect);
+
+// Mock PointerEvent for React Flow drag interactions
+class MockPointerEvent extends MouseEvent {
+    pointerId: number;
+    width: number;
+    height: number;
+    pressure: number;
+    tangentialPressure: number;
+    tiltX: number;
+    tiltY: number;
+    twist: number;
+    pointerType: string;
+    isPrimary: boolean;
+
+    constructor(type: string, params: PointerEventInit = {}) {
+        super(type, params);
+        this.pointerId = params.pointerId ?? 1;
+        this.width = params.width ?? 1;
+        this.height = params.height ?? 1;
+        this.pressure = params.pressure ?? 0;
+        this.tangentialPressure = params.tangentialPressure ?? 0;
+        this.tiltX = params.tiltX ?? 0;
+        this.tiltY = params.tiltY ?? 0;
+        this.twist = params.twist ?? 0;
+        this.pointerType = params.pointerType ?? "mouse";
+        this.isPrimary = params.isPrimary ?? true;
+    }
+
+    getCoalescedEvents() {
+        return [];
+    }
+    getPredictedEvents() {
+        return [];
+    }
+}
+
+Object.defineProperty(globalThis, "PointerEvent", {
+    value: MockPointerEvent,
+    writable: true
+});
+
 // Mock matchMedia for responsive hooks
 window.matchMedia = vi.fn((query: string) => ({
     matches: false,

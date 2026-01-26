@@ -5,10 +5,6 @@
  * from data using the spreadsheet_generate builtin tool.
  */
 
-import type { JsonObject } from "@flowmaestro/shared";
-import type { ContextSnapshot } from "../../../../../src/temporal/core/types";
-import type { NodeHandlerInput } from "../../../../../src/temporal/activities/execution/types";
-
 // Mock the builtin tool
 const mockExecute = jest.fn();
 jest.mock("../../../../../src/tools/builtin/spreadsheet-generate", () => ({
@@ -29,11 +25,15 @@ jest.mock("../../../../../src/temporal/core", () => ({
     getExecutionContext: jest.fn((context: unknown) => context)
 }));
 
+import type { JsonObject } from "@flowmaestro/shared";
 import {
     SpreadsheetGenerationNodeHandler,
     createSpreadsheetGenerationNodeHandler
 } from "../../../../../src/temporal/activities/execution/handlers/outputs/spreadsheet-generation";
 import { interpolateVariables } from "../../../../../src/temporal/core";
+
+import type { NodeHandlerInput } from "../../../../../src/temporal/activities/execution/types";
+import type { ContextSnapshot } from "../../../../../src/temporal/core/types";
 
 // Helper to create mock context
 function createMockContext(overrides: Partial<ContextSnapshot> = {}): ContextSnapshot {

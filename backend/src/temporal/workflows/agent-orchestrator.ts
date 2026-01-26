@@ -339,13 +339,20 @@ export async function agentOrchestratorWorkflow(
                     .map((v) => v.message || v.type)
                     .join(", ");
 
+                const errorMessage = `Input blocked by safety check: ${blockReasons}`;
+
                 await emitAgentExecutionFailed({
                     executionId,
                     threadId,
-                    error: `Input blocked by safety check: ${blockReasons}`
+                    error: errorMessage
                 });
 
-                throw new Error(`Input blocked by safety check: ${blockReasons}`);
+                return {
+                    success: false,
+                    serializedThread: { messages: [], savedMessageIds: [], metadata: {} },
+                    iterations: 0,
+                    error: errorMessage
+                };
             }
 
             // Use potentially redacted content
@@ -624,17 +631,19 @@ export async function agentOrchestratorWorkflow(
                 .map((v) => v.message || v.type)
                 .join(", ");
 
+            const errorMessage = `Output blocked by safety check: ${blockReasons}`;
+
             await emitAgentExecutionFailed({
                 executionId,
                 threadId,
-                error: `Output blocked by safety check: ${blockReasons}`
+                error: errorMessage
             });
 
             // End AGENT_RUN span with error
             if (agentRunSpanId) {
                 await endSpan({
                     spanId: agentRunSpanId,
-                    error: new Error(`Output blocked by safety check: ${blockReasons}`),
+                    error: new Error(errorMessage),
                     attributes: {
                         totalIterations: currentIterations,
                         failureReason: "safety_check_blocked_output"
@@ -642,7 +651,12 @@ export async function agentOrchestratorWorkflow(
                 });
             }
 
-            throw new Error(`Output blocked by safety check: ${blockReasons}`);
+            return {
+                success: false,
+                serializedThread: messageState,
+                iterations: currentIterations,
+                error: errorMessage
+            };
         }
 
         // Add assistant response to history (with potentially redacted content)

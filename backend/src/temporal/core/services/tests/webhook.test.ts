@@ -9,7 +9,11 @@ import * as crypto from "crypto";
 import { TriggerRepository } from "../../../../storage/repositories/TriggerRepository";
 import { getTemporalClient } from "../../../client";
 import { WebhookService, type WebhookRequestData } from "../webhook";
-import type { WebhookTriggerConfig, WorkflowTrigger } from "../../../../storage/models/Trigger";
+import type {
+    WebhookLog,
+    WebhookTriggerConfig,
+    WorkflowTrigger
+} from "../../../../storage/models/Trigger";
 
 // Mock dependencies
 jest.mock("../../../../storage/repositories/TriggerRepository");
@@ -565,9 +569,9 @@ describe("WebhookService", () => {
 
     describe("getWebhookLogs", () => {
         it("should fetch webhook logs for trigger", async () => {
-            const mockResponse = { logs: [{ id: "1" }, { id: "2" }], total: 2 } as {
-                logs: unknown[];
-                total: number;
+            const mockResponse = {
+                logs: [{ id: "1" }, { id: "2" }] as unknown as WebhookLog[],
+                total: 2
             };
             mockTriggerRepo.findWebhookLogsByTriggerId.mockResolvedValue(mockResponse);
 

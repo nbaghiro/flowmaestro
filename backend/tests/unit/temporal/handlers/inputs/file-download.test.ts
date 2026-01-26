@@ -5,10 +5,6 @@
  * from URLs using the file_download builtin tool.
  */
 
-import type { JsonObject } from "@flowmaestro/shared";
-import type { ContextSnapshot } from "../../../../../src/temporal/core/types";
-import type { NodeHandlerInput } from "../../../../../src/temporal/activities/execution/types";
-
 // Mock the builtin tool
 const mockExecute = jest.fn();
 jest.mock("../../../../../src/tools/builtin/file-download", () => ({
@@ -29,11 +25,15 @@ jest.mock("../../../../../src/temporal/core", () => ({
     getExecutionContext: jest.fn((context: unknown) => context)
 }));
 
+import type { JsonObject } from "@flowmaestro/shared";
 import {
     FileDownloadNodeHandler,
     createFileDownloadNodeHandler
 } from "../../../../../src/temporal/activities/execution/handlers/inputs/file-download";
 import { interpolateVariables } from "../../../../../src/temporal/core";
+
+import type { NodeHandlerInput } from "../../../../../src/temporal/activities/execution/types";
+import type { ContextSnapshot } from "../../../../../src/temporal/core/types";
 
 // Helper to create mock context
 function createMockContext(overrides: Partial<ContextSnapshot> = {}): ContextSnapshot {

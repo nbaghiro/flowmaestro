@@ -5,10 +5,6 @@
  * using the Provider SDK system.
  */
 
-import type { JsonObject } from "@flowmaestro/shared";
-import type { NodeHandlerInput } from "../../../../../src/temporal/activities/execution/types";
-import type { ContextSnapshot } from "../../../../../src/temporal/core/types";
-
 // Mock the connection repository
 const mockFindByIdWithData = jest.fn();
 jest.mock("../../../../../src/storage/repositories/ConnectionRepository", () => ({
@@ -41,11 +37,14 @@ jest.mock("../../../../../src/temporal/core", () => ({
     getExecutionContext: jest.fn((context: unknown) => context)
 }));
 
+import type { JsonObject } from "@flowmaestro/shared";
 import {
     IntegrationNodeHandler,
     createIntegrationNodeHandler,
     executeIntegrationNode
 } from "../../../../../src/temporal/activities/execution/handlers/integrations/integration";
+import type { NodeHandlerInput } from "../../../../../src/temporal/activities/execution/types";
+import type { ContextSnapshot } from "../../../../../src/temporal/core/types";
 
 // Helper to create mock context
 function createMockContext(overrides: Partial<ContextSnapshot> = {}): ContextSnapshot {

@@ -911,5 +911,19 @@ const sentryEntry: ProviderRegistryEntry = {
 
 providerRegistry.register(sentryEntry);
 
+// Register PagerDuty provider
+const pagerdutyEntry: ProviderRegistryEntry = {
+    name: "pagerduty",
+    displayName: "PagerDuty",
+    authMethod: "api_key",
+    category: "developer_tools",
+    loader: async () => {
+        const { PagerDutyProvider } = await import("./providers/pagerduty/PagerDutyProvider");
+        return new PagerDutyProvider();
+    }
+};
+
+providerRegistry.register(pagerdutyEntry);
+
 // Export for use in application
 export { providerRegistry };

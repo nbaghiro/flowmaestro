@@ -5,10 +5,6 @@
  * to the execution workspace using the file_write builtin tool.
  */
 
-import type { JsonObject } from "@flowmaestro/shared";
-import type { ContextSnapshot } from "../../../../../src/temporal/core/types";
-import type { NodeHandlerInput } from "../../../../../src/temporal/activities/execution/types";
-
 // Mock the builtin tool
 const mockExecute = jest.fn();
 jest.mock("../../../../../src/tools/builtin/file-write", () => ({
@@ -29,11 +25,15 @@ jest.mock("../../../../../src/temporal/core", () => ({
     getExecutionContext: jest.fn((context: unknown) => context)
 }));
 
+import type { JsonObject } from "@flowmaestro/shared";
 import {
     FileWriteNodeHandler,
     createFileWriteNodeHandler
 } from "../../../../../src/temporal/activities/execution/handlers/outputs/file-write";
 import { interpolateVariables } from "../../../../../src/temporal/core";
+
+import type { NodeHandlerInput } from "../../../../../src/temporal/activities/execution/types";
+import type { ContextSnapshot } from "../../../../../src/temporal/core/types";
 
 // Helper to create mock context
 function createMockContext(overrides: Partial<ContextSnapshot> = {}): ContextSnapshot {

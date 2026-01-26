@@ -5,10 +5,6 @@
  * to text using the audio_transcribe builtin tool (Whisper).
  */
 
-import type { JsonObject } from "@flowmaestro/shared";
-import type { ContextSnapshot } from "../../../../../src/temporal/core/types";
-import type { NodeHandlerInput } from "../../../../../src/temporal/activities/execution/types";
-
 // Mock the builtin tool
 const mockExecute = jest.fn();
 jest.mock("../../../../../src/tools/builtin/audio-transcribe", () => ({
@@ -29,11 +25,14 @@ jest.mock("../../../../../src/temporal/core", () => ({
     getExecutionContext: jest.fn((context: unknown) => context)
 }));
 
+import type { JsonObject } from "@flowmaestro/shared";
 import {
     AudioTranscriptionNodeHandler,
     createAudioTranscriptionNodeHandler
 } from "../../../../../src/temporal/activities/execution/handlers/ai/audio-transcription";
 import { interpolateVariables } from "../../../../../src/temporal/core";
+import type { NodeHandlerInput } from "../../../../../src/temporal/activities/execution/types";
+import type { ContextSnapshot } from "../../../../../src/temporal/core/types";
 
 // Helper to create mock context
 function createMockContext(overrides: Partial<ContextSnapshot> = {}): ContextSnapshot {

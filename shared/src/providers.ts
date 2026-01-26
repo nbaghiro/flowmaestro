@@ -156,7 +156,8 @@ export const PROVIDER_LOGO_DOMAINS: Record<string, string> = {
     mailchimp: "mailchimp.com",
     sendgrid: "sendgrid.com",
     datadog: "datadoghq.com",
-    sentry: "sentry.io"
+    sentry: "sentry.io",
+    pagerduty: "pagerduty.com"
 };
 
 /**
@@ -1553,11 +1554,16 @@ export const ALL_PROVIDERS: Provider[] = [
     {
         provider: "pagerduty",
         displayName: "PagerDuty",
-        description: "Incident management platform",
+        description: "Incident management and on-call scheduling platform",
         logoUrl: getBrandLogo("pagerduty.com"),
         category: "Developer Tools",
         methods: ["api_key"],
-        comingSoon: true
+        apiKeySettings: {
+            keyLabel: "API Key",
+            keyPlaceholder: "Enter your PagerDuty API Key",
+            helpText: "Create a REST API key with read/write permissions",
+            helpUrl: "https://support.pagerduty.com/main/docs/api-access-keys"
+        }
     },
     {
         provider: "aws",
