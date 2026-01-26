@@ -2,8 +2,8 @@
  * Jest configuration for Temporal workflow tests
  *
  * Uses projects to separate unit and integration tests:
- * - Unit tests: Fast, no infrastructure dependencies (co-located with source in tests folders)
- * - Integration tests: Full workflow testing with mocked activities (in tests/integration)
+ * - Unit tests: Fast, no infrastructure dependencies (co-located with source in __tests__ folders)
+ * - Integration tests: Full workflow testing with mocked activities (in __tests__/integration)
  */
 
 const baseConfig = {
@@ -24,8 +24,8 @@ const baseConfig = {
     },
     transformIgnorePatterns: ["node_modules/(?!(nanoid|uuid)/)"],
     moduleNameMapper: {
-        "^nanoid$": "<rootDir>/tests/mocks/nanoid.ts",
-        "^uuid$": "<rootDir>/tests/mocks/uuid.ts"
+        "^nanoid$": "<rootDir>/__tests__/__mocks__/nanoid.ts",
+        "^uuid$": "<rootDir>/__tests__/__mocks__/uuid.ts"
     }
 };
 
@@ -37,15 +37,15 @@ module.exports = {
             ...baseConfig,
             displayName: "unit",
             testMatch: [
-                "<rootDir>/src/**/tests/*.test.ts",
-                "<rootDir>/tests/unit/**/*.test.ts"
+                "<rootDir>/src/**/__tests__/*.test.ts",
+                "<rootDir>/__tests__/unit/**/*.test.ts"
             ]
         },
         {
             ...baseConfig,
             displayName: "integration",
-            testMatch: ["<rootDir>/tests/integration/**/*.test.ts"],
-            setupFilesAfterEnv: ["<rootDir>/tests/integration/setup.ts"]
+            testMatch: ["<rootDir>/__tests__/integration/**/*.test.ts"],
+            setupFilesAfterEnv: ["<rootDir>/__tests__/integration/setup.ts"]
         }
     ],
     collectCoverageFrom: [

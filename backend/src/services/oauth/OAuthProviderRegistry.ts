@@ -588,6 +588,115 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
         refreshable: false // GitHub OAuth tokens don't expire unless revoked
     },
 
+    gitlab: {
+        name: "gitlab",
+        displayName: "GitLab",
+        authUrl: "https://gitlab.com/oauth/authorize",
+        tokenUrl: "https://gitlab.com/oauth/token",
+        scopes: ["api", "read_user", "read_repository", "write_repository"],
+        clientId: config.oauth.gitlab.clientId,
+        clientSecret: config.oauth.gitlab.clientSecret,
+        redirectUri: getOAuthRedirectUri("gitlab"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://gitlab.com/api/v4/user", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    username?: string;
+                    id?: number;
+                    email?: string;
+                    name?: string;
+                    avatar_url?: string;
+                    web_url?: string;
+                };
+
+                return {
+                    username: data.username || "unknown",
+                    userId: data.id?.toString() || "unknown",
+                    email: data.email || `${data.username}@gitlab`,
+                    name: data.name || data.username,
+                    avatar: data.avatar_url,
+                    profileUrl: data.web_url
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get GitLab user info");
+                return {
+                    username: "GitLab User",
+                    userId: "unknown",
+                    email: "unknown@gitlab"
+                };
+            }
+        },
+        refreshable: true
+    },
+
+    bitbucket: {
+        name: "bitbucket",
+        displayName: "Bitbucket",
+        authUrl: "https://bitbucket.org/site/oauth2/authorize",
+        tokenUrl: "https://bitbucket.org/site/oauth2/access_token",
+        scopes: [
+            "repository",
+            "repository:write",
+            "pullrequest",
+            "pullrequest:write",
+            "pipeline",
+            "pipeline:write",
+            "account"
+        ],
+        clientId: config.oauth.bitbucket.clientId,
+        clientSecret: config.oauth.bitbucket.clientSecret,
+        redirectUri: getOAuthRedirectUri("bitbucket"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://api.bitbucket.org/2.0/user", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    username?: string;
+                    uuid?: string;
+                    display_name?: string;
+                    links?: {
+                        avatar?: { href?: string };
+                    };
+                };
+
+                // Bitbucket may not return email in basic user endpoint
+                // It needs a separate call to /user/emails
+                return {
+                    username: data.username || "unknown",
+                    userId: data.uuid || "unknown",
+                    email: `${data.username}@bitbucket`,
+                    name: data.display_name || data.username,
+                    avatar: data.links?.avatar?.href
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get Bitbucket user info");
+                return {
+                    username: "Bitbucket User",
+                    userId: "unknown",
+                    email: "unknown@bitbucket"
+                };
+            }
+        },
+        refreshable: true
+    },
+
     hubspot: {
         name: "hubspot",
         displayName: "HubSpot",

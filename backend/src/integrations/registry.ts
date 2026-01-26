@@ -925,5 +925,33 @@ const pagerdutyEntry: ProviderRegistryEntry = {
 
 providerRegistry.register(pagerdutyEntry);
 
+// Register GitLab provider
+const gitlabEntry: ProviderRegistryEntry = {
+    name: "gitlab",
+    displayName: "GitLab",
+    authMethod: "oauth2",
+    category: "developer_tools",
+    loader: async () => {
+        const { GitLabProvider } = await import("./providers/gitlab/GitLabProvider");
+        return new GitLabProvider();
+    }
+};
+
+providerRegistry.register(gitlabEntry);
+
+// Register Bitbucket provider
+const bitbucketEntry: ProviderRegistryEntry = {
+    name: "bitbucket",
+    displayName: "Bitbucket",
+    authMethod: "oauth2",
+    category: "developer_tools",
+    loader: async () => {
+        const { BitbucketProvider } = await import("./providers/bitbucket/BitbucketProvider");
+        return new BitbucketProvider();
+    }
+};
+
+providerRegistry.register(bitbucketEntry);
+
 // Export for use in application
 export { providerRegistry };

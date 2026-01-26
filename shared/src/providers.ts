@@ -84,6 +84,8 @@ const getBrandLogo = getProviderLogoUrl;
  */
 export const PROVIDER_LOGO_DOMAINS: Record<string, string> = {
     github: "github.com",
+    gitlab: "gitlab.com",
+    bitbucket: "bitbucket.org",
     slack: "slack.com",
     discord: "discord.com",
     telegram: "telegram.org",
@@ -351,20 +353,43 @@ export const ALL_PROVIDERS: Provider[] = [
     {
         provider: "gitlab",
         displayName: "GitLab",
-        description: "Manage GitLab projects and issues",
+        description: "Manage GitLab projects, issues, merge requests, and CI/CD pipelines",
         logoUrl: getBrandLogo("gitlab.com"),
         category: "Developer Tools",
         methods: ["api_key", "oauth2"],
-        comingSoon: true
+        oauthSettings: [
+            {
+                name: "instanceUrl",
+                label: "GitLab Instance URL (optional)",
+                placeholder: "https://gitlab.example.com",
+                helpText: "Leave empty for GitLab.com, or enter your self-hosted GitLab URL",
+                required: false,
+                type: "text"
+            }
+        ],
+        apiKeySettings: {
+            keyLabel: "Personal Access Token",
+            keyPlaceholder: "glpat-xxxxxxxxxxxxxxxxxxxxx",
+            helpText: "Create a Personal Access Token with api scope",
+            helpUrl: "https://gitlab.com/-/profile/personal_access_tokens"
+        }
     },
     {
         provider: "bitbucket",
         displayName: "Bitbucket",
-        description: "Manage Bitbucket repositories",
+        description: "Manage Bitbucket repositories, pull requests, and pipelines",
         logoUrl: getBrandLogo("bitbucket.org"),
         category: "Developer Tools",
         methods: ["api_key", "oauth2"],
-        comingSoon: true
+        apiKeySettings: {
+            keyLabel: "App Password",
+            keyPlaceholder: "xxxxxxxxxxxxxxxxxxxx",
+            requiresSecret: true,
+            secretLabel: "Username",
+            secretPlaceholder: "your-username",
+            helpText: "Create an App Password in Bitbucket settings",
+            helpUrl: "https://bitbucket.org/account/settings/app-passwords/"
+        }
     },
 
     // Project Management

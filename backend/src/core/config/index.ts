@@ -238,6 +238,18 @@ export const config = {
             clientSecret: process.env.GITHUB_CLIENT_SECRET || ""
         },
 
+        // GitLab
+        gitlab: {
+            clientId: process.env.GITLAB_CLIENT_ID || "",
+            clientSecret: process.env.GITLAB_CLIENT_SECRET || ""
+        },
+
+        // Bitbucket
+        bitbucket: {
+            clientId: process.env.BITBUCKET_CLIENT_ID || "",
+            clientSecret: process.env.BITBUCKET_CLIENT_SECRET || ""
+        },
+
         // HubSpot
         hubspot: {
             clientId: process.env.HUBSPOT_CLIENT_ID || "",
@@ -493,6 +505,8 @@ export function getOAuthRedirectUri(provider: string): string {
         notion: "/oauth/notion/callback",
         airtable: "/oauth/airtable/callback",
         github: "/oauth/github/callback",
+        gitlab: "/oauth/gitlab/callback",
+        bitbucket: "/oauth/bitbucket/callback",
         hubspot: "/oauth/hubspot/callback",
         linear: "/oauth/linear/callback",
         figma: "/oauth/figma/callback",
@@ -569,6 +583,8 @@ export function getOAuthCredentials(provider: string): { clientId: string; clien
         notion: "notion",
         airtable: "airtable",
         github: "github",
+        gitlab: "gitlab",
+        bitbucket: "bitbucket",
         hubspot: "hubspot",
         linear: "linear",
         figma: "figma",
