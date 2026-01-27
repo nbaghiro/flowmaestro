@@ -690,6 +690,7 @@ export class ChatInterfaceRepository {
         return {
             id: row.id,
             userId: row.user_id,
+            workspaceId: row.workspace_id,
             name: row.name,
             slug: row.slug,
             agentId: row.agent_id,

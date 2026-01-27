@@ -36,6 +36,7 @@ interface AgentMessageRow {
     tool_calls: string | JsonValue[] | null;
     tool_name: string | null;
     tool_call_id: string | null;
+    attachments: string | JsonValue[] | null;
     created_at: string | Date;
 }
 
@@ -232,9 +233,9 @@ export class AgentExecutionRepository {
     async addMessage(input: CreateAgentMessageInput): Promise<AgentMessageModel> {
         const query = `
             INSERT INTO flowmaestro.agent_messages (
-                execution_id, role, content, tool_calls, tool_name, tool_call_id
+                execution_id, role, content, tool_calls, tool_name, tool_call_id, attachments
             )
-            VALUES ($1, $2, $3, $4, $5, $6)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
             RETURNING *
         `;
 
@@ -244,7 +245,8 @@ export class AgentExecutionRepository {
             input.content,
             input.tool_calls ? JSON.stringify(input.tool_calls) : null,
             input.tool_name || null,
-            input.tool_call_id || null
+            input.tool_call_id || null,
+            input.attachments ? JSON.stringify(input.attachments) : "[]"
         ];
 
         const result = await db.query<AgentMessageRow>(query, values);
@@ -313,6 +315,7 @@ export class AgentExecutionRepository {
             tool_calls?: unknown[];
             tool_name?: string;
             tool_call_id?: string;
+            attachments?: unknown[];
         }>
     ): Promise<void> {
         if (messages.length === 0) {
@@ -326,7 +329,7 @@ export class AgentExecutionRepository {
 
         for (const msg of messages) {
             valueStrings.push(
-                `($${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++})`
+                `($${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++}, $${paramIndex++})`
             );
             values.push(
                 threadId,
@@ -336,13 +339,14 @@ export class AgentExecutionRepository {
                 msg.tool_calls ? JSON.stringify(msg.tool_calls) : null,
                 msg.tool_name || null,
                 msg.tool_call_id || null,
+                msg.attachments ? JSON.stringify(msg.attachments) : "[]",
                 msg.timestamp || new Date()
             );
         }
 
         const query = `
             INSERT INTO flowmaestro.agent_messages (
-                thread_id, execution_id, role, content, tool_calls, tool_name, tool_call_id, created_at
+                thread_id, execution_id, role, content, tool_calls, tool_name, tool_call_id, attachments, created_at
             )
             VALUES ${valueStrings.join(", ")}
             ON CONFLICT DO NOTHING
@@ -374,6 +378,11 @@ export class AgentExecutionRepository {
                     ? JSON.parse(row.tool_calls)
                     : row.tool_calls
                 : null,
+            attachments: row.attachments
+                ? typeof row.attachments === "string"
+                    ? JSON.parse(row.attachments)
+                    : row.attachments
+                : [],
             created_at: new Date(row.created_at)
         };
     }

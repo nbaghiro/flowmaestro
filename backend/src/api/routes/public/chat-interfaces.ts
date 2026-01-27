@@ -2,13 +2,24 @@ import { FastifyInstance } from "fastify";
 import type {
     CreateChatSessionInput,
     ChatSessionResponse,
+    ChatMessageAttachment,
+    JsonObject,
     PublicChatMessage,
     SendChatMessageInput
 } from "@flowmaestro/shared";
 import { createServiceLogger } from "../../../core/logging";
+import { ChatInterfaceAttachmentProcessor } from "../../../services/ChatInterfaceAttachmentProcessor";
+import { AgentExecutionRepository } from "../../../storage/repositories/AgentExecutionRepository";
 import { ChatInterfaceRepository } from "../../../storage/repositories/ChatInterfaceRepository";
 import { ChatInterfaceSessionRepository } from "../../../storage/repositories/ChatInterfaceSessionRepository";
-import { chatInterfaceRateLimiter } from "../../middleware/chatInterfaceRateLimiter";
+import { ThreadRepository } from "../../../storage/repositories/ThreadRepository";
+import { getTemporalClient } from "../../../temporal/client";
+import { TASK_QUEUES } from "../../../temporal/core";
+import { agentOrchestratorWorkflow } from "../../../temporal/workflows/agent-orchestrator";
+import {
+    chatInterfaceRateLimiter,
+    checkChatRateLimit
+} from "../../middleware/chatInterfaceRateLimiter";
 
 const logger = createServiceLogger("PublicChatInterfaceRoutes");
 
@@ -68,8 +79,8 @@ export async function publicChatInterfaceRoutes(fastify: FastifyInstance) {
             // Try to resume existing session
             let session = null;
 
-            // First, try to resume by persistence token (localStorage)
-            if (body.persistenceToken && chatInterface.persistenceType === "local_storage") {
+            // First, try to resume by persistence token (both session and local_storage types)
+            if (body.persistenceToken) {
                 session = await sessionRepo.findByPersistenceToken(
                     chatInterface.id,
                     body.persistenceToken
@@ -95,10 +106,8 @@ export async function publicChatInterfaceRoutes(fastify: FastifyInstance) {
 
             // Create new session if none found
             if (!session) {
-                const persistenceToken =
-                    chatInterface.persistenceType === "local_storage"
-                        ? sessionRepo.generatePersistenceToken()
-                        : undefined;
+                // Generate persistence token for both session and local_storage types
+                const persistenceToken = sessionRepo.generatePersistenceToken();
 
                 session = await sessionRepo.create({
                     interfaceId: chatInterface.id,
@@ -115,14 +124,38 @@ export async function publicChatInterfaceRoutes(fastify: FastifyInstance) {
                 );
             }
 
+            // Load existing messages if resuming a session with a thread
+            let existingMessages: PublicChatMessage[] = [];
+            if (session.threadId) {
+                const executionRepo = new AgentExecutionRepository();
+                const messages = await executionRepo.getMessagesByThread(session.threadId);
+                existingMessages = messages
+                    .filter((m) => m.role === "user" || m.role === "assistant")
+                    .map((m) => ({
+                        id: m.id,
+                        role: m.role as "user" | "assistant",
+                        content: m.content,
+                        timestamp: m.created_at.toISOString(),
+                        ...(m.attachments &&
+                            m.attachments.length > 0 && {
+                                attachments: m.attachments.map((att: ChatMessageAttachment) => ({
+                                    fileName: att.fileName || "unknown",
+                                    fileSize: att.fileSize || 0,
+                                    mimeType: att.mimeType || "application/octet-stream",
+                                    url: att.downloadUrl || att.url || ""
+                                }))
+                            })
+                    }));
+            }
+
             const response: ChatSessionResponse = {
                 sessionId: session.id,
                 sessionToken: session.sessionToken,
-                threadId: session.threadId
-                // Phase 2 will add: existingMessages from thread
+                threadId: session.threadId,
+                existingMessages: existingMessages.length > 0 ? existingMessages : undefined
             };
 
-            // Include persistence token for localStorage sessions
+            // Include persistence token for session resumption (both session and local_storage types)
             if (session.persistenceToken) {
                 response.persistenceToken = session.persistenceToken;
             }
@@ -168,9 +201,28 @@ export async function publicChatInterfaceRoutes(fastify: FastifyInstance) {
                 });
             }
 
-            // Phase 1: Return empty messages array
-            // Phase 2 will add thread message retrieval via ThreadRepository
-            const messages: PublicChatMessage[] = [];
+            // Phase 2: Return thread messages via ThreadRepository
+            let messages: PublicChatMessage[] = [];
+
+            if (session.threadId) {
+                const executionRepo = new AgentExecutionRepository();
+                const threadMessages = await executionRepo.getMessagesByThread(session.threadId);
+
+                messages = threadMessages.map((msg) => ({
+                    id: msg.id,
+                    role: msg.role as "user" | "assistant",
+                    content: msg.content,
+                    timestamp: msg.created_at.toISOString(),
+                    attachments: (msg.attachments || [])
+                        .filter((a) => a.fileName && a.url && a.mimeType)
+                        .map((a) => ({
+                            fileName: a.fileName!,
+                            fileSize: a.fileSize || 0,
+                            mimeType: a.mimeType!,
+                            url: a.downloadUrl || a.url!
+                        }))
+                }));
+            }
 
             return reply.send({
                 success: true,
@@ -214,6 +266,24 @@ export async function publicChatInterfaceRoutes(fastify: FastifyInstance) {
                     });
                 }
 
+                // Check rate limit manually
+                if (body.sessionToken) {
+                    const limit = await checkChatRateLimit(
+                        chatInterface.id,
+                        body.sessionToken,
+                        chatInterface.rateLimitMessages || 10,
+                        chatInterface.rateLimitWindowSeconds || 60
+                    );
+
+                    if (!limit.allowed) {
+                        return reply.status(429).send({
+                            success: false,
+                            error: "Rate limit exceeded",
+                            resetAt: limit.resetAt
+                        });
+                    }
+                }
+
                 // Find session by token
                 const session = await sessionRepo.findBySessionToken(
                     chatInterface.id,
@@ -238,26 +308,133 @@ export async function publicChatInterfaceRoutes(fastify: FastifyInstance) {
                 // Increment message count
                 await sessionRepo.incrementMessageCount(session.id);
 
-                // Phase 1: Just acknowledge the message
-                // Phase 2 will add:
-                // - Create thread if needed
-                // - Execute agent
-                // - Stream response
+                // Phase 2 Implementation:
+                // 1. Get or create thread
+                const threadRepo = new ThreadRepository();
+
+                let threadId = session.threadId;
+                if (!threadId) {
+                    const thread = await threadRepo.create({
+                        user_id: chatInterface.userId,
+                        agent_id: chatInterface.agentId,
+                        workspace_id: chatInterface.workspaceId,
+                        title: `Chat: ${chatInterface.name}`,
+                        metadata: {
+                            source: "chat_interface",
+                            interfaceId: chatInterface.id,
+                            sessionId: session.id
+                        }
+                    });
+                    threadId = thread.id;
+                    await sessionRepo.updateThreadId(session.id, threadId);
+                }
+
+                // 1.5. Process file attachments for RAG (if any)
+                if (body.attachments && body.attachments.length > 0) {
+                    try {
+                        const attachmentProcessor = new ChatInterfaceAttachmentProcessor();
+                        const processingResults = await attachmentProcessor.processAttachments({
+                            attachments: body.attachments,
+                            sessionId: session.id,
+                            threadId,
+                            userId: chatInterface.userId
+                        });
+
+                        const successCount = processingResults.filter((r) => r.success).length;
+                        const totalChunks = processingResults.reduce(
+                            (sum, r) => sum + r.chunksCreated,
+                            0
+                        );
+
+                        logger.info(
+                            {
+                                sessionId: session.id,
+                                attachmentCount: body.attachments.length,
+                                successCount,
+                                totalChunks
+                            },
+                            "Attachment processing completed"
+                        );
+                    } catch (error) {
+                        // Log but don't fail the request - attachments are optional enhancement
+                        logger.error(
+                            { sessionId: session.id, error },
+                            "Failed to process attachments (continuing without RAG)"
+                        );
+                    }
+                }
+
+                // 2. Create execution record
+                const executionRepo = new AgentExecutionRepository();
+                // Load history for context
+                const threadMessages = await executionRepo.getMessagesByThread(threadId);
+
+                // Map AgentMessageModel properly to ThreadMessage for history
+                const mappedHistory = threadMessages.map((msg) => ({
+                    id: msg.id,
+                    role: msg.role,
+                    content: msg.content,
+                    tool_calls: msg.tool_calls || undefined,
+                    tool_name: msg.tool_name || undefined,
+                    tool_call_id: msg.tool_call_id || undefined,
+                    timestamp: msg.created_at
+                }));
+
+                const execution = await executionRepo.create({
+                    agent_id: chatInterface.agentId,
+                    user_id: chatInterface.userId,
+                    thread_id: threadId,
+                    status: "running",
+                    thread_history: mappedHistory,
+                    metadata: {
+                        source: "chat_interface",
+                        interfaceId: chatInterface.id,
+                        sessionToken: body.sessionToken,
+                        ...(body.attachments &&
+                            body.attachments.length > 0 && {
+                                attachments: JSON.parse(JSON.stringify(body.attachments))
+                            })
+                    } as JsonObject
+                });
+
+                // Update session with execution info
+                await sessionRepo.updateExecutionStatus(session.id, execution.id, "running");
+
+                // 3. Start Temporal workflow
+                const temporal = await getTemporalClient();
+                await temporal.workflow.start(agentOrchestratorWorkflow, {
+                    taskQueue: TASK_QUEUES.ORCHESTRATOR,
+                    workflowId: `agent-execution-${execution.id}`,
+                    args: [
+                        {
+                            executionId: execution.id,
+                            agentId: chatInterface.agentId,
+                            userId: chatInterface.userId,
+                            threadId,
+                            initialMessage: body.message,
+                            attachments: body.attachments,
+                            workspaceId: chatInterface.workspaceId,
+                            threadOnly: true // Skip global event channel, use thread-only for SSE
+                        }
+                    ]
+                });
 
                 logger.info(
                     {
                         sessionId: session.id,
                         chatInterfaceId: chatInterface.id,
-                        messageLength: body.message.length
+                        executionId: execution.id,
+                        threadId
                     },
-                    "Chat message received"
+                    "Chat execution started"
                 );
 
                 return reply.status(201).send({
                     success: true,
                     data: {
-                        messageId: `msg_${Date.now()}`, // Temporary ID for Phase 1
-                        status: "stored"
+                        executionId: execution.id,
+                        threadId,
+                        status: "running"
                     }
                 });
             } catch (error) {

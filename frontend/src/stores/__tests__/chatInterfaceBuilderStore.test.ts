@@ -32,6 +32,7 @@ function createMockChatInterface(overrides?: Record<string, unknown>) {
     const defaults = {
         id: "chat-123",
         userId: "user-123",
+        workspaceId: "workspace-123",
         name: "Test Chat",
         slug: "test-chat",
         agentId: "agent-123",

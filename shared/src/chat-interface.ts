@@ -26,6 +26,7 @@ export interface ChatInterfaceSuggestedPrompt {
 export interface ChatInterface {
     id: string;
     userId: string;
+    workspaceId: string;
 
     // Identity
     name: string;
@@ -102,6 +103,8 @@ export interface ChatInterfaceSession {
     firstSeenAt: Date;
     lastActivityAt: Date;
     endedAt: Date | null;
+    currentExecutionId: string | null;
+    executionStatus: "idle" | "running" | "completed" | "failed";
 }
 
 // Create chat interface input
@@ -207,17 +210,30 @@ export interface PublicChatMessageAttachment {
     url: string; // Signed download URL
 }
 
+// Chat message attachment
+export interface ChatMessageAttachment {
+    id?: string;
+    type: "file" | "url";
+    fileName?: string;
+    fileSize?: number;
+    mimeType?: string;
+    gcsUri?: string;
+    downloadUrl?: string; // Signed URL for viewing
+    url?: string;
+}
+
 // Send message input
 export interface SendChatMessageInput {
     sessionToken: string;
     message: string;
-    attachments?: PublicChatMessageAttachment[];
+    attachments?: ChatMessageAttachment[];
 }
 
 // Send message response
 export interface SendChatMessageResponse {
-    messageId: string;
-    status: "stored" | "processing";
+    executionId: string;
+    threadId: string;
+    status: "running" | "queued";
 }
 
 // SSE streaming events (for Phase 2)

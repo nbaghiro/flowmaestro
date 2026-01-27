@@ -85,9 +85,12 @@ export function PublicChatPage() {
         );
     }
 
-    const handleSendMessage = () => {
-        if (inputValue.trim()) {
-            sendMessage(inputValue);
+    const handleSendMessage = (
+        message: string,
+        attachments?: import("@flowmaestro/shared").ChatMessageAttachment[]
+    ) => {
+        if (message.trim() || (attachments && attachments.length > 0)) {
+            sendMessage(message, attachments);
         }
     };
 

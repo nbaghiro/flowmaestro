@@ -1,4 +1,4 @@
-import type { JsonObject } from "@flowmaestro/shared";
+import type { JsonObject, ChatMessageAttachment } from "@flowmaestro/shared";
 
 export type AgentExecutionStatus = "running" | "completed" | "failed" | "cancelled";
 export type MessageRole = "user" | "assistant" | "system" | "tool";
@@ -16,6 +16,7 @@ export interface ThreadMessage {
     tool_calls?: ToolCall[];
     tool_name?: string;
     tool_call_id?: string;
+    attachments?: ChatMessageAttachment[];
     timestamp: Date;
 }
 
@@ -43,6 +44,7 @@ export interface AgentMessageModel {
     tool_calls: ToolCall[] | null;
     tool_name: string | null;
     tool_call_id: string | null;
+    attachments: ChatMessageAttachment[];
     created_at: Date;
 }
 
@@ -74,4 +76,5 @@ export interface CreateAgentMessageInput {
     tool_calls?: ToolCall[];
     tool_name?: string;
     tool_call_id?: string;
+    attachments?: ChatMessageAttachment[];
 }

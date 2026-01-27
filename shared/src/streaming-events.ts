@@ -175,4 +175,90 @@ export type ThreadStreamingEvent =
     | ToolStartedEvent
     | ToolCompletedEvent
     | ToolFailedEvent
-    | TokensUpdatedEvent;
+    | TokensUpdatedEvent
+    | AgentExecutionStartedEvent
+    | AgentMessageNewEvent
+    | AgentThinkingEvent
+    | AgentTokenEvent
+    | AgentExecutionCompletedEvent
+    | AgentExecutionFailedEvent;
+
+// ============================================================================
+// Legacy Agent Events (used by chat interface SSE streaming)
+// These events are published to thread-specific channels for real-time updates
+// ============================================================================
+
+/**
+ * Legacy event types for backward compatibility with chat interface
+ */
+export type LegacyAgentEventType =
+    | "agent:execution:started"
+    | "agent:message:new"
+    | "agent:thinking"
+    | "agent:token"
+    | "agent:execution:completed"
+    | "agent:execution:failed";
+
+/**
+ * Base interface for legacy agent events
+ */
+export interface BaseLegacyAgentEvent {
+    type: LegacyAgentEventType;
+    timestamp: number;
+    executionId: string;
+}
+
+/**
+ * Emitted when agent execution starts
+ */
+export interface AgentExecutionStartedEvent extends BaseLegacyAgentEvent {
+    type: "agent:execution:started";
+    agentId: string;
+    agentName: string;
+}
+
+/**
+ * Emitted when a new message is added to the thread
+ */
+export interface AgentMessageNewEvent extends BaseLegacyAgentEvent {
+    type: "agent:message:new";
+    threadId: string;
+    message: JsonObject;
+}
+
+/**
+ * Emitted when agent is thinking
+ */
+export interface AgentThinkingEvent extends BaseLegacyAgentEvent {
+    type: "agent:thinking";
+    threadId: string;
+}
+
+/**
+ * Emitted for each token during streaming
+ */
+export interface AgentTokenEvent extends BaseLegacyAgentEvent {
+    type: "agent:token";
+    token: string;
+}
+
+/**
+ * Emitted when agent execution completes successfully
+ */
+export interface AgentExecutionCompletedEvent extends BaseLegacyAgentEvent {
+    type: "agent:execution:completed";
+    threadId: string;
+    status: "completed";
+    finalMessage: string;
+    iterations: number;
+}
+
+/**
+ * Emitted when agent execution fails
+ */
+export interface AgentExecutionFailedEvent extends BaseLegacyAgentEvent {
+    type: "agent:execution:failed";
+    threadId: string;
+    status: "failed";
+    error: string;
+}

@@ -1,111 +1,111 @@
 import { FastifyRequest, FastifyReply } from "fastify";
-import { createServiceLogger } from "../../core/logging";
+import { redis } from "../../services/redis";
 
-const logger = createServiceLogger("ChatInterfaceRateLimiter");
-
-// In-memory rate limit tracking
-// Note: In production with multiple instances, use Redis
-interface RateLimitEntry {
-    count: number;
-    resetAt: number;
-}
-
-// Track by session token for authenticated chat sessions
-const sessionLimits = new Map<string, RateLimitEntry>();
-// Fallback to IP for pre-session requests
-const ipLimits = new Map<string, RateLimitEntry>();
-
-// Clean up expired entries periodically
-setInterval(() => {
+export async function checkChatRateLimit(
+    interfaceId: string,
+    sessionToken: string,
+    limit: number = 10,
+    windowSeconds: number = 60
+): Promise<{ allowed: boolean; remaining: number; resetAt: number }> {
     const now = Date.now();
-    for (const [key, entry] of sessionLimits.entries()) {
-        if (entry.resetAt <= now) {
-            sessionLimits.delete(key);
-        }
-    }
-    for (const [key, entry] of ipLimits.entries()) {
-        if (entry.resetAt <= now) {
-            ipLimits.delete(key);
-        }
-    }
-}, 60000); // Clean up every minute
+    const windowMs = windowSeconds * 1000;
+    const key = `chat-rate:${interfaceId}:${sessionToken}`;
 
-export interface ChatRateLimitOptions {
-    limitPerMinute: number;
-    windowSeconds: number;
-}
+    // Cleanup first
+    await redis.zremrangebyscore(key, 0, now - windowMs);
 
-/**
- * Creates a rate limiter middleware for chat interface messages
- * Uses session token if available, otherwise falls back to IP
- * @param options Rate limit configuration
- */
-export function createChatInterfaceRateLimiter(
-    options: ChatRateLimitOptions = {
-        limitPerMinute: 10,
-        windowSeconds: 60
-    }
-) {
-    return async (request: FastifyRequest, reply: FastifyReply) => {
-        const now = Date.now();
-        const windowMs = options.windowSeconds * 1000;
+    // Get current count
+    const count = await redis.zcard(key);
 
-        // Get session token from header or body
-        const sessionToken =
-            (request.headers["x-session-token"] as string) ||
-            ((request.body as Record<string, unknown>)?.sessionToken as string);
-
-        // Determine the rate limit key
-        const limitKey = sessionToken || request.ip;
-        const limitsMap = sessionToken ? sessionLimits : ipLimits;
-
-        const entry = limitsMap.get(limitKey);
-
-        if (entry && entry.resetAt > now) {
-            // Within the rate limit window
-            if (entry.count >= options.limitPerMinute) {
-                logger.warn(
-                    {
-                        key: sessionToken ? "session" : "ip",
-                        limitKey: limitKey.substring(0, 8) + "...",
-                        count: entry.count
-                    },
-                    "Rate limit exceeded for chat message"
-                );
-                return reply.status(429).send({
-                    success: false,
-                    error: "Too many messages. Please wait before sending another.",
-                    retryAfter: Math.ceil((entry.resetAt - now) / 1000)
-                });
-            }
-            // Increment count
-            entry.count++;
-        } else {
-            // New window
-            limitsMap.set(limitKey, {
-                count: 1,
-                resetAt: now + windowMs
-            });
+    if (count >= limit) {
+        // Calculate reset time (timestamp of oldest request + window)
+        const oldest = await redis.zrange(key, 0, 0, "WITHSCORES");
+        let resetAt = now + windowMs;
+        if (oldest && oldest.length > 1) {
+            resetAt = parseInt(oldest[1]) + windowMs;
         }
 
-        // Continue to handler
+        return {
+            allowed: false,
+            remaining: 0,
+            resetAt
+        };
+    }
+
+    // Allowed - add current request
+    await redis.zadd(key, now, `${now}-${Math.random()}`);
+    await redis.expire(key, windowSeconds + 5);
+
+    return {
+        allowed: true,
+        remaining: limit - (count + 1),
+        resetAt: now + windowMs
     };
 }
 
 /**
- * Default rate limiter instance (10 messages per minute)
+ * IP-based rate limiter for chat interface endpoints.
+ * This provides a first line of defense against abuse before session-specific limits.
+ * Uses a higher limit (100 req/min per IP) as a baseline protection.
  */
-export const chatInterfaceRateLimiter = createChatInterfaceRateLimiter({
-    limitPerMinute: 10,
-    windowSeconds: 60
-});
+export const chatInterfaceRateLimiter = async (request: FastifyRequest, reply: FastifyReply) => {
+    const ip = request.ip || "unknown";
+    const limit = 100; // 100 requests per minute per IP
+    const windowSeconds = 60;
+
+    const result = await checkIpRateLimit(ip, limit, windowSeconds);
+
+    if (!result.allowed) {
+        return reply.status(429).send({
+            success: false,
+            error: "Too many requests. Please slow down.",
+            resetAt: result.resetAt
+        });
+    }
+
+    // Allowed - continue to route handler which may apply session-specific limits
+    return;
+};
 
 /**
- * Get custom rate limiter based on chat interface settings
+ * IP-based rate limiting using Redis sliding window
  */
-export function getChatInterfaceRateLimiter(limitMessages: number, windowSeconds: number) {
-    return createChatInterfaceRateLimiter({
-        limitPerMinute: limitMessages,
-        windowSeconds: windowSeconds
-    });
+async function checkIpRateLimit(
+    ip: string,
+    limit: number,
+    windowSeconds: number
+): Promise<{ allowed: boolean; remaining: number; resetAt: number }> {
+    const now = Date.now();
+    const windowMs = windowSeconds * 1000;
+    const key = `chat-ip-rate:${ip}`;
+
+    // Cleanup old entries
+    await redis.zremrangebyscore(key, 0, now - windowMs);
+
+    // Get current count
+    const count = await redis.zcard(key);
+
+    if (count >= limit) {
+        const oldest = await redis.zrange(key, 0, 0, "WITHSCORES");
+        let resetAt = now + windowMs;
+        if (oldest && oldest.length > 1) {
+            resetAt = parseInt(oldest[1]) + windowMs;
+        }
+
+        return {
+            allowed: false,
+            remaining: 0,
+            resetAt
+        };
+    }
+
+    // Allowed - add current request
+    await redis.zadd(key, now, `${now}-${Math.random()}`);
+    await redis.expire(key, windowSeconds + 5);
+
+    return {
+        allowed: true,
+        remaining: limit - (count + 1),
+        resetAt: now + windowMs
+    };
 }

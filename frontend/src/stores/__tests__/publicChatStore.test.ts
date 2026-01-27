@@ -368,7 +368,7 @@ describe("publicChatStore", () => {
         it("sends message successfully with optimistic update", async () => {
             vi.mocked(sendChatMessage).mockResolvedValue({
                 success: true,
-                data: { messageId: "real-msg-id", status: "stored" }
+                data: { executionId: "exec-123", threadId: "thread-123", status: "running" }
             });
 
             const result = await usePublicChatStore.getState().sendMessage("Hello!");
@@ -377,7 +377,7 @@ describe("publicChatStore", () => {
             const state = usePublicChatStore.getState();
             expect(state.messages).toHaveLength(1);
             expect(state.messages[0].content).toBe("Hello!");
-            expect(state.messages[0].id).toBe("real-msg-id");
+            expect(state.messages[0].id).toMatch(/^temp_\d+$/); // Temp ID until SSE updates
             expect(state.isSending).toBe(false);
         });
 
@@ -386,7 +386,7 @@ describe("publicChatStore", () => {
 
             vi.mocked(sendChatMessage).mockResolvedValue({
                 success: true,
-                data: { messageId: "msg-id", status: "stored" }
+                data: { executionId: "exec-123", threadId: "thread-123", status: "running" }
             });
 
             await usePublicChatStore.getState().sendMessage("Hello!");
@@ -422,7 +422,7 @@ describe("publicChatStore", () => {
         it("reverts on unsuccessful response", async () => {
             vi.mocked(sendChatMessage).mockResolvedValue({
                 success: false,
-                data: null as unknown as { messageId: string; status: string },
+                data: null as unknown as { executionId: string; threadId: string; status: string },
                 error: "Rate limited"
             });
 

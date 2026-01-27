@@ -47,6 +47,7 @@ describe("Agent Event Activities", () => {
         it("should emit execution started event with correct data", async () => {
             await emitAgentExecutionStarted({
                 executionId: "exec-1",
+                threadId: "thread-1",
                 agentId: "agent-1",
                 agentName: "Test Agent"
             });
@@ -56,6 +57,7 @@ describe("Agent Event Activities", () => {
                 expect.objectContaining({
                     type: "agent:execution:started",
                     executionId: "exec-1",
+                    threadId: "thread-1",
                     agentId: "agent-1",
                     agentName: "Test Agent",
                     timestamp: expect.any(Number)
@@ -68,6 +70,7 @@ describe("Agent Event Activities", () => {
 
             await emitAgentExecutionStarted({
                 executionId: "exec-1",
+                threadId: "thread-1",
                 agentId: "agent-1",
                 agentName: "Test Agent"
             });
@@ -235,6 +238,7 @@ describe("Agent Event Activities", () => {
         it("should emit token event for streaming", async () => {
             await emitAgentToken({
                 executionId: "exec-1",
+                threadId: "thread-1",
                 token: "Hello"
             });
 
@@ -243,6 +247,7 @@ describe("Agent Event Activities", () => {
                 expect.objectContaining({
                     type: "agent:token",
                     executionId: "exec-1",
+                    threadId: "thread-1",
                     token: "Hello",
                     timestamp: expect.any(Number)
                 })
@@ -254,6 +259,7 @@ describe("Agent Event Activities", () => {
 
             await emitAgentToken({
                 executionId: "exec-1",
+                threadId: "thread-1",
                 token: longToken
             });
 
@@ -269,6 +275,7 @@ describe("Agent Event Activities", () => {
 
             await emitAgentToken({
                 executionId: "exec-1",
+                threadId: "thread-1",
                 token: specialToken
             });
 
@@ -526,6 +533,7 @@ describe("Agent Event Activities", () => {
             // Emit all events
             await emitAgentExecutionStarted({
                 executionId: "e",
+                threadId: "t",
                 agentId: "a",
                 agentName: "n"
             });
@@ -540,7 +548,7 @@ describe("Agent Event Activities", () => {
                 }
             });
             await emitAgentThinking({ executionId: "e", threadId: "t" });
-            await emitAgentToken({ executionId: "e", token: "t" });
+            await emitAgentToken({ executionId: "e", threadId: "t", token: "t" });
             await emitAgentToolCallStarted({
                 executionId: "e",
                 threadId: "t",

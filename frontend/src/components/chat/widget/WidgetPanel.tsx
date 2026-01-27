@@ -1,4 +1,8 @@
-import type { PublicChatInterface, PublicChatMessage } from "@flowmaestro/shared";
+import type {
+    PublicChatInterface,
+    PublicChatMessage,
+    ChatMessageAttachment
+} from "@flowmaestro/shared";
 import { ChatContainer } from "../public";
 
 interface WidgetPanelProps {
@@ -9,7 +13,7 @@ interface WidgetPanelProps {
     isTyping?: boolean;
     error: string | null;
     onInputChange: (value: string) => void;
-    onSendMessage: () => void;
+    onSendMessage: (message: string, attachments?: ChatMessageAttachment[]) => void;
     onClose: () => void;
 }
 

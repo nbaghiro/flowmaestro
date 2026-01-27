@@ -34,6 +34,7 @@ import type {
     ChatSessionResponse,
     CreateChatSessionInput,
     SendChatMessageInput,
+    ChatMessageAttachment,
     PublicChatMessage,
     Folder,
     FolderWithCounts,
@@ -4399,13 +4400,14 @@ export async function getChatSessionMessages(
 
 /**
  * Send a message in a chat session
+ * Returns executionId and threadId for streaming connection
  */
 export async function sendChatMessage(
     slug: string,
     input: SendChatMessageInput
 ): Promise<{
     success: boolean;
-    data: { messageId: string; status: string };
+    data: { executionId: string; threadId: string; status: string };
     error?: string;
 }> {
     const response = await apiFetch(`${API_BASE_URL}/public/chat-interfaces/${slug}/messages`, {
@@ -4422,6 +4424,45 @@ export async function sendChatMessage(
     }
 
     return response.json();
+}
+
+/**
+ * Upload a file for a chat session
+ */
+export async function uploadChatInterfaceFile(
+    slug: string,
+    sessionToken: string,
+    file: File
+): Promise<{
+    success: boolean;
+    data: ChatMessageAttachment;
+    error?: string;
+}> {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await fetch(
+        `${API_BASE_URL}/public/chat-interfaces/${slug}/sessions/${sessionToken}/files`,
+        {
+            method: "POST",
+            body: formData
+            // No content-type header, let browser set boundary
+        }
+    );
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Get the SSE stream URL for chat interface execution
+ */
+export function getChatInterfaceStreamUrl(slug: string, sessionToken: string): string {
+    return `${API_BASE_URL}/public/chat-interfaces/${slug}/sessions/${sessionToken}/stream`;
 }
 
 // ===== API Keys =====

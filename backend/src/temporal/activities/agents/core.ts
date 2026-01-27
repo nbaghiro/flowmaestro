@@ -908,7 +908,7 @@ function sanitizeJsonSchema(schema: JsonObject): JsonObject {
 // =============================================================================
 
 async function callOpenAI(input: OpenAICallInput): Promise<LLMResponse> {
-    const { model, apiKey, messages, tools, temperature, maxTokens, executionId } = input;
+    const { model, apiKey, messages, tools, temperature, maxTokens, executionId, threadId } = input;
 
     // Format messages for OpenAI (sanitize tool names for consistency)
     const formattedMessages = messages.map((msg) => ({
@@ -1029,7 +1029,7 @@ async function callOpenAI(input: OpenAICallInput): Promise<LLMResponse> {
 
                         if (delta?.content && executionId) {
                             // Emit token for streaming
-                            await emitAgentToken({ executionId, token: delta.content });
+                            await emitAgentToken({ executionId, token: delta.content, threadId });
                             fullContent += delta.content;
                         }
 
@@ -1125,7 +1125,7 @@ async function callOpenAI(input: OpenAICallInput): Promise<LLMResponse> {
 }
 
 async function callAnthropic(input: AnthropicCallInput): Promise<LLMResponse> {
-    const { model, apiKey, messages, tools, temperature, maxTokens, executionId } = input;
+    const { model, apiKey, messages, tools, temperature, maxTokens, executionId, threadId } = input;
 
     // Extract system prompt (first message)
     const systemPrompt = messages.find((m) => m.role === "system")?.content || "";
@@ -1267,7 +1267,7 @@ async function callAnthropic(input: AnthropicCallInput): Promise<LLMResponse> {
                         const text = parsed.delta.text;
                         if (text && executionId) {
                             // Emit token immediately for streaming
-                            await emitAgentToken({ executionId, token: text });
+                            await emitAgentToken({ executionId, token: text, threadId });
                             fullContent += text;
                         }
                     }
@@ -1365,7 +1365,7 @@ async function callAnthropic(input: AnthropicCallInput): Promise<LLMResponse> {
 }
 
 async function callGoogle(input: GoogleCallInput): Promise<LLMResponse> {
-    const { model, apiKey, messages, tools, temperature, maxTokens, executionId } = input;
+    const { model, apiKey, messages, tools, temperature, maxTokens, executionId, threadId } = input;
 
     // Extract system prompt
     const systemPrompt = messages.find((m) => m.role === "system")?.content || "";
@@ -1491,7 +1491,11 @@ async function callGoogle(input: GoogleCallInput): Promise<LLMResponse> {
                             if (part.text) {
                                 fullContent += part.text;
                                 if (executionId) {
-                                    await emitAgentToken({ executionId, token: part.text });
+                                    await emitAgentToken({
+                                        executionId,
+                                        token: part.text,
+                                        threadId
+                                    });
                                 }
                             }
                             if (part.functionCall) {
@@ -1533,7 +1537,7 @@ async function callGoogle(input: GoogleCallInput): Promise<LLMResponse> {
 }
 
 async function callCohere(input: CohereCallInput): Promise<LLMResponse> {
-    const { model, apiKey, messages, tools, temperature, maxTokens, executionId } = input;
+    const { model, apiKey, messages, tools, temperature, maxTokens, executionId, threadId } = input;
 
     // Extract system prompt
     const systemPrompt = messages.find((m) => m.role === "system")?.content || "";
@@ -1629,7 +1633,7 @@ async function callCohere(input: CohereCallInput): Promise<LLMResponse> {
                 if (parsed.event_type === "text-generation" && parsed.text) {
                     fullContent += parsed.text;
                     if (executionId) {
-                        await emitAgentToken({ executionId, token: parsed.text });
+                        await emitAgentToken({ executionId, token: parsed.text, threadId });
                     }
                 }
 
@@ -1675,7 +1679,7 @@ async function callCohere(input: CohereCallInput): Promise<LLMResponse> {
 }
 
 async function callHuggingFace(input: HuggingFaceCallInput): Promise<LLMResponse> {
-    const { model, apiKey, messages, temperature, maxTokens, executionId } = input;
+    const { model, apiKey, messages, temperature, maxTokens, executionId, threadId } = input;
 
     // Format messages for Hugging Face (OpenAI-compatible format)
     const formattedMessages = messages.map((msg) => ({
@@ -1730,7 +1734,7 @@ async function callHuggingFace(input: HuggingFaceCallInput): Promise<LLMResponse
                         if (content) {
                             fullContent += content;
                             if (executionId) {
-                                await emitAgentToken({ executionId, token: content });
+                                await emitAgentToken({ executionId, token: content, threadId });
                             }
                         }
                     } catch {

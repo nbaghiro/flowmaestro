@@ -1,7 +1,7 @@
 /**
  * Chat Interface Rate Limiter Tests
  *
- * Tests for in-memory rate limiting middleware (chatInterfaceRateLimiter.ts)
+ * Tests for Redis-based rate limiting middleware (chatInterfaceRateLimiter.ts)
  */
 
 import {
@@ -11,302 +11,163 @@ import {
     assertNoResponse
 } from "../../../../__tests__/helpers/middleware-test-utils";
 
-// Mock the logger
-jest.mock("../../../core/logging", () => ({
-    createServiceLogger: jest.fn().mockReturnValue({
-        trace: jest.fn(),
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        fatal: jest.fn()
-    })
+// Mock Redis
+const mockZremrangebyscore = jest.fn();
+const mockZcard = jest.fn();
+const mockZrange = jest.fn();
+const mockZadd = jest.fn();
+const mockExpire = jest.fn();
+
+jest.mock("../../../services/redis", () => ({
+    redis: {
+        zremrangebyscore: (...args: unknown[]) => mockZremrangebyscore(...args),
+        zcard: (...args: unknown[]) => mockZcard(...args),
+        zrange: (...args: unknown[]) => mockZrange(...args),
+        zadd: (...args: unknown[]) => mockZadd(...args),
+        expire: (...args: unknown[]) => mockExpire(...args)
+    }
 }));
 
-import {
-    createChatInterfaceRateLimiter,
-    chatInterfaceRateLimiter,
-    getChatInterfaceRateLimiter
-} from "../chatInterfaceRateLimiter";
+import { chatInterfaceRateLimiter, checkChatRateLimit } from "../chatInterfaceRateLimiter";
 
-// Type for rate limit error response body in tests
-interface RateLimitResponseBody {
-    error: string;
-    retryAfter: number;
-}
+describe("chatInterfaceRateLimiter", () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        // Default: allow requests (count = 0)
+        mockZremrangebyscore.mockResolvedValue(0);
+        mockZcard.mockResolvedValue(0);
+        mockZadd.mockResolvedValue(1);
+        mockExpire.mockResolvedValue(1);
+    });
 
-describe("createChatInterfaceRateLimiter", () => {
-    describe("Basic rate limiting", () => {
+    describe("IP-based rate limiting middleware", () => {
         it("should allow requests under the limit", async () => {
-            const middleware = createChatInterfaceRateLimiter({
-                limitPerMinute: 10,
-                windowSeconds: 60
-            });
+            mockZcard.mockResolvedValue(50); // 50 requests, limit is 100
 
             const request = createMockRequest({
-                ip: "unique-ip-1",
+                ip: "192.168.1.1",
                 headers: {}
             });
             const reply = createMockReply();
 
-            await middleware(request, reply);
-
-            assertNoResponse(reply);
-        });
-
-        it("should allow multiple requests up to the limit", async () => {
-            const middleware = createChatInterfaceRateLimiter({
-                limitPerMinute: 5,
-                windowSeconds: 60
-            });
-
-            const ip = `test-ip-${Date.now()}-1`;
-
-            // Make 5 requests (should all pass)
-            for (let i = 0; i < 5; i++) {
-                const request = createMockRequest({ ip, headers: {} });
-                const reply = createMockReply();
-                await middleware(request, reply);
-                assertNoResponse(reply);
-            }
-        });
-
-        it("should block requests over the limit", async () => {
-            const middleware = createChatInterfaceRateLimiter({
-                limitPerMinute: 3,
-                windowSeconds: 60
-            });
-
-            const ip = `test-ip-${Date.now()}-2`;
-
-            // Make 3 requests (should pass)
-            for (let i = 0; i < 3; i++) {
-                const request = createMockRequest({ ip, headers: {} });
-                const reply = createMockReply();
-                await middleware(request, reply);
-                assertNoResponse(reply);
-            }
-
-            // 4th request should be blocked
-            const request = createMockRequest({ ip, headers: {} });
-            const reply = createMockReply();
-            await middleware(request, reply);
-
-            assertErrorResponse(reply, 429);
-            const body = reply._tracking.sentBody as RateLimitResponseBody;
-            expect(body.error).toContain("Too many messages");
-            expect(body.retryAfter).toBeDefined();
-            expect(typeof body.retryAfter).toBe("number");
-        });
-    });
-
-    describe("Session token based limiting", () => {
-        it("should use session token from header for rate limiting", async () => {
-            const middleware = createChatInterfaceRateLimiter({
-                limitPerMinute: 2,
-                windowSeconds: 60
-            });
-
-            const sessionToken = `session-${Date.now()}-1`;
-
-            // First 2 requests should pass
-            for (let i = 0; i < 2; i++) {
-                const request = createMockRequest({
-                    ip: "different-ip-each-time-" + i,
-                    headers: { "x-session-token": sessionToken }
-                });
-                const reply = createMockReply();
-                await middleware(request, reply);
-                assertNoResponse(reply);
-            }
-
-            // 3rd request should be blocked (same session, different IP)
-            const request = createMockRequest({
-                ip: "another-ip",
-                headers: { "x-session-token": sessionToken }
-            });
-            const reply = createMockReply();
-            await middleware(request, reply);
-
-            assertErrorResponse(reply, 429);
-        });
-
-        it("should use session token from body for rate limiting", async () => {
-            const middleware = createChatInterfaceRateLimiter({
-                limitPerMinute: 2,
-                windowSeconds: 60
-            });
-
-            const sessionToken = `body-session-${Date.now()}`;
-
-            // Make 2 requests
-            for (let i = 0; i < 2; i++) {
-                const request = createMockRequest({
-                    ip: `ip-${i}`,
-                    headers: {},
-                    body: { sessionToken, message: "test" }
-                });
-                const reply = createMockReply();
-                await middleware(request, reply);
-                assertNoResponse(reply);
-            }
-
-            // 3rd should be blocked
-            const request = createMockRequest({
-                ip: "final-ip",
-                headers: {},
-                body: { sessionToken, message: "test" }
-            });
-            const reply = createMockReply();
-            await middleware(request, reply);
-
-            assertErrorResponse(reply, 429);
-        });
-
-        it("should track session and IP limits separately", async () => {
-            const middleware = createChatInterfaceRateLimiter({
-                limitPerMinute: 2,
-                windowSeconds: 60
-            });
-
-            const sessionToken = `separate-session-${Date.now()}`;
-            const ip = `separate-ip-${Date.now()}`;
-
-            // Use up session limit
-            for (let i = 0; i < 2; i++) {
-                const request = createMockRequest({
-                    ip: `random-ip-${i}`,
-                    headers: { "x-session-token": sessionToken }
-                });
-                await middleware(request, createMockReply());
-            }
-
-            // IP-based request should still work (different tracking)
-            const request = createMockRequest({
-                ip,
-                headers: {} // No session token, will use IP
-            });
-            const reply = createMockReply();
-            await middleware(request, reply);
-
-            assertNoResponse(reply);
-        });
-    });
-
-    describe("Window expiration", () => {
-        it("should reset count after window expires", async () => {
-            jest.useFakeTimers();
-
-            const middleware = createChatInterfaceRateLimiter({
-                limitPerMinute: 2,
-                windowSeconds: 1 // 1 second window for testing
-            });
-
-            const ip = `expiring-ip-${Date.now()}`;
-
-            // Use up the limit
-            for (let i = 0; i < 2; i++) {
-                const request = createMockRequest({ ip, headers: {} });
-                await middleware(request, createMockReply());
-            }
-
-            // Should be blocked
-            const blockedRequest = createMockRequest({ ip, headers: {} });
-            const blockedReply = createMockReply();
-            await middleware(blockedRequest, blockedReply);
-            assertErrorResponse(blockedReply, 429);
-
-            // Advance time past the window
-            jest.advanceTimersByTime(1100); // 1.1 seconds
-
-            // Should be allowed again
-            const newRequest = createMockRequest({ ip, headers: {} });
-            const newReply = createMockReply();
-            await middleware(newRequest, newReply);
-            assertNoResponse(newReply);
-
-            jest.useRealTimers();
-        });
-    });
-
-    describe("Retry-After calculation", () => {
-        it("should return correct retry-after seconds", async () => {
-            jest.useFakeTimers();
-            const now = Date.now();
-            jest.setSystemTime(now);
-
-            const middleware = createChatInterfaceRateLimiter({
-                limitPerMinute: 1,
-                windowSeconds: 60
-            });
-
-            const ip = `retry-after-ip-${now}`;
-
-            // Use up the limit
-            const request1 = createMockRequest({ ip, headers: {} });
-            await middleware(request1, createMockReply());
-
-            // Advance 30 seconds
-            jest.advanceTimersByTime(30000);
-
-            // Try again (should be blocked with ~30s retry-after)
-            const request2 = createMockRequest({ ip, headers: {} });
-            const reply = createMockReply();
-            await middleware(request2, reply);
-
-            assertErrorResponse(reply, 429);
-            const body = reply._tracking.sentBody as RateLimitResponseBody;
-            // Should be approximately 30 seconds remaining
-            expect(body.retryAfter).toBeLessThanOrEqual(31);
-            expect(body.retryAfter).toBeGreaterThan(0);
-
-            jest.useRealTimers();
-        });
-    });
-});
-
-describe("chatInterfaceRateLimiter (default instance)", () => {
-    it("should exist as a middleware function", () => {
-        expect(chatInterfaceRateLimiter).toBeDefined();
-        expect(typeof chatInterfaceRateLimiter).toBe("function");
-    });
-
-    it("should use default limit of 10 per minute", async () => {
-        const ip = `default-instance-ip-${Date.now()}`;
-
-        // Make 10 requests (should all pass)
-        for (let i = 0; i < 10; i++) {
-            const request = createMockRequest({ ip, headers: {} });
-            const reply = createMockReply();
             await chatInterfaceRateLimiter(request, reply);
-            assertNoResponse(reply);
-        }
 
-        // 11th should be blocked
-        const request = createMockRequest({ ip, headers: {} });
-        const reply = createMockReply();
-        await chatInterfaceRateLimiter(request, reply);
-        assertErrorResponse(reply, 429);
+            assertNoResponse(reply);
+            expect(mockZadd).toHaveBeenCalled();
+        });
+
+        it("should block requests when limit is exceeded", async () => {
+            mockZcard.mockResolvedValue(100); // At limit
+            mockZrange.mockResolvedValue(["entry", String(Date.now() - 30000)]); // Oldest entry 30s ago
+
+            const request = createMockRequest({
+                ip: "192.168.1.1",
+                headers: {}
+            });
+            const reply = createMockReply();
+
+            await chatInterfaceRateLimiter(request, reply);
+
+            assertErrorResponse(reply, 429);
+            const body = reply._tracking.sentBody as { error: string; resetAt: number };
+            expect(body.error).toContain("Too many requests");
+            expect(body.resetAt).toBeDefined();
+        });
+
+        it("should use IP from request for rate limit key", async () => {
+            const request = createMockRequest({
+                ip: "10.0.0.1",
+                headers: {}
+            });
+            const reply = createMockReply();
+
+            await chatInterfaceRateLimiter(request, reply);
+
+            expect(mockZremrangebyscore).toHaveBeenCalledWith(
+                expect.stringContaining("chat-ip-rate:10.0.0.1"),
+                expect.any(Number),
+                expect.any(Number)
+            );
+        });
     });
 });
 
-describe("getChatInterfaceRateLimiter", () => {
-    it("should create custom rate limiter with specified limits", async () => {
-        const customLimiter = getChatInterfaceRateLimiter(3, 30);
-        const ip = `custom-limiter-ip-${Date.now()}`;
+describe("checkChatRateLimit", () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockZremrangebyscore.mockResolvedValue(0);
+        mockZcard.mockResolvedValue(0);
+        mockZadd.mockResolvedValue(1);
+        mockExpire.mockResolvedValue(1);
+    });
 
-        // Make 3 requests
-        for (let i = 0; i < 3; i++) {
-            const request = createMockRequest({ ip, headers: {} });
-            const reply = createMockReply();
-            await customLimiter(request, reply);
-            assertNoResponse(reply);
-        }
+    describe("Session-specific rate limiting", () => {
+        it("should allow requests under the limit", async () => {
+            mockZcard.mockResolvedValue(5); // 5 requests
 
-        // 4th should be blocked
-        const request = createMockRequest({ ip, headers: {} });
-        const reply = createMockReply();
-        await customLimiter(request, reply);
-        assertErrorResponse(reply, 429);
+            const result = await checkChatRateLimit("interface-123", "session-abc", 10, 60);
+
+            expect(result.allowed).toBe(true);
+            expect(result.remaining).toBe(4); // 10 - (5 + 1)
+        });
+
+        it("should block requests at the limit", async () => {
+            mockZcard.mockResolvedValue(10); // At limit of 10
+            mockZrange.mockResolvedValue(["entry", String(Date.now() - 30000)]);
+
+            const result = await checkChatRateLimit("interface-123", "session-abc", 10, 60);
+
+            expect(result.allowed).toBe(false);
+            expect(result.remaining).toBe(0);
+        });
+
+        it("should use correct Redis key format", async () => {
+            await checkChatRateLimit("my-interface", "my-session", 10, 60);
+
+            expect(mockZremrangebyscore).toHaveBeenCalledWith(
+                "chat-rate:my-interface:my-session",
+                expect.any(Number),
+                expect.any(Number)
+            );
+        });
+
+        it("should add request to sliding window when allowed", async () => {
+            mockZcard.mockResolvedValue(0);
+
+            await checkChatRateLimit("interface-123", "session-abc", 10, 60);
+
+            expect(mockZadd).toHaveBeenCalledWith(
+                "chat-rate:interface-123:session-abc",
+                expect.any(Number),
+                expect.stringMatching(/^\d+-[\d.]+$/)
+            );
+        });
+
+        it("should set expiry on the rate limit key", async () => {
+            await checkChatRateLimit("interface-123", "session-abc", 10, 60);
+
+            expect(mockExpire).toHaveBeenCalledWith(
+                "chat-rate:interface-123:session-abc",
+                65 // windowSeconds + 5
+            );
+        });
+
+        it("should calculate remaining correctly", async () => {
+            mockZcard.mockResolvedValue(7);
+
+            const result = await checkChatRateLimit("interface-123", "session-abc", 10, 60);
+
+            expect(result.allowed).toBe(true);
+            expect(result.remaining).toBe(2); // 10 - (7 + 1)
+        });
+
+        it("should not add to window when blocked", async () => {
+            mockZcard.mockResolvedValue(10);
+            mockZrange.mockResolvedValue(["entry", String(Date.now())]);
+
+            await checkChatRateLimit("interface-123", "session-abc", 10, 60);
+
+            expect(mockZadd).not.toHaveBeenCalled();
+        });
     });
 });
