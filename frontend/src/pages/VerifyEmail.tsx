@@ -1,6 +1,7 @@
 import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { AbstractBackground } from "../components/common/AbstractBackground";
 import { verifyEmail as verifyEmailApi } from "../lib/api";
 
 export function VerifyEmail() {
@@ -42,7 +43,7 @@ export function VerifyEmail() {
     }, [searchParams, navigate]);
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-background dark:bg-[#222222] px-4">
+        <AbstractBackground variant="auth" className="flex items-center justify-center px-4">
             <div className="w-full max-w-md">
                 <div className="bg-card rounded-lg shadow-lg border border-border p-8">
                     {/* Logo and Title */}
@@ -117,6 +118,6 @@ export function VerifyEmail() {
                     )}
                 </div>
             </div>
-        </div>
+        </AbstractBackground>
     );
 }

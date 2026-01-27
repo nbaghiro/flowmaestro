@@ -1,6 +1,7 @@
 import { Loader2, Users, CheckCircle, XCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { AbstractBackground } from "../components/common/AbstractBackground";
 import { Alert } from "../components/common/Alert";
 import { Button } from "../components/common/Button";
 import { Logo } from "../components/common/Logo";
@@ -121,7 +122,7 @@ export function AcceptInvitation() {
         user?.email?.toLowerCase() !== invitation.email.toLowerCase();
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-background dark:bg-[#222222] px-4">
+        <AbstractBackground variant="auth" className="flex items-center justify-center px-4">
             <div className="w-full max-w-md">
                 <div className="bg-card rounded-lg shadow-lg border border-border p-8">
                     {/* Logo */}
@@ -298,6 +299,6 @@ export function AcceptInvitation() {
                     )}
                 </div>
             </div>
-        </div>
+        </AbstractBackground>
     );
 }
