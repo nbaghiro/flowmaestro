@@ -3,6 +3,8 @@ dist/
 build/
 coverage/
 .next/
+test-results/
+playwright-report/
 *.lock
 package-lock.json
 pnpm-lock.yaml

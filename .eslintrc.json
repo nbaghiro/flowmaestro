@@ -79,6 +79,7 @@
                 "backend/scripts/**/*.ts",
                 "backend/jest.setup.ts",
                 "frontend/src/lib/logger.ts",
+                "frontend/e2e/**/*.ts",
                 "backend/src/temporal/shared/workflow-logger.ts",
                 "backend/src/temporal/shared/logger.ts",
                 "examples/**/*.ts",
