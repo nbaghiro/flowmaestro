@@ -299,8 +299,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Presentation software",
         logoUrl: getBrandLogo("microsoft.com/powerpoint"),
         category: "Productivity",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "whatsapp",
@@ -1327,8 +1326,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Cloud presentation software",
         logoUrl: getBrandLogo("slides.google.com"),
         category: "Productivity",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "gmail",

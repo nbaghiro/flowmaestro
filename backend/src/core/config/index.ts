@@ -483,6 +483,7 @@ export function getOAuthRedirectUri(provider: string): string {
         "google-calendar": "/oauth/google/callback",
         "google-drive": "/oauth/google/callback",
         "google-docs": "/oauth/google/callback",
+        "google-slides": "/oauth/google/callback",
         "google-forms": "/oauth/google/callback",
         gmail: "/oauth/google/callback",
 
@@ -492,6 +493,7 @@ export function getOAuthRedirectUri(provider: string): string {
         "microsoft-onedrive": "/oauth/microsoft/callback",
         "microsoft-excel": "/oauth/microsoft/callback",
         "microsoft-word": "/oauth/microsoft/callback",
+        "microsoft-powerpoint": "/oauth/microsoft/callback",
         "microsoft-teams": "/oauth/microsoft/callback",
 
         // Meta services all use the same callback
@@ -561,6 +563,7 @@ export function getOAuthCredentials(provider: string): { clientId: string; clien
         "google-calendar": "google",
         "google-drive": "google",
         "google-docs": "google",
+        "google-slides": "google",
         "google-forms": "google",
         gmail: "google",
 
@@ -570,6 +573,7 @@ export function getOAuthCredentials(provider: string): { clientId: string; clien
         "microsoft-onedrive": "microsoft",
         "microsoft-excel": "microsoft",
         "microsoft-word": "microsoft",
+        "microsoft-powerpoint": "microsoft",
         "microsoft-teams": "microsoft",
 
         // Meta services - special handling

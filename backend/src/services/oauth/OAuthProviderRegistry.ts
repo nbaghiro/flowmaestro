@@ -337,6 +337,55 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
         refreshable: true
     },
 
+    "google-slides": {
+        name: "google-slides",
+        displayName: "Google Slides",
+        authUrl: "https://accounts.google.com/o/oauth2/v2/auth",
+        tokenUrl: "https://oauth2.googleapis.com/token",
+        scopes: [
+            "https://www.googleapis.com/auth/presentations",
+            "https://www.googleapis.com/auth/drive.file"
+        ],
+        authParams: {
+            access_type: "offline",
+            prompt: "consent"
+        },
+        clientId: config.oauth.google.clientId,
+        clientSecret: config.oauth.google.clientSecret,
+        redirectUri: getOAuthRedirectUri("google"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`
+                    }
+                });
+
+                const data = (await response.json()) as {
+                    email?: string;
+                    name?: string;
+                    picture?: string;
+                    id?: string;
+                };
+
+                return {
+                    email: data.email,
+                    name: data.name,
+                    picture: data.picture,
+                    userId: data.id
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get Google Slides user info");
+                return {
+                    email: "unknown@google",
+                    name: "Google User"
+                };
+            }
+        },
+        revokeUrl: "https://oauth2.googleapis.com/revoke",
+        refreshable: true
+    },
+
     "google-forms": {
         name: "google-forms",
         displayName: "Google Forms",
@@ -1318,6 +1367,54 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
                 };
             } catch (error) {
                 logger.error({ err: error }, "Failed to get Word user info");
+                return {
+                    email: "unknown@microsoft",
+                    name: "Microsoft User"
+                };
+            }
+        },
+        refreshable: true
+    },
+
+    "microsoft-powerpoint": {
+        name: "microsoft-powerpoint",
+        displayName: "Microsoft PowerPoint",
+        authUrl: "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
+        tokenUrl: "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+        scopes: ["User.Read", "Files.ReadWrite", "offline_access"],
+        authParams: {
+            response_mode: "query",
+            prompt: "consent"
+        },
+        clientId: config.oauth.microsoft.clientId,
+        clientSecret: config.oauth.microsoft.clientSecret,
+        redirectUri: getOAuthRedirectUri("microsoft"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://graph.microsoft.com/v1.0/me", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    id?: string;
+                    displayName?: string;
+                    mail?: string;
+                    userPrincipalName?: string;
+                };
+
+                return {
+                    userId: data.id,
+                    email: data.mail || data.userPrincipalName,
+                    name: data.displayName
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get PowerPoint user info");
                 return {
                     email: "unknown@microsoft",
                     name: "Microsoft User"

@@ -194,6 +194,20 @@ const googleDocsEntry: ProviderRegistryEntry = {
     }
 };
 
+// Register Google Slides provider
+const googleSlidesEntry: ProviderRegistryEntry = {
+    name: "google-slides",
+    displayName: "Google Slides",
+    authMethod: "oauth2",
+    category: "productivity",
+    loader: async () => {
+        const { GoogleSlidesProvider } = await import(
+            "./providers/google-slides/GoogleSlidesProvider"
+        );
+        return new GoogleSlidesProvider();
+    }
+};
+
 // Register Gmail provider
 const gmailEntry: ProviderRegistryEntry = {
     name: "gmail",
@@ -296,6 +310,20 @@ const microsoftWordEntry: ProviderRegistryEntry = {
     }
 };
 
+// Register Microsoft PowerPoint provider
+const microsoftPowerPointEntry: ProviderRegistryEntry = {
+    name: "microsoft-powerpoint",
+    displayName: "Microsoft PowerPoint",
+    authMethod: "oauth2",
+    category: "productivity",
+    loader: async () => {
+        const { MicrosoftPowerPointProvider } = await import(
+            "./providers/microsoft-powerpoint/MicrosoftPowerPointProvider"
+        );
+        return new MicrosoftPowerPointProvider();
+    }
+};
+
 // Register Microsoft Teams provider
 const microsoftTeamsEntry: ProviderRegistryEntry = {
     name: "microsoft-teams",
@@ -362,6 +390,7 @@ providerRegistry.register(googleSheetsEntry);
 providerRegistry.register(googleDriveEntry);
 providerRegistry.register(googleCalendarEntry);
 providerRegistry.register(googleDocsEntry);
+providerRegistry.register(googleSlidesEntry);
 providerRegistry.register(gmailEntry);
 providerRegistry.register(youtubeEntry);
 providerRegistry.register(whatsappEntry);
@@ -370,6 +399,7 @@ providerRegistry.register(facebookEntry);
 providerRegistry.register(microsoftOneDriveEntry);
 providerRegistry.register(microsoftExcelEntry);
 providerRegistry.register(microsoftWordEntry);
+providerRegistry.register(microsoftPowerPointEntry);
 providerRegistry.register(microsoftTeamsEntry);
 providerRegistry.register(zendeskEntry);
 providerRegistry.register(apolloEntry);
