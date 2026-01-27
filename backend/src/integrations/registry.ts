@@ -981,5 +981,21 @@ const circleCIEntry: ProviderRegistryEntry = {
 
 providerRegistry.register(circleCIEntry);
 
+// Register Microsoft Outlook provider
+const microsoftOutlookEntry: ProviderRegistryEntry = {
+    name: "microsoft-outlook",
+    displayName: "Microsoft Outlook",
+    authMethod: "oauth2",
+    category: "communication",
+    loader: async () => {
+        const { MicrosoftOutlookProvider } = await import(
+            "./providers/microsoft-outlook/MicrosoftOutlookProvider"
+        );
+        return new MicrosoftOutlookProvider();
+    }
+};
+
+providerRegistry.register(microsoftOutlookEntry);
+
 // Export for use in application
 export { providerRegistry };

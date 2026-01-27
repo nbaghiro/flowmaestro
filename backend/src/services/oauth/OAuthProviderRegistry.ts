@@ -1387,6 +1387,62 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
         refreshable: true
     },
 
+    "microsoft-outlook": {
+        name: "microsoft-outlook",
+        displayName: "Microsoft Outlook",
+        authUrl: "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
+        tokenUrl: "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+        scopes: [
+            "User.Read",
+            "Mail.Read",
+            "Mail.ReadWrite",
+            "Mail.Send",
+            "Calendars.Read",
+            "Calendars.ReadWrite",
+            "offline_access"
+        ],
+        authParams: {
+            response_mode: "query",
+            prompt: "consent"
+        },
+        clientId: config.oauth.microsoft.clientId,
+        clientSecret: config.oauth.microsoft.clientSecret,
+        redirectUri: getOAuthRedirectUri("microsoft"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://graph.microsoft.com/v1.0/me", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    id?: string;
+                    displayName?: string;
+                    mail?: string;
+                    userPrincipalName?: string;
+                };
+
+                return {
+                    userId: data.id,
+                    email: data.mail || data.userPrincipalName,
+                    name: data.displayName
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get Outlook user info");
+                return {
+                    email: "unknown@microsoft",
+                    name: "Microsoft User"
+                };
+            }
+        },
+        refreshable: true
+    },
+
     // ==========================================================================
     // Meta Platform Services (WhatsApp, Instagram, Messenger, Facebook Ads)
     // All use same META_APP_ID and META_APP_SECRET credentials

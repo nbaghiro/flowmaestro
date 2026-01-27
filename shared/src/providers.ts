@@ -121,6 +121,7 @@ export const PROVIDER_LOGO_DOMAINS: Record<string, string> = {
     "microsoft-teams": "teams.microsoft.com",
     "microsoft-excel": "microsoft.com",
     "microsoft-word": "microsoft.com",
+    "microsoft-outlook": "outlook.live.com",
     openai: "openai.com",
     anthropic: "anthropic.com",
     google: "google.com",
@@ -269,13 +270,12 @@ export const ALL_PROVIDERS: Provider[] = [
         methods: ["oauth2"]
     },
     {
-        provider: "outlook",
-        displayName: "Outlook",
+        provider: "microsoft-outlook",
+        displayName: "Microsoft Outlook",
         description: "Email and calendar service",
-        logoUrl: getBrandLogo("outlook.com"),
+        logoUrl: getBrandLogo("outlook.live.com"),
         category: "Communication",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "microsoft-excel",
