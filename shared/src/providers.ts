@@ -2016,7 +2016,7 @@ export const ALL_PROVIDERS: Provider[] = [
         comingSoon: true
     },
 
-    // Social Media Management
+    // Social Media (Management Tools)
     {
         provider: "buffer",
         displayName: "Buffer",
@@ -2038,7 +2038,7 @@ export const ALL_PROVIDERS: Provider[] = [
         displayName: "Later",
         description: "Visual social media scheduler",
         logoUrl: getBrandLogo("later.com"),
-        category: "Social Media Management",
+        category: "Social Media",
         methods: ["oauth2"],
         comingSoon: true
     },
@@ -2047,7 +2047,7 @@ export const ALL_PROVIDERS: Provider[] = [
         displayName: "Sprout Social",
         description: "Social media management suite",
         logoUrl: getBrandLogo("sproutsocial.com"),
-        category: "Social Media Management",
+        category: "Social Media",
         methods: ["oauth2"],
         comingSoon: true
     },

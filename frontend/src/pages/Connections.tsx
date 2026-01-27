@@ -116,7 +116,6 @@ export function Connections() {
         "E-commerce",
         "Payment Processing",
         "Marketing",
-        "Social Media Management",
         "File Storage",
         "Cloud Storage",
         "Social Media",
