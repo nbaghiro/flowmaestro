@@ -142,6 +142,7 @@ export const PROVIDER_LOGO_DOMAINS: Record<string, string> = {
     pinterest: "pinterest.com",
     amplitude: "amplitude.com",
     mixpanel: "mixpanel.com",
+    segment: "segment.com",
     hellosign: "hellosign.com",
     docusign: "docusign.com",
     surveymonkey: "surveymonkey.com",
@@ -660,7 +661,12 @@ export const ALL_PROVIDERS: Provider[] = [
         logoUrl: getBrandLogo("segment.com"),
         category: "Analytics",
         methods: ["api_key"],
-        comingSoon: true
+        apiKeySettings: {
+            keyLabel: "Write Key",
+            keyPlaceholder: "Enter your Segment Write Key",
+            helpText: "Find your Write Key in Segment > Sources > Your Source > API Keys",
+            helpUrl: "https://segment.com/docs/connections/find-writekey/"
+        }
     },
     {
         provider: "hotjar",

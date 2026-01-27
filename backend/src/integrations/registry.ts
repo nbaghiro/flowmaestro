@@ -1027,5 +1027,19 @@ const microsoftOutlookEntry: ProviderRegistryEntry = {
 
 providerRegistry.register(microsoftOutlookEntry);
 
+// Register Segment provider
+const segmentEntry: ProviderRegistryEntry = {
+    name: "segment",
+    displayName: "Segment",
+    authMethod: "api_key",
+    category: "analytics",
+    loader: async () => {
+        const { SegmentProvider } = await import("./providers/segment/SegmentProvider");
+        return new SegmentProvider();
+    }
+};
+
+providerRegistry.register(segmentEntry);
+
 // Export for use in application
 export { providerRegistry };
