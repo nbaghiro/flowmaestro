@@ -128,8 +128,13 @@ export function BaseNode({
 }: BaseNodeProps) {
     const [logoError, setLogoError] = useState(false);
     const nodeId = useNodeId();
-    const { currentExecution, selectedNode, nodeValidation, workflowValidation } =
-        useWorkflowStore();
+    const {
+        currentExecution,
+        selectedNode,
+        nodeValidation,
+        workflowValidation,
+        hideNodeValidationIndicators
+    } = useWorkflowStore();
     const categoryStyle = categoryConfig[category];
     const [showPopover, setShowPopover] = useState(false);
 
@@ -146,8 +151,13 @@ export function BaseNode({
         if (!nodeId) {
             return { hasIssues: false, borderClass: "", leftBorderColor: undefined };
         }
-        return getNodeValidationBorderStyle(nodeId, validationErrors, workflowValidation);
-    }, [nodeId, validationErrors, workflowValidation]);
+        return getNodeValidationBorderStyle(
+            nodeId,
+            validationErrors,
+            workflowValidation,
+            hideNodeValidationIndicators
+        );
+    }, [nodeId, validationErrors, workflowValidation, hideNodeValidationIndicators]);
 
     const connectorLayout =
         useWorkflowStore((s) => {

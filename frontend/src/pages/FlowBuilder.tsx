@@ -116,7 +116,8 @@ export function FlowBuilder() {
         addNode,
         selectNode,
         setNodes,
-        autoFillMissingConnections
+        autoFillMissingConnections,
+        setCurrentWorkflowId
     } = useWorkflowStore();
 
     const { undo, redo, canUndo, canRedo, clear } = useHistoryStore();
@@ -245,6 +246,12 @@ export function FlowBuilder() {
             clear();
         };
     }, [clear]);
+
+    // Set current workflow ID in store (loads persisted UI state like validation toggle)
+    useEffect(() => {
+        setCurrentWorkflowId(workflowId ?? null);
+        return () => setCurrentWorkflowId(null);
+    }, [workflowId, setCurrentWorkflowId]);
 
     useEffect(() => {
         if (workflowId) {

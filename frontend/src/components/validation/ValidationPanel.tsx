@@ -12,7 +12,9 @@ import {
     ChevronDown,
     ChevronRight,
     X,
-    CheckCircle
+    CheckCircle,
+    Eye,
+    EyeOff
 } from "lucide-react";
 import { useState, useMemo, useRef, useEffect } from "react";
 import type { WorkflowValidationIssue, WorkflowValidationSeverity } from "@flowmaestro/shared";
@@ -338,6 +340,7 @@ export function ValidationPanel({ isOpen, onClose, onNodeClick }: ValidationPane
  * ValidationSummaryBadge
  *
  * Small badge showing validation summary for use in toolbar.
+ * Includes a toggle to show/hide validation indicators on nodes.
  */
 interface ValidationSummaryBadgeProps {
     onClick: () => void;
@@ -345,7 +348,8 @@ interface ValidationSummaryBadgeProps {
 }
 
 export function ValidationSummaryBadge({ onClick, className }: ValidationSummaryBadgeProps) {
-    const { workflowValidation } = useWorkflowStore();
+    const { workflowValidation, hideNodeValidationIndicators, toggleNodeValidationIndicators } =
+        useWorkflowStore();
 
     const errorCount = workflowValidation?.summary.errorCount ?? 0;
     const warningCount = workflowValidation?.summary.warningCount ?? 0;
@@ -356,29 +360,73 @@ export function ValidationSummaryBadge({ onClick, className }: ValidationSummary
         return null;
     }
 
+    const hasErrors = errorCount > 0;
+    const baseColorClasses = hasErrors
+        ? "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400"
+        : "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 text-amber-600 dark:text-amber-400";
+    const hoverColorClasses = hasErrors
+        ? "hover:bg-red-100 dark:hover:bg-red-950/50"
+        : "hover:bg-amber-100 dark:hover:bg-amber-950/50";
+
+    // When node indicators are hidden, show a compact icon-only badge
+    if (hideNodeValidationIndicators) {
+        return (
+            <button
+                onClick={toggleNodeValidationIndicators}
+                className={cn(
+                    "flex items-center gap-1 px-2 py-1 rounded text-xs font-medium",
+                    "border transition-colors",
+                    baseColorClasses,
+                    hoverColorClasses,
+                    className
+                )}
+                title="Show validation errors on nodes"
+            >
+                {hasErrors ? (
+                    <AlertCircle className="w-3.5 h-3.5" />
+                ) : (
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                )}
+                <Eye className="w-3 h-3 opacity-70" />
+            </button>
+        );
+    }
+
     return (
-        <button
-            onClick={onClick}
-            className={cn(
-                "flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium",
-                "border transition-colors",
-                errorCount > 0
-                    ? "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-950/50"
-                    : "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-950/50",
-                className
-            )}
-            title={isValid ? "Warnings found" : "Errors found"}
-        >
-            {errorCount > 0 ? (
-                <AlertCircle className="w-3.5 h-3.5" />
-            ) : (
-                <AlertTriangle className="w-3.5 h-3.5" />
-            )}
-            <span>
-                {errorCount > 0 && `${errorCount} error${errorCount !== 1 ? "s" : ""}`}
-                {errorCount > 0 && warningCount > 0 && ", "}
-                {warningCount > 0 && `${warningCount} warning${warningCount !== 1 ? "s" : ""}`}
-            </span>
-        </button>
+        <div className={cn("flex items-center gap-0.5", className)}>
+            <button
+                onClick={onClick}
+                className={cn(
+                    "flex items-center gap-1.5 px-2 py-1 rounded-l text-xs font-medium",
+                    "border border-r-0 transition-colors",
+                    baseColorClasses,
+                    hoverColorClasses
+                )}
+                title={isValid ? "Warnings found" : "Errors found"}
+            >
+                {hasErrors ? (
+                    <AlertCircle className="w-3.5 h-3.5" />
+                ) : (
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                )}
+                <span>
+                    {errorCount > 0 && `${errorCount} error${errorCount !== 1 ? "s" : ""}`}
+                    {errorCount > 0 && warningCount > 0 && ", "}
+                    {warningCount > 0 && `${warningCount} warning${warningCount !== 1 ? "s" : ""}`}
+                </span>
+            </button>
+            <button
+                onClick={toggleNodeValidationIndicators}
+                className={cn(
+                    "flex items-center px-1.5 py-1 rounded-r text-xs",
+                    "border transition-colors",
+                    baseColorClasses,
+                    hoverColorClasses
+                )}
+                title="Hide validation errors on nodes"
+            >
+                <EyeOff className="w-3 h-3" />
+            </button>
+        </div>
     );
 }
