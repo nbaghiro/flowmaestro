@@ -176,20 +176,43 @@ Add to `shared/src/providers.ts`:
 
 ### 6. Secret Management (OAuth providers only)
 
+**IMPORTANT:** This step is REQUIRED for all OAuth providers. Without it, the integration will not work in production.
+
 #### Add to Pulumi Config
 
-Add to `infra/pulumi/Pulumi.production.yaml` in the `secrets` JSON array:
+Add to `infra/pulumi/Pulumi.production.yaml` in the `flowmaestro-infrastructure:secrets` JSON array:
 
 ```json
 {"name":"[provider-id]-client-id","envVar":"[PROVIDER]_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"[Display Name] OAuth client ID"},
 {"name":"[provider-id]-client-secret","envVar":"[PROVIDER]_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"[Display Name] OAuth client secret"}
 ```
 
+**Secret Definition Fields:**
+
+- `name`: kebab-case identifier (becomes GCP secret name: `flowmaestro-app-{name}`)
+- `envVar`: SCREAMING_SNAKE_CASE environment variable name (must match config/index.ts)
+- `category`: Use `oauth` for OAuth credentials (groups into K8s `oauth-secrets`)
+- `deployments`: Use `["api"]` for OAuth (only API server needs these)
+- `required`: Use `false` for optional integrations
+- `description`: Human-readable description shown in setup prompts
+
 #### After Pulumi Deployment
 
-1. Run `pulumi up` to create empty GCP secrets
-2. Run `./infra/scripts/setup-secrets-gcp.sh` to set the secret values
-3. Wait for External Secrets Operator to sync (or force sync)
+1. Run `cd infra/pulumi && pulumi up` to create empty GCP secrets + K8s ExternalSecrets
+2. Run `./infra/scripts/setup-secrets-gcp.sh` to interactively set the secret values
+3. Wait for External Secrets Operator to sync (~5 minutes) or force sync:
+    ```bash
+    kubectl annotate externalsecret -n flowmaestro --all force-sync=$(date +%s)
+    kubectl rollout restart deployment/api-server -n flowmaestro
+    ```
+
+#### For Local Development
+
+After setting GCP secrets, sync to your local `.env`:
+
+```bash
+./infra/scripts/sync-secrets-local.sh
+```
 
 ### 7. Type Checking
 
@@ -666,16 +689,17 @@ If the provider requires user input before OAuth (like Zendesk subdomain), add t
 
 ## Key Files Reference
 
-| File                                                  | Purpose                             |
-| ----------------------------------------------------- | ----------------------------------- |
-| `backend/src/integrations/providers/[provider-id]/`   | Provider implementation directory   |
-| `backend/src/integrations/registry.ts`                | Register provider (add entry here)  |
-| `backend/src/services/oauth/OAuthProviderRegistry.ts` | OAuth config (OAuth providers only) |
-| `backend/src/core/config/index.ts`                    | Environment variable config         |
-| `shared/src/providers.ts`                             | Frontend provider definitions       |
-| `shared/src/connections.ts`                           | Connection data types               |
-| `infra/pulumi/Pulumi.production.yaml`                 | Secret definitions                  |
-| `infra/scripts/setup-secrets-gcp.sh`                  | Set secret values                   |
+| File                                                  | Purpose                                      |
+| ----------------------------------------------------- | -------------------------------------------- |
+| `backend/src/integrations/providers/[provider-id]/`   | Provider implementation directory            |
+| `backend/src/integrations/registry.ts`                | Register provider (add entry here)           |
+| `backend/src/services/oauth/OAuthProviderRegistry.ts` | OAuth config (OAuth providers only)          |
+| `backend/src/core/config/index.ts`                    | Environment variable config + callback paths |
+| `shared/src/providers.ts`                             | Frontend provider definitions + logo domains |
+| `shared/src/connections.ts`                           | Connection data types                        |
+| `infra/pulumi/Pulumi.production.yaml`                 | Secret definitions (REQUIRED for OAuth)      |
+| `infra/scripts/setup-secrets-gcp.sh`                  | Interactive script to set GCP secret values  |
+| `infra/scripts/sync-secrets-local.sh`                 | Sync GCP secrets to local .env file          |
 
 ---
 
@@ -695,5 +719,7 @@ If the provider requires user input before OAuth (like Zendesk subdomain), add t
 3. **Token Refresh**: OAuth tokens expire - ensure refresh logic works
 4. **Rate Limits**: Configure appropriate rate limits to avoid API throttling
 5. **Type Safety**: Run `npx tsc --noEmit` before committing
-6. **Secret Sync**: After adding Pulumi secrets, wait for ESO sync or force it
-7. **Environment Variables**: Use SCREAMING_SNAKE_CASE for env var names
+6. **Pulumi Secrets**: ALWAYS add OAuth credentials to `Pulumi.production.yaml` - without this, the integration won't work in production
+7. **Secret Sync**: After adding Pulumi secrets, run `pulumi up` then wait for ESO sync (~5 min) or force it
+8. **Environment Variables**: Use SCREAMING_SNAKE_CASE for env var names, must match between config/index.ts and Pulumi.production.yaml
+9. **Local Development**: After setting GCP secrets, run `sync-secrets-local.sh` to update your `.env` file
