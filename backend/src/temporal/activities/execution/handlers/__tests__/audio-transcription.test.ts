@@ -7,14 +7,14 @@
 
 // Mock the builtin tool
 const mockExecute = jest.fn();
-jest.mock("../../../../../src/tools/builtin/audio-transcribe", () => ({
+jest.mock("../../../../../tools/builtin/audio-transcribe", () => ({
     audioTranscribeTool: {
         execute: mockExecute
     }
 }));
 
 // Mock logger
-jest.mock("../../../../../src/temporal/core", () => ({
+jest.mock("../../../../core", () => ({
     createActivityLogger: () => ({
         info: jest.fn(),
         error: jest.fn(),
@@ -26,13 +26,13 @@ jest.mock("../../../../../src/temporal/core", () => ({
 }));
 
 import type { JsonObject } from "@flowmaestro/shared";
+import { interpolateVariables } from "../../../../core";
 import {
     AudioTranscriptionNodeHandler,
     createAudioTranscriptionNodeHandler
-} from "../../../../../src/temporal/activities/execution/handlers/ai/audio-transcription";
-import { interpolateVariables } from "../../../../../src/temporal/core";
-import type { NodeHandlerInput } from "../../../../../src/temporal/activities/execution/types";
-import type { ContextSnapshot } from "../../../../../src/temporal/core/types";
+} from "../ai/audio-transcription";
+import type { ContextSnapshot } from "../../../../core/types";
+import type { NodeHandlerInput } from "../../types";
 
 // Helper to create mock context
 function createMockContext(overrides: Partial<ContextSnapshot> = {}): ContextSnapshot {

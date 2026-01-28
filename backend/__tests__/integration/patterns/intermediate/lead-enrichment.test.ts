@@ -118,9 +118,9 @@ describe("Lead Enrichment Pipeline Pattern", () => {
             expect(triggerNodes.length).toBe(1);
         });
 
-        it("should have action nodes for enrichment", () => {
-            const actionNodes = getPatternNodesByType(PATTERN_ID, "action");
-            expect(actionNodes.length).toBeGreaterThanOrEqual(2);
+        it("should have integration nodes for enrichment", () => {
+            const integrationNodes = getPatternNodesByType(PATTERN_ID, "integration");
+            expect(integrationNodes.length).toBeGreaterThanOrEqual(2);
         });
 
         it("should have LLM nodes for merging and qualification", () => {

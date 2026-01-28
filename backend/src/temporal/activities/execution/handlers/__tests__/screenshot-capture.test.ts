@@ -7,14 +7,14 @@
 
 // Mock the builtin tool
 const mockExecute = jest.fn();
-jest.mock("../../../../../src/tools/builtin/screenshot-capture", () => ({
+jest.mock("../../../../../tools/builtin/screenshot-capture", () => ({
     screenshotCaptureTool: {
         execute: mockExecute
     }
 }));
 
 // Mock logger
-jest.mock("../../../../../src/temporal/core", () => ({
+jest.mock("../../../../core", () => ({
     createActivityLogger: () => ({
         info: jest.fn(),
         error: jest.fn(),
@@ -26,14 +26,14 @@ jest.mock("../../../../../src/temporal/core", () => ({
 }));
 
 import type { JsonObject } from "@flowmaestro/shared";
+import { interpolateVariables } from "../../../../core";
 import {
     ScreenshotCaptureNodeHandler,
     createScreenshotCaptureNodeHandler
-} from "../../../../../src/temporal/activities/execution/handlers/outputs/screenshot-capture";
-import { interpolateVariables } from "../../../../../src/temporal/core";
+} from "../outputs/screenshot-capture";
 
-import type { NodeHandlerInput } from "../../../../../src/temporal/activities/execution/types";
-import type { ContextSnapshot } from "../../../../../src/temporal/core/types";
+import type { ContextSnapshot } from "../../../../core/types";
+import type { NodeHandlerInput } from "../../types";
 
 // Helper to create mock context
 function createMockContext(overrides: Partial<ContextSnapshot> = {}): ContextSnapshot {

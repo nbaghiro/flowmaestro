@@ -7,14 +7,14 @@
 
 // Mock the builtin tool
 const mockExecute = jest.fn();
-jest.mock("../../../../../src/tools/builtin/web-search", () => ({
+jest.mock("../../../../../tools/builtin/web-search", () => ({
     webSearchTool: {
         execute: mockExecute
     }
 }));
 
 // Mock logger
-jest.mock("../../../../../src/temporal/core", () => ({
+jest.mock("../../../../core", () => ({
     createActivityLogger: () => ({
         info: jest.fn(),
         error: jest.fn(),
@@ -26,14 +26,11 @@ jest.mock("../../../../../src/temporal/core", () => ({
 }));
 
 import type { JsonObject } from "@flowmaestro/shared";
-import {
-    WebSearchNodeHandler,
-    createWebSearchNodeHandler
-} from "../../../../../src/temporal/activities/execution/handlers/inputs/web-search";
-import { interpolateVariables } from "../../../../../src/temporal/core";
+import { interpolateVariables } from "../../../../core";
+import { WebSearchNodeHandler, createWebSearchNodeHandler } from "../inputs/web-search";
 
-import type { NodeHandlerInput } from "../../../../../src/temporal/activities/execution/types";
-import type { ContextSnapshot } from "../../../../../src/temporal/core/types";
+import type { ContextSnapshot } from "../../../../core/types";
+import type { NodeHandlerInput } from "../../types";
 
 // Helper to create mock context
 function createMockContext(overrides: Partial<ContextSnapshot> = {}): ContextSnapshot {

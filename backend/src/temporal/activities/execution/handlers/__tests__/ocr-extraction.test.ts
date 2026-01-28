@@ -7,14 +7,14 @@
 
 // Mock the builtin tool
 const mockExecute = jest.fn();
-jest.mock("../../../../../src/tools/builtin/ocr-extract", () => ({
+jest.mock("../../../../../tools/builtin/ocr-extract", () => ({
     ocrExtractTool: {
         execute: mockExecute
     }
 }));
 
 // Mock logger
-jest.mock("../../../../../src/temporal/core", () => ({
+jest.mock("../../../../core", () => ({
     createActivityLogger: () => ({
         info: jest.fn(),
         error: jest.fn(),
@@ -26,13 +26,10 @@ jest.mock("../../../../../src/temporal/core", () => ({
 }));
 
 import type { JsonObject } from "@flowmaestro/shared";
-import {
-    OCRExtractionNodeHandler,
-    createOCRExtractionNodeHandler
-} from "../../../../../src/temporal/activities/execution/handlers/ai/ocr-extraction";
-import { interpolateVariables } from "../../../../../src/temporal/core";
-import type { NodeHandlerInput } from "../../../../../src/temporal/activities/execution/types";
-import type { ContextSnapshot } from "../../../../../src/temporal/core/types";
+import { interpolateVariables } from "../../../../core";
+import { OCRExtractionNodeHandler, createOCRExtractionNodeHandler } from "../ai/ocr-extraction";
+import type { ContextSnapshot } from "../../../../core/types";
+import type { NodeHandlerInput } from "../../types";
 
 // Helper to create mock context
 function createMockContext(overrides: Partial<ContextSnapshot> = {}): ContextSnapshot {

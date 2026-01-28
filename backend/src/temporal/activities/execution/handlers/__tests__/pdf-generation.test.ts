@@ -7,14 +7,14 @@
 
 // Mock the builtin tool
 const mockExecute = jest.fn();
-jest.mock("../../../../../src/tools/builtin/pdf-generate", () => ({
+jest.mock("../../../../../tools/builtin/pdf-generate", () => ({
     pdfGenerateTool: {
         execute: mockExecute
     }
 }));
 
 // Mock logger
-jest.mock("../../../../../src/temporal/core", () => ({
+jest.mock("../../../../core", () => ({
     createActivityLogger: () => ({
         info: jest.fn(),
         error: jest.fn(),
@@ -26,14 +26,14 @@ jest.mock("../../../../../src/temporal/core", () => ({
 }));
 
 import type { JsonObject } from "@flowmaestro/shared";
+import { interpolateVariables } from "../../../../core";
 import {
     PdfGenerationNodeHandler,
     createPdfGenerationNodeHandler
-} from "../../../../../src/temporal/activities/execution/handlers/outputs/pdf-generation";
-import { interpolateVariables } from "../../../../../src/temporal/core";
+} from "../outputs/pdf-generation";
 
-import type { NodeHandlerInput } from "../../../../../src/temporal/activities/execution/types";
-import type { ContextSnapshot } from "../../../../../src/temporal/core/types";
+import type { ContextSnapshot } from "../../../../core/types";
+import type { NodeHandlerInput } from "../../types";
 
 // Helper to create mock context
 function createMockContext(overrides: Partial<ContextSnapshot> = {}): ContextSnapshot {
