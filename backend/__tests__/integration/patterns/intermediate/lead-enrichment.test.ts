@@ -2,12 +2,14 @@
  * Lead Enrichment Pipeline Pattern Tests
  *
  * Tests the intermediate-level lead enrichment workflow that includes:
- * - HTTP API calls for data enrichment
- * - LLM-based lead qualification
- * - Conditional routing based on qualification score
- * - CRM action integration
+ * - Multi-source enrichment (Apollo, LinkedIn)
+ * - LLM-based data merging and qualification
+ * - Router-based tier routing
+ * - CRM sync to HubSpot and Salesforce
+ * - Email outreach generation
+ * - Analytics tracking
  *
- * Pattern: input-1 → http-enrich → llm-qualify → conditional-score → [action-crm] → output-1
+ * Pattern: trigger-1 → [action-apollo, action-linkedin] → llm-merge → llm-qualify → router-tier → [various actions] → output-1
  */
 
 import type { JsonObject } from "@flowmaestro/shared";
@@ -15,9 +17,10 @@ import {
     simulatePatternExecution,
     validatePatternStructure,
     createMockLLMOutput,
-    createMockHTTPOutput,
-    createMockConditionalOutput,
     createMockActionOutput,
+    createMockRouterOutput,
+    createMockTriggerOutput,
+    createMockTransformOutput,
     assertPatternSuccess,
     assertNodesExecuted,
     getPatternNodeIds,
@@ -27,24 +30,76 @@ import {
 describe("Lead Enrichment Pipeline Pattern", () => {
     const PATTERN_ID = "lead-enrichment";
 
-    // Standard lead data for tests
-    const sampleLead = {
+    // Standard lead event data for tests
+    const sampleLeadEvent = {
         email: "john@techstartup.com",
         company: "techstartup.com",
         name: "John Smith",
         source: "webinar-signup"
     };
 
-    // Standard enriched company data
-    const enrichedCompanyData = {
-        name: "TechStartup Inc.",
-        domain: "techstartup.com",
+    // Apollo enrichment data
+    const apolloData = {
+        name: "John Smith",
+        title: "VP of Engineering",
+        company: "TechStartup Inc.",
+        companySize: "50-100",
         industry: "Software",
-        employeeCount: 50,
-        funding: "$5M Series A",
-        location: "San Francisco, CA",
-        technologies: ["AWS", "React", "Python"]
+        funding: "$5M Series A"
     };
+
+    // LinkedIn enrichment data
+    const linkedinData = {
+        headline: "VP Engineering at TechStartup",
+        connections: 500,
+        experience: [{ company: "TechStartup", title: "VP Engineering", years: 2 }]
+    };
+
+    // Merged data output
+    const mergedData = {
+        mergedProfile: {
+            name: "John Smith",
+            title: "VP of Engineering",
+            company: "TechStartup Inc.",
+            companySize: "50-100",
+            industry: "Software",
+            funding: "$5M Series A",
+            technologies: ["AWS", "React"],
+            socialProfiles: { linkedin: "johnsmith" }
+        },
+        insights: ["Decision maker", "Well-funded company"],
+        buyingSignals: ["Recent funding", "Hiring engineers"]
+    };
+
+    // Helper to create complete mock outputs for all pattern nodes
+    const createCompleteMocks = (overrides: Record<string, JsonObject> = {}) => ({
+        "trigger-1": createMockTriggerOutput(sampleLeadEvent),
+        "action-apollo": createMockActionOutput(true, apolloData),
+        "action-linkedin": createMockActionOutput(true, linkedinData),
+        "llm-merge": createMockLLMOutput(JSON.stringify(mergedData)),
+        "llm-qualify": createMockLLMOutput(
+            JSON.stringify({
+                score: 85,
+                tier: "enterprise",
+                icp_fit: 90,
+                timing_score: 80,
+                budget_likelihood: "high",
+                decision_maker: true,
+                recommended_cadence: "high-touch"
+            })
+        ),
+        "router-tier": createMockRouterOutput("enterprise"),
+        "action-salesforce": createMockActionOutput(true, { id: "sf-lead-123" }),
+        "action-hubspot-update": createMockActionOutput(true, { updated: true }),
+        "llm-email-enterprise": createMockLLMOutput("Personalized enterprise email..."),
+        "action-gmail-enterprise": createMockActionOutput(true, { messageId: "msg-123" }),
+        "action-slack-enterprise": createMockActionOutput(true),
+        "action-slack-midmarket": createMockActionOutput(true),
+        "action-amplitude": createMockActionOutput(true),
+        "transform-result": createMockTransformOutput({ enriched: true }),
+        "output-1": createMockActionOutput(true),
+        ...overrides
+    });
 
     describe("pattern structure validation", () => {
         it("should have valid pattern structure", () => {
@@ -55,452 +110,173 @@ describe("Lead Enrichment Pipeline Pattern", () => {
 
         it("should have correct node count", () => {
             const nodeIds = getPatternNodeIds(PATTERN_ID);
-            expect(nodeIds.length).toBeGreaterThanOrEqual(5);
+            expect(nodeIds.length).toBeGreaterThanOrEqual(10);
         });
 
-        it("should have HTTP enrichment node", () => {
-            const httpNodes = getPatternNodesByType(PATTERN_ID, "http");
-            expect(httpNodes.length).toBeGreaterThanOrEqual(1);
+        it("should have trigger node as entry point", () => {
+            const triggerNodes = getPatternNodesByType(PATTERN_ID, "trigger");
+            expect(triggerNodes.length).toBe(1);
         });
 
-        it("should have conditional node for score check", () => {
-            const conditionalNodes = getPatternNodesByType(PATTERN_ID, "conditional");
-            expect(conditionalNodes.length).toBeGreaterThanOrEqual(1);
-        });
-
-        it("should have action node for CRM", () => {
+        it("should have action nodes for enrichment", () => {
             const actionNodes = getPatternNodesByType(PATTERN_ID, "action");
-            expect(actionNodes.length).toBeGreaterThanOrEqual(1);
+            expect(actionNodes.length).toBeGreaterThanOrEqual(2);
+        });
+
+        it("should have LLM nodes for merging and qualification", () => {
+            const llmNodes = getPatternNodesByType(PATTERN_ID, "llm");
+            expect(llmNodes.length).toBeGreaterThanOrEqual(2);
+        });
+
+        it("should have router node for tier routing", () => {
+            const routerNodes = getPatternNodesByType(PATTERN_ID, "router");
+            expect(routerNodes.length).toBe(1);
         });
     });
 
-    describe("hot lead qualification", () => {
-        it("should process and qualify a hot lead", async () => {
+    describe("enterprise lead qualification", () => {
+        it("should process and qualify an enterprise lead", async () => {
             const result = await simulatePatternExecution({
                 patternId: PATTERN_ID,
-                inputs: { leadData: sampleLead },
-                mockOutputs: {
-                    "http-enrich": createMockHTTPOutput(enrichedCompanyData),
-                    "llm-qualify": createMockLLMOutput(
-                        JSON.stringify({
-                            score: 85,
-                            tier: "hot",
-                            reasoning:
-                                "Well-funded tech startup in target market with matching tech stack",
-                            nextStep: "Schedule demo call within 24 hours"
-                        })
-                    ),
-                    "conditional-score": createMockConditionalOutput(true),
-                    "action-crm": createMockActionOutput(true, {
-                        contactId: "contact-456",
-                        updated: true,
-                        properties: { lead_score: "85", lead_tier: "hot" }
+                inputs: { leadEvent: sampleLeadEvent },
+                mockOutputs: createCompleteMocks()
+            });
+
+            assertPatternSuccess(result);
+            assertNodesExecuted(result, [
+                "trigger-1",
+                "action-apollo",
+                "action-linkedin",
+                "llm-merge",
+                "llm-qualify",
+                "router-tier"
+            ]);
+        });
+
+        it("should route enterprise leads to Salesforce", async () => {
+            const result = await simulatePatternExecution({
+                patternId: PATTERN_ID,
+                inputs: { leadEvent: sampleLeadEvent },
+                mockOutputs: createCompleteMocks({
+                    "action-salesforce": createMockActionOutput(true, {
+                        id: "sf-lead-456",
+                        created: true
                     })
-                }
+                })
             });
 
             assertPatternSuccess(result);
-            assertNodesExecuted(result, ["http-enrich", "llm-qualify", "conditional-score"]);
-        });
-
-        it("should pass enriched data to qualification LLM", async () => {
-            const result = await simulatePatternExecution({
-                patternId: PATTERN_ID,
-                inputs: { leadData: sampleLead },
-                mockOutputs: {
-                    "http-enrich": createMockHTTPOutput(enrichedCompanyData),
-                    "llm-qualify": createMockLLMOutput(JSON.stringify({ score: 90, tier: "hot" })),
-                    "conditional-score": createMockConditionalOutput(true),
-                    "action-crm": createMockActionOutput(true)
-                }
-            });
-
-            assertPatternSuccess(result);
-            const httpOutput = result.context.nodeOutputs.get("http-enrich") as Record<
+            const sfOutput = result.context.nodeOutputs.get("action-salesforce") as Record<
                 string,
                 unknown
             >;
-            expect(httpOutput?.data).toEqual(enrichedCompanyData);
+            expect(sfOutput?.success).toBe(true);
         });
+    });
 
-        it("should update CRM for qualified leads", async () => {
+    describe("mid-market lead qualification", () => {
+        it("should process mid-market leads via HubSpot", async () => {
+            const midMarketQualification = {
+                score: 65,
+                tier: "mid-market",
+                icp_fit: 70,
+                timing_score: 60,
+                budget_likelihood: "medium",
+                decision_maker: true,
+                recommended_cadence: "standard"
+            };
+
             const result = await simulatePatternExecution({
                 patternId: PATTERN_ID,
-                inputs: { leadData: sampleLead },
-                mockOutputs: {
-                    "http-enrich": createMockHTTPOutput(enrichedCompanyData),
-                    "llm-qualify": createMockLLMOutput(
-                        JSON.stringify({ score: 75, tier: "warm", reasoning: "Good fit" })
+                inputs: { leadEvent: sampleLeadEvent },
+                mockOutputs: createCompleteMocks({
+                    "llm-qualify": createMockLLMOutput(JSON.stringify(midMarketQualification)),
+                    "router-tier": createMockRouterOutput("mid-market"),
+                    "transform-result": createMockTransformOutput({ tier: "mid-market" })
+                })
+            });
+
+            assertPatternSuccess(result);
+            const routerOutput = result.context.nodeOutputs.get("router-tier") as Record<
+                string,
+                unknown
+            >;
+            expect(routerOutput?.selectedRoute).toBe("mid-market");
+        });
+    });
+
+    describe("nurture lead handling", () => {
+        it("should handle unqualified leads for nurturing", async () => {
+            const nurtureQualification = {
+                score: 30,
+                tier: "nurture",
+                icp_fit: 40,
+                timing_score: 20,
+                budget_likelihood: "low",
+                decision_maker: false,
+                recommended_cadence: "nurture"
+            };
+
+            const result = await simulatePatternExecution({
+                patternId: PATTERN_ID,
+                inputs: { leadEvent: sampleLeadEvent },
+                mockOutputs: createCompleteMocks({
+                    "action-apollo": createMockActionOutput(true, { name: "Unknown" }),
+                    "action-linkedin": createMockActionOutput(true, {}),
+                    "llm-merge": createMockLLMOutput(
+                        JSON.stringify({ mergedProfile: { name: "Unknown" } })
                     ),
-                    "conditional-score": createMockConditionalOutput(true),
-                    "action-crm": createMockActionOutput(true, {
-                        contactId: "contact-789",
-                        updated: true,
-                        properties: { lead_score: "75", lead_tier: "warm" }
+                    "llm-qualify": createMockLLMOutput(JSON.stringify(nurtureQualification)),
+                    "router-tier": createMockRouterOutput("nurture"),
+                    "transform-result": createMockTransformOutput({ tier: "nurture" })
+                })
+            });
+
+            assertPatternSuccess(result);
+            const routerOutput = result.context.nodeOutputs.get("router-tier") as Record<
+                string,
+                unknown
+            >;
+            expect(routerOutput?.selectedRoute).toBe("nurture");
+        });
+    });
+
+    describe("enrichment data flow", () => {
+        it("should pass enriched data through merge LLM", async () => {
+            const result = await simulatePatternExecution({
+                patternId: PATTERN_ID,
+                inputs: { leadEvent: sampleLeadEvent },
+                mockOutputs: createCompleteMocks()
+            });
+
+            assertPatternSuccess(result);
+            const apolloOutput = result.context.nodeOutputs.get("action-apollo") as Record<
+                string,
+                unknown
+            >;
+            expect(apolloOutput?.success).toBe(true);
+        });
+    });
+
+    describe("analytics tracking", () => {
+        it("should track qualification event in Amplitude", async () => {
+            const result = await simulatePatternExecution({
+                patternId: PATTERN_ID,
+                inputs: { leadEvent: sampleLeadEvent },
+                mockOutputs: createCompleteMocks({
+                    "action-amplitude": createMockActionOutput(true, {
+                        event: "lead_qualified",
+                        tracked: true
                     })
-                }
+                })
             });
 
             assertPatternSuccess(result);
-            const actionOutput = result.context.nodeOutputs.get("action-crm") as Record<
+            const amplitudeOutput = result.context.nodeOutputs.get("action-amplitude") as Record<
                 string,
                 unknown
             >;
-            expect(actionOutput?.success).toBe(true);
-        });
-    });
-
-    describe("warm lead qualification", () => {
-        it("should process and qualify a warm lead", async () => {
-            const result = await simulatePatternExecution({
-                patternId: PATTERN_ID,
-                inputs: {
-                    leadData: {
-                        email: "jane@midsize.com",
-                        company: "midsize.com",
-                        name: "Jane Doe",
-                        source: "content-download"
-                    }
-                },
-                mockOutputs: {
-                    "http-enrich": createMockHTTPOutput({
-                        name: "Midsize Corp",
-                        employeeCount: 200,
-                        industry: "Manufacturing"
-                    }),
-                    "llm-qualify": createMockLLMOutput(
-                        JSON.stringify({
-                            score: 60,
-                            tier: "warm",
-                            reasoning: "Decent company size but industry is secondary target",
-                            nextStep: "Add to nurture sequence"
-                        })
-                    ),
-                    "conditional-score": createMockConditionalOutput(true),
-                    "action-crm": createMockActionOutput(true)
-                }
-            });
-
-            assertPatternSuccess(result);
-            const llmOutput = result.context.nodeOutputs.get("llm-qualify") as Record<
-                string,
-                unknown
-            >;
-            const qualification = JSON.parse(llmOutput?.text as string);
-            expect(qualification.tier).toBe("warm");
-        });
-    });
-
-    describe("cold lead handling", () => {
-        it("should handle cold leads (below threshold)", async () => {
-            const result = await simulatePatternExecution({
-                patternId: PATTERN_ID,
-                inputs: {
-                    leadData: {
-                        email: "test@small.com",
-                        company: "small.com",
-                        name: "Test User",
-                        source: "cold-outreach"
-                    }
-                },
-                mockOutputs: {
-                    "http-enrich": createMockHTTPOutput({
-                        name: "Small Business",
-                        employeeCount: 5,
-                        industry: "Retail"
-                    }),
-                    "llm-qualify": createMockLLMOutput(
-                        JSON.stringify({
-                            score: 25,
-                            tier: "cold",
-                            reasoning: "Company too small and not in target industry",
-                            nextStep: "No immediate action"
-                        })
-                    ),
-                    "conditional-score": createMockConditionalOutput(false),
-                    "action-crm": createMockActionOutput(false)
-                }
-            });
-
-            assertPatternSuccess(result);
-            const conditionalOutput = result.context.nodeOutputs.get("conditional-score") as Record<
-                string,
-                unknown
-            >;
-            expect(conditionalOutput?.result).toBe(false);
-        });
-
-        it("should handle unqualified leads with condition false", async () => {
-            const result = await simulatePatternExecution({
-                patternId: PATTERN_ID,
-                inputs: { leadData: sampleLead },
-                mockOutputs: {
-                    "http-enrich": createMockHTTPOutput({ name: "Unknown" }),
-                    "llm-qualify": createMockLLMOutput(JSON.stringify({ score: 10, tier: "cold" })),
-                    "conditional-score": createMockConditionalOutput(false),
-                    "action-crm": createMockActionOutput(false)
-                }
-            });
-
-            assertPatternSuccess(result);
-            const conditionalOutput = result.context.nodeOutputs.get("conditional-score") as Record<
-                string,
-                unknown
-            >;
-            expect(conditionalOutput?.result).toBe(false);
-        });
-    });
-
-    describe("HTTP enrichment", () => {
-        it("should handle successful API enrichment", async () => {
-            const result = await simulatePatternExecution({
-                patternId: PATTERN_ID,
-                inputs: { leadData: sampleLead },
-                mockOutputs: {
-                    "http-enrich": createMockHTTPOutput(
-                        {
-                            name: "Acme Corp",
-                            domain: "acme.com",
-                            industry: "Technology",
-                            employeeCount: 500,
-                            revenue: "$50M ARR",
-                            fundingTotal: "$20M",
-                            technologies: ["Kubernetes", "Python", "AWS"]
-                        },
-                        200
-                    ),
-                    "llm-qualify": createMockLLMOutput(JSON.stringify({ score: 95, tier: "hot" })),
-                    "conditional-score": createMockConditionalOutput(true),
-                    "action-crm": createMockActionOutput(true)
-                }
-            });
-
-            assertPatternSuccess(result);
-            const httpOutput = result.context.nodeOutputs.get("http-enrich") as Record<
-                string,
-                unknown
-            >;
-            expect(httpOutput?.status).toBe(200);
-            const httpData = httpOutput?.data as JsonObject;
-            expect(httpData.employeeCount).toBe(500);
-        });
-
-        it("should handle enrichment with minimal data", async () => {
-            const result = await simulatePatternExecution({
-                patternId: PATTERN_ID,
-                inputs: { leadData: sampleLead },
-                mockOutputs: {
-                    "http-enrich": createMockHTTPOutput(
-                        { name: "Unknown Company", domain: sampleLead.company },
-                        200
-                    ),
-                    "llm-qualify": createMockLLMOutput(
-                        JSON.stringify({
-                            score: 40,
-                            tier: "cold",
-                            reasoning: "Insufficient company data for proper qualification"
-                        })
-                    ),
-                    "conditional-score": createMockConditionalOutput(false),
-                    "action-crm": createMockActionOutput(false)
-                }
-            });
-
-            assertPatternSuccess(result);
-            const llmOutput = result.context.nodeOutputs.get("llm-qualify") as Record<
-                string,
-                unknown
-            >;
-            const qualification = JSON.parse(llmOutput?.text as string);
-            expect(qualification.reasoning).toContain("Insufficient");
-        });
-    });
-
-    describe("LLM qualification", () => {
-        it("should qualify based on company size and funding", async () => {
-            const result = await simulatePatternExecution({
-                patternId: PATTERN_ID,
-                inputs: { leadData: sampleLead },
-                mockOutputs: {
-                    "http-enrich": createMockHTTPOutput({
-                        name: "BigTech Inc",
-                        employeeCount: 1000,
-                        funding: "$100M Series C",
-                        industry: "Enterprise Software"
-                    }),
-                    "llm-qualify": createMockLLMOutput(
-                        JSON.stringify({
-                            score: 95,
-                            tier: "hot",
-                            reasoning:
-                                "Large enterprise with significant funding in target vertical",
-                            nextStep: "Immediate outreach by senior AE",
-                            signals: ["Enterprise buyer", "Well-funded", "Matching industry"]
-                        })
-                    ),
-                    "conditional-score": createMockConditionalOutput(true),
-                    "action-crm": createMockActionOutput(true)
-                }
-            });
-
-            assertPatternSuccess(result);
-            const llmOutput = result.context.nodeOutputs.get("llm-qualify") as Record<
-                string,
-                unknown
-            >;
-            const qualification = JSON.parse(llmOutput?.text as string);
-            expect(qualification.score).toBe(95);
-            expect(qualification.signals).toContain("Enterprise buyer");
-        });
-    });
-
-    describe("CRM integration", () => {
-        it("should update CRM with qualification data", async () => {
-            const result = await simulatePatternExecution({
-                patternId: PATTERN_ID,
-                inputs: { leadData: sampleLead },
-                mockOutputs: {
-                    "http-enrich": createMockHTTPOutput(enrichedCompanyData),
-                    "llm-qualify": createMockLLMOutput(
-                        JSON.stringify({ score: 80, tier: "hot", nextStep: "Call" })
-                    ),
-                    "conditional-score": createMockConditionalOutput(true),
-                    "action-crm": createMockActionOutput(true, {
-                        contactId: "hubspot-contact-123",
-                        updated: true,
-                        properties: {
-                            lead_score: "80",
-                            lead_tier: "hot",
-                            enriched_company: "TechStartup Inc."
-                        }
-                    })
-                }
-            });
-
-            assertPatternSuccess(result);
-            const actionOutput = result.context.nodeOutputs.get("action-crm") as Record<
-                string,
-                unknown
-            >;
-            const actionResult = actionOutput?.result as JsonObject;
-            expect((actionResult?.properties as JsonObject)?.lead_score).toBe("80");
-        });
-    });
-
-    describe("edge cases", () => {
-        it("should handle lead with missing company domain", async () => {
-            const result = await simulatePatternExecution({
-                patternId: PATTERN_ID,
-                inputs: {
-                    leadData: {
-                        email: "freelancer@gmail.com",
-                        company: "",
-                        name: "Freelancer",
-                        source: "organic"
-                    }
-                },
-                mockOutputs: {
-                    "http-enrich": createMockHTTPOutput({ error: "Domain not found" }, 404),
-                    "llm-qualify": createMockLLMOutput(
-                        JSON.stringify({
-                            score: 15,
-                            tier: "cold",
-                            reasoning: "No company information available"
-                        })
-                    ),
-                    "conditional-score": createMockConditionalOutput(false),
-                    "action-crm": createMockActionOutput(false)
-                }
-            });
-
-            assertPatternSuccess(result);
-            const httpOutput = result.context.nodeOutputs.get("http-enrich") as Record<
-                string,
-                unknown
-            >;
-            expect(httpOutput?.status).toBe(404);
-        });
-
-        it("should handle international leads", async () => {
-            const result = await simulatePatternExecution({
-                patternId: PATTERN_ID,
-                inputs: {
-                    leadData: {
-                        email: "takeshi@tokyo-tech.jp",
-                        company: "tokyo-tech.jp",
-                        name: "Takeshi Yamamoto",
-                        source: "partner-referral"
-                    }
-                },
-                mockOutputs: {
-                    "http-enrich": createMockHTTPOutput({
-                        name: "Tokyo Technology Co.",
-                        location: "Tokyo, Japan",
-                        employeeCount: 300,
-                        industry: "Technology"
-                    }),
-                    "llm-qualify": createMockLLMOutput(
-                        JSON.stringify({
-                            score: 70,
-                            tier: "warm",
-                            reasoning:
-                                "Good company profile but APAC market requires localized approach",
-                            nextStep: "Route to APAC team"
-                        })
-                    ),
-                    "conditional-score": createMockConditionalOutput(true),
-                    "action-crm": createMockActionOutput(true)
-                }
-            });
-
-            assertPatternSuccess(result);
-            const llmOutput = result.context.nodeOutputs.get("llm-qualify") as Record<
-                string,
-                unknown
-            >;
-            const qualification = JSON.parse(llmOutput?.text as string);
-            expect(qualification.nextStep).toContain("APAC");
-        });
-
-        it("should handle empty lead data", async () => {
-            const result = await simulatePatternExecution({
-                patternId: PATTERN_ID,
-                inputs: { leadData: {} },
-                mockOutputs: {
-                    "http-enrich": createMockHTTPOutput({ error: "No domain provided" }, 400),
-                    "llm-qualify": createMockLLMOutput(
-                        JSON.stringify({ score: 0, tier: "invalid", reasoning: "Missing data" })
-                    ),
-                    "conditional-score": createMockConditionalOutput(false),
-                    "action-crm": createMockActionOutput(false)
-                }
-            });
-
-            assertPatternSuccess(result);
-        });
-    });
-
-    describe("token tracking", () => {
-        it("should track tokens for qualification LLM", async () => {
-            const result = await simulatePatternExecution({
-                patternId: PATTERN_ID,
-                inputs: { leadData: sampleLead },
-                mockOutputs: {
-                    "http-enrich": createMockHTTPOutput(enrichedCompanyData),
-                    "llm-qualify": createMockLLMOutput(JSON.stringify({ score: 80, tier: "hot" }), {
-                        tokens: { prompt: 300, completion: 75 }
-                    }),
-                    "conditional-score": createMockConditionalOutput(true),
-                    "action-crm": createMockActionOutput(true)
-                }
-            });
-
-            assertPatternSuccess(result);
-            const llmOutput = result.context.nodeOutputs.get("llm-qualify") as Record<
-                string,
-                unknown
-            >;
-            expect(llmOutput?.tokens).toEqual({ prompt: 300, completion: 75 });
+            expect(amplitudeOutput?.success).toBe(true);
         });
     });
 });

@@ -1,5 +1,4 @@
 import {
-    BookOpen,
     Calendar,
     Trash2,
     MoreVertical,
@@ -13,7 +12,7 @@ import {
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import type { KnowledgeBaseSummary } from "@flowmaestro/shared";
-import { Badge } from "../common/Badge";
+import { KBChunkMosaicPreview } from "../knowledge-bases/KBChunkMosaicPreview";
 
 export interface KnowledgeBaseCardProps {
     knowledgeBase: KnowledgeBaseSummary;
@@ -45,6 +44,17 @@ function formatFileSize(bytes: number): string {
     return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
 }
 
+// Generate a consistent color based on the KB id
+function getColorFromId(id: string): string {
+    const colors = ["blue", "emerald", "violet", "amber", "cyan", "rose", "orange", "purple"];
+    // Use a simple sum of char codes multiplied by position for better distribution
+    let hash = 0;
+    for (let i = 0; i < id.length; i++) {
+        hash += id.charCodeAt(i) * (i + 1);
+    }
+    return colors[hash % colors.length];
+}
+
 export function KnowledgeBaseCard({
     knowledgeBase: kb,
     isSelected = false,
@@ -59,6 +69,8 @@ export function KnowledgeBaseCard({
 }: KnowledgeBaseCardProps) {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
+
+    const color = getColorFromId(kb.id);
 
     // Close menu when clicking outside
     useEffect(() => {
@@ -76,7 +88,7 @@ export function KnowledgeBaseCard({
 
     return (
         <div
-            className={`bg-card border rounded-lg p-5 hover:shadow-md transition-all group relative flex flex-col h-full cursor-pointer select-none ${
+            className={`bg-card border rounded-lg overflow-hidden hover:shadow-md transition-all group relative flex flex-col h-full cursor-pointer select-none ${
                 isSelected
                     ? "border-primary ring-2 ring-primary/30"
                     : "border-border hover:border-primary"
@@ -86,115 +98,106 @@ export function KnowledgeBaseCard({
             onClick={onClick}
             onContextMenu={onContextMenu}
         >
-            {/* Drag Handle - visible on hover */}
-            {onDragStart && (
-                <div
-                    className="absolute bottom-2 right-2 p-1 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing z-10"
-                    onMouseDown={(e) => e.stopPropagation()}
-                >
-                    <GripVertical className="w-4 h-4" />
+            {/* Mosaic Preview */}
+            <KBChunkMosaicPreview
+                categoryId={kb.id}
+                color={color}
+                height="h-24"
+                animated={isSelected}
+                className="rounded-none"
+            />
+
+            {/* Content */}
+            <div className="p-4 flex flex-col flex-1">
+                {/* Header with menu */}
+                <div className="flex items-start justify-between mb-2">
+                    <h3 className="text-base font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-1 flex-1 pr-2">
+                        {kb.name}
+                    </h3>
+
+                    {/* Menu Button */}
+                    {(onEdit || onMoveToFolder || onDelete) && (
+                        <div className="relative flex-shrink-0" ref={menuRef}>
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setIsMenuOpen(!isMenuOpen);
+                                }}
+                                className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
+                                title="More options"
+                            >
+                                <MoreVertical className="w-4 h-4" />
+                            </button>
+
+                            {/* Dropdown Menu */}
+                            {isMenuOpen && (
+                                <div className="absolute right-0 mt-1 w-48 bg-card border border-border rounded-lg shadow-lg py-1 z-50">
+                                    {onEdit && (
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setIsMenuOpen(false);
+                                                onEdit();
+                                            }}
+                                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+                                        >
+                                            <Edit2 className="w-4 h-4" />
+                                            Edit
+                                        </button>
+                                    )}
+                                    {onMoveToFolder && (
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setIsMenuOpen(false);
+                                                onMoveToFolder();
+                                            }}
+                                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+                                        >
+                                            <FolderInput className="w-4 h-4" />
+                                            Move to folder
+                                        </button>
+                                    )}
+                                    {onRemoveFromFolder && currentFolderId && (
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setIsMenuOpen(false);
+                                                onRemoveFromFolder();
+                                            }}
+                                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+                                        >
+                                            <FolderMinus className="w-4 h-4" />
+                                            Remove from folder
+                                        </button>
+                                    )}
+                                    {onDelete && (
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setIsMenuOpen(false);
+                                                onDelete();
+                                            }}
+                                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                            Delete
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
-            )}
-
-            <div className="flex flex-col flex-1">
-                <div className="flex items-center justify-between mb-3">
-                    <BookOpen className="w-5 h-5 text-primary" />
-                    <div className="flex items-center gap-1">
-                        <Badge variant="default" size="sm">
-                            Documents
-                        </Badge>
-                        {kb.embeddingModel && (
-                            <Badge variant="default" size="sm">
-                                {kb.embeddingModel}
-                            </Badge>
-                        )}
-
-                        {/* Menu Button */}
-                        {(onEdit || onMoveToFolder || onDelete) && (
-                            <div className="relative" ref={menuRef}>
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setIsMenuOpen(!isMenuOpen);
-                                    }}
-                                    className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
-                                    title="More options"
-                                >
-                                    <MoreVertical className="w-4 h-4" />
-                                </button>
-
-                                {/* Dropdown Menu */}
-                                {isMenuOpen && (
-                                    <div className="absolute right-0 mt-1 w-48 bg-card border border-border rounded-lg shadow-lg py-1 z-50">
-                                        {onEdit && (
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setIsMenuOpen(false);
-                                                    onEdit();
-                                                }}
-                                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
-                                            >
-                                                <Edit2 className="w-4 h-4" />
-                                                Edit
-                                            </button>
-                                        )}
-                                        {onMoveToFolder && (
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setIsMenuOpen(false);
-                                                    onMoveToFolder();
-                                                }}
-                                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
-                                            >
-                                                <FolderInput className="w-4 h-4" />
-                                                Move to folder
-                                            </button>
-                                        )}
-                                        {onRemoveFromFolder && currentFolderId && (
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setIsMenuOpen(false);
-                                                    onRemoveFromFolder();
-                                                }}
-                                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
-                                            >
-                                                <FolderMinus className="w-4 h-4" />
-                                                Remove from folder
-                                            </button>
-                                        )}
-                                        {onDelete && (
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setIsMenuOpen(false);
-                                                    onDelete();
-                                                }}
-                                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors"
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                                Delete
-                                            </button>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                <h3 className="text-base font-semibold text-foreground mb-2 group-hover:text-primary transition-colors">
-                    {kb.name}
-                </h3>
 
                 {kb.description && (
-                    <p className="text-sm text-muted-foreground line-clamp-2">{kb.description}</p>
+                    <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+                        {kb.description}
+                    </p>
                 )}
 
                 {/* Spacer to push stats and date to bottom */}
-                <div className="flex-1 min-h-4" />
+                <div className="flex-1 min-h-2" />
 
                 {/* Stats */}
                 <div className="flex items-center gap-4 text-xs text-muted-foreground mb-3">
@@ -205,7 +208,7 @@ export function KnowledgeBaseCard({
                     {kb.chunkCount !== undefined && (
                         <div className="flex items-center gap-1">
                             <Layers className="w-3 h-3" />
-                            <span>{kb.chunkCount} chunks</span>
+                            <span>{kb.chunkCount.toLocaleString()} chunks</span>
                         </div>
                     )}
                     {kb.totalSizeBytes !== undefined && (
@@ -223,6 +226,16 @@ export function KnowledgeBaseCard({
                     </div>
                 </div>
             </div>
+
+            {/* Drag Handle - visible on hover */}
+            {onDragStart && (
+                <div
+                    className="absolute bottom-2 right-2 p-1 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing z-10"
+                    onMouseDown={(e) => e.stopPropagation()}
+                >
+                    <GripVertical className="w-4 h-4" />
+                </div>
+            )}
         </div>
     );
 }

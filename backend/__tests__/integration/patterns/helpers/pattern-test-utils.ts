@@ -469,6 +469,28 @@ export function createMockActionOutput(success: boolean, result?: JsonObject): J
     };
 }
 
+/**
+ * Create mock trigger output
+ */
+export function createMockTriggerOutput(eventData: JsonObject): JsonObject {
+    return {
+        triggered: true,
+        eventData,
+        triggeredAt: new Date().toISOString()
+    };
+}
+
+/**
+ * Create mock transform output
+ */
+export function createMockTransformOutput(result: JsonObject): JsonObject {
+    return {
+        success: true,
+        result,
+        transformedAt: new Date().toISOString()
+    };
+}
+
 // ============================================================================
 // PATTERN VALIDATION
 // ============================================================================

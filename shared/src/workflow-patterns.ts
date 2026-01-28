@@ -1480,7 +1480,7 @@ const leadEnrichmentPattern: WorkflowPattern = {
         "Multi-source lead enrichment from Apollo and LinkedIn, AI qualification with scoring, CRM sync to HubSpot and Salesforce, tiered outreach via Gmail, and analytics tracking in Amplitude",
     useCase: "Sales lead qualification",
     icon: "UserPlus",
-    nodeCount: 16,
+    nodeCount: 15,
     category: "intermediate",
     integrations: ["HubSpot", "Salesforce", "Apollo", "LinkedIn", "Gmail", "Amplitude", "Slack"],
     definition: {
