@@ -141,6 +141,12 @@ export function BuilderHeader({
 
     const overflowMenuItems: OverflowMenuItem[] = [
         {
+            icon: <Settings className="w-4 h-4" />,
+            label: "Workflow Settings",
+            shortcut: "⌘,",
+            onClick: () => onOpenSettings?.()
+        },
+        {
             icon: <Layers className="w-4 h-4" />,
             label: "Checkpoints",
             shortcut: "⌘.",
@@ -155,12 +161,6 @@ export function BuilderHeader({
                   }
               ]
             : []),
-        {
-            icon: <Settings className="w-4 h-4" />,
-            label: "Workflow Settings",
-            shortcut: "⌘,",
-            onClick: () => onOpenSettings?.()
-        },
         {
             icon: <CheckCircle2 className="w-4 h-4" />,
             label: "Validation",

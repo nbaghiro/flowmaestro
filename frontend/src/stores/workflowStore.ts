@@ -198,7 +198,7 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
     workflowValidation: null,
     workflowValidationContext: null,
     currentWorkflowId: null,
-    hideNodeValidationIndicators: false,
+    hideNodeValidationIndicators: true,
 
     setNodes: (nodes) => {
         const sizedNodes = nodes.map((node) => ({
@@ -639,12 +639,15 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
     },
 
     setCurrentWorkflowId: (workflowId: string | null) => {
-        // Load persisted state for this workflow from localStorage
-        let hideIndicators = false;
+        // Load persisted state for this workflow from localStorage (default to hidden)
+        let hideIndicators = true;
         if (workflowId) {
             try {
                 const stored = localStorage.getItem(`workflow-hide-validation-${workflowId}`);
-                hideIndicators = stored === "true";
+                // Only override default if there's a stored value
+                if (stored !== null) {
+                    hideIndicators = stored === "true";
+                }
             } catch {
                 // Ignore localStorage errors
             }
