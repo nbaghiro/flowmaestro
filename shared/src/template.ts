@@ -5,10 +5,16 @@ export const TEMPLATE_CATEGORIES = [
     "sales",
     "operations",
     "engineering",
-    "support"
+    "support",
+    "ecommerce",
+    "saas",
+    "healthcare"
 ] as const;
 
 export type TemplateCategory = (typeof TEMPLATE_CATEGORIES)[number];
+
+export const TEMPLATE_SORT_OPTIONS = ["default", "complexity", "popularity", "newest"] as const;
+export type TemplateSortBy = (typeof TEMPLATE_SORT_OPTIONS)[number];
 
 export interface Template {
     id: string;
@@ -36,6 +42,7 @@ export interface TemplateListParams {
     tags?: string[];
     featured?: boolean;
     search?: string;
+    sortBy?: TemplateSortBy;
     limit?: number;
     offset?: number;
 }
@@ -98,5 +105,23 @@ export const TEMPLATE_CATEGORY_META: Record<
         icon: "Headphones",
         color: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300",
         bgColor: "bg-rose-500"
+    },
+    ecommerce: {
+        label: "E-commerce",
+        icon: "ShoppingCart",
+        color: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300",
+        bgColor: "bg-orange-500"
+    },
+    saas: {
+        label: "SaaS",
+        icon: "Cloud",
+        color: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300",
+        bgColor: "bg-cyan-500"
+    },
+    healthcare: {
+        label: "Healthcare",
+        icon: "Heart",
+        color: "bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300",
+        bgColor: "bg-pink-500"
     }
 };

@@ -7,7 +7,8 @@ import {
     CategoryCount,
     CreateTemplateInput,
     TemplateCategory,
-    TemplateStatus
+    TemplateStatus,
+    TemplateSortBy
 } from "../models/Template";
 
 interface TemplateRow {
@@ -42,6 +43,7 @@ export class TemplateRepository {
             featured,
             search,
             status = "active",
+            sortBy = "default",
             limit = 20,
             offset = 0
         } = options;
@@ -74,6 +76,9 @@ export class TemplateRepository {
 
         const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
+        // Build ORDER BY clause based on sortBy option
+        const orderByClause = this.buildOrderByClause(sortBy);
+
         const countQuery = `
             SELECT COUNT(*) as count
             FROM flowmaestro.workflow_templates
@@ -83,7 +88,7 @@ export class TemplateRepository {
         const query = `
             SELECT * FROM flowmaestro.workflow_templates
             ${whereClause}
-            ORDER BY featured DESC, sort_order ASC, use_count DESC, created_at DESC
+            ${orderByClause}
             LIMIT $${paramIndex++} OFFSET $${paramIndex}
         `;
 
@@ -98,6 +103,28 @@ export class TemplateRepository {
             templates: templatesResult.rows.map((row) => this.mapRow(row)),
             total: parseInt(countResult.rows[0].count)
         };
+    }
+
+    /**
+     * Build ORDER BY clause based on sort option
+     */
+    private buildOrderByClause(sortBy: TemplateSortBy): string {
+        switch (sortBy) {
+            case "complexity":
+                // Sort by node count (ascending = simplest first)
+                // Uses JSONB array length function to count nodes in the definition
+                return "ORDER BY jsonb_array_length(definition->'nodes') ASC, name ASC";
+            case "popularity":
+                // Sort by use count (descending = most popular first)
+                return "ORDER BY use_count DESC, view_count DESC, name ASC";
+            case "newest":
+                // Sort by creation date (descending = newest first)
+                return "ORDER BY created_at DESC, name ASC";
+            case "default":
+            default:
+                // Default: featured first, then by sort_order, then by popularity
+                return "ORDER BY featured DESC, sort_order ASC, use_count DESC, created_at DESC";
+        }
     }
 
     async findById(id: string): Promise<TemplateModel | null> {

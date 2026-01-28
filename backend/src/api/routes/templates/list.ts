@@ -1,5 +1,5 @@
 import { FastifyInstance } from "fastify";
-import { TemplateCategory } from "../../../storage/models/Template";
+import { TemplateCategory, TemplateSortBy } from "../../../storage/models/Template";
 import { TemplateRepository } from "../../../storage/repositories";
 import { validateQuery } from "../../middleware";
 import { listTemplatesQuerySchema, ListTemplatesQuery } from "../../schemas/template-schemas";
@@ -20,6 +20,7 @@ export async function listTemplatesRoute(fastify: FastifyInstance) {
                 featured: query.featured,
                 search: query.search,
                 status: query.status || "active",
+                sortBy: (query.sortBy as TemplateSortBy) || "complexity",
                 limit: query.limit || 20,
                 offset: query.offset || 0
             });
