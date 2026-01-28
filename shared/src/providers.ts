@@ -695,33 +695,6 @@ export const ALL_PROVIDERS: Provider[] = [
         }
     },
     {
-        provider: "chartmogul",
-        displayName: "ChartMogul",
-        description: "Subscription analytics platform",
-        logoUrl: getBrandLogo("chartmogul.com"),
-        category: "Analytics",
-        methods: ["api_key"],
-        comingSoon: true
-    },
-    {
-        provider: "fathom",
-        displayName: "Fathom Analytics",
-        description: "Privacy-focused web analytics",
-        logoUrl: getBrandLogo("usefathom.com"),
-        category: "Analytics",
-        methods: ["api_key"],
-        comingSoon: true
-    },
-    {
-        provider: "plausible",
-        displayName: "Plausible",
-        description: "Privacy-friendly analytics",
-        logoUrl: getBrandLogo("plausible.io"),
-        category: "Analytics",
-        methods: ["api_key"],
-        comingSoon: true
-    },
-    {
         provider: "posthog",
         displayName: "PostHog",
         description: "Product analytics and feature flags",
@@ -764,8 +737,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Payment processing platform",
         logoUrl: getBrandLogo("stripe.com"),
         category: "Payment Processing",
-        methods: ["api_key"],
-        comingSoon: true
+        methods: ["api_key"]
     },
     {
         provider: "plaid",
@@ -792,15 +764,6 @@ export const ALL_PROVIDERS: Provider[] = [
         logoUrl: getBrandLogo("freshbooks.com"),
         category: "Accounting",
         methods: ["oauth2"]
-    },
-    {
-        provider: "wave",
-        displayName: "Wave",
-        description: "Free accounting software",
-        logoUrl: getBrandLogo("waveapps.com"),
-        category: "Accounting",
-        methods: ["oauth2"],
-        comingSoon: true
     },
     {
         provider: "bill-com",
@@ -981,48 +944,12 @@ export const ALL_PROVIDERS: Provider[] = [
         comingSoon: true
     },
     {
-        provider: "chatbase",
-        displayName: "Chatbase",
-        description: "AI chatbot platform",
-        logoUrl: getBrandLogo("chatbase.co"),
-        category: "Customer Support",
-        methods: ["api_key"],
-        comingSoon: true
-    },
-    {
         provider: "gorgias",
         displayName: "Gorgias",
         description: "E-commerce helpdesk platform",
         logoUrl: getBrandLogo("gorgias.com"),
         category: "Customer Support",
         methods: ["oauth2"],
-        comingSoon: true
-    },
-    {
-        provider: "kustomer",
-        displayName: "Kustomer",
-        description: "CRM-powered customer service",
-        logoUrl: getBrandLogo("kustomer.com"),
-        category: "Customer Support",
-        methods: ["api_key"],
-        comingSoon: true
-    },
-    {
-        provider: "reamaze",
-        displayName: "Re:amaze",
-        description: "Customer service and live chat",
-        logoUrl: getBrandLogo("reamaze.com"),
-        category: "Customer Support",
-        methods: ["api_key"],
-        comingSoon: true
-    },
-    {
-        provider: "tidio",
-        displayName: "Tidio",
-        description: "Live chat and chatbots",
-        logoUrl: getBrandLogo("tidio.com"),
-        category: "Customer Support",
-        methods: ["api_key"],
         comingSoon: true
     },
 
@@ -1060,8 +987,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Payment and POS system",
         logoUrl: getBrandLogo("squareup.com"),
         category: "Payment Processing",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "paypal",
@@ -1291,30 +1217,12 @@ export const ALL_PROVIDERS: Provider[] = [
         methods: ["api_key", "oauth2"]
     },
     {
-        provider: "capsule",
-        displayName: "Capsule CRM",
-        description: "Simple CRM for small businesses",
-        logoUrl: getBrandLogo("capsulecrm.com"),
-        category: "CRM & Sales",
-        methods: ["api_key"],
-        comingSoon: true
-    },
-    {
         provider: "insightly",
         displayName: "Insightly",
         description: "CRM and project management",
         logoUrl: getBrandLogo("insightly.com"),
         category: "CRM & Sales",
         methods: ["oauth2"],
-        comingSoon: true
-    },
-    {
-        provider: "nutshell",
-        displayName: "Nutshell",
-        description: "Sales automation CRM",
-        logoUrl: getBrandLogo("nutshell.com"),
-        category: "CRM & Sales",
-        methods: ["api_key"],
         comingSoon: true
     },
 
@@ -1407,7 +1315,7 @@ export const ALL_PROVIDERS: Provider[] = [
         displayName: "Figma",
         description: "Design and prototyping tool - access files, components, comments",
         logoUrl: getBrandLogo("figma.com"),
-        category: "Design",
+        category: "Productivity",
         methods: ["oauth2"]
     },
     {
@@ -1415,7 +1323,7 @@ export const ALL_PROVIDERS: Provider[] = [
         displayName: "Canva",
         description: "Graphic design platform",
         logoUrl: getBrandLogo("canva.com"),
-        category: "Design",
+        category: "Productivity",
         methods: ["oauth2"],
         comingSoon: true
     },
@@ -1735,15 +1643,6 @@ export const ALL_PROVIDERS: Provider[] = [
         methods: ["api_key"],
         comingSoon: true
     },
-    {
-        provider: "icloud",
-        displayName: "iCloud",
-        description: "Apple cloud storage",
-        logoUrl: getBrandLogo("icloud.com"),
-        category: "File Storage",
-        methods: ["oauth2"],
-        comingSoon: true
-    },
 
     // Social Media (Additional)
     {
@@ -1968,15 +1867,6 @@ export const ALL_PROVIDERS: Provider[] = [
 
     // Payment Processing
     {
-        provider: "braintree",
-        displayName: "Braintree",
-        description: "PayPal payment gateway",
-        logoUrl: getBrandLogo("braintreepayments.com"),
-        category: "Payment Processing",
-        methods: ["api_key"],
-        comingSoon: true
-    },
-    {
         provider: "razorpay",
         displayName: "Razorpay",
         description: "Indian payment gateway",
@@ -2022,13 +1912,12 @@ export const ALL_PROVIDERS: Provider[] = [
         methods: ["oauth2"]
     },
 
-    // Knowledge Base
     {
         provider: "gitbook",
         displayName: "GitBook",
         description: "Documentation platform",
         logoUrl: getBrandLogo("gitbook.com"),
-        category: "Knowledge Base",
+        category: "Productivity",
         methods: ["oauth2"],
         comingSoon: true
     },
@@ -2049,15 +1938,6 @@ export const ALL_PROVIDERS: Provider[] = [
         logoUrl: getBrandLogo("hootsuite.com"),
         category: "Social Media",
         methods: ["oauth2"]
-    },
-    {
-        provider: "later",
-        displayName: "Later",
-        description: "Visual social media scheduler",
-        logoUrl: getBrandLogo("later.com"),
-        category: "Social Media",
-        methods: ["oauth2"],
-        comingSoon: true
     },
     {
         provider: "sprout-social",
@@ -2089,15 +1969,6 @@ export const ALL_PROVIDERS: Provider[] = [
         methods: ["oauth2"]
     },
     {
-        provider: "chili-piper",
-        displayName: "Chili Piper",
-        description: "Revenue scheduling platform",
-        logoUrl: getBrandLogo("chilipiper.com"),
-        category: "Scheduling",
-        methods: ["api_key"],
-        comingSoon: true
-    },
-    {
         provider: "microsoft-bookings",
         displayName: "Microsoft Bookings",
         description: "Appointment scheduling app",
@@ -2125,51 +1996,14 @@ export const ALL_PROVIDERS: Provider[] = [
         methods: ["api_key"],
         comingSoon: true
     },
-    {
-        provider: "wufoo",
-        displayName: "Wufoo",
-        description: "Online form builder",
-        logoUrl: getBrandLogo("wufoo.com"),
-        category: "Forms & Surveys",
-        methods: ["api_key"],
-        comingSoon: true
-    },
 
-    // Video & Webinar
-    {
-        provider: "demio",
-        displayName: "Demio",
-        description: "Webinar platform",
-        logoUrl: getBrandLogo("demio.com"),
-        category: "Video & Webinar",
-        methods: ["api_key"],
-        comingSoon: true
-    },
     {
         provider: "gotowebinar",
         displayName: "GoToWebinar",
         description: "Webinar software",
         logoUrl: getBrandLogo("goto.com/webinar"),
-        category: "Video & Webinar",
+        category: "Communication",
         methods: ["oauth2"],
-        comingSoon: true
-    },
-    {
-        provider: "riverside",
-        displayName: "Riverside.fm",
-        description: "Podcast and video recording",
-        logoUrl: getBrandLogo("riverside.fm"),
-        category: "Video & Webinar",
-        methods: ["api_key"],
-        comingSoon: true
-    },
-    {
-        provider: "streamyard",
-        displayName: "StreamYard",
-        description: "Live streaming studio",
-        logoUrl: getBrandLogo("streamyard.com"),
-        category: "Video & Webinar",
-        methods: ["api_key"],
         comingSoon: true
     },
     {
@@ -2177,47 +2011,19 @@ export const ALL_PROVIDERS: Provider[] = [
         displayName: "Vimeo",
         description: "Video hosting platform",
         logoUrl: getBrandLogo("vimeo.com"),
-        category: "Video & Webinar",
+        category: "Communication",
         methods: ["oauth2"],
-        comingSoon: true
-    },
-    {
-        provider: "wistia",
-        displayName: "Wistia",
-        description: "Video hosting for business",
-        logoUrl: getBrandLogo("wistia.com"),
-        category: "Video & Webinar",
-        methods: ["api_key"],
         comingSoon: true
     },
 
     // SMS & Messaging
-    {
-        provider: "clicksend",
-        displayName: "ClickSend",
-        description: "SMS and communication APIs",
-        logoUrl: getBrandLogo("clicksend.com"),
-        category: "SMS & Messaging",
-        methods: ["api_key"],
-        comingSoon: true
-    },
-    {
-        provider: "plivo",
-        displayName: "Plivo",
-        description: "SMS and voice API platform",
-        logoUrl: getBrandLogo("plivo.com"),
-        category: "SMS & Messaging",
-        methods: ["api_key"],
-        comingSoon: true
-    },
 
-    // Security & Authentication
     {
         provider: "auth0",
         displayName: "Auth0",
         description: "Authentication and authorization platform",
         logoUrl: getBrandLogo("auth0.com"),
-        category: "Security & Authentication",
+        category: "Developer Tools",
         methods: ["oauth2"],
         comingSoon: true
     },
@@ -2226,27 +2032,17 @@ export const ALL_PROVIDERS: Provider[] = [
         displayName: "Okta",
         description: "Identity and access management",
         logoUrl: getBrandLogo("okta.com"),
-        category: "Security & Authentication",
-        methods: ["oauth2"],
-        comingSoon: true
-    },
-    {
-        provider: "onelogin",
-        displayName: "OneLogin",
-        description: "Identity and access management",
-        logoUrl: getBrandLogo("onelogin.com"),
-        category: "Security & Authentication",
+        category: "Developer Tools",
         methods: ["oauth2"],
         comingSoon: true
     },
 
-    // Notifications
     {
         provider: "onesignal",
         displayName: "OneSignal",
         description: "Push notification service",
         logoUrl: getBrandLogo("onesignal.com"),
-        category: "Notifications",
+        category: "Developer Tools",
         methods: ["api_key"],
         comingSoon: true
     },
@@ -2255,7 +2051,7 @@ export const ALL_PROVIDERS: Provider[] = [
         displayName: "Pusher",
         description: "Real-time messaging APIs",
         logoUrl: getBrandLogo("pusher.com"),
-        category: "Notifications",
+        category: "Developer Tools",
         methods: ["api_key"],
         comingSoon: true
     },
@@ -2264,27 +2060,7 @@ export const ALL_PROVIDERS: Provider[] = [
         displayName: "Sendbird",
         description: "Chat and messaging API",
         logoUrl: getBrandLogo("sendbird.com"),
-        category: "Notifications",
-        methods: ["api_key"],
-        comingSoon: true
-    },
-
-    // Cloud Storage
-    {
-        provider: "backblaze-b2",
-        displayName: "Backblaze B2",
-        description: "Cloud storage service",
-        logoUrl: getBrandLogo("backblaze.com"),
-        category: "Cloud Storage",
-        methods: ["api_key"],
-        comingSoon: true
-    },
-    {
-        provider: "wasabi",
-        displayName: "Wasabi",
-        description: "Cloud object storage",
-        logoUrl: getBrandLogo("wasabi.com"),
-        category: "Cloud Storage",
+        category: "Developer Tools",
         methods: ["api_key"],
         comingSoon: true
     },
@@ -2300,13 +2076,12 @@ export const ALL_PROVIDERS: Provider[] = [
         comingSoon: true
     },
 
-    // Business Intelligence
     {
         provider: "looker",
         displayName: "Looker",
         description: "Google business intelligence platform",
         logoUrl: getBrandLogo("looker.com"),
-        category: "Business Intelligence",
+        category: "Analytics",
         methods: ["api_key"],
         apiKeySettings: {
             keyLabel: "Client ID",
@@ -2323,7 +2098,7 @@ export const ALL_PROVIDERS: Provider[] = [
         displayName: "Tableau",
         description: "Data visualization and analytics",
         logoUrl: getBrandLogo("tableau.com"),
-        category: "Business Intelligence",
+        category: "Analytics",
         methods: ["api_key"],
         apiKeySettings: {
             keyLabel: "Personal Access Token Name",
@@ -2341,7 +2116,7 @@ export const ALL_PROVIDERS: Provider[] = [
         displayName: "Power BI",
         description: "Microsoft business analytics",
         logoUrl: getBrandLogo("powerbi.microsoft.com"),
-        category: "Business Intelligence",
+        category: "Analytics",
         methods: ["oauth2"],
         comingSoon: true
     },
@@ -2375,24 +2150,22 @@ export const ALL_PROVIDERS: Provider[] = [
         comingSoon: true
     },
 
-    // Invoicing & Billing
     {
         provider: "chargebee",
         displayName: "Chargebee",
         description: "Subscription billing platform",
         logoUrl: getBrandLogo("chargebee.com"),
-        category: "Invoicing & Billing",
+        category: "Accounting",
         methods: ["api_key"],
         comingSoon: true
     },
 
-    // Call Center
     {
         provider: "aircall",
         displayName: "Aircall",
         description: "Cloud phone system",
         logoUrl: getBrandLogo("aircall.io"),
-        category: "Call Center",
+        category: "Communication",
         methods: ["api_key"],
         comingSoon: true
     },
@@ -2401,47 +2174,27 @@ export const ALL_PROVIDERS: Provider[] = [
         displayName: "Dialpad",
         description: "Business communication platform",
         logoUrl: getBrandLogo("dialpad.com"),
-        category: "Call Center",
+        category: "Communication",
         methods: ["oauth2"],
         comingSoon: true
     },
 
-    // Monitoring & Logging
     {
         provider: "splunk",
         displayName: "Splunk",
         description: "Log analysis and monitoring",
         logoUrl: getBrandLogo("splunk.com"),
-        category: "Monitoring & Logging",
-        methods: ["api_key"],
-        comingSoon: true
-    },
-    {
-        provider: "rollbar",
-        displayName: "Rollbar",
-        description: "Error tracking and monitoring",
-        logoUrl: getBrandLogo("rollbar.com"),
-        category: "Monitoring & Logging",
-        methods: ["api_key"],
-        comingSoon: true
-    },
-    {
-        provider: "bugsnag",
-        displayName: "Bugsnag",
-        description: "Error monitoring platform",
-        logoUrl: getBrandLogo("bugsnag.com"),
-        category: "Monitoring & Logging",
+        category: "Developer Tools",
         methods: ["api_key"],
         comingSoon: true
     },
 
-    // AB Testing & Optimization
     {
         provider: "optimizely",
         displayName: "Optimizely",
         description: "Experimentation and A/B testing",
         logoUrl: getBrandLogo("optimizely.com"),
-        category: "AB Testing & Optimization",
+        category: "Developer Tools",
         methods: ["api_key"],
         comingSoon: true
     },
@@ -2450,7 +2203,7 @@ export const ALL_PROVIDERS: Provider[] = [
         displayName: "LaunchDarkly",
         description: "Feature flags and experimentation",
         logoUrl: getBrandLogo("launchdarkly.com"),
-        category: "AB Testing & Optimization",
+        category: "Developer Tools",
         methods: ["api_key"],
         comingSoon: true
     },

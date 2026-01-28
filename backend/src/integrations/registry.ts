@@ -1111,5 +1111,33 @@ const ripplingEntry: ProviderRegistryEntry = {
 
 providerRegistry.register(ripplingEntry);
 
+// Register Stripe provider
+const stripeEntry: ProviderRegistryEntry = {
+    name: "stripe",
+    displayName: "Stripe",
+    authMethod: "api_key",
+    category: "payments",
+    loader: async () => {
+        const { StripeProvider } = await import("./providers/stripe/StripeProvider");
+        return new StripeProvider();
+    }
+};
+
+providerRegistry.register(stripeEntry);
+
+// Register Square provider
+const squareEntry: ProviderRegistryEntry = {
+    name: "square",
+    displayName: "Square",
+    authMethod: "oauth2",
+    category: "payments",
+    loader: async () => {
+        const { SquareProvider } = await import("./providers/square/SquareProvider");
+        return new SquareProvider();
+    }
+};
+
+providerRegistry.register(squareEntry);
+
 // Export for use in application
 export { providerRegistry };

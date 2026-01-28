@@ -486,6 +486,12 @@ export const config = {
         rippling: {
             clientId: process.env.RIPPLING_CLIENT_ID || "",
             clientSecret: process.env.RIPPLING_CLIENT_SECRET || ""
+        },
+
+        // Square
+        square: {
+            clientId: process.env.SQUARE_CLIENT_ID || "",
+            clientSecret: process.env.SQUARE_CLIENT_SECRET || ""
         }
     }
 };
@@ -569,6 +575,7 @@ export function getOAuthRedirectUri(provider: string): string {
         freshbooks: "/oauth/freshbooks/callback",
         workday: "/oauth/workday/callback",
         rippling: "/oauth/rippling/callback",
+        square: "/oauth/square/callback",
 
         // OAuth 1.0a providers
         evernote: "/oauth1/evernote/callback"

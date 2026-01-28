@@ -3587,6 +3587,71 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
         redirectUri: getOAuthRedirectUri("rippling"),
         refreshable: true,
         pkceEnabled: false
+    },
+
+    // ==========================================================================
+    // Square - Payment Processing
+    // Uses OAuth 2.0 with standard flow
+    // ==========================================================================
+
+    square: {
+        name: "square",
+        displayName: "Square",
+        authUrl: "https://connect.squareup.com/oauth2/authorize",
+        tokenUrl: "https://connect.squareup.com/oauth2/token",
+        scopes: [
+            "PAYMENTS_READ",
+            "PAYMENTS_WRITE",
+            "CUSTOMERS_READ",
+            "CUSTOMERS_WRITE",
+            "ORDERS_READ",
+            "ORDERS_WRITE"
+        ],
+        clientId: config.oauth.square.clientId,
+        clientSecret: config.oauth.square.clientSecret,
+        redirectUri: getOAuthRedirectUri("square"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                // Get merchant info using the Merchants API
+                const response = await fetch("https://connect.squareup.com/v2/merchants/me", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                        "Content-Type": "application/json",
+                        "Square-Version": "2025-01-23"
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    merchant?: {
+                        id?: string;
+                        business_name?: string;
+                        country?: string;
+                        currency?: string;
+                        status?: string;
+                    };
+                };
+
+                return {
+                    merchantId: data.merchant?.id || "unknown",
+                    businessName: data.merchant?.business_name || "Square Merchant",
+                    country: data.merchant?.country,
+                    currency: data.merchant?.currency,
+                    status: data.merchant?.status
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get Square merchant info");
+                return {
+                    merchantId: "unknown",
+                    businessName: "Square Merchant"
+                };
+            }
+        },
+        refreshable: true,
+        pkceEnabled: false
     }
 };
 
