@@ -346,7 +346,7 @@ export function CreateWorkflowDialog({ isOpen, onClose, onCreate }: CreateWorkfl
 
     // Determine dialog size based on step
     const getDialogSize = () => {
-        return step === "pattern" ? "6xl" : "md";
+        return step === "pattern" ? "7xl" : "md";
     };
 
     return (
