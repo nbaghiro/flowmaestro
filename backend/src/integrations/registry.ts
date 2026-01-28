@@ -1041,5 +1041,75 @@ const segmentEntry: ProviderRegistryEntry = {
 
 providerRegistry.register(segmentEntry);
 
+// Register Medium provider
+const mediumEntry: ProviderRegistryEntry = {
+    name: "medium",
+    displayName: "Medium",
+    authMethod: "api_key",
+    category: "content_management",
+    loader: async () => {
+        const { MediumProvider } = await import("./providers/medium/MediumProvider");
+        return new MediumProvider();
+    }
+};
+
+providerRegistry.register(mediumEntry);
+
+// Register QuickBooks provider
+const quickbooksEntry: ProviderRegistryEntry = {
+    name: "quickbooks",
+    displayName: "QuickBooks",
+    authMethod: "oauth2",
+    category: "accounting",
+    loader: async () => {
+        const { QuickBooksProvider } = await import("./providers/quickbooks/QuickBooksProvider");
+        return new QuickBooksProvider();
+    }
+};
+
+providerRegistry.register(quickbooksEntry);
+
+// Register FreshBooks provider
+const freshbooksEntry: ProviderRegistryEntry = {
+    name: "freshbooks",
+    displayName: "FreshBooks",
+    authMethod: "oauth2",
+    category: "accounting",
+    loader: async () => {
+        const { FreshBooksProvider } = await import("./providers/freshbooks/FreshBooksProvider");
+        return new FreshBooksProvider();
+    }
+};
+
+providerRegistry.register(freshbooksEntry);
+
+// Register Workday provider
+const workdayEntry: ProviderRegistryEntry = {
+    name: "workday",
+    displayName: "Workday",
+    authMethod: "oauth2",
+    category: "hr",
+    loader: async () => {
+        const { WorkdayProvider } = await import("./providers/workday/WorkdayProvider");
+        return new WorkdayProvider();
+    }
+};
+
+providerRegistry.register(workdayEntry);
+
+// Register Rippling provider
+const ripplingEntry: ProviderRegistryEntry = {
+    name: "rippling",
+    displayName: "Rippling",
+    authMethod: "oauth2",
+    category: "hr",
+    loader: async () => {
+        const { RipplingProvider } = await import("./providers/rippling/RipplingProvider");
+        return new RipplingProvider();
+    }
+};
+
+providerRegistry.register(ripplingEntry);
+
 // Export for use in application
 export { providerRegistry };

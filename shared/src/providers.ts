@@ -163,7 +163,9 @@ export const PROVIDER_LOGO_DOMAINS: Record<string, string> = {
     sentry: "sentry.io",
     pagerduty: "pagerduty.com",
     vercel: "vercel.com",
-    circleci: "circleci.com"
+    circleci: "circleci.com",
+    quickbooks: "quickbooks.intuit.com",
+    freshbooks: "freshbooks.com"
 };
 
 /**
@@ -745,8 +747,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Accounting and bookkeeping",
         logoUrl: getBrandLogo("quickbooks.intuit.com"),
         category: "Accounting",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "xero",
@@ -790,8 +791,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Small business accounting",
         logoUrl: getBrandLogo("freshbooks.com"),
         category: "Accounting",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "wave",
@@ -847,7 +847,19 @@ export const ALL_PROVIDERS: Provider[] = [
         logoUrl: getBrandLogo("workday.com"),
         category: "HR",
         methods: ["oauth2"],
-        comingSoon: true
+        oauthSettings: [
+            {
+                name: "tenant",
+                label: "Workday Tenant",
+                placeholder: "your-company",
+                helpText:
+                    "Enter your Workday tenant ID (found in your Workday URL, e.g., 'acme' from acme.workday.com)",
+                required: true,
+                type: "text",
+                pattern: "^[a-zA-Z0-9][a-zA-Z0-9_-]*[a-zA-Z0-9]$",
+                patternError: "Tenant must start and end with a letter or number"
+            }
+        ]
     },
     {
         provider: "adp",
@@ -873,8 +885,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "HR and IT management",
         logoUrl: getBrandLogo("rippling.com"),
         category: "HR",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
 
     // Customer Support
@@ -1239,11 +1250,17 @@ export const ALL_PROVIDERS: Provider[] = [
     {
         provider: "medium",
         displayName: "Medium",
-        description: "Publishing platform for writers",
+        description: "Publish stories and manage publications on Medium",
         logoUrl: getBrandLogo("medium.com"),
-        category: "Marketing",
-        methods: ["oauth2"],
-        comingSoon: true
+        category: "Content Management",
+        methods: ["api_key"],
+        apiKeySettings: {
+            keyLabel: "Integration Token",
+            keyPlaceholder: "Enter your Medium Integration Token",
+            helpText:
+                "Generate an Integration Token from Medium Settings > Security and apps > Integration tokens",
+            helpUrl: "https://medium.com/me/settings/security"
+        }
     },
 
     // CRM & Sales (Additional)

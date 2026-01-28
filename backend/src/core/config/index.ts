@@ -462,6 +462,30 @@ export const config = {
         mailchimp: {
             clientId: process.env.MAILCHIMP_CLIENT_ID || "",
             clientSecret: process.env.MAILCHIMP_CLIENT_SECRET || ""
+        },
+
+        // QuickBooks
+        quickbooks: {
+            clientId: process.env.QUICKBOOKS_CLIENT_ID || "",
+            clientSecret: process.env.QUICKBOOKS_CLIENT_SECRET || ""
+        },
+
+        // FreshBooks
+        freshbooks: {
+            clientId: process.env.FRESHBOOKS_CLIENT_ID || "",
+            clientSecret: process.env.FRESHBOOKS_CLIENT_SECRET || ""
+        },
+
+        // Workday
+        workday: {
+            clientId: process.env.WORKDAY_CLIENT_ID || "",
+            clientSecret: process.env.WORKDAY_CLIENT_SECRET || ""
+        },
+
+        // Rippling
+        rippling: {
+            clientId: process.env.RIPPLING_CLIENT_ID || "",
+            clientSecret: process.env.RIPPLING_CLIENT_SECRET || ""
         }
     }
 };
@@ -541,6 +565,10 @@ export function getOAuthRedirectUri(provider: string): string {
         clickup: "/oauth/clickup/callback",
         klaviyo: "/oauth/klaviyo/callback",
         mailchimp: "/oauth/mailchimp/callback",
+        quickbooks: "/oauth/quickbooks/callback",
+        freshbooks: "/oauth/freshbooks/callback",
+        workday: "/oauth/workday/callback",
+        rippling: "/oauth/rippling/callback",
 
         // OAuth 1.0a providers
         evernote: "/oauth1/evernote/callback"
@@ -620,7 +648,11 @@ export function getOAuthCredentials(provider: string): { clientId: string; clien
         "cal-com": "calcom",
         clickup: "clickup",
         klaviyo: "klaviyo",
-        mailchimp: "mailchimp"
+        mailchimp: "mailchimp",
+        quickbooks: "quickbooks",
+        freshbooks: "freshbooks",
+        workday: "workday",
+        rippling: "rippling"
     };
 
     const configKey = providerMap[provider];
