@@ -5,13 +5,13 @@
  * Includes execution, context, and state types.
  */
 
-import type { JsonObject, JsonValue } from "@flowmaestro/shared";
+import type { JsonObject, JsonValue, NodeExecutionStatus } from "@flowmaestro/shared";
 
 // ============================================================================
 // RE-EXPORTS
 // ============================================================================
 
-export type { JsonObject, JsonValue };
+export type { JsonObject, JsonValue, NodeExecutionStatus };
 
 // ============================================================================
 // BASE EXECUTION TYPES
@@ -58,19 +58,8 @@ export interface NodeExecutorResult {
 }
 
 // ============================================================================
-// NODE EXECUTION STATUS
+// NODE EXECUTION STATE
 // ============================================================================
-
-/**
- * Node execution status
- */
-export type NodeExecutionStatus =
-    | "pending"
-    | "ready"
-    | "executing"
-    | "completed"
-    | "failed"
-    | "skipped";
 
 /**
  * State for a single node's execution

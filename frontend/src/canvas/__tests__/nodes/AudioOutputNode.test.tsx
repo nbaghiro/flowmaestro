@@ -4,6 +4,7 @@
 
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { NodeExecutionStatus } from "@flowmaestro/shared";
 import AudioOutputNode from "../../nodes/AudioOutputNode";
 import type { NodeProps } from "reactflow";
 
@@ -53,7 +54,7 @@ vi.mock("../../../components/validation/NodeValidationBadge", () => ({
 
 interface AudioOutputNodeData {
     label: string;
-    status?: "idle" | "pending" | "running" | "success" | "error";
+    status?: NodeExecutionStatus;
     provider?: string;
     model?: string;
     voice?: string;
@@ -215,7 +216,7 @@ describe("AudioOutputNode", () => {
         });
 
         it("renders with success status", () => {
-            render(<AudioOutputNode {...createProps({ status: "success" })} />);
+            render(<AudioOutputNode {...createProps({ status: "completed" })} />);
             expect(screen.getByText("Audio Output")).toBeInTheDocument();
         });
     });

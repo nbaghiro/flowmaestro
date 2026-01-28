@@ -4,6 +4,7 @@
 
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { NodeExecutionStatus } from "@flowmaestro/shared";
 import PdfGenerationNode from "../../nodes/PdfGenerationNode";
 import type { NodeProps } from "reactflow";
 
@@ -53,7 +54,7 @@ vi.mock("../../../components/validation/NodeValidationBadge", () => ({
 
 interface PdfGenerationNodeData {
     label: string;
-    status?: "idle" | "pending" | "running" | "success" | "error";
+    status?: NodeExecutionStatus;
     format?: string;
     pageSize?: string;
     orientation?: string;
@@ -214,7 +215,7 @@ describe("PdfGenerationNode", () => {
         });
 
         it("renders with success status", () => {
-            render(<PdfGenerationNode {...createProps({ status: "success" })} />);
+            render(<PdfGenerationNode {...createProps({ status: "completed" })} />);
             expect(screen.getByText("PDF")).toBeInTheDocument();
         });
     });

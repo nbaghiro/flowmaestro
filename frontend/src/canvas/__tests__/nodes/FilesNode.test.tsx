@@ -4,6 +4,7 @@
 
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { NodeExecutionStatus } from "@flowmaestro/shared";
 import FilesNode from "../../nodes/FilesNode";
 import type { NodeProps } from "reactflow";
 
@@ -58,7 +59,7 @@ interface UploadedFile {
 
 interface FilesNodeData {
     label: string;
-    status?: "idle" | "pending" | "running" | "success" | "error";
+    status?: NodeExecutionStatus;
     uploadedFiles?: UploadedFile[];
 }
 
@@ -184,7 +185,7 @@ describe("FilesNode", () => {
         });
 
         it("renders with success status", () => {
-            render(<FilesNode {...createProps({ status: "success" })} />);
+            render(<FilesNode {...createProps({ status: "completed" })} />);
             expect(screen.getByText("Files")).toBeInTheDocument();
         });
     });

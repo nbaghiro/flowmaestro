@@ -4,6 +4,7 @@
 
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { NodeExecutionStatus } from "@flowmaestro/shared";
 import HumanReviewNode from "../../nodes/HumanReviewNode";
 import type { NodeProps } from "reactflow";
 
@@ -53,7 +54,7 @@ vi.mock("../../../components/validation/NodeValidationBadge", () => ({
 
 interface HumanReviewNodeData {
     label: string;
-    status?: "idle" | "pending" | "running" | "success" | "error";
+    status?: NodeExecutionStatus;
     prompt?: string;
     variableName?: string;
     inputType?: string;
@@ -164,17 +165,17 @@ describe("HumanReviewNode", () => {
         });
 
         it("renders with running status", () => {
-            render(<HumanReviewNode {...createProps({ status: "running" })} />);
+            render(<HumanReviewNode {...createProps({ status: "executing" })} />);
             expect(screen.getByText("Human Review")).toBeInTheDocument();
         });
 
         it("renders with success status", () => {
-            render(<HumanReviewNode {...createProps({ status: "success" })} />);
+            render(<HumanReviewNode {...createProps({ status: "completed" })} />);
             expect(screen.getByText("Human Review")).toBeInTheDocument();
         });
 
         it("renders with error status", () => {
-            render(<HumanReviewNode {...createProps({ status: "error" })} />);
+            render(<HumanReviewNode {...createProps({ status: "failed" })} />);
             expect(screen.getByText("Human Review")).toBeInTheDocument();
         });
     });

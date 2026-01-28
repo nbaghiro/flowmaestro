@@ -8,11 +8,12 @@
 import { AudioLines } from "lucide-react";
 import { memo } from "react";
 import { NodeProps } from "reactflow";
+import type { NodeExecutionStatus } from "@flowmaestro/shared";
 import { BaseNode } from "./BaseNode";
 
 interface AudioTranscriptionNodeData {
     label: string;
-    status?: "idle" | "pending" | "running" | "success" | "error";
+    status?: NodeExecutionStatus;
     model?: string;
     language?: string;
     task?: "transcribe" | "translate";

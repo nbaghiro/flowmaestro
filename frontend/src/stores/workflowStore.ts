@@ -7,6 +7,7 @@ import {
     type WorkflowValidationResult,
     type WorkflowValidationContext,
     type WorkflowValidationIssue,
+    type NodeExecutionStatus,
     getErrorMessage,
     validateNodeConfig,
     nodeValidationRules,
@@ -61,7 +62,8 @@ function debouncedWorkflowValidation(get: () => WorkflowStore): void {
 export const INITIAL_NODE_WIDTH = 260;
 export const INITIAL_NODE_HEIGHT = 160;
 
-export type NodeExecutionStatus = "idle" | "pending" | "running" | "success" | "error" | "skipped";
+// Re-export for convenience
+export type { NodeExecutionStatus };
 
 export interface NodeExecutionState {
     status: NodeExecutionStatus;

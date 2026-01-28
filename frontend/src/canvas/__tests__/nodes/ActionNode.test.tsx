@@ -4,6 +4,7 @@
 
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { NodeExecutionStatus } from "@flowmaestro/shared";
 import ActionNode from "../../nodes/ActionNode";
 import type { NodeProps } from "reactflow";
 
@@ -51,30 +52,34 @@ vi.mock("../../../components/validation/NodeValidationBadge", () => ({
     })
 }));
 
-// Mock ALL_PROVIDERS from shared
-vi.mock("@flowmaestro/shared", () => ({
-    ALL_PROVIDERS: [
-        {
-            provider: "slack",
-            displayName: "Slack",
-            logoUrl: "https://example.com/slack-logo.png"
-        },
-        {
-            provider: "github",
-            displayName: "GitHub",
-            logoUrl: "https://example.com/github-logo.png"
-        },
-        {
-            provider: "hubspot",
-            displayName: "HubSpot",
-            logoUrl: "https://example.com/hubspot-logo.png"
-        }
-    ]
-}));
+// Mock ALL_PROVIDERS from shared (NodeExecutionStatus is not mocked - use real type)
+vi.mock("@flowmaestro/shared", async (importOriginal) => {
+    const actual = await importOriginal<typeof import("@flowmaestro/shared")>();
+    return {
+        ...actual,
+        ALL_PROVIDERS: [
+            {
+                provider: "slack",
+                displayName: "Slack",
+                logoUrl: "https://example.com/slack-logo.png"
+            },
+            {
+                provider: "github",
+                displayName: "GitHub",
+                logoUrl: "https://example.com/github-logo.png"
+            },
+            {
+                provider: "hubspot",
+                displayName: "HubSpot",
+                logoUrl: "https://example.com/hubspot-logo.png"
+            }
+        ]
+    };
+});
 
 interface ActionNodeData {
     label: string;
-    status?: "idle" | "pending" | "running" | "success" | "error";
+    status?: NodeExecutionStatus;
     provider?: string;
     providerName?: string;
     operation?: string;
@@ -249,17 +254,17 @@ describe("ActionNode", () => {
         });
 
         it("renders with running status", () => {
-            render(<ActionNode {...createProps({ status: "running" })} />);
+            render(<ActionNode {...createProps({ status: "executing" })} />);
             expect(screen.getByText("Action")).toBeInTheDocument();
         });
 
         it("renders with success status", () => {
-            render(<ActionNode {...createProps({ status: "success" })} />);
+            render(<ActionNode {...createProps({ status: "completed" })} />);
             expect(screen.getByText("Action")).toBeInTheDocument();
         });
 
         it("renders with error status", () => {
-            render(<ActionNode {...createProps({ status: "error" })} />);
+            render(<ActionNode {...createProps({ status: "failed" })} />);
             expect(screen.getByText("Action")).toBeInTheDocument();
         });
     });

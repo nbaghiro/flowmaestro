@@ -4,6 +4,7 @@
 
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { NodeExecutionStatus } from "@flowmaestro/shared";
 import LLMNode from "../../nodes/LLMNode";
 import type { NodeProps } from "reactflow";
 
@@ -53,7 +54,7 @@ vi.mock("../../../components/validation/NodeValidationBadge", () => ({
 
 interface LLMNodeData {
     label: string;
-    status?: "idle" | "pending" | "running" | "success" | "error";
+    status?: NodeExecutionStatus;
     provider?: string;
     model?: string;
     prompt?: string;

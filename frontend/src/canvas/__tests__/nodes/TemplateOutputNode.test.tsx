@@ -4,6 +4,7 @@
 
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { NodeExecutionStatus } from "@flowmaestro/shared";
 import TemplateOutputNode from "../../nodes/TemplateOutputNode";
 import type { NodeProps } from "reactflow";
 
@@ -53,7 +54,7 @@ vi.mock("../../../components/validation/NodeValidationBadge", () => ({
 
 interface TemplateOutputNodeData {
     label: string;
-    status?: "idle" | "pending" | "running" | "success" | "error";
+    status?: NodeExecutionStatus;
     template?: string | Record<string, unknown>;
     outputFormat?: "markdown" | "html" | "json";
 }
@@ -179,7 +180,7 @@ describe("TemplateOutputNode", () => {
         });
 
         it("renders with success status", () => {
-            render(<TemplateOutputNode {...createProps({ status: "success" })} />);
+            render(<TemplateOutputNode {...createProps({ status: "completed" })} />);
             expect(screen.getByText("Template Output")).toBeInTheDocument();
         });
     });

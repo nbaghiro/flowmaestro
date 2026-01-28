@@ -4,6 +4,7 @@
 
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { NodeExecutionStatus } from "@flowmaestro/shared";
 import TransformNode from "../../nodes/TransformNode";
 import type { NodeProps } from "reactflow";
 
@@ -63,7 +64,7 @@ type TransformOperation =
 
 interface TransformNodeData {
     label: string;
-    status?: "idle" | "pending" | "running" | "success" | "error";
+    status?: NodeExecutionStatus;
     operation?: TransformOperation;
     inputData?: string;
     expression?: string;

@@ -122,7 +122,23 @@ export type ExecutionStatus =
     | "completed"
     | "failed"
     | "cancelled";
-export type NodeStatus = "pending" | "running" | "completed" | "failed" | "skipped";
+
+/**
+ * Node execution status - Single source of truth for all node states.
+ *
+ * State transitions:
+ *   idle → pending → ready → executing → completed
+ *                         ↘            ↘ failed
+ *   pending → skipped (when branch not taken)
+ */
+export type NodeExecutionStatus =
+    | "idle" // Initial state, not part of current execution
+    | "pending" // Waiting for dependencies to complete
+    | "ready" // Dependencies done, queued for execution
+    | "executing" // Currently running
+    | "completed" // Finished successfully
+    | "failed" // Finished with error
+    | "skipped"; // Skipped (e.g., conditional branch not taken)
 
 export interface ExecutionPauseContext {
     reason: string;
@@ -160,7 +176,7 @@ export interface ExecutionContext {
     workflowId: string;
     userId: string;
     variables: JsonObject;
-    nodeStatus: Record<string, NodeStatus>;
+    nodeStatus: Record<string, NodeExecutionStatus>;
     metadata: JsonObject;
 }
 

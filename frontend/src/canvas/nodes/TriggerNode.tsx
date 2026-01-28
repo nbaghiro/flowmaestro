@@ -1,12 +1,12 @@
 import { Zap } from "lucide-react";
 import { memo, useState } from "react";
 import { NodeProps } from "reactflow";
-import { getProviderLogo } from "@flowmaestro/shared";
+import { getProviderLogo, type NodeExecutionStatus } from "@flowmaestro/shared";
 import { BaseNode } from "./BaseNode";
 
 interface TriggerNodeData {
     label: string;
-    status?: "idle" | "pending" | "running" | "success" | "error";
+    status?: NodeExecutionStatus;
     providerId?: string;
     providerName?: string;
     eventId?: string;

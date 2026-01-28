@@ -4,6 +4,7 @@
 
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { NodeExecutionStatus } from "@flowmaestro/shared";
 import WebSearchNode from "../../nodes/WebSearchNode";
 import type { NodeProps } from "reactflow";
 
@@ -53,7 +54,7 @@ vi.mock("../../../components/validation/NodeValidationBadge", () => ({
 
 interface WebSearchNodeData {
     label: string;
-    status?: "idle" | "pending" | "running" | "success" | "error";
+    status?: NodeExecutionStatus;
     query?: string;
     maxResults?: number;
     searchType?: string;
@@ -161,17 +162,17 @@ describe("WebSearchNode", () => {
         });
 
         it("renders with running status", () => {
-            render(<WebSearchNode {...createProps({ status: "running" })} />);
+            render(<WebSearchNode {...createProps({ status: "executing" })} />);
             expect(screen.getByText("Web Search")).toBeInTheDocument();
         });
 
         it("renders with success status", () => {
-            render(<WebSearchNode {...createProps({ status: "success" })} />);
+            render(<WebSearchNode {...createProps({ status: "completed" })} />);
             expect(screen.getByText("Web Search")).toBeInTheDocument();
         });
 
         it("renders with error status", () => {
-            render(<WebSearchNode {...createProps({ status: "error" })} />);
+            render(<WebSearchNode {...createProps({ status: "failed" })} />);
             expect(screen.getByText("Web Search")).toBeInTheDocument();
         });
     });

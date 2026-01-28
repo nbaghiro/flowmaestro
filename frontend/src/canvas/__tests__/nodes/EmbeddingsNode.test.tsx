@@ -4,6 +4,7 @@
 
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { NodeExecutionStatus } from "@flowmaestro/shared";
 import EmbeddingsNode from "../../nodes/EmbeddingsNode";
 import type { NodeProps } from "reactflow";
 
@@ -53,7 +54,7 @@ vi.mock("../../../components/validation/NodeValidationBadge", () => ({
 
 interface EmbeddingsNodeData {
     label: string;
-    status?: "idle" | "pending" | "running" | "success" | "error";
+    status?: NodeExecutionStatus;
     model?: string;
     dimensions?: number;
 }
@@ -152,17 +153,17 @@ describe("EmbeddingsNode", () => {
         });
 
         it("renders with running status", () => {
-            render(<EmbeddingsNode {...createProps({ status: "running" })} />);
+            render(<EmbeddingsNode {...createProps({ status: "executing" })} />);
             expect(screen.getByText("Embeddings")).toBeInTheDocument();
         });
 
         it("renders with success status", () => {
-            render(<EmbeddingsNode {...createProps({ status: "success" })} />);
+            render(<EmbeddingsNode {...createProps({ status: "completed" })} />);
             expect(screen.getByText("Embeddings")).toBeInTheDocument();
         });
 
         it("renders with error status", () => {
-            render(<EmbeddingsNode {...createProps({ status: "error" })} />);
+            render(<EmbeddingsNode {...createProps({ status: "failed" })} />);
             expect(screen.getByText("Embeddings")).toBeInTheDocument();
         });
     });

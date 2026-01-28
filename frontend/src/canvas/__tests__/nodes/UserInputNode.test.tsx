@@ -4,6 +4,7 @@
 
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { NodeExecutionStatus } from "@flowmaestro/shared";
 import UserInputNode from "../../nodes/UserInputNode";
 import type { NodeProps } from "reactflow";
 
@@ -53,7 +54,7 @@ vi.mock("../../../components/validation/NodeValidationBadge", () => ({
 
 interface UserInputNodeData {
     label: string;
-    status?: "idle" | "pending" | "running" | "success" | "error";
+    status?: NodeExecutionStatus;
     prompt?: string;
     variableName?: string;
     validationType?: string;
@@ -209,7 +210,7 @@ describe("UserInputNode", () => {
         });
 
         it("renders with success status", () => {
-            render(<UserInputNode {...createProps({ status: "success" })} />);
+            render(<UserInputNode {...createProps({ status: "completed" })} />);
             expect(screen.getByText("User Input")).toBeInTheDocument();
         });
     });

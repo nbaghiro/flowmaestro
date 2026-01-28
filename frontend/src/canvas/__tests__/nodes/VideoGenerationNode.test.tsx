@@ -4,6 +4,7 @@
 
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { NodeExecutionStatus } from "@flowmaestro/shared";
 import VideoGenerationNode from "../../nodes/VideoGenerationNode";
 import type { NodeProps } from "reactflow";
 
@@ -53,7 +54,7 @@ vi.mock("../../../components/validation/NodeValidationBadge", () => ({
 
 interface VideoGenerationNodeData {
     label: string;
-    status?: "idle" | "pending" | "running" | "success" | "error";
+    status?: NodeExecutionStatus;
     provider?: string;
     model?: string;
 }
@@ -181,7 +182,7 @@ describe("VideoGenerationNode", () => {
         });
 
         it("renders with success status", () => {
-            render(<VideoGenerationNode {...createProps({ status: "success" })} />);
+            render(<VideoGenerationNode {...createProps({ status: "completed" })} />);
             expect(screen.getByText("Video")).toBeInTheDocument();
         });
     });

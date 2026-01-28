@@ -78,7 +78,7 @@ export function ExecutionSSEManager() {
                 },
                 onNodeStarted: (data) => {
                     updateNodeState(data.nodeId, {
-                        status: "running",
+                        status: "executing",
                         startedAt: new Date(data.timestamp)
                     });
                     addExecutionLog({
@@ -89,7 +89,7 @@ export function ExecutionSSEManager() {
                 },
                 onNodeCompleted: (data) => {
                     updateNodeState(data.nodeId, {
-                        status: "success",
+                        status: "completed",
                         completedAt: new Date(data.timestamp),
                         output: data.output,
                         duration: data.duration
@@ -102,7 +102,7 @@ export function ExecutionSSEManager() {
                 },
                 onNodeFailed: (data) => {
                     updateNodeState(data.nodeId, {
-                        status: "error",
+                        status: "failed",
                         completedAt: new Date(data.timestamp),
                         error: data.error
                     });

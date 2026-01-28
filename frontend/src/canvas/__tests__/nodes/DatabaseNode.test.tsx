@@ -4,6 +4,7 @@
 
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { NodeExecutionStatus } from "@flowmaestro/shared";
 import DatabaseNode from "../../nodes/DatabaseNode";
 import type { NodeProps } from "reactflow";
 
@@ -53,7 +54,7 @@ vi.mock("../../../components/validation/NodeValidationBadge", () => ({
 
 interface DatabaseNodeData {
     label: string;
-    status?: "idle" | "pending" | "running" | "success" | "error";
+    status?: NodeExecutionStatus;
     operation?: string;
     provider?: string;
 }
@@ -288,18 +289,22 @@ describe("DatabaseNode", () => {
 
     describe("Status Display", () => {
         it("can display with running status", () => {
-            const { container } = render(<DatabaseNode {...createProps({ status: "running" })} />);
+            const { container } = render(
+                <DatabaseNode {...createProps({ status: "executing" })} />
+            );
             // Status is passed to BaseNode which handles styling
             expect(container.firstChild).toBeInTheDocument();
         });
 
         it("can display with error status", () => {
-            const { container } = render(<DatabaseNode {...createProps({ status: "error" })} />);
+            const { container } = render(<DatabaseNode {...createProps({ status: "failed" })} />);
             expect(container.firstChild).toBeInTheDocument();
         });
 
         it("can display with success status", () => {
-            const { container } = render(<DatabaseNode {...createProps({ status: "success" })} />);
+            const { container } = render(
+                <DatabaseNode {...createProps({ status: "completed" })} />
+            );
             expect(container.firstChild).toBeInTheDocument();
         });
     });

@@ -4,6 +4,7 @@
 
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { NodeExecutionStatus } from "@flowmaestro/shared";
 import FileWriteNode from "../../nodes/FileWriteNode";
 import type { NodeProps } from "reactflow";
 
@@ -53,7 +54,7 @@ vi.mock("../../../components/validation/NodeValidationBadge", () => ({
 
 interface FileWriteNodeData {
     label: string;
-    status?: "idle" | "pending" | "running" | "success" | "error";
+    status?: NodeExecutionStatus;
     path?: string;
     encoding?: string;
     createDirectories?: boolean;
@@ -181,7 +182,7 @@ describe("FileWriteNode", () => {
         });
 
         it("renders with success status", () => {
-            render(<FileWriteNode {...createProps({ status: "success" })} />);
+            render(<FileWriteNode {...createProps({ status: "completed" })} />);
             expect(screen.getByText("File Write")).toBeInTheDocument();
         });
     });

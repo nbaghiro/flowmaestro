@@ -4,6 +4,7 @@
 
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { NodeExecutionStatus } from "@flowmaestro/shared";
 import OCRExtractionNode from "../../nodes/OCRExtractionNode";
 import type { NodeProps } from "reactflow";
 
@@ -53,7 +54,7 @@ vi.mock("../../../components/validation/NodeValidationBadge", () => ({
 
 interface OCRExtractionNodeData {
     label: string;
-    status?: "idle" | "pending" | "running" | "success" | "error";
+    status?: NodeExecutionStatus;
     languages?: string[];
     outputFormat?: string;
     confidenceThreshold?: number;
@@ -199,7 +200,7 @@ describe("OCRExtractionNode", () => {
         });
 
         it("renders with success status", () => {
-            render(<OCRExtractionNode {...createProps({ status: "success" })} />);
+            render(<OCRExtractionNode {...createProps({ status: "completed" })} />);
             expect(screen.getByText("OCR")).toBeInTheDocument();
         });
     });

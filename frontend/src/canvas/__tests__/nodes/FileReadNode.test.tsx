@@ -4,6 +4,7 @@
 
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { NodeExecutionStatus } from "@flowmaestro/shared";
 import FileReadNode from "../../nodes/FileReadNode";
 import type { NodeProps } from "reactflow";
 
@@ -53,7 +54,7 @@ vi.mock("../../../components/validation/NodeValidationBadge", () => ({
 
 interface FileReadNodeData {
     label: string;
-    status?: "idle" | "pending" | "running" | "success" | "error";
+    status?: NodeExecutionStatus;
     path?: string;
     encoding?: string;
     maxSize?: number;
@@ -192,7 +193,7 @@ describe("FileReadNode", () => {
         });
 
         it("renders with success status", () => {
-            render(<FileReadNode {...createProps({ status: "success" })} />);
+            render(<FileReadNode {...createProps({ status: "completed" })} />);
             expect(screen.getByText("File Read")).toBeInTheDocument();
         });
     });

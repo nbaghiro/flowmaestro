@@ -4,6 +4,7 @@
 
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { NodeExecutionStatus } from "@flowmaestro/shared";
 import PdfExtractNode from "../../nodes/PdfExtractNode";
 import type { NodeProps } from "reactflow";
 
@@ -53,7 +54,7 @@ vi.mock("../../../components/validation/NodeValidationBadge", () => ({
 
 interface PdfExtractNodeData {
     label: string;
-    status?: "idle" | "pending" | "running" | "success" | "error";
+    status?: NodeExecutionStatus;
     path?: string;
     extractText?: boolean;
     extractMetadata?: boolean;
@@ -195,7 +196,7 @@ describe("PdfExtractNode", () => {
         });
 
         it("renders with success status", () => {
-            render(<PdfExtractNode {...createProps({ status: "success" })} />);
+            render(<PdfExtractNode {...createProps({ status: "completed" })} />);
             expect(screen.getByText("PDF Extract")).toBeInTheDocument();
         });
     });

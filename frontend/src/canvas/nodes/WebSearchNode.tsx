@@ -8,11 +8,12 @@
 import { Search } from "lucide-react";
 import { memo } from "react";
 import { NodeProps } from "reactflow";
+import type { NodeExecutionStatus } from "@flowmaestro/shared";
 import { BaseNode } from "./BaseNode";
 
 interface WebSearchNodeData {
     label: string;
-    status?: "idle" | "pending" | "running" | "success" | "error";
+    status?: NodeExecutionStatus;
     query?: string;
     maxResults?: number;
     searchType?: string;

@@ -4,6 +4,7 @@
 
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { NodeExecutionStatus } from "@flowmaestro/shared";
 import ScreenshotCaptureNode from "../../nodes/ScreenshotCaptureNode";
 import type { NodeProps } from "reactflow";
 
@@ -53,7 +54,7 @@ vi.mock("../../../components/validation/NodeValidationBadge", () => ({
 
 interface ScreenshotCaptureNodeData {
     label: string;
-    status?: "idle" | "pending" | "running" | "success" | "error";
+    status?: NodeExecutionStatus;
     url?: string;
     width?: number;
     height?: number;
@@ -202,7 +203,7 @@ describe("ScreenshotCaptureNode", () => {
         });
 
         it("renders with success status", () => {
-            render(<ScreenshotCaptureNode {...createProps({ status: "success" })} />);
+            render(<ScreenshotCaptureNode {...createProps({ status: "completed" })} />);
             expect(screen.getByText("Screenshot")).toBeInTheDocument();
         });
     });

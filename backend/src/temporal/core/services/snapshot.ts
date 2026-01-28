@@ -6,7 +6,7 @@
  */
 
 import { v4 as uuidv4 } from "uuid";
-import type { JsonObject, JsonValue } from "@flowmaestro/shared";
+import type { JsonObject, JsonValue, NodeExecutionStatus } from "@flowmaestro/shared";
 import { db } from "../../../storage/database";
 import { createSharedMemory } from "./context";
 import type {
@@ -24,7 +24,7 @@ export type SnapshotType = "checkpoint" | "pause" | "failure" | "final";
 
 export interface SnapshotNodeState {
     nodeId: string;
-    status: "pending" | "ready" | "executing" | "completed" | "failed" | "skipped";
+    status: NodeExecutionStatus;
     output?: JsonObject;
     error?: string;
     startedAt?: number;
@@ -344,7 +344,7 @@ export function restoreQueueState(snapshot: WorkflowSnapshot): ExecutionQueueSta
         string,
         {
             nodeId: string;
-            status: "pending" | "ready" | "executing" | "completed" | "failed" | "skipped";
+            status: NodeExecutionStatus;
             retryCount: number;
             output?: JsonObject;
             error?: string;

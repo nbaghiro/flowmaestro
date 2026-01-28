@@ -4,6 +4,7 @@
 
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { NodeExecutionStatus } from "@flowmaestro/shared";
 import WebBrowseNode from "../../nodes/WebBrowseNode";
 import type { NodeProps } from "reactflow";
 
@@ -53,7 +54,7 @@ vi.mock("../../../components/validation/NodeValidationBadge", () => ({
 
 interface WebBrowseNodeData {
     label: string;
-    status?: "idle" | "pending" | "running" | "success" | "error";
+    status?: NodeExecutionStatus;
     url?: string;
     extractText?: boolean;
     maxLength?: number;
@@ -175,7 +176,7 @@ describe("WebBrowseNode", () => {
         });
 
         it("renders with success status", () => {
-            render(<WebBrowseNode {...createProps({ status: "success" })} />);
+            render(<WebBrowseNode {...createProps({ status: "completed" })} />);
             expect(screen.getByText("Web Browse")).toBeInTheDocument();
         });
     });

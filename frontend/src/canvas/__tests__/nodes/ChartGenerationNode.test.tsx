@@ -4,6 +4,7 @@
 
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { NodeExecutionStatus } from "@flowmaestro/shared";
 import ChartGenerationNode from "../../nodes/ChartGenerationNode";
 import type { NodeProps } from "reactflow";
 
@@ -53,7 +54,7 @@ vi.mock("../../../components/validation/NodeValidationBadge", () => ({
 
 interface ChartGenerationNodeData {
     label: string;
-    status?: "idle" | "pending" | "running" | "success" | "error";
+    status?: NodeExecutionStatus;
     chartType?: string;
     theme?: string;
     filename?: string;
@@ -202,7 +203,7 @@ describe("ChartGenerationNode", () => {
         });
 
         it("renders with success status", () => {
-            render(<ChartGenerationNode {...createProps({ status: "success" })} />);
+            render(<ChartGenerationNode {...createProps({ status: "completed" })} />);
             expect(screen.getByText("Chart")).toBeInTheDocument();
         });
     });

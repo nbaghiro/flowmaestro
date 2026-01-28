@@ -4,6 +4,7 @@
 
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { NodeExecutionStatus } from "@flowmaestro/shared";
 import URLNode from "../../nodes/URLNode";
 import type { NodeProps } from "reactflow";
 
@@ -53,7 +54,7 @@ vi.mock("../../../components/validation/NodeValidationBadge", () => ({
 
 interface URLNodeData {
     label: string;
-    status?: "idle" | "pending" | "running" | "success" | "error";
+    status?: NodeExecutionStatus;
     urls?: string[];
 }
 
@@ -166,7 +167,7 @@ describe("URLNode", () => {
         });
 
         it("renders with success status", () => {
-            render(<URLNode {...createProps({ status: "success" })} />);
+            render(<URLNode {...createProps({ status: "completed" })} />);
             const urlTexts = screen.getAllByText("URL");
             expect(urlTexts.length).toBeGreaterThanOrEqual(1);
         });

@@ -4,6 +4,7 @@
 
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { NodeExecutionStatus } from "@flowmaestro/shared";
 import SpreadsheetGenerationNode from "../../nodes/SpreadsheetGenerationNode";
 import type { NodeProps } from "reactflow";
 
@@ -53,7 +54,7 @@ vi.mock("../../../components/validation/NodeValidationBadge", () => ({
 
 interface SpreadsheetGenerationNodeData {
     label: string;
-    status?: "idle" | "pending" | "running" | "success" | "error";
+    status?: NodeExecutionStatus;
     format?: "xlsx" | "csv";
     filename?: string;
 }
@@ -186,7 +187,7 @@ describe("SpreadsheetGenerationNode", () => {
         });
 
         it("renders with success status", () => {
-            render(<SpreadsheetGenerationNode {...createProps({ status: "success" })} />);
+            render(<SpreadsheetGenerationNode {...createProps({ status: "completed" })} />);
             expect(screen.getByText("Spreadsheet")).toBeInTheDocument();
         });
     });

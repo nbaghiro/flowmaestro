@@ -8,11 +8,12 @@
 import { ScanText } from "lucide-react";
 import { memo } from "react";
 import { NodeProps } from "reactflow";
+import type { NodeExecutionStatus } from "@flowmaestro/shared";
 import { BaseNode } from "./BaseNode";
 
 interface OCRExtractionNodeData {
     label: string;
-    status?: "idle" | "pending" | "running" | "success" | "error";
+    status?: NodeExecutionStatus;
     languages?: string[];
     outputFormat?: string;
     confidenceThreshold?: number;

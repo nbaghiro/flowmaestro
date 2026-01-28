@@ -4,6 +4,7 @@
 
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { NodeExecutionStatus } from "@flowmaestro/shared";
 import KnowledgeBaseQueryNode from "../../nodes/KnowledgeBaseQueryNode";
 import type { NodeProps } from "reactflow";
 
@@ -53,7 +54,7 @@ vi.mock("../../../components/validation/NodeValidationBadge", () => ({
 
 interface KnowledgeBaseQueryNodeData {
     label: string;
-    status?: "idle" | "pending" | "running" | "success" | "error";
+    status?: NodeExecutionStatus;
     knowledgeBaseId?: string;
     knowledgeBaseName?: string;
     queryText?: string;
@@ -165,17 +166,17 @@ describe("KnowledgeBaseQueryNode", () => {
         });
 
         it("renders with running status", () => {
-            render(<KnowledgeBaseQueryNode {...createProps({ status: "running" })} />);
+            render(<KnowledgeBaseQueryNode {...createProps({ status: "executing" })} />);
             expect(screen.getByText("KB Query")).toBeInTheDocument();
         });
 
         it("renders with success status", () => {
-            render(<KnowledgeBaseQueryNode {...createProps({ status: "success" })} />);
+            render(<KnowledgeBaseQueryNode {...createProps({ status: "completed" })} />);
             expect(screen.getByText("KB Query")).toBeInTheDocument();
         });
 
         it("renders with error status", () => {
-            render(<KnowledgeBaseQueryNode {...createProps({ status: "error" })} />);
+            render(<KnowledgeBaseQueryNode {...createProps({ status: "failed" })} />);
             expect(screen.getByText("KB Query")).toBeInTheDocument();
         });
     });

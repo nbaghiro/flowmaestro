@@ -4,6 +4,7 @@
 
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { NodeExecutionStatus } from "@flowmaestro/shared";
 import ImageGenerationNode from "../../nodes/ImageGenerationNode";
 import type { NodeProps } from "reactflow";
 
@@ -53,7 +54,7 @@ vi.mock("../../../components/validation/NodeValidationBadge", () => ({
 
 interface ImageGenerationNodeData {
     label: string;
-    status?: "idle" | "pending" | "running" | "success" | "error";
+    status?: NodeExecutionStatus;
     provider?: string;
     model?: string;
 }
@@ -169,7 +170,7 @@ describe("ImageGenerationNode", () => {
         });
 
         it("renders with success status", () => {
-            render(<ImageGenerationNode {...createProps({ status: "success" })} />);
+            render(<ImageGenerationNode {...createProps({ status: "completed" })} />);
             expect(screen.getByText("Image")).toBeInTheDocument();
         });
     });

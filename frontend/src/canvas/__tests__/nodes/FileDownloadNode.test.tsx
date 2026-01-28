@@ -4,6 +4,7 @@
 
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { NodeExecutionStatus } from "@flowmaestro/shared";
 import FileDownloadNode from "../../nodes/FileDownloadNode";
 import type { NodeProps } from "reactflow";
 
@@ -53,7 +54,7 @@ vi.mock("../../../components/validation/NodeValidationBadge", () => ({
 
 interface FileDownloadNodeData {
     label: string;
-    status?: "idle" | "pending" | "running" | "success" | "error";
+    status?: NodeExecutionStatus;
     url?: string;
     filename?: string;
     maxSize?: number;
@@ -190,7 +191,7 @@ describe("FileDownloadNode", () => {
         });
 
         it("renders with success status", () => {
-            render(<FileDownloadNode {...createProps({ status: "success" })} />);
+            render(<FileDownloadNode {...createProps({ status: "completed" })} />);
             expect(screen.getByText("File Download")).toBeInTheDocument();
         });
     });

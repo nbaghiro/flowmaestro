@@ -4,6 +4,7 @@
 
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { NodeExecutionStatus } from "@flowmaestro/shared";
 import TriggerNode from "../../nodes/TriggerNode";
 import type { NodeProps } from "reactflow";
 
@@ -58,7 +59,7 @@ vi.mock("@flowmaestro/shared", () => ({
 
 interface TriggerNodeData {
     label: string;
-    status?: "idle" | "pending" | "running" | "success" | "error";
+    status?: NodeExecutionStatus;
     providerId?: string;
     providerName?: string;
     eventId?: string;
