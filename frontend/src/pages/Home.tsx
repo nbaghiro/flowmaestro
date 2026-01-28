@@ -106,15 +106,23 @@ export function Home() {
     const [isPersonaDetailOpen, setIsPersonaDetailOpen] = useState(false);
     const [isPersonaLaunchOpen, setIsPersonaLaunchOpen] = useState(false);
 
-    // Fetch recent workflows sorted by updated_at
+    // Fetch recent workflows sorted by most recent activity (created or updated)
     const workflowsQuery = useQuery({
         queryKey: ["home", "workflows"],
         queryFn: async () => {
             const response = await getWorkflows({ limit: 10 });
             if (response.success && response.data) {
-                // Sort by updated_at descending (most recently modified first)
+                // Sort by most recent activity (whichever is later: created_at or updated_at)
                 const items = [...response.data.items].sort((a, b) => {
-                    return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+                    const aLatest = Math.max(
+                        new Date(a.created_at).getTime(),
+                        new Date(a.updated_at).getTime()
+                    );
+                    const bLatest = Math.max(
+                        new Date(b.created_at).getTime(),
+                        new Date(b.updated_at).getTime()
+                    );
+                    return bLatest - aLatest;
                 });
                 return items;
             }
@@ -122,15 +130,23 @@ export function Home() {
         }
     });
 
-    // Fetch recent agents sorted by updated_at
+    // Fetch recent agents sorted by most recent activity (created or updated)
     const agentsQuery = useQuery({
         queryKey: ["home", "agents"],
         queryFn: async () => {
             const response = await getAgents({ limit: 10 });
             if (response.success && response.data) {
-                // Sort by updated_at descending (most recently modified first)
+                // Sort by most recent activity (whichever is later: created_at or updated_at)
                 const items = [...response.data.agents].sort((a, b) => {
-                    return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+                    const aLatest = Math.max(
+                        new Date(a.created_at).getTime(),
+                        new Date(a.updated_at).getTime()
+                    );
+                    const bLatest = Math.max(
+                        new Date(b.created_at).getTime(),
+                        new Date(b.updated_at).getTime()
+                    );
+                    return bLatest - aLatest;
                 });
                 return items;
             }
