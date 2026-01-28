@@ -15,3 +15,6 @@ export { PDFViewer, TextViewer, IframeViewer } from "./viewers";
 // Components
 export { DocumentList } from "./DocumentList";
 export { DocumentViewerPanel } from "./DocumentViewerPanel";
+export { DocumentGrid } from "./DocumentGrid";
+export { KBOverviewSidebar } from "./KBOverviewSidebar";
+export { KBContextPanel } from "./KBContextPanel";
