@@ -1,4 +1,14 @@
-import { Megaphone, TrendingUp, Settings, Code, Headphones, LayoutGrid } from "lucide-react";
+import {
+    Megaphone,
+    TrendingUp,
+    Settings,
+    Code,
+    Headphones,
+    LayoutGrid,
+    ShoppingCart,
+    Cloud,
+    Heart
+} from "lucide-react";
 import type { TemplateCategory, CategoryInfo } from "@flowmaestro/shared";
 import { TEMPLATE_CATEGORY_META } from "@flowmaestro/shared";
 import { cn } from "../../lib/utils";
@@ -16,7 +26,10 @@ const categoryIcons: Record<string, React.ComponentType<{ className?: string }>>
     TrendingUp,
     Settings,
     Code,
-    Headphones
+    Headphones,
+    ShoppingCart,
+    Cloud,
+    Heart
 };
 
 export function CategoryFilter({
@@ -101,6 +114,18 @@ export function CategoryFilter({
                         case "support":
                             categoryColor =
                                 "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300";
+                            break;
+                        case "ecommerce":
+                            categoryColor =
+                                "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300";
+                            break;
+                        case "saas":
+                            categoryColor =
+                                "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300";
+                            break;
+                        case "healthcare":
+                            categoryColor =
+                                "bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300";
                             break;
                     }
                 }
