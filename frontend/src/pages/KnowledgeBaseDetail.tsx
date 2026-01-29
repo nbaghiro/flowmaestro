@@ -15,6 +15,7 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Input } from "../components/common/Input";
 import { MobileBuilderGuard } from "../components/common/MobileBuilderGuard";
+import { ThemeToggle } from "../components/common/ThemeToggle";
 import {
     AddUrlModal,
     DeleteDocumentModal,
@@ -365,8 +366,9 @@ export function KnowledgeBaseDetail() {
                         </div>
                     </div>
 
-                    {/* Right: Settings + Delete */}
+                    {/* Right: Theme + Settings + Delete */}
                     <div className="flex items-center gap-1">
+                        <ThemeToggle />
                         <button
                             onClick={() => setShowSettingsModal(true)}
                             className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
