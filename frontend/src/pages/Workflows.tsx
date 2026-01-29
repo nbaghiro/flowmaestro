@@ -28,7 +28,6 @@ import {
 } from "../components/folders";
 import { DuplicateItemWarningDialog } from "../components/folders/dialogs/DuplicateItemWarningDialog";
 import { WorkflowCardSkeleton } from "../components/skeletons";
-import { WorkflowGenerationChatPanel } from "../components/WorkflowGenerationChatPanel";
 import { useFolderManagement } from "../hooks/useFolderManagement";
 import { useSearch } from "../hooks/useSearch";
 import { useSort, WORKFLOW_SORT_FIELDS } from "../hooks/useSort";
@@ -839,9 +838,6 @@ export function Workflows() {
                 }
                 onClose={closeContextMenu}
             />
-
-            {/* Workflow Generation Chat Panel */}
-            <WorkflowGenerationChatPanel />
         </div>
     );
 }
