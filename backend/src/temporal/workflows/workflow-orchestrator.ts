@@ -806,6 +806,114 @@ async function executeNodeWithContext(
 // ============================================================================
 
 /**
+ * Parse a string value into its appropriate type (number, boolean, null, or keep as string)
+ */
+function parseValue(value: string): JsonValue {
+    // Try to parse as number
+    const num = Number(value);
+    if (!isNaN(num) && value.trim() !== "") {
+        return num;
+    }
+
+    // Parse booleans
+    const lower = value.toLowerCase().trim();
+    if (lower === "true") return true;
+    if (lower === "false") return false;
+    if (lower === "null" || lower === "undefined") return null;
+
+    // Try to parse as JSON (for objects/arrays)
+    if (
+        (value.trim().startsWith("{") && value.trim().endsWith("}")) ||
+        (value.trim().startsWith("[") && value.trim().endsWith("]"))
+    ) {
+        try {
+            return JSON.parse(value);
+        } catch {
+            // Not valid JSON, return as string
+        }
+    }
+
+    return value;
+}
+
+/**
+ * Compare two values for equality with type coercion
+ */
+function condEquals(left: JsonValue, right: JsonValue): boolean {
+    if (left === null) return right === null;
+    if (typeof left === "number" || typeof right === "number") {
+        return Number(left) === Number(right);
+    }
+    if (typeof left === "string" || typeof right === "string") {
+        return String(left).toLowerCase() === String(right).toLowerCase();
+    }
+    if (typeof left === "boolean" || typeof right === "boolean") {
+        return Boolean(left) === Boolean(right);
+    }
+    return JSON.stringify(left) === JSON.stringify(right);
+}
+
+/**
+ * Compare two values numerically or lexicographically
+ */
+function condCompare(left: JsonValue, right: JsonValue): number {
+    const leftNum = Number(left);
+    const rightNum = Number(right);
+    if (isNaN(leftNum) || isNaN(rightNum)) {
+        return String(left).localeCompare(String(right));
+    }
+    return leftNum - rightNum;
+}
+
+/**
+ * Check if value contains searchValue (for strings and arrays)
+ */
+function condContains(value: JsonValue, searchValue: JsonValue): boolean {
+    if (typeof value === "string") {
+        return value.toLowerCase().includes(String(searchValue).toLowerCase());
+    }
+    if (Array.isArray(value)) {
+        return value.some((item) => condEquals(item, searchValue));
+    }
+    return false;
+}
+
+/**
+ * Evaluate a condition based on operator
+ */
+function evaluateCondition(left: JsonValue, operator: string, right: JsonValue): boolean {
+    switch (operator) {
+        case "==":
+            return condEquals(left, right);
+        case "!=":
+            return !condEquals(left, right);
+        case ">":
+            return condCompare(left, right) > 0;
+        case "<":
+            return condCompare(left, right) < 0;
+        case ">=":
+            return condCompare(left, right) >= 0;
+        case "<=":
+            return condCompare(left, right) <= 0;
+        case "contains":
+            return condContains(left, right);
+        case "startsWith": {
+            const str = String(left);
+            const search = String(right);
+            return str.toLowerCase().startsWith(search.toLowerCase());
+        }
+        case "endsWith": {
+            const str = String(left);
+            const search = String(right);
+            return str.toLowerCase().endsWith(search.toLowerCase());
+        }
+        default:
+            // Default to equality for unknown operators
+            return condEquals(left, right);
+    }
+}
+
+/**
  * Evaluate a conditional node inline.
  */
 function evaluateConditionalNode(node: ExecutableNode, context: JsonObject): JsonObject {
@@ -824,8 +932,12 @@ function evaluateConditionalNode(node: ExecutableNode, context: JsonObject): Jso
     const leftInterpolated = interpolate(leftValue);
     const rightInterpolated = interpolate(rightValue);
 
-    // Simple equality check (case-insensitive for strings)
-    const conditionMet = leftInterpolated.toLowerCase() === rightInterpolated.toLowerCase();
+    // Parse values for type-aware comparison
+    const leftParsed = parseValue(leftInterpolated);
+    const rightParsed = parseValue(rightInterpolated);
+
+    // Evaluate condition using proper operator logic
+    const conditionMet = evaluateCondition(leftParsed, operator, rightParsed);
     const branch = conditionMet ? "true" : "false";
 
     return {

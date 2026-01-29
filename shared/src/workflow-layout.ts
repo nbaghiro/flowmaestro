@@ -6,6 +6,8 @@
  * frontend and backend contexts.
  */
 
+import { ALL_PROVIDERS } from "./providers";
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -933,16 +935,26 @@ export function convertToReactFlowFormat(
 
     // Convert to React Flow format
     // Spread config directly into data (not nested) to match how nodes are saved
-    const nodes: ReactFlowNode[] = generatedNodes.map((node) => ({
-        id: node.id,
-        type: node.type,
-        position: positions.get(node.id) || { x: 0, y: 0 },
-        data: {
-            label: node.label,
-            ...node.config,
-            status: "idle"
-        }
-    }));
+    const nodes: ReactFlowNode[] = generatedNodes.map((node) => {
+        // Look up provider logoUrl if node has a provider in config
+        const providerId = node.config?.provider as string | undefined;
+        const providerInfo = providerId
+            ? ALL_PROVIDERS.find((p) => p.provider === providerId)
+            : undefined;
+
+        return {
+            id: node.id,
+            type: node.type,
+            position: positions.get(node.id) || { x: 0, y: 0 },
+            data: {
+                label: node.label,
+                ...node.config,
+                // Add logoUrl if provider has one
+                ...(providerInfo?.logoUrl && { logoUrl: providerInfo.logoUrl }),
+                status: "idle"
+            }
+        };
+    });
 
     const edges: ReactFlowEdge[] = generatedEdges.map((edge, index) => ({
         id: `edge-${index}`,

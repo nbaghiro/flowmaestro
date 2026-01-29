@@ -55,10 +55,10 @@ export function IntegrationNodeConfig({
         }
     }, [provider, fetchConnections]);
 
-    // Load operations for selected provider (filtered for "integration" type - read operations)
+    // Load operations for selected provider (all operations - both read and write)
     const { data: operationsData, isLoading: operationsLoading } = useQuery({
-        queryKey: ["provider-operations", provider, "integration"],
-        queryFn: () => getProviderOperations(provider, "integration"),
+        queryKey: ["provider-operations", provider],
+        queryFn: () => getProviderOperations(provider),
         enabled: !!provider
     });
 

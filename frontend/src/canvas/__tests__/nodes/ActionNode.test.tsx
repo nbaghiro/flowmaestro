@@ -222,9 +222,9 @@ describe("ActionNode", () => {
             expect(screen.getByTestId("handle-target-input")).toBeInTheDocument();
         });
 
-        it("renders output handle", () => {
+        it("does NOT render output handle (action nodes are terminal)", () => {
             render(<ActionNode {...createProps()} />);
-            expect(screen.getByTestId("handle-source-output")).toBeInTheDocument();
+            expect(screen.queryByTestId("handle-source-output")).not.toBeInTheDocument();
         });
     });
 

@@ -1012,7 +1012,7 @@ const discordCommunityBotPattern: WorkflowPattern = {
                 position: { x: 860, y: 350 }
             },
             "action-notion-bug": {
-                type: "action",
+                type: "integration",
                 name: "Create Bug Ticket",
                 config: {
                     provider: "notion",
@@ -1029,7 +1029,7 @@ const discordCommunityBotPattern: WorkflowPattern = {
                 position: { x: 1240, y: 100 }
             },
             "action-notion-feature": {
-                type: "action",
+                type: "integration",
                 name: "Log Feature Request",
                 config: {
                     provider: "notion",
@@ -1045,7 +1045,7 @@ const discordCommunityBotPattern: WorkflowPattern = {
                 position: { x: 1240, y: 280 }
             },
             "action-slack-support": {
-                type: "action",
+                type: "integration",
                 name: "Alert Support Team",
                 config: {
                     provider: "slack",
@@ -1057,7 +1057,7 @@ const discordCommunityBotPattern: WorkflowPattern = {
                 position: { x: 1240, y: 450 }
             },
             "action-airtable": {
-                type: "action",
+                type: "integration",
                 name: "Track in Airtable",
                 config: {
                     provider: "airtable",
@@ -1077,7 +1077,7 @@ const discordCommunityBotPattern: WorkflowPattern = {
                 position: { x: 1240, y: 620 }
             },
             "action-slack-eng": {
-                type: "action",
+                type: "integration",
                 name: "Notify Engineering",
                 config: {
                     provider: "slack",
@@ -1089,7 +1089,7 @@ const discordCommunityBotPattern: WorkflowPattern = {
                 position: { x: 1620, y: 100 }
             },
             "action-slack-product": {
-                type: "action",
+                type: "integration",
                 name: "Notify Product",
                 config: {
                     provider: "slack",
@@ -1101,7 +1101,7 @@ const discordCommunityBotPattern: WorkflowPattern = {
                 position: { x: 1620, y: 280 }
             },
             "action-discord-reply": {
-                type: "action",
+                type: "integration",
                 name: "Send Acknowledgment",
                 config: {
                     provider: "discord",
@@ -1125,7 +1125,7 @@ const discordCommunityBotPattern: WorkflowPattern = {
                 position: { x: 2000, y: 550 }
             },
             "action-gmail": {
-                type: "action",
+                type: "integration",
                 name: "Email Alert",
                 config: {
                     provider: "gmail",
@@ -1231,7 +1231,7 @@ const githubPrReviewerPattern: WorkflowPattern = {
                 position: { x: 100, y: 400 }
             },
             "action-github-get": {
-                type: "action",
+                type: "integration",
                 name: "Get PR Details",
                 config: {
                     provider: "github",
@@ -1303,7 +1303,7 @@ const githubPrReviewerPattern: WorkflowPattern = {
                 position: { x: 1240, y: 400 }
             },
             "action-github-review": {
-                type: "action",
+                type: "integration",
                 name: "Post Review",
                 config: {
                     provider: "github",
@@ -1328,7 +1328,7 @@ const githubPrReviewerPattern: WorkflowPattern = {
                 position: { x: 1620, y: 500 }
             },
             "action-jira": {
-                type: "action",
+                type: "integration",
                 name: "Create Jira Issue",
                 config: {
                     provider: "jira",
@@ -1344,7 +1344,7 @@ const githubPrReviewerPattern: WorkflowPattern = {
                 position: { x: 2000, y: 200 }
             },
             "action-linear": {
-                type: "action",
+                type: "integration",
                 name: "Create Linear Issue",
                 config: {
                     provider: "linear",
@@ -1358,7 +1358,7 @@ const githubPrReviewerPattern: WorkflowPattern = {
                 position: { x: 2000, y: 400 }
             },
             "action-slack-alert": {
-                type: "action",
+                type: "integration",
                 name: "Alert Team",
                 config: {
                     provider: "slack",
@@ -1370,7 +1370,7 @@ const githubPrReviewerPattern: WorkflowPattern = {
                 position: { x: 2380, y: 300 }
             },
             "action-slack-notify": {
-                type: "action",
+                type: "integration",
                 name: "Notify Channel",
                 config: {
                     provider: "slack",
@@ -1382,7 +1382,7 @@ const githubPrReviewerPattern: WorkflowPattern = {
                 position: { x: 2000, y: 600 }
             },
             "action-datadog": {
-                type: "action",
+                type: "integration",
                 name: "Track Metrics",
                 config: {
                     provider: "datadog",
@@ -1499,7 +1499,7 @@ const leadEnrichmentPattern: WorkflowPattern = {
                 position: { x: 100, y: 400 }
             },
             "action-apollo": {
-                type: "action",
+                type: "integration",
                 name: "Apollo Enrichment",
                 config: {
                     provider: "apollo",
@@ -1510,7 +1510,7 @@ const leadEnrichmentPattern: WorkflowPattern = {
                 position: { x: 480, y: 200 }
             },
             "action-linkedin": {
-                type: "action",
+                type: "integration",
                 name: "LinkedIn Lookup",
                 config: {
                     provider: "linkedin",
@@ -1581,7 +1581,7 @@ const leadEnrichmentPattern: WorkflowPattern = {
                 position: { x: 1620, y: 400 }
             },
             "action-salesforce": {
-                type: "action",
+                type: "integration",
                 name: "Create SF Lead",
                 config: {
                     provider: "salesforce",
@@ -1598,7 +1598,7 @@ const leadEnrichmentPattern: WorkflowPattern = {
                 position: { x: 2000, y: 150 }
             },
             "action-hubspot-update": {
-                type: "action",
+                type: "integration",
                 name: "Update HubSpot",
                 config: {
                     provider: "hubspot",
@@ -1630,7 +1630,7 @@ const leadEnrichmentPattern: WorkflowPattern = {
                 position: { x: 2000, y: 550 }
             },
             "action-gmail-enterprise": {
-                type: "action",
+                type: "integration",
                 name: "Send Enterprise Email",
                 config: {
                     provider: "gmail",
@@ -1643,7 +1643,7 @@ const leadEnrichmentPattern: WorkflowPattern = {
                 position: { x: 2380, y: 550 }
             },
             "action-slack-enterprise": {
-                type: "action",
+                type: "integration",
                 name: "Alert AE",
                 config: {
                     provider: "slack",
@@ -1655,7 +1655,7 @@ const leadEnrichmentPattern: WorkflowPattern = {
                 position: { x: 2380, y: 200 }
             },
             "action-amplitude": {
-                type: "action",
+                type: "integration",
                 name: "Track Event",
                 config: {
                     provider: "amplitude",
@@ -1673,7 +1673,7 @@ const leadEnrichmentPattern: WorkflowPattern = {
                 position: { x: 2380, y: 750 }
             },
             "action-slack-midmarket": {
-                type: "action",
+                type: "integration",
                 name: "Notify SDR",
                 config: {
                     provider: "slack",
@@ -1780,7 +1780,7 @@ const figmaDesignHandoffPattern: WorkflowPattern = {
                 position: { x: 100, y: 400 }
             },
             "action-figma-file": {
-                type: "action",
+                type: "integration",
                 name: "Get File Details",
                 config: {
                     provider: "figma",
@@ -1791,7 +1791,7 @@ const figmaDesignHandoffPattern: WorkflowPattern = {
                 position: { x: 480, y: 400 }
             },
             "action-figma-components": {
-                type: "action",
+                type: "integration",
                 name: "Get Components",
                 config: {
                     provider: "figma",
@@ -1857,7 +1857,7 @@ const figmaDesignHandoffPattern: WorkflowPattern = {
                 position: { x: 1240, y: 750 }
             },
             "action-notion": {
-                type: "action",
+                type: "integration",
                 name: "Update Notion Docs",
                 config: {
                     provider: "notion",
@@ -1872,7 +1872,7 @@ const figmaDesignHandoffPattern: WorkflowPattern = {
                 position: { x: 1620, y: 200 }
             },
             "action-linear": {
-                type: "action",
+                type: "integration",
                 name: "Create Linear Tickets",
                 config: {
                     provider: "linear",
@@ -1887,7 +1887,7 @@ const figmaDesignHandoffPattern: WorkflowPattern = {
                 position: { x: 1620, y: 400 }
             },
             "action-github": {
-                type: "action",
+                type: "integration",
                 name: "Create PR Draft",
                 config: {
                     provider: "github",
@@ -1901,7 +1901,7 @@ const figmaDesignHandoffPattern: WorkflowPattern = {
                 position: { x: 1620, y: 600 }
             },
             "action-asana": {
-                type: "action",
+                type: "integration",
                 name: "Update Milestone",
                 config: {
                     provider: "asana",
@@ -1914,7 +1914,7 @@ const figmaDesignHandoffPattern: WorkflowPattern = {
                 position: { x: 2000, y: 400 }
             },
             "action-slack": {
-                type: "action",
+                type: "integration",
                 name: "Notify Slack",
                 config: {
                     provider: "slack",
@@ -1926,7 +1926,7 @@ const figmaDesignHandoffPattern: WorkflowPattern = {
                 position: { x: 2380, y: 250 }
             },
             "action-teams": {
-                type: "action",
+                type: "integration",
                 name: "Notify Teams",
                 config: {
                     provider: "microsoft-teams",
@@ -1938,7 +1938,7 @@ const figmaDesignHandoffPattern: WorkflowPattern = {
                 position: { x: 2380, y: 450 }
             },
             "action-slack-breaking": {
-                type: "action",
+                type: "integration",
                 name: "Alert Breaking",
                 config: {
                     provider: "slack",
@@ -2011,7 +2011,7 @@ const trelloProjectSyncPattern: WorkflowPattern = {
         "Bi-directional sync between Trello, Monday.com, and ClickUp with PostgreSQL persistence, Mixpanel analytics, status-based routing to different Slack channels, and Google Sheets reporting",
     useCase: "Project tracking automation",
     icon: "Database",
-    nodeCount: 16,
+    nodeCount: 15,
     category: "intermediate",
     integrations: [
         "Trello",
@@ -2038,7 +2038,7 @@ const trelloProjectSyncPattern: WorkflowPattern = {
                 position: { x: 100, y: 400 }
             },
             "action-trello": {
-                type: "action",
+                type: "integration",
                 name: "Get Card Details",
                 config: {
                     provider: "trello",
@@ -2049,7 +2049,7 @@ const trelloProjectSyncPattern: WorkflowPattern = {
                 position: { x: 480, y: 400 }
             },
             "action-trello-history": {
-                type: "action",
+                type: "integration",
                 name: "Get Card History",
                 config: {
                     provider: "trello",
@@ -2075,7 +2075,7 @@ const trelloProjectSyncPattern: WorkflowPattern = {
                 position: { x: 860, y: 500 }
             },
             "action-postgresql": {
-                type: "action",
+                type: "integration",
                 name: "Sync to Database",
                 config: {
                     provider: "postgresql",
@@ -2088,7 +2088,7 @@ const trelloProjectSyncPattern: WorkflowPattern = {
                 position: { x: 1240, y: 300 }
             },
             "action-monday": {
-                type: "action",
+                type: "integration",
                 name: "Sync to Monday",
                 config: {
                     provider: "monday",
@@ -2105,7 +2105,7 @@ const trelloProjectSyncPattern: WorkflowPattern = {
                 position: { x: 1240, y: 500 }
             },
             "action-clickup": {
-                type: "action",
+                type: "integration",
                 name: "Sync to ClickUp",
                 config: {
                     provider: "clickup",
@@ -2136,7 +2136,7 @@ const trelloProjectSyncPattern: WorkflowPattern = {
                 position: { x: 1620, y: 400 }
             },
             "action-slack-done": {
-                type: "action",
+                type: "integration",
                 name: "Celebrate Completion",
                 config: {
                     provider: "slack",
@@ -2148,7 +2148,7 @@ const trelloProjectSyncPattern: WorkflowPattern = {
                 position: { x: 2000, y: 150 }
             },
             "action-slack-blocked": {
-                type: "action",
+                type: "integration",
                 name: "Alert Blockers",
                 config: {
                     provider: "slack",
@@ -2160,7 +2160,7 @@ const trelloProjectSyncPattern: WorkflowPattern = {
                 position: { x: 2000, y: 350 }
             },
             "action-slack-review": {
-                type: "action",
+                type: "integration",
                 name: "Request Review",
                 config: {
                     provider: "slack",
@@ -2172,7 +2172,7 @@ const trelloProjectSyncPattern: WorkflowPattern = {
                 position: { x: 2000, y: 550 }
             },
             "action-mixpanel": {
-                type: "action",
+                type: "integration",
                 name: "Track Analytics",
                 config: {
                     provider: "mixpanel",
@@ -2191,7 +2191,7 @@ const trelloProjectSyncPattern: WorkflowPattern = {
                 position: { x: 2380, y: 400 }
             },
             "action-sheets": {
-                type: "action",
+                type: "integration",
                 name: "Update Report",
                 config: {
                     provider: "google-sheets",
@@ -2310,7 +2310,7 @@ const calendlyMeetingPrepPattern: WorkflowPattern = {
                 position: { x: 100, y: 450 }
             },
             "action-calendly": {
-                type: "action",
+                type: "integration",
                 name: "Get Event Details",
                 config: {
                     provider: "calendly",
@@ -2321,7 +2321,7 @@ const calendlyMeetingPrepPattern: WorkflowPattern = {
                 position: { x: 480, y: 450 }
             },
             "action-hubspot": {
-                type: "action",
+                type: "integration",
                 name: "Get CRM Data",
                 config: {
                     provider: "hubspot",
@@ -2332,7 +2332,7 @@ const calendlyMeetingPrepPattern: WorkflowPattern = {
                 position: { x: 860, y: 200 }
             },
             "action-apollo": {
-                type: "action",
+                type: "integration",
                 name: "Enrich Profile",
                 config: {
                     provider: "apollo",
@@ -2397,7 +2397,7 @@ const calendlyMeetingPrepPattern: WorkflowPattern = {
                 position: { x: 1620, y: 600 }
             },
             "action-notion": {
-                type: "action",
+                type: "integration",
                 name: "Create Notion Page",
                 config: {
                     provider: "notion",
@@ -2412,7 +2412,7 @@ const calendlyMeetingPrepPattern: WorkflowPattern = {
                 position: { x: 2000, y: 200 }
             },
             "action-calendar": {
-                type: "action",
+                type: "integration",
                 name: "Update Calendar",
                 config: {
                     provider: "google-calendar",
@@ -2426,7 +2426,7 @@ const calendlyMeetingPrepPattern: WorkflowPattern = {
                 position: { x: 2000, y: 400 }
             },
             "action-gmail": {
-                type: "action",
+                type: "integration",
                 name: "Send Confirmation",
                 config: {
                     provider: "gmail",
@@ -2439,7 +2439,7 @@ const calendlyMeetingPrepPattern: WorkflowPattern = {
                 position: { x: 2000, y: 600 }
             },
             "action-hubspot-update": {
-                type: "action",
+                type: "integration",
                 name: "Update CRM",
                 config: {
                     provider: "hubspot",
@@ -2455,7 +2455,7 @@ const calendlyMeetingPrepPattern: WorkflowPattern = {
                 position: { x: 2000, y: 800 }
             },
             "action-slack": {
-                type: "action",
+                type: "integration",
                 name: "Send Slack Prep",
                 config: {
                     provider: "slack",
@@ -2467,7 +2467,7 @@ const calendlyMeetingPrepPattern: WorkflowPattern = {
                 position: { x: 2380, y: 350 }
             },
             "action-airtable": {
-                type: "action",
+                type: "integration",
                 name: "Log Meeting",
                 config: {
                     provider: "airtable",
@@ -2497,7 +2497,7 @@ const calendlyMeetingPrepPattern: WorkflowPattern = {
                 position: { x: 2760, y: 350 }
             },
             "action-slack-reminder": {
-                type: "action",
+                type: "integration",
                 name: "Send 1hr Reminder",
                 config: {
                     provider: "slack",
@@ -2600,7 +2600,7 @@ const whatsappSupportBotPattern: WorkflowPattern = {
                 position: { x: 100, y: 550 }
             },
             "action-hubspot": {
-                type: "action",
+                type: "integration",
                 name: "Get HubSpot Data",
                 config: {
                     provider: "hubspot",
@@ -2611,7 +2611,7 @@ const whatsappSupportBotPattern: WorkflowPattern = {
                 position: { x: 480, y: 250 }
             },
             "action-salesforce": {
-                type: "action",
+                type: "integration",
                 name: "Get Salesforce Data",
                 config: {
                     provider: "salesforce",
@@ -2622,7 +2622,7 @@ const whatsappSupportBotPattern: WorkflowPattern = {
                 position: { x: 480, y: 450 }
             },
             "action-intercom": {
-                type: "action",
+                type: "integration",
                 name: "Get Intercom History",
                 config: {
                     provider: "intercom",
@@ -2681,7 +2681,7 @@ const whatsappSupportBotPattern: WorkflowPattern = {
                 position: { x: 1620, y: 420 }
             },
             "action-zendesk-urgent": {
-                type: "action",
+                type: "integration",
                 name: "Create Urgent Ticket",
                 config: {
                     provider: "zendesk",
@@ -2696,7 +2696,7 @@ const whatsappSupportBotPattern: WorkflowPattern = {
                 position: { x: 2000, y: 150 }
             },
             "action-freshdesk": {
-                type: "action",
+                type: "integration",
                 name: "Create HD Ticket",
                 config: {
                     provider: "freshdesk",
@@ -2737,7 +2737,7 @@ const whatsappSupportBotPattern: WorkflowPattern = {
                 position: { x: 2000, y: 750 }
             },
             "action-slack-urgent": {
-                type: "action",
+                type: "integration",
                 name: "Alert Urgent",
                 config: {
                     provider: "slack",
@@ -2749,7 +2749,7 @@ const whatsappSupportBotPattern: WorkflowPattern = {
                 position: { x: 2380, y: 150 }
             },
             "action-slack-queue": {
-                type: "action",
+                type: "integration",
                 name: "Add to Queue",
                 config: {
                     provider: "slack",
@@ -2761,7 +2761,7 @@ const whatsappSupportBotPattern: WorkflowPattern = {
                 position: { x: 2380, y: 350 }
             },
             "action-whatsapp-reply": {
-                type: "action",
+                type: "integration",
                 name: "Send WhatsApp",
                 config: {
                     provider: "whatsapp",
@@ -2773,7 +2773,7 @@ const whatsappSupportBotPattern: WorkflowPattern = {
                 position: { x: 2380, y: 550 }
             },
             "action-telegram-reply": {
-                type: "action",
+                type: "integration",
                 name: "Send Telegram",
                 config: {
                     provider: "telegram",
@@ -2785,7 +2785,7 @@ const whatsappSupportBotPattern: WorkflowPattern = {
                 position: { x: 2380, y: 750 }
             },
             "action-intercom-update": {
-                type: "action",
+                type: "integration",
                 name: "Log to Intercom",
                 config: {
                     provider: "intercom",
@@ -2798,7 +2798,7 @@ const whatsappSupportBotPattern: WorkflowPattern = {
                 position: { x: 2760, y: 420 }
             },
             "action-segment": {
-                type: "action",
+                type: "integration",
                 name: "Track Analytics",
                 config: {
                     provider: "segment",
@@ -2921,7 +2921,7 @@ const docusignContractPattern: WorkflowPattern = {
                 position: { x: 100, y: 500 }
             },
             "action-sf-deal": {
-                type: "action",
+                type: "integration",
                 name: "Get Deal Details",
                 config: {
                     provider: "salesforce",
@@ -2932,7 +2932,7 @@ const docusignContractPattern: WorkflowPattern = {
                 position: { x: 480, y: 350 }
             },
             "action-sf-account": {
-                type: "action",
+                type: "integration",
                 name: "Get Account",
                 config: {
                     provider: "salesforce",
@@ -2943,7 +2943,7 @@ const docusignContractPattern: WorkflowPattern = {
                 position: { x: 480, y: 550 }
             },
             "action-hubspot": {
-                type: "action",
+                type: "integration",
                 name: "Get HubSpot Data",
                 config: {
                     provider: "hubspot",
@@ -2992,7 +2992,7 @@ const docusignContractPattern: WorkflowPattern = {
                 position: { x: 1620, y: 200 }
             },
             "action-slack-legal": {
-                type: "action",
+                type: "integration",
                 name: "Notify Legal",
                 config: {
                     provider: "slack",
@@ -3004,7 +3004,7 @@ const docusignContractPattern: WorkflowPattern = {
                 position: { x: 1620, y: 400 }
             },
             "action-docusign": {
-                type: "action",
+                type: "integration",
                 name: "Create DocuSign",
                 config: {
                     provider: "docusign",
@@ -3017,7 +3017,7 @@ const docusignContractPattern: WorkflowPattern = {
                 position: { x: 2000, y: 350 }
             },
             "action-hellosign": {
-                type: "action",
+                type: "integration",
                 name: "Create HelloSign",
                 config: {
                     provider: "hellosign",
@@ -3030,7 +3030,7 @@ const docusignContractPattern: WorkflowPattern = {
                 position: { x: 2000, y: 600 }
             },
             "action-gmail-client": {
-                type: "action",
+                type: "integration",
                 name: "Email Client",
                 config: {
                     provider: "gmail",
@@ -3043,7 +3043,7 @@ const docusignContractPattern: WorkflowPattern = {
                 position: { x: 2380, y: 250 }
             },
             "action-slack-sales": {
-                type: "action",
+                type: "integration",
                 name: "Notify Sales",
                 config: {
                     provider: "slack",
@@ -3066,7 +3066,7 @@ const docusignContractPattern: WorkflowPattern = {
                 position: { x: 2760, y: 400 }
             },
             "action-gdrive": {
-                type: "action",
+                type: "integration",
                 name: "Store in Drive",
                 config: {
                     provider: "google-drive",
@@ -3079,7 +3079,7 @@ const docusignContractPattern: WorkflowPattern = {
                 position: { x: 3140, y: 250 }
             },
             "action-box": {
-                type: "action",
+                type: "integration",
                 name: "Backup to Box",
                 config: {
                     provider: "box",
@@ -3092,7 +3092,7 @@ const docusignContractPattern: WorkflowPattern = {
                 position: { x: 3140, y: 450 }
             },
             "action-sf-update": {
-                type: "action",
+                type: "integration",
                 name: "Update Salesforce",
                 config: {
                     provider: "salesforce",
@@ -3108,7 +3108,7 @@ const docusignContractPattern: WorkflowPattern = {
                 position: { x: 3140, y: 650 }
             },
             "action-hubspot-update": {
-                type: "action",
+                type: "integration",
                 name: "Update HubSpot",
                 config: {
                     provider: "hubspot",
@@ -3124,7 +3124,7 @@ const docusignContractPattern: WorkflowPattern = {
                 position: { x: 3520, y: 350 }
             },
             "action-quickbooks": {
-                type: "action",
+                type: "integration",
                 name: "Create Invoice",
                 config: {
                     provider: "quickbooks",
@@ -3137,7 +3137,7 @@ const docusignContractPattern: WorkflowPattern = {
                 position: { x: 3520, y: 550 }
             },
             "action-gmail-confirm": {
-                type: "action",
+                type: "integration",
                 name: "Send Confirmation",
                 config: {
                     provider: "gmail",
@@ -3150,7 +3150,7 @@ const docusignContractPattern: WorkflowPattern = {
                 position: { x: 3520, y: 750 }
             },
             "action-slack-closed": {
-                type: "action",
+                type: "integration",
                 name: "Celebrate Close",
                 config: {
                     provider: "slack",
@@ -3266,7 +3266,7 @@ const tiktokPerformancePattern: WorkflowPattern = {
                 position: { x: 100, y: 450 }
             },
             "action-tiktok": {
-                type: "action",
+                type: "integration",
                 name: "TikTok Metrics",
                 config: {
                     provider: "tiktok",
@@ -3277,7 +3277,7 @@ const tiktokPerformancePattern: WorkflowPattern = {
                 position: { x: 480, y: 200 }
             },
             "action-youtube": {
-                type: "action",
+                type: "integration",
                 name: "YouTube Metrics",
                 config: {
                     provider: "youtube",
@@ -3288,7 +3288,7 @@ const tiktokPerformancePattern: WorkflowPattern = {
                 position: { x: 480, y: 450 }
             },
             "action-instagram": {
-                type: "action",
+                type: "integration",
                 name: "Instagram Metrics",
                 config: {
                     provider: "instagram",
@@ -3344,7 +3344,7 @@ const tiktokPerformancePattern: WorkflowPattern = {
                 position: { x: 1240, y: 600 }
             },
             "action-sheets": {
-                type: "action",
+                type: "integration",
                 name: "Update Tracker",
                 config: {
                     provider: "google-sheets",
@@ -3363,7 +3363,7 @@ const tiktokPerformancePattern: WorkflowPattern = {
                 position: { x: 1620, y: 200 }
             },
             "action-airtable": {
-                type: "action",
+                type: "integration",
                 name: "Sync Content Calendar",
                 config: {
                     provider: "airtable",
@@ -3376,7 +3376,7 @@ const tiktokPerformancePattern: WorkflowPattern = {
                 position: { x: 1620, y: 450 }
             },
             "action-notion": {
-                type: "action",
+                type: "integration",
                 name: "Update Notion",
                 config: {
                     provider: "notion",
@@ -3391,7 +3391,7 @@ const tiktokPerformancePattern: WorkflowPattern = {
                 position: { x: 1620, y: 700 }
             },
             "action-looker": {
-                type: "action",
+                type: "integration",
                 name: "Update Dashboard",
                 config: {
                     provider: "looker",
@@ -3406,7 +3406,7 @@ const tiktokPerformancePattern: WorkflowPattern = {
                 position: { x: 2000, y: 300 }
             },
             "action-posthog": {
-                type: "action",
+                type: "integration",
                 name: "Track Analytics",
                 config: {
                     provider: "posthog",
@@ -3428,7 +3428,7 @@ const tiktokPerformancePattern: WorkflowPattern = {
                 position: { x: 2000, y: 700 }
             },
             "action-slack-alert": {
-                type: "action",
+                type: "integration",
                 name: "Viral Alert",
                 config: {
                     provider: "slack",
@@ -3440,7 +3440,7 @@ const tiktokPerformancePattern: WorkflowPattern = {
                 position: { x: 2380, y: 600 }
             },
             "action-slack-daily": {
-                type: "action",
+                type: "integration",
                 name: "Daily Summary",
                 config: {
                     provider: "slack",
@@ -3452,7 +3452,7 @@ const tiktokPerformancePattern: WorkflowPattern = {
                 position: { x: 2380, y: 350 }
             },
             "action-gmail": {
-                type: "action",
+                type: "integration",
                 name: "Email Report",
                 config: {
                     provider: "gmail",
@@ -3534,7 +3534,7 @@ const mongodbPipelineMonitorPattern: WorkflowPattern = {
         "Monitor MongoDB and PostgreSQL pipelines, AI anomaly detection, auto-create PagerDuty/Sentry incidents, sync to Datadog dashboards, update Amplitude metrics, notify via Slack/Teams, and generate incident reports in Notion",
     useCase: "Data engineering monitoring",
     icon: "Database",
-    nodeCount: 20,
+    nodeCount: 19,
     category: "advanced",
     integrations: [
         "MongoDB",
@@ -3562,7 +3562,7 @@ const mongodbPipelineMonitorPattern: WorkflowPattern = {
                 position: { x: 100, y: 450 }
             },
             "action-mongodb": {
-                type: "action",
+                type: "integration",
                 name: "MongoDB Metrics",
                 config: {
                     provider: "mongodb",
@@ -3584,7 +3584,7 @@ const mongodbPipelineMonitorPattern: WorkflowPattern = {
                 position: { x: 480, y: 250 }
             },
             "action-postgresql": {
-                type: "action",
+                type: "integration",
                 name: "PostgreSQL Metrics",
                 config: {
                     provider: "postgresql",
@@ -3595,7 +3595,7 @@ const mongodbPipelineMonitorPattern: WorkflowPattern = {
                 position: { x: 480, y: 450 }
             },
             "action-datadog-get": {
-                type: "action",
+                type: "integration",
                 name: "Datadog Baselines",
                 config: {
                     provider: "datadog",
@@ -3640,7 +3640,7 @@ const mongodbPipelineMonitorPattern: WorkflowPattern = {
                 position: { x: 1240, y: 450 }
             },
             "action-pagerduty": {
-                type: "action",
+                type: "integration",
                 name: "Create PagerDuty",
                 config: {
                     provider: "pagerduty",
@@ -3655,7 +3655,7 @@ const mongodbPipelineMonitorPattern: WorkflowPattern = {
                 position: { x: 1620, y: 200 }
             },
             "action-sentry": {
-                type: "action",
+                type: "integration",
                 name: "Create Sentry Issue",
                 config: {
                     provider: "sentry",
@@ -3669,7 +3669,7 @@ const mongodbPipelineMonitorPattern: WorkflowPattern = {
                 position: { x: 1620, y: 450 }
             },
             "action-datadog-event": {
-                type: "action",
+                type: "integration",
                 name: "Log to Datadog",
                 config: {
                     provider: "datadog",
@@ -3683,7 +3683,7 @@ const mongodbPipelineMonitorPattern: WorkflowPattern = {
                 position: { x: 1620, y: 700 }
             },
             "action-slack-critical": {
-                type: "action",
+                type: "integration",
                 name: "Critical Alert",
                 config: {
                     provider: "slack",
@@ -3695,7 +3695,7 @@ const mongodbPipelineMonitorPattern: WorkflowPattern = {
                 position: { x: 2000, y: 200 }
             },
             "action-teams-critical": {
-                type: "action",
+                type: "integration",
                 name: "Teams Alert",
                 config: {
                     provider: "microsoft-teams",
@@ -3707,7 +3707,7 @@ const mongodbPipelineMonitorPattern: WorkflowPattern = {
                 position: { x: 2000, y: 400 }
             },
             "action-slack-warning": {
-                type: "action",
+                type: "integration",
                 name: "Warning Alert",
                 config: {
                     provider: "slack",
@@ -3719,7 +3719,7 @@ const mongodbPipelineMonitorPattern: WorkflowPattern = {
                 position: { x: 2000, y: 600 }
             },
             "action-notion-incident": {
-                type: "action",
+                type: "integration",
                 name: "Create Incident Report",
                 config: {
                     provider: "notion",
@@ -3735,7 +3735,7 @@ const mongodbPipelineMonitorPattern: WorkflowPattern = {
                 position: { x: 2380, y: 300 }
             },
             "action-amplitude": {
-                type: "action",
+                type: "integration",
                 name: "Track Metrics",
                 config: {
                     provider: "amplitude",
@@ -3753,7 +3753,7 @@ const mongodbPipelineMonitorPattern: WorkflowPattern = {
                 position: { x: 2380, y: 550 }
             },
             "action-datadog-metrics": {
-                type: "action",
+                type: "integration",
                 name: "Submit Metrics",
                 config: {
                     provider: "datadog",
@@ -3785,7 +3785,7 @@ const mongodbPipelineMonitorPattern: WorkflowPattern = {
                 position: { x: 2760, y: 450 }
             },
             "action-slack-healthy": {
-                type: "action",
+                type: "integration",
                 name: "Status Update",
                 config: {
                     provider: "slack",
@@ -3912,7 +3912,7 @@ const teamsSalesStandupPattern: WorkflowPattern = {
                 position: { x: 100, y: 500 }
             },
             "action-hubspot": {
-                type: "action",
+                type: "integration",
                 name: "HubSpot Deals",
                 config: {
                     provider: "hubspot",
@@ -3923,7 +3923,7 @@ const teamsSalesStandupPattern: WorkflowPattern = {
                 position: { x: 480, y: 250 }
             },
             "action-salesforce": {
-                type: "action",
+                type: "integration",
                 name: "Salesforce Opps",
                 config: {
                     provider: "salesforce",
@@ -3934,7 +3934,7 @@ const teamsSalesStandupPattern: WorkflowPattern = {
                 position: { x: 480, y: 500 }
             },
             "action-pipedrive": {
-                type: "action",
+                type: "integration",
                 name: "Pipedrive Deals",
                 config: {
                     provider: "pipedrive",
@@ -3990,7 +3990,7 @@ const teamsSalesStandupPattern: WorkflowPattern = {
                 position: { x: 1240, y: 700 }
             },
             "action-teams": {
-                type: "action",
+                type: "integration",
                 name: "Teams Standup",
                 config: {
                     provider: "microsoft-teams",
@@ -4002,7 +4002,7 @@ const teamsSalesStandupPattern: WorkflowPattern = {
                 position: { x: 1620, y: 200 }
             },
             "action-slack": {
-                type: "action",
+                type: "integration",
                 name: "Slack Summary",
                 config: {
                     provider: "slack",
@@ -4014,7 +4014,7 @@ const teamsSalesStandupPattern: WorkflowPattern = {
                 position: { x: 1620, y: 400 }
             },
             "action-excel": {
-                type: "action",
+                type: "integration",
                 name: "Update Excel",
                 config: {
                     provider: "microsoft-excel",
@@ -4033,7 +4033,7 @@ const teamsSalesStandupPattern: WorkflowPattern = {
                 position: { x: 1620, y: 600 }
             },
             "action-sheets": {
-                type: "action",
+                type: "integration",
                 name: "Update Sheets",
                 config: {
                     provider: "google-sheets",
@@ -4051,7 +4051,7 @@ const teamsSalesStandupPattern: WorkflowPattern = {
                 position: { x: 1620, y: 800 }
             },
             "action-tableau": {
-                type: "action",
+                type: "integration",
                 name: "Refresh Tableau",
                 config: {
                     provider: "tableau",
@@ -4062,7 +4062,7 @@ const teamsSalesStandupPattern: WorkflowPattern = {
                 position: { x: 2000, y: 300 }
             },
             "action-mixpanel": {
-                type: "action",
+                type: "integration",
                 name: "Track Metrics",
                 config: {
                     provider: "mixpanel",
@@ -4102,7 +4102,7 @@ const teamsSalesStandupPattern: WorkflowPattern = {
                 position: { x: 2380, y: 600 }
             },
             "action-outlook": {
-                type: "action",
+                type: "integration",
                 name: "Email Rep",
                 config: {
                     provider: "microsoft-outlook",
@@ -4125,7 +4125,7 @@ const teamsSalesStandupPattern: WorkflowPattern = {
                 position: { x: 2380, y: 350 }
             },
             "action-teams-alert": {
-                type: "action",
+                type: "integration",
                 name: "Risk Alert",
                 config: {
                     provider: "microsoft-teams",
@@ -4236,7 +4236,7 @@ const stripeReconciliationPattern: WorkflowPattern = {
                 position: { x: 100, y: 500 }
             },
             "action-stripe": {
-                type: "action",
+                type: "integration",
                 name: "Stripe Charges",
                 config: {
                     provider: "stripe",
@@ -4247,7 +4247,7 @@ const stripeReconciliationPattern: WorkflowPattern = {
                 position: { x: 480, y: 250 }
             },
             "action-stripe-refunds": {
-                type: "action",
+                type: "integration",
                 name: "Stripe Refunds",
                 config: {
                     provider: "stripe",
@@ -4258,7 +4258,7 @@ const stripeReconciliationPattern: WorkflowPattern = {
                 position: { x: 480, y: 450 }
             },
             "action-shopify": {
-                type: "action",
+                type: "integration",
                 name: "Shopify Orders",
                 config: {
                     provider: "shopify",
@@ -4270,7 +4270,7 @@ const stripeReconciliationPattern: WorkflowPattern = {
                 position: { x: 480, y: 650 }
             },
             "action-quickbooks": {
-                type: "action",
+                type: "integration",
                 name: "QuickBooks Invoices",
                 config: {
                     provider: "quickbooks",
@@ -4326,7 +4326,7 @@ const stripeReconciliationPattern: WorkflowPattern = {
                 position: { x: 1240, y: 700 }
             },
             "action-quickbooks-sync": {
-                type: "action",
+                type: "integration",
                 name: "Sync to QuickBooks",
                 config: {
                     provider: "quickbooks",
@@ -4337,7 +4337,7 @@ const stripeReconciliationPattern: WorkflowPattern = {
                 position: { x: 1620, y: 250 }
             },
             "action-freshbooks": {
-                type: "action",
+                type: "integration",
                 name: "Sync to FreshBooks",
                 config: {
                     provider: "freshbooks",
@@ -4348,7 +4348,7 @@ const stripeReconciliationPattern: WorkflowPattern = {
                 position: { x: 1620, y: 450 }
             },
             "action-sheets": {
-                type: "action",
+                type: "integration",
                 name: "Update Tracker",
                 config: {
                     provider: "google-sheets",
@@ -4368,7 +4368,7 @@ const stripeReconciliationPattern: WorkflowPattern = {
                 position: { x: 1620, y: 650 }
             },
             "action-looker": {
-                type: "action",
+                type: "integration",
                 name: "Update Dashboard",
                 config: {
                     provider: "looker",
@@ -4404,7 +4404,7 @@ const stripeReconciliationPattern: WorkflowPattern = {
                 position: { x: 2000, y: 400 }
             },
             "action-slack-alert": {
-                type: "action",
+                type: "integration",
                 name: "Fraud Alert",
                 config: {
                     provider: "slack",
@@ -4416,7 +4416,7 @@ const stripeReconciliationPattern: WorkflowPattern = {
                 position: { x: 2380, y: 200 }
             },
             "action-teams-alert": {
-                type: "action",
+                type: "integration",
                 name: "Teams Alert",
                 config: {
                     provider: "microsoft-teams",
@@ -4428,7 +4428,7 @@ const stripeReconciliationPattern: WorkflowPattern = {
                 position: { x: 2380, y: 400 }
             },
             "action-slack-summary": {
-                type: "action",
+                type: "integration",
                 name: "Daily Summary",
                 config: {
                     provider: "slack",
@@ -4440,7 +4440,7 @@ const stripeReconciliationPattern: WorkflowPattern = {
                 position: { x: 2380, y: 600 }
             },
             "action-gmail": {
-                type: "action",
+                type: "integration",
                 name: "Email CFO",
                 config: {
                     provider: "gmail",
@@ -4463,7 +4463,7 @@ const stripeReconciliationPattern: WorkflowPattern = {
                 position: { x: 2760, y: 750 }
             },
             "action-slack-discrepancy": {
-                type: "action",
+                type: "integration",
                 name: "Alert Discrepancies",
                 config: {
                     provider: "slack",
@@ -4613,7 +4613,7 @@ const intercomAnalyzerPattern: WorkflowPattern = {
                 position: { x: 100, y: 600 }
             },
             "action-intercom-get": {
-                type: "action",
+                type: "integration",
                 name: "Get Conversation",
                 config: {
                     provider: "intercom",
@@ -4624,7 +4624,7 @@ const intercomAnalyzerPattern: WorkflowPattern = {
                 position: { x: 480, y: 350 }
             },
             "action-zendesk-get": {
-                type: "action",
+                type: "integration",
                 name: "Get Ticket",
                 config: {
                     provider: "zendesk",
@@ -4635,7 +4635,7 @@ const intercomAnalyzerPattern: WorkflowPattern = {
                 position: { x: 480, y: 600 }
             },
             "action-hubspot": {
-                type: "action",
+                type: "integration",
                 name: "Get Customer",
                 config: {
                     provider: "hubspot",
@@ -4679,7 +4679,7 @@ const intercomAnalyzerPattern: WorkflowPattern = {
                 position: { x: 1240, y: 350 }
             },
             "action-linear": {
-                type: "action",
+                type: "integration",
                 name: "Create Linear Issue",
                 config: {
                     provider: "linear",
@@ -4696,7 +4696,7 @@ const intercomAnalyzerPattern: WorkflowPattern = {
                 position: { x: 1620, y: 200 }
             },
             "action-jira": {
-                type: "action",
+                type: "integration",
                 name: "Create Jira Issue",
                 config: {
                     provider: "jira",
@@ -4712,7 +4712,7 @@ const intercomAnalyzerPattern: WorkflowPattern = {
                 position: { x: 1620, y: 400 }
             },
             "action-notion": {
-                type: "action",
+                type: "integration",
                 name: "Update KB",
                 config: {
                     provider: "notion",
@@ -4728,7 +4728,7 @@ const intercomAnalyzerPattern: WorkflowPattern = {
                 position: { x: 1620, y: 600 }
             },
             "action-hubspot-update": {
-                type: "action",
+                type: "integration",
                 name: "Update Health Score",
                 config: {
                     provider: "hubspot",
@@ -4745,7 +4745,7 @@ const intercomAnalyzerPattern: WorkflowPattern = {
                 position: { x: 1620, y: 800 }
             },
             "action-sheets": {
-                type: "action",
+                type: "integration",
                 name: "Log Analytics",
                 config: {
                     provider: "google-sheets",
@@ -4766,7 +4766,7 @@ const intercomAnalyzerPattern: WorkflowPattern = {
                 position: { x: 2000, y: 550 }
             },
             "action-looker": {
-                type: "action",
+                type: "integration",
                 name: "Refresh Dashboard",
                 config: {
                     provider: "looker",
@@ -4787,7 +4787,7 @@ const intercomAnalyzerPattern: WorkflowPattern = {
                 position: { x: 2380, y: 300 }
             },
             "action-slack-churn": {
-                type: "action",
+                type: "integration",
                 name: "Churn Alert",
                 config: {
                     provider: "slack",
@@ -4799,7 +4799,7 @@ const intercomAnalyzerPattern: WorkflowPattern = {
                 position: { x: 2760, y: 200 }
             },
             "action-slack-insights": {
-                type: "action",
+                type: "integration",
                 name: "Share Insights",
                 config: {
                     provider: "slack",
@@ -4811,7 +4811,7 @@ const intercomAnalyzerPattern: WorkflowPattern = {
                 position: { x: 2760, y: 450 }
             },
             "action-teams": {
-                type: "action",
+                type: "integration",
                 name: "Teams Update",
                 config: {
                     provider: "microsoft-teams",
@@ -4940,7 +4940,7 @@ const multiChannelPublisherPattern: WorkflowPattern = {
                 position: { x: 100, y: 550 }
             },
             "action-gdrive": {
-                type: "action",
+                type: "integration",
                 name: "Get Assets",
                 config: {
                     provider: "google-drive",
@@ -5050,7 +5050,7 @@ const multiChannelPublisherPattern: WorkflowPattern = {
                 position: { x: 1240, y: 350 }
             },
             "action-youtube": {
-                type: "action",
+                type: "integration",
                 name: "Publish YouTube",
                 config: {
                     provider: "youtube",
@@ -5064,7 +5064,7 @@ const multiChannelPublisherPattern: WorkflowPattern = {
                 position: { x: 1620, y: 150 }
             },
             "action-buffer-tiktok": {
-                type: "action",
+                type: "integration",
                 name: "Schedule TikTok",
                 config: {
                     provider: "buffer",
@@ -5078,7 +5078,7 @@ const multiChannelPublisherPattern: WorkflowPattern = {
                 position: { x: 1620, y: 350 }
             },
             "action-instagram": {
-                type: "action",
+                type: "integration",
                 name: "Publish Instagram",
                 config: {
                     provider: "instagram",
@@ -5090,7 +5090,7 @@ const multiChannelPublisherPattern: WorkflowPattern = {
                 position: { x: 1620, y: 550 }
             },
             "action-twitter": {
-                type: "action",
+                type: "integration",
                 name: "Post Thread",
                 config: {
                     provider: "twitter",
@@ -5101,7 +5101,7 @@ const multiChannelPublisherPattern: WorkflowPattern = {
                 position: { x: 1620, y: 750 }
             },
             "action-linkedin": {
-                type: "action",
+                type: "integration",
                 name: "Publish LinkedIn",
                 config: {
                     provider: "linkedin",
@@ -5113,7 +5113,7 @@ const multiChannelPublisherPattern: WorkflowPattern = {
                 position: { x: 1620, y: 950 }
             },
             "action-reddit": {
-                type: "action",
+                type: "integration",
                 name: "Submit to Reddit",
                 config: {
                     provider: "reddit",
@@ -5126,7 +5126,7 @@ const multiChannelPublisherPattern: WorkflowPattern = {
                 position: { x: 2000, y: 150 }
             },
             "action-medium": {
-                type: "action",
+                type: "integration",
                 name: "Publish Medium",
                 config: {
                     provider: "medium",
@@ -5140,7 +5140,7 @@ const multiChannelPublisherPattern: WorkflowPattern = {
                 position: { x: 2000, y: 350 }
             },
             "action-notion": {
-                type: "action",
+                type: "integration",
                 name: "Update Calendar",
                 config: {
                     provider: "notion",
@@ -5158,7 +5158,7 @@ const multiChannelPublisherPattern: WorkflowPattern = {
                 position: { x: 2000, y: 550 }
             },
             "action-amplitude": {
-                type: "action",
+                type: "integration",
                 name: "Track Publish",
                 config: {
                     provider: "amplitude",
@@ -5183,7 +5183,7 @@ const multiChannelPublisherPattern: WorkflowPattern = {
                 position: { x: 2000, y: 750 }
             },
             "action-slack": {
-                type: "action",
+                type: "integration",
                 name: "Notify Slack",
                 config: {
                     provider: "slack",
@@ -5195,7 +5195,7 @@ const multiChannelPublisherPattern: WorkflowPattern = {
                 position: { x: 2380, y: 450 }
             },
             "action-teams": {
-                type: "action",
+                type: "integration",
                 name: "Notify Teams",
                 config: {
                     provider: "microsoft-teams",

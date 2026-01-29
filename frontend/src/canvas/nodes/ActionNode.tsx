@@ -52,6 +52,7 @@ function ActionNode({ data, selected }: NodeProps<ActionNodeData>) {
             status={data.status}
             category="outputs"
             selected={selected}
+            hasOutputHandle={false}
         >
             <div className="space-y-1.5">
                 {hasProvider ? (
