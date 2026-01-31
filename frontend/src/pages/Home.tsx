@@ -1,22 +1,29 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type {
     AgentSummary,
     AgentTemplate,
     ChatInterfaceSummary,
     FormInterfaceSummary,
+    KnowledgeBaseSummary,
     PersonaDefinition,
     PersonaDefinitionSummary,
     Template,
     WorkflowSummary
 } from "@flowmaestro/shared";
 import { TEMPLATE_CATEGORY_META } from "@flowmaestro/shared";
+import { CreateChatInterfaceDialog } from "../components/chat/builder/CreateChatInterfaceDialog";
+import { CreateAgentDialog } from "../components/CreateAgentDialog";
+import { CreateWorkflowDialog } from "../components/CreateWorkflowDialog";
+import { GetStartedPanel } from "../components/empty-states";
+import { CreateFormInterfaceDialog } from "../components/forms/CreateFormInterfaceDialog";
 import {
     HomePageSkeleton,
     MixedInterfaces,
     MixedTemplates,
     RecentAgents,
+    RecentKnowledgeBases,
     RecentPersonas,
     RecentWorkflows,
     WelcomeSection
@@ -32,11 +39,14 @@ import {
     getAgents,
     getChatInterfaces,
     getFormInterfaces,
+    getKnowledgeBases,
+    getKnowledgeBaseStats,
     getPersona,
     getPersonas,
     getTemplates,
     getWorkflows
 } from "../lib/api";
+import type { KnowledgeBase, KnowledgeBaseStats } from "../lib/api";
 
 // Convert API response to WorkflowSummary format
 interface ApiWorkflow {
@@ -86,6 +96,24 @@ function toAgentSummary(agent: {
     };
 }
 
+// Convert KnowledgeBase + stats to KnowledgeBaseSummary for card components
+function toKnowledgeBaseSummary(
+    kb: KnowledgeBase,
+    stats?: KnowledgeBaseStats
+): KnowledgeBaseSummary {
+    return {
+        id: kb.id,
+        name: kb.name,
+        description: kb.description ?? null,
+        documentCount: stats?.document_count ?? 0,
+        chunkCount: stats?.chunk_count,
+        totalSizeBytes: stats?.total_size_bytes,
+        embeddingModel: kb.config?.embeddingModel,
+        createdAt: new Date(kb.created_at),
+        updatedAt: new Date(kb.updated_at)
+    };
+}
+
 // Shuffle array using Fisher-Yates algorithm
 function shuffleArray<T>(array: T[]): T[] {
     const shuffled = [...array];
@@ -105,6 +133,12 @@ export function Home() {
     const [selectedPersona, setSelectedPersona] = useState<PersonaDefinition | null>(null);
     const [isPersonaDetailOpen, setIsPersonaDetailOpen] = useState(false);
     const [isPersonaLaunchOpen, setIsPersonaLaunchOpen] = useState(false);
+
+    // Get Started panel dialogs
+    const [isCreateWorkflowOpen, setIsCreateWorkflowOpen] = useState(false);
+    const [isCreateAgentOpen, setIsCreateAgentOpen] = useState(false);
+    const [isCreateChatInterfaceOpen, setIsCreateChatInterfaceOpen] = useState(false);
+    const [isCreateFormInterfaceOpen, setIsCreateFormInterfaceOpen] = useState(false);
 
     // Fetch recent workflows sorted by most recent activity (created or updated)
     const workflowsQuery = useQuery({
@@ -179,6 +213,36 @@ export function Home() {
                 return [...response.data.items].sort((a, b) => {
                     return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
                 });
+            }
+            return [];
+        }
+    });
+
+    // Fetch knowledge bases with stats sorted by updated_at
+    const knowledgeBasesQuery = useQuery({
+        queryKey: ["home", "knowledge-bases"],
+        queryFn: async () => {
+            const response = await getKnowledgeBases({ limit: 10 });
+            if (response.success && response.data) {
+                // Sort by updated_at descending
+                const sortedKBs = [...response.data].sort((a, b) => {
+                    return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+                });
+
+                // Fetch stats for each knowledge base in parallel
+                const statsPromises = sortedKBs.map(async (kb) => {
+                    try {
+                        const statsResponse = await getKnowledgeBaseStats(kb.id);
+                        if (statsResponse.success && statsResponse.data) {
+                            return { kb, stats: statsResponse.data };
+                        }
+                    } catch {
+                        // Ignore stats fetch errors
+                    }
+                    return { kb, stats: undefined };
+                });
+
+                return Promise.all(statsPromises);
             }
             return [];
         }
@@ -259,6 +323,12 @@ export function Home() {
         return agentsQuery.data.map(toAgentSummary);
     }, [agentsQuery.data]);
 
+    // Convert knowledge bases to KnowledgeBaseSummary format
+    const recentKnowledgeBases: KnowledgeBaseSummary[] = useMemo(() => {
+        if (!knowledgeBasesQuery.data) return [];
+        return knowledgeBasesQuery.data.map(({ kb, stats }) => toKnowledgeBaseSummary(kb, stats));
+    }, [knowledgeBasesQuery.data]);
+
     // Mix form and chat interfaces
     const mixedInterfaces = useMemo(() => {
         const formInterfaces = formInterfacesQuery.data ?? [];
@@ -314,6 +384,7 @@ export function Home() {
     const isLoading =
         workflowsQuery.isLoading ||
         agentsQuery.isLoading ||
+        knowledgeBasesQuery.isLoading ||
         formInterfacesQuery.isLoading ||
         chatInterfacesQuery.isLoading ||
         personasQuery.isLoading ||
@@ -371,6 +442,48 @@ export function Home() {
         setSelectedPersona(null);
     };
 
+    // Get Started panel handlers
+    const handleCreateWorkflow = useCallback(
+        async (name: string, description?: string) => {
+            // Navigate to builder with new workflow
+            navigate("/builder/new", { state: { name, description } });
+        },
+        [navigate]
+    );
+
+    const handleCreateAgent = useCallback(
+        (agentId: string) => {
+            // Close dialog and navigate to the newly created agent
+            setIsCreateAgentOpen(false);
+            queryClient.invalidateQueries({ queryKey: ["home", "agents"] });
+            navigate(`/agents/${agentId}`);
+        },
+        [navigate, queryClient]
+    );
+
+    const handleCreateChatInterface = useCallback(
+        (chatInterface: { id: string; title: string }) => {
+            // Close dialog and navigate to the newly created chat interface
+            setIsCreateChatInterfaceOpen(false);
+            queryClient.invalidateQueries({ queryKey: ["home", "chat-interfaces"] });
+            navigate(`/chat-interfaces/${chatInterface.id}/edit`);
+        },
+        [navigate, queryClient]
+    );
+
+    const handleCreateFormInterface = useCallback(
+        (formInterface: { id: string; title: string }) => {
+            // Close dialog and navigate to the newly created form interface
+            setIsCreateFormInterfaceOpen(false);
+            queryClient.invalidateQueries({ queryKey: ["home", "form-interfaces"] });
+            navigate(`/form-interfaces/${formInterface.id}/edit`);
+        },
+        [navigate, queryClient]
+    );
+
+    // Check if all primary sections are empty
+    const isAllEmpty = recentWorkflows.length === 0 && recentAgents.length === 0;
+
     const handleClosePersonaLaunch = () => {
         setIsPersonaLaunchOpen(false);
         setSelectedPersona(null);
@@ -384,23 +497,75 @@ export function Home() {
         <div className="max-w-7xl mx-auto px-4 py-6 md:px-6 md:py-8">
             <WelcomeSection />
 
-            <RecentWorkflows workflows={recentWorkflows} />
+            {isAllEmpty ? (
+                <>
+                    {/* Show GetStartedPanel when no workflows or agents */}
+                    <GetStartedPanel
+                        onCreateWorkflow={() => setIsCreateWorkflowOpen(true)}
+                        onCreateAgent={() => setIsCreateAgentOpen(true)}
+                        onCreateChatInterface={() => setIsCreateChatInterfaceOpen(true)}
+                        onCreateFormInterface={() => setIsCreateFormInterfaceOpen(true)}
+                        className="mb-8"
+                    />
 
-            <RecentAgents agents={recentAgents} />
+                    {/* Still show templates for inspiration */}
+                    <MixedTemplates
+                        templates={mixedTemplates}
+                        onWorkflowTemplateClick={handleWorkflowTemplateClick}
+                        onAgentTemplateClick={handleAgentTemplateClick}
+                    />
+                </>
+            ) : (
+                <>
+                    <RecentWorkflows workflows={recentWorkflows} />
 
-            <RecentPersonas
-                personas={allPersonas}
-                onPersonaClick={handlePersonaClick}
-                onPersonaLaunch={handlePersonaLaunch}
+                    <RecentAgents agents={recentAgents} />
+
+                    <RecentPersonas
+                        personas={allPersonas}
+                        onPersonaClick={handlePersonaClick}
+                        onPersonaLaunch={handlePersonaLaunch}
+                    />
+
+                    <MixedTemplates
+                        templates={mixedTemplates}
+                        onWorkflowTemplateClick={handleWorkflowTemplateClick}
+                        onAgentTemplateClick={handleAgentTemplateClick}
+                    />
+
+                    <MixedInterfaces interfaces={mixedInterfaces} />
+
+                    <RecentKnowledgeBases knowledgeBases={recentKnowledgeBases} />
+                </>
+            )}
+
+            {/* Create Workflow Dialog */}
+            <CreateWorkflowDialog
+                isOpen={isCreateWorkflowOpen}
+                onClose={() => setIsCreateWorkflowOpen(false)}
+                onCreate={handleCreateWorkflow}
             />
 
-            <MixedTemplates
-                templates={mixedTemplates}
-                onWorkflowTemplateClick={handleWorkflowTemplateClick}
-                onAgentTemplateClick={handleAgentTemplateClick}
+            {/* Create Agent Dialog */}
+            <CreateAgentDialog
+                isOpen={isCreateAgentOpen}
+                onClose={() => setIsCreateAgentOpen(false)}
+                onCreated={handleCreateAgent}
             />
 
-            <MixedInterfaces interfaces={mixedInterfaces} />
+            {/* Create Chat Interface Dialog */}
+            <CreateChatInterfaceDialog
+                isOpen={isCreateChatInterfaceOpen}
+                onClose={() => setIsCreateChatInterfaceOpen(false)}
+                onCreated={handleCreateChatInterface}
+            />
+
+            {/* Create Form Interface Dialog */}
+            <CreateFormInterfaceDialog
+                isOpen={isCreateFormInterfaceOpen}
+                onClose={() => setIsCreateFormInterfaceOpen(false)}
+                onCreated={handleCreateFormInterface}
+            />
 
             {/* Workflow Template Preview Dialog */}
             <TemplatePreviewDialog
