@@ -1,4 +1,4 @@
-import { Plus, Bot, Trash2, FolderInput, FolderMinus, Search } from "lucide-react";
+import { Plus, Trash2, FolderInput, FolderMinus, Search } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import type { FolderWithCounts, AgentSummary, FolderResourceType } from "@flowmaestro/shared";
@@ -13,6 +13,7 @@ import { PageHeader } from "../components/common/PageHeader";
 import { SkeletonGrid } from "../components/common/SkeletonGrid";
 import { SortDropdown } from "../components/common/SortDropdown";
 import { CreateAgentDialog } from "../components/CreateAgentDialog";
+import { EmptyStateWithGhostCards } from "../components/empty-states";
 import {
     CreateFolderDialog,
     MoveToFolderDialog,
@@ -481,25 +482,11 @@ export function Agents() {
                             </Button>
                         </div>
                     ) : agents.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed border-border rounded-lg bg-card">
-                            <Bot className="w-12 h-12 text-muted-foreground mb-4" />
-                            <h3 className="text-lg font-semibold text-foreground mb-2">
-                                {currentFolder ? "No agents in this folder" : "No agents yet"}
-                            </h3>
-                            <p className="text-sm text-muted-foreground mb-6 text-center max-w-md">
-                                {currentFolder
-                                    ? "Move agents here or create a new one."
-                                    : "Create your first AI agent to automate tasks, answer questions, or execute workflows."}
-                            </p>
-                            <Button
-                                variant="primary"
-                                onClick={() => setIsCreateDialogOpen(true)}
-                                size="lg"
-                            >
-                                <Plus className="w-4 h-4" />
-                                {currentFolder ? "Create Agent" : "Create Your First Agent"}
-                            </Button>
-                        </div>
+                        <EmptyStateWithGhostCards
+                            entityType="agent"
+                            onCreateClick={() => setIsCreateDialogOpen(true)}
+                            isInFolder={!!currentFolder}
+                        />
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {filteredAgents.map((agent) => (

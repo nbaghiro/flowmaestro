@@ -1,4 +1,4 @@
-import { BookOpen, Plus, Trash2, FolderInput, FolderMinus, Search } from "lucide-react";
+import { Plus, Trash2, FolderInput, FolderMinus, Search } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import type {
@@ -15,6 +15,7 @@ import { ExpandableSearch } from "../components/common/ExpandableSearch";
 import { FolderDropdown } from "../components/common/FolderDropdown";
 import { PageHeader } from "../components/common/PageHeader";
 import { SkeletonGrid } from "../components/common/SkeletonGrid";
+import { EmptyStateWithGhostCards } from "../components/empty-states";
 import {
     CreateFolderDialog,
     MoveToFolderDialog,
@@ -506,29 +507,11 @@ export function KnowledgeBases() {
                             </Button>
                         </div>
                     ) : knowledgeBases.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed border-border rounded-lg bg-card">
-                            <BookOpen className="w-12 h-12 text-muted-foreground mb-4" />
-                            <h3 className="text-lg font-semibold text-foreground mb-2">
-                                {currentFolder
-                                    ? "No knowledge bases in this folder"
-                                    : "No knowledge bases yet"}
-                            </h3>
-                            <p className="text-sm text-muted-foreground mb-6 text-center max-w-md">
-                                {currentFolder
-                                    ? "Move knowledge bases here or create a new one."
-                                    : "Create your first knowledge base to start uploading documents for RAG workflows."}
-                            </p>
-                            <Button
-                                variant="primary"
-                                onClick={() => setShowCreateModal(true)}
-                                size="lg"
-                            >
-                                <Plus className="w-4 h-4" />
-                                {currentFolder
-                                    ? "Create Knowledge Base"
-                                    : "Create Your First Knowledge Base"}
-                            </Button>
-                        </div>
+                        <EmptyStateWithGhostCards
+                            entityType="knowledge-base"
+                            onCreateClick={() => setShowCreateModal(true)}
+                            isInFolder={!!currentFolder}
+                        />
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {filteredKnowledgeBases.map((kb) => (

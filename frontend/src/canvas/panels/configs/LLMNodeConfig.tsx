@@ -1,4 +1,4 @@
-import { Plus, AlertTriangle } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import {
     getDefaultModelForProvider,
@@ -11,7 +11,6 @@ import { Input } from "../../../components/common/Input";
 import { LLMModelSelect } from "../../../components/common/LLMModelSelect";
 import { Slider } from "../../../components/common/Slider";
 import { VariableInput } from "../../../components/common/VariableInput";
-import { NewConnectionDialog } from "../../../components/connections/dialogs/NewConnectionDialog";
 import { ProviderConnectionDialog } from "../../../components/connections/dialogs/ProviderConnectionDialog";
 import { OutputSettingsSection } from "../../../components/OutputSettingsSection";
 import { useConnectionStore } from "../../../stores/connectionStore";
@@ -38,7 +37,6 @@ export function LLMNodeConfig({ nodeId, data, onUpdate, errors = [] }: LLMNodeCo
     const [topP, setTopP] = useState((data.topP as number) || 1);
     const [outputVariable, setOutputVariable] = useState((data.outputVariable as string) || "");
     const [isProviderDialogOpen, setIsProviderDialogOpen] = useState(false);
-    const [isNewConnectionDialogOpen, setIsNewConnectionDialogOpen] = useState(false);
 
     const { connections, fetchConnections } = useConnectionStore();
 
@@ -129,16 +127,12 @@ export function LLMNodeConfig({ nodeId, data, onUpdate, errors = [] }: LLMNodeCo
     return (
         <>
             <FormSection title="Model Configuration">
-                <FormField
-                    label="LLM Provider Connection"
-                    error={provider && providerInfo && !selectedConnection ? undefined : getError("connectionId")}
-                >
+                <FormField label="LLM Provider Connection" error={getError("connectionId")}>
                     {provider && selectedConnection ? (
-                        // State 1: Provider selected with active connection
                         <button
                             type="button"
                             onClick={() => setIsProviderDialogOpen(true)}
-                            className="w-full flex items-start gap-3 p-3 text-left border-2 border-border rounded-lg hover:border-border/60 hover:bg-muted transition-all"
+                            className="w-full flex items-start gap-3 p-3 text-left border-2 border-border rounded-lg hover:border-primary/50 hover:bg-muted transition-all bg-card"
                         >
                             {/* Provider Icon */}
                             <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center">
@@ -164,61 +158,13 @@ export function LLMNodeConfig({ nodeId, data, onUpdate, errors = [] }: LLMNodeCo
                                     {selectedConnection.name}
                                 </p>
                                 {selectedConnection.metadata?.account_info?.email && (
-                                    <p className="text-xs text-muted-foreground/80 truncate">
+                                    <p className="text-xs text-muted-foreground/70 truncate">
                                         {selectedConnection.metadata.account_info.email}
                                     </p>
                                 )}
                             </div>
                         </button>
-                    ) : provider && providerInfo ? (
-                        // State 2: Provider pre-selected but no connection - show warning
-                        <div className="space-y-1.5">
-                            <button
-                                type="button"
-                                onClick={() => setIsNewConnectionDialogOpen(true)}
-                                className="w-full flex items-start gap-3 p-3 text-left border-2 border-amber-500/50 rounded-lg hover:border-amber-500 hover:bg-amber-500/5 transition-all"
-                            >
-                                {/* Provider Icon */}
-                                <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center">
-                                    {providerInfo.logoUrl ? (
-                                        <img
-                                            src={providerInfo.logoUrl}
-                                            alt={providerInfo.displayName}
-                                            className="w-10 h-10 object-contain"
-                                        />
-                                    ) : (
-                                        <div className="w-10 h-10 bg-muted rounded" />
-                                    )}
-                                </div>
-
-                                {/* Provider Info with Warning */}
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <h3 className="font-medium text-sm text-foreground">
-                                            {providerInfo.displayName}
-                                        </h3>
-                                        <AlertTriangle className="w-4 h-4 text-amber-500" />
-                                    </div>
-                                    <p className="text-xs text-amber-600 dark:text-amber-400">
-                                        No connection - click to connect
-                                    </p>
-                                </div>
-                            </button>
-                            <div className="flex items-center justify-between">
-                                <button
-                                    type="button"
-                                    onClick={() => setIsProviderDialogOpen(true)}
-                                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                                >
-                                    or change provider
-                                </button>
-                                <span className="text-xs text-destructive">
-                                    Select a connection
-                                </span>
-                            </div>
-                        </div>
                     ) : (
-                        // State 3: No provider selected
                         <button
                             type="button"
                             onClick={() => setIsProviderDialogOpen(true)}
@@ -319,33 +265,6 @@ export function LLMNodeConfig({ nodeId, data, onUpdate, errors = [] }: LLMNodeCo
                 defaultCategory="AI & ML"
                 onSelect={handleConnectionSelect}
             />
-
-            {/* Direct New Connection Dialog for pre-selected providers */}
-            {providerInfo && (
-                <NewConnectionDialog
-                    isOpen={isNewConnectionDialogOpen}
-                    onClose={() => setIsNewConnectionDialogOpen(false)}
-                    provider={provider}
-                    providerDisplayName={providerInfo.displayName}
-                    providerIcon={
-                        providerInfo.logoUrl ? (
-                            <img
-                                src={providerInfo.logoUrl}
-                                alt={providerInfo.displayName}
-                                className="w-10 h-10 object-contain"
-                            />
-                        ) : undefined
-                    }
-                    onSuccess={() => {
-                        setIsNewConnectionDialogOpen(false);
-                        // Refresh connections to get the new one
-                        fetchConnections();
-                    }}
-                    supportsOAuth={providerInfo.methods.includes("oauth2")}
-                    supportsApiKey={providerInfo.methods.includes("api_key")}
-                    oauthSettings={providerInfo.oauthSettings}
-                />
-            )}
         </>
     );
 }
