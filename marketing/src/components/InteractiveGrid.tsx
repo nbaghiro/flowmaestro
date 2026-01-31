@@ -18,7 +18,7 @@ export const InteractiveGrid: React.FC = () => {
     return (
         <div className="absolute inset-0 overflow-hidden">
             {/* Base grid pattern */}
-            <div className="absolute inset-0 grid-pattern opacity-30"></div>
+            <div className="absolute inset-0 grid-pattern opacity-50"></div>
 
             {/* Mouse spotlight effect */}
             <div

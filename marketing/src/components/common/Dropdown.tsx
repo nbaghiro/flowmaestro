@@ -1,4 +1,4 @@
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 import React from "react";
 import { Link } from "react-router-dom";
@@ -42,7 +42,7 @@ export const Dropdown: React.FC<DropdownProps> = ({ label, items }) => {
 
     return (
         <div className="relative" onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
-            <button className="flex items-center gap-1 text-sm text-gray-400 hover:text-white transition-colors">
+            <button className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
                 {label}
                 <ChevronDown
                     className={`w-3 h-3 transition-transform duration-200 ${
@@ -58,10 +58,10 @@ export const Dropdown: React.FC<DropdownProps> = ({ label, items }) => {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -8 }}
                         transition={{ duration: 0.15, ease: "easeOut" }}
-                        className="absolute top-full left-0 mt-3 w-72 py-2 bg-background border border-stroke rounded-xl shadow-2xl shadow-black/50"
+                        className="absolute top-full left-0 mt-3 w-72 py-2 bg-card border border-border rounded-xl shadow-2xl shadow-black/20"
                     >
                         {/* Arrow pointer */}
-                        <div className="absolute -top-2 left-6 w-4 h-4 bg-background border-l border-t border-stroke rotate-45" />
+                        <div className="absolute -top-2 left-6 w-4 h-4 bg-card border-l border-t border-border rotate-45" />
 
                         <div className="relative z-10">
                             {items.map((item) => (
@@ -69,19 +69,19 @@ export const Dropdown: React.FC<DropdownProps> = ({ label, items }) => {
                                     key={item.href}
                                     to={item.href}
                                     onClick={() => setIsOpen(false)}
-                                    className="flex items-center gap-3 px-4 py-3 hover:bg-background-surface transition-colors"
+                                    className="flex items-center gap-3 px-4 py-3 hover:bg-secondary transition-colors"
                                 >
                                     {item.icon && (
-                                        <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-background-elevated border border-stroke flex items-center justify-center">
-                                            <item.icon className="w-4 h-4 text-gray-300" />
+                                        <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-secondary border border-border flex items-center justify-center">
+                                            <item.icon className="w-4 h-4 text-muted-foreground" />
                                         </div>
                                     )}
                                     <div className="flex-1 min-w-0">
-                                        <div className="text-sm font-medium text-white">
+                                        <div className="text-sm font-medium text-foreground">
                                             {item.label}
                                         </div>
                                         {item.description && (
-                                            <div className="text-xs text-gray-500 truncate">
+                                            <div className="text-xs text-muted-foreground truncate">
                                                 {item.description}
                                             </div>
                                         )}

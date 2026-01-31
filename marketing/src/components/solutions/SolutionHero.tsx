@@ -12,7 +12,7 @@ export const SolutionHero: React.FC<SolutionHeroProps> = ({ solution }) => {
     return (
         <section className="relative pt-32 pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
             {/* Grid pattern */}
-            <div className="absolute inset-0 grid-pattern opacity-30" />
+            <div className="absolute inset-0 grid-pattern opacity-50" />
 
             <div className="relative max-w-5xl mx-auto text-center">
                 {/* Category Icon & Tagline */}

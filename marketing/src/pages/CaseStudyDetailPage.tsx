@@ -15,7 +15,7 @@ export const CaseStudyDetailPage: React.FC = () => {
     }
 
     return (
-        <div className="min-h-screen bg-background text-gray-50">
+        <div className="min-h-screen bg-background text-foreground">
             <Navigation />
             <CaseStudyHero caseStudy={caseStudy} />
             <CaseStudyContent caseStudy={caseStudy} />

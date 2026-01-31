@@ -119,8 +119,8 @@ const plans: PricingPlan[] = [
         basePrice: 29,
         baseCredits: 25000,
         icon: <Users className="w-5 h-5" />,
-        color: "bg-blue-500",
-        borderColor: "border-blue-500/50",
+        color: "bg-foreground",
+        borderColor: "border-foreground/50",
         cta: "Start Trial",
         popular: true,
         features: [
@@ -181,7 +181,7 @@ const PricingCard: React.FC<PricingCardProps> = ({ plan, selectedCredits, isAnnu
         >
             {plan.popular && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <span className="px-3 py-1 text-xs font-medium bg-blue-500 text-white rounded-full">
+                    <span className="px-3 py-1 text-xs font-medium bg-foreground text-background rounded-full">
                         Most Popular
                     </span>
                 </div>
@@ -245,12 +245,12 @@ export const PricingPage: React.FC = () => {
     const selectedCredits = sliderToCredits(sliderValue);
 
     return (
-        <div className="min-h-screen bg-background text-gray-50">
+        <div className="min-h-screen bg-background text-foreground">
             <Navigation />
 
             {/* Hero Section */}
             <section className="relative pt-32 pb-8 px-4 sm:px-6 lg:px-8">
-                <div className="absolute inset-0 grid-pattern opacity-30"></div>
+                <div className="absolute inset-0 grid-pattern opacity-50"></div>
                 <div className="relative z-10 max-w-5xl mx-auto text-center">
                     <motion.div
                         initial={{ opacity: 0, y: 30 }}

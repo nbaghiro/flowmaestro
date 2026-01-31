@@ -1,66 +1,57 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+    darkMode: ["class"],
     content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
     theme: {
         extend: {
             colors: {
-                // Cool Steel - Industrial Precision palette
-                background: {
-                    DEFAULT: "#09090b",
-                    surface: "#18181b",
-                    elevated: "#27272a",
-                },
-                // Zinc scale for grays (cool-toned)
-                gray: {
-                    50: "#fafafa",
-                    100: "#f4f4f5",
-                    200: "#e4e4e7",
-                    300: "#d4d4d8",
-                    400: "#a1a1aa",
-                    500: "#71717a",
-                    600: "#52525b",
-                    700: "#3f3f46",
-                    800: "#27272a",
-                    900: "#18181b",
-                    950: "#09090b",
-                },
-                // Primary blue (Electric Blue)
+                // CSS variable-based colors matching frontend app
+                border: "hsl(var(--border))",
+                input: "hsl(var(--input))",
+                ring: "hsl(var(--ring))",
+                background: "hsl(var(--background))",
+                foreground: "hsl(var(--foreground))",
                 primary: {
-                    300: "#93c5fd",
-                    400: "#60a5fa",
-                    500: "#3b82f6",
-                    600: "#2563eb",
-                    700: "#1d4ed8",
+                    DEFAULT: "hsl(var(--primary))",
+                    foreground: "hsl(var(--primary-foreground))"
                 },
-                // Cyan accent
+                secondary: {
+                    DEFAULT: "hsl(var(--secondary))",
+                    foreground: "hsl(var(--secondary-foreground))"
+                },
+                muted: {
+                    DEFAULT: "hsl(var(--muted))",
+                    foreground: "hsl(var(--muted-foreground))"
+                },
                 accent: {
-                    400: "#22d3ee",
-                    500: "#06b6d4",
-                    600: "#0891b2",
+                    DEFAULT: "hsl(var(--accent))",
+                    foreground: "hsl(var(--accent-foreground))"
                 },
+                card: {
+                    DEFAULT: "hsl(var(--card))",
+                    foreground: "hsl(var(--card-foreground))"
+                }
             },
-            // Border colors
-            borderColor: {
-                stroke: {
-                    DEFAULT: "#3f3f46",
-                    hover: "#52525b",
-                },
+            borderRadius: {
+                lg: "var(--radius)",
+                md: "calc(var(--radius) - 2px)",
+                sm: "calc(var(--radius) - 4px)"
             },
             animation: {
                 "fade-in": "fadeIn 0.6s ease-out",
-                "slide-up": "slideUp 0.6s ease-out",
+                "slide-up": "slideUp 0.6s ease-out"
             },
             keyframes: {
                 fadeIn: {
                     "0%": { opacity: "0" },
-                    "100%": { opacity: "1" },
+                    "100%": { opacity: "1" }
                 },
                 slideUp: {
                     "0%": { transform: "translateY(50px)", opacity: "0" },
-                    "100%": { transform: "translateY(0)", opacity: "1" },
-                },
-            },
-        },
+                    "100%": { transform: "translateY(0)", opacity: "1" }
+                }
+            }
+        }
     },
-    plugins: [],
+    plugins: []
 };

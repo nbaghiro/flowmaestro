@@ -1,8 +1,9 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronDown, Menu, X } from "lucide-react";
+import { ChevronDown, Menu, Moon, Sun, X } from "lucide-react";
 import React from "react";
 import { Link } from "react-router-dom";
 import { SOLUTION_NAV_ITEMS } from "../data/solutions";
+import { useTheme } from "../hooks/useTheme";
 import { Dropdown } from "./common/Dropdown";
 
 interface NavLinkProps {
@@ -12,9 +13,23 @@ interface NavLinkProps {
 
 const NavLink: React.FC<NavLinkProps> = ({ label, hasDropdown }) => {
     return (
-        <button className="flex items-center gap-1 text-sm text-gray-400 hover:text-white transition-colors">
+        <button className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
             {label}
             {hasDropdown && <ChevronDown className="w-3 h-3" />}
+        </button>
+    );
+};
+
+const ThemeToggle: React.FC = () => {
+    const { theme, toggleTheme } = useTheme();
+
+    return (
+        <button
+            onClick={toggleTheme}
+            className="p-2 text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-secondary"
+            aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
+        >
+            {theme === "light" ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
         </button>
     );
 };
@@ -22,6 +37,7 @@ const NavLink: React.FC<NavLinkProps> = ({ label, hasDropdown }) => {
 export const Navigation: React.FC = () => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
     const [isSolutionsExpanded, setIsSolutionsExpanded] = React.useState(false);
+    const { theme, toggleTheme } = useTheme();
 
     // Close mobile menu on route change
     React.useEffect(() => {
@@ -48,14 +64,14 @@ export const Navigation: React.FC = () => {
 
     return (
         <>
-            <nav className="fixed top-0 left-0 right-0 z-50 border-b border-stroke bg-background/80 backdrop-blur-sm">
+            <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-card/95 backdrop-blur-sm">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between h-16">
                         {/* Logo */}
                         <div className="flex items-center">
                             <a
                                 href="/"
-                                className="flex items-center gap-2 text-white font-semibold text-lg"
+                                className="flex items-center gap-2 text-foreground font-semibold text-lg"
                             >
                                 <svg
                                     xmlns="http://www.w3.org/2000/svg"
@@ -63,14 +79,19 @@ export const Navigation: React.FC = () => {
                                     height="32"
                                     viewBox="0 0 32 32"
                                 >
-                                    <rect width="32" height="32" rx="6" fill="white" />
+                                    <rect
+                                        width="32"
+                                        height="32"
+                                        rx="6"
+                                        className="fill-foreground"
+                                    />
                                     <text
                                         x="16"
                                         y="21"
                                         fontFamily="Arial, sans-serif"
                                         fontSize="13"
                                         fontWeight="bold"
-                                        fill="black"
+                                        className="fill-background"
                                         textAnchor="middle"
                                     >
                                         FM
@@ -85,7 +106,7 @@ export const Navigation: React.FC = () => {
                             <Dropdown label="Solutions" items={SOLUTION_NAV_ITEMS} />
                             <Link
                                 to="/integrations"
-                                className="text-sm text-gray-400 hover:text-white transition-colors"
+                                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                             >
                                 Integrations
                             </Link>
@@ -94,23 +115,24 @@ export const Navigation: React.FC = () => {
                             <NavLink label="Docs" />
                             <Link
                                 to="/pricing"
-                                className="text-sm text-gray-400 hover:text-white transition-colors"
+                                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                             >
                                 Pricing
                             </Link>
                         </div>
 
-                        {/* Auth Buttons + Mobile Menu Toggle */}
-                        <div className="flex items-center gap-4">
+                        {/* Auth Buttons + Theme Toggle + Mobile Menu Toggle */}
+                        <div className="flex items-center gap-2">
+                            <ThemeToggle />
                             <a
                                 href={import.meta.env.VITE_APP_URL || "http://localhost:3000"}
-                                className="hidden sm:block text-sm text-gray-400 hover:text-white transition-colors"
+                                className="hidden sm:block text-sm text-muted-foreground hover:text-foreground transition-colors px-2"
                             >
                                 Log In
                             </a>
                             <a
                                 href={import.meta.env.VITE_APP_URL || "http://localhost:3000"}
-                                className="hidden sm:block px-4 py-2 bg-white text-black text-sm font-medium rounded-md hover:bg-gray-100 transition-colors"
+                                className="hidden sm:block px-4 py-2 bg-foreground text-background text-sm font-medium rounded-md hover:opacity-90 transition-opacity"
                             >
                                 Get Started
                             </a>
@@ -118,7 +140,7 @@ export const Navigation: React.FC = () => {
                             {/* Mobile Menu Button */}
                             <button
                                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                                className="md:hidden p-2 text-gray-400 hover:text-white transition-colors"
+                                className="md:hidden p-2 text-muted-foreground hover:text-foreground transition-colors"
                                 aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
                             >
                                 {isMobileMenuOpen ? (
@@ -148,7 +170,7 @@ export const Navigation: React.FC = () => {
                                 <div>
                                     <button
                                         onClick={() => setIsSolutionsExpanded(!isSolutionsExpanded)}
-                                        className="flex items-center justify-between w-full py-4 text-lg font-medium text-white border-b border-stroke"
+                                        className="flex items-center justify-between w-full py-4 text-lg font-medium text-foreground border-b border-border"
                                     >
                                         Solutions
                                         <ChevronDown
@@ -174,7 +196,7 @@ export const Navigation: React.FC = () => {
                                                             onClick={() =>
                                                                 setIsMobileMenuOpen(false)
                                                             }
-                                                            className="flex items-center gap-3 py-3 text-gray-400 hover:text-white transition-colors"
+                                                            className="flex items-center gap-3 py-3 text-muted-foreground hover:text-foreground transition-colors"
                                                         >
                                                             {item.icon && (
                                                                 <item.icon className="w-5 h-5" />
@@ -184,7 +206,7 @@ export const Navigation: React.FC = () => {
                                                                     {item.label}
                                                                 </div>
                                                                 {item.description && (
-                                                                    <div className="text-sm text-gray-500">
+                                                                    <div className="text-sm text-muted-foreground">
                                                                         {item.description}
                                                                     </div>
                                                                 )}
@@ -201,41 +223,60 @@ export const Navigation: React.FC = () => {
                                 <Link
                                     to="/integrations"
                                     onClick={() => setIsMobileMenuOpen(false)}
-                                    className="block py-4 text-lg font-medium text-white border-b border-stroke"
+                                    className="block py-4 text-lg font-medium text-foreground border-b border-border"
                                 >
                                     Integrations
                                 </Link>
-                                <button className="flex items-center justify-between w-full py-4 text-lg font-medium text-white border-b border-stroke">
+                                <button className="flex items-center justify-between w-full py-4 text-lg font-medium text-foreground border-b border-border">
                                     Company
                                     <ChevronDown className="w-5 h-5" />
                                 </button>
-                                <button className="flex items-center justify-between w-full py-4 text-lg font-medium text-white border-b border-stroke">
+                                <button className="flex items-center justify-between w-full py-4 text-lg font-medium text-foreground border-b border-border">
                                     Resources
                                     <ChevronDown className="w-5 h-5" />
                                 </button>
-                                <button className="block py-4 text-lg font-medium text-white border-b border-stroke text-left w-full">
+                                <button className="block py-4 text-lg font-medium text-foreground border-b border-border text-left w-full">
                                     Docs
                                 </button>
                                 <Link
                                     to="/pricing"
                                     onClick={() => setIsMobileMenuOpen(false)}
-                                    className="block py-4 text-lg font-medium text-white border-b border-stroke"
+                                    className="block py-4 text-lg font-medium text-foreground border-b border-border"
                                 >
                                     Pricing
                                 </Link>
                             </nav>
 
+                            {/* Mobile Theme Toggle */}
+                            <div className="mt-6 flex items-center justify-between py-4 border-b border-border">
+                                <span className="text-foreground font-medium">Theme</span>
+                                <button
+                                    onClick={toggleTheme}
+                                    className="flex items-center gap-2 px-3 py-2 bg-secondary rounded-md text-foreground"
+                                >
+                                    {theme === "light" ? (
+                                        <>
+                                            <Moon className="w-4 h-4" /> Dark
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Sun className="w-4 h-4" /> Light
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+
                             {/* Mobile Auth Buttons */}
-                            <div className="mt-8 space-y-3">
+                            <div className="mt-6 space-y-3">
                                 <a
                                     href={import.meta.env.VITE_APP_URL || "http://localhost:3000"}
-                                    className="block w-full py-3 text-center text-white border border-stroke rounded-lg hover:bg-background-elevated transition-colors"
+                                    className="block w-full py-3 text-center text-foreground border border-border rounded-lg hover:bg-secondary transition-colors"
                                 >
                                     Log In
                                 </a>
                                 <a
                                     href={import.meta.env.VITE_APP_URL || "http://localhost:3000"}
-                                    className="block w-full py-3 text-center bg-white text-black font-medium rounded-lg hover:bg-gray-100 transition-colors"
+                                    className="block w-full py-3 text-center bg-foreground text-background font-medium rounded-lg hover:opacity-90 transition-opacity"
                                 >
                                     Get Started
                                 </a>

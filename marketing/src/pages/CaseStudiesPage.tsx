@@ -6,7 +6,7 @@ import { Navigation } from "../components/Navigation";
 
 export const CaseStudiesPage: React.FC = () => {
     return (
-        <div className="min-h-screen bg-background text-gray-50">
+        <div className="min-h-screen bg-background text-foreground">
             <Navigation />
 
             {/* Hero Section */}

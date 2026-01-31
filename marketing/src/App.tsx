@@ -1,5 +1,6 @@
 import React from "react";
 import { Routes, Route, useLocation } from "react-router-dom";
+import { ThemeProvider } from "./hooks/useTheme";
 import { CaseStudiesPage } from "./pages/CaseStudiesPage";
 import { CaseStudyDetailPage } from "./pages/CaseStudyDetailPage";
 import { Home } from "./pages/Home";
@@ -19,7 +20,7 @@ const ScrollToTop: React.FC = () => {
 
 const App: React.FC = () => {
     return (
-        <>
+        <ThemeProvider>
             <ScrollToTop />
             <Routes>
                 <Route path="/" element={<Home />} />
@@ -29,7 +30,7 @@ const App: React.FC = () => {
                 <Route path="/case-studies" element={<CaseStudiesPage />} />
                 <Route path="/case-studies/:slug" element={<CaseStudyDetailPage />} />
             </Routes>
-        </>
+        </ThemeProvider>
     );
 };
 

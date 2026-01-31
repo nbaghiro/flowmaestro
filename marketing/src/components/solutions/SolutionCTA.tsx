@@ -24,7 +24,7 @@ export const SolutionCTA: React.FC<SolutionCTAProps> = ({ solution }) => {
                     className="relative rounded-3xl bg-gradient-to-br from-gray-800/80 via-background-elevated to-gray-800/80 p-12 md:p-16 backdrop-blur-sm border border-stroke overflow-hidden"
                 >
                     {/* Background Pattern */}
-                    <div className="absolute inset-0 grid-pattern opacity-20" />
+                    <div className="absolute inset-0 grid-pattern opacity-40" />
 
                     {/* Content */}
                     <div className="relative z-10 text-center">

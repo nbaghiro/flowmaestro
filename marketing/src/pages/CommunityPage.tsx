@@ -56,12 +56,12 @@ const resources = [
 
 export const CommunityPage: React.FC = () => {
     return (
-        <div className="min-h-screen bg-background text-gray-50">
+        <div className="min-h-screen bg-background text-foreground">
             <Navigation />
 
             {/* Hero Section */}
             <section className="relative pt-32 pb-20 px-4 sm:px-6 lg:px-8">
-                <div className="absolute inset-0 grid-pattern opacity-30"></div>
+                <div className="absolute inset-0 grid-pattern opacity-50"></div>
                 <div className="relative z-10 max-w-4xl mx-auto text-center">
                     <motion.div
                         initial={{ opacity: 0, y: 30 }}
@@ -81,7 +81,7 @@ export const CommunityPage: React.FC = () => {
 
             {/* Community Channels */}
             <section className="py-16 px-4 sm:px-6 lg:px-8 bg-background-surface">
-                <div className="absolute inset-0 grid-pattern opacity-30"></div>
+                <div className="absolute inset-0 grid-pattern opacity-50"></div>
                 <div className="relative z-10 max-w-6xl mx-auto">
                     <motion.div
                         initial={{ opacity: 0, y: 30 }}
@@ -138,7 +138,7 @@ export const CommunityPage: React.FC = () => {
 
             {/* Resources */}
             <section className="py-16 px-4 sm:px-6 lg:px-8 bg-background">
-                <div className="absolute inset-0 grid-pattern opacity-30"></div>
+                <div className="absolute inset-0 grid-pattern opacity-50"></div>
                 <div className="relative z-10 max-w-4xl mx-auto">
                     <motion.div
                         initial={{ opacity: 0, y: 30 }}
@@ -181,7 +181,7 @@ export const CommunityPage: React.FC = () => {
 
             {/* CTA */}
             <section className="py-20 px-4 sm:px-6 lg:px-8 bg-background-surface">
-                <div className="absolute inset-0 grid-pattern opacity-30"></div>
+                <div className="absolute inset-0 grid-pattern opacity-50"></div>
                 <div className="relative z-10 max-w-2xl mx-auto text-center">
                     <motion.div
                         initial={{ opacity: 0, y: 30 }}

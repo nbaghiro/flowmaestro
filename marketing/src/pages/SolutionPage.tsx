@@ -26,7 +26,7 @@ export const SolutionPage: React.FC = () => {
     const providers = getProvidersForSolution(category, ALL_PROVIDERS);
 
     return (
-        <div className="min-h-screen bg-background text-gray-50">
+        <div className="min-h-screen bg-background text-foreground">
             <Navigation />
             <SolutionHero solution={solution} />
             <IntegrationShowcase providers={providers} solution={solution} />

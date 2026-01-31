@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
+import { useTheme } from "../hooks/useTheme";
 
 export const InteractiveBackground: React.FC = () => {
     const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+    const { theme } = useTheme();
 
     useEffect(() => {
         const handleMouseMove = (e: MouseEvent): void => {
@@ -15,16 +17,19 @@ export const InteractiveBackground: React.FC = () => {
         };
     }, []);
 
+    // Theme-aware spotlight color
+    const spotlightColor = theme === "dark" ? "rgba(161, 161, 170, 0.18)" : "rgba(0, 0, 0, 0.06)";
+
     return (
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
             {/* Base grid pattern */}
-            <div className="absolute inset-0 grid-pattern opacity-20"></div>
+            <div className="absolute inset-0 grid-pattern opacity-40"></div>
 
-            {/* Mouse spotlight effect - cool steel glow */}
+            {/* Mouse spotlight effect - theme-aware glow */}
             <div
                 className="absolute inset-0 transition-opacity duration-300"
                 style={{
-                    background: `radial-gradient(700px circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(161, 161, 170, 0.18), transparent 45%)`
+                    background: `radial-gradient(700px circle at ${mousePosition.x}px ${mousePosition.y}px, ${spotlightColor}, transparent 45%)`
                 }}
             ></div>
 
