@@ -22,10 +22,10 @@ export const SolutionHero: React.FC<SolutionHeroProps> = ({ solution }) => {
                     transition={{ duration: 0.5 }}
                     className="flex items-center justify-center gap-3 mb-6"
                 >
-                    <div className="p-3 rounded-xl bg-background-elevated border border-stroke">
-                        <Icon className="w-6 h-6 text-primary-400" />
+                    <div className="p-3 rounded-xl bg-secondary border border-border">
+                        <Icon className="w-6 h-6 text-foreground" />
                     </div>
-                    <span className="text-sm font-medium text-primary-400 uppercase tracking-wider">
+                    <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
                         {solution.tagline}
                     </span>
                 </motion.div>
@@ -45,7 +45,7 @@ export const SolutionHero: React.FC<SolutionHeroProps> = ({ solution }) => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.2 }}
-                    className="text-xl sm:text-2xl text-gray-400 max-w-3xl mx-auto mb-10 leading-relaxed"
+                    className="text-xl sm:text-2xl text-muted-foreground max-w-3xl mx-auto mb-10 leading-relaxed"
                 >
                     {solution.description}
                 </motion.p>
@@ -59,7 +59,7 @@ export const SolutionHero: React.FC<SolutionHeroProps> = ({ solution }) => {
                 >
                     <a
                         href={import.meta.env.VITE_APP_URL || "http://localhost:3000"}
-                        className="px-8 py-4 bg-white text-black hover:bg-gray-100 rounded-lg font-semibold transition-all duration-200 shadow-lg"
+                        className="px-8 py-4 bg-foreground text-background hover:opacity-90 rounded-lg font-semibold transition-all duration-200 shadow-lg"
                     >
                         Start Building Free
                     </a>
@@ -67,7 +67,7 @@ export const SolutionHero: React.FC<SolutionHeroProps> = ({ solution }) => {
                         href="https://cal.com/naib-baghirov-o5surn/30min"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="px-8 py-4 bg-background-elevated hover:bg-border border border-stroke rounded-lg font-semibold transition-all duration-200"
+                        className="px-8 py-4 bg-secondary hover:bg-accent border border-border rounded-lg font-semibold transition-all duration-200"
                     >
                         Schedule a Demo
                     </a>

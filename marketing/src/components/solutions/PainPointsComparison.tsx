@@ -12,7 +12,7 @@ export const PainPointsComparison: React.FC<PainPointsComparisonProps> = ({ solu
     const isInView = useInView(ref, { once: true, margin: "-100px" });
 
     return (
-        <section ref={ref} className="py-24 px-4 sm:px-6 lg:px-8 bg-background-surface">
+        <section ref={ref} className="py-24 px-4 sm:px-6 lg:px-8 bg-secondary">
             <div className="max-w-5xl mx-auto">
                 {/* Section Header */}
                 <motion.div
@@ -24,7 +24,7 @@ export const PainPointsComparison: React.FC<PainPointsComparisonProps> = ({ solu
                     <h2 className="text-3xl sm:text-4xl font-bold mb-4">
                         Stop the Pain, Start Automating
                     </h2>
-                    <p className="text-lg text-gray-400 max-w-2xl mx-auto">
+                    <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
                         See how FlowMaestro transforms your {solution.name.toLowerCase()} workflows
                         from frustrating to effortless.
                     </p>
@@ -57,7 +57,7 @@ export const PainPointsComparison: React.FC<PainPointsComparisonProps> = ({ solu
                                             <X className="w-3 h-3 text-red-500" />
                                         </div>
                                     </div>
-                                    <span className="text-gray-300 leading-relaxed">
+                                    <span className="text-muted-foreground leading-relaxed">
                                         {pain.text}
                                     </span>
                                 </motion.li>
@@ -90,7 +90,7 @@ export const PainPointsComparison: React.FC<PainPointsComparisonProps> = ({ solu
                                             <Check className="w-3 h-3 text-green-500" />
                                         </div>
                                     </div>
-                                    <span className="text-gray-300 leading-relaxed">
+                                    <span className="text-muted-foreground leading-relaxed">
                                         {sol.text}
                                     </span>
                                 </motion.li>

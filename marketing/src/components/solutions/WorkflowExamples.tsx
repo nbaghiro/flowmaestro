@@ -23,14 +23,14 @@ const IntegrationIcon: React.FC<IntegrationIconProps> = ({ slug }) => {
     if (!provider) {
         // Fallback for unknown providers (like "openai" which might be "openai")
         return (
-            <div className="w-10 h-10 rounded-lg bg-background-elevated border border-stroke flex items-center justify-center">
-                <Cpu className="w-5 h-5 text-gray-400" />
+            <div className="w-10 h-10 rounded-lg bg-secondary border border-border flex items-center justify-center">
+                <Cpu className="w-5 h-5 text-muted-foreground" />
             </div>
         );
     }
 
     return (
-        <div className="w-10 h-10 rounded-lg bg-background-elevated border border-stroke flex items-center justify-center p-1.5 hover:bg-border transition-colors">
+        <div className="w-10 h-10 rounded-lg bg-secondary border border-border flex items-center justify-center p-1.5 hover:bg-accent transition-colors">
             <img
                 src={provider.logoUrl}
                 alt={provider.displayName}
@@ -56,11 +56,11 @@ const WorkflowCard: React.FC<WorkflowCardProps> = ({ example, index, isInView })
             initial={{ opacity: 0, y: 20 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.5, delay: 0.2 + index * 0.1 }}
-            className="p-6 sm:p-8 rounded-2xl bg-background-surface border border-stroke hover:border-stroke-hover transition-all duration-300"
+            className="p-6 sm:p-8 rounded-2xl bg-card border border-border hover:border-muted-foreground/30 transition-all duration-300"
         >
             {/* Card Header */}
-            <h3 className="text-xl font-semibold text-white mb-2">{example.title}</h3>
-            <p className="text-gray-400 mb-6 leading-relaxed">{example.description}</p>
+            <h3 className="text-xl font-semibold text-foreground mb-2">{example.title}</h3>
+            <p className="text-muted-foreground mb-6 leading-relaxed">{example.description}</p>
 
             {/* Integration Flow */}
             <div className="flex items-center gap-2 flex-wrap">
@@ -68,7 +68,7 @@ const WorkflowCard: React.FC<WorkflowCardProps> = ({ example, index, isInView })
                     <React.Fragment key={slug}>
                         <IntegrationIcon slug={slug} />
                         {i < example.integrations.length - 1 && (
-                            <ArrowRight className="w-4 h-4 text-gray-600 flex-shrink-0" />
+                            <ArrowRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                         )}
                     </React.Fragment>
                 ))}
@@ -95,11 +95,11 @@ export const WorkflowExamples: React.FC<WorkflowExamplesProps> = ({ solution }) 
                     transition={{ duration: 0.5 }}
                     className="text-center mb-12"
                 >
-                    <span className="text-sm font-medium text-primary-400 uppercase tracking-wider mb-3 block">
+                    <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-3 block">
                         Powerful Templates Your {solution.name} Team Can Leverage
                     </span>
                     <h2 className="text-3xl sm:text-4xl font-bold mb-4">Empower Your Team</h2>
-                    <p className="text-lg text-gray-400 max-w-2xl mx-auto">
+                    <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
                         Get started quickly with pre-built workflows designed for{" "}
                         {solution.name.toLowerCase()} teams. Customize them to fit your exact needs.
                     </p>
