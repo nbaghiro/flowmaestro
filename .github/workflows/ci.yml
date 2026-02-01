@@ -19,7 +19,7 @@ jobs:
   # ============================================================================
 
   setup:
-    name: Setup
+    name: Install Deps
     runs-on: ubuntu-latest
     outputs:
       cache-key: ${{ steps.cache-key.outputs.key }}
@@ -109,6 +109,7 @@ jobs:
   lint-sdk-python:
     name: Lint SDK (Python)
     runs-on: ubuntu-latest
+    needs: [setup]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -498,3 +499,39 @@ jobs:
           push: false
           cache-from: type=gha,scope=static
           cache-to: type=gha,mode=max,scope=static
+
+  # Summary job to ensure all Docker builds passed
+  docker-complete:
+    name: Docker Complete
+    runs-on: ubuntu-latest
+    needs:
+      - docker-build-backend
+      - docker-build-frontend
+      - docker-build-marketing
+      - docker-build-migrations
+      - docker-build-static
+    if: always()
+    steps:
+      - name: Check Docker build results
+        run: |
+          if [ "${{ needs.docker-build-backend.result }}" != "success" ]; then
+            echo "Backend Docker build failed"
+            exit 1
+          fi
+          if [ "${{ needs.docker-build-frontend.result }}" != "success" ]; then
+            echo "Frontend Docker build failed"
+            exit 1
+          fi
+          if [ "${{ needs.docker-build-marketing.result }}" != "success" ]; then
+            echo "Marketing Docker build failed"
+            exit 1
+          fi
+          if [ "${{ needs.docker-build-migrations.result }}" != "success" ]; then
+            echo "Migrations Docker build failed"
+            exit 1
+          fi
+          if [ "${{ needs.docker-build-static.result }}" != "success" ]; then
+            echo "Static Docker build failed"
+            exit 1
+          fi
+          echo "All Docker builds passed!"
