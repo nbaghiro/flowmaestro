@@ -18,6 +18,7 @@ interface FormInterfaceRow {
     target_type: FormInterfaceTargetType;
     workflow_id: string | null;
     agent_id: string | null;
+    trigger_id: string | null;
     cover_type: FormInterfaceCoverType;
     cover_value: string;
     icon_url: string | null;
@@ -712,6 +713,21 @@ export class FormInterfaceRepository {
     }
 
     /**
+     * Set trigger ID for a form interface (used when auto-creating triggers on publish)
+     */
+    async setTriggerId(id: string, triggerId: string | null): Promise<FormInterface | null> {
+        const query = `
+            UPDATE flowmaestro.form_interfaces
+            SET trigger_id = $2
+            WHERE id = $1 AND deleted_at IS NULL
+            RETURNING *
+        `;
+
+        const result = await db.query(query, [id, triggerId]);
+        return result.rows.length > 0 ? this.mapRow(result.rows[0] as FormInterfaceRow) : null;
+    }
+
+    /**
      * Map database row to FormInterface model
      */
     private mapRow(row: FormInterfaceRow): FormInterface {
@@ -723,6 +739,7 @@ export class FormInterfaceRepository {
             targetType: row.target_type,
             workflowId: row.workflow_id,
             agentId: row.agent_id,
+            triggerId: row.trigger_id,
             coverType: row.cover_type,
             coverValue: row.cover_value,
             iconUrl: row.icon_url,

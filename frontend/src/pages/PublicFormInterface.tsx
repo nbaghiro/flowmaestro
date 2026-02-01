@@ -1,10 +1,25 @@
 import { Send, Paperclip, Link, X, Loader2, Copy, Download, Check } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
-import type { PublicFormInterface, SubmitFormInterfaceInput } from "@flowmaestro/shared";
+import type { PublicFormInterface } from "@flowmaestro/shared";
 import { MediaOutput, hasMediaContent } from "../components/common/MediaOutput";
-import { getPublicFormInterface, submitPublicFormInterface } from "../lib/api";
+import {
+    getPublicFormInterface,
+    submitPublicFormInterface,
+    uploadPublicFormFile,
+    subscribeToFormExecutionStream
+} from "../lib/api";
 import { logger } from "../lib/logger";
+
+interface UploadedFile {
+    filename: string;
+    size: number;
+    mimeType: string;
+    gcsUri: string;
+    downloadUrl: string;
+    isUploading?: boolean;
+    error?: string;
+}
 
 export function PublicFormInterfacePage() {
     const { slug } = useParams();
@@ -15,12 +30,13 @@ export function PublicFormInterfacePage() {
 
     // Form state
     const [message, setMessage] = useState("");
-    const [files, setFiles] = useState<File[]>([]);
-    const [urls, setUrls] = useState<string[]>([]);
+    const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+    const [urls, setUrls] = useState<Array<{ url: string; title?: string }>>([]);
     const [urlInput, setUrlInput] = useState("");
 
     // Submission state
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [streamingOutput, setStreamingOutput] = useState("");
     const [output, setOutput] = useState<string | null>(null);
     const [outputData, setOutputData] = useState<unknown>(null);
     const [isOutputEditable, setIsOutputEditable] = useState(false);
@@ -28,11 +44,19 @@ export function PublicFormInterfacePage() {
     const [copied, setCopied] = useState(false);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const streamCleanupRef = useRef<(() => void) | null>(null);
 
     useEffect(() => {
         if (slug) {
             loadFormInterface();
         }
+
+        // Cleanup SSE on unmount
+        return () => {
+            if (streamCleanupRef.current) {
+                streamCleanupRef.current();
+            }
+        };
     }, [slug]);
 
     const loadFormInterface = async () => {
@@ -51,33 +75,88 @@ export function PublicFormInterfacePage() {
         }
     };
 
-    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (!e.target.files || !formInterface) return;
+    const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!e.target.files || !formInterface || !slug) return;
 
         const newFiles = Array.from(e.target.files);
         const maxFiles = formInterface.maxFiles || 5;
         const maxSizeMb = formInterface.maxFileSizeMb || 25;
 
         // Check file count
-        if (files.length + newFiles.length > maxFiles) {
-            alert(`Maximum ${maxFiles} files allowed`);
+        if (uploadedFiles.length + newFiles.length > maxFiles) {
+            setError(`Maximum ${maxFiles} files allowed`);
             return;
         }
 
-        // Check file sizes
+        // Validate and upload each file
         for (const file of newFiles) {
+            // Check file size
             if (file.size > maxSizeMb * 1024 * 1024) {
-                alert(`File ${file.name} exceeds ${maxSizeMb}MB limit`);
-                return;
+                setError(`File ${file.name} exceeds ${maxSizeMb}MB limit`);
+                continue;
+            }
+
+            // Add placeholder while uploading
+            const placeholderFile: UploadedFile = {
+                filename: file.name,
+                size: file.size,
+                mimeType: file.type,
+                gcsUri: "",
+                downloadUrl: "",
+                isUploading: true
+            };
+            setUploadedFiles((prev) => [...prev, placeholderFile]);
+
+            try {
+                // Upload the file immediately
+                const response = await uploadPublicFormFile(slug, file);
+
+                if (response.success && response.data) {
+                    // Update with actual data
+                    setUploadedFiles((prev) =>
+                        prev.map((f) =>
+                            f.filename === file.name && f.isUploading
+                                ? {
+                                      ...response.data,
+                                      isUploading: false
+                                  }
+                                : f
+                        )
+                    );
+                } else {
+                    // Mark as error
+                    setUploadedFiles((prev) =>
+                        prev.map((f) =>
+                            f.filename === file.name && f.isUploading
+                                ? { ...f, isUploading: false, error: "Upload failed" }
+                                : f
+                        )
+                    );
+                }
+            } catch (uploadError) {
+                logger.error("Failed to upload file", uploadError);
+                setUploadedFiles((prev) =>
+                    prev.map((f) =>
+                        f.filename === file.name && f.isUploading
+                            ? {
+                                  ...f,
+                                  isUploading: false,
+                                  error:
+                                      uploadError instanceof Error
+                                          ? uploadError.message
+                                          : "Upload failed"
+                              }
+                            : f
+                    )
+                );
             }
         }
 
-        setFiles((prev) => [...prev, ...newFiles]);
         e.target.value = "";
     };
 
     const removeFile = (index: number) => {
-        setFiles((prev) => prev.filter((_, i) => i !== index));
+        setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
     };
 
     const addUrl = () => {
@@ -85,10 +164,10 @@ export function PublicFormInterfacePage() {
 
         try {
             new URL(urlInput);
-            setUrls((prev) => [...prev, urlInput.trim()]);
+            setUrls((prev) => [...prev, { url: urlInput.trim() }]);
             setUrlInput("");
         } catch {
-            alert("Please enter a valid URL");
+            setError("Please enter a valid URL");
         }
     };
 
@@ -98,55 +177,85 @@ export function PublicFormInterfacePage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!formInterface || isSubmitting) return;
+        if (!formInterface || isSubmitting || !slug) return;
+
+        // Check if any files are still uploading
+        const filesStillUploading = uploadedFiles.some((f) => f.isUploading);
+        if (filesStillUploading) {
+            setError("Please wait for files to finish uploading");
+            return;
+        }
+
+        // Filter out failed uploads
+        const validFiles = uploadedFiles.filter((f) => !f.error && f.gcsUri);
 
         setIsSubmitting(true);
         setOutput(null);
+        setStreamingOutput("");
+        setError(null);
 
         try {
-            // Phase 1: File upload not implemented yet, just pass the message
-            // In Phase 2, files would be uploaded to GCS first and fileUrls passed
-            const submitData: SubmitFormInterfaceInput = {
+            // Submit the form
+            const response = await submitPublicFormInterface(slug, {
                 message: message.trim() || "",
-                // fileUrls would be populated after GCS upload in Phase 2
+                files:
+                    validFiles.length > 0
+                        ? validFiles.map((f) => ({
+                              filename: f.filename,
+                              size: f.size,
+                              mimeType: f.mimeType,
+                              gcsUri: f.gcsUri,
+                              downloadUrl: f.downloadUrl
+                          }))
+                        : undefined,
                 urls: urls.length > 0 ? urls : undefined
-            };
-
-            const response = await submitPublicFormInterface(slug!, submitData);
+            });
 
             if (response.success && response.data) {
-                // Extract output from response
-                const responseData = response.data as { output?: unknown };
-                const workflowOutput = responseData.output;
+                const { submissionId, executionId } = response.data;
 
-                // Store raw output data for media detection
-                setOutputData(workflowOutput);
+                // Subscribe to execution stream
+                streamCleanupRef.current = subscribeToFormExecutionStream(
+                    slug,
+                    submissionId,
+                    executionId,
+                    {
+                        onMessage: (content) => {
+                            setStreamingOutput((prev) => prev + content);
+                        },
+                        onComplete: (finalOutput) => {
+                            const displayOutput = finalOutput || streamingOutput;
+                            setOutput(displayOutput);
+                            setEditedOutput(displayOutput);
+                            setStreamingOutput("");
+                            setIsSubmitting(false);
 
-                // Format output for display
-                let displayOutput: string;
-                if (typeof workflowOutput === "string") {
-                    displayOutput = workflowOutput;
-                } else if (workflowOutput) {
-                    displayOutput = JSON.stringify(workflowOutput, null, 2);
-                } else {
-                    displayOutput =
-                        "Thank you for your submission! Your request has been received.";
-                }
+                            // Try to parse as JSON for media detection
+                            try {
+                                const parsed = JSON.parse(displayOutput);
+                                setOutputData(parsed);
+                            } catch {
+                                setOutputData(null);
+                            }
 
-                setOutput(displayOutput);
-                setEditedOutput(displayOutput);
-
-                // Clear form
-                setMessage("");
-                setFiles([]);
-                setUrls([]);
+                            // Clear form on success
+                            setMessage("");
+                            setUploadedFiles([]);
+                            setUrls([]);
+                        },
+                        onError: (errorMsg) => {
+                            setError(errorMsg);
+                            setIsSubmitting(false);
+                        }
+                    }
+                );
             } else {
                 setError(response.error || "Failed to submit");
+                setIsSubmitting(false);
             }
         } catch (err) {
             logger.error("Failed to submit form", err);
-            setError("Failed to submit form");
-        } finally {
+            setError(err instanceof Error ? err.message : "Failed to submit form");
             setIsSubmitting(false);
         }
     };
@@ -186,7 +295,7 @@ export function PublicFormInterfacePage() {
         );
     }
 
-    if (error || !formInterface) {
+    if (!formInterface) {
         return (
             <div className="min-h-screen bg-background flex items-center justify-center">
                 <div className="text-center">
@@ -240,6 +349,19 @@ export function PublicFormInterfacePage() {
                     )}
                 </div>
 
+                {/* Error message */}
+                {error && (
+                    <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
+                        {error}
+                        <button
+                            onClick={() => setError(null)}
+                            className="ml-2 text-destructive/60 hover:text-destructive"
+                        >
+                            <X className="w-4 h-4 inline" />
+                        </button>
+                    </div>
+                )}
+
                 {/* Form */}
                 <form onSubmit={handleSubmit} className="space-y-6">
                     {/* Message Input */}
@@ -254,6 +376,7 @@ export function PublicFormInterfacePage() {
                             onChange={(e) => setMessage(e.target.value)}
                             placeholder={formInterface.inputPlaceholder || "Enter your message..."}
                             className="w-full min-h-[150px] p-4 bg-card border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-y"
+                            disabled={isSubmitting}
                         />
                     </div>
 
@@ -272,28 +395,54 @@ export function PublicFormInterfacePage() {
                                 onChange={handleFileSelect}
                                 className="hidden"
                                 accept={formInterface.allowedFileTypes?.join(",") || undefined}
+                                disabled={isSubmitting}
                             />
 
-                            {files.length > 0 && (
+                            {uploadedFiles.length > 0 && (
                                 <div className="mb-3 space-y-2">
-                                    {files.map((file, index) => (
+                                    {uploadedFiles.map((file, index) => (
                                         <div
                                             key={index}
-                                            className="flex items-center justify-between p-3 bg-muted rounded-lg"
+                                            className={`flex items-center justify-between p-3 rounded-lg ${
+                                                file.error
+                                                    ? "bg-destructive/10 border border-destructive/20"
+                                                    : "bg-muted"
+                                            }`}
                                         >
                                             <div className="flex items-center gap-2 text-sm">
-                                                <Paperclip className="w-4 h-4 text-muted-foreground" />
-                                                <span className="text-foreground truncate max-w-[200px]">
-                                                    {file.name}
+                                                {file.isUploading ? (
+                                                    <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                                                ) : (
+                                                    <Paperclip className="w-4 h-4 text-muted-foreground" />
+                                                )}
+                                                <span
+                                                    className={`truncate max-w-[200px] ${
+                                                        file.error
+                                                            ? "text-destructive"
+                                                            : "text-foreground"
+                                                    }`}
+                                                >
+                                                    {file.filename}
                                                 </span>
                                                 <span className="text-muted-foreground">
                                                     ({(file.size / 1024).toFixed(1)} KB)
                                                 </span>
+                                                {file.isUploading && (
+                                                    <span className="text-muted-foreground">
+                                                        Uploading...
+                                                    </span>
+                                                )}
+                                                {file.error && (
+                                                    <span className="text-destructive text-xs">
+                                                        {file.error}
+                                                    </span>
+                                                )}
                                             </div>
                                             <button
                                                 type="button"
                                                 onClick={() => removeFile(index)}
                                                 className="p-1 hover:bg-background rounded"
+                                                disabled={isSubmitting}
                                             >
                                                 <X className="w-4 h-4 text-muted-foreground" />
                                             </button>
@@ -305,7 +454,8 @@ export function PublicFormInterfacePage() {
                             <button
                                 type="button"
                                 onClick={() => fileInputRef.current?.click()}
-                                className="w-full flex flex-col items-center gap-2 p-8 bg-card border border-border rounded-lg hover:border-muted-foreground/50 transition-colors"
+                                className="w-full flex flex-col items-center gap-2 p-8 bg-card border border-border rounded-lg hover:border-muted-foreground/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                disabled={isSubmitting}
                             >
                                 <Paperclip className="w-8 h-8 text-muted-foreground" />
                                 <div className="text-center">
@@ -331,7 +481,7 @@ export function PublicFormInterfacePage() {
                             )}
                             {urls.length > 0 && (
                                 <div className="mb-3 space-y-2">
-                                    {urls.map((url, index) => (
+                                    {urls.map((urlItem, index) => (
                                         <div
                                             key={index}
                                             className="flex items-center justify-between p-2 bg-muted rounded-lg"
@@ -339,13 +489,14 @@ export function PublicFormInterfacePage() {
                                             <div className="flex items-center gap-2 text-sm">
                                                 <Link className="w-4 h-4 text-muted-foreground" />
                                                 <span className="text-foreground truncate max-w-[300px]">
-                                                    {url}
+                                                    {urlItem.url}
                                                 </span>
                                             </div>
                                             <button
                                                 type="button"
                                                 onClick={() => removeUrl(index)}
                                                 className="p-1 hover:bg-background rounded"
+                                                disabled={isSubmitting}
                                             >
                                                 <X className="w-4 h-4 text-muted-foreground" />
                                             </button>
@@ -367,11 +518,13 @@ export function PublicFormInterfacePage() {
                                             addUrl();
                                         }
                                     }}
+                                    disabled={isSubmitting}
                                 />
                                 <button
                                     type="button"
                                     onClick={addUrl}
-                                    className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
+                                    className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors disabled:opacity-50"
+                                    disabled={isSubmitting}
                                 >
                                     <Link className="w-4 h-4" />
                                     Add URL
@@ -383,13 +536,13 @@ export function PublicFormInterfacePage() {
                     {/* Submit Button */}
                     <button
                         type="submit"
-                        disabled={isSubmitting}
+                        disabled={isSubmitting || uploadedFiles.some((f) => f.isUploading)}
                         className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-primary text-primary-foreground font-medium rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                         {isSubmitting ? (
                             <>
                                 <Loader2 className="w-4 h-4 animate-spin" />
-                                {formInterface.submitLoadingText || "Submitting..."}
+                                {formInterface.submitLoadingText || "Processing..."}
                             </>
                         ) : (
                             <>
@@ -400,7 +553,31 @@ export function PublicFormInterfacePage() {
                     </button>
                 </form>
 
-                {/* Output */}
+                {/* Streaming Output */}
+                {(streamingOutput || isSubmitting) && !output && (
+                    <div className="mt-8 mb-12">
+                        {formInterface.outputLabel && (
+                            <label className="block text-sm font-medium text-foreground mb-2">
+                                {formInterface.outputLabel}
+                            </label>
+                        )}
+                        <div className="bg-card border border-border rounded-lg p-4">
+                            {streamingOutput ? (
+                                <div className="text-foreground whitespace-pre-wrap">
+                                    {streamingOutput}
+                                    <span className="animate-pulse">|</span>
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    <span>Generating response...</span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* Final Output */}
                 {output && (
                     <div className="mt-8 mb-12">
                         {formInterface.outputLabel && (

@@ -32,6 +32,9 @@ import { oauth1Routes } from "./routes/oauth1";
 import { personaInstanceRoutes } from "./routes/persona-instances";
 import { personaRoutes } from "./routes/personas";
 import { publicChatInterfaceRoutes } from "./routes/public/chat-interfaces";
+import { publicFormInterfaceFilesRoutes } from "./routes/public/form-interface-files";
+import { publicFormInterfaceQueryRoutes } from "./routes/public/form-interface-query";
+import { publicFormInterfaceStreamRoutes } from "./routes/public/form-interface-stream";
 import { publicFormInterfaceRoutes } from "./routes/public/form-interfaces";
 import { templateRoutes } from "./routes/templates";
 import { threadRoutes } from "./routes/threads";
@@ -188,6 +191,9 @@ export async function buildServer() {
 
     // Public routes (widgets and public API - CORS allows any origin via dynamic origin check)
     await fastify.register(publicFormInterfaceRoutes, { prefix: "/public/form-interfaces" });
+    await fastify.register(publicFormInterfaceFilesRoutes, { prefix: "/public/form-interfaces" });
+    await fastify.register(publicFormInterfaceStreamRoutes, { prefix: "/public/form-interfaces" });
+    await fastify.register(publicFormInterfaceQueryRoutes, { prefix: "/public/form-interfaces" });
     await fastify.register(publicChatInterfaceRoutes, { prefix: "/public/chat-interfaces" });
     await fastify.register(publicApiV1Routes, { prefix: "/api/v1" });
 

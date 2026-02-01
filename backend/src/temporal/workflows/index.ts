@@ -40,6 +40,13 @@ export {
     type ProcessDocumentWorkflowResult
 } from "./document-processor";
 
+// Form submission attachment processor workflow
+export {
+    processFormSubmissionAttachmentsWorkflow,
+    type FormSubmissionAttachmentInput,
+    type FormSubmissionAttachmentResult
+} from "./form-submission-attachment-processor";
+
 // Persona orchestrator workflow (background execution)
 export {
     personaOrchestratorWorkflow,

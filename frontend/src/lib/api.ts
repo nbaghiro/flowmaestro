@@ -3911,17 +3911,24 @@ export async function getPublicFormInterface(
 
 /**
  * Submit to a public form interface
+ * Phase 2: Now returns executionId for real-time streaming
  */
 export async function submitPublicFormInterface(
     slug: string,
     data: {
         message: string;
-        files?: Array<{ fileName: string; fileSize: number; mimeType: string; gcsUri: string }>;
-        urls?: string[];
+        files?: Array<{
+            filename: string;
+            size: number;
+            mimeType: string;
+            gcsUri: string;
+            downloadUrl?: string;
+        }>;
+        urls?: Array<{ url: string; title?: string }>;
     }
 ): Promise<{
     success: boolean;
-    data: { submissionId: string; message: string };
+    data: { submissionId: string; executionId: string };
     error?: string;
 }> {
     const response = await apiFetch(`${API_BASE_URL}/public/form-interfaces/${slug}/submit`, {
@@ -3931,6 +3938,175 @@ export async function submitPublicFormInterface(
         },
         body: JSON.stringify(data)
     });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Upload a file to a public form interface
+ * Returns a signed URL for download and GCS URI for submission
+ */
+export async function uploadPublicFormFile(
+    slug: string,
+    file: File
+): Promise<{
+    success: boolean;
+    data: {
+        filename: string;
+        size: number;
+        mimeType: string;
+        gcsUri: string;
+        downloadUrl: string;
+    };
+    error?: string;
+}> {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await apiFetch(`${API_BASE_URL}/public/form-interfaces/${slug}/files`, {
+        method: "POST",
+        body: formData
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Get form submission execution status
+ */
+export async function getPublicFormSubmissionStatus(
+    slug: string,
+    submissionId: string
+): Promise<{
+    success: boolean;
+    data: {
+        status: "pending" | "running" | "completed" | "failed";
+        output?: string;
+        error?: string;
+    };
+    error?: string;
+}> {
+    const response = await apiFetch(
+        `${API_BASE_URL}/public/form-interfaces/${slug}/submissions/${submissionId}/status`,
+        {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json"
+            }
+        }
+    );
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+}
+
+/**
+ * Create an SSE connection for streaming form execution results
+ * Returns a cleanup function to close the connection
+ */
+export function subscribeToFormExecutionStream(
+    slug: string,
+    submissionId: string,
+    executionId: string,
+    handlers: {
+        onMessage?: (content: string) => void;
+        onComplete?: (output: string) => void;
+        onError?: (error: string) => void;
+    }
+): () => void {
+    const url = `${API_BASE_URL}/public/form-interfaces/${slug}/submissions/${submissionId}/stream?executionId=${executionId}`;
+    const eventSource = new EventSource(url);
+
+    eventSource.onmessage = (event) => {
+        try {
+            const data = JSON.parse(event.data);
+
+            switch (data.type) {
+                case "message":
+                case "token":
+                    if (handlers.onMessage && data.content) {
+                        handlers.onMessage(data.content);
+                    }
+                    break;
+                case "complete":
+                    if (handlers.onComplete) {
+                        handlers.onComplete(data.output || "");
+                    }
+                    eventSource.close();
+                    break;
+                case "error":
+                    if (handlers.onError) {
+                        handlers.onError(data.error || "Unknown error");
+                    }
+                    eventSource.close();
+                    break;
+            }
+        } catch {
+            // Ignore parse errors
+        }
+    };
+
+    eventSource.onerror = () => {
+        if (handlers.onError) {
+            handlers.onError("Connection error");
+        }
+        eventSource.close();
+    };
+
+    return () => {
+        eventSource.close();
+    };
+}
+
+/**
+ * Query form submission attachments (RAG)
+ */
+export async function queryFormSubmissionAttachments(
+    slug: string,
+    submissionId: string,
+    query: string,
+    options?: { topK?: number; similarityThreshold?: number }
+): Promise<{
+    success: boolean;
+    data: {
+        results: Array<{
+            content: string;
+            similarity: number;
+            sourceName: string;
+            sourceType: string;
+            chunkIndex: number;
+        }>;
+    };
+    error?: string;
+}> {
+    const response = await apiFetch(
+        `${API_BASE_URL}/public/form-interfaces/${slug}/submissions/${submissionId}/query`,
+        {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                query,
+                topK: options?.topK || 5,
+                similarityThreshold: options?.similarityThreshold || 0.7
+            })
+        }
+    );
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
