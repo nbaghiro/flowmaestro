@@ -11,9 +11,7 @@ export const CTA: React.FC = () => {
             ref={ref}
             className="relative py-24 sm:py-32 px-4 sm:px-6 lg:px-8 bg-secondary overflow-hidden"
         >
-            {/* Background grid pattern */}
             <div className="absolute inset-0 grid-pattern opacity-50" />
-
             <div className="relative z-10 max-w-4xl mx-auto text-center">
                 <motion.div
                     initial={{ opacity: 0, y: 30 }}

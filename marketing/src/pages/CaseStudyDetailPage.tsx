@@ -15,11 +15,15 @@ export const CaseStudyDetailPage: React.FC = () => {
     }
 
     return (
-        <div className="min-h-screen bg-background text-foreground">
-            <Navigation />
-            <CaseStudyHero caseStudy={caseStudy} />
-            <CaseStudyContent caseStudy={caseStudy} />
-            <Footer />
+        <div className="min-h-screen bg-background text-foreground relative">
+            {/* Full-page background pattern */}
+            <div className="fixed inset-0 grid-pattern opacity-50 pointer-events-none" />
+            <div className="relative z-10">
+                <Navigation />
+                <CaseStudyHero caseStudy={caseStudy} />
+                <CaseStudyContent caseStudy={caseStudy} />
+                <Footer />
+            </div>
         </div>
     );
 };

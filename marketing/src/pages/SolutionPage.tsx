@@ -26,14 +26,18 @@ export const SolutionPage: React.FC = () => {
     const providers = getProvidersForSolution(category, ALL_PROVIDERS);
 
     return (
-        <div className="min-h-screen bg-background text-foreground">
-            <Navigation />
-            <SolutionHero solution={solution} />
-            <WorkflowExamples solution={solution} />
-            <IntegrationShowcase providers={providers} solution={solution} />
-            <PainPointsComparison solution={solution} />
-            <SolutionCTA solution={solution} />
-            <Footer />
+        <div className="min-h-screen bg-background text-foreground relative">
+            {/* Full-page background pattern */}
+            <div className="fixed inset-0 grid-pattern opacity-50 pointer-events-none" />
+            <div className="relative z-10">
+                <Navigation />
+                <SolutionHero solution={solution} />
+                <WorkflowExamples solution={solution} />
+                <IntegrationShowcase providers={providers} solution={solution} />
+                <PainPointsComparison solution={solution} />
+                <SolutionCTA solution={solution} />
+                <Footer />
+            </div>
         </div>
     );
 };

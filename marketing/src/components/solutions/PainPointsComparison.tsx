@@ -12,8 +12,9 @@ export const PainPointsComparison: React.FC<PainPointsComparisonProps> = ({ solu
     const isInView = useInView(ref, { once: true, margin: "-100px" });
 
     return (
-        <section ref={ref} className="py-24 px-4 sm:px-6 lg:px-8 bg-secondary">
-            <div className="max-w-5xl mx-auto">
+        <section ref={ref} className="relative py-24 px-4 sm:px-6 lg:px-8 bg-secondary">
+            <div className="absolute inset-0 grid-pattern opacity-50" />
+            <div className="relative z-10 max-w-5xl mx-auto">
                 {/* Section Header */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}

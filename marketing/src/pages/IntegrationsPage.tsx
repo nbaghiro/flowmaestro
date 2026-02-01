@@ -154,208 +154,213 @@ export const IntegrationsPage: React.FC = () => {
     const screenshotPath = `/screenshots/${currentExample.screenshotBase}-${theme}.png`;
 
     return (
-        <div className="min-h-screen bg-background text-foreground">
-            <Navigation />
+        <div className="min-h-screen bg-background text-foreground relative">
+            {/* Full-page background pattern */}
+            <div className="fixed inset-0 grid-pattern opacity-50 pointer-events-none" />
+            <div className="relative z-10">
+                <Navigation />
 
-            {/* Hero Section */}
-            <section className="relative pt-32 pb-16 px-4 sm:px-6 lg:px-8">
-                <div className="absolute inset-0 grid-pattern opacity-50"></div>
-                <div className="relative z-10 max-w-7xl mx-auto text-center">
-                    <motion.div
-                        initial={{ opacity: 0, y: 30 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6 }}
-                    >
-                        <p className="text-sm font-medium tracking-widest text-muted-foreground uppercase mb-6">
-                            Integrations
-                        </p>
-                        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6 text-foreground">
-                            {totalCount}+ Enterprise
-                            <span className="gradient-text"> Integrations</span>
-                        </h1>
-                        <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
-                            Connect to the tools your team already uses. Every integration
-                            automatically becomes MCP tools for your AI agents to use.
-                        </p>
+                {/* Hero Section */}
+                <section className="relative pt-32 pb-16 px-4 sm:px-6 lg:px-8">
+                    <div className="relative z-10 max-w-7xl mx-auto text-center">
+                        <motion.div
+                            initial={{ opacity: 0, y: 30 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.6 }}
+                        >
+                            <p className="text-sm font-medium tracking-widest text-muted-foreground uppercase mb-6">
+                                Integrations
+                            </p>
+                            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6 text-foreground">
+                                {totalCount}+ Enterprise
+                                <span className="gradient-text"> Integrations</span>
+                            </h1>
+                            <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
+                                Connect to the tools your team already uses. Every integration
+                                automatically becomes MCP tools for your AI agents to use.
+                            </p>
 
-                        {/* MCP Tools Feature Callout */}
-                        <div className="inline-flex items-center gap-3 px-6 py-3 rounded-full bg-secondary border border-border">
-                            <Cpu className="w-5 h-5 text-foreground" />
-                            <span className="text-sm text-muted-foreground">
-                                All integrations are auto-wrapped as{" "}
-                                <span className="text-foreground font-medium">MCP Tools</span> for
-                                AI agents
-                            </span>
-                        </div>
-                    </motion.div>
-                </div>
-            </section>
+                            {/* MCP Tools Feature Callout */}
+                            <div className="inline-flex items-center gap-3 px-6 py-3 rounded-full bg-secondary border border-border">
+                                <Cpu className="w-5 h-5 text-foreground" />
+                                <span className="text-sm text-muted-foreground">
+                                    All integrations are auto-wrapped as{" "}
+                                    <span className="text-foreground font-medium">MCP Tools</span>{" "}
+                                    for AI agents
+                                </span>
+                            </div>
+                        </motion.div>
+                    </div>
+                </section>
 
-            {/* Workflow Examples Carousel */}
-            <section className="relative py-16 px-4 sm:px-6 lg:px-8 bg-secondary">
-                <div className="absolute inset-0 grid-pattern opacity-50"></div>
-                <div className="relative z-10 max-w-7xl mx-auto">
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6 }}
-                        className="text-center mb-8"
-                    >
-                        <h2 className="text-2xl sm:text-3xl font-bold mb-3 text-foreground">
-                            See Integrations in Action
-                        </h2>
-                        <p className="text-muted-foreground">
-                            Real workflows connecting multiple integrations
-                        </p>
-                    </motion.div>
+                {/* Workflow Examples Carousel */}
+                <section className="relative py-16 px-4 sm:px-6 lg:px-8 bg-secondary">
+                    <div className="absolute inset-0 grid-pattern opacity-50" />
+                    <div className="relative z-10 max-w-7xl mx-auto">
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.6 }}
+                            className="text-center mb-8"
+                        >
+                            <h2 className="text-2xl sm:text-3xl font-bold mb-3 text-foreground">
+                                See Integrations in Action
+                            </h2>
+                            <p className="text-muted-foreground">
+                                Real workflows connecting multiple integrations
+                            </p>
+                        </motion.div>
 
-                    <motion.div
-                        initial={{ opacity: 0, y: 30 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6, delay: 0.2 }}
-                        onMouseEnter={() => setIsPaused(true)}
-                        onMouseLeave={() => setIsPaused(false)}
-                    >
-                        {/* Carousel Header */}
-                        <div className="text-center mb-6">
-                            <AnimatePresence mode="wait">
-                                <motion.div
-                                    key={currentSlide}
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: -10 }}
-                                    transition={{ duration: 0.3 }}
-                                >
-                                    <h3 className="text-lg font-semibold text-foreground mb-1">
-                                        {currentExample.title}
-                                    </h3>
-                                    <p className="text-sm text-muted-foreground">
-                                        {currentExample.description}
-                                    </p>
-                                </motion.div>
-                            </AnimatePresence>
-                        </div>
-
-                        {/* Carousel Container */}
-                        <div className="relative max-w-5xl mx-auto">
-                            {/* Navigation Arrows */}
-                            <button
-                                onClick={prevSlide}
-                                className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 lg:-translate-x-12 z-20 p-2 rounded-full bg-card border border-border hover:bg-accent transition-colors shadow-lg"
-                                aria-label="Previous workflow"
-                            >
-                                <ChevronLeft className="w-5 h-5 text-foreground" />
-                            </button>
-                            <button
-                                onClick={nextSlide}
-                                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 lg:translate-x-12 z-20 p-2 rounded-full bg-card border border-border hover:bg-accent transition-colors shadow-lg"
-                                aria-label="Next workflow"
-                            >
-                                <ChevronRight className="w-5 h-5 text-foreground" />
-                            </button>
-
-                            {/* Screenshot */}
-                            <div className="rounded-xl overflow-hidden border border-border shadow-2xl">
+                        <motion.div
+                            initial={{ opacity: 0, y: 30 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.6, delay: 0.2 }}
+                            onMouseEnter={() => setIsPaused(true)}
+                            onMouseLeave={() => setIsPaused(false)}
+                        >
+                            {/* Carousel Header */}
+                            <div className="text-center mb-6">
                                 <AnimatePresence mode="wait">
-                                    <motion.img
-                                        key={`${currentSlide}-${theme}`}
-                                        src={screenshotPath}
-                                        alt={currentExample.title}
-                                        className="w-full"
-                                        initial={{ opacity: 0 }}
-                                        animate={{ opacity: 1 }}
-                                        exit={{ opacity: 0 }}
+                                    <motion.div
+                                        key={currentSlide}
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -10 }}
                                         transition={{ duration: 0.3 }}
-                                    />
+                                    >
+                                        <h3 className="text-lg font-semibold text-foreground mb-1">
+                                            {currentExample.title}
+                                        </h3>
+                                        <p className="text-sm text-muted-foreground">
+                                            {currentExample.description}
+                                        </p>
+                                    </motion.div>
                                 </AnimatePresence>
                             </div>
 
-                            {/* Dot Navigation */}
-                            <div className="flex justify-center gap-2 mt-6">
-                                {workflowExamples.map((example, index) => (
-                                    <button
-                                        key={example.id}
-                                        onClick={() => setCurrentSlide(index)}
-                                        className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                                            index === currentSlide
-                                                ? "bg-foreground w-6"
-                                                : "bg-muted-foreground/40 hover:bg-muted-foreground/60"
-                                        }`}
-                                        aria-label={`Go to ${example.title}`}
-                                    />
-                                ))}
+                            {/* Carousel Container */}
+                            <div className="relative max-w-5xl mx-auto">
+                                {/* Navigation Arrows */}
+                                <button
+                                    onClick={prevSlide}
+                                    className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 lg:-translate-x-12 z-20 p-2 rounded-full bg-card border border-border hover:bg-accent transition-colors shadow-lg"
+                                    aria-label="Previous workflow"
+                                >
+                                    <ChevronLeft className="w-5 h-5 text-foreground" />
+                                </button>
+                                <button
+                                    onClick={nextSlide}
+                                    className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 lg:translate-x-12 z-20 p-2 rounded-full bg-card border border-border hover:bg-accent transition-colors shadow-lg"
+                                    aria-label="Next workflow"
+                                >
+                                    <ChevronRight className="w-5 h-5 text-foreground" />
+                                </button>
+
+                                {/* Screenshot */}
+                                <div className="rounded-xl overflow-hidden border border-border shadow-2xl">
+                                    <AnimatePresence mode="wait">
+                                        <motion.img
+                                            key={`${currentSlide}-${theme}`}
+                                            src={screenshotPath}
+                                            alt={currentExample.title}
+                                            className="w-full"
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            exit={{ opacity: 0 }}
+                                            transition={{ duration: 0.3 }}
+                                        />
+                                    </AnimatePresence>
+                                </div>
+
+                                {/* Dot Navigation */}
+                                <div className="flex justify-center gap-2 mt-6">
+                                    {workflowExamples.map((example, index) => (
+                                        <button
+                                            key={example.id}
+                                            onClick={() => setCurrentSlide(index)}
+                                            className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                                                index === currentSlide
+                                                    ? "bg-foreground w-6"
+                                                    : "bg-muted-foreground/40 hover:bg-muted-foreground/60"
+                                            }`}
+                                            aria-label={`Go to ${example.title}`}
+                                        />
+                                    ))}
+                                </div>
                             </div>
+                        </motion.div>
+                    </div>
+                </section>
+
+                {/* Filters Section */}
+                <section className="relative px-4 sm:px-6 lg:px-8 py-8">
+                    <div className="max-w-7xl mx-auto">
+                        {/* Search */}
+                        <div className="relative mb-6">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                            <input
+                                type="text"
+                                placeholder="Search integrations..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full pl-12 pr-4 py-3 bg-card border border-border rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:border-muted-foreground transition-colors"
+                            />
                         </div>
-                    </motion.div>
-                </div>
-            </section>
 
-            {/* Filters Section */}
-            <section className="relative px-4 sm:px-6 lg:px-8 py-8">
-                <div className="max-w-7xl mx-auto">
-                    {/* Search */}
-                    <div className="relative mb-6">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                        <input
-                            type="text"
-                            placeholder="Search integrations..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-12 pr-4 py-3 bg-card border border-border rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:border-muted-foreground transition-colors"
-                        />
-                    </div>
-
-                    {/* Category Tabs */}
-                    <div className="flex flex-wrap gap-2">
-                        {categories.map((category) => (
-                            <button
-                                key={category}
-                                onClick={() => setSelectedCategory(category)}
-                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                                    selectedCategory === category
-                                        ? "bg-foreground text-background"
-                                        : "bg-card text-muted-foreground hover:bg-accent hover:text-foreground border border-border"
-                                }`}
-                            >
-                                {category}
-                                {category === "All" && (
-                                    <span className="ml-2 text-xs opacity-70">({totalCount})</span>
-                                )}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* Integrations Grid */}
-            <section className="relative px-4 sm:px-6 lg:px-8 pb-24">
-                <div className="max-w-7xl mx-auto">
-                    {/* Results count */}
-                    <p className="text-sm text-muted-foreground mb-6">
-                        Showing {sortedProviders.length} integration
-                        {sortedProviders.length !== 1 ? "s" : ""}
-                        {selectedCategory !== "All" && ` in ${selectedCategory}`}
-                    </p>
-
-                    {/* Grid */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                        {sortedProviders.map((provider) => (
-                            <IntegrationCard key={provider.provider} provider={provider} />
-                        ))}
-                    </div>
-
-                    {/* Empty state */}
-                    {sortedProviders.length === 0 && (
-                        <div className="text-center py-16">
-                            <p className="text-muted-foreground">
-                                No integrations found matching your search.
-                            </p>
+                        {/* Category Tabs */}
+                        <div className="flex flex-wrap gap-2">
+                            {categories.map((category) => (
+                                <button
+                                    key={category}
+                                    onClick={() => setSelectedCategory(category)}
+                                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                                        selectedCategory === category
+                                            ? "bg-foreground text-background"
+                                            : "bg-card text-muted-foreground hover:bg-accent hover:text-foreground border border-border"
+                                    }`}
+                                >
+                                    {category}
+                                    {category === "All" && (
+                                        <span className="ml-2 text-xs opacity-70">
+                                            ({totalCount})
+                                        </span>
+                                    )}
+                                </button>
+                            ))}
                         </div>
-                    )}
-                </div>
-            </section>
+                    </div>
+                </section>
 
-            <Footer />
+                {/* Integrations Grid */}
+                <section className="relative px-4 sm:px-6 lg:px-8 pb-24">
+                    <div className="max-w-7xl mx-auto">
+                        {/* Results count */}
+                        <p className="text-sm text-muted-foreground mb-6">
+                            Showing {sortedProviders.length} integration
+                            {sortedProviders.length !== 1 ? "s" : ""}
+                            {selectedCategory !== "All" && ` in ${selectedCategory}`}
+                        </p>
+
+                        {/* Grid */}
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                            {sortedProviders.map((provider) => (
+                                <IntegrationCard key={provider.provider} provider={provider} />
+                            ))}
+                        </div>
+
+                        {/* Empty state */}
+                        {sortedProviders.length === 0 && (
+                            <div className="text-center py-16">
+                                <p className="text-muted-foreground">
+                                    No integrations found matching your search.
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                </section>
+
+                <Footer />
+            </div>
         </div>
     );
 };

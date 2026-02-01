@@ -22,9 +22,6 @@ export const InteractiveBackground: React.FC = () => {
 
     return (
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            {/* Base grid pattern */}
-            <div className="absolute inset-0 grid-pattern opacity-40"></div>
-
             {/* Mouse spotlight effect - theme-aware glow */}
             <div
                 className="absolute inset-0 transition-opacity duration-300"
