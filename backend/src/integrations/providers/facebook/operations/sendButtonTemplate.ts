@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { FacebookClient } from "../client/FacebookClient";
 import type { MessengerSendResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -44,7 +43,6 @@ export const sendButtonTemplateOperation: OperationDefinition = (() => {
             description: "Send a message with up to 3 buttons to a Messenger user",
             category: "messaging",
             inputSchema: sendButtonTemplateSchema,
-            inputSchemaJSON: toJSONSchema(sendButtonTemplateSchema),
             retryable: true,
             timeout: 15000
         };

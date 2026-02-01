@@ -21,17 +21,7 @@ export const getPresentationOperation: OperationDefinition = {
         "Retrieve a Google Slides presentation by ID, including its slides, masters, and layouts",
     category: "presentations",
     retryable: true,
-    inputSchema: getPresentationSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            presentationId: {
-                type: "string",
-                description: "The ID of the presentation to retrieve"
-            }
-        },
-        required: ["presentationId"]
-    }
+    inputSchema: getPresentationSchema
 };
 
 interface PresentationResponse {

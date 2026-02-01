@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { ZendeskClient } from "../../client/ZendeskClient";
 import type { ArticleResponse } from "../../types";
@@ -23,7 +22,6 @@ export const getArticleOperation: OperationDefinition = {
     description: "Get a Help Center article by ID",
     category: "help-center",
     inputSchema: getArticleSchema,
-    inputSchemaJSON: toJSONSchema(getArticleSchema),
     retryable: true,
     timeout: 10000
 };

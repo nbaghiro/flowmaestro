@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { LinkedInClient } from "../client/LinkedInClient";
 import { PostIdSchema } from "../schemas";
 import type { LinkedInPost } from "./types";
@@ -28,7 +27,6 @@ export const getPostOperation: OperationDefinition = (() => {
             description: "Get details of a LinkedIn post by its URN.",
             category: "posts",
             inputSchema: getPostSchema,
-            inputSchemaJSON: toJSONSchema(getPostSchema),
             retryable: true,
             timeout: 15000
         };

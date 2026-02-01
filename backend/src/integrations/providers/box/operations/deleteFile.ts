@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { BoxClient } from "../client/BoxClient";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 
@@ -25,7 +24,6 @@ export const deleteFileOperation: OperationDefinition = {
         "Delete a file or folder from Box. Deleted items are moved to trash and can be restored for 30 days.",
     category: "files",
     inputSchema: deleteFileSchema,
-    inputSchemaJSON: toJSONSchema(deleteFileSchema),
     retryable: false, // Don't retry deletes
     timeout: 30000
 };

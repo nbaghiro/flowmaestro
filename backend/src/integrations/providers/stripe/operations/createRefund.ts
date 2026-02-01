@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { StripeClient } from "../client/StripeClient";
 import type { StripeRefund } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -27,7 +26,6 @@ export const createRefundOperation: OperationDefinition = {
     category: "refunds",
     actionType: "write",
     inputSchema: createRefundSchema,
-    inputSchemaJSON: toJSONSchema(createRefundSchema),
     retryable: true,
     timeout: 15000
 };

@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { TableauClient } from "../client/TableauClient";
 import { TableauDataSourceIdSchema } from "./schemas";
 import type { TableauDataSource } from "./types";
@@ -23,7 +22,6 @@ export const getDataSourceOperation: OperationDefinition = {
     description: "Get data source details by ID",
     category: "datasources",
     inputSchema: getDataSourceSchema,
-    inputSchemaJSON: toJSONSchema(getDataSourceSchema),
     retryable: true,
     timeout: 30000
 };

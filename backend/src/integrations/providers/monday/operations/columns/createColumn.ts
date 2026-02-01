@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { CREATE_COLUMN } from "../../graphql/mutations";
 import { createColumnInputSchema, type CreateColumnInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
@@ -10,7 +9,6 @@ export const createColumnOperation: OperationDefinition = {
     description: "Create a new column on a Monday.com board.",
     category: "columns",
     inputSchema: createColumnInputSchema,
-    inputSchemaJSON: toJSONSchema(createColumnInputSchema),
     retryable: true,
     timeout: 10000
 };

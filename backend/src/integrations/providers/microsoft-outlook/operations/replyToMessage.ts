@@ -16,25 +16,6 @@ export const replyToMessageOperation: OperationDefinition = {
     description: "Reply to an email message",
     category: "email",
     inputSchema: replyToMessageSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["messageId", "comment"],
-        properties: {
-            messageId: {
-                type: "string",
-                description: "ID of the message to reply to"
-            },
-            comment: {
-                type: "string",
-                description: "Reply content"
-            },
-            replyAll: {
-                type: "boolean",
-                default: false,
-                description: "Reply to all recipients"
-            }
-        }
-    },
     retryable: false // Reply should not auto-retry to avoid duplicates
 };
 

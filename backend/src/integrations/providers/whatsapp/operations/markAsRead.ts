@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { WhatsAppClient } from "../client/WhatsAppClient";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 
@@ -27,7 +26,6 @@ export const markAsReadOperation: OperationDefinition = (() => {
             description: "Mark a received message as read (sends read receipt to user)",
             category: "messaging",
             inputSchema: markAsReadSchema,
-            inputSchemaJSON: toJSONSchema(markAsReadSchema),
             retryable: true,
             timeout: 10000
         };

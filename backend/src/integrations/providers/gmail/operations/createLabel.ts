@@ -38,37 +38,7 @@ export const createLabelOperation: OperationDefinition = {
     description: "Create a new custom label in Gmail",
     category: "labels",
     retryable: true,
-    inputSchema: createLabelSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            name: {
-                type: "string",
-                description: "Name of the label to create"
-            },
-            messageListVisibility: {
-                type: "string",
-                enum: ["show", "hide"],
-                description: "Whether to show messages with this label",
-                default: "show"
-            },
-            labelListVisibility: {
-                type: "string",
-                enum: ["labelShow", "labelShowIfUnread", "labelHide"],
-                description: "Visibility of the label in the label list",
-                default: "labelShow"
-            },
-            backgroundColor: {
-                type: "string",
-                description: "Background color (hex format)"
-            },
-            textColor: {
-                type: "string",
-                description: "Text color (hex format)"
-            }
-        },
-        required: ["name"]
-    }
+    inputSchema: createLabelSchema
 };
 
 /**

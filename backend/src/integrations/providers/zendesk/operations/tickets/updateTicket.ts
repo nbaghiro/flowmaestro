@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { ZendeskClient } from "../../client/ZendeskClient";
 import type { TicketResponse } from "../../types";
@@ -50,7 +49,6 @@ export const updateTicketOperation: OperationDefinition = {
     description: "Update an existing ticket in Zendesk",
     category: "tickets",
     inputSchema: updateTicketSchema,
-    inputSchemaJSON: toJSONSchema(updateTicketSchema),
     retryable: true,
     timeout: 10000
 };

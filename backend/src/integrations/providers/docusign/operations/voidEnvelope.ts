@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { DocuSignClient } from "../client/DocuSignClient";
 import { DocuSignEnvelopeIdSchema } from "../schemas";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -28,7 +27,6 @@ export const voidEnvelopeOperation: OperationDefinition = (() => {
             description: "Void a DocuSign envelope to cancel it",
             category: "envelopes",
             inputSchema: voidEnvelopeSchema,
-            inputSchemaJSON: toJSONSchema(voidEnvelopeSchema),
             retryable: false,
             timeout: 30000
         };

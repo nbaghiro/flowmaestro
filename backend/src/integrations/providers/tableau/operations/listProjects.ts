@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { TableauClient } from "../client/TableauClient";
 import { TableauPageSizeSchema, TableauPageNumberSchema, TableauFilterSchema } from "./schemas";
 import type { TableauProjectsResponse } from "./types";
@@ -25,7 +24,6 @@ export const listProjectsOperation: OperationDefinition = {
     description: "Get all projects on the site",
     category: "projects",
     inputSchema: listProjectsSchema,
-    inputSchemaJSON: toJSONSchema(listProjectsSchema),
     retryable: true,
     timeout: 30000
 };

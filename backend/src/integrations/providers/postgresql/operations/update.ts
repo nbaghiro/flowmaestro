@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { Pool, QueryResult } from "pg";
 
@@ -29,7 +28,6 @@ export const updateOperation: OperationDefinition = {
     description: "Update rows in a table",
     category: "database",
     inputSchema: updateSchema,
-    inputSchemaJSON: toJSONSchema(updateSchema),
     retryable: false,
     timeout: 10000
 };

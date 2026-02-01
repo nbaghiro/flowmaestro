@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../core/schema-utils";
 import { getAccountInputSchema, type GetAccountInput } from "../schemas";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { ApolloClient } from "../client/ApolloClient";
@@ -9,7 +8,6 @@ export const getAccountOperation: OperationDefinition = {
     description: "Retrieve an account (organization) by ID from Apollo",
     category: "accounts",
     inputSchema: getAccountInputSchema,
-    inputSchemaJSON: toJSONSchema(getAccountInputSchema),
     retryable: true,
     timeout: 30000
 };

@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { MediumClient } from "../client/MediumClient";
 
@@ -52,7 +51,6 @@ export const createPostOperation: OperationDefinition = {
     description: "Create a new post under the authenticated user's profile",
     category: "post",
     inputSchema: createPostSchema,
-    inputSchemaJSON: toJSONSchema(createPostSchema),
     retryable: false,
     timeout: 60000
 };

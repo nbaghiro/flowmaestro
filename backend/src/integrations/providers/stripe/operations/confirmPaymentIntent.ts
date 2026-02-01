@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { StripeClient } from "../client/StripeClient";
 import type { StripePaymentIntent } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -29,7 +28,6 @@ export const confirmPaymentIntentOperation: OperationDefinition = {
     category: "payments",
     actionType: "write",
     inputSchema: confirmPaymentIntentSchema,
-    inputSchemaJSON: toJSONSchema(confirmPaymentIntentSchema),
     retryable: true,
     timeout: 15000
 };

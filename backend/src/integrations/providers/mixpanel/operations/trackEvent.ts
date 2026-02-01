@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { MixpanelClient } from "../client/MixpanelClient";
 import {
     MixpanelDistinctIdSchema,
@@ -36,7 +35,6 @@ export const trackEventOperation: OperationDefinition = {
     category: "events",
     actionType: "write",
     inputSchema: trackEventSchema,
-    inputSchemaJSON: toJSONSchema(trackEventSchema),
     retryable: true,
     timeout: 10000
 };

@@ -22,22 +22,6 @@ export const replyToChannelMessageOperation: OperationDefinition = {
     description: "Reply to a message in a Microsoft Teams channel",
     category: "messaging",
     inputSchema: replyToChannelMessageSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["teamId", "channelId", "messageId", "content"],
-        properties: {
-            teamId: { type: "string", description: "ID of the team" },
-            channelId: { type: "string", description: "ID of the channel" },
-            messageId: { type: "string", description: "ID of the message to reply to" },
-            content: { type: "string", description: "Reply content" },
-            contentType: {
-                type: "string",
-                enum: ["text", "html"],
-                default: "text",
-                description: "Content type"
-            }
-        }
-    },
     retryable: true
 };
 

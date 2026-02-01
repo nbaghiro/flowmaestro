@@ -15,14 +15,13 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Input } from "../components/common/Input";
 import { MobileBuilderGuard } from "../components/common/MobileBuilderGuard";
-import { ThemeToggle } from "../components/common/ThemeToggle";
 import {
     AddUrlModal,
     DeleteDocumentModal,
     DeleteKnowledgeBaseModal,
     KBSettingsSection
 } from "../components/knowledge-bases";
-import { DocumentGrid } from "../components/knowledge-bases/DocumentGrid";
+import { DocumentList } from "../components/knowledge-bases/DocumentList";
 import { KBContextPanel } from "../components/knowledge-bases/KBContextPanel";
 import { KBOverviewSidebar } from "../components/knowledge-bases/KBOverviewSidebar";
 import { logger } from "../lib/logger";
@@ -366,9 +365,8 @@ export function KnowledgeBaseDetail() {
                         </div>
                     </div>
 
-                    {/* Right: Theme + Settings + Delete */}
+                    {/* Right: Settings + Delete */}
                     <div className="flex items-center gap-1">
-                        <ThemeToggle />
                         <button
                             onClick={() => setShowSettingsModal(true)}
                             className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
@@ -443,7 +441,7 @@ export function KnowledgeBaseDetail() {
 
                         {/* Document Grid */}
                         <div className="flex-1 overflow-auto p-4">
-                            <DocumentGrid
+                            <DocumentList
                                 documents={currentDocuments}
                                 onDeleteClick={setDeleteConfirmDocId}
                                 onReprocess={handleReprocessDocument}

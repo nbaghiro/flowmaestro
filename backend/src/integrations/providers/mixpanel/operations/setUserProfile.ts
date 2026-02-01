@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { MixpanelClient } from "../client/MixpanelClient";
 import { MixpanelDistinctIdSchema } from "../schemas";
 import type { MixpanelEngageResponse } from "./types";
@@ -40,7 +39,6 @@ export const setUserProfileOperation: OperationDefinition = {
     category: "profiles",
     actionType: "write",
     inputSchema: setUserProfileSchema,
-    inputSchemaJSON: toJSONSchema(setUserProfileSchema),
     retryable: true,
     timeout: 10000
 };

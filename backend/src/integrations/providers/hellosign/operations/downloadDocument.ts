@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { HelloSignClient } from "../client/HelloSignClient";
 import { HelloSignRequestIdSchema } from "../schemas";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -31,7 +30,6 @@ export const downloadDocumentOperation: OperationDefinition = (() => {
             description: "Get a download URL for the signed document(s)",
             category: "documents",
             inputSchema: downloadDocumentSchema,
-            inputSchemaJSON: toJSONSchema(downloadDocumentSchema),
             retryable: true,
             timeout: 60000
         };

@@ -21,21 +21,7 @@ export const moveToFolderOperation: OperationDefinition = {
     description: "Move a presentation to a specific Google Drive folder",
     category: "drive",
     retryable: true,
-    inputSchema: moveToFolderSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            presentationId: {
-                type: "string",
-                description: "The ID of the presentation to move"
-            },
-            folderId: {
-                type: "string",
-                description: "The ID of the destination folder"
-            }
-        },
-        required: ["presentationId", "folderId"]
-    }
+    inputSchema: moveToFolderSchema
 };
 
 /**

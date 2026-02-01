@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { GitHubClient } from "../../client/GitHubClient";
 import {
     GitHubOwnerSchema,
@@ -33,7 +32,6 @@ export const mergePullRequestOperation: OperationDefinition = {
     description: "Merge a pull request",
     category: "pull_requests",
     inputSchema: mergePullRequestSchema,
-    inputSchemaJSON: toJSONSchema(mergePullRequestSchema),
     retryable: false,
     timeout: 30000
 };

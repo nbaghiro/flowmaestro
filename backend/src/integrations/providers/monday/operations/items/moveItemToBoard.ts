@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { MOVE_ITEM_TO_BOARD } from "../../graphql/mutations";
 import { moveItemToBoardInputSchema, type MoveItemToBoardInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
@@ -10,7 +9,6 @@ export const moveItemToBoardOperation: OperationDefinition = {
     description: "Move an item to a different board in Monday.com.",
     category: "items",
     inputSchema: moveItemToBoardInputSchema,
-    inputSchemaJSON: toJSONSchema(moveItemToBoardInputSchema),
     retryable: true,
     timeout: 10000
 };

@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { PipedriveClient } from "../../client/PipedriveClient";
 import type { PipedriveResponse } from "../types";
@@ -22,7 +21,6 @@ export const deleteDealOperation: OperationDefinition = {
     description: "Delete a deal (marks as deleted, can be recovered within 30 days)",
     category: "deals",
     inputSchema: deleteDealSchema,
-    inputSchemaJSON: toJSONSchema(deleteDealSchema),
     retryable: false,
     timeout: 10000
 };

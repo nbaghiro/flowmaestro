@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { TrelloClient } from "../../client/TrelloClient";
 import { TrelloCardIdSchema, TrelloListIdSchema } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
@@ -41,7 +40,6 @@ export const updateCardOperation: OperationDefinition = {
     category: "cards",
     actionType: "write",
     inputSchema: updateCardSchema,
-    inputSchemaJSON: toJSONSchema(updateCardSchema),
     retryable: false,
     timeout: 10000
 };

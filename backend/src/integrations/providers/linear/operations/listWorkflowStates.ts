@@ -20,17 +20,7 @@ export const listWorkflowStatesOperation: OperationDefinition = {
     description: "List workflow states for a specific team in Linear",
     category: "teams",
     retryable: true,
-    inputSchema: listWorkflowStatesSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            teamId: {
-                type: "string",
-                description: "Team ID to get workflow states for"
-            }
-        },
-        required: ["teamId"]
-    }
+    inputSchema: listWorkflowStatesSchema
 };
 
 /**

@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { MailchimpMemberOutput } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { MailchimpClient } from "../client/MailchimpClient";
@@ -24,7 +23,6 @@ export const getSegmentMembersOperation: OperationDefinition = {
     description: "Get all members in a Mailchimp segment",
     category: "segments",
     inputSchema: getSegmentMembersSchema,
-    inputSchemaJSON: toJSONSchema(getSegmentMembersSchema),
     retryable: true,
     timeout: 30000
 };

@@ -53,7 +53,8 @@ const connectionMetadataSchema = z
             })
             .catchall(z.any())
             .optional(),
-        provider_config: z.record(z.any()).optional()
+        provider_config: z.record(z.any()).optional(),
+        isTestConnection: z.boolean().optional()
     })
     .optional();
 

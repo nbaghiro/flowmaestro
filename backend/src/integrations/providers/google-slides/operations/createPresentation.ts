@@ -20,17 +20,7 @@ export const createPresentationOperation: OperationDefinition = {
     description: "Create a new Google Slides presentation",
     category: "presentations",
     retryable: true,
-    inputSchema: createPresentationSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            title: {
-                type: "string",
-                description: "Presentation title"
-            }
-        },
-        required: ["title"]
-    }
+    inputSchema: createPresentationSchema
 };
 
 interface CreatePresentationResponse {

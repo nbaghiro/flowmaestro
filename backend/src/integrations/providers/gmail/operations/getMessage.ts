@@ -107,28 +107,7 @@ export const getMessageOperation: OperationDefinition = {
         "Get a specific Gmail message by ID with full details including body and attachments",
     category: "messages",
     retryable: true,
-    inputSchema: getMessageSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            messageId: {
-                type: "string",
-                description: "The ID of the message to retrieve"
-            },
-            format: {
-                type: "string",
-                enum: ["full", "metadata", "minimal", "raw"],
-                description: "Format of the response",
-                default: "full"
-            },
-            metadataHeaders: {
-                type: "array",
-                items: { type: "string" },
-                description: "When format is 'metadata', only include these headers"
-            }
-        },
-        required: ["messageId"]
-    }
+    inputSchema: getMessageSchema
 };
 
 /**

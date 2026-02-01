@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { GitHubClient } from "../../client/GitHubClient";
 import { GitHubOwnerSchema, GitHubRepoNameSchema, GitHubIssueNumberSchema } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
@@ -26,7 +25,6 @@ export const addCommentOperation: OperationDefinition = {
     description: "Add a comment to an issue or pull request",
     category: "issues",
     inputSchema: addCommentSchema,
-    inputSchemaJSON: toJSONSchema(addCommentSchema),
     retryable: false,
     timeout: 15000
 };

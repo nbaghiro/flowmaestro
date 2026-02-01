@@ -23,29 +23,7 @@ export const createCalendarOperation: OperationDefinition = {
     description: "Create a new secondary calendar",
     category: "calendars",
     retryable: true,
-    inputSchema: createCalendarSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            summary: {
-                type: "string",
-                description: "Calendar name/title"
-            },
-            description: {
-                type: "string",
-                description: "Calendar description"
-            },
-            location: {
-                type: "string",
-                description: "Geographic location of calendar"
-            },
-            timeZone: {
-                type: "string",
-                description: "Time zone (e.g., America/Los_Angeles)"
-            }
-        },
-        required: ["summary"]
-    }
+    inputSchema: createCalendarSchema
 };
 
 /**

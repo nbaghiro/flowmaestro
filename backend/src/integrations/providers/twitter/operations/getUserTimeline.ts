@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { TwitterClient } from "../client/TwitterClient";
 import { UserIdSchema, MaxResultsSchema, PaginationTokenSchema } from "../schemas";
 import type { TweetsResponse, XAPIResponse, XUser } from "./types";
@@ -33,7 +32,6 @@ export const getUserTimelineOperation: OperationDefinition = (() => {
                 "Get recent tweets from a user. Returns the authenticated user's tweets if no user_id is provided.",
             category: "tweets",
             inputSchema: getUserTimelineSchema,
-            inputSchemaJSON: toJSONSchema(getUserTimelineSchema),
             retryable: true,
             timeout: 15000
         };

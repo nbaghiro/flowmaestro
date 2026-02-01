@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { ZendeskClient } from "../../client/ZendeskClient";
 import type { ZendeskSearchResult, ZendeskTicket } from "../../types";
@@ -34,7 +33,6 @@ export const searchTicketsOperation: OperationDefinition = {
         "Search for tickets using Zendesk search syntax (e.g., status:open, priority:high, assignee:me)",
     category: "tickets",
     inputSchema: searchTicketsSchema,
-    inputSchemaJSON: toJSONSchema(searchTicketsSchema),
     retryable: true,
     timeout: 30000
 };

@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { createIssueInputSchema, type CreateIssueInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { JiraClient } from "../../client/JiraClient";
@@ -10,7 +9,6 @@ export const createIssueOperation: OperationDefinition = {
         "Create a new issue in Jira. Supports standard fields and custom fields via customFields parameter.",
     category: "issues",
     inputSchema: createIssueInputSchema,
-    inputSchemaJSON: toJSONSchema(createIssueInputSchema),
     retryable: true,
     timeout: 10000
 };

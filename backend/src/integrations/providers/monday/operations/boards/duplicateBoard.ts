@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { DUPLICATE_BOARD } from "../../graphql/mutations";
 import { duplicateBoardInputSchema, type DuplicateBoardInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
@@ -11,7 +10,6 @@ export const duplicateBoardOperation: OperationDefinition = {
         "Duplicate a board in Monday.com with structure only, items, or items and updates.",
     category: "boards",
     inputSchema: duplicateBoardInputSchema,
-    inputSchemaJSON: toJSONSchema(duplicateBoardInputSchema),
     retryable: true,
     timeout: 30000
 };

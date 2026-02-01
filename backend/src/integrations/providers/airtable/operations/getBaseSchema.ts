@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { AirtableClient } from "../client/AirtableClient";
 import { baseIdSchema } from "../schemas";
 import type { AirtableTable } from "./types";
@@ -17,7 +16,6 @@ export const getBaseSchemaOperation: OperationDefinition = {
     description: "Get complete schema for a base including all tables, fields, and views",
     category: "schema",
     inputSchema: getBaseSchemaSchema,
-    inputSchemaJSON: toJSONSchema(getBaseSchemaSchema),
     retryable: true,
     timeout: 15000
 };

@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { RipplingClient } from "../client/RipplingClient";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 
@@ -30,7 +29,6 @@ export const getLeaveBalancesOperation: OperationDefinition = (() => {
             category: "hr",
             actionType: "read",
             inputSchema: getLeaveBalancesSchema,
-            inputSchemaJSON: toJSONSchema(getLeaveBalancesSchema),
             retryable: true,
             timeout: 15000
         };

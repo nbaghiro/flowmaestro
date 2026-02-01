@@ -1,3 +1,4 @@
+import { toJSONSchema } from "../../../../core/utils/zod-to-json-schema";
 import { HelloSignClient } from "../client/HelloSignClient";
 import {
     executeCreateSignatureRequest,
@@ -23,7 +24,7 @@ export class HelloSignMCPAdapter {
         return Array.from(this.operations.values()).map((op) => ({
             name: `hellosign_${op.id}`,
             description: op.description,
-            inputSchema: op.inputSchemaJSON,
+            inputSchema: toJSONSchema(op.inputSchema),
             executeRef: op.id
         }));
     }

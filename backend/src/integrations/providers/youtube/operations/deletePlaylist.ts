@@ -20,17 +20,7 @@ export const deletePlaylistOperation: OperationDefinition = {
     description: "Delete a YouTube playlist permanently",
     category: "playlists",
     retryable: false,
-    inputSchema: deletePlaylistSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            playlistId: {
-                type: "string",
-                description: "The playlist ID to delete"
-            }
-        },
-        required: ["playlistId"]
-    }
+    inputSchema: deletePlaylistSchema
 };
 
 /**

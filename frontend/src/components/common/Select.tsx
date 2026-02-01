@@ -55,14 +55,14 @@ export function Select({
                         "data-[state=open]:animate-in data-[state=closed]:animate-out",
                         "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
                         "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
-                        "max-h-[300px]",
+                        "max-h-[400px]",
                         "z-[100]"
                     )}
                     position="popper"
                     sideOffset={4}
                 >
                     <SelectPrimitive.Viewport
-                        className="p-1 max-h-[300px] overflow-y-auto"
+                        className="p-1 max-h-[400px] overflow-y-auto"
                         style={
                             {
                                 scrollbarWidth: "thin",

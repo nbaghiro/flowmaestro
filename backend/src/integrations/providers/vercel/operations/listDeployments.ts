@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { VercelDeploymentOutput } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { VercelClient } from "../client/VercelClient";
@@ -24,7 +23,6 @@ export const listDeploymentsOperation: OperationDefinition = {
     description: "List deployments for a Vercel project or all projects",
     category: "deployments",
     inputSchema: listDeploymentsSchema,
-    inputSchemaJSON: toJSONSchema(listDeploymentsSchema),
     retryable: true,
     timeout: 30000
 };

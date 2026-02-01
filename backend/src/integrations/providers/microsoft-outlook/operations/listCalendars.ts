@@ -12,10 +12,6 @@ export const listCalendarsOperation: OperationDefinition = {
     description: "List user's calendars",
     category: "calendar",
     inputSchema: listCalendarsSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {}
-    },
     retryable: true
 };
 

@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { HelloSignClient } from "../client/HelloSignClient";
 import type { HelloSignListResponse, HelloSignSignatureRequest } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -35,7 +34,6 @@ export const listSignatureRequestsOperation: OperationDefinition = (() => {
             description: "List all signature requests in your HelloSign account",
             category: "signature_requests",
             inputSchema: listSignatureRequestsSchema,
-            inputSchemaJSON: toJSONSchema(listSignatureRequestsSchema),
             retryable: true,
             timeout: 30000
         };

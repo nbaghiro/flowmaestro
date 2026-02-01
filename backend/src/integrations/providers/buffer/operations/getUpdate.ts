@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { BufferClient } from "../client/BufferClient";
 import { BufferUpdateIdSchema } from "../schemas";
 import type { BufferUpdate } from "./types";
@@ -28,7 +27,6 @@ export const getUpdateOperation: OperationDefinition = (() => {
             description: "Get details of a specific Buffer update/post",
             category: "updates",
             inputSchema: getUpdateSchema,
-            inputSchemaJSON: toJSONSchema(getUpdateSchema),
             retryable: true,
             timeout: 10000
         };

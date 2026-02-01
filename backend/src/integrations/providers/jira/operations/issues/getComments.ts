@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { getCommentsInputSchema, type GetCommentsInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { JiraClient } from "../../client/JiraClient";
@@ -9,7 +8,6 @@ export const getCommentsOperation: OperationDefinition = {
     description: "Get all comments for an issue with pagination support.",
     category: "issues",
     inputSchema: getCommentsInputSchema,
-    inputSchemaJSON: toJSONSchema(getCommentsInputSchema),
     retryable: true,
     timeout: 10000
 };

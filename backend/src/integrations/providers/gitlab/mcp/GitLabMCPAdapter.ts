@@ -1,3 +1,4 @@
+import { toJSONSchema } from "../../../../core/utils/zod-to-json-schema";
 import { GitLabClient } from "../client/GitLabClient";
 import {
     // Project executors
@@ -35,7 +36,7 @@ export class GitLabMCPAdapter {
         return Array.from(this.operations.values()).map((op) => ({
             name: `gitlab_${op.id}`,
             description: op.description,
-            inputSchema: op.inputSchemaJSON,
+            inputSchema: toJSONSchema(op.inputSchema),
             executeRef: op.id
         }));
     }

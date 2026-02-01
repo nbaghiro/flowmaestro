@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { DatadogMonitorOutput } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { DatadogClient } from "../client/DatadogClient";
@@ -18,7 +17,6 @@ export const listMonitorsOperation: OperationDefinition = {
     description: "Get all monitors for the organization",
     category: "monitors",
     inputSchema: listMonitorsSchema,
-    inputSchemaJSON: toJSONSchema(listMonitorsSchema),
     retryable: true,
     timeout: 30000
 };

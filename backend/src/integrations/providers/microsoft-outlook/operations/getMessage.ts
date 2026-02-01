@@ -14,16 +14,6 @@ export const getMessageOperation: OperationDefinition = {
     description: "Get a specific email message by ID",
     category: "email",
     inputSchema: getMessageSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["messageId"],
-        properties: {
-            messageId: {
-                type: "string",
-                description: "The ID of the message to retrieve"
-            }
-        }
-    },
     retryable: true
 };
 

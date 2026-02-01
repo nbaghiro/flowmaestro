@@ -1,3 +1,4 @@
+import { toJSONSchema } from "../../../../core/utils/zod-to-json-schema";
 import { CalendlyClient } from "../client/CalendlyClient";
 import { executeCancelEvent } from "../operations/cancelEvent";
 import { executeGetAvailability } from "../operations/getAvailability";
@@ -22,7 +23,7 @@ export class CalendlyMCPAdapter {
         return Array.from(this.operations.values()).map((op) => ({
             name: `calendly_${op.id}`,
             description: op.description,
-            inputSchema: op.inputSchemaJSON,
+            inputSchema: toJSONSchema(op.inputSchema),
             executeRef: op.id
         }));
     }

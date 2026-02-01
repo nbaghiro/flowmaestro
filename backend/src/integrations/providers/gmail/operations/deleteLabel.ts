@@ -20,17 +20,7 @@ export const deleteLabelOperation: OperationDefinition = {
     description: "Delete a custom Gmail label (system labels like INBOX, SENT cannot be deleted)",
     category: "labels",
     retryable: true,
-    inputSchema: deleteLabelSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            labelId: {
-                type: "string",
-                description: "The ID of the label to delete"
-            }
-        },
-        required: ["labelId"]
-    }
+    inputSchema: deleteLabelSchema
 };
 
 /**

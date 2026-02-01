@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { TableauClient } from "../client/TableauClient";
 import { TableauPageSizeSchema, TableauPageNumberSchema } from "./schemas";
 import type { TableauSitesResponse } from "./types";
@@ -24,7 +23,6 @@ export const listSitesOperation: OperationDefinition = {
     description: "Get all sites the user has access to",
     category: "sites",
     inputSchema: listSitesSchema,
-    inputSchemaJSON: toJSONSchema(listSitesSchema),
     retryable: true,
     timeout: 30000
 };

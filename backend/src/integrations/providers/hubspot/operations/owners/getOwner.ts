@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import type { HubspotOwner } from "./listOwners";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { HubspotClient } from "../../client/HubspotClient";
@@ -22,7 +21,6 @@ export const getOwnerOperation: OperationDefinition = {
     description: "Retrieve an owner by ID from HubSpot CRM",
     category: "crm",
     inputSchema: getOwnerSchema,
-    inputSchemaJSON: toJSONSchema(getOwnerSchema),
     retryable: true,
     timeout: 10000
 };

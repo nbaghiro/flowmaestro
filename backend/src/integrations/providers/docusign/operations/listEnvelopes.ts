@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { DocuSignClient } from "../client/DocuSignClient";
 import type { DocuSignListEnvelopesResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -38,7 +37,6 @@ export const listEnvelopesOperation: OperationDefinition = (() => {
             description: "List envelopes in your DocuSign account with optional filters",
             category: "envelopes",
             inputSchema: listEnvelopesSchema,
-            inputSchemaJSON: toJSONSchema(listEnvelopesSchema),
             retryable: true,
             timeout: 30000
         };

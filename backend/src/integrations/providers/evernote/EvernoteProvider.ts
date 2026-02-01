@@ -1,5 +1,6 @@
 import type { OAuth1TokenData } from "@flowmaestro/shared";
 import { config as appConfig, getOAuthRedirectUri } from "../../../core/config";
+import { toJSONSchema } from "../../../core/utils/zod-to-json-schema";
 import { BaseProvider } from "../../core/BaseProvider";
 import { EvernoteClient } from "./client/EvernoteClient";
 import {
@@ -163,7 +164,7 @@ export class EvernoteProvider extends BaseProvider {
         return this.getOperations().map((op) => ({
             name: `evernote_${op.id}`,
             description: op.description,
-            inputSchema: op.inputSchemaJSON
+            inputSchema: toJSONSchema(op.inputSchema)
         }));
     }
 

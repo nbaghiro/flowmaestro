@@ -31,23 +31,7 @@ export const quickAddOperation: OperationDefinition = {
         "Create an event from natural language text (e.g., 'Dinner with John tomorrow at 7pm')",
     category: "events",
     retryable: true,
-    inputSchema: quickAddSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            calendarId: {
-                type: "string",
-                description: "Calendar identifier (use 'primary' for main calendar)",
-                default: "primary"
-            },
-            text: {
-                type: "string",
-                description:
-                    "Natural language text describing the event (e.g., 'Dinner with John tomorrow at 7pm')"
-            }
-        },
-        required: ["text"]
-    }
+    inputSchema: quickAddSchema
 };
 
 /**

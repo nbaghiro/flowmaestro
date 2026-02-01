@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { WhatsAppClient } from "../client/WhatsAppClient";
 import type { WhatsAppBusinessProfileResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -28,7 +27,6 @@ export const getBusinessProfileOperation: OperationDefinition = (() => {
                 "Retrieve the business profile information for a WhatsApp Business phone number",
             category: "account",
             inputSchema: getBusinessProfileSchema,
-            inputSchemaJSON: toJSONSchema(getBusinessProfileSchema),
             retryable: true,
             timeout: 10000
         };

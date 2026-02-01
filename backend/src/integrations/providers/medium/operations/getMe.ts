@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { MediumClient } from "../client/MediumClient";
 
@@ -14,7 +13,6 @@ export const getMeOperation: OperationDefinition = {
         "Get the authenticated user's details including ID, username, and profile information",
     category: "user",
     inputSchema: getMeSchema,
-    inputSchemaJSON: toJSONSchema(getMeSchema),
     retryable: true,
     timeout: 30000
 };

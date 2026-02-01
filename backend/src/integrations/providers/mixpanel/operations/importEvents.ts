@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { MixpanelClient } from "../client/MixpanelClient";
 import type { MixpanelImportResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -38,7 +37,6 @@ export const importEventsOperation: OperationDefinition = {
     category: "events",
     actionType: "write",
     inputSchema: importEventsSchema,
-    inputSchemaJSON: toJSONSchema(importEventsSchema),
     retryable: true,
     timeout: 30000
 };

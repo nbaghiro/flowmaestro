@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { createServiceLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { RedditClient } from "../client/RedditClient";
 import { SubredditNameSchema, PostTitleSchema, PostTextSchema, LinkUrlSchema } from "../schemas";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -51,7 +50,6 @@ export const submitTextPostOperation: OperationDefinition = (() => {
             description: "Submit a new text (self) post to a subreddit.",
             category: "posts",
             inputSchema: submitTextPostSchema,
-            inputSchemaJSON: toJSONSchema(submitTextPostSchema),
             retryable: false, // Don't retry to avoid duplicate posts
             timeout: 15000
         };
@@ -74,7 +72,6 @@ export const submitLinkPostOperation: OperationDefinition = (() => {
             description: "Submit a new link post to a subreddit.",
             category: "posts",
             inputSchema: submitLinkPostSchema,
-            inputSchemaJSON: toJSONSchema(submitLinkPostSchema),
             retryable: false, // Don't retry to avoid duplicate posts
             timeout: 15000
         };

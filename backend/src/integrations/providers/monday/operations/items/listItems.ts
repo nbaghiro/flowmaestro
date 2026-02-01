@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { LIST_ITEMS, LIST_ITEMS_IN_GROUP } from "../../graphql/queries";
 import { listItemsInputSchema, type ListItemsInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
@@ -10,7 +9,6 @@ export const listItemsOperation: OperationDefinition = {
     description: "List items from a Monday.com board with optional group filtering and pagination.",
     category: "items",
     inputSchema: listItemsInputSchema,
-    inputSchemaJSON: toJSONSchema(listItemsInputSchema),
     retryable: true,
     timeout: 30000
 };

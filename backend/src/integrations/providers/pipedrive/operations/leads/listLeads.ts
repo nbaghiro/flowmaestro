@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { PipedriveClient } from "../../client/PipedriveClient";
 import type { PipedriveLead } from "../types";
@@ -43,7 +42,6 @@ export const listLeadsOperation: OperationDefinition = {
     description: "Get all leads from the Leads Inbox with optional filtering",
     category: "leads",
     inputSchema: listLeadsSchema,
-    inputSchemaJSON: toJSONSchema(listLeadsSchema),
     retryable: true,
     timeout: 15000
 };

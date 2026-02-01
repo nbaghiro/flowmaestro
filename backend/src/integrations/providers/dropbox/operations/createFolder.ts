@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { DropboxClient } from "../client/DropboxClient";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 
@@ -24,7 +23,6 @@ export const createFolderOperation: OperationDefinition = {
     description: "Create a new folder in Dropbox. Returns the created folder metadata.",
     category: "folders",
     inputSchema: createFolderSchema,
-    inputSchemaJSON: toJSONSchema(createFolderSchema),
     retryable: true,
     timeout: 10000
 };

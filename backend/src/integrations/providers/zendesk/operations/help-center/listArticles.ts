@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { ZendeskClient } from "../../client/ZendeskClient";
 import type { ArticlesResponse } from "../../types";
@@ -31,7 +30,6 @@ export const listArticlesOperation: OperationDefinition = {
     description: "List Help Center articles with optional filtering by section or category",
     category: "help-center",
     inputSchema: listArticlesSchema,
-    inputSchemaJSON: toJSONSchema(listArticlesSchema),
     retryable: true,
     timeout: 30000
 };

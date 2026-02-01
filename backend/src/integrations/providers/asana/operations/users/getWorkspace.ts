@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { getWorkspaceInputSchema, type GetWorkspaceInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { AsanaClient } from "../../client/AsanaClient";
@@ -9,7 +8,6 @@ export const getWorkspaceOperation: OperationDefinition = {
     description: "Retrieve a specific workspace from Asana by its GID.",
     category: "users",
     inputSchema: getWorkspaceInputSchema,
-    inputSchemaJSON: toJSONSchema(getWorkspaceInputSchema),
     retryable: true,
     timeout: 10000
 };

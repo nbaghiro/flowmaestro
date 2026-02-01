@@ -2298,3 +2298,10 @@ export function getAvailableProviders(): Provider[] {
 export function getAllCategories(): string[] {
     return [...new Set(ALL_PROVIDERS.map((p) => p.category))].sort();
 }
+
+/**
+ * Check if a provider supports OAuth authentication (OAuth 1.0a or OAuth 2.0).
+ */
+export function supportsOAuth(methods: string[]): boolean {
+    return methods.includes("oauth2") || methods.includes("oauth1");
+}

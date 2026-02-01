@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { InstagramClient } from "../client/InstagramClient";
 import type { InstagramSendResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -34,7 +33,6 @@ export const sendMediaMessageOperation: OperationDefinition = (() => {
             description: "Send an image, video, or audio message to an Instagram user",
             category: "messaging",
             inputSchema: sendMediaMessageSchema,
-            inputSchemaJSON: toJSONSchema(sendMediaMessageSchema),
             retryable: true,
             timeout: 30000
         };

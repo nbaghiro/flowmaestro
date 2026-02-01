@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { BoxClient } from "../client/BoxClient";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 
@@ -16,7 +15,6 @@ export const createFolderOperation: OperationDefinition = {
     description: "Create a new folder in Box.",
     category: "folders",
     inputSchema: createFolderSchema,
-    inputSchemaJSON: toJSONSchema(createFolderSchema),
     retryable: false, // Don't retry to avoid duplicate folders
     timeout: 30000
 };

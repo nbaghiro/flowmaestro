@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { TrelloClient } from "../../client/TrelloClient";
 import { TrelloCardIdSchema } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
@@ -23,7 +22,6 @@ export const getCardOperation: OperationDefinition = {
     description: "Get detailed information about a specific Trello card",
     category: "cards",
     inputSchema: getCardSchema,
-    inputSchemaJSON: toJSONSchema(getCardSchema),
     retryable: true,
     timeout: 10000
 };

@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { VercelDeploymentOutput } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { VercelClient } from "../client/VercelClient";
@@ -17,7 +16,6 @@ export const cancelDeploymentOperation: OperationDefinition = {
     category: "deployments",
     actionType: "write",
     inputSchema: cancelDeploymentSchema,
-    inputSchemaJSON: toJSONSchema(cancelDeploymentSchema),
     retryable: false,
     timeout: 30000
 };

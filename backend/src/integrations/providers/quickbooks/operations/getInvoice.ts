@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { QuickBooksInvoiceOutput } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { QuickBooksClient } from "../client/QuickBooksClient";
@@ -16,7 +15,6 @@ export const getInvoiceOperation: OperationDefinition = {
     description: "Get a specific invoice by ID from QuickBooks",
     category: "invoices",
     inputSchema: getInvoiceSchema,
-    inputSchemaJSON: toJSONSchema(getInvoiceSchema),
     retryable: true,
     timeout: 30000
 };

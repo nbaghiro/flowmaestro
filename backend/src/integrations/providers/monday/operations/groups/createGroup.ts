@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { CREATE_GROUP } from "../../graphql/mutations";
 import { createGroupInputSchema, type CreateGroupInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
@@ -10,7 +9,6 @@ export const createGroupOperation: OperationDefinition = {
     description: "Create a new group on a Monday.com board.",
     category: "groups",
     inputSchema: createGroupInputSchema,
-    inputSchemaJSON: toJSONSchema(createGroupInputSchema),
     retryable: true,
     timeout: 10000
 };

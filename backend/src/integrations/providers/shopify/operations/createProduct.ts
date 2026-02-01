@@ -1,5 +1,4 @@
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { ShopifyClient } from "../client/ShopifyClient";
 import { CreateProductSchema, type CreateProductParams } from "../schemas";
 import type { ShopifyProductResponse } from "./types";
@@ -18,7 +17,6 @@ export const createProductOperation: OperationDefinition = (() => {
             description: "Create a new product with title, description, variants, and images",
             category: "products",
             inputSchema: CreateProductSchema,
-            inputSchemaJSON: toJSONSchema(CreateProductSchema),
             retryable: false, // Creation should not be retried to avoid duplicates
             timeout: 30000
         };

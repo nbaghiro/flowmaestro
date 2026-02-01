@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { searchUsersInputSchema, type SearchUsersInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { JiraClient } from "../../client/JiraClient";
@@ -9,7 +8,6 @@ export const searchUsersOperation: OperationDefinition = {
     description: "Search for users by query or get a specific user by accountId.",
     category: "users",
     inputSchema: searchUsersInputSchema,
-    inputSchemaJSON: toJSONSchema(searchUsersInputSchema),
     retryable: true,
     timeout: 10000
 };

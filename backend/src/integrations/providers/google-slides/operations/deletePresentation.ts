@@ -20,17 +20,7 @@ export const deletePresentationOperation: OperationDefinition = {
     description: "Delete a Google Slides presentation (moves to trash)",
     category: "presentations",
     retryable: false,
-    inputSchema: deletePresentationSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            presentationId: {
-                type: "string",
-                description: "The ID of the presentation to delete"
-            }
-        },
-        required: ["presentationId"]
-    }
+    inputSchema: deletePresentationSchema
 };
 
 /**

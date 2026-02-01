@@ -3,7 +3,6 @@
  */
 
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { IntercomClient } from "../client/IntercomClient";
 import type { IntercomConversation, IntercomListResponse } from "../types";
@@ -31,7 +30,6 @@ export const listConversationsOperation: OperationDefinition = {
     description: "List all conversations",
     category: "messaging",
     inputSchema: listConversationsSchema,
-    inputSchemaJSON: toJSONSchema(listConversationsSchema),
     retryable: true,
     timeout: 30000
 };
@@ -81,7 +79,6 @@ export const getConversationOperation: OperationDefinition = {
     description: "Retrieve a specific conversation with all parts",
     category: "messaging",
     inputSchema: getConversationSchema,
-    inputSchemaJSON: toJSONSchema(getConversationSchema),
     retryable: true,
     timeout: 10000
 };
@@ -132,7 +129,6 @@ export const replyToConversationOperation: OperationDefinition = {
     description: "Add a reply to an existing conversation",
     category: "messaging",
     inputSchema: replyToConversationSchema,
-    inputSchemaJSON: toJSONSchema(replyToConversationSchema),
     retryable: false,
     timeout: 10000
 };
@@ -189,7 +185,6 @@ export const closeConversationOperation: OperationDefinition = {
     description: "Close/resolve a conversation",
     category: "messaging",
     inputSchema: closeConversationSchema,
-    inputSchemaJSON: toJSONSchema(closeConversationSchema),
     retryable: false,
     timeout: 10000
 };
@@ -248,7 +243,6 @@ export const assignConversationOperation: OperationDefinition = {
     description: "Assign conversation to an admin or team",
     category: "messaging",
     inputSchema: assignConversationSchema,
-    inputSchemaJSON: toJSONSchema(assignConversationSchema),
     retryable: false,
     timeout: 10000
 };

@@ -45,49 +45,7 @@ export const updateSheetPropertiesOperation: OperationDefinition = {
     description: "Update properties of a sheet (title, color, visibility, etc.)",
     category: "sheets",
     retryable: true,
-    inputSchema: updateSheetPropertiesSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            spreadsheetId: {
-                type: "string",
-                description: "Spreadsheet ID"
-            },
-            sheetId: {
-                type: "number",
-                description: "Sheet ID (gid)"
-            },
-            properties: {
-                type: "object",
-                properties: {
-                    title: { type: "string", description: "Sheet title" },
-                    index: { type: "number", description: "Sheet position index" },
-                    hidden: { type: "boolean", description: "Whether sheet is hidden" },
-                    tabColor: {
-                        type: "object",
-                        properties: {
-                            red: { type: "number" },
-                            green: { type: "number" },
-                            blue: { type: "number" },
-                            alpha: { type: "number" }
-                        },
-                        description: "Tab color (RGB values 0-1)"
-                    },
-                    gridProperties: {
-                        type: "object",
-                        properties: {
-                            rowCount: { type: "number" },
-                            columnCount: { type: "number" },
-                            frozenRowCount: { type: "number" },
-                            frozenColumnCount: { type: "number" }
-                        }
-                    }
-                },
-                description: "Properties to update"
-            }
-        },
-        required: ["spreadsheetId", "sheetId", "properties"]
-    }
+    inputSchema: updateSheetPropertiesSchema
 };
 
 /**

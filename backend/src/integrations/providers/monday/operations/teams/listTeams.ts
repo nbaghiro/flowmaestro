@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { LIST_TEAMS } from "../../graphql/queries";
 import { listTeamsInputSchema, type ListTeamsInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
@@ -10,7 +9,6 @@ export const listTeamsOperation: OperationDefinition = {
     description: "List all teams in the Monday.com account.",
     category: "teams",
     inputSchema: listTeamsInputSchema,
-    inputSchemaJSON: toJSONSchema(listTeamsInputSchema),
     retryable: true,
     timeout: 15000
 };

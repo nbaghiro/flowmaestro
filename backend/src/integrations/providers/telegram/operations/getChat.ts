@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { TelegramClient } from "../client/TelegramClient";
 import { TelegramChatIdSchema } from "../schemas";
 import type { TelegramGetChatResponse } from "./types";
@@ -28,7 +27,6 @@ export const getChatOperation: OperationDefinition = (() => {
             description: "Get up-to-date information about a chat",
             category: "data",
             inputSchema: getChatSchema,
-            inputSchemaJSON: toJSONSchema(getChatSchema),
             retryable: true,
             timeout: 10000
         };

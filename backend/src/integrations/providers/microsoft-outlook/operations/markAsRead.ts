@@ -15,20 +15,6 @@ export const markAsReadOperation: OperationDefinition = {
     description: "Mark a message as read or unread",
     category: "email",
     inputSchema: markAsReadSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["messageId", "isRead"],
-        properties: {
-            messageId: {
-                type: "string",
-                description: "ID of the message"
-            },
-            isRead: {
-                type: "boolean",
-                description: "Read status to set"
-            }
-        }
-    },
     retryable: true
 };
 

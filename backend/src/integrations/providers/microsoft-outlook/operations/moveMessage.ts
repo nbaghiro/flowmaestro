@@ -15,20 +15,6 @@ export const moveMessageOperation: OperationDefinition = {
     description: "Move a message to another folder",
     category: "email",
     inputSchema: moveMessageSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["messageId", "destinationFolderId"],
-        properties: {
-            messageId: {
-                type: "string",
-                description: "ID of the message to move"
-            },
-            destinationFolderId: {
-                type: "string",
-                description: "ID of the destination folder"
-            }
-        }
-    },
     retryable: true
 };
 

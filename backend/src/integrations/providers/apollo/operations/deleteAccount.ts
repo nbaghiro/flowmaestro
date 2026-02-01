@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../core/schema-utils";
 import { deleteAccountInputSchema, type DeleteAccountInput } from "../schemas";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { ApolloClient } from "../client/ApolloClient";
@@ -9,7 +8,6 @@ export const deleteAccountOperation: OperationDefinition = {
     description: "Delete an account (organization) from Apollo",
     category: "accounts",
     inputSchema: deleteAccountInputSchema,
-    inputSchemaJSON: toJSONSchema(deleteAccountInputSchema),
     retryable: false,
     timeout: 30000
 };

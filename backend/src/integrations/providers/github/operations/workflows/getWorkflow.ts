@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { GitHubClient } from "../../client/GitHubClient";
 import { GitHubOwnerSchema, GitHubRepoNameSchema, GitHubWorkflowIdSchema } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
@@ -25,7 +24,6 @@ export const getWorkflowOperation: OperationDefinition = {
     description: "Get details about a specific workflow",
     category: "workflows",
     inputSchema: getWorkflowSchema,
-    inputSchemaJSON: toJSONSchema(getWorkflowSchema),
     retryable: true,
     timeout: 15000
 };

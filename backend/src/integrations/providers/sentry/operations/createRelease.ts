@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { SentryClient } from "../client/SentryClient";
 
@@ -20,7 +19,6 @@ export const createReleaseOperation: OperationDefinition = {
     description: "Create a new release in Sentry",
     category: "releases",
     inputSchema: createReleaseSchema,
-    inputSchemaJSON: toJSONSchema(createReleaseSchema),
     retryable: false,
     timeout: 30000
 };

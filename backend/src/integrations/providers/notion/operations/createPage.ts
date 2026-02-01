@@ -24,34 +24,7 @@ export const createPageOperation: OperationDefinition = {
     description: "Create a new page in Notion",
     category: "write",
     retryable: true,
-    inputSchema: createPageSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            parent_id: {
-                type: "string",
-                description: "Parent page or database ID"
-            },
-            parent_type: {
-                type: "string",
-                enum: ["page_id", "database_id"],
-                description: "Type of parent (page or database)"
-            },
-            title: {
-                type: "string",
-                description: "Page title"
-            },
-            properties: {
-                type: "object",
-                description: "Page properties (for database pages)"
-            },
-            children: {
-                type: "array",
-                description: "Page content blocks"
-            }
-        },
-        required: ["parent_id", "parent_type", "title"]
-    }
+    inputSchema: createPageSchema
 };
 
 /**

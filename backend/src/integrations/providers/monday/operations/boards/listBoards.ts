@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { LIST_BOARDS } from "../../graphql/queries";
 import { listBoardsInputSchema, type ListBoardsInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
@@ -10,7 +9,6 @@ export const listBoardsOperation: OperationDefinition = {
     description: "List boards in Monday.com with optional filtering by workspace, type, and state.",
     category: "boards",
     inputSchema: listBoardsInputSchema,
-    inputSchemaJSON: toJSONSchema(listBoardsInputSchema),
     retryable: true,
     timeout: 30000
 };

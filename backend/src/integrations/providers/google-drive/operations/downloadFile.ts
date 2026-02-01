@@ -21,17 +21,7 @@ export const downloadFileOperation: OperationDefinition = {
         "Download file content from Google Drive. Note: Use exportDocument for Google Workspace files (Docs, Sheets, Slides)",
     category: "files",
     retryable: true,
-    inputSchema: downloadFileSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            fileId: {
-                type: "string",
-                description: "File ID to download"
-            }
-        },
-        required: ["fileId"]
-    }
+    inputSchema: downloadFileSchema
 };
 
 /**

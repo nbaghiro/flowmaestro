@@ -1,6 +1,6 @@
 import { Search } from "lucide-react";
 import { useEffect, useState } from "react";
-import { ALL_PROVIDERS, type Provider } from "@flowmaestro/shared";
+import { ALL_PROVIDERS, supportsOAuth, type Provider } from "@flowmaestro/shared";
 import { Input } from "../components/common/Input";
 import { PageHeader } from "../components/common/PageHeader";
 import { Select } from "../components/common/Select";
@@ -309,7 +309,7 @@ export function Connections() {
                         setIsAddDialogOpen(false);
                         setSelectedProvider(null);
                     }}
-                    supportsOAuth={selectedProvider.methods.includes("oauth2")}
+                    supportsOAuth={supportsOAuth(selectedProvider.methods)}
                     supportsApiKey={selectedProvider.methods.includes("api_key")}
                     oauthSettings={selectedProvider.oauthSettings}
                 />

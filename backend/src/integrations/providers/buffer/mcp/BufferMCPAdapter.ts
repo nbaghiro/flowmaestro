@@ -1,3 +1,4 @@
+import { toJSONSchema } from "../../../../core/utils/zod-to-json-schema";
 import { BufferClient } from "../client/BufferClient";
 import { executeCreateUpdate } from "../operations/createUpdate";
 import { executeDeleteUpdate } from "../operations/deleteUpdate";
@@ -20,7 +21,7 @@ export class BufferMCPAdapter {
         return Array.from(this.operations.values()).map((op) => ({
             name: `buffer_${op.id}`,
             description: op.description,
-            inputSchema: op.inputSchemaJSON,
+            inputSchema: toJSONSchema(op.inputSchema),
             executeRef: op.id
         }));
     }

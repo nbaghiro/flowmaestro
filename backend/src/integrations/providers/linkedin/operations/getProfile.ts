@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { LinkedInClient } from "../client/LinkedInClient";
 import type { LinkedInUserProfile } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -26,7 +25,6 @@ export const getProfileOperation: OperationDefinition = (() => {
                 "Get the authenticated user's LinkedIn profile. Returns the user's person URN needed for creating posts.",
             category: "profile",
             inputSchema: getProfileSchema,
-            inputSchemaJSON: toJSONSchema(getProfileSchema),
             retryable: true,
             timeout: 15000
         };

@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { GitLabClient } from "../../client/GitLabClient";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { GitLabProject } from "../types";
@@ -24,7 +23,6 @@ export const getProjectOperation: OperationDefinition = {
     description: "Get details of a specific GitLab project",
     category: "projects",
     inputSchema: getProjectSchema,
-    inputSchemaJSON: toJSONSchema(getProjectSchema),
     retryable: true,
     timeout: 30000
 };

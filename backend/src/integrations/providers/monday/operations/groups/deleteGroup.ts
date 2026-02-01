@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { DELETE_GROUP } from "../../graphql/mutations";
 import { deleteGroupInputSchema, type DeleteGroupInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
@@ -10,7 +9,6 @@ export const deleteGroupOperation: OperationDefinition = {
     description: "Delete a group from a Monday.com board. Items in the group will be deleted.",
     category: "groups",
     inputSchema: deleteGroupInputSchema,
-    inputSchemaJSON: toJSONSchema(deleteGroupInputSchema),
     retryable: false,
     timeout: 10000
 };

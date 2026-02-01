@@ -16,7 +16,7 @@ import { BaseNodeHandler, type NodeHandlerInput, type NodeHandlerOutput } from "
 const connectionRepository = new ConnectionRepository();
 const logger = createActivityLogger({ nodeType: "Action" });
 
-// Initialize execution router
+// Initialize execution router (handles sandbox routing internally)
 const executionRouter = new ExecutionRouter(providerRegistry);
 
 // ============================================================================

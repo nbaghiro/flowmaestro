@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { Db } from "mongodb";
 
@@ -23,7 +22,6 @@ export const deleteManyOperation: OperationDefinition = {
     description: "Delete all documents matching the filter",
     category: "database",
     inputSchema: deleteManySchema,
-    inputSchemaJSON: toJSONSchema(deleteManySchema),
     retryable: false,
     timeout: 60000
 };

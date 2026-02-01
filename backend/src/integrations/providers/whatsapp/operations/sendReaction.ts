@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { WhatsAppClient } from "../client/WhatsAppClient";
 import type { WhatsAppSendResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -30,7 +29,6 @@ export const sendReactionOperation: OperationDefinition = (() => {
             description: "React to a message with an emoji",
             category: "messaging",
             inputSchema: sendReactionSchema,
-            inputSchemaJSON: toJSONSchema(sendReactionSchema),
             retryable: true,
             timeout: 10000
         };

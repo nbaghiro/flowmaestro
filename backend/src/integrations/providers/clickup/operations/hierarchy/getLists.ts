@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../../core/logging";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { ClickUpClient } from "../../client/ClickUpClient";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 
@@ -29,7 +28,6 @@ export const getListsOperation: OperationDefinition = (() => {
             category: "hierarchy",
             actionType: "read",
             inputSchema: getListsSchema,
-            inputSchemaJSON: toJSONSchema(getListsSchema),
             retryable: true,
             timeout: 15000
         };

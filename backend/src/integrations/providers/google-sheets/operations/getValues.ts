@@ -26,26 +26,7 @@ export const getValuesOperation: OperationDefinition = {
     description: "Get values from a range in a spreadsheet",
     category: "values",
     retryable: true,
-    inputSchema: getValuesSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            spreadsheetId: {
-                type: "string",
-                description: "Spreadsheet ID"
-            },
-            range: {
-                type: "string",
-                description: "A1 notation range (e.g., 'Sheet1!A1:B10' or 'Sheet1')"
-            },
-            valueRenderOption: {
-                type: "string",
-                enum: ["FORMATTED_VALUE", "UNFORMATTED_VALUE", "FORMULA"],
-                description: "How values should be represented (default: FORMATTED_VALUE)"
-            }
-        },
-        required: ["spreadsheetId", "range"]
-    }
+    inputSchema: getValuesSchema
 };
 
 /**

@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { MOVE_ITEM_TO_GROUP } from "../../graphql/mutations";
 import { moveItemToGroupInputSchema, type MoveItemToGroupInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
@@ -10,7 +9,6 @@ export const moveItemToGroupOperation: OperationDefinition = {
     description: "Move an item to a different group within the same board.",
     category: "items",
     inputSchema: moveItemToGroupInputSchema,
-    inputSchemaJSON: toJSONSchema(moveItemToGroupInputSchema),
     retryable: true,
     timeout: 10000
 };

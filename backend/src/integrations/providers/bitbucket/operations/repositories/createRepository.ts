@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { BitbucketClient } from "../../client/BitbucketClient";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { BitbucketRepository } from "../types";
@@ -36,7 +35,6 @@ export const createRepositoryOperation: OperationDefinition = {
     category: "repositories",
     actionType: "write",
     inputSchema: createRepositorySchema,
-    inputSchemaJSON: toJSONSchema(createRepositorySchema),
     retryable: false,
     timeout: 30000
 };

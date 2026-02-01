@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { SurveyMonkeyClient } from "../client/SurveyMonkeyClient";
 import { GetSurveyDetailsSchema } from "../schemas";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -16,7 +15,6 @@ export const getSurveyDetailsOperation: OperationDefinition = {
         "Get full survey details including all pages and questions. Returns the complete survey structure.",
     category: "surveys",
     inputSchema: getSurveyDetailsSchema,
-    inputSchemaJSON: toJSONSchema(getSurveyDetailsSchema),
     retryable: true,
     timeout: 60000 // Survey details can be large
 };

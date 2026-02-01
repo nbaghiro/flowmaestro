@@ -17,29 +17,6 @@ export const listMessagesOperation: OperationDefinition = {
     description: "List email messages in a mail folder",
     category: "email",
     inputSchema: listMessagesSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            folderId: {
-                type: "string",
-                description: "Folder ID (defaults to Inbox)"
-            },
-            top: {
-                type: "number",
-                minimum: 1,
-                maximum: 50,
-                description: "Number of messages to return (max 50)"
-            },
-            filter: {
-                type: "string",
-                description: "OData filter expression (e.g., 'isRead eq false')"
-            },
-            search: {
-                type: "string",
-                description: "Search query to filter messages"
-            }
-        }
-    },
     retryable: true
 };
 

@@ -21,21 +21,7 @@ export const moveToFolderOperation: OperationDefinition = {
     description: "Move a Google Docs document to a specific Google Drive folder",
     category: "documents",
     retryable: true,
-    inputSchema: moveToFolderSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            documentId: {
-                type: "string",
-                description: "The ID of the document to move"
-            },
-            folderId: {
-                type: "string",
-                description: "The ID of the destination Google Drive folder"
-            }
-        },
-        required: ["documentId", "folderId"]
-    }
+    inputSchema: moveToFolderSchema
 };
 
 /**

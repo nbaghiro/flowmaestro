@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { HubspotClient } from "../../client/HubspotClient";
 import type { HubspotDeal, HubspotBatchResponse } from "../types";
@@ -26,7 +25,6 @@ export const batchCreateDealsOperation: OperationDefinition = {
     description: "Create multiple deals at once (max 100)",
     category: "crm",
     inputSchema: batchCreateDealsSchema,
-    inputSchemaJSON: toJSONSchema(batchCreateDealsSchema),
     retryable: true,
     timeout: 10000
 };
@@ -80,7 +78,6 @@ export const batchUpdateDealsOperation: OperationDefinition = {
     description: "Update multiple deals at once (max 100)",
     category: "crm",
     inputSchema: batchUpdateDealsSchema,
-    inputSchemaJSON: toJSONSchema(batchUpdateDealsSchema),
     retryable: true,
     timeout: 10000
 };
@@ -134,7 +131,6 @@ export const batchReadDealsOperation: OperationDefinition = {
     description: "Read multiple deals by IDs (max 100)",
     category: "crm",
     inputSchema: batchReadDealsSchema,
-    inputSchemaJSON: toJSONSchema(batchReadDealsSchema),
     retryable: true,
     timeout: 10000
 };
@@ -192,7 +188,6 @@ export const batchUpsertDealsOperation: OperationDefinition = {
     description: "Create or update multiple deals at once (max 100)",
     category: "crm",
     inputSchema: batchUpsertDealsSchema,
-    inputSchemaJSON: toJSONSchema(batchUpsertDealsSchema),
     retryable: true,
     timeout: 10000
 };

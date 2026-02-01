@@ -1,5 +1,4 @@
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { ShopifyClient } from "../client/ShopifyClient";
 import { ListOrdersSchema, type ListOrdersParams } from "../schemas";
 import type { ShopifyOrdersResponse } from "./types";
@@ -19,7 +18,6 @@ export const listOrdersOperation: OperationDefinition = (() => {
                 "Retrieve a list of orders with optional filters for status, dates, and pagination",
             category: "orders",
             inputSchema: ListOrdersSchema,
-            inputSchemaJSON: toJSONSchema(ListOrdersSchema),
             retryable: true,
             timeout: 30000
         };

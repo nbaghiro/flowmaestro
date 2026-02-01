@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { LinkedInClient } from "../client/LinkedInClient";
 import { PostIdSchema } from "../schemas";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -28,7 +27,6 @@ export const deletePostOperation: OperationDefinition = (() => {
                 "Delete a LinkedIn post by its URN (urn:li:share:xxx or urn:li:ugcPost:xxx).",
             category: "posts",
             inputSchema: deletePostSchema,
-            inputSchemaJSON: toJSONSchema(deletePostSchema),
             retryable: true,
             timeout: 15000
         };

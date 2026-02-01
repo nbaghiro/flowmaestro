@@ -37,38 +37,7 @@ export const shareFileOperation: OperationDefinition = {
         "Share a file or folder with a user, group, domain, or make it public with specific permissions",
     category: "sharing",
     retryable: true,
-    inputSchema: shareFileSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            fileId: {
-                type: "string",
-                description: "File or folder ID to share"
-            },
-            type: {
-                type: "string",
-                enum: ["user", "group", "domain", "anyone"],
-                description:
-                    "Type of permission: 'user' (specific user), 'group' (Google Group), 'domain' (everyone in domain), 'anyone' (public)"
-            },
-            role: {
-                type: "string",
-                enum: ["owner", "organizer", "fileOrganizer", "writer", "commenter", "reader"],
-                description:
-                    "Role: 'owner' (full control), 'writer' (edit), 'commenter' (comment only), 'reader' (view only)"
-            },
-            emailAddress: {
-                type: "string",
-                format: "email",
-                description: "Email address (required for 'user' and 'group' types)"
-            },
-            domain: {
-                type: "string",
-                description: "Domain name (required for 'domain' type)"
-            }
-        },
-        required: ["fileId", "type", "role"]
-    }
+    inputSchema: shareFileSchema
 };
 
 /**

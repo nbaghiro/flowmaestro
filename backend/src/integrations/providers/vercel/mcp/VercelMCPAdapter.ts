@@ -1,3 +1,4 @@
+import { toJSONSchema } from "../../../../core/utils/zod-to-json-schema";
 import {
     // Project Operations
     executeListProjects,
@@ -39,7 +40,7 @@ export class VercelMCPAdapter {
             tools.push({
                 name: `vercel_${id}`,
                 description: operation.description,
-                inputSchema: operation.inputSchemaJSON
+                inputSchema: toJSONSchema(operation.inputSchema)
             });
         }
 

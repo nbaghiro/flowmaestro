@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { WorkdayClient } from "../client/WorkdayClient";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 
@@ -37,7 +36,6 @@ export const requestTimeOffOperation: OperationDefinition = (() => {
             category: "hr",
             actionType: "write",
             inputSchema: requestTimeOffSchema,
-            inputSchemaJSON: toJSONSchema(requestTimeOffSchema),
             retryable: false,
             timeout: 15000
         };

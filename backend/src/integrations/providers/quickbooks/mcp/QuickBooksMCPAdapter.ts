@@ -1,3 +1,4 @@
+import { toJSONSchema } from "../../../../core/utils/zod-to-json-schema";
 import {
     // Customer Operations
     executeListCustomers,
@@ -35,7 +36,7 @@ export class QuickBooksMCPAdapter {
             tools.push({
                 name: `quickbooks_${id}`,
                 description: operation.description,
-                inputSchema: operation.inputSchemaJSON
+                inputSchema: toJSONSchema(operation.inputSchema)
             });
         }
 

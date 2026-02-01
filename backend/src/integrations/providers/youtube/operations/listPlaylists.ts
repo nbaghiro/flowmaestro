@@ -35,47 +35,7 @@ export const listPlaylistsOperation: OperationDefinition = {
     description: "List playlists by IDs, channel, or authenticated user",
     category: "playlists",
     retryable: true,
-    inputSchema: listPlaylistsSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            ids: {
-                type: "array",
-                items: { type: "string" },
-                description: "Playlist IDs to retrieve"
-            },
-            channelId: {
-                type: "string",
-                description: "Get playlists for a specific channel"
-            },
-            mine: {
-                type: "boolean",
-                description: "Get the authenticated user's playlists",
-                default: false
-            },
-            maxResults: {
-                type: "number",
-                description: "Maximum number of results",
-                minimum: 1,
-                maximum: 50,
-                default: 25
-            },
-            pageToken: {
-                type: "string",
-                description: "Token for pagination"
-            },
-            part: {
-                type: "array",
-                items: {
-                    type: "string",
-                    enum: ["snippet", "status", "contentDetails"]
-                },
-                description: "Playlist resource parts to include",
-                default: ["snippet", "status", "contentDetails"]
-            }
-        },
-        required: []
-    }
+    inputSchema: listPlaylistsSchema
 };
 
 /**

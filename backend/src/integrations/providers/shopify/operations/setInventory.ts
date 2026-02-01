@@ -1,5 +1,4 @@
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { ShopifyClient } from "../client/ShopifyClient";
 import { SetInventorySchema, type SetInventoryParams } from "../schemas";
 import type { ShopifyInventoryLevelResponse } from "./types";
@@ -18,7 +17,6 @@ export const setInventoryOperation: OperationDefinition = (() => {
             description: "Set inventory level to an absolute quantity value",
             category: "inventory",
             inputSchema: SetInventorySchema,
-            inputSchemaJSON: toJSONSchema(SetInventorySchema),
             retryable: true, // Setting is idempotent, safe to retry
             timeout: 15000
         };

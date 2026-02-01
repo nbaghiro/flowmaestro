@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { LookerClient } from "../client/LookerClient";
 import { LookerLookIdSchema, LookerFormatSchema, LookerLimitSchema } from "./schemas";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -24,7 +23,6 @@ export const runLookOperation: OperationDefinition = {
     description: "Execute a Look and return the query results",
     category: "looks",
     inputSchema: runLookSchema,
-    inputSchemaJSON: toJSONSchema(runLookSchema),
     retryable: true,
     timeout: 120000 // Queries can take a while
 };

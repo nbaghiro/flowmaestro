@@ -14,16 +14,6 @@ export const deleteEventOperation: OperationDefinition = {
     description: "Delete a calendar event",
     category: "calendar",
     inputSchema: deleteEventSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["eventId"],
-        properties: {
-            eventId: {
-                type: "string",
-                description: "ID of the event to delete"
-            }
-        }
-    },
     retryable: false // Delete should not auto-retry
 };
 

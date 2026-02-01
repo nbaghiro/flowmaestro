@@ -23,16 +23,6 @@ export const getPresentationOperation: OperationDefinition = {
     description: "Get metadata for a PowerPoint presentation",
     category: "presentations",
     inputSchema: getPresentationSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            itemId: {
-                type: "string",
-                description: "OneDrive item ID of the PowerPoint presentation"
-            },
-            filePath: { type: "string", description: "File path" }
-        }
-    },
     retryable: true
 };
 
@@ -89,16 +79,6 @@ export const downloadPresentationOperation: OperationDefinition = {
     description: "Download a PowerPoint presentation as base64 content",
     category: "presentations",
     inputSchema: downloadPresentationSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["itemId"],
-        properties: {
-            itemId: {
-                type: "string",
-                description: "OneDrive item ID of the PowerPoint presentation"
-            }
-        }
-    },
     retryable: true
 };
 
@@ -144,17 +124,6 @@ export const convertPresentationOperation: OperationDefinition = {
     description: "Convert a PowerPoint presentation to PDF format",
     category: "presentations",
     inputSchema: convertPresentationSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["itemId", "format"],
-        properties: {
-            itemId: {
-                type: "string",
-                description: "OneDrive item ID of the PowerPoint presentation"
-            },
-            format: { type: "string", enum: ["pdf"], description: "Target format (PDF)" }
-        }
-    },
     retryable: true
 };
 
@@ -207,16 +176,6 @@ export const uploadPresentationOperation: OperationDefinition = {
     description: "Upload a new PowerPoint presentation to OneDrive",
     category: "presentations",
     inputSchema: uploadPresentationSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["fileName", "content"],
-        properties: {
-            fileName: { type: "string", description: "Name of the file to create" },
-            content: { type: "string", description: "Presentation content (base64 encoded)" },
-            folderId: { type: "string", description: "Parent folder ID" },
-            conflictBehavior: { type: "string", enum: ["rename", "replace", "fail"] }
-        }
-    },
     retryable: true
 };
 
@@ -264,20 +223,6 @@ export const replacePresentationOperation: OperationDefinition = {
     description: "Replace the content of an existing PowerPoint presentation",
     category: "presentations",
     inputSchema: replacePresentationSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["itemId", "content"],
-        properties: {
-            itemId: {
-                type: "string",
-                description: "OneDrive item ID of the PowerPoint presentation"
-            },
-            content: {
-                type: "string",
-                description: "New presentation content (base64 encoded)"
-            }
-        }
-    },
     retryable: true
 };
 
@@ -320,14 +265,6 @@ export const searchPresentationsOperation: OperationDefinition = {
     description: "Search for PowerPoint presentations in OneDrive",
     category: "presentations",
     inputSchema: searchPresentationsSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["query"],
-        properties: {
-            query: { type: "string", description: "Search query" },
-            top: { type: "number", description: "Maximum number of results" }
-        }
-    },
     retryable: true
 };
 
@@ -374,18 +311,6 @@ export const copyPresentationOperation: OperationDefinition = {
     description: "Create a copy of a PowerPoint presentation",
     category: "presentations",
     inputSchema: copyPresentationSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["itemId", "newName"],
-        properties: {
-            itemId: {
-                type: "string",
-                description: "OneDrive item ID of the PowerPoint presentation"
-            },
-            newName: { type: "string", description: "Name for the copy" },
-            destinationFolderId: { type: "string", description: "Destination folder ID" }
-        }
-    },
     retryable: true
 };
 
@@ -435,16 +360,6 @@ export const deletePresentationOperation: OperationDefinition = {
     description: "Delete a PowerPoint presentation from OneDrive",
     category: "presentations",
     inputSchema: deletePresentationSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["itemId"],
-        properties: {
-            itemId: {
-                type: "string",
-                description: "OneDrive item ID of the PowerPoint presentation"
-            }
-        }
-    },
     retryable: false
 };
 
@@ -488,18 +403,6 @@ export const createSharingLinkOperation: OperationDefinition = {
     description: "Create a sharing link for a PowerPoint presentation",
     category: "sharing",
     inputSchema: createSharingLinkSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["itemId", "type"],
-        properties: {
-            itemId: {
-                type: "string",
-                description: "OneDrive item ID of the PowerPoint presentation"
-            },
-            type: { type: "string", enum: ["view", "edit", "embed"] },
-            scope: { type: "string", enum: ["anonymous", "organization"] }
-        }
-    },
     retryable: true
 };
 
@@ -541,16 +444,6 @@ export const getPreviewUrlOperation: OperationDefinition = {
     description: "Get an embeddable preview URL for a PowerPoint presentation",
     category: "presentations",
     inputSchema: getPreviewUrlSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["itemId"],
-        properties: {
-            itemId: {
-                type: "string",
-                description: "OneDrive item ID of the PowerPoint presentation"
-            }
-        }
-    },
     retryable: true
 };
 

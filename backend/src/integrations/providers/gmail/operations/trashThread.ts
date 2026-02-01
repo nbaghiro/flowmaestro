@@ -21,17 +21,7 @@ export const trashThreadOperation: OperationDefinition = {
         "Move an entire conversation thread to the trash folder (can be recovered within 30 days)",
     category: "threads",
     retryable: true,
-    inputSchema: trashThreadSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            threadId: {
-                type: "string",
-                description: "The ID of the thread to move to trash"
-            }
-        },
-        required: ["threadId"]
-    }
+    inputSchema: trashThreadSchema
 };
 
 /**

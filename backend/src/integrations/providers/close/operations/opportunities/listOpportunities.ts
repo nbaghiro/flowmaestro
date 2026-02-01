@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { CloseClient } from "../../client/CloseClient";
 import type { CloseListResponse, CloseOpportunity } from "../types";
@@ -27,7 +26,6 @@ export const listOpportunitiesOperation: OperationDefinition = {
     description: "Get all opportunities with optional filtering and pagination",
     category: "opportunities",
     inputSchema: listOpportunitiesSchema,
-    inputSchemaJSON: toJSONSchema(listOpportunitiesSchema),
     retryable: true,
     timeout: 15000
 };

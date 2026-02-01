@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { listTasksInputSchema, type ListTasksInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { AsanaClient } from "../../client/AsanaClient";
@@ -10,7 +9,6 @@ export const listTasksOperation: OperationDefinition = {
         "List tasks from a project, section, or by assignee. At least one filter (project, section, or assignee+workspace) is required.",
     category: "tasks",
     inputSchema: listTasksInputSchema,
-    inputSchemaJSON: toJSONSchema(listTasksInputSchema),
     retryable: true,
     timeout: 30000
 };

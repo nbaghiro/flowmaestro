@@ -22,51 +22,6 @@ export const createEventOperation: OperationDefinition = {
     description: "Create a new calendar event",
     category: "calendar",
     inputSchema: createEventSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["subject", "start", "end"],
-        properties: {
-            subject: {
-                type: "string",
-                description: "Event title"
-            },
-            start: {
-                type: "string",
-                description: "Start time in ISO 8601 format"
-            },
-            end: {
-                type: "string",
-                description: "End time in ISO 8601 format"
-            },
-            timeZone: {
-                type: "string",
-                default: "UTC",
-                description: "Time zone (default: UTC)"
-            },
-            body: {
-                type: "string",
-                description: "Event description/body"
-            },
-            location: {
-                type: "string",
-                description: "Location name"
-            },
-            attendees: {
-                type: "array",
-                items: { type: "string", format: "email" },
-                description: "Attendee email addresses"
-            },
-            isOnlineMeeting: {
-                type: "boolean",
-                default: false,
-                description: "Create as Teams meeting"
-            },
-            calendarId: {
-                type: "string",
-                description: "Target calendar ID (defaults to primary)"
-            }
-        }
-    },
     retryable: false // Event creation should not auto-retry to avoid duplicates
 };
 

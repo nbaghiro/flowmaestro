@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { TableauClient } from "../client/TableauClient";
 import { TableauWorkbookIdSchema } from "./schemas";
 import type { TableauWorkbook } from "./types";
@@ -23,7 +22,6 @@ export const getWorkbookOperation: OperationDefinition = {
     description: "Get workbook details including views and connections",
     category: "workbooks",
     inputSchema: getWorkbookSchema,
-    inputSchemaJSON: toJSONSchema(getWorkbookSchema),
     retryable: true,
     timeout: 30000
 };

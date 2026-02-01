@@ -18,13 +18,6 @@ export const getWorksheetsOperation: OperationDefinition = {
     description: "List all worksheets in an Excel workbook",
     category: "worksheets",
     inputSchema: getWorksheetsSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["itemId"],
-        properties: {
-            itemId: { type: "string", description: "OneDrive item ID of the Excel workbook" }
-        }
-    },
     retryable: true
 };
 
@@ -68,15 +61,6 @@ export const readRangeOperation: OperationDefinition = {
     description: "Read data from a range of cells in an Excel worksheet",
     category: "data",
     inputSchema: readRangeSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["itemId", "worksheetName", "address"],
-        properties: {
-            itemId: { type: "string", description: "OneDrive item ID of the Excel workbook" },
-            worksheetName: { type: "string", description: "Name or ID of the worksheet" },
-            address: { type: "string", description: "Cell range address (e.g., 'A1:D10')" }
-        }
-    },
     retryable: true
 };
 
@@ -128,16 +112,6 @@ export const writeRangeOperation: OperationDefinition = {
     description: "Write data to a range of cells in an Excel worksheet",
     category: "data",
     inputSchema: writeRangeSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["itemId", "worksheetName", "address", "values"],
-        properties: {
-            itemId: { type: "string", description: "OneDrive item ID of the Excel workbook" },
-            worksheetName: { type: "string", description: "Name or ID of the worksheet" },
-            address: { type: "string", description: "Cell range address" },
-            values: { type: "array", description: "2D array of values to write" }
-        }
-    },
     retryable: true
 };
 
@@ -189,13 +163,6 @@ export const getTablesOperation: OperationDefinition = {
     description: "List all tables in an Excel workbook",
     category: "tables",
     inputSchema: getTablesSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["itemId"],
-        properties: {
-            itemId: { type: "string", description: "OneDrive item ID of the Excel workbook" }
-        }
-    },
     retryable: true
 };
 
@@ -238,14 +205,6 @@ export const getTableRowsOperation: OperationDefinition = {
     description: "Get all rows from an Excel table",
     category: "tables",
     inputSchema: getTableRowsSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["itemId", "tableName"],
-        properties: {
-            itemId: { type: "string", description: "OneDrive item ID of the Excel workbook" },
-            tableName: { type: "string", description: "Name or ID of the table" }
-        }
-    },
     retryable: true
 };
 
@@ -294,15 +253,6 @@ export const addTableRowOperation: OperationDefinition = {
     description: "Add a new row to an Excel table",
     category: "tables",
     inputSchema: addTableRowSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["itemId", "tableName", "values"],
-        properties: {
-            itemId: { type: "string", description: "OneDrive item ID of the Excel workbook" },
-            tableName: { type: "string", description: "Name or ID of the table" },
-            values: { type: "array", description: "Array of values for the new row" }
-        }
-    },
     retryable: true
 };
 
@@ -348,14 +298,6 @@ export const createWorksheetOperation: OperationDefinition = {
     description: "Create a new worksheet in an Excel workbook",
     category: "worksheets",
     inputSchema: createWorksheetSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["itemId"],
-        properties: {
-            itemId: { type: "string", description: "OneDrive item ID of the Excel workbook" },
-            name: { type: "string", description: "Name for the new worksheet" }
-        }
-    },
     retryable: true
 };
 
@@ -398,14 +340,6 @@ export const getUsedRangeOperation: OperationDefinition = {
     description: "Get the used range (area with data) in a worksheet",
     category: "data",
     inputSchema: getUsedRangeSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["itemId", "worksheetName"],
-        properties: {
-            itemId: { type: "string", description: "OneDrive item ID of the Excel workbook" },
-            worksheetName: { type: "string", description: "Name or ID of the worksheet" }
-        }
-    },
     retryable: true
 };
 
@@ -455,16 +389,6 @@ export const clearRangeOperation: OperationDefinition = {
     description: "Clear contents, formats, or both from a range of cells",
     category: "data",
     inputSchema: clearRangeSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["itemId", "worksheetName", "address"],
-        properties: {
-            itemId: { type: "string", description: "OneDrive item ID of the Excel workbook" },
-            worksheetName: { type: "string", description: "Name or ID of the worksheet" },
-            address: { type: "string", description: "Cell range address to clear" },
-            applyTo: { type: "string", enum: ["all", "formats", "contents"] }
-        }
-    },
     retryable: false
 };
 

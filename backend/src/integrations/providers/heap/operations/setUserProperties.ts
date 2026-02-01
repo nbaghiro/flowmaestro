@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { HeapClient } from "../client/HeapClient";
 import { HeapUserIdentitySchema, HeapUserPropertiesSchema } from "../schemas";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -24,7 +23,6 @@ export const setUserPropertiesOperation: OperationDefinition = {
     category: "users",
     actionType: "write",
     inputSchema: setUserPropertiesSchema,
-    inputSchemaJSON: toJSONSchema(setUserPropertiesSchema),
     retryable: true,
     timeout: 10000
 };

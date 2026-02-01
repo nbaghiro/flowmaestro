@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { TypeformClient } from "../client/TypeformClient";
 import { GetFormSchema } from "../schemas";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -16,7 +15,6 @@ export const getFormOperation: OperationDefinition = {
         "Get detailed information about a specific typeform including its fields, logic, and settings.",
     category: "forms",
     inputSchema: getFormSchema,
-    inputSchemaJSON: toJSONSchema(getFormSchema),
     retryable: true,
     timeout: 30000
 };

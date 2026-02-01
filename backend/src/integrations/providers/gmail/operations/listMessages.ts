@@ -43,39 +43,7 @@ export const listMessagesOperation: OperationDefinition = {
         "List or search messages in the user's Gmail mailbox with optional filters and search query",
     category: "messages",
     retryable: true,
-    inputSchema: listMessagesSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            query: {
-                type: "string",
-                description:
-                    "Gmail search query (e.g., 'from:user@example.com', 'is:unread', 'subject:meeting')"
-            },
-            maxResults: {
-                type: "number",
-                description: "Maximum number of messages to return (1-500, default 100)",
-                minimum: 1,
-                maximum: 500,
-                default: 100
-            },
-            pageToken: {
-                type: "string",
-                description: "Token for next page of results"
-            },
-            labelIds: {
-                type: "array",
-                items: { type: "string" },
-                description: "Filter by label IDs (e.g., ['INBOX', 'UNREAD'])"
-            },
-            includeSpamTrash: {
-                type: "boolean",
-                description: "Include messages from SPAM and TRASH in results",
-                default: false
-            }
-        },
-        required: []
-    }
+    inputSchema: listMessagesSchema
 };
 
 /**

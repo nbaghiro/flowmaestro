@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { DropboxClient } from "../client/DropboxClient";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 
@@ -35,7 +34,6 @@ export const uploadFileOperation: OperationDefinition = {
         "Upload a file to Dropbox. The file content should be base64 encoded. Returns the uploaded file metadata.",
     category: "files",
     inputSchema: uploadFileSchema,
-    inputSchemaJSON: toJSONSchema(uploadFileSchema),
     retryable: true,
     timeout: 60000 // Longer timeout for uploads
 };

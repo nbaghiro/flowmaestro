@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Plus, AlertTriangle } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
-import { ALL_PROVIDERS, type ValidationError } from "@flowmaestro/shared";
+import { ALL_PROVIDERS, supportsOAuth, type ValidationError } from "@flowmaestro/shared";
 import { FormField, FormSection } from "../../../components/common/FormField";
 import { Input } from "../../../components/common/Input";
 import { Select } from "../../../components/common/Select";
@@ -362,7 +362,7 @@ export function IntegrationNodeConfig({
                         // Refresh connections to get the new one
                         fetchConnections({ provider });
                     }}
-                    supportsOAuth={providerInfo.methods.includes("oauth2")}
+                    supportsOAuth={supportsOAuth(providerInfo.methods)}
                     supportsApiKey={providerInfo.methods.includes("api_key")}
                     oauthSettings={providerInfo.oauthSettings}
                 />

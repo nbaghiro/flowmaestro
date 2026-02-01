@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { GET_BOARD } from "../../graphql/queries";
 import { getBoardInputSchema, type GetBoardInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
@@ -11,7 +10,6 @@ export const getBoardOperation: OperationDefinition = {
         "Retrieve a specific board from Monday.com by its ID, including columns and groups.",
     category: "boards",
     inputSchema: getBoardInputSchema,
-    inputSchemaJSON: toJSONSchema(getBoardInputSchema),
     retryable: true,
     timeout: 10000
 };

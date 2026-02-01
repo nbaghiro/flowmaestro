@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { PipedriveClient } from "../../client/PipedriveClient";
 import type { PipedriveResponse, PipedriveActivity } from "../types";
@@ -40,7 +39,6 @@ export const updateActivityOperation: OperationDefinition = {
     description: "Update an existing activity",
     category: "activities",
     inputSchema: updateActivitySchema,
-    inputSchemaJSON: toJSONSchema(updateActivitySchema),
     retryable: false,
     timeout: 10000
 };

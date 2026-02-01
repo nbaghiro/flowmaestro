@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { getTaskCommentsInputSchema, type GetTaskCommentsInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { AsanaClient } from "../../client/AsanaClient";
@@ -9,7 +8,6 @@ export const getTaskCommentsOperation: OperationDefinition = {
     description: "Get all comments (stories) on a task in Asana.",
     category: "tasks",
     inputSchema: getTaskCommentsInputSchema,
-    inputSchemaJSON: toJSONSchema(getTaskCommentsInputSchema),
     retryable: true,
     timeout: 30000
 };

@@ -23,13 +23,6 @@ export const getDocumentOperation: OperationDefinition = {
     description: "Get metadata for a Word document",
     category: "documents",
     inputSchema: getDocumentSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            itemId: { type: "string", description: "OneDrive item ID of the Word document" },
-            filePath: { type: "string", description: "File path" }
-        }
-    },
     retryable: true
 };
 
@@ -86,13 +79,6 @@ export const downloadDocumentOperation: OperationDefinition = {
     description: "Download a Word document as base64 content",
     category: "documents",
     inputSchema: downloadDocumentSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["itemId"],
-        properties: {
-            itemId: { type: "string", description: "OneDrive item ID of the Word document" }
-        }
-    },
     retryable: true
 };
 
@@ -138,14 +124,6 @@ export const convertDocumentOperation: OperationDefinition = {
     description: "Convert a Word document to PDF or HTML format",
     category: "documents",
     inputSchema: convertDocumentSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["itemId", "format"],
-        properties: {
-            itemId: { type: "string", description: "OneDrive item ID of the Word document" },
-            format: { type: "string", enum: ["pdf", "html"], description: "Target format" }
-        }
-    },
     retryable: true
 };
 
@@ -198,16 +176,6 @@ export const uploadDocumentOperation: OperationDefinition = {
     description: "Upload a new Word document to OneDrive",
     category: "documents",
     inputSchema: uploadDocumentSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["fileName", "content"],
-        properties: {
-            fileName: { type: "string", description: "Name of the file to create" },
-            content: { type: "string", description: "Document content (base64 encoded)" },
-            folderId: { type: "string", description: "Parent folder ID" },
-            conflictBehavior: { type: "string", enum: ["rename", "replace", "fail"] }
-        }
-    },
     retryable: true
 };
 
@@ -255,14 +223,6 @@ export const replaceDocumentOperation: OperationDefinition = {
     description: "Replace the content of an existing Word document",
     category: "documents",
     inputSchema: replaceDocumentSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["itemId", "content"],
-        properties: {
-            itemId: { type: "string", description: "OneDrive item ID of the Word document" },
-            content: { type: "string", description: "New document content (base64 encoded)" }
-        }
-    },
     retryable: true
 };
 
@@ -305,14 +265,6 @@ export const searchDocumentsOperation: OperationDefinition = {
     description: "Search for Word documents in OneDrive",
     category: "documents",
     inputSchema: searchDocumentsSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["query"],
-        properties: {
-            query: { type: "string", description: "Search query" },
-            top: { type: "number", description: "Maximum number of results" }
-        }
-    },
     retryable: true
 };
 
@@ -359,15 +311,6 @@ export const copyDocumentOperation: OperationDefinition = {
     description: "Create a copy of a Word document",
     category: "documents",
     inputSchema: copyDocumentSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["itemId", "newName"],
-        properties: {
-            itemId: { type: "string", description: "OneDrive item ID of the Word document" },
-            newName: { type: "string", description: "Name for the copy" },
-            destinationFolderId: { type: "string", description: "Destination folder ID" }
-        }
-    },
     retryable: true
 };
 
@@ -417,13 +360,6 @@ export const deleteDocumentOperation: OperationDefinition = {
     description: "Delete a Word document from OneDrive",
     category: "documents",
     inputSchema: deleteDocumentSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["itemId"],
-        properties: {
-            itemId: { type: "string", description: "OneDrive item ID of the Word document" }
-        }
-    },
     retryable: false
 };
 
@@ -467,15 +403,6 @@ export const createSharingLinkOperation: OperationDefinition = {
     description: "Create a sharing link for a Word document",
     category: "sharing",
     inputSchema: createSharingLinkSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["itemId", "type"],
-        properties: {
-            itemId: { type: "string", description: "OneDrive item ID of the Word document" },
-            type: { type: "string", enum: ["view", "edit", "embed"] },
-            scope: { type: "string", enum: ["anonymous", "organization"] }
-        }
-    },
     retryable: true
 };
 
@@ -517,13 +444,6 @@ export const getPreviewUrlOperation: OperationDefinition = {
     description: "Get an embeddable preview URL for a Word document",
     category: "documents",
     inputSchema: getPreviewUrlSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["itemId"],
-        properties: {
-            itemId: { type: "string", description: "OneDrive item ID of the Word document" }
-        }
-    },
     retryable: true
 };
 

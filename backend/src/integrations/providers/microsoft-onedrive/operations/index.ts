@@ -27,15 +27,6 @@ export const listFilesOperation: OperationDefinition = {
     description: "List files and folders in OneDrive",
     category: "files",
     inputSchema: listFilesSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            folderId: { type: "string", description: "Folder ID to list files from" },
-            folderPath: { type: "string", description: "Folder path to list files from" },
-            top: { type: "number", description: "Maximum number of items to return" },
-            orderBy: { type: "string", description: "Sort order" }
-        }
-    },
     retryable: true
 };
 
@@ -85,13 +76,6 @@ export const getFileOperation: OperationDefinition = {
     description: "Get file metadata from OneDrive",
     category: "files",
     inputSchema: getFileSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            fileId: { type: "string", description: "File ID" },
-            filePath: { type: "string", description: "File path" }
-        }
-    },
     retryable: true
 };
 
@@ -155,17 +139,6 @@ export const uploadFileOperation: OperationDefinition = {
     description: "Upload a file to OneDrive",
     category: "files",
     inputSchema: uploadFileSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["fileName", "content"],
-        properties: {
-            fileName: { type: "string", description: "Name of the file to create" },
-            content: { type: "string", description: "File content" },
-            folderId: { type: "string", description: "Parent folder ID" },
-            folderPath: { type: "string", description: "Parent folder path" },
-            conflictBehavior: { type: "string", enum: ["rename", "replace", "fail"] }
-        }
-    },
     retryable: true
 };
 
@@ -209,15 +182,6 @@ export const createFolderOperation: OperationDefinition = {
     description: "Create a new folder in OneDrive",
     category: "folders",
     inputSchema: createFolderSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["name"],
-        properties: {
-            name: { type: "string", description: "Name of the folder to create" },
-            parentFolderId: { type: "string", description: "Parent folder ID" },
-            parentFolderPath: { type: "string", description: "Parent folder path" }
-        }
-    },
     retryable: true
 };
 
@@ -259,13 +223,6 @@ export const deleteFileOperation: OperationDefinition = {
     description: "Delete a file or folder from OneDrive",
     category: "files",
     inputSchema: deleteFileSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["fileId"],
-        properties: {
-            fileId: { type: "string", description: "ID of the file or folder to delete" }
-        }
-    },
     retryable: false
 };
 
@@ -308,14 +265,6 @@ export const searchFilesOperation: OperationDefinition = {
     description: "Search for files in OneDrive",
     category: "files",
     inputSchema: searchFilesSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["query"],
-        properties: {
-            query: { type: "string", description: "Search query" },
-            top: { type: "number", description: "Maximum number of results" }
-        }
-    },
     retryable: true
 };
 
@@ -362,15 +311,6 @@ export const createSharingLinkOperation: OperationDefinition = {
     description: "Create a sharing link for a file",
     category: "sharing",
     inputSchema: createSharingLinkSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["fileId", "type"],
-        properties: {
-            fileId: { type: "string", description: "ID of the file to share" },
-            type: { type: "string", enum: ["view", "edit", "embed"] },
-            scope: { type: "string", enum: ["anonymous", "organization"] }
-        }
-    },
     retryable: true
 };
 

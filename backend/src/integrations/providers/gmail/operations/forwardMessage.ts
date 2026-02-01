@@ -49,55 +49,7 @@ export const forwardMessageOperation: OperationDefinition = {
     description: "Forward an existing email message to new recipients",
     category: "messages",
     retryable: false,
-    inputSchema: forwardMessageSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            messageId: {
-                type: "string",
-                description: "The ID of the message to forward"
-            },
-            to: {
-                oneOf: [
-                    { type: "string", format: "email" },
-                    { type: "array", items: { type: "string", format: "email" } }
-                ],
-                description: "Recipient email address(es) to forward to"
-            },
-            cc: {
-                oneOf: [
-                    { type: "string", format: "email" },
-                    { type: "array", items: { type: "string", format: "email" } }
-                ],
-                description: "CC recipient email address(es)"
-            },
-            body: {
-                type: "string",
-                description: "Additional message to include above the forwarded content",
-                default: ""
-            },
-            bodyType: {
-                type: "string",
-                enum: ["text", "html"],
-                description: "Body content type",
-                default: "text"
-            },
-            attachments: {
-                type: "array",
-                items: {
-                    type: "object",
-                    properties: {
-                        filename: { type: "string" },
-                        content: { type: "string" },
-                        mimeType: { type: "string" }
-                    },
-                    required: ["filename", "content", "mimeType"]
-                },
-                description: "Additional attachments"
-            }
-        },
-        required: ["messageId", "to"]
-    }
+    inputSchema: forwardMessageSchema
 };
 
 /**

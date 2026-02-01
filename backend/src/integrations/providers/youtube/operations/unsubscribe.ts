@@ -24,17 +24,7 @@ export const unsubscribeOperation: OperationDefinition = {
         "Unsubscribe from a YouTube channel using the subscription ID (get from listSubscriptions)",
     category: "subscriptions",
     retryable: false,
-    inputSchema: unsubscribeSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            subscriptionId: {
-                type: "string",
-                description: "The subscription ID to remove (use listSubscriptions to get this)"
-            }
-        },
-        required: ["subscriptionId"]
-    }
+    inputSchema: unsubscribeSchema
 };
 
 /**

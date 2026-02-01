@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { TableauClient } from "../client/TableauClient";
 import { TableauViewIdSchema, TableauMaxAgeSchema } from "./schemas";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -23,7 +22,6 @@ export const queryViewDataOperation: OperationDefinition = {
     description: "Get the underlying data from a view in CSV format",
     category: "views",
     inputSchema: queryViewDataSchema,
-    inputSchemaJSON: toJSONSchema(queryViewDataSchema),
     retryable: true,
     timeout: 120000
 };

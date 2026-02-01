@@ -20,17 +20,7 @@ export const listPermissionsOperation: OperationDefinition = {
     description: "List all permissions (who has access) for a specific file or folder",
     category: "sharing",
     retryable: true,
-    inputSchema: listPermissionsSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            fileId: {
-                type: "string",
-                description: "File or folder ID to list permissions for"
-            }
-        },
-        required: ["fileId"]
-    }
+    inputSchema: listPermissionsSchema
 };
 
 /**

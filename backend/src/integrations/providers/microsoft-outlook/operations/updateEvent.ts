@@ -20,40 +20,6 @@ export const updateEventOperation: OperationDefinition = {
     description: "Update an existing calendar event",
     category: "calendar",
     inputSchema: updateEventSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["eventId"],
-        properties: {
-            eventId: {
-                type: "string",
-                description: "ID of the event to update"
-            },
-            subject: {
-                type: "string",
-                description: "New event title"
-            },
-            start: {
-                type: "string",
-                description: "New start time in ISO 8601 format"
-            },
-            end: {
-                type: "string",
-                description: "New end time in ISO 8601 format"
-            },
-            timeZone: {
-                type: "string",
-                description: "Time zone for start/end times"
-            },
-            body: {
-                type: "string",
-                description: "New event description"
-            },
-            location: {
-                type: "string",
-                description: "New location name"
-            }
-        }
-    },
     retryable: true
 };
 

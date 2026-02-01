@@ -61,71 +61,7 @@ export const searchOperation: OperationDefinition = {
         "Search for videos, channels, or playlists on YouTube with optional filters and sorting",
     category: "search",
     retryable: true,
-    inputSchema: searchSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            query: {
-                type: "string",
-                description: "Search query text"
-            },
-            type: {
-                type: "string",
-                enum: ["video", "channel", "playlist"],
-                description: "Type of resource to search for"
-            },
-            maxResults: {
-                type: "number",
-                description: "Maximum number of results (1-50)",
-                minimum: 1,
-                maximum: 50,
-                default: 25
-            },
-            pageToken: {
-                type: "string",
-                description: "Token for pagination"
-            },
-            order: {
-                type: "string",
-                enum: ["date", "rating", "relevance", "title", "viewCount"],
-                description: "Sort order for results",
-                default: "relevance"
-            },
-            publishedAfter: {
-                type: "string",
-                description: "Filter by publish date (RFC 3339 format)"
-            },
-            publishedBefore: {
-                type: "string",
-                description: "Filter by publish date (RFC 3339 format)"
-            },
-            channelId: {
-                type: "string",
-                description: "Filter by channel ID"
-            },
-            videoDuration: {
-                type: "string",
-                enum: ["any", "short", "medium", "long"],
-                description: "Filter by video duration"
-            },
-            videoDefinition: {
-                type: "string",
-                enum: ["any", "high", "standard"],
-                description: "Filter by video definition (HD or SD)"
-            },
-            regionCode: {
-                type: "string",
-                description: "ISO 3166-1 alpha-2 country code"
-            },
-            safeSearch: {
-                type: "string",
-                enum: ["moderate", "none", "strict"],
-                description: "Safe search filtering level",
-                default: "moderate"
-            }
-        },
-        required: ["query"]
-    }
+    inputSchema: searchSchema
 };
 
 /**

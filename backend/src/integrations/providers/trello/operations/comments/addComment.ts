@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { TrelloClient } from "../../client/TrelloClient";
 import { TrelloCardIdSchema } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
@@ -25,7 +24,6 @@ export const addCommentOperation: OperationDefinition = {
     category: "comments",
     actionType: "write",
     inputSchema: addCommentSchema,
-    inputSchemaJSON: toJSONSchema(addCommentSchema),
     retryable: false,
     timeout: 10000
 };

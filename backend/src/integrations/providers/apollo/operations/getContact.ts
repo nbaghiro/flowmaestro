@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../core/schema-utils";
 import { getContactInputSchema, type GetContactInput } from "../schemas";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { ApolloClient } from "../client/ApolloClient";
@@ -9,7 +8,6 @@ export const getContactOperation: OperationDefinition = {
     description: "Retrieve a contact by ID from Apollo",
     category: "contacts",
     inputSchema: getContactInputSchema,
-    inputSchemaJSON: toJSONSchema(getContactInputSchema),
     retryable: true,
     timeout: 30000
 };

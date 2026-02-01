@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { SendGridValidationOutput } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { SendGridClient } from "../client/SendGridClient";
@@ -17,7 +16,6 @@ export const validateEmailOperation: OperationDefinition = {
     description: "Validate an email address using SendGrid Email Validation API",
     category: "validation",
     inputSchema: validateEmailSchema,
-    inputSchemaJSON: toJSONSchema(validateEmailSchema),
     retryable: true,
     timeout: 15000
 };

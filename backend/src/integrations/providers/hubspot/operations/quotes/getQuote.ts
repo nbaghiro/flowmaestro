@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { HubspotClient } from "../../client/HubspotClient";
 import type { HubspotObject } from "../types";
@@ -24,7 +23,6 @@ export const getQuoteOperation: OperationDefinition = {
     description: "Retrieve a quote by ID from HubSpot CRM",
     category: "crm",
     inputSchema: getQuoteSchema,
-    inputSchemaJSON: toJSONSchema(getQuoteSchema),
     retryable: true,
     timeout: 10000
 };

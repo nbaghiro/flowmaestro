@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { TwitterClient } from "../client/TwitterClient";
 import { TweetTextSchema, TweetIdSchema } from "../schemas";
 import type { CreateTweetResponse } from "./types";
@@ -29,7 +28,6 @@ export const replyToTweetOperation: OperationDefinition = (() => {
             description: "Post a reply to an existing tweet.",
             category: "tweets",
             inputSchema: replyToTweetSchema,
-            inputSchemaJSON: toJSONSchema(replyToTweetSchema),
             retryable: false, // Don't retry to avoid duplicate replies
             timeout: 15000
         };

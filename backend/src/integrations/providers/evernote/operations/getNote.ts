@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { EvernoteClient } from "../client/EvernoteClient";
 
@@ -22,7 +21,6 @@ export const getNoteOperation: OperationDefinition = {
     category: "notes",
     actionType: "read",
     inputSchema: getNoteSchema,
-    inputSchemaJSON: toJSONSchema(getNoteSchema),
     retryable: true,
     timeout: 30000
 };

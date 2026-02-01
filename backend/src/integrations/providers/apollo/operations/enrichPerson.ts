@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../core/schema-utils";
 import { enrichPersonInputSchema, type EnrichPersonInput } from "../schemas";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { ApolloClient } from "../client/ApolloClient";
@@ -9,7 +8,6 @@ export const enrichPersonOperation: OperationDefinition = {
     description: "Enrich a person's profile with additional data from Apollo. Consumes credits.",
     category: "enrichment",
     inputSchema: enrichPersonInputSchema,
-    inputSchemaJSON: toJSONSchema(enrichPersonInputSchema),
     retryable: true,
     timeout: 30000
 };

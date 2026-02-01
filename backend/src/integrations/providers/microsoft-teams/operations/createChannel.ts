@@ -21,21 +21,6 @@ export const createChannelOperation: OperationDefinition = {
     description: "Create a new channel in a Microsoft Team",
     category: "channels",
     inputSchema: createChannelSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["teamId", "displayName"],
-        properties: {
-            teamId: { type: "string", description: "ID of the team" },
-            displayName: { type: "string", description: "Name of the channel (max 50 characters)" },
-            description: { type: "string", description: "Description of the channel" },
-            membershipType: {
-                type: "string",
-                enum: ["standard", "private"],
-                default: "standard",
-                description: "Channel membership type"
-            }
-        }
-    },
     retryable: false
 };
 

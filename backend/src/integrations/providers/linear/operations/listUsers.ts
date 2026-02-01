@@ -18,12 +18,7 @@ export const listUsersOperation: OperationDefinition = {
     description: "List all users in Linear workspace",
     category: "users",
     retryable: true,
-    inputSchema: listUsersSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {},
-        required: []
-    }
+    inputSchema: listUsersSchema
 };
 
 /**

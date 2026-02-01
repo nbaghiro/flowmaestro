@@ -1,3 +1,4 @@
+import { toJSONSchema } from "../../../../core/utils/zod-to-json-schema";
 import { BitbucketClient } from "../client/BitbucketClient";
 import {
     // Repository executors
@@ -34,7 +35,7 @@ export class BitbucketMCPAdapter {
         return Array.from(this.operations.values()).map((op) => ({
             name: `bitbucket_${op.id}`,
             description: op.description,
-            inputSchema: op.inputSchemaJSON,
+            inputSchema: toJSONSchema(op.inputSchema),
             executeRef: op.id
         }));
     }

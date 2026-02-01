@@ -22,29 +22,7 @@ export const updateRecordOperation: OperationDefinition = {
     description: "Update an existing record in Salesforce",
     category: "records",
     retryable: true, // Safe to retry updates
-    inputSchema: updateRecordSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            objectType: {
-                type: "string",
-                minLength: 1,
-                description: "Salesforce object type (e.g., Account, Contact, Lead)"
-            },
-            recordId: {
-                type: "string",
-                minLength: 15,
-                maxLength: 18,
-                description: "Salesforce record ID (15 or 18 character)"
-            },
-            data: {
-                type: "object",
-                additionalProperties: true,
-                description: "Field values to update"
-            }
-        },
-        required: ["objectType", "recordId", "data"]
-    }
+    inputSchema: updateRecordSchema
 };
 
 /**

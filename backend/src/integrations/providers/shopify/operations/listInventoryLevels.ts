@@ -1,5 +1,4 @@
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { ShopifyClient } from "../client/ShopifyClient";
 import { ListInventoryLevelsSchema, type ListInventoryLevelsParams } from "../schemas";
 import type { ShopifyInventoryLevelsResponse } from "./types";
@@ -18,7 +17,6 @@ export const listInventoryLevelsOperation: OperationDefinition = (() => {
             description: "Retrieve inventory levels for items across locations",
             category: "inventory",
             inputSchema: ListInventoryLevelsSchema,
-            inputSchemaJSON: toJSONSchema(ListInventoryLevelsSchema),
             retryable: true,
             timeout: 30000
         };

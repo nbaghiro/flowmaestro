@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { SegmentClient } from "../client/SegmentClient";
 import {
     SegmentUserIdSchema,
@@ -131,7 +130,6 @@ export const batchEventsOperation: OperationDefinition = {
     category: "events",
     actionType: "write",
     inputSchema: batchEventsSchema,
-    inputSchemaJSON: toJSONSchema(batchEventsSchema),
     retryable: true,
     timeout: 30000 // Longer timeout for batch operations
 };

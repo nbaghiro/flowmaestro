@@ -21,21 +21,7 @@ export const deleteSheetOperation: OperationDefinition = {
     description: "Delete a sheet from a spreadsheet",
     category: "sheets",
     retryable: true,
-    inputSchema: deleteSheetSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            spreadsheetId: {
-                type: "string",
-                description: "Spreadsheet ID"
-            },
-            sheetId: {
-                type: "number",
-                description: "Sheet ID (gid, not title)"
-            }
-        },
-        required: ["spreadsheetId", "sheetId"]
-    }
+    inputSchema: deleteSheetSchema
 };
 
 /**

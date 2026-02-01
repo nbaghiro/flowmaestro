@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { InstagramClient } from "../client/InstagramClient";
 import type { InstagramAccountResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -27,7 +26,6 @@ export const getAccountInfoOperation: OperationDefinition = (() => {
             description: "Get information about an Instagram Business account",
             category: "account",
             inputSchema: getAccountInfoSchema,
-            inputSchemaJSON: toJSONSchema(getAccountInfoSchema),
             retryable: true,
             timeout: 15000
         };

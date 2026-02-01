@@ -20,17 +20,7 @@ export const trashMessageOperation: OperationDefinition = {
     description: "Move a Gmail message to the trash folder (can be recovered within 30 days)",
     category: "messages",
     retryable: true,
-    inputSchema: trashMessageSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            messageId: {
-                type: "string",
-                description: "The ID of the message to move to trash"
-            }
-        },
-        required: ["messageId"]
-    }
+    inputSchema: trashMessageSchema
 };
 
 /**

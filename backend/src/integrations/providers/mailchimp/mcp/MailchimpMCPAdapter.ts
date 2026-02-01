@@ -1,3 +1,4 @@
+import { toJSONSchema } from "../../../../core/utils/zod-to-json-schema";
 import {
     // List Operations
     executeGetLists,
@@ -55,7 +56,7 @@ export class MailchimpMCPAdapter {
             tools.push({
                 name: `mailchimp_${id}`,
                 description: operation.description,
-                inputSchema: operation.inputSchemaJSON
+                inputSchema: toJSONSchema(operation.inputSchema)
             });
         }
 

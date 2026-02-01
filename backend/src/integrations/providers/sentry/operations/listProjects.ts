@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { SentryProjectOutput } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { SentryClient } from "../client/SentryClient";
@@ -17,7 +16,6 @@ export const listProjectsOperation: OperationDefinition = {
     description: "List all projects in an organization",
     category: "projects",
     inputSchema: listProjectsSchema,
-    inputSchemaJSON: toJSONSchema(listProjectsSchema),
     retryable: true,
     timeout: 30000
 };

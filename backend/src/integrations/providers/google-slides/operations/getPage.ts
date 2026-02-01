@@ -21,21 +21,7 @@ export const getPageOperation: OperationDefinition = {
     description: "Retrieve a specific page (slide) from a Google Slides presentation",
     category: "pages",
     retryable: true,
-    inputSchema: getPageSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            presentationId: {
-                type: "string",
-                description: "The ID of the presentation"
-            },
-            pageObjectId: {
-                type: "string",
-                description: "The object ID of the page (slide) to retrieve"
-            }
-        },
-        required: ["presentationId", "pageObjectId"]
-    }
+    inputSchema: getPageSchema
 };
 
 interface PageResponse {

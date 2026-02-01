@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { TableauClient } from "../client/TableauClient";
 import { TableauViewIdSchema } from "./schemas";
 import type { TableauView } from "./types";
@@ -23,7 +22,6 @@ export const getViewOperation: OperationDefinition = {
     description: "Get view details by ID",
     category: "views",
     inputSchema: getViewSchema,
-    inputSchemaJSON: toJSONSchema(getViewSchema),
     retryable: true,
     timeout: 30000
 };

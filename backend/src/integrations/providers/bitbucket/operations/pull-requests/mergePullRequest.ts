@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { BitbucketClient } from "../../client/BitbucketClient";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { BitbucketPullRequest } from "../types";
@@ -32,7 +31,6 @@ export const mergePullRequestOperation: OperationDefinition = {
     category: "pull-requests",
     actionType: "write",
     inputSchema: mergePullRequestSchema,
-    inputSchemaJSON: toJSONSchema(mergePullRequestSchema),
     retryable: false,
     timeout: 60000 // Merging can take longer
 };

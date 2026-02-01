@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { RipplingClient } from "../client/RipplingClient";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 
@@ -27,7 +26,6 @@ export const getEmployeeOperation: OperationDefinition = (() => {
             category: "hr",
             actionType: "read",
             inputSchema: getEmployeeSchema,
-            inputSchemaJSON: toJSONSchema(getEmployeeSchema),
             retryable: true,
             timeout: 15000
         };

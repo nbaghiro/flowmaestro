@@ -38,42 +38,7 @@ export const listSubscriptionsOperation: OperationDefinition = {
     description: "List the authenticated user's YouTube channel subscriptions",
     category: "subscriptions",
     retryable: true,
-    inputSchema: listSubscriptionsSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            mine: {
-                type: "boolean",
-                description: "Get the authenticated user's subscriptions",
-                default: true
-            },
-            channelId: {
-                type: "string",
-                description: "Get subscriptions for a specific channel"
-            },
-            forChannelId: {
-                type: "string",
-                description: "Check if subscribed to a specific channel"
-            },
-            maxResults: {
-                type: "number",
-                description: "Maximum number of results",
-                minimum: 1,
-                maximum: 50,
-                default: 25
-            },
-            pageToken: {
-                type: "string",
-                description: "Token for pagination"
-            },
-            order: {
-                type: "string",
-                enum: ["alphabetical", "relevance", "unread"],
-                description: "Sort order for results"
-            }
-        },
-        required: []
-    }
+    inputSchema: listSubscriptionsSchema
 };
 
 /**

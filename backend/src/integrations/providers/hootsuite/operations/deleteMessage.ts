@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { HootsuiteClient } from "../client/HootsuiteClient";
 import { HootsuiteMessageIdSchema } from "../schemas";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -27,7 +26,6 @@ export const deleteMessageOperation: OperationDefinition = (() => {
             description: "Delete a scheduled message from Hootsuite",
             category: "messages",
             inputSchema: deleteMessageSchema,
-            inputSchemaJSON: toJSONSchema(deleteMessageSchema),
             retryable: true,
             timeout: 10000
         };

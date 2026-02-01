@@ -34,30 +34,7 @@ export const listResponsesOperation: OperationDefinition = {
     description: "Get all responses for a form with optional pagination and filtering",
     category: "responses",
     retryable: true,
-    inputSchema: listResponsesSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            formId: {
-                type: "string",
-                description: "The ID of the form"
-            },
-            pageSize: {
-                type: "number",
-                description: "Maximum number of responses to return (max 5000)"
-            },
-            pageToken: {
-                type: "string",
-                description: "Token for pagination to get the next page"
-            },
-            filter: {
-                type: "string",
-                description:
-                    'Filter by timestamp (e.g., "timestamp > 2024-01-01T00:00:00Z" or "timestamp >= 2024-01-01T00:00:00.000Z")'
-            }
-        },
-        required: ["formId"]
-    }
+    inputSchema: listResponsesSchema
 };
 
 /**

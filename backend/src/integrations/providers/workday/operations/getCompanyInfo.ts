@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { WorkdayClient } from "../client/WorkdayClient";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 
@@ -25,7 +24,6 @@ export const getCompanyInfoOperation: OperationDefinition = (() => {
             category: "hr",
             actionType: "read",
             inputSchema: getCompanyInfoSchema,
-            inputSchemaJSON: toJSONSchema(getCompanyInfoSchema),
             retryable: true,
             timeout: 15000
         };

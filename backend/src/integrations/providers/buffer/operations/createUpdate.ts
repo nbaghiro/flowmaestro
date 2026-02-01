@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { BufferClient } from "../client/BufferClient";
 import {
     BufferProfileIdSchema,
@@ -40,7 +39,6 @@ export const createUpdateOperation: OperationDefinition = (() => {
             description: "Create a new scheduled post in Buffer",
             category: "updates",
             inputSchema: createUpdateSchema,
-            inputSchemaJSON: toJSONSchema(createUpdateSchema),
             retryable: true,
             timeout: 15000
         };

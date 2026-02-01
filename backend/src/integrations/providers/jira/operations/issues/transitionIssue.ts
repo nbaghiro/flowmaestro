@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { transitionIssueInputSchema, type TransitionIssueInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { JiraClient } from "../../client/JiraClient";
@@ -10,7 +9,6 @@ export const transitionIssueOperation: OperationDefinition = {
         "Transition an issue to a new status (e.g., To Do -> In Progress -> Done). Use getTransitions to get available transition IDs.",
     category: "issues",
     inputSchema: transitionIssueInputSchema,
-    inputSchemaJSON: toJSONSchema(transitionIssueInputSchema),
     retryable: true,
     timeout: 10000
 };

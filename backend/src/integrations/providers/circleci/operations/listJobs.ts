@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { CircleCIJobOutput } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { CircleCIClient } from "../client/CircleCIClient";
@@ -16,7 +15,6 @@ export const listJobsOperation: OperationDefinition = {
     description: "List all jobs in a CircleCI workflow",
     category: "jobs",
     inputSchema: listJobsSchema,
-    inputSchemaJSON: toJSONSchema(listJobsSchema),
     retryable: true,
     timeout: 30000
 };

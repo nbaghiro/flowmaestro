@@ -24,22 +24,7 @@ export const batchUpdateSpreadsheetOperation: OperationDefinition = {
     description: "Apply one or more updates to spreadsheet (formatting, properties, sheets, etc.)",
     category: "spreadsheets",
     retryable: true,
-    inputSchema: batchUpdateSpreadsheetSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            spreadsheetId: {
-                type: "string",
-                description: "Spreadsheet ID"
-            },
-            requests: {
-                type: "array",
-                items: { type: "object" },
-                description: "Array of update requests (see Google Sheets API documentation)"
-            }
-        },
-        required: ["spreadsheetId", "requests"]
-    }
+    inputSchema: batchUpdateSpreadsheetSchema
 };
 
 /**

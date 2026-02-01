@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { HelloSignClient } from "../client/HelloSignClient";
 import { HelloSignRequestIdSchema } from "../schemas";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -27,7 +26,6 @@ export const cancelSignatureRequestOperation: OperationDefinition = (() => {
             description: "Cancel a pending signature request",
             category: "signature_requests",
             inputSchema: cancelSignatureRequestSchema,
-            inputSchemaJSON: toJSONSchema(cancelSignatureRequestSchema),
             retryable: false,
             timeout: 30000
         };

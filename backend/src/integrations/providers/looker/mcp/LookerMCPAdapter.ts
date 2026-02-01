@@ -1,3 +1,4 @@
+import { toJSONSchema } from "../../../../core/utils/zod-to-json-schema";
 import { LookerClient } from "../client/LookerClient";
 import { executeCreateQuery } from "../operations/createQuery";
 import { executeGetDashboard } from "../operations/getDashboard";
@@ -25,7 +26,7 @@ export class LookerMCPAdapter {
         return Array.from(this.operations.values()).map((op) => ({
             name: `looker_${op.id}`,
             description: op.description,
-            inputSchema: op.inputSchemaJSON,
+            inputSchema: toJSONSchema(op.inputSchema),
             executeRef: op.id
         }));
     }

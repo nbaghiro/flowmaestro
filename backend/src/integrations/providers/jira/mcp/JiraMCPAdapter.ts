@@ -1,3 +1,4 @@
+import { toJSONSchema } from "../../../../core/utils/zod-to-json-schema";
 import {
     executeCreateIssue,
     executeGetIssue,
@@ -39,7 +40,7 @@ export class JiraMCPAdapter {
         return Array.from(this.operations.values()).map((op) => ({
             name: `jira_${op.id}`,
             description: op.description,
-            inputSchema: op.inputSchemaJSON
+            inputSchema: toJSONSchema(op.inputSchema)
         }));
     }
 

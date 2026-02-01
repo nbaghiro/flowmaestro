@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { SegmentClient } from "../client/SegmentClient";
 import {
     SegmentUserIdSchema,
@@ -50,7 +49,6 @@ export const trackPageOperation: OperationDefinition = {
     category: "events",
     actionType: "write",
     inputSchema: trackPageSchema,
-    inputSchemaJSON: toJSONSchema(trackPageSchema),
     retryable: true,
     timeout: 10000
 };

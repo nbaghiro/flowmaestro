@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { SquareClient } from "../client/SquareClient";
 import type { SquareOrderResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -23,7 +22,6 @@ export const getOrderOperation: OperationDefinition = {
     category: "orders",
     actionType: "read",
     inputSchema: getOrderSchema,
-    inputSchemaJSON: toJSONSchema(getOrderSchema),
     retryable: true,
     timeout: 10000
 };

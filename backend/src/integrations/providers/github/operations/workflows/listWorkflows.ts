@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { GitHubClient } from "../../client/GitHubClient";
 import {
     GitHubOwnerSchema,
@@ -31,7 +30,6 @@ export const listWorkflowsOperation: OperationDefinition = {
     description: "List all workflows in a repository",
     category: "workflows",
     inputSchema: listWorkflowsSchema,
-    inputSchemaJSON: toJSONSchema(listWorkflowsSchema),
     retryable: true,
     timeout: 30000
 };

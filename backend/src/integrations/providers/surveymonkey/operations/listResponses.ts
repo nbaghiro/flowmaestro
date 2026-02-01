@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { SurveyMonkeyClient } from "../client/SurveyMonkeyClient";
 import { ListResponsesSchema } from "../schemas";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -15,7 +14,6 @@ export const listResponsesOperation: OperationDefinition = {
         "List responses (submissions) for a specific survey. Supports filtering by date range and completion status. Returns response metadata without full answer details.",
     category: "responses",
     inputSchema: listResponsesSchema,
-    inputSchemaJSON: toJSONSchema(listResponsesSchema),
     retryable: true,
     timeout: 60000 // Responses can be large
 };

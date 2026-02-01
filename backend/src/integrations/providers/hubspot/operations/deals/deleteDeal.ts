@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { HubspotClient } from "../../client/HubspotClient";
 
@@ -21,7 +20,6 @@ export const deleteDealOperation: OperationDefinition = {
     description: "Delete a deal by ID (archives the deal)",
     category: "crm",
     inputSchema: deleteDealSchema,
-    inputSchemaJSON: toJSONSchema(deleteDealSchema),
     retryable: true,
     timeout: 10000
 };

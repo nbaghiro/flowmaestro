@@ -1,4 +1,5 @@
 import { config as appConfig, getOAuthRedirectUri } from "../../../core/config";
+import { toJSONSchema } from "../../../core/utils/zod-to-json-schema";
 import { BaseProvider } from "../../core/BaseProvider";
 import { GoogleCalendarClient } from "./client/GoogleCalendarClient";
 import {
@@ -337,7 +338,7 @@ export class GoogleCalendarProvider extends BaseProvider {
         return this.getOperations().map((op) => ({
             name: `google_calendar_${op.id}`,
             description: op.description,
-            inputSchema: op.inputSchemaJSON
+            inputSchema: toJSONSchema(op.inputSchema)
         }));
     }
 

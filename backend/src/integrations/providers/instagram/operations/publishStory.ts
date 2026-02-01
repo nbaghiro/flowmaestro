@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { InstagramClient } from "../client/InstagramClient";
 import type { InstagramPublishResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -29,7 +28,6 @@ export const publishStoryOperation: OperationDefinition = (() => {
             description: "Publish a story (image or video) to Instagram Stories",
             category: "publishing",
             inputSchema: publishStorySchema,
-            inputSchemaJSON: toJSONSchema(publishStorySchema),
             retryable: true,
             timeout: 120000 // 2 minutes for video processing
         };

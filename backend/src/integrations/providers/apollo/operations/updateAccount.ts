@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../core/schema-utils";
 import { updateAccountInputSchema, type UpdateAccountInput } from "../schemas";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { ApolloClient } from "../client/ApolloClient";
@@ -9,7 +8,6 @@ export const updateAccountOperation: OperationDefinition = {
     description: "Update an existing account (organization) in Apollo",
     category: "accounts",
     inputSchema: updateAccountInputSchema,
-    inputSchemaJSON: toJSONSchema(updateAccountInputSchema),
     retryable: false,
     timeout: 30000
 };

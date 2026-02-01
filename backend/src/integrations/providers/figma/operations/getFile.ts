@@ -18,26 +18,6 @@ export const getFileOperation: OperationDefinition = {
         includeGeometry: z.boolean().optional().describe("Include vector path geometry data"),
         branchData: z.boolean().optional().describe("Include branch metadata")
     }),
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            fileKey: {
-                type: "string",
-                description: "Figma file key from URL (e.g., abc123def456)"
-            },
-            version: { type: "string", description: "Specific version ID to retrieve" },
-            depth: {
-                type: "number",
-                description: "Tree depth to retrieve (limits nesting levels)"
-            },
-            includeGeometry: {
-                type: "boolean",
-                description: "Include vector path geometry data"
-            },
-            branchData: { type: "boolean", description: "Include branch metadata" }
-        },
-        required: ["fileKey"]
-    },
     retryable: true
 };
 

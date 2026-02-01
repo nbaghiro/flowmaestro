@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { Db } from "mongodb";
 
@@ -31,7 +30,6 @@ export const updateOneOperation: OperationDefinition = {
     description: "Update a single document matching the filter",
     category: "database",
     inputSchema: updateOneSchema,
-    inputSchemaJSON: toJSONSchema(updateOneSchema),
     retryable: false,
     timeout: 30000
 };

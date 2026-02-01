@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { MailchimpTagOutput } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { MailchimpClient } from "../client/MailchimpClient";
@@ -18,7 +17,6 @@ export const getTagsOperation: OperationDefinition = {
     description: "Get all tags from a Mailchimp audience",
     category: "tags",
     inputSchema: getTagsSchema,
-    inputSchemaJSON: toJSONSchema(getTagsSchema),
     retryable: true,
     timeout: 15000
 };

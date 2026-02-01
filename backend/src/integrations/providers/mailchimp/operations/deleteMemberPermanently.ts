@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { MailchimpClient } from "../client/MailchimpClient";
 
@@ -17,7 +16,6 @@ export const deleteMemberPermanentlyOperation: OperationDefinition = {
         "Permanently delete a member from a Mailchimp audience. This action cannot be undone and the email cannot be re-added.",
     category: "members",
     inputSchema: deleteMemberPermanentlySchema,
-    inputSchemaJSON: toJSONSchema(deleteMemberPermanentlySchema),
     retryable: false,
     timeout: 10000
 };

@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { BitbucketClient } from "../../client/BitbucketClient";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { BitbucketPipeline } from "../types";
@@ -24,7 +23,6 @@ export const getPipelineOperation: OperationDefinition = {
     description: "Get details of a specific pipeline in a Bitbucket repository",
     category: "pipelines",
     inputSchema: getPipelineSchema,
-    inputSchemaJSON: toJSONSchema(getPipelineSchema),
     retryable: true,
     timeout: 30000
 };

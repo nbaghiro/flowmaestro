@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { KlaviyoClient } from "../client/KlaviyoClient";
 
@@ -22,7 +21,6 @@ export const getListsOperation: OperationDefinition = {
     description: "Get all lists from Klaviyo",
     category: "lists",
     inputSchema: getListsSchema,
-    inputSchemaJSON: toJSONSchema(getListsSchema),
     retryable: true,
     timeout: 15000
 };

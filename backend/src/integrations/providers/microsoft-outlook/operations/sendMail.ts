@@ -29,53 +29,6 @@ export const sendMailOperation: OperationDefinition = {
     description: "Send an email message",
     category: "email",
     inputSchema: sendMailSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["to", "subject", "body"],
-        properties: {
-            to: {
-                type: "array",
-                items: { type: "string", format: "email" },
-                minItems: 1,
-                description: "Array of recipient email addresses"
-            },
-            subject: {
-                type: "string",
-                description: "Email subject"
-            },
-            body: {
-                type: "string",
-                description: "Email body content"
-            },
-            bodyType: {
-                type: "string",
-                enum: ["text", "html"],
-                default: "html",
-                description: "Content type: 'text' or 'html'"
-            },
-            cc: {
-                type: "array",
-                items: { type: "string", format: "email" },
-                description: "CC recipients"
-            },
-            bcc: {
-                type: "array",
-                items: { type: "string", format: "email" },
-                description: "BCC recipients"
-            },
-            importance: {
-                type: "string",
-                enum: ["low", "normal", "high"],
-                default: "normal",
-                description: "Email importance level"
-            },
-            saveToSentItems: {
-                type: "boolean",
-                default: true,
-                description: "Save to Sent folder"
-            }
-        }
-    },
     retryable: false // Email sending should not auto-retry to avoid duplicates
 };
 

@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { SendGridStatsOutput } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { SendGridClient } from "../client/SendGridClient";
@@ -18,7 +17,6 @@ export const getStatsOperation: OperationDefinition = {
     description: "Get global email statistics from SendGrid",
     category: "analytics",
     inputSchema: getStatsSchema,
-    inputSchemaJSON: toJSONSchema(getStatsSchema),
     retryable: true,
     timeout: 30000
 };

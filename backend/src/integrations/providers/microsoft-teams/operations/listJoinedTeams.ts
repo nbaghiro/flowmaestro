@@ -12,10 +12,6 @@ export const listJoinedTeamsOperation: OperationDefinition = {
     description: "List all Microsoft Teams the user is a member of",
     category: "teams",
     inputSchema: listJoinedTeamsSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {}
-    },
     retryable: true
 };
 

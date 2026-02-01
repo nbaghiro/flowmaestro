@@ -1,3 +1,4 @@
+import { toJSONSchema } from "../../../../core/utils/zod-to-json-schema";
 import { CalComClient } from "../client/CalComClient";
 import { executeCancelBooking } from "../operations/cancelBooking";
 import { executeCreateBooking } from "../operations/createBooking";
@@ -24,7 +25,7 @@ export class CalComMCPAdapter {
         return Array.from(this.operations.values()).map((op) => ({
             name: `calcom_${op.id}`,
             description: op.description,
-            inputSchema: op.inputSchemaJSON,
+            inputSchema: toJSONSchema(op.inputSchema),
             executeRef: op.id
         }));
     }

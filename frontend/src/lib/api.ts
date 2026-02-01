@@ -1505,6 +1505,8 @@ export interface Connection {
             username?: string;
             workspace?: string;
         };
+        /** When true, operations return mock/test data instead of real API calls */
+        isTestConnection?: boolean;
     };
     capabilities: JsonObject;
     last_used_at: string | null;

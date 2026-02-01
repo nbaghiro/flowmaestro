@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { LinkedInClient } from "../client/LinkedInClient";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 
@@ -36,7 +35,6 @@ export const getOrganizationsOperation: OperationDefinition = (() => {
                 "Get the list of LinkedIn organizations (company pages) the user can post to as an admin.",
             category: "organizations",
             inputSchema: getOrganizationsSchema,
-            inputSchemaJSON: toJSONSchema(getOrganizationsSchema),
             retryable: true,
             timeout: 15000
         };

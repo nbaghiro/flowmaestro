@@ -20,17 +20,7 @@ export const deleteDocumentOperation: OperationDefinition = {
     description: "Permanently delete a Google Docs document (uses Drive API)",
     category: "documents",
     retryable: true,
-    inputSchema: deleteDocumentSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            documentId: {
-                type: "string",
-                description: "The ID of the document to delete"
-            }
-        },
-        required: ["documentId"]
-    }
+    inputSchema: deleteDocumentSchema
 };
 
 /**

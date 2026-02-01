@@ -20,17 +20,7 @@ export const getIssueOperation: OperationDefinition = {
     description: "Get a single issue by ID from Linear",
     category: "issues",
     retryable: true,
-    inputSchema: getIssueSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            id: {
-                type: "string",
-                description: "Issue ID to retrieve"
-            }
-        },
-        required: ["id"]
-    }
+    inputSchema: getIssueSchema
 };
 
 /**

@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { HubspotClient } from "../../client/HubspotClient";
 import type { HubspotContact } from "../types";
@@ -29,7 +28,6 @@ export const getContactOperation: OperationDefinition = {
     description: "Get a contact by ID or email address",
     category: "crm",
     inputSchema: getContactSchema,
-    inputSchemaJSON: toJSONSchema(getContactSchema),
     retryable: true,
     timeout: 10000
 };

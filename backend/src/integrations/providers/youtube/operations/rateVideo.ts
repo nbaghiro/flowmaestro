@@ -23,22 +23,7 @@ export const rateVideoOperation: OperationDefinition = {
     description: "Like, dislike, or remove rating from a YouTube video",
     category: "videos",
     retryable: true,
-    inputSchema: rateVideoSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            videoId: {
-                type: "string",
-                description: "The video ID to rate"
-            },
-            rating: {
-                type: "string",
-                enum: ["like", "dislike", "none"],
-                description: "Rating to apply (like, dislike, or none to remove rating)"
-            }
-        },
-        required: ["videoId", "rating"]
-    }
+    inputSchema: rateVideoSchema
 };
 
 /**

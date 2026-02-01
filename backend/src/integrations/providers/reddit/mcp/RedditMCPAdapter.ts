@@ -1,3 +1,4 @@
+import { toJSONSchema } from "../../../../core/utils/zod-to-json-schema";
 import { RedditClient } from "../client/RedditClient";
 import { executeGetMe } from "../operations/getMe";
 import { executeGetPost } from "../operations/getPost";
@@ -21,7 +22,7 @@ export class RedditMCPAdapter {
         return Array.from(this.operations.values()).map((op) => ({
             name: `reddit_${op.id}`,
             description: op.description,
-            inputSchema: op.inputSchemaJSON,
+            inputSchema: toJSONSchema(op.inputSchema),
             executeRef: op.id
         }));
     }

@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { WorkdayClient } from "../client/WorkdayClient";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 
@@ -30,7 +29,6 @@ export const listAbsenceBalancesOperation: OperationDefinition = (() => {
             category: "hr",
             actionType: "read",
             inputSchema: listAbsenceBalancesSchema,
-            inputSchemaJSON: toJSONSchema(listAbsenceBalancesSchema),
             retryable: true,
             timeout: 15000
         };

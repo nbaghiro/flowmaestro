@@ -31,27 +31,7 @@ export const modifyMessageOperation: OperationDefinition = {
         "Add or remove labels from a Gmail message (mark as read/unread, star, archive, etc.)",
     category: "messages",
     retryable: true,
-    inputSchema: modifyMessageSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            messageId: {
-                type: "string",
-                description: "The ID of the message to modify"
-            },
-            addLabelIds: {
-                type: "array",
-                items: { type: "string" },
-                description: "Label IDs to add (e.g., ['STARRED', 'IMPORTANT'])"
-            },
-            removeLabelIds: {
-                type: "array",
-                items: { type: "string" },
-                description: "Label IDs to remove (e.g., ['UNREAD', 'INBOX'])"
-            }
-        },
-        required: ["messageId"]
-    }
+    inputSchema: modifyMessageSchema
 };
 
 /**

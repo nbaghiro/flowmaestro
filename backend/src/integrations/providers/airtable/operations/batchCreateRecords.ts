@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { AirtableClient } from "../client/AirtableClient";
 import { baseIdSchema, tableIdSchema, fieldsSchema } from "../schemas";
 import type { AirtableRecord } from "./types";
@@ -23,7 +22,6 @@ export const batchCreateRecordsOperation: OperationDefinition = {
     description: "Create up to 10 records at once",
     category: "data",
     inputSchema: batchCreateRecordsSchema,
-    inputSchemaJSON: toJSONSchema(batchCreateRecordsSchema),
     retryable: true,
     timeout: 30000
 };

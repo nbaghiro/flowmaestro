@@ -14,12 +14,6 @@ export const listChatsOperation: OperationDefinition = {
     description: "List user's Microsoft Teams chats (1:1 and group chats)",
     category: "chats",
     inputSchema: listChatsSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            top: { type: "number", description: "Maximum number of chats to return" }
-        }
-    },
     retryable: true
 };
 

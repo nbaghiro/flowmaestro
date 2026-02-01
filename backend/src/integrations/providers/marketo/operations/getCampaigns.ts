@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { MarketoClient } from "../client/MarketoClient";
 
@@ -25,7 +24,6 @@ export const getCampaignsOperation: OperationDefinition = {
     description: "Get all campaigns from Marketo. Optionally filter to only triggerable campaigns.",
     category: "campaigns",
     inputSchema: getCampaignsSchema,
-    inputSchemaJSON: toJSONSchema(getCampaignsSchema),
     retryable: true,
     timeout: 15000
 };

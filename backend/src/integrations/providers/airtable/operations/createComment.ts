@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { AirtableClient } from "../client/AirtableClient";
 import { baseIdSchema, tableIdSchema, recordIdSchema } from "../schemas";
 import type { AirtableComment } from "./types";
@@ -20,7 +19,6 @@ export const createCommentOperation: OperationDefinition = {
     description: "Add a comment to a record",
     category: "collaboration",
     inputSchema: createCommentSchema,
-    inputSchemaJSON: toJSONSchema(createCommentSchema),
     retryable: true,
     timeout: 10000
 };

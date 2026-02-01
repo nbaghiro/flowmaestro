@@ -2,6 +2,7 @@ import {
     X,
     FileText,
     Globe,
+    File,
     Search,
     ArrowLeft,
     Loader2,
@@ -110,9 +111,12 @@ function DocumentViewer({
 }) {
     const getDocumentIcon = () => {
         if (doc.source_type === "url") {
-            return <Globe className="w-4 h-4 text-muted-foreground" />;
+            return <Globe className="w-4 h-4 text-primary" />;
         }
-        return <FileText className="w-4 h-4 text-muted-foreground" />;
+        if (doc.file_type === "pdf") {
+            return <File className="w-4 h-4 text-red-500" />;
+        }
+        return <FileText className="w-4 h-4 text-primary" />;
     };
 
     const renderViewer = () => {
@@ -277,7 +281,7 @@ function SearchPanel({
                     >
                         <ArrowLeft className="w-4 h-4" />
                     </button>
-                    <Search className="w-4 h-4 text-muted-foreground" />
+                    <Search className="w-4 h-4 text-primary" />
                     <span className="font-medium text-sm">Search</span>
                 </div>
                 <div className="flex items-center gap-1">
@@ -370,7 +374,7 @@ function SearchPanel({
             <div className="flex-1 overflow-auto">
                 {searching ? (
                     <div className="flex flex-col items-center justify-center py-12">
-                        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground mb-2" />
+                        <Loader2 className="w-6 h-6 animate-spin text-primary mb-2" />
                         <p className="text-sm text-muted-foreground">Searching...</p>
                     </div>
                 ) : !hasSearched ? (
@@ -400,8 +404,8 @@ function SearchPanel({
                                     key={docName}
                                     className="border border-border rounded-lg overflow-hidden"
                                 >
-                                    <div className="flex items-center gap-2 p-3 border-b border-border">
-                                        <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                    <div className="flex items-center gap-2 p-3 bg-muted/30 border-b border-border">
+                                        <FileText className="w-4 h-4 text-primary flex-shrink-0" />
                                         <span className="font-medium text-sm truncate flex-1">
                                             {docName}
                                         </span>
@@ -421,7 +425,7 @@ function SearchPanel({
                                             return (
                                                 <div key={result.id} className="p-3">
                                                     <div className="flex items-center gap-2 mb-1.5">
-                                                        <span className="text-xs font-medium text-muted-foreground">
+                                                        <span className="text-xs font-medium text-primary">
                                                             Chunk {result.chunk_index + 1}
                                                         </span>
                                                         <span className="text-xs text-muted-foreground">
@@ -442,7 +446,7 @@ function SearchPanel({
                                                             onClick={() =>
                                                                 toggleChunkExpansion(result.id)
                                                             }
-                                                            className="flex items-center gap-1 mt-2 text-xs text-muted-foreground hover:text-foreground"
+                                                            className="flex items-center gap-1 mt-2 text-xs text-primary hover:underline"
                                                         >
                                                             {isExpanded ? (
                                                                 <>

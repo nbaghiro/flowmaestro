@@ -26,19 +26,7 @@ export const listCalendarsOperation: OperationDefinition = {
     description: "List all calendars accessible by the user",
     category: "calendars",
     retryable: true,
-    inputSchema: listCalendarsSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            maxResults: {
-                type: "number",
-                description: "Maximum number of calendars to return",
-                minimum: 1,
-                maximum: 250
-            }
-        },
-        required: []
-    }
+    inputSchema: listCalendarsSchema
 };
 
 /**

@@ -14,16 +14,6 @@ export const deleteMessageOperation: OperationDefinition = {
     description: "Delete an email message",
     category: "email",
     inputSchema: deleteMessageSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["messageId"],
-        properties: {
-            messageId: {
-                type: "string",
-                description: "ID of the message to delete"
-            }
-        }
-    },
     retryable: false // Delete should not auto-retry
 };
 

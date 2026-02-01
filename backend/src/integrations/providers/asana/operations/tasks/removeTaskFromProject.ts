@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { removeTaskFromProjectInputSchema, type RemoveTaskFromProjectInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { AsanaClient } from "../../client/AsanaClient";
@@ -10,7 +9,6 @@ export const removeTaskFromProjectOperation: OperationDefinition = {
         "Remove a task from a project. The task will still exist but no longer be part of the project.",
     category: "tasks",
     inputSchema: removeTaskFromProjectInputSchema,
-    inputSchemaJSON: toJSONSchema(removeTaskFromProjectInputSchema),
     retryable: true,
     timeout: 10000
 };

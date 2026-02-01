@@ -22,25 +22,7 @@ export const moveFileOperation: OperationDefinition = {
     description: "Move a file or folder from one folder to another in Google Drive",
     category: "organization",
     retryable: true,
-    inputSchema: moveFileSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            fileId: {
-                type: "string",
-                description: "File or folder ID to move"
-            },
-            newFolderId: {
-                type: "string",
-                description: "New parent folder ID"
-            },
-            oldFolderId: {
-                type: "string",
-                description: "Current parent folder ID"
-            }
-        },
-        required: ["fileId", "newFolderId", "oldFolderId"]
-    }
+    inputSchema: moveFileSchema
 };
 
 /**

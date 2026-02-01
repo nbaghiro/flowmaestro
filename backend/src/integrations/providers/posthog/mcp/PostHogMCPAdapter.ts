@@ -1,3 +1,4 @@
+import { toJSONSchema } from "../../../../core/utils/zod-to-json-schema";
 import { PostHogClient } from "../client/PostHogClient";
 import { executeCaptureEvent } from "../operations/captureEvent";
 import { executeCaptureEvents } from "../operations/captureEvents";
@@ -18,7 +19,7 @@ export class PostHogMCPAdapter {
         return Array.from(this.operations.values()).map((op) => ({
             name: `posthog_${op.id}`,
             description: op.description,
-            inputSchema: op.inputSchemaJSON,
+            inputSchema: toJSONSchema(op.inputSchema),
             executeRef: op.id
         }));
     }

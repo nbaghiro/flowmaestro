@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { AmplitudeClient } from "../client/AmplitudeClient";
 import type { AmplitudeIdentifyResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -43,7 +42,6 @@ export const identifyUserOperation: OperationDefinition = {
     category: "users",
     actionType: "write",
     inputSchema: identifyUserSchema,
-    inputSchemaJSON: toJSONSchema(identifyUserSchema),
     retryable: true,
     timeout: 10000
 };

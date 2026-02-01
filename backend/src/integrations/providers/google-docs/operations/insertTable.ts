@@ -30,30 +30,7 @@ export const insertTableOperation: OperationDefinition = {
     description: "Insert a table into a Google Docs document",
     category: "documents",
     retryable: true,
-    inputSchema: insertTableSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            documentId: {
-                type: "string",
-                description: "The ID of the document"
-            },
-            rows: {
-                type: "integer",
-                description: "Number of rows in the table (1-100)"
-            },
-            columns: {
-                type: "integer",
-                description: "Number of columns in the table (1-20)"
-            },
-            index: {
-                type: "integer",
-                description:
-                    "The index in the document to insert the table at. If not specified, inserts at the end."
-            }
-        },
-        required: ["documentId", "rows", "columns"]
-    }
+    inputSchema: insertTableSchema
 };
 
 interface BatchUpdateResponse {

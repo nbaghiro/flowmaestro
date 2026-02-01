@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { getCustomFieldConfigsInputSchema, type GetCustomFieldConfigsInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { JiraClient } from "../../client/JiraClient";
@@ -10,7 +9,6 @@ export const getCustomFieldConfigsOperation: OperationDefinition = {
         "Get configuration details for a custom field, including allowed values and default values.",
     category: "fields",
     inputSchema: getCustomFieldConfigsInputSchema,
-    inputSchemaJSON: toJSONSchema(getCustomFieldConfigsInputSchema),
     retryable: true,
     timeout: 10000
 };

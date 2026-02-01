@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { DropboxClient } from "../client/DropboxClient";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 
@@ -16,7 +15,6 @@ export const downloadFileOperation: OperationDefinition = {
         "Download a file from Dropbox. Returns the file content as a base64 encoded string along with file metadata.",
     category: "files",
     inputSchema: downloadFileSchema,
-    inputSchemaJSON: toJSONSchema(downloadFileSchema),
     retryable: true,
     timeout: 60000 // Longer timeout for downloads
 };

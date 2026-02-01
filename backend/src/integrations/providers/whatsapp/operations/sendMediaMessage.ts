@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { WhatsAppClient } from "../client/WhatsAppClient";
 import type { WhatsAppSendResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -43,7 +42,6 @@ export const sendMediaMessageOperation: OperationDefinition = (() => {
             description: "Send an image, video, audio, document, or sticker to a WhatsApp user",
             category: "messaging",
             inputSchema: sendMediaMessageSchema,
-            inputSchemaJSON: toJSONSchema(sendMediaMessageSchema),
             retryable: true,
             timeout: 30000
         };

@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { SlackClient } from "../client/SlackClient";
 import type { SlackConversationsResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -34,7 +33,6 @@ export const listChannelsOperation: OperationDefinition = (() => {
             description: "List all channels in the Slack workspace",
             category: "channels",
             inputSchema: listChannelsSchema,
-            inputSchemaJSON: toJSONSchema(listChannelsSchema),
             retryable: true,
             timeout: 10000
         };

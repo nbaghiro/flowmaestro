@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { SegmentClient } from "../client/SegmentClient";
 import {
     SegmentUserIdSchema,
@@ -49,7 +48,6 @@ export const groupUserOperation: OperationDefinition = {
     category: "users",
     actionType: "write",
     inputSchema: groupUserSchema,
-    inputSchemaJSON: toJSONSchema(groupUserSchema),
     retryable: true,
     timeout: 10000
 };

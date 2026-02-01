@@ -17,29 +17,6 @@ export const listEventsOperation: OperationDefinition = {
     description: "List calendar events within a time range",
     category: "calendar",
     inputSchema: listEventsSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["startDateTime", "endDateTime"],
-        properties: {
-            calendarId: {
-                type: "string",
-                description: "Calendar ID (defaults to primary calendar)"
-            },
-            startDateTime: {
-                type: "string",
-                description: "Start of time range in ISO 8601 format"
-            },
-            endDateTime: {
-                type: "string",
-                description: "End of time range in ISO 8601 format"
-            },
-            top: {
-                type: "number",
-                minimum: 1,
-                description: "Maximum number of events to return"
-            }
-        }
-    },
     retryable: true
 };
 

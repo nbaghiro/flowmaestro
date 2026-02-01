@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { PagerDutyClient } from "../client/PagerDutyClient";
 
@@ -30,7 +29,6 @@ export const createIncidentOperation: OperationDefinition = {
     category: "incidents",
     actionType: "write",
     inputSchema: createIncidentSchema,
-    inputSchemaJSON: toJSONSchema(createIncidentSchema),
     retryable: false,
     timeout: 30000
 };

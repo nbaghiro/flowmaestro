@@ -1,4 +1,5 @@
 import { config as appConfig, getOAuthRedirectUri } from "../../../core/config";
+import { toJSONSchema } from "../../../core/utils/zod-to-json-schema";
 import { BaseProvider } from "../../core/BaseProvider";
 import { MicrosoftPowerPointClient } from "./client/MicrosoftPowerPointClient";
 import {
@@ -162,7 +163,7 @@ export class MicrosoftPowerPointProvider extends BaseProvider {
         return this.getOperations().map((op) => ({
             name: `microsoft_powerpoint_${op.id}`,
             description: op.description,
-            inputSchema: op.inputSchemaJSON
+            inputSchema: toJSONSchema(op.inputSchema)
         }));
     }
 

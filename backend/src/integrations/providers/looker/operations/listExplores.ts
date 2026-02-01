@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { LookerClient } from "../client/LookerClient";
 import type { LookerModel } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -20,7 +19,6 @@ export const listExploresOperation: OperationDefinition = {
     description: "Get all available explores across all models",
     category: "explores",
     inputSchema: listExploresSchema,
-    inputSchemaJSON: toJSONSchema(listExploresSchema),
     retryable: true,
     timeout: 30000
 };

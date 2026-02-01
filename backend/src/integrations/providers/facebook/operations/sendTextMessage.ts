@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { FacebookClient } from "../client/FacebookClient";
 import type { MessengerSendResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -33,7 +32,6 @@ export const sendTextMessageOperation: OperationDefinition = (() => {
             description: "Send a text message to a Messenger user",
             category: "messaging",
             inputSchema: sendTextMessageSchema,
-            inputSchemaJSON: toJSONSchema(sendTextMessageSchema),
             retryable: true,
             timeout: 15000
         };

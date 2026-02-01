@@ -1,3 +1,4 @@
+import { toJSONSchema } from "../../../../core/utils/zod-to-json-schema";
 import { ClickUpClient } from "../client/ClickUpClient";
 import { executeCreateTaskComment } from "../operations/comments/createTaskComment";
 import { executeGetTaskComments } from "../operations/comments/getTaskComments";
@@ -24,7 +25,7 @@ export class ClickUpMCPAdapter {
         return Array.from(this.operations.values()).map((op) => ({
             name: `clickup_${op.id}`,
             description: op.description,
-            inputSchema: op.inputSchemaJSON,
+            inputSchema: toJSONSchema(op.inputSchema),
             executeRef: op.id
         }));
     }

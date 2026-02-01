@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { getProjectInputSchema, type GetProjectInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { JiraClient } from "../../client/JiraClient";
@@ -9,7 +8,6 @@ export const getProjectOperation: OperationDefinition = {
     description: "Get full details of a project, including issue types, components, and versions.",
     category: "projects",
     inputSchema: getProjectInputSchema,
-    inputSchemaJSON: toJSONSchema(getProjectInputSchema),
     retryable: true,
     timeout: 10000
 };

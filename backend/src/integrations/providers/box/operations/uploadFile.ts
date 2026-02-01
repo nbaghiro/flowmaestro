@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { BoxClient } from "../client/BoxClient";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 
@@ -18,7 +17,6 @@ export const uploadFileOperation: OperationDefinition = {
         "Upload a file to Box. Supports files up to 50MB. Content should be base64 encoded.",
     category: "files",
     inputSchema: uploadFileSchema,
-    inputSchemaJSON: toJSONSchema(uploadFileSchema),
     retryable: true,
     timeout: 120000 // 2 minutes for larger files
 };

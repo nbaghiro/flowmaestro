@@ -1,3 +1,4 @@
+import { toJSONSchema } from "../../../../core/utils/zod-to-json-schema";
 import {
     // User Operations
     executeGetMe,
@@ -36,7 +37,7 @@ export class FreshBooksMCPAdapter {
             tools.push({
                 name: `freshbooks_${id}`,
                 description: operation.description,
-                inputSchema: operation.inputSchemaJSON
+                inputSchema: toJSONSchema(operation.inputSchema)
             });
         }
 

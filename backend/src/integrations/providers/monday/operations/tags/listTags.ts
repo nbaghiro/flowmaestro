@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { LIST_TAGS } from "../../graphql/queries";
 import { listTagsInputSchema, type ListTagsInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
@@ -10,7 +9,6 @@ export const listTagsOperation: OperationDefinition = {
     description: "List all tags on a Monday.com board.",
     category: "tags",
     inputSchema: listTagsInputSchema,
-    inputSchemaJSON: toJSONSchema(listTagsInputSchema),
     retryable: true,
     timeout: 10000
 };

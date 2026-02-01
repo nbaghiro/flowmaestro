@@ -16,26 +16,6 @@ export const forwardMessageOperation: OperationDefinition = {
     description: "Forward an email to new recipients",
     category: "email",
     inputSchema: forwardMessageSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["messageId", "to"],
-        properties: {
-            messageId: {
-                type: "string",
-                description: "ID of the message to forward"
-            },
-            to: {
-                type: "array",
-                items: { type: "string", format: "email" },
-                minItems: 1,
-                description: "Email addresses to forward to"
-            },
-            comment: {
-                type: "string",
-                description: "Additional message to include"
-            }
-        }
-    },
     retryable: false // Forward should not auto-retry to avoid duplicates
 };
 

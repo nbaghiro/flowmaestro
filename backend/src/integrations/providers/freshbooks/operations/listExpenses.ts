@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { FreshBooksExpenseOutput } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { FreshBooksHttpClient } from "../client/FreshBooksClient";
@@ -23,7 +22,6 @@ export const listExpensesOperation: OperationDefinition = {
     description: "Get a list of expenses from FreshBooks",
     category: "expenses",
     inputSchema: listExpensesSchema,
-    inputSchemaJSON: toJSONSchema(listExpensesSchema),
     retryable: true,
     timeout: 30000
 };

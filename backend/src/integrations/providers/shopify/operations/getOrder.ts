@@ -1,5 +1,4 @@
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { ShopifyClient } from "../client/ShopifyClient";
 import { GetOrderSchema, type GetOrderParams } from "../schemas";
 import type { ShopifyOrderResponse } from "./types";
@@ -18,7 +17,6 @@ export const getOrderOperation: OperationDefinition = (() => {
             description: "Retrieve a single order by its ID with full details",
             category: "orders",
             inputSchema: GetOrderSchema,
-            inputSchemaJSON: toJSONSchema(GetOrderSchema),
             retryable: true,
             timeout: 15000
         };

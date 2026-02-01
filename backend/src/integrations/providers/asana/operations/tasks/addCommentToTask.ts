@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { addCommentToTaskInputSchema, type AddCommentToTaskInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { AsanaClient } from "../../client/AsanaClient";
@@ -9,7 +8,6 @@ export const addCommentToTaskOperation: OperationDefinition = {
     description: "Add a comment (story) to a task in Asana.",
     category: "tasks",
     inputSchema: addCommentToTaskInputSchema,
-    inputSchemaJSON: toJSONSchema(addCommentToTaskInputSchema),
     retryable: true,
     timeout: 10000
 };

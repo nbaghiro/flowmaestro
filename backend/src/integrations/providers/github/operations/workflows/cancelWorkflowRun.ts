@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { GitHubClient } from "../../client/GitHubClient";
 import { GitHubOwnerSchema, GitHubRepoNameSchema } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
@@ -24,7 +23,6 @@ export const cancelWorkflowRunOperation: OperationDefinition = {
     description: "Cancel a workflow run that is in progress",
     category: "workflows",
     inputSchema: cancelWorkflowRunSchema,
-    inputSchemaJSON: toJSONSchema(cancelWorkflowRunSchema),
     retryable: false,
     timeout: 30000
 };

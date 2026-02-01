@@ -31,39 +31,7 @@ export const updateLabelOperation: OperationDefinition = {
     description: "Update an existing Gmail label's name, visibility, or color",
     category: "labels",
     retryable: true,
-    inputSchema: updateLabelSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            labelId: {
-                type: "string",
-                description: "The ID of the label to update"
-            },
-            name: {
-                type: "string",
-                description: "New name for the label"
-            },
-            messageListVisibility: {
-                type: "string",
-                enum: ["show", "hide"],
-                description: "Whether to show messages with this label"
-            },
-            labelListVisibility: {
-                type: "string",
-                enum: ["labelShow", "labelShowIfUnread", "labelHide"],
-                description: "Visibility of the label"
-            },
-            backgroundColor: {
-                type: "string",
-                description: "Background color (hex format)"
-            },
-            textColor: {
-                type: "string",
-                description: "Text color (hex format)"
-            }
-        },
-        required: ["labelId"]
-    }
+    inputSchema: updateLabelSchema
 };
 
 /**

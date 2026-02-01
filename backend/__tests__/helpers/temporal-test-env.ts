@@ -151,7 +151,14 @@ export async function createTestEnvironment(
     });
 
     const cleanup = async () => {
-        await worker.shutdown();
+        // Only shutdown if worker is still running
+        // Check worker state to avoid "Not running" error
+        try {
+            await worker.shutdown();
+        } catch (_error) {
+            // Ignore shutdown errors - worker may already be stopped
+            // This happens when runUntil completes or fails
+        }
         await env.teardown();
     };
 

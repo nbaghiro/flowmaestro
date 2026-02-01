@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { LookerClient } from "../client/LookerClient";
 import { LookerSearchTermSchema } from "./schemas";
 import type { LookerSearchResult } from "./types";
@@ -26,7 +25,6 @@ export const searchContentOperation: OperationDefinition = {
     description: "Search for dashboards and looks by title or description",
     category: "content",
     inputSchema: searchContentSchema,
-    inputSchemaJSON: toJSONSchema(searchContentSchema),
     retryable: true,
     timeout: 30000
 };

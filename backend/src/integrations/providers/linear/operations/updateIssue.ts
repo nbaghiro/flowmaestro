@@ -31,42 +31,7 @@ export const updateIssueOperation: OperationDefinition = {
     description: "Update an existing issue in Linear",
     category: "issues",
     retryable: true,
-    inputSchema: updateIssueSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            id: {
-                type: "string",
-                description: "Issue ID to update"
-            },
-            title: {
-                type: "string",
-                description: "Issue title"
-            },
-            description: {
-                type: "string",
-                description: "Issue description (markdown)"
-            },
-            assigneeId: {
-                type: "string",
-                description: "Assignee user ID"
-            },
-            priority: {
-                type: "number",
-                description: "Priority (0=None, 1=Urgent, 2=High, 3=Normal, 4=Low)"
-            },
-            stateId: {
-                type: "string",
-                description: "Workflow state ID"
-            },
-            labelIds: {
-                type: "array",
-                items: { type: "string" },
-                description: "Array of label IDs"
-            }
-        },
-        required: ["id"]
-    }
+    inputSchema: updateIssueSchema
 };
 
 /**

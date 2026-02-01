@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { Db } from "mongodb";
 
@@ -46,7 +45,6 @@ export const findOperation: OperationDefinition = {
     description: "Query documents from a collection using MongoDB query syntax",
     category: "database",
     inputSchema: findSchema,
-    inputSchemaJSON: toJSONSchema(findSchema),
     retryable: false,
     timeout: 30000
 };

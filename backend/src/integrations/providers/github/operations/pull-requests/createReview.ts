@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { GitHubClient } from "../../client/GitHubClient";
 import {
     GitHubOwnerSchema,
@@ -33,7 +32,6 @@ export const createReviewOperation: OperationDefinition = {
     description: "Create a review on a pull request (approve, request changes, or comment)",
     category: "pull_requests",
     inputSchema: createReviewSchema,
-    inputSchemaJSON: toJSONSchema(createReviewSchema),
     retryable: false,
     timeout: 15000
 };

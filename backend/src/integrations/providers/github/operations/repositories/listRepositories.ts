@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { GitHubClient } from "../../client/GitHubClient";
 import {
     GitHubPerPageSchema,
@@ -36,7 +35,6 @@ export const listRepositoriesOperation: OperationDefinition = {
     description: "List repositories for the authenticated user",
     category: "repositories",
     inputSchema: listRepositoriesSchema,
-    inputSchemaJSON: toJSONSchema(listRepositoriesSchema),
     retryable: true,
     timeout: 30000
 };

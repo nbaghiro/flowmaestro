@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { QuickBooksCompanyInfoOutput } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { QuickBooksClient } from "../client/QuickBooksClient";
@@ -14,7 +13,6 @@ export const getCompanyInfoOperation: OperationDefinition = {
     description: "Get information about the connected QuickBooks company",
     category: "company",
     inputSchema: getCompanyInfoSchema,
-    inputSchemaJSON: toJSONSchema(getCompanyInfoSchema),
     retryable: true,
     timeout: 30000
 };

@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { CloseClient } from "../../client/CloseClient";
 import type { CloseOpportunity } from "../types";
@@ -34,7 +33,6 @@ export const updateOpportunityOperation: OperationDefinition = {
     description: "Update an existing opportunity",
     category: "opportunities",
     inputSchema: updateOpportunitySchema,
-    inputSchemaJSON: toJSONSchema(updateOpportunitySchema),
     retryable: false,
     timeout: 10000
 };

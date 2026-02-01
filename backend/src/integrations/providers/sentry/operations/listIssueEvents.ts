@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { SentryEventOutput } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { SentryClient } from "../client/SentryClient";
@@ -18,7 +17,6 @@ export const listIssueEventsOperation: OperationDefinition = {
     description: "List events for a specific issue",
     category: "events",
     inputSchema: listIssueEventsSchema,
-    inputSchemaJSON: toJSONSchema(listIssueEventsSchema),
     retryable: true,
     timeout: 30000
 };

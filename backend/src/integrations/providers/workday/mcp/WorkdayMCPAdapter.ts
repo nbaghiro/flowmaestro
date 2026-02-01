@@ -1,3 +1,4 @@
+import { toJSONSchema } from "../../../../core/utils/zod-to-json-schema";
 import { WorkdayClient } from "../client/WorkdayClient";
 import { executeGetCompanyInfo } from "../operations/getCompanyInfo";
 import { executeGetEligibleAbsenceTypes } from "../operations/getEligibleAbsenceTypes";
@@ -21,7 +22,7 @@ export class WorkdayMCPAdapter {
         return Array.from(this.operations.values()).map((op) => ({
             name: `workday_${op.id}`,
             description: op.description,
-            inputSchema: op.inputSchemaJSON,
+            inputSchema: toJSONSchema(op.inputSchema),
             executeRef: op.id
         }));
     }

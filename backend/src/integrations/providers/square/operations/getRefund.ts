@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { SquareClient } from "../client/SquareClient";
 import type { SquareRefundResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -23,7 +22,6 @@ export const getRefundOperation: OperationDefinition = {
     category: "refunds",
     actionType: "read",
     inputSchema: getRefundSchema,
-    inputSchemaJSON: toJSONSchema(getRefundSchema),
     retryable: true,
     timeout: 10000
 };

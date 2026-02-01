@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { AirtableClient } from "../client/AirtableClient";
 import { baseIdSchema, tableIdSchema, sortSchema } from "../schemas";
 import type { AirtableListRecordsResponse } from "./types";
@@ -31,7 +30,6 @@ export const listRecordsOperation: OperationDefinition = {
     description: "List records from an Airtable table with optional filtering and pagination",
     category: "data",
     inputSchema: listRecordsSchema,
-    inputSchemaJSON: toJSONSchema(listRecordsSchema),
     retryable: true,
     timeout: 30000
 };

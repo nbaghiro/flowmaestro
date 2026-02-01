@@ -1,4 +1,5 @@
 import { config as appConfig, getOAuthRedirectUri } from "../../../core/config";
+import { toJSONSchema } from "../../../core/utils/zod-to-json-schema";
 import { BaseProvider } from "../../core/BaseProvider";
 import { SurveyMonkeyClient } from "./client/SurveyMonkeyClient";
 import {
@@ -139,7 +140,7 @@ export class SurveyMonkeyProvider extends BaseProvider {
         return this.getOperations().map((op) => ({
             name: `surveymonkey_${op.id}`,
             description: op.description,
-            inputSchema: op.inputSchemaJSON
+            inputSchema: toJSONSchema(op.inputSchema)
         }));
     }
 

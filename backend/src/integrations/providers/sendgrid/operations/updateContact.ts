@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { SendGridClient, SendGridContact } from "../client/SendGridClient";
 
@@ -26,7 +25,6 @@ export const updateContactOperation: OperationDefinition = {
     description: "Update an existing contact in SendGrid Marketing (async operation)",
     category: "contacts",
     inputSchema: updateContactSchema,
-    inputSchemaJSON: toJSONSchema(updateContactSchema),
     retryable: false,
     timeout: 30000
 };

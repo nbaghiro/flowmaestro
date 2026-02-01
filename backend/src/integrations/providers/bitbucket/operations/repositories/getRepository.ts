@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { BitbucketClient } from "../../client/BitbucketClient";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { BitbucketRepository } from "../types";
@@ -23,7 +22,6 @@ export const getRepositoryOperation: OperationDefinition = {
     description: "Get details of a specific Bitbucket repository",
     category: "repositories",
     inputSchema: getRepositorySchema,
-    inputSchemaJSON: toJSONSchema(getRepositorySchema),
     retryable: true,
     timeout: 30000
 };

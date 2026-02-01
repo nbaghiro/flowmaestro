@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { Db } from "mongodb";
 
@@ -28,7 +27,6 @@ export const insertManyOperation: OperationDefinition = {
     description: "Insert multiple documents into a collection",
     category: "database",
     inputSchema: insertManySchema,
-    inputSchemaJSON: toJSONSchema(insertManySchema),
     retryable: false,
     timeout: 60000
 };

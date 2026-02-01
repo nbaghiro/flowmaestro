@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { AirtableClient } from "../client/AirtableClient";
 import { baseIdSchema, tableIdSchema, recordIdSchema } from "../schemas";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -18,7 +17,6 @@ export const batchDeleteRecordsOperation: OperationDefinition = {
     description: "Delete up to 10 records at once",
     category: "data",
     inputSchema: batchDeleteRecordsSchema,
-    inputSchemaJSON: toJSONSchema(batchDeleteRecordsSchema),
     retryable: false,
     timeout: 30000
 };

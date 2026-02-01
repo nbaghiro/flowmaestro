@@ -1,3 +1,4 @@
+import { toJSONSchema } from "../../../../core/utils/zod-to-json-schema";
 import { RipplingClient } from "../client/RipplingClient";
 import { executeGetCompany } from "../operations/getCompany";
 import { executeGetEmployee } from "../operations/getEmployee";
@@ -24,7 +25,7 @@ export class RipplingMCPAdapter {
         return Array.from(this.operations.values()).map((op) => ({
             name: `rippling_${op.id}`,
             description: op.description,
-            inputSchema: op.inputSchemaJSON,
+            inputSchema: toJSONSchema(op.inputSchema),
             executeRef: op.id
         }));
     }

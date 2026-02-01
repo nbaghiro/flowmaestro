@@ -26,26 +26,7 @@ export const batchUpdateOperation: OperationDefinition = {
         "Apply multiple updates to a presentation atomically. Supports all Google Slides API request types including createSlide, duplicateObject, createShape, insertText, updatePageProperties, deleteObject, replaceAllText, and more.",
     category: "presentations",
     retryable: true,
-    inputSchema: batchUpdateSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            presentationId: {
-                type: "string",
-                description: "The ID of the presentation to update"
-            },
-            requests: {
-                type: "array",
-                items: {
-                    type: "object",
-                    description:
-                        "A single update request. Common types: createSlide, duplicateObject, createShape, createImage, createVideo, createTable, insertText, deleteText, replaceAllText, updateShapeProperties, updateTextStyle, updatePageProperties, deleteObject"
-                },
-                description: "Array of update requests to apply atomically"
-            }
-        },
-        required: ["presentationId", "requests"]
-    }
+    inputSchema: batchUpdateSchema
 };
 
 interface BatchUpdateResponse {

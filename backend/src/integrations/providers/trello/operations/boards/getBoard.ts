@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { TrelloClient } from "../../client/TrelloClient";
 import { TrelloBoardIdSchema } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
@@ -23,7 +22,6 @@ export const getBoardOperation: OperationDefinition = {
     description: "Get detailed information about a specific Trello board",
     category: "boards",
     inputSchema: getBoardSchema,
-    inputSchemaJSON: toJSONSchema(getBoardSchema),
     retryable: true,
     timeout: 10000
 };

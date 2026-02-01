@@ -1,5 +1,4 @@
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { ShopifyClient } from "../client/ShopifyClient";
 import { CloseOrderSchema, type CloseOrderParams } from "../schemas";
 import type { ShopifyOrderResponse } from "./types";
@@ -18,7 +17,6 @@ export const closeOrderOperation: OperationDefinition = (() => {
             description: "Mark an order as closed (completed)",
             category: "orders",
             inputSchema: CloseOrderSchema,
-            inputSchemaJSON: toJSONSchema(CloseOrderSchema),
             retryable: true,
             timeout: 15000
         };

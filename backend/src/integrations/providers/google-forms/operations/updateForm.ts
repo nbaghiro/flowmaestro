@@ -31,27 +31,7 @@ export const updateFormOperation: OperationDefinition = {
         "Batch update a form (add/modify questions, change settings, update form info, etc.)",
     category: "forms",
     retryable: true,
-    inputSchema: updateFormSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            formId: {
-                type: "string",
-                description: "The ID of the form to update"
-            },
-            requests: {
-                type: "array",
-                items: {
-                    type: "object",
-                    description:
-                        "An update request (createItem, updateItem, deleteItem, moveItem, updateFormInfo, updateSettings)"
-                },
-                description:
-                    "Array of update requests. See Google Forms API documentation for request formats."
-            }
-        },
-        required: ["formId", "requests"]
-    }
+    inputSchema: updateFormSchema
 };
 
 /**

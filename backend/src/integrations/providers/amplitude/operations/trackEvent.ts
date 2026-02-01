@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { AmplitudeClient } from "../client/AmplitudeClient";
 import {
     AmplitudeUserIdSchema,
@@ -42,7 +41,6 @@ export const trackEventOperation: OperationDefinition = {
     category: "events",
     actionType: "write",
     inputSchema: trackEventSchema,
-    inputSchemaJSON: toJSONSchema(trackEventSchema),
     retryable: true,
     timeout: 10000
 };

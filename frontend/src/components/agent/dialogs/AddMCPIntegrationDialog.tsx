@@ -1,6 +1,6 @@
 import { ArrowLeft, Check, Globe, Plus, Search, Server, X } from "lucide-react";
 import { useState, useEffect } from "react";
-import { ALL_PROVIDERS, type Provider } from "@flowmaestro/shared";
+import { ALL_PROVIDERS, supportsOAuth, type Provider } from "@flowmaestro/shared";
 import { getConnectionMCPTools } from "../../../lib/api";
 import { useConnectionStore } from "../../../stores/connectionStore";
 import { Alert } from "../../common/Alert";
@@ -697,7 +697,7 @@ export function AddMCPIntegrationDialog({
                         />
                     }
                     onSuccess={handleConnectionCreated}
-                    supportsOAuth={currentProvider.methods.includes("oauth2")}
+                    supportsOAuth={supportsOAuth(currentProvider.methods)}
                     supportsApiKey={currentProvider.methods.includes("api_key")}
                     oauthSettings={currentProvider.oauthSettings}
                 />

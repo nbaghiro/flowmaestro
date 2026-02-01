@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { ARCHIVE_GROUP } from "../../graphql/mutations";
 import { archiveGroupInputSchema, type ArchiveGroupInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
@@ -10,7 +9,6 @@ export const archiveGroupOperation: OperationDefinition = {
     description: "Archive a group in Monday.com. Archived groups can be restored later.",
     category: "groups",
     inputSchema: archiveGroupInputSchema,
-    inputSchemaJSON: toJSONSchema(archiveGroupInputSchema),
     retryable: true,
     timeout: 10000
 };

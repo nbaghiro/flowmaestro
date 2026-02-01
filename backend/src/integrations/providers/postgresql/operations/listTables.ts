@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { Pool, QueryResult } from "pg";
 
@@ -22,7 +21,6 @@ export const listTablesOperation: OperationDefinition = {
     description: "List all tables in the database",
     category: "database",
     inputSchema: listTablesSchema,
-    inputSchemaJSON: toJSONSchema(listTablesSchema),
     retryable: true,
     timeout: 5000
 };

@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { FacebookClient } from "../client/FacebookClient";
 import type { MessengerSendResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -59,7 +58,6 @@ export const sendGenericTemplateOperation: OperationDefinition = (() => {
                 "Send a carousel of cards (up to 10) with title, subtitle, image, and buttons",
             category: "messaging",
             inputSchema: sendGenericTemplateSchema,
-            inputSchemaJSON: toJSONSchema(sendGenericTemplateSchema),
             retryable: true,
             timeout: 15000
         };

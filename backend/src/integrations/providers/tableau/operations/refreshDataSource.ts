@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { TableauClient } from "../client/TableauClient";
 import { TableauDataSourceIdSchema } from "./schemas";
 import type { TableauJobResponse } from "./types";
@@ -24,7 +23,6 @@ export const refreshDataSourceOperation: OperationDefinition = {
     category: "datasources",
     actionType: "write",
     inputSchema: refreshDataSourceSchema,
-    inputSchemaJSON: toJSONSchema(refreshDataSourceSchema),
     retryable: true,
     timeout: 30000
 };

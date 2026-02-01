@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { DocuSignClient } from "../client/DocuSignClient";
 import { DocuSignEnvelopeIdSchema } from "../schemas";
 import type { DocuSignRecipientsResponse } from "./types";
@@ -29,7 +28,6 @@ export const getRecipientsOperation: OperationDefinition = (() => {
             description: "Get the list of recipients and their status for an envelope",
             category: "recipients",
             inputSchema: getRecipientsSchema,
-            inputSchemaJSON: toJSONSchema(getRecipientsSchema),
             retryable: true,
             timeout: 30000
         };

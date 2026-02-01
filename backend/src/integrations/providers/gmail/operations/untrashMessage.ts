@@ -20,17 +20,7 @@ export const untrashMessageOperation: OperationDefinition = {
     description: "Remove a Gmail message from the trash folder and restore it to the inbox",
     category: "messages",
     retryable: true,
-    inputSchema: untrashMessageSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            messageId: {
-                type: "string",
-                description: "The ID of the message to remove from trash"
-            }
-        },
-        required: ["messageId"]
-    }
+    inputSchema: untrashMessageSchema
 };
 
 /**

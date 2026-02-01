@@ -34,27 +34,7 @@ export const listObjectsOperation: OperationDefinition = {
     description: "Get a list of all available Salesforce objects (sObjects) in the org",
     category: "metadata",
     retryable: true,
-    inputSchema: listObjectsSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            includeCustom: {
-                type: "boolean",
-                description: "Include custom objects in the list",
-                default: true
-            },
-            onlyQueryable: {
-                type: "boolean",
-                description: "Only return objects that can be queried",
-                default: false
-            },
-            onlyCreateable: {
-                type: "boolean",
-                description: "Only return objects that can have records created",
-                default: false
-            }
-        }
-    }
+    inputSchema: listObjectsSchema
 };
 
 /**

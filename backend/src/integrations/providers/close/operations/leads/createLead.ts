@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { CloseClient } from "../../client/CloseClient";
 import type { CloseLead } from "../types";
@@ -71,7 +70,6 @@ export const createLeadOperation: OperationDefinition = {
     description: "Create a new lead (company) with optional contacts",
     category: "leads",
     inputSchema: createLeadSchema,
-    inputSchemaJSON: toJSONSchema(createLeadSchema),
     retryable: false,
     timeout: 10000
 };

@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { SurveyMonkeyClient } from "../client/SurveyMonkeyClient";
 import { ListSurveysSchema } from "../schemas";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -15,7 +14,6 @@ export const listSurveysOperation: OperationDefinition = {
         "List all surveys in the SurveyMonkey account. Returns survey metadata including ID, title, creation date, and response count.",
     category: "surveys",
     inputSchema: listSurveysSchema,
-    inputSchemaJSON: toJSONSchema(listSurveysSchema),
     retryable: true,
     timeout: 30000
 };

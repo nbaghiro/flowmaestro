@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { createTaskInputSchema, type CreateTaskInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { AsanaClient } from "../../client/AsanaClient";
@@ -10,7 +9,6 @@ export const createTaskOperation: OperationDefinition = {
         "Create a new task in Asana. Can be added to projects, assigned to users, and include custom fields.",
     category: "tasks",
     inputSchema: createTaskInputSchema,
-    inputSchemaJSON: toJSONSchema(createTaskInputSchema),
     retryable: true,
     timeout: 10000
 };

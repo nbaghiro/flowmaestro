@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { SentryClient } from "../client/SentryClient";
 
@@ -15,7 +14,6 @@ export const getIssueOperation: OperationDefinition = {
     description: "Get details of a specific issue",
     category: "issues",
     inputSchema: getIssueSchema,
-    inputSchemaJSON: toJSONSchema(getIssueSchema),
     retryable: true,
     timeout: 30000
 };

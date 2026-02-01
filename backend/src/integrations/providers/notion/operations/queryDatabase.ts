@@ -23,31 +23,7 @@ export const queryDatabaseOperation: OperationDefinition = {
     description: "Query a Notion database with filters and sorting",
     category: "read",
     retryable: true,
-    inputSchema: queryDatabaseSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            database_id: {
-                type: "string",
-                description: "Database ID to query"
-            },
-            filter: {
-                type: "object",
-                description: "Filter object for database query"
-            },
-            sorts: {
-                type: "array",
-                description: "Array of sort objects"
-            },
-            page_size: {
-                type: "number",
-                description: "Number of results per page",
-                minimum: 1,
-                maximum: 100
-            }
-        },
-        required: ["database_id"]
-    }
+    inputSchema: queryDatabaseSchema
 };
 
 /**

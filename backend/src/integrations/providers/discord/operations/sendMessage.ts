@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { DiscordClient } from "../client/DiscordClient";
 import type { DiscordMessageResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -78,7 +77,6 @@ export const sendMessageOperation: OperationDefinition = (() => {
             description: "Send a message to a Discord channel",
             category: "messaging",
             inputSchema: sendMessageSchema,
-            inputSchemaJSON: toJSONSchema(sendMessageSchema),
             retryable: true,
             timeout: 10000
         };

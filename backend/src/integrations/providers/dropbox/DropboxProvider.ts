@@ -1,4 +1,5 @@
 import { config as appConfig, getOAuthRedirectUri } from "../../../core/config";
+import { toJSONSchema } from "../../../core/utils/zod-to-json-schema";
 import { BaseProvider } from "../../core/BaseProvider";
 import { DropboxClient } from "./client/DropboxClient";
 import {
@@ -136,7 +137,7 @@ export class DropboxProvider extends BaseProvider {
         return this.getOperations().map((op) => ({
             name: `dropbox_${op.id}`,
             description: op.description,
-            inputSchema: op.inputSchemaJSON
+            inputSchema: toJSONSchema(op.inputSchema)
         }));
     }
 

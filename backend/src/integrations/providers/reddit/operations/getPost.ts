@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { createServiceLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { RedditClient } from "../client/RedditClient";
 import { SubredditNameSchema, PostIdSchema, CommentSortSchema, LimitSchema } from "../schemas";
 import type { RedditComment } from "./types";
@@ -32,7 +31,6 @@ export const getPostOperation: OperationDefinition = (() => {
             description: "Get a single post with its comments from a subreddit.",
             category: "posts",
             inputSchema: getPostSchema,
-            inputSchemaJSON: toJSONSchema(getPostSchema),
             retryable: true,
             timeout: 15000
         };

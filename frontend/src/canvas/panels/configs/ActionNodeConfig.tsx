@@ -5,7 +5,7 @@
 
 import { ChevronLeft, Play, AlertTriangle } from "lucide-react";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { ALL_PROVIDERS, type ValidationError } from "@flowmaestro/shared";
+import { ALL_PROVIDERS, supportsOAuth, type ValidationError } from "@flowmaestro/shared";
 import { ActionOperationList } from "../../../components/actions/ActionOperationList";
 import {
     ActionProviderList,
@@ -439,7 +439,7 @@ function ActionOperationConfig({
                         ) : undefined
                     }
                     onSuccess={onConnectionCreated}
-                    supportsOAuth={providerInfo.methods.includes("oauth2")}
+                    supportsOAuth={supportsOAuth(providerInfo.methods)}
                     supportsApiKey={providerInfo.methods.includes("api_key")}
                     oauthSettings={providerInfo.oauthSettings as never[]}
                 />

@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { CloseClient } from "../../client/CloseClient";
 import type { CloseListResponse, CloseContact } from "../types";
@@ -25,7 +24,6 @@ export const listContactsOperation: OperationDefinition = {
     description: "Get all contacts with optional filtering and pagination",
     category: "contacts",
     inputSchema: listContactsSchema,
-    inputSchemaJSON: toJSONSchema(listContactsSchema),
     retryable: true,
     timeout: 15000
 };

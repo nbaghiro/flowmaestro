@@ -69,28 +69,7 @@ export const getThreadOperation: OperationDefinition = {
     description: "Get a complete conversation thread with all messages",
     category: "threads",
     retryable: true,
-    inputSchema: getThreadSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            threadId: {
-                type: "string",
-                description: "The ID of the thread to retrieve"
-            },
-            format: {
-                type: "string",
-                enum: ["full", "metadata", "minimal"],
-                description: "Format of messages in the thread",
-                default: "full"
-            },
-            metadataHeaders: {
-                type: "array",
-                items: { type: "string" },
-                description: "When format is 'metadata', only include these headers"
-            }
-        },
-        required: ["threadId"]
-    }
+    inputSchema: getThreadSchema
 };
 
 /**

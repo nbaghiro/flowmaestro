@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { FacebookClient } from "../client/FacebookClient";
 import type { MessengerMessageResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -35,7 +34,6 @@ export const getMessagesOperation: OperationDefinition = (() => {
             description: "Get messages from a Messenger conversation",
             category: "messaging",
             inputSchema: getMessagesSchema,
-            inputSchemaJSON: toJSONSchema(getMessagesSchema),
             retryable: true,
             timeout: 15000
         };

@@ -27,36 +27,7 @@ export const updatePlaylistOperation: OperationDefinition = {
     description: "Update an existing YouTube playlist's title, description, or privacy",
     category: "playlists",
     retryable: false,
-    inputSchema: updatePlaylistSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            playlistId: {
-                type: "string",
-                description: "The playlist ID to update"
-            },
-            title: {
-                type: "string",
-                description: "New playlist title",
-                maxLength: 150
-            },
-            description: {
-                type: "string",
-                description: "New playlist description",
-                maxLength: 5000
-            },
-            privacyStatus: {
-                type: "string",
-                enum: ["private", "public", "unlisted"],
-                description: "New privacy status"
-            },
-            defaultLanguage: {
-                type: "string",
-                description: "New default language (BCP-47 code)"
-            }
-        },
-        required: ["playlistId"]
-    }
+    inputSchema: updatePlaylistSchema
 };
 
 /**

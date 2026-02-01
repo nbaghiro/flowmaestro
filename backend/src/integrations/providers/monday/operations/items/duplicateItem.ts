@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { DUPLICATE_ITEM } from "../../graphql/mutations";
 import { duplicateItemInputSchema, type DuplicateItemInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
@@ -10,7 +9,6 @@ export const duplicateItemOperation: OperationDefinition = {
     description: "Duplicate an item in Monday.com, optionally including updates/comments.",
     category: "items",
     inputSchema: duplicateItemInputSchema,
-    inputSchemaJSON: toJSONSchema(duplicateItemInputSchema),
     retryable: true,
     timeout: 10000
 };

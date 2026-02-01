@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { MediumClient } from "../client/MediumClient";
 
@@ -18,7 +17,6 @@ export const uploadImageOperation: OperationDefinition = {
     description: "Upload an image to Medium. Returns a URL that can be used in post content",
     category: "image",
     inputSchema: uploadImageSchema,
-    inputSchemaJSON: toJSONSchema(uploadImageSchema),
     retryable: true,
     timeout: 60000
 };

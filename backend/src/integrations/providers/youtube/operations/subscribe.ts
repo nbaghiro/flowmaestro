@@ -20,17 +20,7 @@ export const subscribeOperation: OperationDefinition = {
     description: "Subscribe to a YouTube channel",
     category: "subscriptions",
     retryable: false,
-    inputSchema: subscribeSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            channelId: {
-                type: "string",
-                description: "The channel ID to subscribe to"
-            }
-        },
-        required: ["channelId"]
-    }
+    inputSchema: subscribeSchema
 };
 
 /**

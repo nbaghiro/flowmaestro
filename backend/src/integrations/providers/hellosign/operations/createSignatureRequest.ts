@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { HelloSignClient } from "../client/HelloSignClient";
 import { HelloSignSignerSchema } from "../schemas";
 import type { HelloSignCreateResponse } from "./types";
@@ -43,7 +42,6 @@ export const createSignatureRequestOperation: OperationDefinition = (() => {
             description: "Create and send a document for electronic signature via HelloSign",
             category: "signature_requests",
             inputSchema: createSignatureRequestSchema,
-            inputSchemaJSON: toJSONSchema(createSignatureRequestSchema),
             retryable: false,
             timeout: 60000
         };

@@ -38,37 +38,7 @@ export const listFilesOperation: OperationDefinition = {
     description: "List or search files and folders in Google Drive with optional filters",
     category: "files",
     retryable: true,
-    inputSchema: listFilesSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            query: {
-                type: "string",
-                description:
-                    "Search query using Drive query syntax (e.g., \"'folderId' in parents and trashed=false\")"
-            },
-            pageSize: {
-                type: "number",
-                description: "Number of files to return (1-1000, default 100)",
-                minimum: 1,
-                maximum: 1000,
-                default: 100
-            },
-            pageToken: {
-                type: "string",
-                description: "Token for next page of results"
-            },
-            orderBy: {
-                type: "string",
-                description: "Sort order (e.g., 'createdTime desc', 'modifiedTime', 'name')"
-            },
-            fields: {
-                type: "string",
-                description: "Comma-separated list of fields to include in response"
-            }
-        },
-        required: []
-    }
+    inputSchema: listFilesSchema
 };
 
 /**

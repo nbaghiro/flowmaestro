@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { DatadogClient } from "../client/DatadogClient";
 
@@ -15,7 +14,6 @@ export const getMonitorOperation: OperationDefinition = {
     description: "Get details of a specific monitor",
     category: "monitors",
     inputSchema: getMonitorSchema,
-    inputSchemaJSON: toJSONSchema(getMonitorSchema),
     retryable: true,
     timeout: 30000
 };

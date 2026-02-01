@@ -19,30 +19,6 @@ export const respondToEventOperation: OperationDefinition = {
     description: "Accept, tentatively accept, or decline an event invitation",
     category: "calendar",
     inputSchema: respondToEventSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["eventId", "response"],
-        properties: {
-            eventId: {
-                type: "string",
-                description: "ID of the event to respond to"
-            },
-            response: {
-                type: "string",
-                enum: ["accept", "tentativelyAccept", "decline"],
-                description: "Response type: accept, tentativelyAccept, or decline"
-            },
-            sendResponse: {
-                type: "boolean",
-                default: true,
-                description: "Send response to organizer"
-            },
-            comment: {
-                type: "string",
-                description: "Optional response message"
-            }
-        }
-    },
     retryable: false // Response should not auto-retry
 };
 

@@ -31,35 +31,7 @@ export const addSheetOperation: OperationDefinition = {
     description: "Add a new sheet to a spreadsheet",
     category: "sheets",
     retryable: true,
-    inputSchema: addSheetSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            spreadsheetId: {
-                type: "string",
-                description: "Spreadsheet ID"
-            },
-            title: {
-                type: "string",
-                description: "Sheet title"
-            },
-            index: {
-                type: "number",
-                description: "Sheet position index (default: end)"
-            },
-            gridProperties: {
-                type: "object",
-                properties: {
-                    rowCount: { type: "number", description: "Number of rows" },
-                    columnCount: { type: "number", description: "Number of columns" },
-                    frozenRowCount: { type: "number", description: "Frozen rows" },
-                    frozenColumnCount: { type: "number", description: "Frozen columns" }
-                },
-                description: "Grid properties for the new sheet"
-            }
-        },
-        required: ["spreadsheetId", "title"]
-    }
+    inputSchema: addSheetSchema
 };
 
 /**

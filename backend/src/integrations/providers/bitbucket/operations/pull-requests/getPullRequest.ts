@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { BitbucketClient } from "../../client/BitbucketClient";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { BitbucketPullRequest } from "../types";
@@ -24,7 +23,6 @@ export const getPullRequestOperation: OperationDefinition = {
     description: "Get details of a specific pull request in a Bitbucket repository",
     category: "pull-requests",
     inputSchema: getPullRequestSchema,
-    inputSchemaJSON: toJSONSchema(getPullRequestSchema),
     retryable: true,
     timeout: 30000
 };

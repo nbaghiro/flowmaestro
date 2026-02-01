@@ -1,3 +1,4 @@
+import { toJSONSchema } from "../../../../core/utils/zod-to-json-schema";
 import {
     // Metrics Operations
     executeQueryMetrics,
@@ -39,7 +40,7 @@ export class DatadogMCPAdapter {
             tools.push({
                 name: `datadog_${id}`,
                 description: operation.description,
-                inputSchema: operation.inputSchemaJSON
+                inputSchema: toJSONSchema(operation.inputSchema)
             });
         }
 

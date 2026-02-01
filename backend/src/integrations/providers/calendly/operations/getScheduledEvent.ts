@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { CalendlyClient } from "../client/CalendlyClient";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 
@@ -27,7 +26,6 @@ export const getScheduledEventOperation: OperationDefinition = (() => {
             category: "data",
             actionType: "read",
             inputSchema: getScheduledEventSchema,
-            inputSchemaJSON: toJSONSchema(getScheduledEventSchema),
             retryable: true,
             timeout: 10000
         };

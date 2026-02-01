@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { SegmentClient } from "../client/SegmentClient";
 import {
     SegmentUserIdSchema,
@@ -47,7 +46,6 @@ export const aliasUserOperation: OperationDefinition = {
     category: "users",
     actionType: "write",
     inputSchema: aliasUserSchema,
-    inputSchemaJSON: toJSONSchema(aliasUserSchema),
     retryable: true,
     timeout: 10000
 };

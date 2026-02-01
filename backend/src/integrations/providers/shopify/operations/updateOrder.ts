@@ -1,5 +1,4 @@
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { ShopifyClient } from "../client/ShopifyClient";
 import { UpdateOrderSchema, type UpdateOrderParams } from "../schemas";
 import type { ShopifyOrderResponse } from "./types";
@@ -18,7 +17,6 @@ export const updateOrderOperation: OperationDefinition = (() => {
             description: "Update an existing order's note, tags, email, or other editable fields",
             category: "orders",
             inputSchema: UpdateOrderSchema,
-            inputSchemaJSON: toJSONSchema(UpdateOrderSchema),
             retryable: true,
             timeout: 15000
         };

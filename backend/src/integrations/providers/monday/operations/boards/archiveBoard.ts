@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { ARCHIVE_BOARD } from "../../graphql/mutations";
 import { archiveBoardInputSchema, type ArchiveBoardInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
@@ -10,7 +9,6 @@ export const archiveBoardOperation: OperationDefinition = {
     description: "Archive a board in Monday.com. Archived boards can be restored later.",
     category: "boards",
     inputSchema: archiveBoardInputSchema,
-    inputSchemaJSON: toJSONSchema(archiveBoardInputSchema),
     retryable: true,
     timeout: 10000
 };

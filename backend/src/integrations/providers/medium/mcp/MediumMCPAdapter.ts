@@ -1,3 +1,4 @@
+import { toJSONSchema } from "../../../../core/utils/zod-to-json-schema";
 import {
     // User Operations
     executeGetMe,
@@ -35,7 +36,7 @@ export class MediumMCPAdapter {
             tools.push({
                 name: `medium_${id}`,
                 description: operation.description,
-                inputSchema: operation.inputSchemaJSON
+                inputSchema: toJSONSchema(operation.inputSchema)
             });
         }
 

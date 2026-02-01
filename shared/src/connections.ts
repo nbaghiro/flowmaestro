@@ -136,6 +136,11 @@ export interface ConnectionMetadata {
         [key: string]: JsonValue | undefined;
     };
     provider_config?: Record<string, JsonValue>;
+    /**
+     * When true, operations using this connection will return mock/test data
+     * instead of making real API calls. Used for E2E testing workflows.
+     */
+    isTestConnection?: boolean;
 }
 
 /**

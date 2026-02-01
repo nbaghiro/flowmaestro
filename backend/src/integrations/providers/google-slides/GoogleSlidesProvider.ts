@@ -1,4 +1,5 @@
 import { config as appConfig, getOAuthRedirectUri } from "../../../core/config";
+import { toJSONSchema } from "../../../core/utils/zod-to-json-schema";
 import { BaseProvider } from "../../core/BaseProvider";
 import { GoogleSlidesClient } from "./client/GoogleSlidesClient";
 import {
@@ -189,7 +190,7 @@ export class GoogleSlidesProvider extends BaseProvider {
         return this.getOperations().map((op) => ({
             name: `google_slides_${op.id}`,
             description: op.description,
-            inputSchema: op.inputSchemaJSON
+            inputSchema: toJSONSchema(op.inputSchema)
         }));
     }
 

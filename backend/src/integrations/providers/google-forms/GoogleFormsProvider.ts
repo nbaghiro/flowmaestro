@@ -1,4 +1,5 @@
 import { config as appConfig, getOAuthRedirectUri } from "../../../core/config";
+import { toJSONSchema } from "../../../core/utils/zod-to-json-schema";
 import { BaseProvider } from "../../core/BaseProvider";
 import { GoogleFormsClient } from "./client/GoogleFormsClient";
 import {
@@ -193,7 +194,7 @@ export class GoogleFormsProvider extends BaseProvider {
         return this.getOperations().map((op) => ({
             name: `google_forms_${op.id}`,
             description: op.description,
-            inputSchema: op.inputSchemaJSON
+            inputSchema: toJSONSchema(op.inputSchema)
         }));
     }
 

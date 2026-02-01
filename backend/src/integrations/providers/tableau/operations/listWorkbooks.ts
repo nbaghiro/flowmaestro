@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { TableauClient } from "../client/TableauClient";
 import { TableauPageSizeSchema, TableauPageNumberSchema, TableauFilterSchema } from "./schemas";
 import type { TableauWorkbooksResponse } from "./types";
@@ -25,7 +24,6 @@ export const listWorkbooksOperation: OperationDefinition = {
     description: "Get all workbooks on the site",
     category: "workbooks",
     inputSchema: listWorkbooksSchema,
-    inputSchemaJSON: toJSONSchema(listWorkbooksSchema),
     retryable: true,
     timeout: 30000
 };

@@ -1,4 +1,5 @@
 import { config as appConfig, getOAuthRedirectUri } from "../../../core/config";
+import { toJSONSchema } from "../../../core/utils/zod-to-json-schema";
 import { BaseProvider } from "../../core/BaseProvider";
 import { SalesforceClient } from "./client/SalesforceClient";
 import {
@@ -200,7 +201,7 @@ export class SalesforceProvider extends BaseProvider {
         return this.getOperations().map((op) => ({
             name: `salesforce_${op.id}`,
             description: op.description,
-            inputSchema: op.inputSchemaJSON
+            inputSchema: toJSONSchema(op.inputSchema)
         }));
     }
 

@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { TrelloClient } from "../../client/TrelloClient";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { TrelloMember } from "../types";
@@ -20,7 +19,6 @@ export const getMeOperation: OperationDefinition = {
     description: "Get information about the current authenticated Trello user",
     category: "members",
     inputSchema: getMeSchema,
-    inputSchemaJSON: toJSONSchema(getMeSchema),
     retryable: true,
     timeout: 10000
 };

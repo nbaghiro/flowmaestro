@@ -25,30 +25,7 @@ export const getRecordOperation: OperationDefinition = {
     description: "Retrieve a single record by its ID from Salesforce",
     category: "records",
     retryable: true,
-    inputSchema: getRecordSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            objectType: {
-                type: "string",
-                minLength: 1,
-                description: "Salesforce object type (e.g., Account, Contact, Lead)"
-            },
-            recordId: {
-                type: "string",
-                minLength: 15,
-                maxLength: 18,
-                description: "Salesforce record ID (15 or 18 character)"
-            },
-            fields: {
-                type: "array",
-                items: { type: "string" },
-                description:
-                    "Specific fields to retrieve (if not provided, returns all accessible fields)"
-            }
-        },
-        required: ["objectType", "recordId"]
-    }
+    inputSchema: getRecordSchema
 };
 
 /**

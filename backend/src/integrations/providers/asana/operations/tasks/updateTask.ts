@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { updateTaskInputSchema, type UpdateTaskInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { AsanaClient } from "../../client/AsanaClient";
@@ -10,7 +9,6 @@ export const updateTaskOperation: OperationDefinition = {
         "Update an existing task in Asana. Can modify name, description, assignee, dates, and more.",
     category: "tasks",
     inputSchema: updateTaskInputSchema,
-    inputSchemaJSON: toJSONSchema(updateTaskInputSchema),
     retryable: true,
     timeout: 10000
 };

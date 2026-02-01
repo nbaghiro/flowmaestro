@@ -1,3 +1,4 @@
+import { toJSONSchema } from "../../../../core/utils/zod-to-json-schema";
 import {
     // Pipeline Operations
     executeListPipelines,
@@ -37,7 +38,7 @@ export class CircleCIMCPAdapter {
             tools.push({
                 name: `circleci_${id}`,
                 description: operation.description,
-                inputSchema: operation.inputSchemaJSON
+                inputSchema: toJSONSchema(operation.inputSchema)
             });
         }
 

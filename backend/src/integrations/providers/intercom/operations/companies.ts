@@ -3,7 +3,6 @@
  */
 
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { IntercomClient } from "../client/IntercomClient";
 import type { IntercomCompany, IntercomListResponse } from "../types";
@@ -31,7 +30,6 @@ export const listCompaniesOperation: OperationDefinition = {
     description: "List all companies",
     category: "data",
     inputSchema: listCompaniesSchema,
-    inputSchemaJSON: toJSONSchema(listCompaniesSchema),
     retryable: true,
     timeout: 30000
 };
@@ -82,7 +80,6 @@ export const getCompanyOperation: OperationDefinition = {
     description: "Retrieve a specific company",
     category: "data",
     inputSchema: getCompanySchema,
-    inputSchemaJSON: toJSONSchema(getCompanySchema),
     retryable: true,
     timeout: 10000
 };
@@ -136,7 +133,6 @@ export const createOrUpdateCompanyOperation: OperationDefinition = {
     description: "Create a new company or update if exists",
     category: "data",
     inputSchema: createOrUpdateCompanySchema,
-    inputSchemaJSON: toJSONSchema(createOrUpdateCompanySchema),
     retryable: false,
     timeout: 10000
 };

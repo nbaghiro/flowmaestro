@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { createServiceLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { RedditClient } from "../client/RedditClient";
 import { FullnameSchema, VoteDirectionSchema } from "../schemas";
 import type { VoteDirection } from "./types";
@@ -29,7 +28,6 @@ export const voteOperation: OperationDefinition = (() => {
             description: "Upvote, downvote, or remove vote on a post or comment.",
             category: "interactions",
             inputSchema: voteSchema,
-            inputSchemaJSON: toJSONSchema(voteSchema),
             retryable: true,
             timeout: 10000
         };

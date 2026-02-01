@@ -1,3 +1,4 @@
+import { toJSONSchema } from "../../../../core/utils/zod-to-json-schema";
 import { SquareClient } from "../client/SquareClient";
 import {
     // Payments
@@ -32,7 +33,7 @@ export class SquareMCPAdapter {
         return Array.from(this.operations.values()).map((op) => ({
             name: `square_${op.id}`,
             description: op.description,
-            inputSchema: op.inputSchemaJSON,
+            inputSchema: toJSONSchema(op.inputSchema),
             executeRef: op.id
         }));
     }

@@ -1,3 +1,4 @@
+import { toJSONSchema } from "../../../../core/utils/zod-to-json-schema";
 import { FacebookClient } from "../client/FacebookClient";
 import {
     executeSendTextMessage,
@@ -26,7 +27,7 @@ export class FacebookMCPAdapter {
         return Array.from(this.operations.values()).map((op) => ({
             name: `facebook_${op.id}`,
             description: op.description,
-            inputSchema: op.inputSchemaJSON,
+            inputSchema: toJSONSchema(op.inputSchema),
             executeRef: op.id
         }));
     }

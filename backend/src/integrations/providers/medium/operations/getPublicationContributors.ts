@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { MediumClient } from "../client/MediumClient";
 
@@ -15,7 +14,6 @@ export const getPublicationContributorsOperation: OperationDefinition = {
     description: "Get the list of contributors for a publication including their roles",
     category: "publication",
     inputSchema: getPublicationContributorsSchema,
-    inputSchemaJSON: toJSONSchema(getPublicationContributorsSchema),
     retryable: true,
     timeout: 30000
 };

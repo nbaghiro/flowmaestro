@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { AirtableClient } from "../client/AirtableClient";
 import { baseIdSchema, tableIdSchema, recordIdSchema, fieldsSchema } from "../schemas";
 import type { AirtableRecord } from "./types";
@@ -25,7 +24,6 @@ export const updateRecordOperation: OperationDefinition = {
     description: "Update an existing record",
     category: "data",
     inputSchema: updateRecordSchema,
-    inputSchemaJSON: toJSONSchema(updateRecordSchema),
     retryable: true,
     timeout: 10000
 };

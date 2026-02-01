@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { InstagramClient } from "../client/InstagramClient";
 import type { InstagramPublishResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -36,7 +35,6 @@ export const publishReelOperation: OperationDefinition = (() => {
             description: "Publish a video reel to Instagram",
             category: "publishing",
             inputSchema: publishReelSchema,
-            inputSchemaJSON: toJSONSchema(publishReelSchema),
             retryable: true,
             timeout: 180000 // 3 minutes for video processing
         };

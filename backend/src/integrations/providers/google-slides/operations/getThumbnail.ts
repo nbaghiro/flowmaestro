@@ -28,26 +28,7 @@ export const getThumbnailOperation: OperationDefinition = {
     description: "Get a thumbnail image URL for a specific slide in a presentation",
     category: "pages",
     retryable: true,
-    inputSchema: getThumbnailSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            presentationId: {
-                type: "string",
-                description: "The ID of the presentation"
-            },
-            pageObjectId: {
-                type: "string",
-                description: "The object ID of the page (slide) to get thumbnail for"
-            },
-            thumbnailSize: {
-                type: "string",
-                enum: ["LARGE", "MEDIUM", "SMALL"],
-                description: "Size of the thumbnail"
-            }
-        },
-        required: ["presentationId", "pageObjectId"]
-    }
+    inputSchema: getThumbnailSchema
 };
 
 interface ThumbnailResponse {

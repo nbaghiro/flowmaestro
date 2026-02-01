@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { getCurrentUserInputSchema, type GetCurrentUserInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { JiraClient } from "../../client/JiraClient";
@@ -9,7 +8,6 @@ export const getCurrentUserOperation: OperationDefinition = {
     description: "Get details of the currently authenticated user.",
     category: "users",
     inputSchema: getCurrentUserInputSchema,
-    inputSchemaJSON: toJSONSchema(getCurrentUserInputSchema),
     retryable: true,
     timeout: 10000
 };

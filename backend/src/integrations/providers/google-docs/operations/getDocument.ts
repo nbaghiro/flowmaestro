@@ -20,17 +20,7 @@ export const getDocumentOperation: OperationDefinition = {
     description: "Retrieve a Google Docs document by ID, including its content and structure",
     category: "documents",
     retryable: true,
-    inputSchema: getDocumentSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            documentId: {
-                type: "string",
-                description: "The ID of the document to retrieve"
-            }
-        },
-        required: ["documentId"]
-    }
+    inputSchema: getDocumentSchema
 };
 
 interface DocumentResponse {

@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { SendGridClient, SendGridEmailPersonalization } from "../client/SendGridClient";
 
@@ -33,7 +32,6 @@ export const sendBatchEmailOperation: OperationDefinition = {
     description: "Send personalized emails to multiple recipients using a SendGrid template",
     category: "email",
     inputSchema: sendBatchEmailSchema,
-    inputSchemaJSON: toJSONSchema(sendBatchEmailSchema),
     retryable: false,
     timeout: 60000
 };

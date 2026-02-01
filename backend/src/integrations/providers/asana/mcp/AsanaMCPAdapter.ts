@@ -1,3 +1,4 @@
+import { toJSONSchema } from "../../../../core/utils/zod-to-json-schema";
 import {
     executeCreateTask,
     executeGetTask,
@@ -53,7 +54,7 @@ export class AsanaMCPAdapter {
         return Array.from(this.operations.values()).map((op) => ({
             name: `asana_${op.id}`,
             description: op.description,
-            inputSchema: op.inputSchemaJSON
+            inputSchema: toJSONSchema(op.inputSchema)
         }));
     }
 

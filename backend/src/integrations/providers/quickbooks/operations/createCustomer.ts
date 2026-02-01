@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { QuickBooksCustomerOutput } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { QuickBooksClient } from "../client/QuickBooksClient";
@@ -21,7 +20,6 @@ export const createCustomerOperation: OperationDefinition = {
     description: "Create a new customer in QuickBooks",
     category: "customers",
     inputSchema: createCustomerSchema,
-    inputSchemaJSON: toJSONSchema(createCustomerSchema),
     retryable: false,
     timeout: 30000
 };

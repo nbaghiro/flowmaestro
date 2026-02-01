@@ -1,3 +1,4 @@
+import { toJSONSchema } from "../../../../core/utils/zod-to-json-schema";
 import { TwitterClient } from "../client/TwitterClient";
 import { executeDeleteTweet } from "../operations/deleteTweet";
 import { executeGetUser } from "../operations/getUser";
@@ -20,7 +21,7 @@ export class TwitterMCPAdapter {
         return Array.from(this.operations.values()).map((op) => ({
             name: `twitter_${op.id}`,
             description: op.description,
-            inputSchema: op.inputSchemaJSON,
+            inputSchema: toJSONSchema(op.inputSchema),
             executeRef: op.id
         }));
     }

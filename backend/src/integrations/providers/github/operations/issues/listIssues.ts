@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { GitHubClient } from "../../client/GitHubClient";
 import {
     GitHubOwnerSchema,
@@ -40,7 +39,6 @@ export const listIssuesOperation: OperationDefinition = {
     description: "List issues in a repository",
     category: "issues",
     inputSchema: listIssuesSchema,
-    inputSchemaJSON: toJSONSchema(listIssuesSchema),
     retryable: true,
     timeout: 30000
 };

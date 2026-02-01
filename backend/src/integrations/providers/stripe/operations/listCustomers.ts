@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { StripeClient } from "../client/StripeClient";
 import type { StripeCustomer, StripeList } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -26,7 +25,6 @@ export const listCustomersOperation: OperationDefinition = {
     category: "customers",
     actionType: "read",
     inputSchema: listCustomersSchema,
-    inputSchemaJSON: toJSONSchema(listCustomersSchema),
     retryable: true,
     timeout: 15000
 };

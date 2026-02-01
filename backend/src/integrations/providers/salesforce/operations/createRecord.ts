@@ -24,24 +24,7 @@ export const createRecordOperation: OperationDefinition = {
     description: "Create a new record in Salesforce for any standard or custom object",
     category: "records",
     retryable: false, // Don't retry creates to avoid duplicates
-    inputSchema: createRecordSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            objectType: {
-                type: "string",
-                minLength: 1,
-                description:
-                    "Salesforce object type (e.g., Account, Contact, Lead, Opportunity, Custom__c)"
-            },
-            data: {
-                type: "object",
-                additionalProperties: true,
-                description: "Field values for the new record"
-            }
-        },
-        required: ["objectType", "data"]
-    }
+    inputSchema: createRecordSchema
 };
 
 /**

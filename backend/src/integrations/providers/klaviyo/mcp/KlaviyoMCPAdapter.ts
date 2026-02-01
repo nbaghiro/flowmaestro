@@ -1,3 +1,4 @@
+import { toJSONSchema } from "../../../../core/utils/zod-to-json-schema";
 import {
     executeGetProfiles,
     executeGetProfile,
@@ -37,7 +38,7 @@ export class KlaviyoMCPAdapter {
             tools.push({
                 name: `klaviyo_${id}`,
                 description: operation.description,
-                inputSchema: operation.inputSchemaJSON
+                inputSchema: toJSONSchema(operation.inputSchema)
             });
         }
 

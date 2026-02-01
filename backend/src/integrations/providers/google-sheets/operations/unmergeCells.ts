@@ -25,26 +25,7 @@ export const unmergeCellsOperation: OperationDefinition = {
     description: "Unmerge merged cells in a range",
     category: "formatting",
     retryable: true,
-    inputSchema: unmergeCellsSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            spreadsheetId: { type: "string", description: "Spreadsheet ID" },
-            sheetId: { type: "number", description: "Sheet ID (gid)" },
-            startRowIndex: { type: "number", description: "Start row index (0-based)" },
-            endRowIndex: { type: "number", description: "End row index (exclusive)" },
-            startColumnIndex: { type: "number", description: "Start column index (0-based)" },
-            endColumnIndex: { type: "number", description: "End column index (exclusive)" }
-        },
-        required: [
-            "spreadsheetId",
-            "sheetId",
-            "startRowIndex",
-            "endRowIndex",
-            "startColumnIndex",
-            "endColumnIndex"
-        ]
-    }
+    inputSchema: unmergeCellsSchema
 };
 
 /**

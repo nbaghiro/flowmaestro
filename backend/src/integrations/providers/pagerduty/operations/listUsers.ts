@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { PagerDutyClient } from "../client/PagerDutyClient";
 
@@ -28,7 +27,6 @@ export const listUsersOperation: OperationDefinition = {
     description: "List users in the account with optional filtering",
     category: "users",
     inputSchema: listUsersSchema,
-    inputSchemaJSON: toJSONSchema(listUsersSchema),
     retryable: true,
     timeout: 30000
 };

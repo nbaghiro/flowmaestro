@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { AirtableClient } from "../client/AirtableClient";
 import { baseIdSchema, tableIdSchema, recordIdSchema } from "../schemas";
 import type { AirtableRecord } from "./types";
@@ -19,7 +18,6 @@ export const getRecordOperation: OperationDefinition = {
     description: "Get a single record by ID",
     category: "data",
     inputSchema: getRecordSchema,
-    inputSchemaJSON: toJSONSchema(getRecordSchema),
     retryable: true,
     timeout: 10000
 };

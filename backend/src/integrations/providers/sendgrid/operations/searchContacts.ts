@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { SendGridContactOutput } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { SendGridClient } from "../client/SendGridClient";
@@ -21,7 +20,6 @@ export const searchContactsOperation: OperationDefinition = {
     description: "Search contacts using SendGrid Query Language (SGQL)",
     category: "contacts",
     inputSchema: searchContactsSchema,
-    inputSchemaJSON: toJSONSchema(searchContactsSchema),
     retryable: true,
     timeout: 30000
 };

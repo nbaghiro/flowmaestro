@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { SlackClient } from "../client/SlackClient";
 import {
     SlackChannelSchema,
@@ -36,7 +35,6 @@ export const sendMessageOperation: OperationDefinition = (() => {
             description: "Send a message to a Slack channel or direct message",
             category: "messaging",
             inputSchema: sendMessageSchema,
-            inputSchemaJSON: toJSONSchema(sendMessageSchema),
             retryable: true,
             timeout: 10000
         };

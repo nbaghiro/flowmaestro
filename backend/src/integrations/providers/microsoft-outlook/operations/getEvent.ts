@@ -14,16 +14,6 @@ export const getEventOperation: OperationDefinition = {
     description: "Get a specific calendar event by ID",
     category: "calendar",
     inputSchema: getEventSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["eventId"],
-        properties: {
-            eventId: {
-                type: "string",
-                description: "The ID of the event to retrieve"
-            }
-        }
-    },
     retryable: true
 };
 

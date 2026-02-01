@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { BoxClient } from "../client/BoxClient";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 
@@ -23,7 +22,6 @@ export const shareFileOperation: OperationDefinition = {
         "Create a shared link for a Box file. Returns a URL that can be used to access the file.",
     category: "sharing",
     inputSchema: shareFileSchema,
-    inputSchemaJSON: toJSONSchema(shareFileSchema),
     retryable: true,
     timeout: 30000
 };

@@ -1,4 +1,4 @@
-import { ArrowLeft, X, Eye, EyeOff, Shield, Key, ExternalLink } from "lucide-react";
+import { ArrowLeft, X, Eye, EyeOff, Shield, Key, ExternalLink, FlaskConical } from "lucide-react";
 import React, { useState, useEffect, useCallback } from "react";
 import type { JsonObject, OAuthField, ApiKeySettings } from "@flowmaestro/shared";
 import { useOAuth } from "../../../hooks/useOAuth";
@@ -377,6 +377,33 @@ export function NewConnectionDialog({
         }
     };
 
+    const handleTestConnectionCreate = async () => {
+        setIsSubmitting(true);
+        setError(null);
+
+        try {
+            const input: CreateConnectionInput = {
+                name: `${providerDisplayName} Test Connection`,
+                connection_method: "api_key",
+                provider,
+                data: {
+                    api_key: `test-token-${provider}-${Date.now()}`
+                },
+                metadata: {
+                    isTestConnection: true
+                }
+            };
+
+            await addConnection(input);
+            if (onSuccess) onSuccess();
+            handleClose();
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Failed to create test connection");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
     if (!isOpen) return null;
 
     return (
@@ -486,6 +513,19 @@ export function NewConnectionDialog({
                                     </div>
                                 </button>
                             )}
+
+                            {/* Test Connection Option - subtle link */}
+                            <div className="pt-4 text-center">
+                                <button
+                                    onClick={handleTestConnectionCreate}
+                                    disabled={isSubmitting}
+                                    className="text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1.5"
+                                    type="button"
+                                >
+                                    <FlaskConical className="w-3 h-3" />
+                                    <span>Or create a test connection with mock data</span>
+                                </button>
+                            </div>
                         </div>
                     )}
 

@@ -1,3 +1,4 @@
+import { toJSONSchema } from "../../../../core/utils/zod-to-json-schema";
 import { AmplitudeClient } from "../client/AmplitudeClient";
 import { executeIdentifyUser } from "../operations/identifyUser";
 import { executeTrackEvent } from "../operations/trackEvent";
@@ -17,7 +18,7 @@ export class AmplitudeMCPAdapter {
         return Array.from(this.operations.values()).map((op) => ({
             name: `amplitude_${op.id}`,
             description: op.description,
-            inputSchema: op.inputSchemaJSON,
+            inputSchema: toJSONSchema(op.inputSchema),
             executeRef: op.id
         }));
     }

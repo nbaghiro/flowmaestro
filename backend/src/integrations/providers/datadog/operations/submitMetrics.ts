@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { DatadogClient } from "../client/DatadogClient";
 
@@ -25,7 +24,6 @@ export const submitMetricsOperation: OperationDefinition = {
     description: "Submit custom metric datapoints to Datadog",
     category: "metrics",
     inputSchema: submitMetricsSchema,
-    inputSchemaJSON: toJSONSchema(submitMetricsSchema),
     retryable: true,
     timeout: 30000
 };

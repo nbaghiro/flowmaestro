@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { MarketoClient } from "../client/MarketoClient";
 
@@ -34,7 +33,6 @@ export const createLeadOperation: OperationDefinition = {
     category: "leads",
     actionType: "write",
     inputSchema: createLeadSchema,
-    inputSchemaJSON: toJSONSchema(createLeadSchema),
     retryable: true,
     timeout: 15000
 };

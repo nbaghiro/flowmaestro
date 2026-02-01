@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { KlaviyoClient } from "../client/KlaviyoClient";
 
@@ -25,7 +24,6 @@ export const subscribeProfileOperation: OperationDefinition = {
     category: "profiles",
     actionType: "write",
     inputSchema: subscribeProfileSchema,
-    inputSchemaJSON: toJSONSchema(subscribeProfileSchema),
     retryable: true,
     timeout: 15000
 };

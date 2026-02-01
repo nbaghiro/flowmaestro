@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { TelegramClient } from "../client/TelegramClient";
 import { TelegramChatIdSchema, TelegramMessageIdSchema } from "../schemas";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -28,7 +27,6 @@ export const deleteMessageOperation: OperationDefinition = (() => {
             description: "Delete a message from a chat",
             category: "messaging",
             inputSchema: deleteMessageSchema,
-            inputSchemaJSON: toJSONSchema(deleteMessageSchema),
             retryable: true,
             timeout: 10000
         };

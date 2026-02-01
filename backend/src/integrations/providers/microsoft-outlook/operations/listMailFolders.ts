@@ -12,10 +12,6 @@ export const listMailFoldersOperation: OperationDefinition = {
     description: "List all mail folders in the user's mailbox",
     category: "email",
     inputSchema: listMailFoldersSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {}
-    },
     retryable: true
 };
 

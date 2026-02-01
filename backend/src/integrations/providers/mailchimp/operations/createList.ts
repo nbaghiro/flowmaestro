@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { MailchimpListOutput } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { MailchimpClient } from "../client/MailchimpClient";
@@ -34,7 +33,6 @@ export const createListOperation: OperationDefinition = {
     description: "Create a new audience (list) in Mailchimp",
     category: "audiences",
     inputSchema: createListSchema,
-    inputSchemaJSON: toJSONSchema(createListSchema),
     retryable: false,
     timeout: 15000
 };

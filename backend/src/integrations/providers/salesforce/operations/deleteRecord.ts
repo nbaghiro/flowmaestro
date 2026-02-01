@@ -21,24 +21,7 @@ export const deleteRecordOperation: OperationDefinition = {
     description: "Delete a record from Salesforce (moves to Recycle Bin)",
     category: "records",
     retryable: false, // Don't retry deletes
-    inputSchema: deleteRecordSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            objectType: {
-                type: "string",
-                minLength: 1,
-                description: "Salesforce object type (e.g., Account, Contact, Lead)"
-            },
-            recordId: {
-                type: "string",
-                minLength: 15,
-                maxLength: 18,
-                description: "Salesforce record ID (15 or 18 character)"
-            }
-        },
-        required: ["objectType", "recordId"]
-    }
+    inputSchema: deleteRecordSchema
 };
 
 /**

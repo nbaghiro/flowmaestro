@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { StripeClient } from "../client/StripeClient";
 import type { StripeCharge } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -29,7 +28,6 @@ export const createChargeOperation: OperationDefinition = {
     category: "charges",
     actionType: "write",
     inputSchema: createChargeSchema,
-    inputSchemaJSON: toJSONSchema(createChargeSchema),
     retryable: true,
     timeout: 15000
 };

@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { TypeformClient } from "../client/TypeformClient";
 import { ListWorkspacesSchema } from "../schemas";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -16,7 +15,6 @@ export const listWorkspacesOperation: OperationDefinition = {
         "List all workspaces in the Typeform account. Workspaces are containers for organizing forms.",
     category: "workspaces",
     inputSchema: listWorkspacesSchema,
-    inputSchemaJSON: toJSONSchema(listWorkspacesSchema),
     retryable: true,
     timeout: 30000
 };

@@ -20,20 +20,6 @@ export const sendChatMessageOperation: OperationDefinition = {
     description: "Send a message to a Microsoft Teams chat",
     category: "messaging",
     inputSchema: sendChatMessageSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["chatId", "content"],
-        properties: {
-            chatId: { type: "string", description: "ID of the chat" },
-            content: { type: "string", description: "Message content" },
-            contentType: {
-                type: "string",
-                enum: ["text", "html"],
-                default: "text",
-                description: "Content type"
-            }
-        }
-    },
     retryable: true
 };
 

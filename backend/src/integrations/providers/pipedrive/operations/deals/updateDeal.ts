@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { PipedriveClient } from "../../client/PipedriveClient";
 import type { PipedriveResponse, PipedriveDeal } from "../types";
@@ -37,7 +36,6 @@ export const updateDealOperation: OperationDefinition = {
     description: "Update an existing deal",
     category: "deals",
     inputSchema: updateDealSchema,
-    inputSchemaJSON: toJSONSchema(updateDealSchema),
     retryable: false,
     timeout: 10000
 };

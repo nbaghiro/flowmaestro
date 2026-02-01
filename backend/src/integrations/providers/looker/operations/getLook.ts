@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { LookerClient } from "../client/LookerClient";
 import { LookerLookIdSchema } from "./schemas";
 import type { LookerLook } from "./types";
@@ -23,7 +22,6 @@ export const getLookOperation: OperationDefinition = {
     description: "Get a specific Look by ID with all details",
     category: "looks",
     inputSchema: getLookSchema,
-    inputSchemaJSON: toJSONSchema(getLookSchema),
     retryable: true,
     timeout: 30000
 };

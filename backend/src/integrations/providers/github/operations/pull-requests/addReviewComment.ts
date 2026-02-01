@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { GitHubClient } from "../../client/GitHubClient";
 import { GitHubOwnerSchema, GitHubRepoNameSchema, GitHubIssueNumberSchema } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
@@ -30,7 +29,6 @@ export const addReviewCommentOperation: OperationDefinition = {
     description: "Add an inline code review comment to a pull request",
     category: "pull_requests",
     inputSchema: addReviewCommentSchema,
-    inputSchemaJSON: toJSONSchema(addReviewCommentSchema),
     retryable: false,
     timeout: 15000
 };

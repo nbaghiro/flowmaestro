@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { DELETE_ITEM } from "../../graphql/mutations";
 import { deleteItemInputSchema, type DeleteItemInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
@@ -10,7 +9,6 @@ export const deleteItemOperation: OperationDefinition = {
     description: "Delete an item from Monday.com. This action cannot be undone.",
     category: "items",
     inputSchema: deleteItemInputSchema,
-    inputSchemaJSON: toJSONSchema(deleteItemInputSchema),
     retryable: false,
     timeout: 10000
 };

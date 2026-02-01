@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { PipedriveClient } from "../../client/PipedriveClient";
 import type { PipedriveResponse } from "../types";
@@ -22,7 +21,6 @@ export const deletePersonOperation: OperationDefinition = {
     description: "Delete a contact (person)",
     category: "persons",
     inputSchema: deletePersonSchema,
-    inputSchemaJSON: toJSONSchema(deletePersonSchema),
     retryable: false,
     timeout: 10000
 };

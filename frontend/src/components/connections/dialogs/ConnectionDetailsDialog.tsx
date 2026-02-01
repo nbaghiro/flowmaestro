@@ -1,4 +1,4 @@
-import { Shield, Key, AlertTriangle } from "lucide-react";
+import { Shield, Key, AlertTriangle, FlaskConical } from "lucide-react";
 import React, { useState } from "react";
 import { Alert } from "../../common/Alert";
 import { Button } from "../../common/Button";
@@ -38,6 +38,7 @@ export function ConnectionDetailsDialog({
 
     const isOAuth = connection.connection_method === "oauth2";
     const isApiKey = connection.connection_method === "api_key";
+    const isTestConnection = connection.metadata?.isTestConnection === true;
 
     const handleDisconnect = async () => {
         setIsDisconnecting(true);
@@ -175,6 +176,14 @@ export function ConnectionDetailsDialog({
                             </span>
                         </div>
                     </div>
+
+                    {/* Test Connection Indicator */}
+                    {isTestConnection && (
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <FlaskConical className="w-3.5 h-3.5" />
+                            <span>Test connection using mock data</span>
+                        </div>
+                    )}
 
                     {/* Dates */}
                     <div className="grid grid-cols-2 gap-4">

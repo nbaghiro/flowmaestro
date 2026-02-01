@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { FreshBooksUserOutput } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { FreshBooksHttpClient } from "../client/FreshBooksClient";
@@ -15,7 +14,6 @@ export const getMeOperation: OperationDefinition = {
         "Get information about the authenticated user including their business memberships",
     category: "user",
     inputSchema: getMeSchema,
-    inputSchemaJSON: toJSONSchema(getMeSchema),
     retryable: true,
     timeout: 30000
 };

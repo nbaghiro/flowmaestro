@@ -1,3 +1,4 @@
+import { toJSONSchema } from "../../../../core/utils/zod-to-json-schema";
 import { StripeClient } from "../client/StripeClient";
 import {
     // Payment Intents
@@ -35,7 +36,7 @@ export class StripeMCPAdapter {
         return Array.from(this.operations.values()).map((op) => ({
             name: `stripe_${op.id}`,
             description: op.description,
-            inputSchema: op.inputSchemaJSON,
+            inputSchema: toJSONSchema(op.inputSchema),
             executeRef: op.id
         }));
     }

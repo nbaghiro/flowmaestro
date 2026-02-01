@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { DropboxClient } from "../client/DropboxClient";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 
@@ -24,7 +23,6 @@ export const listFilesOperation: OperationDefinition = {
         "List files and folders in a Dropbox directory. Returns file metadata including names, paths, sizes, and modification dates.",
     category: "files",
     inputSchema: listFilesSchema,
-    inputSchemaJSON: toJSONSchema(listFilesSchema),
     retryable: true,
     timeout: 30000
 };

@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { TableauClient } from "../client/TableauClient";
 import { TableauPageSizeSchema, TableauPageNumberSchema, TableauFilterSchema } from "./schemas";
 import type { TableauViewsResponse } from "./types";
@@ -25,7 +24,6 @@ export const listViewsOperation: OperationDefinition = {
     description: "Get all views (visualizations) on the site",
     category: "views",
     inputSchema: listViewsSchema,
-    inputSchemaJSON: toJSONSchema(listViewsSchema),
     retryable: true,
     timeout: 30000
 };

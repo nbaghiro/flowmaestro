@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { removeTagFromTaskInputSchema, type RemoveTagFromTaskInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { AsanaClient } from "../../client/AsanaClient";
@@ -9,7 +8,6 @@ export const removeTagFromTaskOperation: OperationDefinition = {
     description: "Remove a tag from a task in Asana.",
     category: "tasks",
     inputSchema: removeTagFromTaskInputSchema,
-    inputSchemaJSON: toJSONSchema(removeTagFromTaskInputSchema),
     retryable: true,
     timeout: 10000
 };

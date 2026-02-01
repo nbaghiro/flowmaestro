@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { CloseClient } from "../../client/CloseClient";
 
@@ -21,7 +20,6 @@ export const deleteLeadOperation: OperationDefinition = {
     description: "Delete a lead and all associated data",
     category: "leads",
     inputSchema: deleteLeadSchema,
-    inputSchemaJSON: toJSONSchema(deleteLeadSchema),
     retryable: false,
     timeout: 10000
 };

@@ -10,13 +10,6 @@ export const listCommentsOperation: OperationDefinition = {
     inputSchema: z.object({
         fileKey: z.string().describe("Figma file key from URL")
     }),
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            fileKey: { type: "string", description: "Figma file key from URL" }
-        },
-        required: ["fileKey"]
-    },
     retryable: true
 };
 

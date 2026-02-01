@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { MediumClient } from "../client/MediumClient";
 
@@ -15,7 +14,6 @@ export const getPublicationsOperation: OperationDefinition = {
     description: "Get the list of publications the user has contributed to or owns",
     category: "publication",
     inputSchema: getPublicationsSchema,
-    inputSchemaJSON: toJSONSchema(getPublicationsSchema),
     retryable: true,
     timeout: 30000
 };

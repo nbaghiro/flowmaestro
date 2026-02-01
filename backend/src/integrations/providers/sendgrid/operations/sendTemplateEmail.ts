@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { SendGridClient } from "../client/SendGridClient";
 
@@ -34,7 +33,6 @@ export const sendTemplateEmailOperation: OperationDefinition = {
     description: "Send an email using a SendGrid dynamic template",
     category: "email",
     inputSchema: sendTemplateEmailSchema,
-    inputSchemaJSON: toJSONSchema(sendTemplateEmailSchema),
     retryable: false,
     timeout: 30000
 };

@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { createServiceLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { RedditClient } from "../client/RedditClient";
 import { FullnameSchema } from "../schemas";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -37,7 +36,6 @@ export const saveOperation: OperationDefinition = (() => {
             description: "Save a post or comment to your saved list.",
             category: "interactions",
             inputSchema: saveSchema,
-            inputSchemaJSON: toJSONSchema(saveSchema),
             retryable: true,
             timeout: 10000
         };
@@ -60,7 +58,6 @@ export const unsaveOperation: OperationDefinition = (() => {
             description: "Remove a post or comment from your saved list.",
             category: "interactions",
             inputSchema: unsaveSchema,
-            inputSchemaJSON: toJSONSchema(unsaveSchema),
             retryable: true,
             timeout: 10000
         };

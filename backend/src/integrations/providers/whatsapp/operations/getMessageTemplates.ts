@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { WhatsAppClient } from "../client/WhatsAppClient";
 import type { WhatsAppMessageTemplateResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -38,7 +37,6 @@ export const getMessageTemplatesOperation: OperationDefinition = (() => {
             description: "List message templates for a WhatsApp Business Account",
             category: "templates",
             inputSchema: getMessageTemplatesSchema,
-            inputSchemaJSON: toJSONSchema(getMessageTemplatesSchema),
             retryable: true,
             timeout: 15000
         };

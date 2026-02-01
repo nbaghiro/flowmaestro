@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { AirtableClient } from "../client/AirtableClient";
 import { baseIdSchema, tableIdSchema, fieldsSchema } from "../schemas";
 import type { AirtableRecord } from "./types";
@@ -20,7 +19,6 @@ export const createRecordOperation: OperationDefinition = {
     description: "Create a new record in a table",
     category: "data",
     inputSchema: createRecordSchema,
-    inputSchemaJSON: toJSONSchema(createRecordSchema),
     retryable: true,
     timeout: 10000
 };

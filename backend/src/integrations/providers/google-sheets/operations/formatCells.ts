@@ -61,31 +61,7 @@ export const formatCellsOperation: OperationDefinition = {
     description: "Apply formatting to a range of cells",
     category: "formatting",
     retryable: true,
-    inputSchema: formatCellsSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            spreadsheetId: { type: "string", description: "Spreadsheet ID" },
-            sheetId: { type: "number", description: "Sheet ID (gid)" },
-            startRowIndex: { type: "number", description: "Start row index (0-based)" },
-            endRowIndex: { type: "number", description: "End row index (exclusive)" },
-            startColumnIndex: { type: "number", description: "Start column index (0-based)" },
-            endColumnIndex: { type: "number", description: "End column index (exclusive)" },
-            format: {
-                type: "object",
-                description: "Cell formatting options"
-            }
-        },
-        required: [
-            "spreadsheetId",
-            "sheetId",
-            "startRowIndex",
-            "endRowIndex",
-            "startColumnIndex",
-            "endColumnIndex",
-            "format"
-        ]
-    }
+    inputSchema: formatCellsSchema
 };
 
 /**
