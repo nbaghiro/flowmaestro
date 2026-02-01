@@ -7,6 +7,7 @@ import { initializeLogger, shutdownLogger } from "../core/logging";
 import { initializeOTel, shutdownOTel } from "../core/observability";
 import { redisEventBus } from "../services/events/RedisEventBus";
 import { credentialRefreshScheduler } from "../services/oauth/CredentialRefreshScheduler";
+import { connectRedis, redis } from "../services/redis";
 import { webhookDispatcher } from "../services/webhooks";
 import { eventBridge } from "../services/websocket/EventBridge";
 import { db } from "../storage/database";
@@ -31,6 +32,9 @@ import { oauthRoutes } from "./routes/oauth";
 import { oauth1Routes } from "./routes/oauth1";
 import { personaInstanceRoutes } from "./routes/persona-instances";
 import { personaRoutes } from "./routes/personas";
+import { publicChatInterfaceFileRoutes } from "./routes/public/chat-interface-files";
+import { publicChatInterfaceQueryRoutes } from "./routes/public/chat-interface-query";
+import { publicChatInterfaceStreamRoutes } from "./routes/public/chat-interface-stream";
 import { publicChatInterfaceRoutes } from "./routes/public/chat-interfaces";
 import { publicFormInterfaceFilesRoutes } from "./routes/public/form-interface-files";
 import { publicFormInterfaceQueryRoutes } from "./routes/public/form-interface-query";
@@ -122,6 +126,10 @@ export async function buildServer() {
     // Initialize event bridge (manages Redis connection for SSE streaming)
     await eventBridge.initialize();
 
+    // Connect to Redis for rate limiting and caching
+    await connectRedis();
+    fastify.log.info("Redis connected for rate limiting");
+
     // Initialize OpenTelemetry (exports to GCP Cloud Trace/Monitoring)
     initializeOTel({
         serviceName: "flowmaestro-api",
@@ -195,6 +203,9 @@ export async function buildServer() {
     await fastify.register(publicFormInterfaceStreamRoutes, { prefix: "/public/form-interfaces" });
     await fastify.register(publicFormInterfaceQueryRoutes, { prefix: "/public/form-interfaces" });
     await fastify.register(publicChatInterfaceRoutes, { prefix: "/public/chat-interfaces" });
+    await fastify.register(publicChatInterfaceStreamRoutes, { prefix: "/public/chat-interfaces" });
+    await fastify.register(publicChatInterfaceFileRoutes, { prefix: "/public/chat-interfaces" });
+    await fastify.register(publicChatInterfaceQueryRoutes, { prefix: "/public/chat-interfaces" });
     await fastify.register(publicApiV1Routes, { prefix: "/api/v1" });
 
     // Error handler (must be last)
@@ -249,6 +260,7 @@ export async function startServer() {
             await shutdownLogger();
 
             await db.close();
+            await redis.quit();
             await redisEventBus.disconnect();
             process.exit(0);
         });

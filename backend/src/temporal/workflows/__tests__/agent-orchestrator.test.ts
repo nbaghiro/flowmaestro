@@ -263,7 +263,9 @@ describe("Agent Orchestrator Workflow", () => {
             expect(mockEmitAgentExecutionStarted).toHaveBeenCalledWith({
                 executionId: "exec-123",
                 agentId: "agent-123",
-                agentName: "Test Agent"
+                agentName: "Test Agent",
+                threadId: "thread-123",
+                threadOnly: undefined
             });
         });
 

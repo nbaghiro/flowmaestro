@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import type { ChatMessageAttachment } from "@flowmaestro/shared";
 import { usePublicChatStore } from "../../../stores/publicChatStore";
 import { WidgetBubble } from "./WidgetBubble";
 import { WidgetPanel } from "./WidgetPanel";
@@ -55,9 +56,9 @@ export function WidgetContainer({ slug }: WidgetContainerProps) {
         return null;
     }
 
-    const handleSendMessage = () => {
-        if (inputValue.trim()) {
-            sendMessage(inputValue);
+    const handleSendMessage = (message: string, attachments?: ChatMessageAttachment[]) => {
+        if (message.trim() || (attachments && attachments.length > 0)) {
+            sendMessage(message, attachments);
         }
     };
 

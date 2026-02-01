@@ -15,12 +15,54 @@ env:
 
 jobs:
   # ============================================================================
-  # ROOT LEVEL JOBS (no dependencies, run immediately)
+  # SETUP JOB - Cache dependencies for all other jobs
   # ============================================================================
 
-  lint-app:
-    name: Lint App
+  setup:
+    name: Install Deps
     runs-on: ubuntu-latest
+    outputs:
+      cache-key: ${{ steps.cache-key.outputs.key }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Generate cache key
+        id: cache-key
+        run: echo "key=node-modules-${{ hashFiles('package-lock.json') }}" >> $GITHUB_OUTPUT
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Restore cached dependencies
+        id: cache-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: node_modules
+          key: ${{ steps.cache-key.outputs.key }}
+
+      - name: Install dependencies
+        if: steps.cache-restore.outputs.cache-hit != 'true'
+        run: npm ci
+
+      - name: Save dependencies to cache
+        if: steps.cache-restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: node_modules
+          key: ${{ steps.cache-key.outputs.key }}
+
+  # ============================================================================
+  # LINT JOBS - Run in parallel, don't block tests
+  # ============================================================================
+
+  typecheck:
+    name: Type Check
+    runs-on: ubuntu-latest
+    needs: [setup]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -29,13 +71,34 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Restore cached dependencies
+        uses: actions/cache/restore@v4
+        with:
+          path: node_modules
+          key: ${{ needs.setup.outputs.cache-key }}
 
       - name: Type check
         run: npm run typecheck
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    needs: [setup]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Restore cached dependencies
+        uses: actions/cache/restore@v4
+        with:
+          path: node_modules
+          key: ${{ needs.setup.outputs.cache-key }}
 
       - name: Lint code
         run: npm run lint
@@ -46,6 +109,7 @@ jobs:
   lint-sdk-python:
     name: Lint SDK (Python)
     runs-on: ubuntu-latest
+    needs: [setup]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -70,6 +134,7 @@ jobs:
   lint-sdk-javascript:
     name: Lint SDK (JavaScript)
     runs-on: ubuntu-latest
+    needs: [setup]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -78,10 +143,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
 
-      - name: Install dependencies
-        run: npm ci --workspace=@flowmaestro/sdk --ignore-scripts
+      - name: Restore cached dependencies
+        uses: actions/cache/restore@v4
+        with:
+          path: node_modules
+          key: ${{ needs.setup.outputs.cache-key }}
 
       - name: Type check JavaScript SDK
         run: npm run typecheck --workspace=@flowmaestro/sdk
@@ -89,6 +156,7 @@ jobs:
   lint-sdk-widget:
     name: Lint SDK (Widget)
     runs-on: ubuntu-latest
+    needs: [setup]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -97,22 +165,24 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
 
-      - name: Install dependencies
-        run: npm ci --workspace=@flowmaestro/widget --ignore-scripts
+      - name: Restore cached dependencies
+        uses: actions/cache/restore@v4
+        with:
+          path: node_modules
+          key: ${{ needs.setup.outputs.cache-key }}
 
       - name: Type check Widget SDK
         run: npm run typecheck --workspace=@flowmaestro/widget
 
   # ============================================================================
-  # SECOND LEVEL JOBS (depend on lint-app)
+  # TEST JOBS - Run in parallel with lint (no dependency on lint)
   # ============================================================================
 
   unit-tests:
     name: Unit Tests (${{ matrix.shard }}/${{ matrix.total-shards }})
     runs-on: ubuntu-latest
-    needs: [lint-app]
+    needs: [setup]
     strategy:
       fail-fast: false
       matrix:
@@ -126,15 +196,17 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
 
       - name: Setup Python (for syntax validation tests)
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Restore cached dependencies
+        uses: actions/cache/restore@v4
+        with:
+          path: node_modules
+          key: ${{ needs.setup.outputs.cache-key }}
 
       # Run shared tests (small, no sharding needed) - only on first shard
       - name: Run shared tests
@@ -152,12 +224,12 @@ jobs:
   integration-tests:
     name: Integration Tests (${{ matrix.shard }}/${{ matrix.total-shards }})
     runs-on: ubuntu-latest
-    needs: [lint-app]
+    needs: [setup]
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3]
-        total-shards: [3]
+        shard: [1, 2, 3, 4, 5]
+        total-shards: [5]
     env:
       DATABASE_URL: postgresql://flowmaestro:flowmaestro_dev_password@localhost:5432/flowmaestro
       POSTGRES_HOST: localhost
@@ -177,10 +249,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Restore cached dependencies
+        uses: actions/cache/restore@v4
+        with:
+          path: node_modules
+          key: ${{ needs.setup.outputs.cache-key }}
 
       - name: Install netcat for readiness checks
         run: sudo apt-get update && sudo apt-get install -y netcat-openbsd
@@ -238,6 +312,10 @@ jobs:
             kill $(cat /tmp/worker_pid) || true
           fi
 
+  # ============================================================================
+  # GATE JOBS - Ensure all checks pass
+  # ============================================================================
+
   # Summary job to ensure all test shards passed
   tests-complete:
     name: Tests Complete
@@ -257,10 +335,41 @@ jobs:
           fi
           echo "All tests passed!"
 
+  # Summary job to ensure all lint checks passed
+  lint-complete:
+    name: Lint Complete
+    runs-on: ubuntu-latest
+    needs: [typecheck, lint, lint-sdk-python, lint-sdk-javascript, lint-sdk-widget]
+    if: always()
+    steps:
+      - name: Check lint results
+        run: |
+          if [ "${{ needs.typecheck.result }}" != "success" ]; then
+            echo "Type check failed"
+            exit 1
+          fi
+          if [ "${{ needs.lint.result }}" != "success" ]; then
+            echo "Lint failed"
+            exit 1
+          fi
+          if [ "${{ needs.lint-sdk-python.result }}" != "success" ]; then
+            echo "Python SDK lint failed"
+            exit 1
+          fi
+          if [ "${{ needs.lint-sdk-javascript.result }}" != "success" ]; then
+            echo "JavaScript SDK lint failed"
+            exit 1
+          fi
+          if [ "${{ needs.lint-sdk-widget.result }}" != "success" ]; then
+            echo "Widget SDK lint failed"
+            exit 1
+          fi
+          echo "All lint checks passed!"
+
   build:
     name: Build
     runs-on: ubuntu-latest
-    needs: [lint-app]
+    needs: [setup]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -269,16 +378,18 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Restore cached dependencies
+        uses: actions/cache/restore@v4
+        with:
+          path: node_modules
+          key: ${{ needs.setup.outputs.cache-key }}
 
       - name: Build all packages
         run: npm run build
 
   # ============================================================================
-  # THIRD LEVEL JOBS (depend on build, run Docker builds in parallel)
+  # DOCKER BUILDS - Run after build completes
   # ============================================================================
 
   docker-build-backend:
@@ -388,3 +499,39 @@ jobs:
           push: false
           cache-from: type=gha,scope=static
           cache-to: type=gha,mode=max,scope=static
+
+  # Summary job to ensure all Docker builds passed
+  docker-complete:
+    name: Docker Complete
+    runs-on: ubuntu-latest
+    needs:
+      - docker-build-backend
+      - docker-build-frontend
+      - docker-build-marketing
+      - docker-build-migrations
+      - docker-build-static
+    if: always()
+    steps:
+      - name: Check Docker build results
+        run: |
+          if [ "${{ needs.docker-build-backend.result }}" != "success" ]; then
+            echo "Backend Docker build failed"
+            exit 1
+          fi
+          if [ "${{ needs.docker-build-frontend.result }}" != "success" ]; then
+            echo "Frontend Docker build failed"
+            exit 1
+          fi
+          if [ "${{ needs.docker-build-marketing.result }}" != "success" ]; then
+            echo "Marketing Docker build failed"
+            exit 1
+          fi
+          if [ "${{ needs.docker-build-migrations.result }}" != "success" ]; then
+            echo "Migrations Docker build failed"
+            exit 1
+          fi
+          if [ "${{ needs.docker-build-static.result }}" != "success" ]; then
+            echo "Static Docker build failed"
+            exit 1
+          fi
+          echo "All Docker builds passed!"
