@@ -271,6 +271,9 @@ export const usePublicChatStore = create<PublicChatStore>((set, get) => ({
 
     // Send a message
     sendMessage: async (message, attachments = []) => {
+        // Prevent double-click race condition
+        if (get().isSending) return false;
+
         const { session, chatInterface, messages } = get();
         if (!session || !chatInterface) {
             set({ error: "Session not initialized" });
