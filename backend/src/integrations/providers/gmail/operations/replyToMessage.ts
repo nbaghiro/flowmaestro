@@ -38,45 +38,7 @@ export const replyToMessageOperation: OperationDefinition = {
     description: "Reply to an existing email message, maintaining the conversation thread",
     category: "messages",
     retryable: false,
-    inputSchema: replyToMessageSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            messageId: {
-                type: "string",
-                description: "The ID of the message to reply to"
-            },
-            body: {
-                type: "string",
-                description: "Reply body content"
-            },
-            bodyType: {
-                type: "string",
-                enum: ["text", "html"],
-                description: "Body content type",
-                default: "text"
-            },
-            replyAll: {
-                type: "boolean",
-                description: "Reply to all recipients",
-                default: false
-            },
-            attachments: {
-                type: "array",
-                items: {
-                    type: "object",
-                    properties: {
-                        filename: { type: "string" },
-                        content: { type: "string" },
-                        mimeType: { type: "string" }
-                    },
-                    required: ["filename", "content", "mimeType"]
-                },
-                description: "File attachments"
-            }
-        },
-        required: ["messageId", "body"]
-    }
+    inputSchema: replyToMessageSchema
 };
 
 /**

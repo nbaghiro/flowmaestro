@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { createSubtaskInputSchema, type CreateSubtaskInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { AsanaClient } from "../../client/AsanaClient";
@@ -9,7 +8,6 @@ export const createSubtaskOperation: OperationDefinition = {
     description: "Create a subtask under a parent task in Asana.",
     category: "tasks",
     inputSchema: createSubtaskInputSchema,
-    inputSchemaJSON: toJSONSchema(createSubtaskInputSchema),
     retryable: true,
     timeout: 10000
 };

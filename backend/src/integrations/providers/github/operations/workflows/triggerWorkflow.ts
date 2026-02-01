@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { GitHubClient } from "../../client/GitHubClient";
 import {
     GitHubOwnerSchema,
@@ -32,7 +31,6 @@ export const triggerWorkflowOperation: OperationDefinition = {
     description: "Trigger a workflow dispatch event",
     category: "workflows",
     inputSchema: triggerWorkflowSchema,
-    inputSchemaJSON: toJSONSchema(triggerWorkflowSchema),
     retryable: false,
     timeout: 30000
 };

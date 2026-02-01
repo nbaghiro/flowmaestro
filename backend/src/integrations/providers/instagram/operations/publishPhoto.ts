@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { InstagramClient } from "../client/InstagramClient";
 import type { InstagramPublishResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -30,7 +29,6 @@ export const publishPhotoOperation: OperationDefinition = (() => {
             description: "Publish a single photo to Instagram feed",
             category: "publishing",
             inputSchema: publishPhotoSchema,
-            inputSchemaJSON: toJSONSchema(publishPhotoSchema),
             retryable: true,
             timeout: 60000
         };

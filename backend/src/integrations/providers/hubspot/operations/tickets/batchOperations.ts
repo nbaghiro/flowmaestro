@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { HubspotClient } from "../../client/HubspotClient";
 import type { HubspotTicket, HubspotBatchResponse } from "../types";
@@ -26,7 +25,6 @@ export const batchCreateTicketsOperation: OperationDefinition = {
     description: "Create multiple tickets at once (max 100)",
     category: "crm",
     inputSchema: batchCreateTicketsSchema,
-    inputSchemaJSON: toJSONSchema(batchCreateTicketsSchema),
     retryable: true,
     timeout: 10000
 };
@@ -80,7 +78,6 @@ export const batchUpdateTicketsOperation: OperationDefinition = {
     description: "Update multiple tickets at once (max 100)",
     category: "crm",
     inputSchema: batchUpdateTicketsSchema,
-    inputSchemaJSON: toJSONSchema(batchUpdateTicketsSchema),
     retryable: true,
     timeout: 10000
 };
@@ -134,7 +131,6 @@ export const batchReadTicketsOperation: OperationDefinition = {
     description: "Read multiple tickets by IDs (max 100)",
     category: "crm",
     inputSchema: batchReadTicketsSchema,
-    inputSchemaJSON: toJSONSchema(batchReadTicketsSchema),
     retryable: true,
     timeout: 10000
 };
@@ -192,7 +188,6 @@ export const batchUpsertTicketsOperation: OperationDefinition = {
     description: "Create or update multiple tickets at once (max 100)",
     category: "crm",
     inputSchema: batchUpsertTicketsSchema,
-    inputSchemaJSON: toJSONSchema(batchUpsertTicketsSchema),
     retryable: true,
     timeout: 10000
 };

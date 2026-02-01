@@ -1,3 +1,4 @@
+import { toJSONSchema } from "../../../../core/utils/zod-to-json-schema";
 import { HeapClient } from "../client/HeapClient";
 import { executeSetAccountProperties } from "../operations/setAccountProperties";
 import { executeSetUserProperties } from "../operations/setUserProperties";
@@ -17,7 +18,7 @@ export class HeapMCPAdapter {
         return Array.from(this.operations.values()).map((op) => ({
             name: `heap_${op.id}`,
             description: op.description,
-            inputSchema: op.inputSchemaJSON,
+            inputSchema: toJSONSchema(op.inputSchema),
             executeRef: op.id
         }));
     }

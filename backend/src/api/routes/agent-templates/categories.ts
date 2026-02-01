@@ -23,7 +23,9 @@ export async function getAgentCategoriesRoute(fastify: FastifyInstance) {
             "engineering",
             "support"
         ];
-        const existingCategories = new Set(categories.map((c) => c.category));
+        const existingCategories = new Set<TemplateCategory>(
+            categories.map((c) => c.category as TemplateCategory)
+        );
         const allCategories = agentCategories
             .filter((key) => !existingCategories.has(key))
             .map((key) => ({

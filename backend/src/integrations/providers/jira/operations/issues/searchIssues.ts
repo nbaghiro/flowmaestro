@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { searchIssuesInputSchema, type SearchIssuesInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { JiraClient } from "../../client/JiraClient";
@@ -10,7 +9,6 @@ export const searchIssuesOperation: OperationDefinition = {
         "Search for issues using JQL (Jira Query Language). Supports pagination, field filtering, and result expansion.",
     category: "search",
     inputSchema: searchIssuesInputSchema,
-    inputSchemaJSON: toJSONSchema(searchIssuesInputSchema),
     retryable: true,
     timeout: 30000
 };

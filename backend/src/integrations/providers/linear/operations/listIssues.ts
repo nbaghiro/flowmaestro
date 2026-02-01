@@ -23,30 +23,7 @@ export const listIssuesOperation: OperationDefinition = {
     description: "List issues from Linear with optional filters",
     category: "issues",
     retryable: true,
-    inputSchema: listIssuesSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            teamId: {
-                type: "string",
-                description: "Filter by team ID"
-            },
-            first: {
-                type: "number",
-                description: "Number of issues to return",
-                default: 50
-            },
-            after: {
-                type: "string",
-                description: "Cursor for pagination"
-            },
-            filter: {
-                type: "object",
-                description: "Issue filters (GraphQL IssueFilter format)"
-            }
-        },
-        required: []
-    }
+    inputSchema: listIssuesSchema
 };
 
 /**

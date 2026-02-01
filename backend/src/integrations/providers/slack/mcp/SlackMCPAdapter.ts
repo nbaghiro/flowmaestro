@@ -1,3 +1,4 @@
+import { toJSONSchema } from "../../../../core/utils/zod-to-json-schema";
 import { SlackClient } from "../client/SlackClient";
 import { executeListChannels } from "../operations/listChannels";
 import { executeSendMessage } from "../operations/sendMessage";
@@ -16,7 +17,7 @@ export class SlackMCPAdapter {
         return Array.from(this.operations.values()).map((op) => ({
             name: `slack_${op.id}`,
             description: op.description,
-            inputSchema: op.inputSchemaJSON,
+            inputSchema: toJSONSchema(op.inputSchema),
             executeRef: op.id
         }));
     }

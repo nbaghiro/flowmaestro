@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { LinkedInClient } from "../client/LinkedInClient";
 import {
     PostContentSchema,
@@ -40,7 +39,6 @@ export const createArticlePostOperation: OperationDefinition = (() => {
                 "Create a LinkedIn post with an article link. The article URL will be displayed with a preview card.",
             category: "posts",
             inputSchema: createArticlePostSchema,
-            inputSchemaJSON: toJSONSchema(createArticlePostSchema),
             retryable: false,
             timeout: 15000
         };

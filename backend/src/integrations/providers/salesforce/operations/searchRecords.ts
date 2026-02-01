@@ -36,34 +36,7 @@ export const searchRecordsOperation: OperationDefinition = {
         "Execute a SOSL search across multiple Salesforce objects. Useful for finding records by text across fields.",
     category: "search",
     retryable: true,
-    inputSchema: searchRecordsSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            searchQuery: {
-                type: "string",
-                description: "Full SOSL search query (takes precedence over other parameters)"
-            },
-            searchTerm: {
-                type: "string",
-                description: "Text to search for (will be wrapped in FIND clause)"
-            },
-            objectTypes: {
-                type: "array",
-                items: { type: "string" },
-                description: "Object types to search in (e.g., ['Account', 'Contact'])"
-            },
-            returningFields: {
-                type: "object",
-                additionalProperties: {
-                    type: "array",
-                    items: { type: "string" }
-                },
-                description:
-                    "Fields to return per object type (e.g., { Account: ['Name', 'Website'] })"
-            }
-        }
-    }
+    inputSchema: searchRecordsSchema
 };
 
 /**

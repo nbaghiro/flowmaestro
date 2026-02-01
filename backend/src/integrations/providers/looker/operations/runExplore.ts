@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { LookerClient } from "../client/LookerClient";
 import {
     LookerModelSchema,
@@ -34,7 +33,6 @@ export const runExploreOperation: OperationDefinition = {
     description: "Run an inline query on an explore and return results",
     category: "explores",
     inputSchema: runExploreSchema,
-    inputSchemaJSON: toJSONSchema(runExploreSchema),
     retryable: true,
     timeout: 120000
 };

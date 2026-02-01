@@ -158,7 +158,7 @@ function ConnectionCard({
 
             {/* Connection Info */}
             <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <h3 className="font-medium text-sm text-foreground truncate">
                         {connection.name}
                     </h3>
@@ -169,6 +169,11 @@ function ConnectionCard({
                     >
                         {methodLabels[connection.connection_method] || "Custom"}
                     </span>
+                    {connection.metadata?.isTestConnection && (
+                        <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded bg-amber-900/30 text-amber-400">
+                            Test
+                        </span>
+                    )}
                 </div>
 
                 {connection.metadata?.account_info?.email && (

@@ -32,32 +32,7 @@ export const appendValuesOperation: OperationDefinition = {
     description: "Append values to the end of a range in a spreadsheet",
     category: "values",
     retryable: true,
-    inputSchema: appendValuesSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            spreadsheetId: {
-                type: "string",
-                description: "Spreadsheet ID"
-            },
-            range: {
-                type: "string",
-                description: "A1 notation range (e.g., 'Sheet1!A1')"
-            },
-            values: {
-                type: "array",
-                items: { type: "array", items: {} },
-                description: "2D array of values to append (e.g., [['Name', 'Age'], ['John', 30]])"
-            },
-            valueInputOption: {
-                type: "string",
-                enum: ["RAW", "USER_ENTERED"],
-                description:
-                    "How input data should be interpreted (RAW = as-is, USER_ENTERED = parse formulas/formats)"
-            }
-        },
-        required: ["spreadsheetId", "range", "values"]
-    }
+    inputSchema: appendValuesSchema
 };
 
 /**

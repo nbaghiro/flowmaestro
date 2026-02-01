@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { BufferClient } from "../client/BufferClient";
 import { BufferUpdateIdSchema } from "../schemas";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -27,7 +26,6 @@ export const deleteUpdateOperation: OperationDefinition = (() => {
             description: "Delete a scheduled post from Buffer",
             category: "updates",
             inputSchema: deleteUpdateSchema,
-            inputSchemaJSON: toJSONSchema(deleteUpdateSchema),
             retryable: true,
             timeout: 10000
         };

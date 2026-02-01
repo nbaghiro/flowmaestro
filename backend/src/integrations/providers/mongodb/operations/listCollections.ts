@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { Db, CollectionInfo } from "mongodb";
 
@@ -30,7 +29,6 @@ export const listCollectionsOperation: OperationDefinition = {
     description: "List all collections in the database",
     category: "database",
     inputSchema: listCollectionsSchema,
-    inputSchemaJSON: toJSONSchema(listCollectionsSchema),
     retryable: false,
     timeout: 30000
 };

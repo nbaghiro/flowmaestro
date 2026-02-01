@@ -1,3 +1,4 @@
+import { toJSONSchema } from "../../../../core/utils/zod-to-json-schema";
 import {
     // Organization Operations
     executeListOrganizations,
@@ -41,7 +42,7 @@ export class SentryMCPAdapter {
             tools.push({
                 name: `sentry_${id}`,
                 description: operation.description,
-                inputSchema: operation.inputSchemaJSON
+                inputSchema: toJSONSchema(operation.inputSchema)
             });
         }
 

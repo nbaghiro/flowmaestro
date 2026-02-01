@@ -40,48 +40,7 @@ export const listCommentsOperation: OperationDefinition = {
     description: "List comment threads for a video or channel with optional search and sorting",
     category: "comments",
     retryable: true,
-    inputSchema: listCommentsSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            videoId: {
-                type: "string",
-                description: "Get comments for a specific video"
-            },
-            channelId: {
-                type: "string",
-                description: "Get comments for a channel's videos"
-            },
-            maxResults: {
-                type: "number",
-                description: "Maximum number of comment threads to return",
-                minimum: 1,
-                maximum: 100,
-                default: 25
-            },
-            pageToken: {
-                type: "string",
-                description: "Token for pagination"
-            },
-            order: {
-                type: "string",
-                enum: ["time", "relevance"],
-                description: "Sort order",
-                default: "time"
-            },
-            searchTerms: {
-                type: "string",
-                description: "Search for comments containing specific terms"
-            },
-            textFormat: {
-                type: "string",
-                enum: ["html", "plainText"],
-                description: "Format of the comment text",
-                default: "plainText"
-            }
-        },
-        required: []
-    }
+    inputSchema: listCommentsSchema
 };
 
 /**

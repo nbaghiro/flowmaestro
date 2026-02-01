@@ -18,12 +18,7 @@ export const listTeamsOperation: OperationDefinition = {
     description: "List all teams in Linear workspace",
     category: "teams",
     retryable: true,
-    inputSchema: listTeamsSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {},
-        required: []
-    }
+    inputSchema: listTeamsSchema
 };
 
 /**

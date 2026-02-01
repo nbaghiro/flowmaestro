@@ -15,14 +15,6 @@ export const listChatMessagesOperation: OperationDefinition = {
     description: "List messages in a Microsoft Teams chat",
     category: "messaging",
     inputSchema: listChatMessagesSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["chatId"],
-        properties: {
-            chatId: { type: "string", description: "ID of the chat" },
-            top: { type: "number", description: "Maximum number of messages to return" }
-        }
-    },
     retryable: true
 };
 

@@ -28,36 +28,7 @@ export const searchOperation: OperationDefinition = {
     description: "Search for pages and databases in Notion workspace",
     category: "query",
     retryable: true,
-    inputSchema: searchSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            query: {
-                type: "string",
-                description: "Search query string"
-            },
-            filter: {
-                type: "object",
-                description: "Filter by object type (page or database)",
-                properties: {
-                    value: {
-                        type: "string",
-                        enum: ["page", "database"]
-                    },
-                    property: {
-                        type: "string",
-                        enum: ["object"]
-                    }
-                }
-            },
-            page_size: {
-                type: "number",
-                description: "Number of results per page",
-                minimum: 1,
-                maximum: 100
-            }
-        }
-    }
+    inputSchema: searchSchema
 };
 
 /**

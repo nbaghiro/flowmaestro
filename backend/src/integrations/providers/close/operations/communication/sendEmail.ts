@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { CloseClient } from "../../client/CloseClient";
 import type { CloseEmailActivity } from "../types";
@@ -35,7 +34,6 @@ export const sendEmailOperation: OperationDefinition = {
     description: "Send an email via Close",
     category: "communication",
     inputSchema: sendEmailSchema,
-    inputSchemaJSON: toJSONSchema(sendEmailSchema),
     retryable: false,
     timeout: 15000
 };

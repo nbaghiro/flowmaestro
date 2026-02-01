@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { MarketoClient } from "../client/MarketoClient";
 
@@ -21,7 +20,6 @@ export const getListsOperation: OperationDefinition = {
     description: "Get all static lists from Marketo",
     category: "lists",
     inputSchema: getListsSchema,
-    inputSchemaJSON: toJSONSchema(getListsSchema),
     retryable: true,
     timeout: 15000
 };

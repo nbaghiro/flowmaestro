@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { Db } from "mongodb";
 
@@ -42,7 +41,6 @@ export const aggregateOperation: OperationDefinition = {
     description: "Execute an aggregation pipeline on a collection",
     category: "database",
     inputSchema: aggregateSchema,
-    inputSchemaJSON: toJSONSchema(aggregateSchema),
     retryable: false,
     timeout: 120000 // 2 minutes for complex aggregations
 };

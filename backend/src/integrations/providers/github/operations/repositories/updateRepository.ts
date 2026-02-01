@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { GitHubClient } from "../../client/GitHubClient";
 import {
     GitHubOwnerSchema,
@@ -39,7 +38,6 @@ export const updateRepositoryOperation: OperationDefinition = {
     description: "Update repository settings",
     category: "repositories",
     inputSchema: updateRepositorySchema,
-    inputSchemaJSON: toJSONSchema(updateRepositorySchema),
     retryable: true,
     timeout: 15000
 };

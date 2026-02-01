@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../../../core/types";
 import type { HubspotClient } from "../../../client/HubspotClient";
 
@@ -21,7 +20,6 @@ export const deleteNoteOperation: OperationDefinition = {
     description: "Delete (archive) a note engagement in HubSpot CRM",
     category: "crm",
     inputSchema: deleteNoteSchema,
-    inputSchemaJSON: toJSONSchema(deleteNoteSchema),
     retryable: true,
     timeout: 10000
 };

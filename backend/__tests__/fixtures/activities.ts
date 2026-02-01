@@ -6,6 +6,7 @@
  */
 
 import type { JsonObject } from "@flowmaestro/shared";
+import { sandboxDataService } from "../../src/integrations/sandbox";
 import type {
     NodeHandlerInput,
     NodeExecutionMetadata
@@ -59,19 +60,75 @@ export interface ExecutionLogEntry {
 export function createMockActivities(config: MockActivityConfig = {}) {
     const executionLog: ExecutionLogEntry[] = config.executionLog || [];
 
+    // ExecuteNode activity signature supports TWO calling conventions:
+    // 1. Object-based (used by Temporal workflow orchestrator):
+    //    executeNode({ nodeType, nodeConfig, context, executionContext })
+    // 2. Positional (used by unit tests):
+    //    executeNode(nodeType, nodeConfig, context, metadata)
     const mockExecuteNode = jest.fn(
         async (
-            nodeType: string,
-            nodeConfig: JsonObject,
-            _context: ContextSnapshot,
-            metadata: NodeExecutionMetadata
+            inputOrNodeType:
+                | {
+                      nodeType: string;
+                      nodeConfig: JsonObject;
+                      context: JsonObject;
+                      executionContext?: {
+                          executionId: string;
+                          workflowName: string;
+                          userId?: string;
+                          nodeId: string;
+                      };
+                  }
+                | string,
+            nodeConfigArg?: JsonObject,
+            contextArg?: JsonObject | ContextSnapshot,
+            metadataArg?: {
+                nodeId: string;
+                nodeName?: string;
+                executionId?: string;
+                workflowName?: string;
+            }
         ): Promise<{
+            result: JsonObject;
+            signals: {
+                pause?: boolean;
+                pauseContext?: JsonObject;
+                branchesToSkip?: string[];
+            };
+            metrics?: {
+                durationMs?: number;
+                tokenUsage?: {
+                    promptTokens?: number;
+                    completionTokens?: number;
+                    totalTokens?: number;
+                    model?: string;
+                };
+            };
+            // Legacy fields for backward compatibility with unit tests
             success: boolean;
             output: JsonObject;
-            signals: JsonObject;
             error?: string;
         }> => {
-            const nodeId = metadata.nodeId;
+            // Normalize arguments - detect which calling convention is being used
+            let nodeId: string;
+            let nodeType: string;
+            let nodeConfig: JsonObject;
+            let context: JsonObject;
+
+            if (typeof inputOrNodeType === "string") {
+                // Positional calling convention: executeNode(nodeType, nodeConfig, context, metadata)
+                nodeType = inputOrNodeType;
+                nodeConfig = nodeConfigArg || {};
+                context = (contextArg as JsonObject) || {};
+                nodeId = metadataArg?.nodeId || "unknown";
+            } else {
+                // Object calling convention: executeNode({ nodeType, nodeConfig, context, executionContext })
+                nodeType = inputOrNodeType.nodeType;
+                nodeConfig = inputOrNodeType.nodeConfig;
+                context = inputOrNodeType.context;
+                nodeId = inputOrNodeType.executionContext?.nodeId || "unknown";
+            }
+
             const mockConfig = config.nodeConfigs?.[nodeId] || {};
 
             // Simulate delay
@@ -88,28 +145,87 @@ export function createMockActivities(config: MockActivityConfig = {}) {
                 success: true
             };
 
-            // Check if should fail
+            // Check if should fail (explicit mock config)
             if (mockConfig.shouldFail) {
                 logEntry.success = false;
                 logEntry.error = mockConfig.errorMessage || `Node ${nodeId} failed`;
                 executionLog.push(logEntry);
 
-                return {
-                    success: false,
-                    output: {},
-                    signals: {},
-                    error: logEntry.error
-                };
+                // Throw error to simulate activity failure
+                throw new Error(logEntry.error);
             }
 
-            // Generate output
-            const output = mockConfig.customOutput || {
+            // For integration nodes, check sandboxDataService for scenarios and fixtures
+            if (nodeType === "integration" && nodeConfig) {
+                const provider = nodeConfig.provider as string;
+                const operation = nodeConfig.operation as string;
+                const inputs = (nodeConfig.inputs as Record<string, unknown>) || {};
+
+                // Resolve input templates against the context
+                const resolvedInputs: Record<string, unknown> = {};
+                for (const [key, value] of Object.entries(inputs)) {
+                    if (
+                        typeof value === "string" &&
+                        value.startsWith("{{") &&
+                        value.endsWith("}}")
+                    ) {
+                        // Extract variable path from template
+                        const path = value.slice(2, -2).trim();
+                        const parts = path.split(".");
+                        // Look up in context
+                        let resolved: unknown = context;
+                        for (const part of parts) {
+                            if (resolved && typeof resolved === "object") {
+                                resolved = (resolved as Record<string, unknown>)[part];
+                            } else {
+                                resolved = undefined;
+                                break;
+                            }
+                        }
+                        resolvedInputs[key] = resolved;
+                    } else {
+                        resolvedInputs[key] = value;
+                    }
+                }
+
+                if (provider && operation) {
+                    const sandboxResponse = await sandboxDataService.getSandboxResponse(
+                        provider,
+                        operation,
+                        resolvedInputs
+                    );
+
+                    if (sandboxResponse) {
+                        if (!sandboxResponse.success) {
+                            logEntry.success = false;
+                            logEntry.error = sandboxResponse.error?.message || "Operation failed";
+                            executionLog.push(logEntry);
+                            throw new Error(logEntry.error);
+                        }
+
+                        logEntry.output = sandboxResponse.data as JsonObject;
+                        executionLog.push(logEntry);
+
+                        const outputData = sandboxResponse.data as JsonObject;
+                        return {
+                            result: outputData,
+                            signals: {},
+                            // Legacy fields for backward compatibility
+                            success: true,
+                            output: outputData
+                        };
+                    }
+                }
+            }
+
+            // Generate output from mock config or default
+            const outputResult = mockConfig.customOutput || {
                 result: `executed-${nodeId}`,
                 nodeType,
                 timestamp: Date.now()
             };
 
-            logEntry.output = output;
+            logEntry.output = outputResult;
             executionLog.push(logEntry);
 
             // Call custom handler if provided
@@ -117,28 +233,36 @@ export function createMockActivities(config: MockActivityConfig = {}) {
                 mockConfig.onExecute({
                     nodeType,
                     nodeConfig,
-                    context: _context,
-                    metadata
-                } as NodeHandlerInput);
+                    context,
+                    metadata: metadataArg as NodeExecutionMetadata
+                } as unknown as NodeHandlerInput);
             }
 
             // Use custom signals or default empty object
             const signals = mockConfig.customSignals || {};
 
             return {
+                result: outputResult,
+                signals: signals as {
+                    pause?: boolean;
+                    pauseContext?: JsonObject;
+                    branchesToSkip?: string[];
+                },
+                // Legacy fields for backward compatibility
                 success: true,
-                output,
-                signals
+                output: outputResult
             };
         }
     );
 
     const mockValidateInputs = jest.fn(async (_schema: JsonObject, _inputs: JsonObject) => {
-        return { valid: true, errors: [] };
+        // Return format expected by workflow-orchestrator: { success: boolean, error?: { message: string } }
+        return { success: true, error: null };
     });
 
     const mockValidateOutputs = jest.fn(async (_schema: JsonObject, _outputs: JsonObject) => {
-        return { valid: true, errors: [] };
+        // Return format expected by workflow-orchestrator: { success: boolean, error?: { message: string } }
+        return { success: true, error: null };
     });
 
     const mockEmitEvent = jest.fn(async (_event: string, _data: JsonObject) => {

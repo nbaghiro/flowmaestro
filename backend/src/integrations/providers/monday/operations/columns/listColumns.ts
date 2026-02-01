@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { LIST_COLUMNS } from "../../graphql/queries";
 import { listColumnsInputSchema, type ListColumnsInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
@@ -10,7 +9,6 @@ export const listColumnsOperation: OperationDefinition = {
     description: "List all columns on a Monday.com board.",
     category: "columns",
     inputSchema: listColumnsInputSchema,
-    inputSchemaJSON: toJSONSchema(listColumnsInputSchema),
     retryable: true,
     timeout: 10000
 };

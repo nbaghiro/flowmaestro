@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { SurveyMonkeyClient } from "../client/SurveyMonkeyClient";
 import { ListCollectorsSchema } from "../schemas";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -15,7 +14,6 @@ export const listCollectorsOperation: OperationDefinition = {
         "List collectors (distribution channels) for a specific survey. Collectors are how surveys are distributed, such as web links, email invitations, or embedded surveys.",
     category: "collectors",
     inputSchema: listCollectorsSchema,
-    inputSchemaJSON: toJSONSchema(listCollectorsSchema),
     retryable: true,
     timeout: 30000
 };

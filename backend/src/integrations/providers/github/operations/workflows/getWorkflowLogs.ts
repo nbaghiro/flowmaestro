@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { GitHubClient } from "../../client/GitHubClient";
 import { GitHubOwnerSchema, GitHubRepoNameSchema } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
@@ -24,7 +23,6 @@ export const getWorkflowLogsOperation: OperationDefinition = {
     description: "Download logs for a workflow run",
     category: "workflows",
     inputSchema: getWorkflowLogsSchema,
-    inputSchemaJSON: toJSONSchema(getWorkflowLogsSchema),
     retryable: true,
     timeout: 60000 // Logs can be large
 };

@@ -3,7 +3,6 @@
  */
 
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { IntercomClient } from "../client/IntercomClient";
 import type { IntercomNote, IntercomListResponse } from "../types";
@@ -26,7 +25,6 @@ export const createNoteOperation: OperationDefinition = {
     description: "Add a note to a contact",
     category: "data",
     inputSchema: createNoteSchema,
-    inputSchemaJSON: toJSONSchema(createNoteSchema),
     retryable: false,
     timeout: 10000
 };
@@ -74,7 +72,6 @@ export const listNotesOperation: OperationDefinition = {
     description: "List all notes for a contact",
     category: "data",
     inputSchema: listNotesSchema,
-    inputSchemaJSON: toJSONSchema(listNotesSchema),
     retryable: true,
     timeout: 10000
 };

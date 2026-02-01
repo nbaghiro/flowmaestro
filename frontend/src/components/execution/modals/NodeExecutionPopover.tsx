@@ -76,36 +76,44 @@ export function NodeExecutionPopover({
             document.removeEventListener("mouseup", handleMouseUp);
         };
     }, [isResizing]);
-    // Get status info
+    // Get status info using canonical NodeExecutionStatus values
     const getStatusInfo = () => {
         switch (executionState.status) {
             case "pending":
+            case "ready":
                 return {
                     icon: <Clock className="w-4 h-4" />,
                     color: "text-yellow-600",
                     bg: "bg-yellow-50 dark:bg-yellow-900/20",
-                    label: "Pending"
+                    label: executionState.status === "ready" ? "Ready" : "Pending"
                 };
-            case "running":
+            case "executing":
                 return {
                     icon: <Clock className="w-4 h-4 animate-spin" />,
                     color: "text-blue-600",
                     bg: "bg-blue-50 dark:bg-blue-900/20",
                     label: "Running"
                 };
-            case "success":
+            case "completed":
                 return {
                     icon: <CheckCircle2 className="w-4 h-4" />,
                     color: "text-green-600",
                     bg: "bg-green-50 dark:bg-green-900/20",
-                    label: "Success"
+                    label: "Completed"
                 };
-            case "error":
+            case "failed":
                 return {
                     icon: <XCircle className="w-4 h-4" />,
                     color: "text-red-600",
                     bg: "bg-red-50 dark:bg-red-900/20",
-                    label: "Error"
+                    label: "Failed"
+                };
+            case "skipped":
+                return {
+                    icon: <AlertCircle className="w-4 h-4" />,
+                    color: "text-gray-600",
+                    bg: "bg-muted/30 dark:bg-gray-900/20",
+                    label: "Skipped"
                 };
             default:
                 return {

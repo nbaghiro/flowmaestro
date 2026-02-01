@@ -20,17 +20,7 @@ export const createDocumentOperation: OperationDefinition = {
     description: "Create a new Google Docs document",
     category: "documents",
     retryable: true,
-    inputSchema: createDocumentSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            title: {
-                type: "string",
-                description: "Document title"
-            }
-        },
-        required: ["title"]
-    }
+    inputSchema: createDocumentSchema
 };
 
 interface CreateDocumentResponse {

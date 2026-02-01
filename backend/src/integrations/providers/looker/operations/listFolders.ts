@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { LookerClient } from "../client/LookerClient";
 import type { LookerFolder } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -22,7 +21,6 @@ export const listFoldersOperation: OperationDefinition = {
     description: "Get all folders in the Looker instance",
     category: "folders",
     inputSchema: listFoldersSchema,
-    inputSchemaJSON: toJSONSchema(listFoldersSchema),
     retryable: true,
     timeout: 30000
 };

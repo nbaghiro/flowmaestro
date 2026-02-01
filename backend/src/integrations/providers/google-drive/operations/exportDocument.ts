@@ -26,29 +26,7 @@ export const exportDocumentOperation: OperationDefinition = {
         "Export a Google Workspace document (Docs, Sheets, Slides) to another format (PDF, Word, Excel, etc.)",
     category: "export",
     retryable: true,
-    inputSchema: exportDocumentSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            fileId: {
-                type: "string",
-                description: "Google Workspace document ID to export"
-            },
-            mimeType: {
-                type: "string",
-                description:
-                    "Export MIME type - Common formats:\n" +
-                    "PDF: 'application/pdf'\n" +
-                    "Word (.docx): 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'\n" +
-                    "Excel (.xlsx): 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'\n" +
-                    "PowerPoint (.pptx): 'application/vnd.openxmlformats-officedocument.presentationml.presentation'\n" +
-                    "Plain text: 'text/plain'\n" +
-                    "HTML: 'text/html'\n" +
-                    "CSV: 'text/csv'"
-            }
-        },
-        required: ["fileId", "mimeType"]
-    }
+    inputSchema: exportDocumentSchema
 };
 
 /**

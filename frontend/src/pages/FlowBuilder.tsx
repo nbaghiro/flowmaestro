@@ -2,7 +2,7 @@ import { Loader2, Save, LayoutGrid } from "lucide-react";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { ReactFlowProvider, useReactFlow, Node } from "reactflow";
-import { autoLayoutWorkflow } from "@flowmaestro/shared";
+import { autoLayoutWorkflow, ALL_PROVIDERS } from "@flowmaestro/shared";
 import { NodeInspector } from "../canvas/panels/NodeInspector";
 import { NodeLibrary } from "../canvas/panels/NodeLibrary";
 import { WorkflowCanvas } from "../canvas/WorkflowCanvas";
@@ -116,7 +116,8 @@ export function FlowBuilder() {
         addNode,
         selectNode,
         setNodes,
-        autoFillMissingConnections
+        autoFillMissingConnections,
+        setCurrentWorkflowId
     } = useWorkflowStore();
 
     const { undo, redo, canUndo, canRedo, clear } = useHistoryStore();
@@ -246,6 +247,12 @@ export function FlowBuilder() {
         };
     }, [clear]);
 
+    // Set current workflow ID in store (loads persisted UI state like validation toggle)
+    useEffect(() => {
+        setCurrentWorkflowId(workflowId ?? null);
+        return () => setCurrentWorkflowId(null);
+    }, [workflowId, setCurrentWorkflowId]);
+
     useEffect(() => {
         if (workflowId) {
             loadWorkflow();
@@ -293,6 +300,14 @@ export function FlowBuilder() {
                         const flowNodes = Object.entries(nodesObj).map(
                             ([id, node]: [string, unknown]) => {
                                 const nodeData = node as Record<string, unknown>;
+                                const config = nodeData.config as Record<string, unknown>;
+
+                                // Look up provider logoUrl if node has a provider in config
+                                const providerId = config?.provider as string | undefined;
+                                const providerInfo = providerId
+                                    ? ALL_PROVIDERS.find((p) => p.provider === providerId)
+                                    : undefined;
+
                                 const flowNode: {
                                     id: string;
                                     type: string;
@@ -308,7 +323,11 @@ export function FlowBuilder() {
                                     },
                                     data: {
                                         label: nodeData.name,
-                                        ...(nodeData.config as Record<string, unknown>),
+                                        ...config,
+                                        // Add logoUrl if provider has one
+                                        ...(providerInfo?.logoUrl && {
+                                            logoUrl: providerInfo.logoUrl
+                                        }),
                                         onError: nodeData.onError
                                     }
                                 };

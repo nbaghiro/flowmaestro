@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { SentryAlertRuleOutput } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { SentryClient } from "../client/SentryClient";
@@ -17,7 +16,6 @@ export const listAlertRulesOperation: OperationDefinition = {
     description: "List alert rules for a project",
     category: "alerts",
     inputSchema: listAlertRulesSchema,
-    inputSchemaJSON: toJSONSchema(listAlertRulesSchema),
     retryable: true,
     timeout: 30000
 };

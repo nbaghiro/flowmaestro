@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { DocuSignClient } from "../client/DocuSignClient";
 import { DocuSignTemplateIdSchema } from "../schemas";
 import type { DocuSignCreateEnvelopeResponse } from "./types";
@@ -61,7 +60,6 @@ export const createFromTemplateOperation: OperationDefinition = (() => {
             description: "Create an envelope from a pre-defined DocuSign template",
             category: "envelopes",
             inputSchema: createFromTemplateSchema,
-            inputSchemaJSON: toJSONSchema(createFromTemplateSchema),
             retryable: false,
             timeout: 60000
         };

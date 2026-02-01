@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { BitbucketClient } from "../../client/BitbucketClient";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { BitbucketIssue, BitbucketPaginatedResponse } from "../types";
@@ -43,7 +42,6 @@ export const listIssuesOperation: OperationDefinition = {
         "List issues in a Bitbucket repository (requires issue tracker to be enabled on the repository)",
     category: "issues",
     inputSchema: listIssuesSchema,
-    inputSchemaJSON: toJSONSchema(listIssuesSchema),
     retryable: true,
     timeout: 30000
 };

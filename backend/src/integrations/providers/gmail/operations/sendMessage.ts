@@ -49,66 +49,7 @@ export const sendMessageOperation: OperationDefinition = {
     description: "Send a new email message with optional attachments",
     category: "messages",
     retryable: false, // Don't retry sends to avoid duplicates
-    inputSchema: sendMessageSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            to: {
-                oneOf: [
-                    { type: "string", format: "email" },
-                    { type: "array", items: { type: "string", format: "email" } }
-                ],
-                description: "Recipient email address(es)"
-            },
-            cc: {
-                oneOf: [
-                    { type: "string", format: "email" },
-                    { type: "array", items: { type: "string", format: "email" } }
-                ],
-                description: "CC recipient email address(es)"
-            },
-            bcc: {
-                oneOf: [
-                    { type: "string", format: "email" },
-                    { type: "array", items: { type: "string", format: "email" } }
-                ],
-                description: "BCC recipient email address(es)"
-            },
-            subject: {
-                type: "string",
-                description: "Email subject line"
-            },
-            body: {
-                type: "string",
-                description: "Email body content"
-            },
-            bodyType: {
-                type: "string",
-                enum: ["text", "html"],
-                description: "Body content type",
-                default: "text"
-            },
-            attachments: {
-                type: "array",
-                items: {
-                    type: "object",
-                    properties: {
-                        filename: { type: "string" },
-                        content: { type: "string", description: "Base64 encoded content" },
-                        mimeType: { type: "string" }
-                    },
-                    required: ["filename", "content", "mimeType"]
-                },
-                description: "File attachments"
-            },
-            replyTo: {
-                type: "string",
-                format: "email",
-                description: "Reply-To email address"
-            }
-        },
-        required: ["to", "subject", "body"]
-    }
+    inputSchema: sendMessageSchema
 };
 
 /**

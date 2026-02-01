@@ -1,3 +1,4 @@
+import { toJSONSchema } from "../../../../core/utils/zod-to-json-schema";
 import { WhatsAppClient } from "../client/WhatsAppClient";
 import {
     executeSendTextMessage,
@@ -24,7 +25,7 @@ export class WhatsAppMCPAdapter {
         return Array.from(this.operations.values()).map((op) => ({
             name: `whatsapp_${op.id}`,
             description: op.description,
-            inputSchema: op.inputSchemaJSON,
+            inputSchema: toJSONSchema(op.inputSchema),
             executeRef: op.id
         }));
     }

@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../core/schema-utils";
 import { searchPeopleInputSchema, type SearchPeopleInput } from "../schemas";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { ApolloClient } from "../client/ApolloClient";
@@ -10,7 +9,6 @@ export const searchPeopleOperation: OperationDefinition = {
         "Search Apollo's database of 210M+ people with demographic filters. Does not consume credits.",
     category: "search",
     inputSchema: searchPeopleInputSchema,
-    inputSchemaJSON: toJSONSchema(searchPeopleInputSchema),
     retryable: true,
     timeout: 30000
 };

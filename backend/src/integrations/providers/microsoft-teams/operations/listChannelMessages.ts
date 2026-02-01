@@ -16,15 +16,6 @@ export const listChannelMessagesOperation: OperationDefinition = {
     description: "List messages in a Microsoft Teams channel",
     category: "messaging",
     inputSchema: listChannelMessagesSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["teamId", "channelId"],
-        properties: {
-            teamId: { type: "string", description: "ID of the team" },
-            channelId: { type: "string", description: "ID of the channel" },
-            top: { type: "number", description: "Maximum number of messages to return" }
-        }
-    },
     retryable: true
 };
 

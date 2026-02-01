@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { PagerDutyClient } from "../client/PagerDutyClient";
 
@@ -35,7 +34,6 @@ export const listSchedulesOperation: OperationDefinition = {
     description: "List on-call schedules with optional filtering",
     category: "schedules",
     inputSchema: listSchedulesSchema,
-    inputSchemaJSON: toJSONSchema(listSchedulesSchema),
     retryable: true,
     timeout: 30000
 };

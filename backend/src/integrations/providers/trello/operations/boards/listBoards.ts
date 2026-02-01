@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { TrelloClient } from "../../client/TrelloClient";
 import { TrelloFilterSchema, TrelloLimitSchema } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
@@ -24,7 +23,6 @@ export const listBoardsOperation: OperationDefinition = {
     description: "List all Trello boards accessible by the current user",
     category: "boards",
     inputSchema: listBoardsSchema,
-    inputSchemaJSON: toJSONSchema(listBoardsSchema),
     retryable: true,
     timeout: 15000
 };

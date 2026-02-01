@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { InstagramClient } from "../client/InstagramClient";
 import type { InstagramSendResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -47,7 +46,6 @@ export const sendQuickRepliesOperation: OperationDefinition = (() => {
             description: "Send a message with quick reply buttons to an Instagram user",
             category: "messaging",
             inputSchema: sendQuickRepliesSchema,
-            inputSchemaJSON: toJSONSchema(sendQuickRepliesSchema),
             retryable: true,
             timeout: 15000
         };

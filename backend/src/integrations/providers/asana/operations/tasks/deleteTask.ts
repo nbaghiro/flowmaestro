@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { deleteTaskInputSchema, type DeleteTaskInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { AsanaClient } from "../../client/AsanaClient";
@@ -9,7 +8,6 @@ export const deleteTaskOperation: OperationDefinition = {
     description: "Delete a task from Asana. This action cannot be undone.",
     category: "tasks",
     inputSchema: deleteTaskInputSchema,
-    inputSchemaJSON: toJSONSchema(deleteTaskInputSchema),
     retryable: false,
     timeout: 10000
 };

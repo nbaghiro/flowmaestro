@@ -26,40 +26,6 @@ export const exportImagesOperation: OperationDefinition = {
         svgSimplifyStroke: z.boolean().optional().describe("Simplify strokes in SVG output"),
         useAbsoluteBounds: z.boolean().optional().describe("Use absolute bounding box for export")
     }),
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            fileKey: { type: "string", description: "Figma file key from URL" },
-            nodeIds: {
-                type: "array",
-                items: { type: "string" },
-                description: "Node IDs to export (e.g., ['1:2', '1:3'])"
-            },
-            format: {
-                type: "string",
-                enum: ["png", "jpg", "svg", "pdf"],
-                description: "Export format",
-                default: "png"
-            },
-            scale: {
-                type: "number",
-                description: "Scale factor (0.01 to 4), default 1"
-            },
-            svgIncludeId: {
-                type: "boolean",
-                description: "Include id attributes in SVG elements"
-            },
-            svgSimplifyStroke: {
-                type: "boolean",
-                description: "Simplify strokes in SVG output"
-            },
-            useAbsoluteBounds: {
-                type: "boolean",
-                description: "Use absolute bounding box for export"
-            }
-        },
-        required: ["fileKey", "nodeIds"]
-    },
     retryable: true
 };
 

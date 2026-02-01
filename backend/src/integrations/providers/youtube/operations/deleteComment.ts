@@ -20,17 +20,7 @@ export const deleteCommentOperation: OperationDefinition = {
     description: "Delete a comment you authored or a comment on your video",
     category: "comments",
     retryable: false,
-    inputSchema: deleteCommentSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            commentId: {
-                type: "string",
-                description: "The comment ID to delete"
-            }
-        },
-        required: ["commentId"]
-    }
+    inputSchema: deleteCommentSchema
 };
 
 /**

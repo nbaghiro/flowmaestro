@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { GitHubClient } from "../../client/GitHubClient";
 import {
     GitHubRepoNameSchema,
@@ -41,7 +40,6 @@ export const createRepositoryOperation: OperationDefinition = {
     description: "Create a new repository for the authenticated user or organization",
     category: "repositories",
     inputSchema: createRepositorySchema,
-    inputSchemaJSON: toJSONSchema(createRepositorySchema),
     retryable: false, // Don't retry creates to avoid duplicates
     timeout: 30000
 };

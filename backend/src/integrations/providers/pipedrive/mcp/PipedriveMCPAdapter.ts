@@ -1,3 +1,4 @@
+import { toJSONSchema } from "../../../../core/utils/zod-to-json-schema";
 import type { MCPTool, OperationDefinition } from "../../../core/types";
 import type { PipedriveClient } from "../client/PipedriveClient";
 
@@ -24,7 +25,7 @@ export class PipedriveMCPAdapter {
             tools.push({
                 name: `pipedrive_${id}`,
                 description: operation.description,
-                inputSchema: operation.inputSchemaJSON
+                inputSchema: toJSONSchema(operation.inputSchema)
             });
         }
 

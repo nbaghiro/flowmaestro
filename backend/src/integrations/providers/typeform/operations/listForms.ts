@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { TypeformClient } from "../client/TypeformClient";
 import { ListFormsSchema } from "../schemas";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -16,7 +15,6 @@ export const listFormsOperation: OperationDefinition = {
         "List all typeforms in the account. Returns form metadata including ID, title, creation date, and workspace info.",
     category: "forms",
     inputSchema: listFormsSchema,
-    inputSchemaJSON: toJSONSchema(listFormsSchema),
     retryable: true,
     timeout: 30000
 };

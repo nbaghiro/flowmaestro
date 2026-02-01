@@ -1,7 +1,9 @@
-import { motion, useInView } from "framer-motion";
-import React from "react";
+import { AnimatePresence, motion, useInView } from "framer-motion";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { getProviderLogoUrl } from "@flowmaestro/shared";
+import { useTheme } from "../hooks/useTheme";
 
 // Alias for cleaner code
 const getBrandLogo = getProviderLogoUrl;
@@ -90,8 +92,8 @@ const LogoRow: React.FC<LogoRowProps> = ({ integrations, direction, speed = 30 }
     return (
         <div className="relative flex overflow-hidden py-4">
             {/* Gradient masks for fade effect */}
-            <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-background-surface to-transparent z-10 pointer-events-none" />
-            <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-background-surface to-transparent z-10 pointer-events-none" />
+            <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-secondary to-transparent z-10 pointer-events-none" />
+            <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-secondary to-transparent z-10 pointer-events-none" />
 
             <div
                 className={`flex items-center gap-12 ${
@@ -104,7 +106,7 @@ const LogoRow: React.FC<LogoRowProps> = ({ integrations, direction, speed = 30 }
                 {duplicatedIntegrations.map((integration, index) => (
                     <div
                         key={`${integration.name}-${index}`}
-                        className="flex-shrink-0 flex items-center justify-center w-16 h-16 rounded-xl bg-background-elevated backdrop-blur-sm border border-stroke hover:bg-border hover:border-stroke-hover transition-all duration-300 group"
+                        className="flex-shrink-0 flex items-center justify-center w-16 h-16 rounded-xl bg-card backdrop-blur-sm border border-border hover:bg-accent hover:border-muted-foreground/30 transition-all duration-300 group"
                     >
                         <img
                             src={integration.logoUrl}
@@ -122,20 +124,92 @@ const LogoRow: React.FC<LogoRowProps> = ({ integrations, direction, speed = 30 }
     );
 };
 
+interface WorkflowExample {
+    id: string;
+    screenshotBase: string;
+    title: string;
+    description: string;
+}
+
+const workflowExamples: WorkflowExample[] = [
+    {
+        id: "lead-enrichment",
+        screenshotBase: "workflow-lead-enrichment",
+        title: "Lead Enrichment Pipeline",
+        description: "Enrich leads with Apollo & LinkedIn, qualify and route to CRM"
+    },
+    {
+        id: "whatsapp-support",
+        screenshotBase: "workflow-whatsapp-support",
+        title: "WhatsApp Customer Support Bot",
+        description:
+            "Omnichannel support: WhatsApp/Telegram messages, enrich from HubSpot/Salesforce"
+    },
+    {
+        id: "social-media-hub",
+        screenshotBase: "workflow-social-media-hub",
+        title: "Social Media Performance Hub",
+        description: "Cross-platform analytics: aggregate metrics from TikTok, YouTube, Instagram"
+    },
+    {
+        id: "calendly-meeting-prep",
+        screenshotBase: "workflow-calendly-meeting-prep",
+        title: "Calendly Meeting Prep",
+        description:
+            "Lookup attendees in HubSpot/Apollo, research company, generate personalized briefs"
+    },
+    {
+        id: "data-infrastructure",
+        screenshotBase: "workflow-data-infrastructure",
+        title: "Data Infrastructure Monitor",
+        description:
+            "Monitor MongoDB/PostgreSQL pipelines, AI anomaly detection, auto-create alerts"
+    },
+    {
+        id: "github-pr-reviewer",
+        screenshotBase: "workflow-github-pr-reviewer",
+        title: "GitHub PR Reviewer",
+        description: "Automated code review: analyze PRs, check for issues, post review comments"
+    }
+];
+
 export const Integrations: React.FC = () => {
     const ref = React.useRef<HTMLDivElement>(null);
     const isInView = useInView(ref, { once: true, margin: "-100px" });
+    const { theme } = useTheme();
+    const [currentSlide, setCurrentSlide] = useState(0);
+    const [isPaused, setIsPaused] = useState(false);
 
     const totalIntegrations = 110;
+
+    const nextSlide = useCallback(() => {
+        setCurrentSlide((prev) => (prev + 1) % workflowExamples.length);
+    }, []);
+
+    const prevSlide = useCallback(() => {
+        setCurrentSlide((prev) => (prev - 1 + workflowExamples.length) % workflowExamples.length);
+    }, []);
+
+    // Auto-advance carousel
+    useEffect(() => {
+        if (isPaused) return;
+
+        const interval = setInterval(() => {
+            nextSlide();
+        }, 5000);
+
+        return () => clearInterval(interval);
+    }, [isPaused, nextSlide]);
+
+    const currentExample = workflowExamples[currentSlide];
+    const screenshotPath = `/screenshots/${currentExample.screenshotBase}-${theme}.png`;
 
     return (
         <section
             ref={ref}
-            className="relative py-24 px-4 sm:px-6 lg:px-8 bg-background-surface overflow-hidden"
+            className="relative py-24 px-4 sm:px-6 lg:px-8 bg-secondary overflow-hidden"
         >
-            {/* Background Grid Pattern */}
-            <div className="absolute inset-0 grid-pattern opacity-30"></div>
-
+            <div className="absolute inset-0 grid-pattern opacity-50" />
             <div className="relative z-10 max-w-7xl mx-auto">
                 {/* Section Header */}
                 <motion.div
@@ -144,14 +218,14 @@ export const Integrations: React.FC = () => {
                     transition={{ duration: 0.6 }}
                     className="text-center mb-4"
                 >
-                    <p className="text-sm font-medium tracking-widest text-gray-400 uppercase mb-6">
+                    <p className="text-sm font-medium tracking-widest text-muted-foreground uppercase mb-6">
                         Integrations
                     </p>
-                    <h2 className="text-4xl sm:text-5xl font-bold mb-4">
+                    <h2 className="text-4xl sm:text-5xl font-bold mb-4 text-foreground">
                         Connect
                         <span className="gradient-text"> Everything</span>
                     </h2>
-                    <p className="text-xl text-gray-400 max-w-2xl mx-auto">
+                    <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
                         With {totalIntegrations}+ enterprise integrations, your AI agents can read,
                         write, and execute tasks within your existing systems.
                     </p>
@@ -178,10 +252,91 @@ export const Integrations: React.FC = () => {
                 >
                     <Link
                         to="/integrations"
-                        className="px-6 py-3 bg-background-elevated hover:bg-border border border-stroke rounded-lg font-semibold transition-all duration-200 inline-block"
+                        className="px-6 py-3 bg-card hover:bg-accent border border-border rounded-lg font-semibold transition-all duration-200 inline-block text-foreground"
                     >
                         View All Integrations
                     </Link>
+                </motion.div>
+
+                {/* Workflow Examples Carousel */}
+                <motion.div
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={isInView ? { opacity: 1, y: 0 } : {}}
+                    transition={{ duration: 0.6, delay: 0.5 }}
+                    className="mt-16"
+                    onMouseEnter={() => setIsPaused(true)}
+                    onMouseLeave={() => setIsPaused(false)}
+                >
+                    {/* Carousel Header */}
+                    <div className="text-center mb-6">
+                        <AnimatePresence mode="wait">
+                            <motion.div
+                                key={currentSlide}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                transition={{ duration: 0.3 }}
+                            >
+                                <h3 className="text-lg font-semibold text-foreground mb-1">
+                                    {currentExample.title}
+                                </h3>
+                                <p className="text-sm text-muted-foreground">
+                                    {currentExample.description}
+                                </p>
+                            </motion.div>
+                        </AnimatePresence>
+                    </div>
+
+                    {/* Carousel Container */}
+                    <div className="relative max-w-5xl mx-auto">
+                        {/* Navigation Arrows */}
+                        <button
+                            onClick={prevSlide}
+                            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 lg:-translate-x-12 z-20 p-2 rounded-full bg-card border border-border hover:bg-accent transition-colors shadow-lg"
+                            aria-label="Previous workflow"
+                        >
+                            <ChevronLeft className="w-5 h-5 text-foreground" />
+                        </button>
+                        <button
+                            onClick={nextSlide}
+                            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 lg:translate-x-12 z-20 p-2 rounded-full bg-card border border-border hover:bg-accent transition-colors shadow-lg"
+                            aria-label="Next workflow"
+                        >
+                            <ChevronRight className="w-5 h-5 text-foreground" />
+                        </button>
+
+                        {/* Screenshot */}
+                        <div className="rounded-xl overflow-hidden border border-border shadow-2xl">
+                            <AnimatePresence mode="wait">
+                                <motion.img
+                                    key={`${currentSlide}-${theme}`}
+                                    src={screenshotPath}
+                                    alt={currentExample.title}
+                                    className="w-full"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    transition={{ duration: 0.3 }}
+                                />
+                            </AnimatePresence>
+                        </div>
+
+                        {/* Dot Navigation */}
+                        <div className="flex justify-center gap-2 mt-6">
+                            {workflowExamples.map((example, index) => (
+                                <button
+                                    key={example.id}
+                                    onClick={() => setCurrentSlide(index)}
+                                    className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                                        index === currentSlide
+                                            ? "bg-foreground w-6"
+                                            : "bg-muted-foreground/40 hover:bg-muted-foreground/60"
+                                    }`}
+                                    aria-label={`Go to ${example.title}`}
+                                />
+                            ))}
+                        </div>
+                    </div>
                 </motion.div>
             </div>
         </section>

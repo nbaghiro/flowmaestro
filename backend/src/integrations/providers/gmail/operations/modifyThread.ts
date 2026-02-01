@@ -28,27 +28,7 @@ export const modifyThreadOperation: OperationDefinition = {
     description: "Add or remove labels from all messages in a conversation thread",
     category: "threads",
     retryable: true,
-    inputSchema: modifyThreadSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            threadId: {
-                type: "string",
-                description: "The ID of the thread to modify"
-            },
-            addLabelIds: {
-                type: "array",
-                items: { type: "string" },
-                description: "Label IDs to add to all messages"
-            },
-            removeLabelIds: {
-                type: "array",
-                items: { type: "string" },
-                description: "Label IDs to remove from all messages"
-            }
-        },
-        required: ["threadId"]
-    }
+    inputSchema: modifyThreadSchema
 };
 
 /**

@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { deleteProjectInputSchema, type DeleteProjectInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { AsanaClient } from "../../client/AsanaClient";
@@ -9,7 +8,6 @@ export const deleteProjectOperation: OperationDefinition = {
     description: "Delete a project from Asana. This action cannot be undone.",
     category: "projects",
     inputSchema: deleteProjectInputSchema,
-    inputSchemaJSON: toJSONSchema(deleteProjectInputSchema),
     retryable: false,
     timeout: 10000
 };

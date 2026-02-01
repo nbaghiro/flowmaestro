@@ -1,5 +1,4 @@
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { ShopifyClient } from "../client/ShopifyClient";
 import { ListProductsSchema, type ListProductsParams } from "../schemas";
 import type { ShopifyProductsResponse } from "./types";
@@ -19,7 +18,6 @@ export const listProductsOperation: OperationDefinition = (() => {
                 "Retrieve a list of products with optional filters for title, vendor, type, and status",
             category: "products",
             inputSchema: ListProductsSchema,
-            inputSchemaJSON: toJSONSchema(ListProductsSchema),
             retryable: true,
             timeout: 30000
         };

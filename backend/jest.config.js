@@ -38,6 +38,7 @@ module.exports = {
             displayName: "unit",
             testMatch: [
                 "<rootDir>/src/**/__tests__/*.test.ts",
+                "<rootDir>/src/**/__tests__/**/*.test.ts",
                 "<rootDir>/__tests__/unit/**/*.test.ts"
             ]
         },

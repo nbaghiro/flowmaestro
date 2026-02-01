@@ -32,32 +32,7 @@ export const updateValuesOperation: OperationDefinition = {
     description: "Update values in a specific range of a spreadsheet",
     category: "values",
     retryable: true,
-    inputSchema: updateValuesSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            spreadsheetId: {
-                type: "string",
-                description: "Spreadsheet ID"
-            },
-            range: {
-                type: "string",
-                description: "A1 notation range (e.g., 'Sheet1!A1:B10')"
-            },
-            values: {
-                type: "array",
-                items: { type: "array", items: {} },
-                description: "2D array of values to set (e.g., [['Name', 'Age'], ['John', 30]])"
-            },
-            valueInputOption: {
-                type: "string",
-                enum: ["RAW", "USER_ENTERED"],
-                description:
-                    "How input data should be interpreted (RAW = as-is, USER_ENTERED = parse formulas/formats)"
-            }
-        },
-        required: ["spreadsheetId", "range", "values"]
-    }
+    inputSchema: updateValuesSchema
 };
 
 /**

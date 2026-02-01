@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { GitHubClient } from "../../client/GitHubClient";
 import { GitHubOwnerSchema, GitHubRepoNameSchema, GitHubIssueNumberSchema } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
@@ -25,7 +24,6 @@ export const reopenIssueOperation: OperationDefinition = {
     description: "Reopen a closed issue",
     category: "issues",
     inputSchema: reopenIssueSchema,
-    inputSchemaJSON: toJSONSchema(reopenIssueSchema),
     retryable: true,
     timeout: 15000
 };
@@ -50,6 +48,7 @@ export async function executeReopenIssue(
                 number: issue.number,
                 title: issue.title,
                 state: issue.state,
+                state_reason: issue.state_reason,
                 html_url: issue.html_url,
                 updated_at: issue.updated_at
             }

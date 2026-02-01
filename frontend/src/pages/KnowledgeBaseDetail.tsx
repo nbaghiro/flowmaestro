@@ -3,40 +3,33 @@ import {
     ArrowLeft,
     Loader2,
     Trash2,
-    FileText,
-    Search,
-    Settings,
     Pencil,
     Check,
-    X
+    X,
+    Upload,
+    Link as LinkIcon,
+    Search,
+    Settings
 } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { Input } from "../components/common/Input";
 import { MobileBuilderGuard } from "../components/common/MobileBuilderGuard";
 import {
     AddUrlModal,
     DeleteDocumentModal,
     DeleteKnowledgeBaseModal,
-    DocumentList,
-    DocumentViewerPanel,
-    KBSettingsSection,
-    SearchSection,
-    UploadSection
+    KBSettingsSection
 } from "../components/knowledge-bases";
+import { DocumentList } from "../components/knowledge-bases/DocumentList";
+import { KBContextPanel } from "../components/knowledge-bases/KBContextPanel";
+import { KBOverviewSidebar } from "../components/knowledge-bases/KBOverviewSidebar";
 import { logger } from "../lib/logger";
 import { streamKnowledgeBase } from "../lib/sse";
 import { useKnowledgeBaseStore } from "../stores/knowledgeBaseStore";
 import type { KnowledgeDocument } from "../lib/api";
 
-type TabType = "documents" | "search" | "settings";
-
-function formatFileSize(bytes: number) {
-    if (bytes === 0) return "0 B";
-    const k = 1024;
-    const sizes = ["B", "KB", "MB", "GB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
-}
+type PanelMode = "empty" | "viewer" | "search" | "settings";
 
 export function KnowledgeBaseDetail() {
     const { id } = useParams<{ id: string }>();
@@ -58,7 +51,6 @@ export function KnowledgeBaseDetail() {
         updateKB
     } = useKnowledgeBaseStore();
 
-    const [activeTab, setActiveTab] = useState<TabType>("documents");
     const [showUrlModal, setShowUrlModal] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [deleteConfirmDocId, setDeleteConfirmDocId] = useState<string | null>(null);
@@ -66,13 +58,16 @@ export function KnowledgeBaseDetail() {
     const [showDeleteKBModal, setShowDeleteKBModal] = useState(false);
     const [deletingKB, setDeletingKB] = useState(false);
     const [selectedDocument, setSelectedDocument] = useState<KnowledgeDocument | null>(null);
-    const [viewerWidth, setViewerWidth] = useState(450);
+    const [panelWidth, setPanelWidth] = useState(500);
+    const [panelMode, setPanelMode] = useState<PanelMode>("empty");
+    const [showSettingsModal, setShowSettingsModal] = useState(false);
 
     // Name editing state
     const [isEditingName, setIsEditingName] = useState(false);
     const [editedName, setEditedName] = useState("");
     const [isSavingName, setIsSavingName] = useState(false);
     const nameInputRef = useRef<HTMLInputElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -111,7 +106,7 @@ export function KnowledgeBaseDetail() {
         pollingIntervalRef.current = setInterval(() => {
             fetchDocuments(id);
             fetchStats(id);
-        }, 30000); // Reduced from 5s to 30s since SSE provides real-time updates
+        }, 30000);
 
         return () => {
             cleanup();
@@ -133,6 +128,13 @@ export function KnowledgeBaseDetail() {
         } finally {
             setUploading(false);
         }
+    };
+
+    const handleFileInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!e.target.files || !e.target.files[0]) return;
+        const file = e.target.files[0];
+        await handleFileUpload(file);
+        e.target.value = "";
     };
 
     const handleAddUrl = async (url: string, name?: string) => {
@@ -157,6 +159,11 @@ export function KnowledgeBaseDetail() {
         try {
             await deleteDoc(id, deleteConfirmDocId);
             setDeleteConfirmDocId(null);
+            // If we were viewing this document, close the viewer
+            if (selectedDocument?.id === deleteConfirmDocId) {
+                setSelectedDocument(null);
+                setPanelMode("empty");
+            }
         } catch (error) {
             logger.error("Failed to delete document", error);
         } finally {
@@ -246,18 +253,26 @@ export function KnowledgeBaseDetail() {
     const handleDocumentClick = (doc: KnowledgeDocument) => {
         if (doc.status === "ready") {
             setSelectedDocument(doc);
+            setPanelMode("viewer");
         }
     };
 
     const handleCloseViewer = () => {
         setSelectedDocument(null);
+        setPanelMode("empty");
     };
 
-    const tabs: { id: TabType; label: string; icon: typeof FileText }[] = [
-        { id: "documents", label: "Documents", icon: FileText },
-        { id: "search", label: "Search", icon: Search },
-        { id: "settings", label: "Settings", icon: Settings }
-    ];
+    const handleSearchClick = () => {
+        setPanelMode("search");
+        setSelectedDocument(null);
+    };
+
+    const handlePanelModeChange = (mode: PanelMode) => {
+        setPanelMode(mode);
+        if (mode !== "viewer") {
+            setSelectedDocument(null);
+        }
+    };
 
     if (loading && !currentKB) {
         return (
@@ -289,10 +304,10 @@ export function KnowledgeBaseDetail() {
     return (
         <MobileBuilderGuard backUrl="/knowledge-bases">
             <div className="h-screen flex flex-col bg-background">
-                {/* Header */}
-                <div className="h-16 border-b border-border bg-card flex items-center justify-between px-6 flex-shrink-0">
+                {/* Compact Header */}
+                <div className="h-14 border-b border-border bg-card flex items-center justify-between px-4 flex-shrink-0">
                     {/* Left: Back + Title */}
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3">
                         <button
                             onClick={() => navigate("/knowledge-bases")}
                             className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
@@ -311,13 +326,13 @@ export function KnowledgeBaseDetail() {
                                         onChange={(e) => setEditedName(e.target.value)}
                                         onKeyDown={handleNameKeyDown}
                                         onBlur={handleSaveName}
-                                        className="text-lg font-semibold text-foreground bg-muted border border-border rounded px-2 py-0.5 outline-none focus:border-primary"
+                                        className="text-base font-semibold text-foreground bg-muted border border-border rounded px-2 py-0.5 outline-none focus:border-primary"
                                         disabled={isSavingName}
                                     />
                                     <button
                                         onClick={handleSaveName}
                                         disabled={isSavingName}
-                                        className="p-1 text-green-600 hover:bg-green-50 rounded transition-colors disabled:opacity-50"
+                                        className="p-1 text-green-600 hover:bg-green-50 dark:hover:bg-green-950 rounded transition-colors disabled:opacity-50"
                                         title="Save"
                                     >
                                         {isSavingName ? (
@@ -341,7 +356,7 @@ export function KnowledgeBaseDetail() {
                                     className="flex items-center gap-2 group"
                                     title="Click to edit name"
                                 >
-                                    <h1 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
+                                    <h1 className="text-base font-semibold text-foreground group-hover:text-primary transition-colors">
                                         {currentKB.name}
                                     </h1>
                                     <Pencil className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -350,106 +365,104 @@ export function KnowledgeBaseDetail() {
                         </div>
                     </div>
 
-                    {/* Center: Stats badges */}
-                    {currentStats && (
-                        <div className="flex items-center gap-2">
-                            <span className="text-xs text-muted-foreground bg-background border border-border px-2.5 py-1 rounded-md">
-                                {currentStats.document_count} docs
-                            </span>
-                            <span className="text-xs text-muted-foreground bg-background border border-border px-2.5 py-1 rounded-md">
-                                {currentStats.chunk_count} chunks
-                            </span>
-                            <span className="text-xs text-muted-foreground bg-background border border-border px-2.5 py-1 rounded-md">
-                                {formatFileSize(currentStats.total_size_bytes)}
-                            </span>
-                        </div>
-                    )}
-
-                    {/* Right: Delete */}
-                    <button
-                        onClick={() => setShowDeleteKBModal(true)}
-                        className="p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
-                        title="Delete knowledge base"
-                    >
-                        <Trash2 className="w-4 h-4" />
-                    </button>
+                    {/* Right: Settings + Delete */}
+                    <div className="flex items-center gap-1">
+                        <button
+                            onClick={() => setShowSettingsModal(true)}
+                            className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
+                            title="Settings"
+                        >
+                            <Settings className="w-4 h-4" />
+                        </button>
+                        <button
+                            onClick={() => setShowDeleteKBModal(true)}
+                            className="p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+                            title="Delete knowledge base"
+                        >
+                            <Trash2 className="w-4 h-4" />
+                        </button>
+                    </div>
                 </div>
 
-                {/* Main Content */}
+                {/* Main Content - Three Column Layout */}
                 <div className="flex-1 flex overflow-hidden">
-                    {/* Left Sidebar */}
-                    <div className="w-56 border-r border-border bg-card flex-shrink-0">
-                        <nav className="p-4 space-y-1">
-                            {tabs.map((tab) => {
-                                const Icon = tab.icon;
-                                return (
-                                    <button
-                                        key={tab.id}
-                                        onClick={() => setActiveTab(tab.id)}
-                                        className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded-lg transition-colors ${
-                                            activeTab === tab.id
-                                                ? "bg-primary/10 text-primary font-medium"
-                                                : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                                        }`}
-                                    >
-                                        <Icon className="w-4 h-4" />
-                                        {tab.label}
-                                    </button>
-                                );
-                            })}
-                        </nav>
+                    {/* Left Sidebar - Overview */}
+                    <div className="w-52 border-r border-border bg-card flex-shrink-0 overflow-y-auto">
+                        <KBOverviewSidebar stats={currentStats} documents={currentDocuments} />
                     </div>
 
-                    {/* Center Panel */}
-                    <div className="flex-1 overflow-auto bg-muted/30">
-                        <div className="max-w-4xl mx-auto p-6">
-                            {activeTab === "documents" && (
-                                <div className="space-y-6">
-                                    <UploadSection
-                                        onFileUpload={handleFileUpload}
-                                        onAddUrlClick={() => setShowUrlModal(true)}
-                                        isUploading={uploading}
+                    {/* Center - Document Grid */}
+                    <div className="flex-1 flex flex-col overflow-hidden bg-muted/30">
+                        {/* Toolbar */}
+                        <div className="h-14 border-b border-border bg-card/50 flex items-center justify-between px-4 flex-shrink-0">
+                            <div className="flex items-center gap-2">
+                                {/* Upload Button */}
+                                <label className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors cursor-pointer">
+                                    <Input
+                                        ref={fileInputRef}
+                                        type="file"
+                                        onChange={handleFileInputChange}
+                                        accept=".pdf,.docx,.doc,.txt,.md,.html,.json,.csv"
+                                        className="hidden"
+                                        disabled={uploading}
                                     />
-                                    <DocumentList
-                                        documents={currentDocuments}
-                                        onDeleteClick={setDeleteConfirmDocId}
-                                        onReprocess={handleReprocessDocument}
-                                        processingDocId={processingDocId}
-                                        onDocumentClick={handleDocumentClick}
-                                        selectedDocumentId={selectedDocument?.id}
-                                    />
-                                </div>
-                            )}
+                                    {uploading ? (
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                        <Upload className="w-4 h-4" />
+                                    )}
+                                    Upload
+                                </label>
 
-                            {activeTab === "search" && (
-                                <SearchSection
-                                    knowledgeBaseId={id || ""}
-                                    documents={currentDocuments}
-                                    onSearch={handleSearch}
-                                />
-                            )}
+                                {/* Add URL Button */}
+                                <button
+                                    onClick={() => setShowUrlModal(true)}
+                                    disabled={uploading}
+                                    className="inline-flex items-center gap-2 px-3 py-1.5 bg-muted text-foreground text-sm font-medium rounded-lg hover:bg-muted/80 transition-colors disabled:opacity-50"
+                                >
+                                    <LinkIcon className="w-4 h-4" />
+                                    Add URL
+                                </button>
+                            </div>
 
-                            {activeTab === "settings" && (
-                                <KBSettingsSection
-                                    kb={currentKB}
-                                    onUpdate={async (input) => {
-                                        if (id) {
-                                            await updateKB(id, input);
-                                        }
-                                    }}
-                                />
-                            )}
+                            {/* Search Button */}
+                            <button
+                                onClick={handleSearchClick}
+                                className={`inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+                                    panelMode === "search"
+                                        ? "bg-primary/10 text-primary"
+                                        : "bg-muted text-foreground hover:bg-muted/80"
+                                }`}
+                            >
+                                <Search className="w-4 h-4" />
+                                Search
+                            </button>
+                        </div>
+
+                        {/* Document Grid */}
+                        <div className="flex-1 overflow-auto p-4">
+                            <DocumentList
+                                documents={currentDocuments}
+                                onDeleteClick={setDeleteConfirmDocId}
+                                onReprocess={handleReprocessDocument}
+                                processingDocId={processingDocId}
+                                onDocumentClick={handleDocumentClick}
+                                selectedDocumentId={selectedDocument?.id}
+                            />
                         </div>
                     </div>
 
-                    {/* Document Viewer Panel */}
-                    <DocumentViewerPanel
-                        doc={selectedDocument}
+                    {/* Right Panel - Context Panel */}
+                    <KBContextPanel
+                        mode={panelMode}
+                        selectedDocument={selectedDocument}
                         knowledgeBaseId={id || ""}
-                        isOpen={selectedDocument !== null}
+                        documents={currentDocuments}
                         onClose={handleCloseViewer}
-                        width={viewerWidth}
-                        onWidthChange={setViewerWidth}
+                        onModeChange={handlePanelModeChange}
+                        onSearch={handleSearch}
+                        width={panelWidth}
+                        onWidthChange={setPanelWidth}
                     />
                 </div>
 
@@ -475,6 +488,39 @@ export function KnowledgeBaseDetail() {
                     isLoading={deletingKB}
                     knowledgeBaseName={currentKB.name}
                 />
+
+                {/* Settings Modal */}
+                {showSettingsModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center">
+                        <div
+                            className="absolute inset-0 bg-black/50"
+                            onClick={() => setShowSettingsModal(false)}
+                        />
+                        <div className="relative bg-card border border-border rounded-xl shadow-xl max-w-2xl w-full mx-4 max-h-[85vh] overflow-y-auto">
+                            <div className="sticky top-0 bg-card border-b border-border px-6 py-4 flex items-center justify-between">
+                                <h2 className="text-lg font-semibold text-foreground">
+                                    Knowledge Base Settings
+                                </h2>
+                                <button
+                                    onClick={() => setShowSettingsModal(false)}
+                                    className="p-1.5 hover:bg-muted rounded-lg transition-colors"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
+                            <div className="p-6">
+                                <KBSettingsSection
+                                    kb={currentKB}
+                                    onUpdate={async (input) => {
+                                        if (id) {
+                                            await updateKB(id, input);
+                                        }
+                                    }}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </MobileBuilderGuard>
     );

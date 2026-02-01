@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { ZendeskClient } from "../../client/ZendeskClient";
 import type { TicketsResponse } from "../../types";
@@ -28,7 +27,6 @@ export const listTicketsOperation: OperationDefinition = {
     description: "List all tickets in Zendesk with pagination",
     category: "tickets",
     inputSchema: listTicketsSchema,
-    inputSchemaJSON: toJSONSchema(listTicketsSchema),
     retryable: true,
     timeout: 30000
 };

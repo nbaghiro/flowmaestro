@@ -48,56 +48,7 @@ export const listVideosOperation: OperationDefinition = {
     description: "List videos by IDs, popular chart, or user rating with optional filters",
     category: "videos",
     retryable: true,
-    inputSchema: listVideosSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            ids: {
-                type: "array",
-                items: { type: "string" },
-                description: "Video IDs to retrieve (up to 50)"
-            },
-            chart: {
-                type: "string",
-                enum: ["mostPopular"],
-                description: "Chart to retrieve (mostPopular)"
-            },
-            myRating: {
-                type: "string",
-                enum: ["like", "dislike"],
-                description: "Filter by user's rating"
-            },
-            maxResults: {
-                type: "number",
-                description: "Maximum number of results",
-                minimum: 1,
-                maximum: 50,
-                default: 25
-            },
-            pageToken: {
-                type: "string",
-                description: "Token for pagination"
-            },
-            regionCode: {
-                type: "string",
-                description: "ISO 3166-1 alpha-2 country code"
-            },
-            videoCategoryId: {
-                type: "string",
-                description: "Filter by video category ID"
-            },
-            part: {
-                type: "array",
-                items: {
-                    type: "string",
-                    enum: ["snippet", "contentDetails", "status", "statistics"]
-                },
-                description: "Video resource parts to include",
-                default: ["snippet", "contentDetails", "statistics"]
-            }
-        },
-        required: []
-    }
+    inputSchema: listVideosSchema
 };
 
 /**

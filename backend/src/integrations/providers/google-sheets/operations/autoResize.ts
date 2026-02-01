@@ -24,22 +24,7 @@ export const autoResizeOperation: OperationDefinition = {
     description: "Automatically resize columns or rows to fit content",
     category: "formatting",
     retryable: true,
-    inputSchema: autoResizeSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            spreadsheetId: { type: "string", description: "Spreadsheet ID" },
-            sheetId: { type: "number", description: "Sheet ID (gid)" },
-            dimension: {
-                type: "string",
-                enum: ["COLUMNS", "ROWS"],
-                description: "Dimension to resize (COLUMNS or ROWS)"
-            },
-            startIndex: { type: "number", description: "Start index (0-based)" },
-            endIndex: { type: "number", description: "End index (exclusive)" }
-        },
-        required: ["spreadsheetId", "sheetId", "dimension", "startIndex", "endIndex"]
-    }
+    inputSchema: autoResizeSchema
 };
 
 /**

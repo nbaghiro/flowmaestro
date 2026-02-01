@@ -1,4 +1,5 @@
 import { config as appConfig, getOAuthRedirectUri } from "../../../core/config";
+import { toJSONSchema } from "../../../core/utils/zod-to-json-schema";
 import { BaseProvider } from "../../core/BaseProvider";
 import { MicrosoftOneDriveClient } from "./client/MicrosoftOneDriveClient";
 import {
@@ -152,7 +153,7 @@ export class MicrosoftOneDriveProvider extends BaseProvider {
         return this.getOperations().map((op) => ({
             name: `microsoft_onedrive_${op.id}`,
             description: op.description,
-            inputSchema: op.inputSchemaJSON
+            inputSchema: toJSONSchema(op.inputSchema)
         }));
     }
 

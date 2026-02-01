@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { CircleCIPipelineOutput } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { CircleCIClient } from "../client/CircleCIClient";
@@ -17,7 +16,6 @@ export const listPipelinesOperation: OperationDefinition = {
     description: "List all pipelines for a CircleCI project",
     category: "pipelines",
     inputSchema: listPipelinesSchema,
-    inputSchemaJSON: toJSONSchema(listPipelinesSchema),
     retryable: true,
     timeout: 30000
 };

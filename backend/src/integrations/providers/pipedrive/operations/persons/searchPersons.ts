@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { PipedriveClient } from "../../client/PipedriveClient";
 import type { PipedriveSearchResult, PipedrivePerson } from "../types";
@@ -30,7 +29,6 @@ export const searchPersonsOperation: OperationDefinition = {
     description: "Search contacts by name, email, or phone",
     category: "persons",
     inputSchema: searchPersonsSchema,
-    inputSchemaJSON: toJSONSchema(searchPersonsSchema),
     retryable: true,
     timeout: 15000
 };

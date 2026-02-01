@@ -1,6 +1,6 @@
 import { X, Search, Plus, Check } from "lucide-react";
 import { useState, useEffect } from "react";
-import { ALL_PROVIDERS, type Provider } from "@flowmaestro/shared";
+import { ALL_PROVIDERS, supportsOAuth, type Provider } from "@flowmaestro/shared";
 import { useConnectionStore } from "../../../stores/connectionStore";
 import { Button } from "../../common/Button";
 import { Input } from "../../common/Input";
@@ -352,7 +352,7 @@ export function ProviderConnectionDialog({
                                         />
                                     }
                                     onSuccess={handleConnectionCreated}
-                                    supportsOAuth={currentProvider.methods.includes("oauth2")}
+                                    supportsOAuth={supportsOAuth(currentProvider.methods)}
                                     supportsApiKey={currentProvider.methods.includes("api_key")}
                                     oauthSettings={currentProvider.oauthSettings}
                                     apiKeySettings={currentProvider.apiKeySettings}

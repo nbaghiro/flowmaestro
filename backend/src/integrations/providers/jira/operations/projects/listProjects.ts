@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { listProjectsInputSchema, type ListProjectsInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { JiraClient } from "../../client/JiraClient";
@@ -9,7 +8,6 @@ export const listProjectsOperation: OperationDefinition = {
     description: "Get a list of all projects accessible to the user.",
     category: "projects",
     inputSchema: listProjectsInputSchema,
-    inputSchemaJSON: toJSONSchema(listProjectsInputSchema),
     retryable: true,
     timeout: 10000
 };

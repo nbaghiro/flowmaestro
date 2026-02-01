@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { searchTasksInputSchema, type SearchTasksInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { AsanaClient } from "../../client/AsanaClient";
@@ -10,7 +9,6 @@ export const searchTasksOperation: OperationDefinition = {
         "Search for tasks in a workspace using various filters like text, assignee, projects, tags, dates, and completion status.",
     category: "tasks",
     inputSchema: searchTasksInputSchema,
-    inputSchemaJSON: toJSONSchema(searchTasksInputSchema),
     retryable: true,
     timeout: 30000
 };

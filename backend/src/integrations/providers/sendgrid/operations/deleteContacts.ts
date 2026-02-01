@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { SendGridClient } from "../client/SendGridClient";
 
@@ -16,7 +15,6 @@ export const deleteContactsOperation: OperationDefinition = {
     description: "Delete contacts from SendGrid Marketing (async operation)",
     category: "contacts",
     inputSchema: deleteContactsSchema,
-    inputSchemaJSON: toJSONSchema(deleteContactsSchema),
     retryable: false,
     timeout: 30000
 };

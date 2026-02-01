@@ -21,21 +21,7 @@ export const getResponseOperation: OperationDefinition = {
     description: "Get a single form response by ID",
     category: "responses",
     retryable: true,
-    inputSchema: getResponseSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            formId: {
-                type: "string",
-                description: "The ID of the form"
-            },
-            responseId: {
-                type: "string",
-                description: "The ID of the response to retrieve"
-            }
-        },
-        required: ["formId", "responseId"]
-    }
+    inputSchema: getResponseSchema
 };
 
 /**

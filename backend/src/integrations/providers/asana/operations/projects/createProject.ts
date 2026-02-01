@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { createProjectInputSchema, type CreateProjectInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { AsanaClient } from "../../client/AsanaClient";
@@ -9,7 +8,6 @@ export const createProjectOperation: OperationDefinition = {
     description: "Create a new project in Asana within a workspace or team.",
     category: "projects",
     inputSchema: createProjectInputSchema,
-    inputSchemaJSON: toJSONSchema(createProjectInputSchema),
     retryable: true,
     timeout: 10000
 };

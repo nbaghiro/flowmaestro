@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { DropboxClient } from "../client/DropboxClient";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 
@@ -33,7 +32,6 @@ export const shareFileOperation: OperationDefinition = {
         "Create a shared link for a file or folder in Dropbox. Returns the shareable URL that can be accessed by others based on visibility settings.",
     category: "sharing",
     inputSchema: shareFileSchema,
-    inputSchemaJSON: toJSONSchema(shareFileSchema),
     retryable: true,
     timeout: 10000
 };

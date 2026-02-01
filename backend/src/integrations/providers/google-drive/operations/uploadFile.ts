@@ -26,33 +26,7 @@ export const uploadFileOperation: OperationDefinition = {
     description: "Upload a file to Google Drive, optionally to a specific folder",
     category: "files",
     retryable: true,
-    inputSchema: uploadFileSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            fileName: {
-                type: "string",
-                description: "File name"
-            },
-            fileContent: {
-                type: "string",
-                description: "Base64 encoded file content or data URL"
-            },
-            mimeType: {
-                type: "string",
-                description: "MIME type of the file (e.g., image/png, application/pdf)"
-            },
-            folderId: {
-                type: "string",
-                description: "Parent folder ID (omit for root directory)"
-            },
-            description: {
-                type: "string",
-                description: "File description"
-            }
-        },
-        required: ["fileName", "fileContent", "mimeType"]
-    }
+    inputSchema: uploadFileSchema
 };
 
 /**

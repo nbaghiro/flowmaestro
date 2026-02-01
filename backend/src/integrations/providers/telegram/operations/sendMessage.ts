@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { TelegramClient } from "../client/TelegramClient";
 import {
     TelegramChatIdSchema,
@@ -38,7 +37,6 @@ export const sendMessageOperation: OperationDefinition = (() => {
             description: "Send a text message to a Telegram chat",
             category: "messaging",
             inputSchema: sendMessageSchema,
-            inputSchemaJSON: toJSONSchema(sendMessageSchema),
             retryable: true,
             timeout: 10000
         };

@@ -28,38 +28,7 @@ export const createPlaylistOperation: OperationDefinition = {
     description: "Create a new YouTube playlist",
     category: "playlists",
     retryable: false,
-    inputSchema: createPlaylistSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            title: {
-                type: "string",
-                description: "Playlist title",
-                maxLength: 150
-            },
-            description: {
-                type: "string",
-                description: "Playlist description",
-                maxLength: 5000
-            },
-            privacyStatus: {
-                type: "string",
-                enum: ["private", "public", "unlisted"],
-                description: "Privacy status of the playlist",
-                default: "private"
-            },
-            defaultLanguage: {
-                type: "string",
-                description: "Default language (BCP-47 code)"
-            },
-            tags: {
-                type: "array",
-                items: { type: "string" },
-                description: "Tags for the playlist"
-            }
-        },
-        required: ["title"]
-    }
+    inputSchema: createPlaylistSchema
 };
 
 /**

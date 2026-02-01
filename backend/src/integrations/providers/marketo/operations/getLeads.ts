@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { MarketoClient } from "../client/MarketoClient";
 
@@ -36,7 +35,6 @@ export const getLeadsOperation: OperationDefinition = {
         "Query leads by filter type and values. Supports pagination for large result sets.",
     category: "leads",
     inputSchema: getLeadsSchema,
-    inputSchemaJSON: toJSONSchema(getLeadsSchema),
     retryable: true,
     timeout: 30000
 };

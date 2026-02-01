@@ -28,28 +28,7 @@ export const createSpreadsheetOperation: OperationDefinition = {
     description: "Create a new Google Sheets spreadsheet",
     category: "spreadsheets",
     retryable: true,
-    inputSchema: createSpreadsheetSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            title: {
-                type: "string",
-                description: "Spreadsheet title"
-            },
-            sheets: {
-                type: "array",
-                items: {
-                    type: "object",
-                    properties: {
-                        title: { type: "string", description: "Sheet title" }
-                    },
-                    required: ["title"]
-                },
-                description: "Initial sheets to create (optional)"
-            }
-        },
-        required: ["title"]
-    }
+    inputSchema: createSpreadsheetSchema
 };
 
 /**

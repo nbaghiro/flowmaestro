@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { PagerDutyClient } from "../client/PagerDutyClient";
 
@@ -30,7 +29,6 @@ export const listEscalationPoliciesOperation: OperationDefinition = {
     description: "List escalation policies with optional filtering",
     category: "policies",
     inputSchema: listEscalationPoliciesSchema,
-    inputSchemaJSON: toJSONSchema(listEscalationPoliciesSchema),
     retryable: true,
     timeout: 30000
 };

@@ -300,190 +300,184 @@ export function WorkflowGenerationChatPanel() {
     if (!isPanelOpen) return null;
 
     return (
-        <div className="fixed top-0 right-0 bottom-0 z-50">
+        <div
+            className="relative h-full bg-card border-l border-border shadow-2xl flex flex-col flex-shrink-0"
+            style={{ width: panelWidth }}
+        >
+            {/* Resize Handle */}
             <div
-                className="h-full bg-card border-l border-border shadow-2xl flex flex-col"
-                style={{ width: panelWidth }}
+                className={cn(
+                    "absolute top-0 left-0 bottom-0 w-1 cursor-ew-resize hover:bg-primary/20 transition-colors",
+                    isResizing && "bg-primary/30"
+                )}
+                onMouseDown={handleResizeStart}
             >
-                {/* Resize Handle */}
-                <div
-                    className={cn(
-                        "absolute top-0 left-0 bottom-0 w-1 cursor-ew-resize hover:bg-primary/20 transition-colors",
-                        isResizing && "bg-primary/30"
-                    )}
-                    onMouseDown={handleResizeStart}
-                >
-                    <div className="absolute top-0 left-0 bottom-0 w-3 -translate-x-1/2" />
+                <div className="absolute top-0 left-0 bottom-0 w-3 -translate-x-1/2" />
+            </div>
+
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
+                <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-primary" />
+                    <h3 className="text-sm font-semibold">Generate Workflow</h3>
                 </div>
 
-                {/* Header */}
-                <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
-                    <div className="flex items-center gap-2">
-                        <Sparkles className="w-4 h-4 text-primary" />
-                        <h3 className="text-sm font-semibold">Generate Workflow</h3>
-                    </div>
+                <div className="flex items-center gap-2">
+                    {/* Connection Selector */}
+                    <LLMConnectionDropdown
+                        connectionId={selectedConnectionId || ""}
+                        model={selectedModel || ""}
+                        onSelect={(connId, model) => handleConnectionModelSelect(connId, model)}
+                        variant="compact"
+                        autoSelectFirst={true}
+                        showThinkingBadges={true}
+                        thinkingConfig={{
+                            enabled: enableThinking,
+                            onEnabledChange: setEnableThinking
+                        }}
+                    />
 
-                    <div className="flex items-center gap-2">
-                        {/* Connection Selector */}
-                        <LLMConnectionDropdown
-                            connectionId={selectedConnectionId || ""}
-                            model={selectedModel || ""}
-                            onSelect={(connId, model) => handleConnectionModelSelect(connId, model)}
-                            variant="compact"
-                            autoSelectFirst={true}
-                            showThinkingBadges={true}
-                            thinkingConfig={{
-                                enabled: enableThinking,
-                                onEnabledChange: setEnableThinking
-                            }}
-                        />
+                    {/* Clear Chat */}
+                    <button
+                        onClick={() => setShowClearConfirm(true)}
+                        disabled={messages.length === 0 || isStreaming}
+                        className={cn(
+                            "p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors",
+                            "disabled:opacity-30 disabled:cursor-not-allowed"
+                        )}
+                        title="Clear chat history"
+                    >
+                        <RotateCcw className="w-4 h-4" />
+                    </button>
 
-                        {/* Clear Chat */}
-                        <button
-                            onClick={() => setShowClearConfirm(true)}
-                            disabled={messages.length === 0 || isStreaming}
-                            className={cn(
-                                "p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors",
-                                "disabled:opacity-30 disabled:cursor-not-allowed"
-                            )}
-                            title="Clear chat history"
-                        >
-                            <RotateCcw className="w-4 h-4" />
-                        </button>
-
-                        {/* Close */}
-                        <button
-                            onClick={closePanel}
-                            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
-                            title="Close"
-                        >
-                            <X className="w-4 h-4" />
-                        </button>
-                    </div>
+                    {/* Close */}
+                    <button
+                        onClick={closePanel}
+                        className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
+                        title="Close"
+                    >
+                        <X className="w-4 h-4" />
+                    </button>
                 </div>
+            </div>
 
-                {/* Messages */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                    {messages.length === 0 ? (
-                        <div className="h-full flex flex-col items-center justify-center">
-                            {/* Welcome Message */}
-                            <div className="text-center text-muted-foreground max-w-sm mx-auto">
-                                <Bot className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                                <p className="text-sm mb-2">
-                                    Describe the workflow you want to create
-                                </p>
-                                <p className="text-xs">
-                                    I'll help you design the perfect automation workflow through
-                                    conversation. Tell me what you want to automate!
-                                </p>
-                            </div>
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                {messages.length === 0 ? (
+                    <div className="h-full flex flex-col items-center justify-center">
+                        {/* Welcome Message */}
+                        <div className="text-center text-muted-foreground max-w-sm mx-auto">
+                            <Bot className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                            <p className="text-sm mb-2">Describe the workflow you want to create</p>
+                            <p className="text-xs">
+                                I'll help you design the perfect automation workflow through
+                                conversation. Tell me what you want to automate!
+                            </p>
                         </div>
-                    ) : (
-                        <>
-                            {messages.map((message) => (
-                                <MessageBubble
-                                    key={message.id}
-                                    message={message}
-                                    isStreaming={
-                                        isStreaming &&
-                                        message.id === messages[messages.length - 1]?.id
-                                    }
-                                    isThinking={
-                                        isThinking &&
-                                        message.id === messages[messages.length - 1]?.id
-                                    }
-                                    onToggleThinking={() => toggleThinkingExpanded(message.id)}
-                                    onCreateWorkflow={handleCreateWorkflow}
-                                    onRefinePlan={handleRefinePlan}
-                                    isCreatingWorkflow={isCreatingWorkflow}
-                                />
-                            ))}
-                            <div ref={messagesEndRef} />
-                        </>
-                    )}
-                </div>
+                    </div>
+                ) : (
+                    <>
+                        {messages.map((message) => (
+                            <MessageBubble
+                                key={message.id}
+                                message={message}
+                                isStreaming={
+                                    isStreaming && message.id === messages[messages.length - 1]?.id
+                                }
+                                isThinking={
+                                    isThinking && message.id === messages[messages.length - 1]?.id
+                                }
+                                onToggleThinking={() => toggleThinkingExpanded(message.id)}
+                                onCreateWorkflow={handleCreateWorkflow}
+                                onRefinePlan={handleRefinePlan}
+                                isCreatingWorkflow={isCreatingWorkflow}
+                            />
+                        ))}
+                        <div ref={messagesEndRef} />
+                    </>
+                )}
+            </div>
 
-                {/* Example Prompts (shown at bottom when no messages) */}
-                {messages.length === 0 && (
-                    <div className="border-t border-border px-4 py-3 flex-shrink-0">
-                        <div className="flex items-center justify-between mb-2">
-                            <button
-                                onClick={() => setIsExamplesExpanded(!isExamplesExpanded)}
-                                className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
-                            >
-                                {isExamplesExpanded ? (
-                                    <ChevronDown className="w-3.5 h-3.5" />
-                                ) : (
-                                    <ChevronRight className="w-3.5 h-3.5" />
-                                )}
-                                Example prompts
-                            </button>
-                            {isExamplesExpanded && (
-                                <button
-                                    onClick={handleRefreshExamples}
-                                    className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
-                                    title="Shuffle examples"
-                                >
-                                    <RefreshCw className="w-3.5 h-3.5" />
-                                </button>
+            {/* Example Prompts (shown at bottom when no messages) */}
+            {messages.length === 0 && (
+                <div className="border-t border-border px-4 py-3 flex-shrink-0">
+                    <div className="flex items-center justify-between mb-2">
+                        <button
+                            onClick={() => setIsExamplesExpanded(!isExamplesExpanded)}
+                            className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                            {isExamplesExpanded ? (
+                                <ChevronDown className="w-3.5 h-3.5" />
+                            ) : (
+                                <ChevronRight className="w-3.5 h-3.5" />
                             )}
-                        </div>
+                            Example prompts
+                        </button>
                         {isExamplesExpanded && (
-                            <div className="space-y-1.5">
-                                {examplePrompts.map((prompt, index) => (
-                                    <button
-                                        key={index}
-                                        onClick={() => handleExamplePromptClick(prompt)}
-                                        className={cn(
-                                            "w-full text-left px-3 py-2 rounded-lg text-xs",
-                                            "bg-muted/50 border border-border/50",
-                                            "hover:bg-muted hover:border-border transition-colors",
-                                            "text-muted-foreground hover:text-foreground"
-                                        )}
-                                    >
-                                        {prompt}
-                                    </button>
-                                ))}
-                            </div>
+                            <button
+                                onClick={handleRefreshExamples}
+                                className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
+                                title="Shuffle examples"
+                            >
+                                <RefreshCw className="w-3.5 h-3.5" />
+                            </button>
                         )}
                     </div>
-                )}
-
-                {/* Input */}
-                <div className="border-t border-border p-4 flex-shrink-0">
-                    <div className="flex gap-2">
-                        <Input
-                            type="text"
-                            value={input}
-                            onChange={(e) => setInput(e.target.value)}
-                            onKeyPress={handleKeyPress}
-                            placeholder="Describe your workflow idea..."
-                            disabled={isStreaming}
-                            className={cn(
-                                "flex-1 px-4 py-3 rounded-lg",
-                                "bg-muted border border-border",
-                                "text-foreground placeholder:text-muted-foreground",
-                                "focus:outline-none focus:ring-2 focus:ring-primary",
-                                "disabled:opacity-50"
-                            )}
-                        />
-                        <Button
-                            onClick={handleSend}
-                            disabled={!input.trim() || isStreaming}
-                            className={cn(
-                                "px-4 py-3 rounded-lg",
-                                "bg-primary text-primary-foreground",
-                                "hover:bg-primary/90 transition-colors",
-                                "disabled:opacity-50 disabled:cursor-not-allowed"
-                            )}
-                        >
-                            <Send className="w-5 h-5" />
-                        </Button>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-2 text-center">
-                        Press Enter to send
-                    </p>
+                    {isExamplesExpanded && (
+                        <div className="space-y-1.5">
+                            {examplePrompts.map((prompt, index) => (
+                                <button
+                                    key={index}
+                                    onClick={() => handleExamplePromptClick(prompt)}
+                                    className={cn(
+                                        "w-full text-left px-3 py-2 rounded-lg text-xs",
+                                        "bg-muted/50 border border-border/50",
+                                        "hover:bg-muted hover:border-border transition-colors",
+                                        "text-muted-foreground hover:text-foreground"
+                                    )}
+                                >
+                                    {prompt}
+                                </button>
+                            ))}
+                        </div>
+                    )}
                 </div>
+            )}
+
+            {/* Input */}
+            <div className="border-t border-border p-4 flex-shrink-0">
+                <div className="flex gap-2">
+                    <Input
+                        type="text"
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        onKeyPress={handleKeyPress}
+                        placeholder="Describe your workflow idea..."
+                        disabled={isStreaming}
+                        className={cn(
+                            "flex-1 px-4 py-3 rounded-lg",
+                            "bg-muted border border-border",
+                            "text-foreground placeholder:text-muted-foreground",
+                            "focus:outline-none focus:ring-2 focus:ring-primary",
+                            "disabled:opacity-50"
+                        )}
+                    />
+                    <Button
+                        onClick={handleSend}
+                        disabled={!input.trim() || isStreaming}
+                        className={cn(
+                            "px-4 py-3 rounded-lg",
+                            "bg-primary text-primary-foreground",
+                            "hover:bg-primary/90 transition-colors",
+                            "disabled:opacity-50 disabled:cursor-not-allowed"
+                        )}
+                    >
+                        <Send className="w-5 h-5" />
+                    </Button>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2 text-center">
+                    Press Enter to send
+                </p>
             </div>
 
             {/* Clear Chat Confirmation */}

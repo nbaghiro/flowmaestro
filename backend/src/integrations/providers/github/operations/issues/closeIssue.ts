@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { GitHubClient } from "../../client/GitHubClient";
 import { GitHubOwnerSchema, GitHubRepoNameSchema, GitHubIssueNumberSchema } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
@@ -29,7 +28,6 @@ export const closeIssueOperation: OperationDefinition = {
     description: "Close an issue with an optional reason",
     category: "issues",
     inputSchema: closeIssueSchema,
-    inputSchemaJSON: toJSONSchema(closeIssueSchema),
     retryable: true,
     timeout: 15000
 };
@@ -62,6 +60,7 @@ export async function executeCloseIssue(
                 number: issue.number,
                 title: issue.title,
                 state: issue.state,
+                state_reason: issue.state_reason,
                 html_url: issue.html_url,
                 closed_at: issue.closed_at
             }

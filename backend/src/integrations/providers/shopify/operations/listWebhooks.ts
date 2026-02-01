@@ -1,5 +1,4 @@
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { ShopifyClient } from "../client/ShopifyClient";
 import { ListWebhooksSchema, type ListWebhooksParams } from "../schemas";
 import type { ShopifyWebhooksResponse } from "./types";
@@ -18,7 +17,6 @@ export const listWebhooksOperation: OperationDefinition = (() => {
             description: "Retrieve a list of registered webhooks for this store",
             category: "webhooks",
             inputSchema: ListWebhooksSchema,
-            inputSchemaJSON: toJSONSchema(ListWebhooksSchema),
             retryable: true,
             timeout: 15000
         };

@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { BufferClient } from "../client/BufferClient";
 import { BufferProfileIdSchema } from "../schemas";
 import type { BufferPendingUpdatesResponse } from "./types";
@@ -36,7 +35,6 @@ export const getPendingUpdatesOperation: OperationDefinition = (() => {
             description: "Get queued/pending updates for a Buffer profile",
             category: "updates",
             inputSchema: getPendingUpdatesSchema,
-            inputSchemaJSON: toJSONSchema(getPendingUpdatesSchema),
             retryable: true,
             timeout: 10000
         };

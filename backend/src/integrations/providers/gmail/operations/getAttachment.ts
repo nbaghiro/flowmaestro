@@ -21,21 +21,7 @@ export const getAttachmentOperation: OperationDefinition = {
     description: "Download an attachment from a Gmail message",
     category: "attachments",
     retryable: true,
-    inputSchema: getAttachmentSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            messageId: {
-                type: "string",
-                description: "The ID of the message containing the attachment"
-            },
-            attachmentId: {
-                type: "string",
-                description: "The ID of the attachment to retrieve"
-            }
-        },
-        required: ["messageId", "attachmentId"]
-    }
+    inputSchema: getAttachmentSchema
 };
 
 /**

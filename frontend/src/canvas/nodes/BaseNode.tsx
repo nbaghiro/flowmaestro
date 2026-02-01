@@ -1,6 +1,7 @@
 import { LucideIcon, GripHorizontal, ArrowLeftRight } from "lucide-react";
 import { ReactNode, useState, useEffect, useMemo } from "react";
 import { Handle, Position, useNodeId, useStore, useUpdateNodeInternals } from "reactflow";
+import type { NodeExecutionStatus } from "@flowmaestro/shared";
 import { NodeExecutionPopover } from "../../components/execution/modals/NodeExecutionPopover";
 import {
     NodeValidationBadge,
@@ -13,15 +14,13 @@ import {
     INITIAL_NODE_HEIGHT
 } from "../../stores/workflowStore";
 
-export type NodeStatus = "idle" | "pending" | "running" | "success" | "error";
-
 export type ConnectorLayout = "vertical" | "horizontal";
 
 interface BaseNodeProps {
     icon: LucideIcon;
     logoUrl?: string;
     label: string;
-    status?: NodeStatus;
+    status?: NodeExecutionStatus;
     category?:
         | "ai"
         | "logic"
@@ -42,13 +41,21 @@ interface BaseNodeProps {
     connectorLayout?: ConnectorLayout;
 }
 
-const statusConfig: Record<NodeStatus, { color: string; label: string }> = {
+// Status display config using canonical NodeExecutionStatus values
+const statusConfig: Record<NodeExecutionStatus, { color: string; label: string }> = {
     idle: { color: "bg-gray-300 dark:bg-gray-600", label: "Idle" },
     pending: { color: "bg-yellow-400 dark:bg-yellow-500", label: "Pending" },
-    running: { color: "bg-blue-500 animate-pulse", label: "Running" },
-    success: { color: "bg-green-500", label: "Success" },
-    error: { color: "bg-red-500", label: "Error" }
+    ready: { color: "bg-yellow-400 dark:bg-yellow-500", label: "Ready" },
+    executing: { color: "bg-blue-500 animate-pulse", label: "Running" },
+    completed: { color: "bg-green-500", label: "Completed" },
+    failed: { color: "bg-red-500", label: "Failed" },
+    skipped: { color: "bg-gray-300 dark:bg-gray-600", label: "Skipped" }
 };
+
+// Safe accessor for status config - always returns a valid config
+function getStatusConfig(status: NodeExecutionStatus): { color: string; label: string } {
+    return statusConfig[status] ?? statusConfig.idle;
+}
 
 // Category styles reference CSS classes defined in App.css (single source of truth for colors)
 const categoryConfig: Record<
@@ -128,8 +135,13 @@ export function BaseNode({
 }: BaseNodeProps) {
     const [logoError, setLogoError] = useState(false);
     const nodeId = useNodeId();
-    const { currentExecution, selectedNode, nodeValidation, workflowValidation } =
-        useWorkflowStore();
+    const {
+        currentExecution,
+        selectedNode,
+        nodeValidation,
+        workflowValidation,
+        hideNodeValidationIndicators
+    } = useWorkflowStore();
     const categoryStyle = categoryConfig[category];
     const [showPopover, setShowPopover] = useState(false);
 
@@ -146,8 +158,13 @@ export function BaseNode({
         if (!nodeId) {
             return { hasIssues: false, borderClass: "", leftBorderColor: undefined };
         }
-        return getNodeValidationBorderStyle(nodeId, validationErrors, workflowValidation);
-    }, [nodeId, validationErrors, workflowValidation]);
+        return getNodeValidationBorderStyle(
+            nodeId,
+            validationErrors,
+            workflowValidation,
+            hideNodeValidationIndicators
+        );
+    }, [nodeId, validationErrors, workflowValidation, hideNodeValidationIndicators]);
 
     const connectorLayout =
         useWorkflowStore((s) => {
@@ -294,15 +311,13 @@ export function BaseNode({
     }, [viewport]);
 
     // Use execution status if available, otherwise use provided status
-    const status: NodeStatus = executionState
-        ? (executionState.status as NodeStatus)
-        : providedStatus || "idle";
+    const status: NodeExecutionStatus = executionState?.status ?? providedStatus ?? "idle";
 
     // Build tooltip text
     const getTooltipText = () => {
-        if (!executionState) return statusConfig[status].label;
+        if (!executionState) return getStatusConfig(status).label;
 
-        const parts = [statusConfig[status].label];
+        const parts = [getStatusConfig(status).label];
 
         if (executionState.duration) {
             parts.push(`${executionState.duration}ms`);
@@ -372,7 +387,7 @@ export function BaseNode({
                         <div
                             className={cn(
                                 "w-2 h-2 rounded-full transition-all cursor-pointer hover:scale-125",
-                                statusConfig[status].color
+                                getStatusConfig(status).color
                             )}
                             title={getTooltipText()}
                             onMouseEnter={() => {
@@ -394,7 +409,7 @@ export function BaseNode({
                     <div
                         className={cn(
                             "w-2 h-2 rounded-full transition-all",
-                            statusConfig[status].color
+                            getStatusConfig(status).color
                         )}
                         title={getTooltipText()}
                     />

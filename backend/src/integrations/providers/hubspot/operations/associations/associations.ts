@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { HubspotClient } from "../../client/HubspotClient";
 
@@ -22,7 +21,6 @@ export const createAssociationOperation: OperationDefinition = {
     description: "Create an association between two HubSpot objects",
     category: "crm",
     inputSchema: createAssociationSchema,
-    inputSchemaJSON: toJSONSchema(createAssociationSchema),
     retryable: true,
     timeout: 10000
 };
@@ -71,7 +69,6 @@ export const deleteAssociationOperation: OperationDefinition = {
     description: "Delete an association between two HubSpot objects",
     category: "crm",
     inputSchema: deleteAssociationSchema,
-    inputSchemaJSON: toJSONSchema(deleteAssociationSchema),
     retryable: true,
     timeout: 10000
 };
@@ -124,7 +121,6 @@ export const listAssociationsOperation: OperationDefinition = {
     description: "List all associations for an object",
     category: "crm",
     inputSchema: listAssociationsSchema,
-    inputSchemaJSON: toJSONSchema(listAssociationsSchema),
     retryable: true,
     timeout: 10000
 };
@@ -184,7 +180,6 @@ export const batchCreateAssociationsOperation: OperationDefinition = {
     description: "Create multiple associations at once (max 100)",
     category: "crm",
     inputSchema: batchCreateAssociationsSchema,
-    inputSchemaJSON: toJSONSchema(batchCreateAssociationsSchema),
     retryable: true,
     timeout: 10000
 };

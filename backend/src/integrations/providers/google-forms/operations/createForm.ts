@@ -20,17 +20,7 @@ export const createFormOperation: OperationDefinition = {
     description: "Create a new Google Form with a title",
     category: "forms",
     retryable: true,
-    inputSchema: createFormSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            title: {
-                type: "string",
-                description: "The title of the form"
-            }
-        },
-        required: ["title"]
-    }
+    inputSchema: createFormSchema
 };
 
 /**

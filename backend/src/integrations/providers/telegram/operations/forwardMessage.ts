@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { TelegramClient } from "../client/TelegramClient";
 import {
     TelegramChatIdSchema,
@@ -35,7 +34,6 @@ export const forwardMessageOperation: OperationDefinition = (() => {
             description: "Forward a message from one chat to another",
             category: "messaging",
             inputSchema: forwardMessageSchema,
-            inputSchemaJSON: toJSONSchema(forwardMessageSchema),
             retryable: true,
             timeout: 10000
         };

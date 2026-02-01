@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { CREATE_BOARD } from "../../graphql/mutations";
 import { createBoardInputSchema, type CreateBoardInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
@@ -11,7 +10,6 @@ export const createBoardOperation: OperationDefinition = {
         "Create a new board in Monday.com with specified visibility and optional template.",
     category: "boards",
     inputSchema: createBoardInputSchema,
-    inputSchemaJSON: toJSONSchema(createBoardInputSchema),
     retryable: true,
     timeout: 10000
 };

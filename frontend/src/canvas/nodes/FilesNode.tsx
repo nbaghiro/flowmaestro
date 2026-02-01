@@ -8,6 +8,7 @@
 import { FileText } from "lucide-react";
 import { memo } from "react";
 import { NodeProps } from "reactflow";
+import type { NodeExecutionStatus } from "@flowmaestro/shared";
 import { BaseNode } from "./BaseNode";
 
 interface UploadedFile {
@@ -17,7 +18,7 @@ interface UploadedFile {
 
 interface FilesNodeData {
     label: string;
-    status?: "idle" | "pending" | "running" | "success" | "error";
+    status?: NodeExecutionStatus;
     uploadedFiles?: UploadedFile[];
 }
 

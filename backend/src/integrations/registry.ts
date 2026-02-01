@@ -194,6 +194,20 @@ const googleDocsEntry: ProviderRegistryEntry = {
     }
 };
 
+// Register Google Slides provider
+const googleSlidesEntry: ProviderRegistryEntry = {
+    name: "google-slides",
+    displayName: "Google Slides",
+    authMethod: "oauth2",
+    category: "productivity",
+    loader: async () => {
+        const { GoogleSlidesProvider } = await import(
+            "./providers/google-slides/GoogleSlidesProvider"
+        );
+        return new GoogleSlidesProvider();
+    }
+};
+
 // Register Gmail provider
 const gmailEntry: ProviderRegistryEntry = {
     name: "gmail",
@@ -296,6 +310,20 @@ const microsoftWordEntry: ProviderRegistryEntry = {
     }
 };
 
+// Register Microsoft PowerPoint provider
+const microsoftPowerPointEntry: ProviderRegistryEntry = {
+    name: "microsoft-powerpoint",
+    displayName: "Microsoft PowerPoint",
+    authMethod: "oauth2",
+    category: "productivity",
+    loader: async () => {
+        const { MicrosoftPowerPointProvider } = await import(
+            "./providers/microsoft-powerpoint/MicrosoftPowerPointProvider"
+        );
+        return new MicrosoftPowerPointProvider();
+    }
+};
+
 // Register Microsoft Teams provider
 const microsoftTeamsEntry: ProviderRegistryEntry = {
     name: "microsoft-teams",
@@ -362,6 +390,7 @@ providerRegistry.register(googleSheetsEntry);
 providerRegistry.register(googleDriveEntry);
 providerRegistry.register(googleCalendarEntry);
 providerRegistry.register(googleDocsEntry);
+providerRegistry.register(googleSlidesEntry);
 providerRegistry.register(gmailEntry);
 providerRegistry.register(youtubeEntry);
 providerRegistry.register(whatsappEntry);
@@ -370,6 +399,7 @@ providerRegistry.register(facebookEntry);
 providerRegistry.register(microsoftOneDriveEntry);
 providerRegistry.register(microsoftExcelEntry);
 providerRegistry.register(microsoftWordEntry);
+providerRegistry.register(microsoftPowerPointEntry);
 providerRegistry.register(microsoftTeamsEntry);
 providerRegistry.register(zendeskEntry);
 providerRegistry.register(apolloEntry);
@@ -980,6 +1010,134 @@ const circleCIEntry: ProviderRegistryEntry = {
 };
 
 providerRegistry.register(circleCIEntry);
+
+// Register Microsoft Outlook provider
+const microsoftOutlookEntry: ProviderRegistryEntry = {
+    name: "microsoft-outlook",
+    displayName: "Microsoft Outlook",
+    authMethod: "oauth2",
+    category: "communication",
+    loader: async () => {
+        const { MicrosoftOutlookProvider } = await import(
+            "./providers/microsoft-outlook/MicrosoftOutlookProvider"
+        );
+        return new MicrosoftOutlookProvider();
+    }
+};
+
+providerRegistry.register(microsoftOutlookEntry);
+
+// Register Segment provider
+const segmentEntry: ProviderRegistryEntry = {
+    name: "segment",
+    displayName: "Segment",
+    authMethod: "api_key",
+    category: "analytics",
+    loader: async () => {
+        const { SegmentProvider } = await import("./providers/segment/SegmentProvider");
+        return new SegmentProvider();
+    }
+};
+
+providerRegistry.register(segmentEntry);
+
+// Register Medium provider
+const mediumEntry: ProviderRegistryEntry = {
+    name: "medium",
+    displayName: "Medium",
+    authMethod: "api_key",
+    category: "content_management",
+    loader: async () => {
+        const { MediumProvider } = await import("./providers/medium/MediumProvider");
+        return new MediumProvider();
+    }
+};
+
+providerRegistry.register(mediumEntry);
+
+// Register QuickBooks provider
+const quickbooksEntry: ProviderRegistryEntry = {
+    name: "quickbooks",
+    displayName: "QuickBooks",
+    authMethod: "oauth2",
+    category: "accounting",
+    loader: async () => {
+        const { QuickBooksProvider } = await import("./providers/quickbooks/QuickBooksProvider");
+        return new QuickBooksProvider();
+    }
+};
+
+providerRegistry.register(quickbooksEntry);
+
+// Register FreshBooks provider
+const freshbooksEntry: ProviderRegistryEntry = {
+    name: "freshbooks",
+    displayName: "FreshBooks",
+    authMethod: "oauth2",
+    category: "accounting",
+    loader: async () => {
+        const { FreshBooksProvider } = await import("./providers/freshbooks/FreshBooksProvider");
+        return new FreshBooksProvider();
+    }
+};
+
+providerRegistry.register(freshbooksEntry);
+
+// Register Workday provider
+const workdayEntry: ProviderRegistryEntry = {
+    name: "workday",
+    displayName: "Workday",
+    authMethod: "oauth2",
+    category: "hr",
+    loader: async () => {
+        const { WorkdayProvider } = await import("./providers/workday/WorkdayProvider");
+        return new WorkdayProvider();
+    }
+};
+
+providerRegistry.register(workdayEntry);
+
+// Register Rippling provider
+const ripplingEntry: ProviderRegistryEntry = {
+    name: "rippling",
+    displayName: "Rippling",
+    authMethod: "oauth2",
+    category: "hr",
+    loader: async () => {
+        const { RipplingProvider } = await import("./providers/rippling/RipplingProvider");
+        return new RipplingProvider();
+    }
+};
+
+providerRegistry.register(ripplingEntry);
+
+// Register Stripe provider
+const stripeEntry: ProviderRegistryEntry = {
+    name: "stripe",
+    displayName: "Stripe",
+    authMethod: "api_key",
+    category: "payments",
+    loader: async () => {
+        const { StripeProvider } = await import("./providers/stripe/StripeProvider");
+        return new StripeProvider();
+    }
+};
+
+providerRegistry.register(stripeEntry);
+
+// Register Square provider
+const squareEntry: ProviderRegistryEntry = {
+    name: "square",
+    displayName: "Square",
+    authMethod: "oauth2",
+    category: "payments",
+    loader: async () => {
+        const { SquareProvider } = await import("./providers/square/SquareProvider");
+        return new SquareProvider();
+    }
+};
+
+providerRegistry.register(squareEntry);
 
 // Export for use in application
 export { providerRegistry };

@@ -24,23 +24,7 @@ export const batchClearValuesOperation: OperationDefinition = {
     description: "Clear values from multiple ranges in a spreadsheet",
     category: "values",
     retryable: true,
-    inputSchema: batchClearValuesSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            spreadsheetId: {
-                type: "string",
-                description: "Spreadsheet ID"
-            },
-            ranges: {
-                type: "array",
-                items: { type: "string" },
-                description:
-                    "Array of A1 notation ranges to clear (e.g., ['Sheet1!A1:B10', 'Sheet2!C1:D5'])"
-            }
-        },
-        required: ["spreadsheetId", "ranges"]
-    }
+    inputSchema: batchClearValuesSchema
 };
 
 /**

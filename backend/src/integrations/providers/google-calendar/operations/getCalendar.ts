@@ -24,18 +24,7 @@ export const getCalendarOperation: OperationDefinition = {
     description: "Get metadata for a specific calendar (name, timezone, description, etc.)",
     category: "calendars",
     retryable: true,
-    inputSchema: getCalendarSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            calendarId: {
-                type: "string",
-                description: "Calendar identifier (use 'primary' for main calendar)",
-                default: "primary"
-            }
-        },
-        required: []
-    }
+    inputSchema: getCalendarSchema
 };
 
 /**

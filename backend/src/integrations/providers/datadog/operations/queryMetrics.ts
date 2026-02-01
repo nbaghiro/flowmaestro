@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { DatadogMetricSeriesOutput } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { DatadogClient } from "../client/DatadogClient";
@@ -18,7 +17,6 @@ export const queryMetricsOperation: OperationDefinition = {
     description: "Query timeseries metric data from Datadog",
     category: "metrics",
     inputSchema: queryMetricsSchema,
-    inputSchemaJSON: toJSONSchema(queryMetricsSchema),
     retryable: true,
     timeout: 30000
 };

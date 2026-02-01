@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { MarketoClient } from "../client/MarketoClient";
 
@@ -27,7 +26,6 @@ export const removeFromListOperation: OperationDefinition = {
     category: "lists",
     actionType: "write",
     inputSchema: removeFromListSchema,
-    inputSchemaJSON: toJSONSchema(removeFromListSchema),
     retryable: true,
     timeout: 15000
 };

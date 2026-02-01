@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { DropboxClient } from "../client/DropboxClient";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 
@@ -20,7 +19,6 @@ export const deleteFileOperation: OperationDefinition = {
         "Delete a file or folder from Dropbox. This moves the item to trash (can be recovered within retention period). Returns metadata of the deleted item.",
     category: "files",
     inputSchema: deleteFileSchema,
-    inputSchemaJSON: toJSONSchema(deleteFileSchema),
     retryable: false, // Deletion should not be retried automatically
     timeout: 10000
 };

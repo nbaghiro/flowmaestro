@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { CloseClient } from "../../client/CloseClient";
 import type { CloseCall } from "../types";
@@ -29,7 +28,6 @@ export const logCallOperation: OperationDefinition = {
     description: "Log a call activity",
     category: "communication",
     inputSchema: logCallSchema,
-    inputSchemaJSON: toJSONSchema(logCallSchema),
     retryable: false,
     timeout: 10000
 };

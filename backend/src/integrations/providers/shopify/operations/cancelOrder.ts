@@ -1,5 +1,4 @@
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { ShopifyClient } from "../client/ShopifyClient";
 import { CancelOrderSchema, type CancelOrderParams } from "../schemas";
 import type { ShopifyOrderResponse } from "./types";
@@ -19,7 +18,6 @@ export const cancelOrderOperation: OperationDefinition = (() => {
                 "Cancel an order with optional reason, restock, and email notification options",
             category: "orders",
             inputSchema: CancelOrderSchema,
-            inputSchemaJSON: toJSONSchema(CancelOrderSchema),
             retryable: false, // Cancellation should not be retried automatically
             timeout: 15000
         };

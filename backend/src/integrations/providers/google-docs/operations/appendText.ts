@@ -21,21 +21,7 @@ export const appendTextOperation: OperationDefinition = {
     description: "Append text to the end of a Google Docs document",
     category: "documents",
     retryable: true,
-    inputSchema: appendTextSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            documentId: {
-                type: "string",
-                description: "The ID of the document"
-            },
-            text: {
-                type: "string",
-                description: "The text to append to the end of the document"
-            }
-        },
-        required: ["documentId", "text"]
-    }
+    inputSchema: appendTextSchema
 };
 
 interface BatchUpdateResponse {

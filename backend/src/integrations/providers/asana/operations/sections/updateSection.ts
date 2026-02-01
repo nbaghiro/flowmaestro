@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { updateSectionInputSchema, type UpdateSectionInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { AsanaClient } from "../../client/AsanaClient";
@@ -9,7 +8,6 @@ export const updateSectionOperation: OperationDefinition = {
     description: "Update an existing section in Asana (e.g., rename it).",
     category: "sections",
     inputSchema: updateSectionInputSchema,
-    inputSchemaJSON: toJSONSchema(updateSectionInputSchema),
     retryable: true,
     timeout: 10000
 };

@@ -1,6 +1,6 @@
 import { Search } from "lucide-react";
 import { useState } from "react";
-import { ALL_PROVIDERS, type Provider } from "@flowmaestro/shared";
+import { ALL_PROVIDERS, supportsOAuth, type Provider } from "@flowmaestro/shared";
 import { Dialog } from "../../common/Dialog";
 import { Input } from "../../common/Input";
 import { NewConnectionDialog } from "./NewConnectionDialog";
@@ -147,7 +147,7 @@ export function AddProviderDialog({ isOpen, onClose, onProviderAdded }: AddProvi
                         />
                     }
                     onSuccess={handleConnectionSuccess}
-                    supportsOAuth={selectedProvider.methods.includes("oauth2")}
+                    supportsOAuth={supportsOAuth(selectedProvider.methods)}
                     supportsApiKey={selectedProvider.methods.includes("api_key")}
                     oauthSettings={selectedProvider.oauthSettings}
                 />

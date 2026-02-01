@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { LinkedInClient } from "../client/LinkedInClient";
 import { PostIdSchema, MaxResultsSchema, PaginationStartSchema } from "../schemas";
 import type { GetCommentsResponse } from "./types";
@@ -30,7 +29,6 @@ export const getCommentsOperation: OperationDefinition = (() => {
             description: "Get comments on a LinkedIn post.",
             category: "engagement",
             inputSchema: getCommentsSchema,
-            inputSchemaJSON: toJSONSchema(getCommentsSchema),
             retryable: true,
             timeout: 15000
         };

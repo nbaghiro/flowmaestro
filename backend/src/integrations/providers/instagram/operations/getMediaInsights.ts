@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { InstagramClient } from "../client/InstagramClient";
 import type { InstagramInsightResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -33,7 +32,6 @@ export const getMediaInsightsOperation: OperationDefinition = (() => {
             description: "Get engagement metrics for an Instagram post or reel",
             category: "analytics",
             inputSchema: getMediaInsightsSchema,
-            inputSchemaJSON: toJSONSchema(getMediaInsightsSchema),
             retryable: true,
             timeout: 15000
         };

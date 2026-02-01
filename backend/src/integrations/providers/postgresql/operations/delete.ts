@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { Pool, QueryResult } from "pg";
 
@@ -28,7 +27,6 @@ export const deleteOperation: OperationDefinition = {
     description: "Delete rows from a table",
     category: "database",
     inputSchema: deleteSchema,
-    inputSchemaJSON: toJSONSchema(deleteSchema),
     retryable: false,
     timeout: 10000
 };

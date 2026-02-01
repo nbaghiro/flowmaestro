@@ -25,21 +25,7 @@ export const getSpreadsheetOperation: OperationDefinition = {
     description: "Get metadata and properties of a spreadsheet",
     category: "spreadsheets",
     retryable: true,
-    inputSchema: getSpreadsheetSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            spreadsheetId: {
-                type: "string",
-                description: "Spreadsheet ID"
-            },
-            includeGridData: {
-                type: "boolean",
-                description: "Include cell data in response (default: false)"
-            }
-        },
-        required: ["spreadsheetId"]
-    }
+    inputSchema: getSpreadsheetSchema
 };
 
 /**

@@ -1,5 +1,5 @@
 import { motion, useInView } from "framer-motion";
-import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import React from "react";
 
 export const CTA: React.FC = () => {
@@ -7,78 +7,50 @@ export const CTA: React.FC = () => {
     const isInView = useInView(ref, { once: true, margin: "-100px" });
 
     return (
-        <section ref={ref} className="relative py-24 px-4 sm:px-6 lg:px-8 bg-background">
-            {/* Background Grid Pattern */}
-            <div className="absolute inset-0 grid-pattern opacity-30"></div>
-
-            <div className="relative z-10 max-w-5xl mx-auto">
+        <section
+            ref={ref}
+            className="relative py-24 sm:py-32 px-4 sm:px-6 lg:px-8 bg-secondary overflow-hidden"
+        >
+            <div className="absolute inset-0 grid-pattern opacity-50" />
+            <div className="relative z-10 max-w-4xl mx-auto text-center">
                 <motion.div
                     initial={{ opacity: 0, y: 30 }}
                     animate={isInView ? { opacity: 1, y: 0 } : {}}
                     transition={{ duration: 0.6 }}
-                    className="relative rounded-3xl bg-gradient-to-br from-gray-800/80 via-background-elevated to-gray-800/80 p-12 md:p-16 backdrop-blur-sm border border-stroke overflow-hidden"
                 >
-                    {/* Background Pattern */}
-                    <div className="absolute inset-0 grid-pattern opacity-20"></div>
+                    {/* Headline */}
+                    <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6 tracking-tight text-foreground">
+                        Start automating today
+                    </h2>
 
-                    {/* Content */}
-                    <div className="relative z-10 text-center">
-                        <h2 className="text-4xl sm:text-5xl font-bold mb-6">
-                            Ready to
-                            <span className="gradient-text"> Automate Everything</span>?
-                        </h2>
+                    <p className="text-lg sm:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto">
+                        Join thousands of teams building powerful workflows with FlowMaestro. Free
+                        to start, no credit card required.
+                    </p>
 
-                        <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
-                            Join thousands of teams building powerful workflows with FlowMaestro.
-                            Start for free, no credit card required.
-                        </p>
-
-                        {/* Features */}
-                        <div className="flex flex-wrap justify-center gap-6 mb-10">
-                            {["Free 14-day trial", "No credit card required", "Cancel anytime"].map(
-                                (feature) => (
-                                    <div
-                                        key={feature}
-                                        className="flex items-center gap-2 text-gray-300"
-                                    >
-                                        <CheckCircle2 className="w-5 h-5 text-green-400" />
-                                        <span>{feature}</span>
-                                    </div>
-                                )
-                            )}
-                        </div>
-
-                        {/* Buttons */}
-                        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                            <a
-                                href={import.meta.env.VITE_APP_URL || "http://localhost:3000"}
-                                className="group px-8 py-4 bg-white text-black hover:bg-gray-100 rounded-lg font-semibold transition-all duration-200 flex items-center gap-2 shadow-lg"
-                            >
-                                Start Building Now
-                                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                            </a>
-                            <a
-                                href="https://cal.com/naib-baghirov-o5surn/30min"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="px-8 py-4 bg-background-elevated hover:bg-border border border-stroke rounded-lg font-semibold transition-all duration-200"
-                            >
-                                Schedule a Demo
-                            </a>
-                        </div>
-
-                        <p className="text-sm text-gray-400 mt-8">
-                            Have questions?{" "}
-                            <a
-                                href="https://form.typeform.com/to/DF4VPClq"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-primary-400 hover:text-primary-300 underline"
-                            >
-                                Talk to our sales team
-                            </a>
-                        </p>
+                    {/* CTA Buttons */}
+                    <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                        <a
+                            href={import.meta.env.VITE_APP_URL || "http://localhost:3000"}
+                            className="group px-8 py-4 bg-foreground text-background hover:opacity-90 rounded-lg font-semibold transition-all duration-200 flex items-center gap-2 shadow-lg"
+                        >
+                            Get Started Free
+                            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                        </a>
+                        <a
+                            href="https://cal.com/naib-baghirov-o5surn/30min"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-8 py-4 bg-card hover:bg-accent border border-border rounded-lg font-semibold transition-all duration-200 text-foreground"
+                        >
+                            Schedule a Demo
+                        </a>
                     </div>
+
+                    {/* Trust indicators */}
+                    <p className="text-sm text-muted-foreground mt-10">
+                        No credit card required · Free 14-day trial · Cancel anytime
+                    </p>
                 </motion.div>
             </div>
         </section>

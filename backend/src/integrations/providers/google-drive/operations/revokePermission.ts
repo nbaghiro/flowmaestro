@@ -24,21 +24,7 @@ export const revokePermissionOperation: OperationDefinition = {
     description: "Revoke (remove) a specific permission from a file or folder",
     category: "sharing",
     retryable: true,
-    inputSchema: revokePermissionSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            fileId: {
-                type: "string",
-                description: "File or folder ID"
-            },
-            permissionId: {
-                type: "string",
-                description: "Permission ID to revoke (get from listPermissions operation)"
-            }
-        },
-        required: ["fileId", "permissionId"]
-    }
+    inputSchema: revokePermissionSchema
 };
 
 /**

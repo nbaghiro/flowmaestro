@@ -3,7 +3,6 @@
  */
 
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { FreshdeskClient } from "../client/FreshdeskClient";
 import type { FreshdeskCompany } from "../types";
@@ -27,7 +26,6 @@ export const createCompanyOperation: OperationDefinition = {
     description: "Create a new company",
     category: "data",
     inputSchema: createCompanySchema,
-    inputSchemaJSON: toJSONSchema(createCompanySchema),
     retryable: false,
     timeout: 10000
 };
@@ -79,7 +77,6 @@ export const getCompanyOperation: OperationDefinition = {
     description: "Retrieve a specific company",
     category: "data",
     inputSchema: getCompanySchema,
-    inputSchemaJSON: toJSONSchema(getCompanySchema),
     retryable: true,
     timeout: 10000
 };
@@ -127,7 +124,6 @@ export const updateCompanyOperation: OperationDefinition = {
     description: "Update an existing company",
     category: "data",
     inputSchema: updateCompanySchema,
-    inputSchemaJSON: toJSONSchema(updateCompanySchema),
     retryable: false,
     timeout: 10000
 };
@@ -179,7 +175,6 @@ export const listCompaniesOperation: OperationDefinition = {
     description: "List all companies",
     category: "data",
     inputSchema: listCompaniesSchema,
-    inputSchemaJSON: toJSONSchema(listCompaniesSchema),
     retryable: true,
     timeout: 30000
 };

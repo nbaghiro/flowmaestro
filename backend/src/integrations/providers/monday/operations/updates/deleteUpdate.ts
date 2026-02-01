@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { DELETE_UPDATE } from "../../graphql/mutations";
 import { deleteUpdateInputSchema, type DeleteUpdateInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
@@ -10,7 +9,6 @@ export const deleteUpdateOperation: OperationDefinition = {
     description: "Delete an update (comment) from Monday.com.",
     category: "updates",
     inputSchema: deleteUpdateInputSchema,
-    inputSchemaJSON: toJSONSchema(deleteUpdateInputSchema),
     retryable: false,
     timeout: 10000
 };

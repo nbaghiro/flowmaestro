@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { VercelDomainOutput } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { VercelClient } from "../client/VercelClient";
@@ -23,7 +22,6 @@ export const listDomainsOperation: OperationDefinition = {
     description: "List all domains configured for a Vercel project",
     category: "domains",
     inputSchema: listDomainsSchema,
-    inputSchemaJSON: toJSONSchema(listDomainsSchema),
     retryable: true,
     timeout: 30000
 };

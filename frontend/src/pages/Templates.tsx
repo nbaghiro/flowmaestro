@@ -6,11 +6,11 @@ import type { Template, TemplateCategory, CategoryInfo, AgentTemplate } from "@f
 import { TEMPLATE_CATEGORY_META } from "@flowmaestro/shared";
 import { Input } from "../components/common/Input";
 import { PageHeader } from "../components/common/PageHeader";
+import { Select } from "../components/common/Select";
 import { SkeletonGrid } from "../components/common/SkeletonGrid";
 import { TemplateCardSkeleton } from "../components/skeletons";
 import { AgentTemplateCard } from "../components/templates/cards/AgentTemplateCard";
 import { TemplateCard } from "../components/templates/cards/TemplateCard";
-import { CategoryFilter } from "../components/templates/CategoryFilter";
 import { AgentTemplatePreviewDialog } from "../components/templates/dialogs/AgentTemplatePreviewDialog";
 import { TemplatePreviewDialog } from "../components/templates/dialogs/TemplatePreviewDialog";
 import { TemplateTypeToggle, type TemplateType } from "../components/templates/TemplateTypeToggle";
@@ -178,26 +178,34 @@ export function Templates() {
                 <TemplateTypeToggle value={templateType} onChange={handleTemplateTypeChange} />
             </div>
 
-            {/* Search and Filters */}
-            <div className="space-y-4 mb-8">
-                {/* Search bar */}
-                <div className="relative max-w-md">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            {/* Search and Filter Bar */}
+            <div className="mb-8 flex flex-col sm:flex-row gap-3">
+                {/* Search Input */}
+                <div className="relative sm:flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                         type="text"
                         placeholder={`Search ${templateType === "workflows" ? "workflow" : "agent"} templates...`}
                         value={searchQuery}
                         onChange={handleSearchChange}
-                        className="w-full pl-10 pr-4 py-2.5 border border-border dark:border-border rounded-full bg-card dark:bg-card text-foreground dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-primary focus:border-transparent transition-colors"
+                        className="w-full pl-10 pr-4 py-2 bg-card border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                     />
                 </div>
 
-                {/* Category filter */}
-                <CategoryFilter
-                    categories={categories}
-                    selectedCategory={selectedCategory}
-                    onCategoryChange={handleCategoryChange}
-                    isLoading={categoriesLoading}
+                {/* Category Dropdown */}
+                <Select
+                    value={selectedCategory || "all"}
+                    onChange={(value) =>
+                        handleCategoryChange(value === "all" ? null : (value as TemplateCategory))
+                    }
+                    options={[
+                        { value: "all", label: "All Categories" },
+                        ...categories.map((cat) => ({
+                            value: cat.category,
+                            label: `${TEMPLATE_CATEGORY_META[cat.category]?.label || cat.category} (${cat.count})`
+                        }))
+                    ]}
+                    className="sm:w-[200px] sm:flex-shrink-0"
                 />
             </div>
 

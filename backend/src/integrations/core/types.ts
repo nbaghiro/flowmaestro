@@ -1,5 +1,8 @@
+import type { JSONSchema } from "../../core/utils/zod-to-json-schema";
 import type { ConnectionWithData, ConnectionMethod } from "../../storage/models/Connection";
 import type { z } from "zod";
+
+export type { JSONSchema };
 
 /**
  * Execution context - tells us whether this is a workflow or agent execution
@@ -113,7 +116,26 @@ export function inferActionType(operationId: string): OperationActionType {
 }
 
 /**
+ * Example input/output pair for an operation (for testing and documentation)
+ */
+export interface OperationExample {
+    /** Unique name for this example */
+    name: string;
+    /** Human-readable description */
+    description?: string;
+    /** Example input parameters */
+    input: Record<string, unknown>;
+    /** Expected output */
+    output: Record<string, unknown>;
+    /** Tags for filtering: happy-path, error-case, edge-case, etc. */
+    tags?: string[];
+}
+
+/**
  * Operation definition with metadata and schemas
+ *
+ * Note: JSON Schema is derived from Zod schemas on-demand using toJSONSchema().
+ * This avoids maintaining duplicate schema definitions.
  */
 export interface OperationDefinition {
     id: string; // "sendMessage"
@@ -121,23 +143,12 @@ export interface OperationDefinition {
     description: string;
     category: string; // "messaging", "files", "channels"
     actionType?: OperationActionType; // Optional - will be inferred from id if not provided
-    inputSchema: z.ZodSchema; // Zod for TypeScript
-    inputSchemaJSON: JSONSchema; // JSON Schema for MCP
-    outputSchema?: z.ZodSchema;
+    inputSchema: z.ZodSchema; // Zod schema for input validation
+    outputSchema?: z.ZodSchema; // Zod schema for output validation
+    examples?: OperationExample[]; // Example input/output pairs for testing
     rateLimit?: RateLimitConfig;
     timeout?: number;
     retryable: boolean;
-}
-
-/**
- * JSON Schema (for MCP and frontend)
- */
-export interface JSONSchema {
-    type: string;
-    properties?: Record<string, unknown>;
-    required?: string[];
-    description?: string;
-    [key: string]: unknown;
 }
 
 /**
@@ -406,8 +417,7 @@ export interface OperationSummary {
     description: string;
     category: string;
     actionType: OperationActionType; // "read" or "write" - for filtering by node type
-    inputSchema: JSONSchema;
-    inputSchemaJSON?: JSONSchema;
+    inputSchema: JSONSchema; // JSON Schema derived from Zod schema
     parameters?: Array<{
         name: string;
         type: string;

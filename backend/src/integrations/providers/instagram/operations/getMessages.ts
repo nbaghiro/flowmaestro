@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { InstagramClient } from "../client/InstagramClient";
 import type { InstagramMessageResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -35,7 +34,6 @@ export const getMessagesOperation: OperationDefinition = (() => {
             description: "Get messages from an Instagram Direct Message conversation",
             category: "messaging",
             inputSchema: getMessagesSchema,
-            inputSchemaJSON: toJSONSchema(getMessagesSchema),
             retryable: true,
             timeout: 15000
         };

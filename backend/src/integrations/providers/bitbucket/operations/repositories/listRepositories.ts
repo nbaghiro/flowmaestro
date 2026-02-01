@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { BitbucketClient } from "../../client/BitbucketClient";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { BitbucketRepository, BitbucketPaginatedResponse } from "../types";
@@ -33,7 +32,6 @@ export const listRepositoriesOperation: OperationDefinition = {
     description: "List repositories in a Bitbucket workspace",
     category: "repositories",
     inputSchema: listRepositoriesSchema,
-    inputSchemaJSON: toJSONSchema(listRepositoriesSchema),
     retryable: true,
     timeout: 30000
 };

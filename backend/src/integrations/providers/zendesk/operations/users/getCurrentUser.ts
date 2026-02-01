@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { ZendeskClient } from "../../client/ZendeskClient";
 import type { UserResponse } from "../../types";
@@ -20,7 +19,6 @@ export const getCurrentUserOperation: OperationDefinition = {
     description: "Get the currently authenticated user in Zendesk",
     category: "users",
     inputSchema: getCurrentUserSchema,
-    inputSchemaJSON: toJSONSchema(getCurrentUserSchema),
     retryable: true,
     timeout: 10000
 };

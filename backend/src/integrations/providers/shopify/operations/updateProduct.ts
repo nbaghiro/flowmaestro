@@ -1,5 +1,4 @@
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { ShopifyClient } from "../client/ShopifyClient";
 import { UpdateProductSchema, type UpdateProductParams } from "../schemas";
 import type { ShopifyProductResponse } from "./types";
@@ -18,7 +17,6 @@ export const updateProductOperation: OperationDefinition = (() => {
             description: "Update an existing product's title, description, vendor, tags, or status",
             category: "products",
             inputSchema: UpdateProductSchema,
-            inputSchemaJSON: toJSONSchema(UpdateProductSchema),
             retryable: true,
             timeout: 15000
         };

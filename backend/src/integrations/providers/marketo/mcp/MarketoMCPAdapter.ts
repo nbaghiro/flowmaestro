@@ -1,3 +1,4 @@
+import { toJSONSchema } from "../../../../core/utils/zod-to-json-schema";
 import {
     executeGetLead,
     executeGetLeads,
@@ -36,7 +37,7 @@ export class MarketoMCPAdapter {
             tools.push({
                 name: `marketo_${id}`,
                 description: operation.description,
-                inputSchema: operation.inputSchemaJSON
+                inputSchema: toJSONSchema(operation.inputSchema)
             });
         }
 

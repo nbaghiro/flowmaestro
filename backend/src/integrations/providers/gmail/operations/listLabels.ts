@@ -19,12 +19,7 @@ export const listLabelsOperation: OperationDefinition = {
         "List all labels in the user's Gmail account including system labels (INBOX, SENT, etc.) and custom labels",
     category: "labels",
     retryable: true,
-    inputSchema: listLabelsSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {},
-        required: []
-    }
+    inputSchema: listLabelsSchema
 };
 
 /**

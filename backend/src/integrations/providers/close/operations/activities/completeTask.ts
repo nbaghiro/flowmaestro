@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { CloseClient } from "../../client/CloseClient";
 import type { CloseTask } from "../types";
@@ -22,7 +21,6 @@ export const completeTaskOperation: OperationDefinition = {
     description: "Mark a task as completed",
     category: "activities",
     inputSchema: completeTaskSchema,
-    inputSchemaJSON: toJSONSchema(completeTaskSchema),
     retryable: false,
     timeout: 10000
 };

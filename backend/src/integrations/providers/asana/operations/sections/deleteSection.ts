@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { deleteSectionInputSchema, type DeleteSectionInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { AsanaClient } from "../../client/AsanaClient";
@@ -9,7 +8,6 @@ export const deleteSectionOperation: OperationDefinition = {
     description: "Delete a section from Asana. Tasks in the section will not be deleted.",
     category: "sections",
     inputSchema: deleteSectionInputSchema,
-    inputSchemaJSON: toJSONSchema(deleteSectionInputSchema),
     retryable: false,
     timeout: 10000
 };

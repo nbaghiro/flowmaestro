@@ -32,6 +32,7 @@ export function NodeValidationBadge({
     className
 }: NodeValidationBadgeProps) {
     const workflowValidation = useWorkflowStore((s) => s.workflowValidation);
+    const hideNodeValidationIndicators = useWorkflowStore((s) => s.hideNodeValidationIndicators);
 
     // Get workflow-level issues for this node
     const workflowIssues = useMemo<WorkflowValidationIssue[]>(() => {
@@ -91,8 +92,8 @@ export function NodeValidationBadge({
         return { errors, warnings, info, total: errors + warnings + info };
     }, [combinedIssues]);
 
-    // Don't render if no issues
-    if (counts.total === 0) {
+    // Don't render if validation indicators are hidden or no issues
+    if (hideNodeValidationIndicators || counts.total === 0) {
         return null;
     }
 
@@ -146,8 +147,13 @@ export function NodeValidationBadge({
 export function getNodeValidationBorderStyle(
     nodeId: string,
     nodeValidationErrors: ValidationError[],
-    workflowValidation: ReturnType<typeof useWorkflowStore.getState>["workflowValidation"]
+    workflowValidation: ReturnType<typeof useWorkflowStore.getState>["workflowValidation"],
+    hideIndicators = false
 ): { hasIssues: boolean; borderClass: string; leftBorderColor: string | undefined } {
+    // Return no styling if indicators are hidden
+    if (hideIndicators) {
+        return { hasIssues: false, borderClass: "", leftBorderColor: undefined };
+    }
     // Check node-level errors
     const hasNodeErrors = nodeValidationErrors.some((e) => e.severity === "error");
     const hasNodeWarnings = nodeValidationErrors.some((e) => e.severity === "warning");

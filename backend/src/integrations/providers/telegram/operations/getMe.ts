@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { TelegramClient } from "../client/TelegramClient";
 import type { TelegramGetMeResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -25,7 +24,6 @@ export const getMeOperation: OperationDefinition = (() => {
             description: "Get basic information about the bot",
             category: "data",
             inputSchema: getMeSchema,
-            inputSchemaJSON: toJSONSchema(getMeSchema),
             retryable: true,
             timeout: 10000
         };

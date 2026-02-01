@@ -28,35 +28,7 @@ export const getChannelOperation: OperationDefinition = {
         "Get detailed information about a YouTube channel by ID, username, or authenticated user",
     category: "channels",
     retryable: true,
-    inputSchema: getChannelSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            channelId: {
-                type: "string",
-                description: "The YouTube channel ID"
-            },
-            forUsername: {
-                type: "string",
-                description: "Get channel by legacy username"
-            },
-            mine: {
-                type: "boolean",
-                description: "Get the authenticated user's channel",
-                default: false
-            },
-            part: {
-                type: "array",
-                items: {
-                    type: "string",
-                    enum: ["snippet", "statistics", "contentDetails", "brandingSettings", "status"]
-                },
-                description: "Channel resource parts to include",
-                default: ["snippet", "statistics"]
-            }
-        },
-        required: []
-    }
+    inputSchema: getChannelSchema
 };
 
 /**

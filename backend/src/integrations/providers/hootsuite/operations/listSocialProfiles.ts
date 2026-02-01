@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { HootsuiteClient } from "../client/HootsuiteClient";
 import type { HootsuiteSocialProfile } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -25,7 +24,6 @@ export const listSocialProfilesOperation: OperationDefinition = (() => {
             description: "List all connected social media profiles in Hootsuite",
             category: "profiles",
             inputSchema: listSocialProfilesSchema,
-            inputSchemaJSON: toJSONSchema(listSocialProfilesSchema),
             retryable: true,
             timeout: 10000
         };

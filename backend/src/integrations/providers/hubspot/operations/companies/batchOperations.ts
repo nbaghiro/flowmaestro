@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { HubspotClient } from "../../client/HubspotClient";
 import type { HubspotCompany, HubspotBatchResponse } from "../types";
@@ -26,7 +25,6 @@ export const batchCreateCompaniesOperation: OperationDefinition = {
     description: "Create multiple companies at once (max 100)",
     category: "crm",
     inputSchema: batchCreateCompaniesSchema,
-    inputSchemaJSON: toJSONSchema(batchCreateCompaniesSchema),
     retryable: true,
     timeout: 10000
 };
@@ -81,7 +79,6 @@ export const batchUpdateCompaniesOperation: OperationDefinition = {
     description: "Update multiple companies at once (max 100)",
     category: "crm",
     inputSchema: batchUpdateCompaniesSchema,
-    inputSchemaJSON: toJSONSchema(batchUpdateCompaniesSchema),
     retryable: true,
     timeout: 10000
 };
@@ -136,7 +133,6 @@ export const batchReadCompaniesOperation: OperationDefinition = {
     description: "Read multiple companies by IDs (max 100)",
     category: "crm",
     inputSchema: batchReadCompaniesSchema,
-    inputSchemaJSON: toJSONSchema(batchReadCompaniesSchema),
     retryable: true,
     timeout: 10000
 };
@@ -194,7 +190,6 @@ export const batchUpsertCompaniesOperation: OperationDefinition = {
     description: "Create or update multiple companies at once (max 100)",
     category: "crm",
     inputSchema: batchUpsertCompaniesSchema,
-    inputSchemaJSON: toJSONSchema(batchUpsertCompaniesSchema),
     retryable: true,
     timeout: 10000
 };

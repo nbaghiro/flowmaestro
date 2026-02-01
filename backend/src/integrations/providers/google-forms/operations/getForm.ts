@@ -20,17 +20,7 @@ export const getFormOperation: OperationDefinition = {
     description: "Retrieve form structure and metadata",
     category: "forms",
     retryable: true,
-    inputSchema: getFormSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            formId: {
-                type: "string",
-                description: "The ID of the form to retrieve"
-            }
-        },
-        required: ["formId"]
-    }
+    inputSchema: getFormSchema
 };
 
 /**

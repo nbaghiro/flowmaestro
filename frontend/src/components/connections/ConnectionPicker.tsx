@@ -1,6 +1,6 @@
 import { Plus, Key, AlertCircle } from "lucide-react";
 import { useState } from "react";
-import { ALL_PROVIDERS } from "@flowmaestro/shared";
+import { ALL_PROVIDERS, supportsOAuth } from "@flowmaestro/shared";
 import { ConnectionMethod } from "../../lib/api";
 import { cn } from "../../lib/utils";
 import { useConnectionStore } from "../../stores/connectionStore";
@@ -135,10 +135,11 @@ export function ConnectionPicker({
                                     !conn.metadata.account_info.email.includes("unknown")
                                         ? ` (${conn.metadata.account_info.email})`
                                         : "";
+                                const testSuffix = conn.metadata?.isTestConnection ? " [Test]" : "";
 
                                 return {
                                     value: conn.id,
-                                    label: displayName + emailSuffix
+                                    label: displayName + emailSuffix + testSuffix
                                 };
                             })
                         ]}
@@ -146,7 +147,7 @@ export function ConnectionPicker({
 
                     {/* Show method badge for selected connection */}
                     {selectedConnection && (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                             <span
                                 className={cn(
                                     "inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full",
@@ -156,6 +157,13 @@ export function ConnectionPicker({
                             >
                                 {methodBadgeConfig[selectedConnection.connection_method].label}
                             </span>
+
+                            {/* Test mode badge */}
+                            {selectedConnection.metadata?.isTestConnection && (
+                                <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                                    Test Mode
+                                </span>
+                            )}
 
                             {/* OAuth expiry warning */}
                             {selectedConnection.connection_method === "oauth2" &&
@@ -211,7 +219,7 @@ export function ConnectionPicker({
                         onSuccess={() => {
                             setIsAddDialogOpen(false);
                         }}
-                        supportsOAuth={providerInfo.methods.includes("oauth2")}
+                        supportsOAuth={supportsOAuth(providerInfo.methods)}
                         supportsApiKey={providerInfo.methods.includes("api_key")}
                         oauthSettings={providerInfo.oauthSettings}
                     />

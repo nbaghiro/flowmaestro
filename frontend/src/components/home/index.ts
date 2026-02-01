@@ -3,6 +3,7 @@ export { HorizontalCardRow } from "./HorizontalCardRow";
 export { MixedInterfaces } from "./MixedInterfaces";
 export { MixedTemplates } from "./MixedTemplates";
 export { RecentAgents } from "./RecentAgents";
+export { RecentKnowledgeBases } from "./RecentKnowledgeBases";
 export { RecentPersonas } from "./RecentPersonas";
 export { RecentWorkflows } from "./RecentWorkflows";
 export { WelcomeSection } from "./WelcomeSection";

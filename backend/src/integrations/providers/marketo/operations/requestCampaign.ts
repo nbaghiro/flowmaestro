@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { MarketoClient } from "../client/MarketoClient";
 
@@ -37,7 +36,6 @@ export const requestCampaignOperation: OperationDefinition = {
     category: "campaigns",
     actionType: "write",
     inputSchema: requestCampaignSchema,
-    inputSchemaJSON: toJSONSchema(requestCampaignSchema),
     retryable: true,
     timeout: 15000
 };

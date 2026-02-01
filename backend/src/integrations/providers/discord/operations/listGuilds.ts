@@ -1,7 +1,6 @@
 import { z } from "zod";
 import type { DiscordGuild } from "@flowmaestro/shared";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { DiscordClient } from "../client/DiscordClient";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 
@@ -26,7 +25,6 @@ export const listGuildsOperation: OperationDefinition = (() => {
             description: "List Discord servers (guilds) the connected user is a member of",
             category: "discovery",
             inputSchema: listGuildsSchema,
-            inputSchemaJSON: toJSONSchema(listGuildsSchema),
             retryable: true,
             timeout: 15000
         };

@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { DatadogClient } from "../client/DatadogClient";
 
@@ -23,7 +22,6 @@ export const createEventOperation: OperationDefinition = {
     description: "Post a new event to the Datadog event stream",
     category: "events",
     inputSchema: createEventSchema,
-    inputSchemaJSON: toJSONSchema(createEventSchema),
     retryable: false,
     timeout: 30000
 };

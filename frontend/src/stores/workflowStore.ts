@@ -7,6 +7,7 @@ import {
     type WorkflowValidationResult,
     type WorkflowValidationContext,
     type WorkflowValidationIssue,
+    type NodeExecutionStatus,
     getErrorMessage,
     validateNodeConfig,
     nodeValidationRules,
@@ -60,8 +61,6 @@ function debouncedWorkflowValidation(get: () => WorkflowStore): void {
 
 export const INITIAL_NODE_WIDTH = 260;
 export const INITIAL_NODE_HEIGHT = 160;
-
-export type NodeExecutionStatus = "idle" | "pending" | "running" | "success" | "error" | "skipped";
 
 export interface NodeExecutionState {
     status: NodeExecutionStatus;
@@ -137,6 +136,12 @@ interface WorkflowStore {
     workflowValidation: WorkflowValidationResult | null;
     workflowValidationContext: WorkflowValidationContext | null;
 
+    // Current workflow ID (for persistence)
+    currentWorkflowId: string | null;
+
+    // UI state for hiding validation indicators on nodes (persisted per workflow)
+    hideNodeValidationIndicators: boolean;
+
     // Actions
     setNodes: (nodes: Node[]) => void;
     setEdges: (edges: Edge[]) => void;
@@ -168,6 +173,10 @@ interface WorkflowStore {
     setWorkflowValidationContext: (context: WorkflowValidationContext) => void;
     getNodeWorkflowIssues: (nodeId: string) => WorkflowValidationIssue[];
 
+    // UI actions
+    setCurrentWorkflowId: (workflowId: string | null) => void;
+    toggleNodeValidationIndicators: () => void;
+
     // Connection auto-fill
     autoFillMissingConnections: (
         connections: Array<{ id: string; provider: string; status: string }>
@@ -187,6 +196,8 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
     nodeValidation: {},
     workflowValidation: null,
     workflowValidationContext: null,
+    currentWorkflowId: null,
+    hideNodeValidationIndicators: true,
 
     setNodes: (nodes) => {
         const sizedNodes = nodes.map((node) => ({
@@ -624,6 +635,42 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
         const { workflowValidation } = get();
         if (!workflowValidation) return [];
         return workflowValidation.nodeIssues.get(nodeId) || [];
+    },
+
+    setCurrentWorkflowId: (workflowId: string | null) => {
+        // Load persisted state for this workflow from localStorage (default to hidden)
+        let hideIndicators = true;
+        if (workflowId) {
+            try {
+                const stored = localStorage.getItem(`workflow-hide-validation-${workflowId}`);
+                // Only override default if there's a stored value
+                if (stored !== null) {
+                    hideIndicators = stored === "true";
+                }
+            } catch {
+                // Ignore localStorage errors
+            }
+        }
+        set({ currentWorkflowId: workflowId, hideNodeValidationIndicators: hideIndicators });
+    },
+
+    toggleNodeValidationIndicators: () => {
+        const { currentWorkflowId, hideNodeValidationIndicators } = get();
+        const newValue = !hideNodeValidationIndicators;
+
+        // Persist to localStorage if we have a workflow ID
+        if (currentWorkflowId) {
+            try {
+                localStorage.setItem(
+                    `workflow-hide-validation-${currentWorkflowId}`,
+                    String(newValue)
+                );
+            } catch {
+                // Ignore localStorage errors
+            }
+        }
+
+        set({ hideNodeValidationIndicators: newValue });
     },
 
     autoFillMissingConnections: (

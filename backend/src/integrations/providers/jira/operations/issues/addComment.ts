@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { addCommentInputSchema, type AddCommentInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { JiraClient } from "../../client/JiraClient";
@@ -9,7 +8,6 @@ export const addCommentOperation: OperationDefinition = {
     description: "Add a comment to an issue.",
     category: "issues",
     inputSchema: addCommentInputSchema,
-    inputSchemaJSON: toJSONSchema(addCommentInputSchema),
     retryable: true,
     timeout: 10000
 };

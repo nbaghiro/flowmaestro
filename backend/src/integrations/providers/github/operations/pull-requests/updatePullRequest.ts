@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { GitHubClient } from "../../client/GitHubClient";
 import { GitHubOwnerSchema, GitHubRepoNameSchema, GitHubIssueNumberSchema } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
@@ -29,7 +28,6 @@ export const updatePullRequestOperation: OperationDefinition = {
     description: "Update an existing pull request",
     category: "pull_requests",
     inputSchema: updatePullRequestSchema,
-    inputSchemaJSON: toJSONSchema(updatePullRequestSchema),
     retryable: true,
     timeout: 15000
 };

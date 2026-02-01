@@ -15,6 +15,7 @@ export interface WorkflowExample {
     title: string;
     description: string;
     integrations: string[]; // Provider slugs to show icons
+    screenshotBase?: string; // Base name for screenshot (e.g., "workflow-sales-meeting-prep")
 }
 
 // Solution category type
@@ -37,7 +38,7 @@ export interface SolutionCategory {
 // Mapping from solution categories to provider categories
 export const SOLUTION_CATEGORY_MAPPINGS: Record<string, string[]> = {
     sales: ["CRM & Sales", "Payment Processing"],
-    marketing: ["Marketing", "Social Media", "Analytics", "Social Media Management"],
+    marketing: ["Marketing", "Social Media", "Analytics"],
     operations: ["Productivity", "Project Management", "HR", "ERP", "Scheduling", "File Storage"],
     support: ["Customer Support", "Communication"],
     engineering: [
@@ -140,7 +141,7 @@ export const SOLUTIONS: SolutionCategory[] = [
             "From content creation to campaign analytics, automate the repetitive work that slows your marketing team down. Focus on strategy while FlowMaestro handles the execution.",
         icon: Megaphone,
         color: "purple",
-        providerCategories: ["Marketing", "Social Media", "Analytics", "Social Media Management"],
+        providerCategories: ["Marketing", "Social Media", "Analytics"],
         painPoints: [
             { text: "Content creation takes forever with constant back-and-forth between tools" },
             { text: "Campaign performance data is scattered across multiple platforms" },

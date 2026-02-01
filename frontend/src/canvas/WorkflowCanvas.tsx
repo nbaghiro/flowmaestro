@@ -134,6 +134,8 @@ export function WorkflowCanvas({
                 connectionMode={ConnectionMode.Loose}
                 fitView
                 fitViewOptions={{ padding: 0.05, maxZoom: 1 }}
+                minZoom={0.1}
+                maxZoom={2}
                 proOptions={{ hideAttribution: true }}
             >
                 <ZoomCompensatedBackground baseGap={12} baseSize={1} />

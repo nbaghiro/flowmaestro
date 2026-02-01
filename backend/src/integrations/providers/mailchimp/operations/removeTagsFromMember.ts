@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { MailchimpClient } from "../client/MailchimpClient";
 
@@ -17,7 +16,6 @@ export const removeTagsFromMemberOperation: OperationDefinition = {
     description: "Remove tags from a member in a Mailchimp audience",
     category: "tags",
     inputSchema: removeTagsFromMemberSchema,
-    inputSchemaJSON: toJSONSchema(removeTagsFromMemberSchema),
     retryable: false,
     timeout: 10000
 };

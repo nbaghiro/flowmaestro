@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { updateIssueInputSchema, type UpdateIssueInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { JiraClient } from "../../client/JiraClient";
@@ -9,7 +8,6 @@ export const updateIssueOperation: OperationDefinition = {
     description: "Update an existing issue's fields. Supports standard fields and custom fields.",
     category: "issues",
     inputSchema: updateIssueInputSchema,
-    inputSchemaJSON: toJSONSchema(updateIssueInputSchema),
     retryable: true,
     timeout: 10000
 };

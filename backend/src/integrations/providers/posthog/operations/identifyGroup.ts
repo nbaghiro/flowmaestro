@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { PostHogClient } from "../client/PostHogClient";
 import {
     PostHogDistinctIdSchema,
@@ -36,7 +35,6 @@ export const identifyGroupOperation: OperationDefinition = {
     category: "groups",
     actionType: "write",
     inputSchema: identifyGroupSchema,
-    inputSchemaJSON: toJSONSchema(identifyGroupSchema),
     retryable: true,
     timeout: 10000
 };

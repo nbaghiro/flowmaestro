@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { createServiceLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { RedditClient } from "../client/RedditClient";
 import {
     SubredditNameSchema,
@@ -38,7 +37,6 @@ export const getPostsOperation: OperationDefinition = (() => {
                 "Get posts from a subreddit. Supports sorting by hot, new, top, rising, or controversial.",
             category: "posts",
             inputSchema: getPostsSchema,
-            inputSchemaJSON: toJSONSchema(getPostsSchema),
             retryable: true,
             timeout: 15000
         };

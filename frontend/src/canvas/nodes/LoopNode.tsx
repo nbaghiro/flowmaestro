@@ -1,11 +1,12 @@
 import { Repeat } from "lucide-react";
 import { memo } from "react";
 import { NodeProps } from "reactflow";
+import type { NodeExecutionStatus } from "@flowmaestro/shared";
 import { BaseNode } from "./BaseNode";
 
 interface LoopNodeData {
     label: string;
-    status?: "idle" | "pending" | "running" | "success" | "error";
+    status?: NodeExecutionStatus;
     loopType?: "forEach" | "while" | "times";
     arrayVariable?: string;
     itemVariable?: string;

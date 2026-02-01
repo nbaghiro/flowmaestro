@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { addTagToTaskInputSchema, type AddTagToTaskInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { AsanaClient } from "../../client/AsanaClient";
@@ -9,7 +8,6 @@ export const addTagToTaskOperation: OperationDefinition = {
     description: "Add a tag to a task in Asana.",
     category: "tasks",
     inputSchema: addTagToTaskInputSchema,
-    inputSchemaJSON: toJSONSchema(addTagToTaskInputSchema),
     retryable: true,
     timeout: 10000
 };

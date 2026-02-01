@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { getCurrentUserInputSchema, type GetCurrentUserInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { AsanaClient } from "../../client/AsanaClient";
@@ -9,7 +8,6 @@ export const getCurrentUserOperation: OperationDefinition = {
     description: "Get the currently authenticated Asana user.",
     category: "users",
     inputSchema: getCurrentUserInputSchema,
-    inputSchemaJSON: toJSONSchema(getCurrentUserInputSchema),
     retryable: true,
     timeout: 10000
 };

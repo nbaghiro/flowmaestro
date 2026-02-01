@@ -1,4 +1,7 @@
 import { getLogger } from "../../core/logging";
+import { toJSONSchema } from "../../core/utils/zod-to-json-schema";
+import { getSandboxConfig, type SandboxConfig } from "../sandbox/SandboxConfig";
+import { sandboxDataService } from "../sandbox/SandboxDataService";
 import { ProviderRegistry } from "./ProviderRegistry";
 import {
     inferActionType,
@@ -13,15 +16,50 @@ import type { ConnectionWithData } from "../../storage/models/Connection";
 const logger = getLogger();
 
 /**
+ * Extended connection metadata that includes test connection flag
+ */
+interface ConnectionMetadataWithTestFlag {
+    isTestConnection?: boolean;
+    [key: string]: unknown;
+}
+
+/**
  * Execution Router - intelligently routes requests to direct API or MCP
+ *
+ * Handles routing to sandbox for test connections automatically.
  */
 export class ExecutionRouter {
-    constructor(private providerRegistry: ProviderRegistry) {}
+    private sandboxConfig: SandboxConfig;
+
+    constructor(private providerRegistry: ProviderRegistry) {
+        this.sandboxConfig = getSandboxConfig();
+    }
 
     /**
      * Execute operation (direct API or MCP based on context)
+     *
+     * Automatically routes to sandbox for test connections.
      */
     async execute(
+        providerName: string,
+        operationId: string,
+        params: Record<string, unknown>,
+        connection: ConnectionWithData,
+        context: ExecutionContext
+    ): Promise<OperationResult> {
+        // Check if sandbox mode applies to this operation
+        if (this.shouldUseSandbox(providerName, operationId, connection)) {
+            return this.executeSandbox(providerName, operationId, params, connection, context);
+        }
+
+        // Normal execution path
+        return this.executeReal(providerName, operationId, params, connection, context);
+    }
+
+    /**
+     * Execute operation for real (not sandboxed)
+     */
+    private async executeReal(
         providerName: string,
         operationId: string,
         params: Record<string, unknown>,
@@ -39,6 +77,158 @@ export class ExecutionRouter {
         } else {
             return await this.executeDirect(provider, operationId, params, connection, context);
         }
+    }
+
+    /**
+     * Execute operation in sandbox mode
+     */
+    private async executeSandbox(
+        providerName: string,
+        operationId: string,
+        params: Record<string, unknown>,
+        connection: ConnectionWithData,
+        context: ExecutionContext
+    ): Promise<OperationResult> {
+        logger.debug(
+            {
+                component: "ExecutionRouter",
+                provider: providerName,
+                operation: operationId,
+                connectionId: connection.id
+            },
+            "Sandbox mode enabled for operation"
+        );
+
+        const sandboxResponse = await sandboxDataService.getSandboxResponse(
+            providerName,
+            operationId,
+            params
+        );
+
+        if (sandboxResponse) {
+            logger.debug(
+                {
+                    component: "ExecutionRouter",
+                    provider: providerName,
+                    operation: operationId,
+                    success: sandboxResponse.success
+                },
+                "Returning sandbox response"
+            );
+            return sandboxResponse;
+        }
+
+        // Handle fallback behavior when no sandbox data exists
+        return this.handleSandboxFallback(providerName, operationId, params, connection, context);
+    }
+
+    /**
+     * Determine if sandbox mode should be used for this operation
+     */
+    private shouldUseSandbox(
+        providerName: string,
+        operationId: string,
+        connection: ConnectionWithData
+    ): boolean {
+        // Check if connection is marked as test connection
+        const metadata = connection.metadata as ConnectionMetadataWithTestFlag | undefined;
+        if (metadata?.isTestConnection) {
+            return true;
+        }
+
+        // Check operation-level override
+        const operationKey = `${providerName}:${operationId}`;
+        const opOverride = this.sandboxConfig.operationOverrides[operationKey];
+        if (opOverride !== undefined) {
+            return opOverride.enabled;
+        }
+
+        // Check provider-level override
+        const providerOverride = this.sandboxConfig.providerOverrides[providerName];
+        if (providerOverride !== undefined) {
+            return providerOverride.enabled;
+        }
+
+        // Fall back to global setting
+        return this.sandboxConfig.enabled;
+    }
+
+    /**
+     * Handle fallback when no sandbox data exists
+     */
+    private async handleSandboxFallback(
+        providerName: string,
+        operationId: string,
+        params: Record<string, unknown>,
+        connection: ConnectionWithData,
+        context: ExecutionContext
+    ): Promise<OperationResult> {
+        const fallbackBehavior = this.getSandboxFallbackBehavior(providerName, operationId);
+
+        logger.debug(
+            {
+                component: "ExecutionRouter",
+                provider: providerName,
+                operation: operationId,
+                fallbackBehavior
+            },
+            "No sandbox data found, using fallback behavior"
+        );
+
+        switch (fallbackBehavior) {
+            case "passthrough":
+                // Allow real API call
+                return this.executeReal(providerName, operationId, params, connection, context);
+
+            case "empty":
+                // Return empty success response
+                return {
+                    success: true,
+                    data: {}
+                };
+
+            case "error":
+            default:
+                // Return error indicating no sandbox data
+                return {
+                    success: false,
+                    error: {
+                        type: "validation",
+                        message: `No sandbox data found for ${providerName}:${operationId}`,
+                        retryable: false
+                    }
+                };
+        }
+    }
+
+    /**
+     * Get fallback behavior for an operation in sandbox mode
+     */
+    private getSandboxFallbackBehavior(
+        providerName: string,
+        operationId: string
+    ): SandboxConfig["fallbackBehavior"] {
+        const operationKey = `${providerName}:${operationId}`;
+
+        // Check operation-specific fallback
+        if (this.sandboxConfig.operationOverrides[operationKey]?.fallbackBehavior) {
+            return this.sandboxConfig.operationOverrides[operationKey].fallbackBehavior!;
+        }
+
+        // Check provider-specific fallback
+        if (this.sandboxConfig.providerOverrides[providerName]?.fallbackBehavior) {
+            return this.sandboxConfig.providerOverrides[providerName].fallbackBehavior!;
+        }
+
+        // Use global fallback
+        return this.sandboxConfig.fallbackBehavior;
+    }
+
+    /**
+     * Check if sandbox data exists for an operation
+     */
+    hasSandboxData(provider: string, operation: string): boolean {
+        return sandboxDataService.hasSandboxData(provider, operation);
     }
 
     /**
@@ -125,15 +315,9 @@ export class ExecutionRouter {
             const operations = provider.getOperations();
 
             return operations.map((op) => {
-                if (!op.inputSchemaJSON) {
-                    logger.error(
-                        { component: "ExecutionRouter", operationId: op.id },
-                        "Operation is missing inputSchemaJSON"
-                    );
-                    throw new Error(`Operation ${op.id} is missing inputSchemaJSON`);
-                }
-
-                const parameters = this.extractParametersFromSchema(op.inputSchemaJSON);
+                // Derive JSON Schema from Zod schema on-demand
+                const inputSchemaJSON = toJSONSchema(op.inputSchema);
+                const parameters = this.extractParametersFromSchema(inputSchemaJSON);
 
                 return {
                     id: op.id,
@@ -141,8 +325,7 @@ export class ExecutionRouter {
                     description: op.description,
                     category: op.category,
                     actionType: op.actionType ?? inferActionType(op.id),
-                    inputSchema: op.inputSchemaJSON,
-                    inputSchemaJSON: op.inputSchemaJSON,
+                    inputSchema: inputSchemaJSON,
                     parameters,
                     retryable: op.retryable
                 };

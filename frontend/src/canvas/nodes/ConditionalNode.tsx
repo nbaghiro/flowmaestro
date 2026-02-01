@@ -1,12 +1,13 @@
 import { GitBranch, CheckCircle2, XCircle } from "lucide-react";
 import { memo, useEffect } from "react";
 import { NodeProps, Handle, Position, useNodeId, useUpdateNodeInternals } from "reactflow";
+import type { NodeExecutionStatus } from "@flowmaestro/shared";
 import { useWorkflowStore } from "../../stores/workflowStore";
 import { BaseNode, ConnectorLayout } from "./BaseNode";
 
 interface ConditionalNodeData {
     label: string;
-    status?: "idle" | "pending" | "running" | "success" | "error";
+    status?: NodeExecutionStatus;
     conditionType?: "simple" | "expression";
     leftValue?: string;
     operator?: string;

@@ -1,5 +1,4 @@
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { ShopifyClient } from "../client/ShopifyClient";
 import { DeleteWebhookSchema, type DeleteWebhookParams } from "../schemas";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -17,7 +16,6 @@ export const deleteWebhookOperation: OperationDefinition = (() => {
             description: "Remove a webhook subscription by its ID",
             category: "webhooks",
             inputSchema: DeleteWebhookSchema,
-            inputSchemaJSON: toJSONSchema(DeleteWebhookSchema),
             retryable: true, // Deletion is idempotent
             timeout: 15000
         };

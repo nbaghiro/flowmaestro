@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { getSectionInputSchema, type GetSectionInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { AsanaClient } from "../../client/AsanaClient";
@@ -9,7 +8,6 @@ export const getSectionOperation: OperationDefinition = {
     description: "Retrieve a specific section from Asana by its GID.",
     category: "sections",
     inputSchema: getSectionInputSchema,
-    inputSchemaJSON: toJSONSchema(getSectionInputSchema),
     retryable: true,
     timeout: 10000
 };

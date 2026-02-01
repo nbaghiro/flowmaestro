@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { TableauClient } from "../client/TableauClient";
 import { TableauPageSizeSchema, TableauPageNumberSchema, TableauFilterSchema } from "./schemas";
 import type { TableauDataSourcesResponse } from "./types";
@@ -25,7 +24,6 @@ export const listDataSourcesOperation: OperationDefinition = {
     description: "Get all data sources on the site",
     category: "datasources",
     inputSchema: listDataSourcesSchema,
-    inputSchemaJSON: toJSONSchema(listDataSourcesSchema),
     retryable: true,
     timeout: 30000
 };

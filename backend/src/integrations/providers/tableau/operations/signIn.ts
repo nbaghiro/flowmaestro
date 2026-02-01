@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { TableauClient } from "../client/TableauClient";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 
@@ -20,7 +19,6 @@ export const signInOperation: OperationDefinition = {
     category: "auth",
     actionType: "write",
     inputSchema: signInSchema,
-    inputSchemaJSON: toJSONSchema(signInSchema),
     retryable: true,
     timeout: 30000
 };

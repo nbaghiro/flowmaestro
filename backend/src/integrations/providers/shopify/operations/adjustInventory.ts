@@ -1,5 +1,4 @@
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { ShopifyClient } from "../client/ShopifyClient";
 import { AdjustInventorySchema, type AdjustInventoryParams } from "../schemas";
 import type { ShopifyInventoryLevelResponse } from "./types";
@@ -19,7 +18,6 @@ export const adjustInventoryOperation: OperationDefinition = (() => {
                 "Adjust inventory level by a relative amount (positive to add, negative to subtract)",
             category: "inventory",
             inputSchema: AdjustInventorySchema,
-            inputSchemaJSON: toJSONSchema(AdjustInventorySchema),
             retryable: false, // Inventory adjustments should not be retried to avoid double-adjustments
             timeout: 15000
         };

@@ -21,21 +21,7 @@ export const clearValuesOperation: OperationDefinition = {
     description: "Clear values from a range in a spreadsheet",
     category: "values",
     retryable: true,
-    inputSchema: clearValuesSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            spreadsheetId: {
-                type: "string",
-                description: "Spreadsheet ID"
-            },
-            range: {
-                type: "string",
-                description: "A1 notation range to clear (e.g., 'Sheet1!A1:B10')"
-            }
-        },
-        required: ["spreadsheetId", "range"]
-    }
+    inputSchema: clearValuesSchema
 };
 
 /**

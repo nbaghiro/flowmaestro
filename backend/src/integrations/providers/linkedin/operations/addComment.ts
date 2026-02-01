@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { LinkedInClient } from "../client/LinkedInClient";
 import { PostIdSchema, AuthorUrnSchema, CommentTextSchema } from "../schemas";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -29,7 +28,6 @@ export const addCommentOperation: OperationDefinition = (() => {
             description: "Add a comment to a LinkedIn post.",
             category: "engagement",
             inputSchema: addCommentSchema,
-            inputSchemaJSON: toJSONSchema(addCommentSchema),
             retryable: false,
             timeout: 15000
         };

@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { FacebookClient } from "../client/FacebookClient";
 import type { MessengerSendResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -45,7 +44,6 @@ export const sendMediaTemplateOperation: OperationDefinition = (() => {
             description: "Send an image or video with an optional button",
             category: "messaging",
             inputSchema: sendMediaTemplateSchema,
-            inputSchemaJSON: toJSONSchema(sendMediaTemplateSchema),
             retryable: true,
             timeout: 30000
         };

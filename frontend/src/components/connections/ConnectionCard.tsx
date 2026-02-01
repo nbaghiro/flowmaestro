@@ -86,7 +86,7 @@ export function ConnectionCard({
             </div>
 
             {/* Badges */}
-            <div className="flex items-center gap-2 mb-3">
+            <div className="flex items-center gap-2 mb-3 flex-wrap">
                 <span
                     className={cn(
                         "inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full",
@@ -95,6 +95,13 @@ export function ConnectionCard({
                 >
                     {methodConfig.label}
                 </span>
+
+                {/* Test Mode Badge */}
+                {connection.metadata?.isTestConnection && (
+                    <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                        Test Mode
+                    </span>
+                )}
 
                 {/* OAuth Expiry Warning */}
                 {connection.connection_method === "oauth2" && connection.metadata?.expires_at && (

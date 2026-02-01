@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { TwitterClient } from "../client/TwitterClient";
 import { UsernameSchema } from "../schemas";
 import type { XAPIResponse, XUser } from "./types";
@@ -31,7 +30,6 @@ export const getUserOperation: OperationDefinition = (() => {
                 "Get user profile information. Returns the authenticated user if no username is provided.",
             category: "users",
             inputSchema: getUserSchema,
-            inputSchemaJSON: toJSONSchema(getUserSchema),
             retryable: true,
             timeout: 10000
         };

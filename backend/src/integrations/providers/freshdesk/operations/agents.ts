@@ -3,7 +3,6 @@
  */
 
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { FreshdeskClient } from "../client/FreshdeskClient";
 import type { FreshdeskAgent } from "../types";
@@ -25,7 +24,6 @@ export const listAgentsOperation: OperationDefinition = {
     description: "List all support agents",
     category: "data",
     inputSchema: listAgentsSchema,
-    inputSchemaJSON: toJSONSchema(listAgentsSchema),
     retryable: true,
     timeout: 30000
 };
@@ -71,7 +69,6 @@ export const getAgentOperation: OperationDefinition = {
     description: "Retrieve a specific agent",
     category: "data",
     inputSchema: getAgentSchema,
-    inputSchemaJSON: toJSONSchema(getAgentSchema),
     retryable: true,
     timeout: 10000
 };
@@ -113,7 +110,6 @@ export const getCurrentAgentOperation: OperationDefinition = {
     description: "Get the authenticated agent's details",
     category: "data",
     inputSchema: getCurrentAgentSchema,
-    inputSchemaJSON: toJSONSchema(getCurrentAgentSchema),
     retryable: true,
     timeout: 10000
 };

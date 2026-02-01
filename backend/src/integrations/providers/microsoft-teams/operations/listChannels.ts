@@ -14,13 +14,6 @@ export const listChannelsOperation: OperationDefinition = {
     description: "List all channels in a Microsoft Team",
     category: "channels",
     inputSchema: listChannelsSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["teamId"],
-        properties: {
-            teamId: { type: "string", description: "ID of the team" }
-        }
-    },
     retryable: true
 };
 

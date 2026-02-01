@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { MailchimpClient } from "../client/MailchimpClient";
 
@@ -17,7 +16,6 @@ export const archiveMemberOperation: OperationDefinition = {
         "Archive (soft delete) a member from a Mailchimp audience. The member can be re-added later.",
     category: "members",
     inputSchema: archiveMemberSchema,
-    inputSchemaJSON: toJSONSchema(archiveMemberSchema),
     retryable: false,
     timeout: 10000
 };

@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { VercelEnvVarOutput } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { VercelClient } from "../client/VercelClient";
@@ -28,7 +27,6 @@ export const setEnvironmentVariableOperation: OperationDefinition = {
     category: "environment",
     actionType: "write",
     inputSchema: setEnvironmentVariableSchema,
-    inputSchemaJSON: toJSONSchema(setEnvironmentVariableSchema),
     retryable: false,
     timeout: 30000
 };

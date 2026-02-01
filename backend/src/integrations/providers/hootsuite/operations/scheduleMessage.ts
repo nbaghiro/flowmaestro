@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { HootsuiteClient } from "../client/HootsuiteClient";
 import {
     HootsuiteSocialProfileIdSchema,
@@ -41,7 +40,6 @@ export const scheduleMessageOperation: OperationDefinition = (() => {
             description: "Schedule a new post in Hootsuite",
             category: "messages",
             inputSchema: scheduleMessageSchema,
-            inputSchemaJSON: toJSONSchema(scheduleMessageSchema),
             retryable: true,
             timeout: 15000
         };

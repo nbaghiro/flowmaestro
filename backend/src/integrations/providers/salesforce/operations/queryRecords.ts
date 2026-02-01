@@ -41,45 +41,7 @@ export const queryRecordsOperation: OperationDefinition = {
         "Execute a SOQL query to retrieve records from Salesforce. Supports full SOQL or structured query parameters.",
     category: "query",
     retryable: true,
-    inputSchema: queryRecordsSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            query: {
-                type: "string",
-                description: "Full SOQL query string (takes precedence over other parameters)"
-            },
-            objectType: {
-                type: "string",
-                description: "Object type to query (e.g., Account, Contact, Lead)"
-            },
-            fields: {
-                type: "array",
-                items: { type: "string" },
-                description: "Fields to select (default: Id, Name)",
-                default: ["Id", "Name"]
-            },
-            where: {
-                type: "string",
-                description: "WHERE clause conditions (without WHERE keyword)"
-            },
-            orderBy: {
-                type: "string",
-                description: "ORDER BY clause (e.g., 'Name ASC')"
-            },
-            limit: {
-                type: "integer",
-                minimum: 1,
-                maximum: 2000,
-                description: "Maximum records to return"
-            },
-            fetchAll: {
-                type: "boolean",
-                description: "Fetch all pages of results (use with caution for large datasets)",
-                default: false
-            }
-        }
-    }
+    inputSchema: queryRecordsSchema
 };
 
 /**

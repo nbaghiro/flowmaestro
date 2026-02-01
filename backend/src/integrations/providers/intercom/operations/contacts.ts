@@ -3,7 +3,6 @@
  */
 
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { IntercomClient } from "../client/IntercomClient";
 import type { IntercomContact, IntercomListResponse } from "../types";
@@ -32,7 +31,6 @@ export const listContactsOperation: OperationDefinition = {
     description: "List all contacts with optional filters",
     category: "data",
     inputSchema: listContactsSchema,
-    inputSchemaJSON: toJSONSchema(listContactsSchema),
     retryable: true,
     timeout: 30000
 };
@@ -102,7 +100,6 @@ export const getContactOperation: OperationDefinition = {
     description: "Retrieve a specific contact by ID",
     category: "data",
     inputSchema: getContactSchema,
-    inputSchemaJSON: toJSONSchema(getContactSchema),
     retryable: true,
     timeout: 10000
 };
@@ -154,7 +151,6 @@ export const createContactOperation: OperationDefinition = {
     description: "Create a new contact (lead or user)",
     category: "data",
     inputSchema: createContactSchema,
-    inputSchemaJSON: toJSONSchema(createContactSchema),
     retryable: false,
     timeout: 10000
 };
@@ -215,7 +211,6 @@ export const updateContactOperation: OperationDefinition = {
     description: "Update an existing contact",
     category: "data",
     inputSchema: updateContactSchema,
-    inputSchemaJSON: toJSONSchema(updateContactSchema),
     retryable: false,
     timeout: 10000
 };
@@ -279,7 +274,6 @@ export const searchContactsOperation: OperationDefinition = {
     description: "Search contacts with query",
     category: "data",
     inputSchema: searchContactsSchema,
-    inputSchemaJSON: toJSONSchema(searchContactsSchema),
     retryable: true,
     timeout: 30000
 };

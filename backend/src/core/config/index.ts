@@ -462,6 +462,36 @@ export const config = {
         mailchimp: {
             clientId: process.env.MAILCHIMP_CLIENT_ID || "",
             clientSecret: process.env.MAILCHIMP_CLIENT_SECRET || ""
+        },
+
+        // QuickBooks
+        quickbooks: {
+            clientId: process.env.QUICKBOOKS_CLIENT_ID || "",
+            clientSecret: process.env.QUICKBOOKS_CLIENT_SECRET || ""
+        },
+
+        // FreshBooks
+        freshbooks: {
+            clientId: process.env.FRESHBOOKS_CLIENT_ID || "",
+            clientSecret: process.env.FRESHBOOKS_CLIENT_SECRET || ""
+        },
+
+        // Workday
+        workday: {
+            clientId: process.env.WORKDAY_CLIENT_ID || "",
+            clientSecret: process.env.WORKDAY_CLIENT_SECRET || ""
+        },
+
+        // Rippling
+        rippling: {
+            clientId: process.env.RIPPLING_CLIENT_ID || "",
+            clientSecret: process.env.RIPPLING_CLIENT_SECRET || ""
+        },
+
+        // Square
+        square: {
+            clientId: process.env.SQUARE_CLIENT_ID || "",
+            clientSecret: process.env.SQUARE_CLIENT_SECRET || ""
         }
     }
 };
@@ -483,6 +513,7 @@ export function getOAuthRedirectUri(provider: string): string {
         "google-calendar": "/oauth/google/callback",
         "google-drive": "/oauth/google/callback",
         "google-docs": "/oauth/google/callback",
+        "google-slides": "/oauth/google/callback",
         "google-forms": "/oauth/google/callback",
         gmail: "/oauth/google/callback",
 
@@ -492,6 +523,7 @@ export function getOAuthRedirectUri(provider: string): string {
         "microsoft-onedrive": "/oauth/microsoft/callback",
         "microsoft-excel": "/oauth/microsoft/callback",
         "microsoft-word": "/oauth/microsoft/callback",
+        "microsoft-powerpoint": "/oauth/microsoft/callback",
         "microsoft-teams": "/oauth/microsoft/callback",
 
         // Meta services all use the same callback
@@ -539,6 +571,11 @@ export function getOAuthRedirectUri(provider: string): string {
         clickup: "/oauth/clickup/callback",
         klaviyo: "/oauth/klaviyo/callback",
         mailchimp: "/oauth/mailchimp/callback",
+        quickbooks: "/oauth/quickbooks/callback",
+        freshbooks: "/oauth/freshbooks/callback",
+        workday: "/oauth/workday/callback",
+        rippling: "/oauth/rippling/callback",
+        square: "/oauth/square/callback",
 
         // OAuth 1.0a providers
         evernote: "/oauth1/evernote/callback"
@@ -561,6 +598,7 @@ export function getOAuthCredentials(provider: string): { clientId: string; clien
         "google-calendar": "google",
         "google-drive": "google",
         "google-docs": "google",
+        "google-slides": "google",
         "google-forms": "google",
         gmail: "google",
 
@@ -570,6 +608,7 @@ export function getOAuthCredentials(provider: string): { clientId: string; clien
         "microsoft-onedrive": "microsoft",
         "microsoft-excel": "microsoft",
         "microsoft-word": "microsoft",
+        "microsoft-powerpoint": "microsoft",
         "microsoft-teams": "microsoft",
 
         // Meta services - special handling
@@ -616,7 +655,11 @@ export function getOAuthCredentials(provider: string): { clientId: string; clien
         "cal-com": "calcom",
         clickup: "clickup",
         klaviyo: "klaviyo",
-        mailchimp: "mailchimp"
+        mailchimp: "mailchimp",
+        quickbooks: "quickbooks",
+        freshbooks: "freshbooks",
+        workday: "workday",
+        rippling: "rippling"
     };
 
     const configKey = providerMap[provider];

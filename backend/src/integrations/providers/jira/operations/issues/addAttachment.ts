@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { addAttachmentInputSchema, type AddAttachmentInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { JiraClient } from "../../client/JiraClient";
@@ -9,7 +8,6 @@ export const addAttachmentOperation: OperationDefinition = {
     description: "Upload a file attachment to an issue. File content should be base64 encoded.",
     category: "issues",
     inputSchema: addAttachmentInputSchema,
-    inputSchemaJSON: toJSONSchema(addAttachmentInputSchema),
     retryable: true,
     timeout: 30000 // Longer timeout for file uploads
 };

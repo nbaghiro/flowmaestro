@@ -1,3 +1,4 @@
+import { toJSONSchema } from "../../../../core/utils/zod-to-json-schema";
 import { LinkedInClient } from "../client/LinkedInClient";
 import { executeAddComment } from "../operations/addComment";
 import { executeAddReaction } from "../operations/addReaction";
@@ -23,7 +24,7 @@ export class LinkedInMCPAdapter {
         return Array.from(this.operations.values()).map((op) => ({
             name: `linkedin_${op.id}`,
             description: op.description,
-            inputSchema: op.inputSchemaJSON,
+            inputSchema: toJSONSchema(op.inputSchema),
             executeRef: op.id
         }));
     }

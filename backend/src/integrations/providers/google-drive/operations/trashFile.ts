@@ -21,17 +21,7 @@ export const trashFileOperation: OperationDefinition = {
         "Move a file or folder to trash (soft delete). Files in trash are automatically deleted after 30 days.",
     category: "organization",
     retryable: true,
-    inputSchema: trashFileSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            fileId: {
-                type: "string",
-                description: "File or folder ID to move to trash"
-            }
-        },
-        required: ["fileId"]
-    }
+    inputSchema: trashFileSchema
 };
 
 /**

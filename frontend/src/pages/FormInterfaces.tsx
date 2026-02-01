@@ -1,4 +1,4 @@
-import { ClipboardList, Plus, Trash2, FolderInput, FolderMinus, Search } from "lucide-react";
+import { Plus, Trash2, FolderInput, FolderMinus, Search } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import type {
@@ -17,6 +17,7 @@ import { FolderDropdown } from "../components/common/FolderDropdown";
 import { PageHeader } from "../components/common/PageHeader";
 import { SkeletonGrid } from "../components/common/SkeletonGrid";
 import { SortDropdown } from "../components/common/SortDropdown";
+import { EmptyStateWithGhostCards } from "../components/empty-states";
 import {
     CreateFolderDialog,
     MoveToFolderDialog,
@@ -538,23 +539,11 @@ export function FormInterfaces() {
                     </Button>
                 </div>
             ) : formInterfaces.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed border-border rounded-lg bg-card">
-                    <ClipboardList className="w-12 h-12 text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-semibold text-foreground mb-2">
-                        {currentFolder
-                            ? "No form interfaces in this folder"
-                            : "No form interfaces yet"}
-                    </h3>
-                    <p className="text-sm text-muted-foreground mb-6 text-center max-w-md">
-                        {currentFolder
-                            ? "Move form interfaces here or create a new one."
-                            : "Create a form interface to expose your workflows or agents as public forms with custom branding."}
-                    </p>
-                    <Button variant="primary" onClick={() => setIsCreateDialogOpen(true)}>
-                        <Plus className="w-4 h-4 mr-2" />
-                        {currentFolder ? "Create Form Interface" : "Create Form Interface"}
-                    </Button>
-                </div>
+                <EmptyStateWithGhostCards
+                    entityType="form-interface"
+                    onCreateClick={() => setIsCreateDialogOpen(true)}
+                    isInFolder={!!currentFolder}
+                />
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
                     {filteredFormInterfaces.map((fi) => (

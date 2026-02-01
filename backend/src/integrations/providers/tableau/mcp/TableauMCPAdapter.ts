@@ -1,3 +1,4 @@
+import { toJSONSchema } from "../../../../core/utils/zod-to-json-schema";
 import { TableauClient } from "../client/TableauClient";
 import { executeDownloadWorkbook } from "../operations/downloadWorkbook";
 import { executeGetDataSource } from "../operations/getDataSource";
@@ -27,7 +28,7 @@ export class TableauMCPAdapter {
         return Array.from(this.operations.values()).map((op) => ({
             name: `tableau_${op.id}`,
             description: op.description,
-            inputSchema: op.inputSchemaJSON,
+            inputSchema: toJSONSchema(op.inputSchema),
             executeRef: op.id
         }));
     }

@@ -15,18 +15,6 @@ export const createCommentOperation: OperationDefinition = {
         nodeId: z.string().optional().describe("Node ID to attach comment to"),
         parentId: z.string().optional().describe("Parent comment ID for replies")
     }),
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            fileKey: { type: "string", description: "Figma file key from URL" },
-            message: { type: "string", description: "Comment message text" },
-            x: { type: "number", description: "X coordinate for comment placement" },
-            y: { type: "number", description: "Y coordinate for comment placement" },
-            nodeId: { type: "string", description: "Node ID to attach comment to" },
-            parentId: { type: "string", description: "Parent comment ID for replies" }
-        },
-        required: ["fileKey", "message"]
-    },
     retryable: false
 };
 

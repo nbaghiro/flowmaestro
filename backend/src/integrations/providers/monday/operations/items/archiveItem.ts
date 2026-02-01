@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { ARCHIVE_ITEM } from "../../graphql/mutations";
 import { archiveItemInputSchema, type ArchiveItemInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
@@ -10,7 +9,6 @@ export const archiveItemOperation: OperationDefinition = {
     description: "Archive an item in Monday.com. Archived items can be restored later.",
     category: "items",
     inputSchema: archiveItemInputSchema,
-    inputSchemaJSON: toJSONSchema(archiveItemInputSchema),
     retryable: true,
     timeout: 10000
 };

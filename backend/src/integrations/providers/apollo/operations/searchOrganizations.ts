@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../core/schema-utils";
 import { searchOrganizationsInputSchema, type SearchOrganizationsInput } from "../schemas";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { ApolloClient } from "../client/ApolloClient";
@@ -10,7 +9,6 @@ export const searchOrganizationsOperation: OperationDefinition = {
         "Search Apollo's database of 35M+ companies with filters. Consumes credits per search.",
     category: "search",
     inputSchema: searchOrganizationsInputSchema,
-    inputSchemaJSON: toJSONSchema(searchOrganizationsInputSchema),
     retryable: true,
     timeout: 30000
 };

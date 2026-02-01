@@ -15,7 +15,7 @@ import { BaseNodeHandler, type NodeHandlerInput, type NodeHandlerOutput } from "
 const connectionRepository = new ConnectionRepository();
 const logger = createActivityLogger({ nodeType: "Integration" });
 
-// Initialize execution router (no MCP service for now, will add later)
+// Initialize execution router (handles sandbox routing internally)
 const executionRouter = new ExecutionRouter(providerRegistry);
 
 // ============================================================================

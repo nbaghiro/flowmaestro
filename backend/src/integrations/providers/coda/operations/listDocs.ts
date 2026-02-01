@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { CodaClient } from "../client/CodaClient";
 import { CodaLimitSchema } from "../schemas";
 import type { CodaDocsResponse } from "./types";
@@ -23,7 +22,6 @@ export const listDocsOperation: OperationDefinition = {
     description: "List all Coda documents accessible with this API key",
     category: "documents",
     inputSchema: listDocsSchema,
-    inputSchemaJSON: toJSONSchema(listDocsSchema),
     retryable: true,
     timeout: 10000
 };

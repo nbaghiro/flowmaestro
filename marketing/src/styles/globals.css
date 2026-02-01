@@ -3,12 +3,53 @@
 @tailwind utilities;
 
 @layer base {
+    :root {
+        /* Light mode - matching frontend app */
+        --background: 0 0% 98%;
+        --foreground: 0 0% 9%;
+        --card: 0 0% 100%;
+        --card-foreground: 0 0% 9%;
+        --primary: 0 0% 9%;
+        --primary-foreground: 0 0% 100%;
+        --secondary: 0 0% 95%;
+        --secondary-foreground: 0 0% 9%;
+        --muted: 0 0% 95%;
+        --muted-foreground: 0 0% 45%;
+        --accent: 0 0% 95%;
+        --accent-foreground: 0 0% 9%;
+        --border: 0 0% 88%;
+        --input: 0 0% 95%;
+        --ring: 0 0% 9%;
+        --radius: 0.5rem;
+    }
+
+    .dark {
+        --background: 0 0% 9%;
+        --foreground: 0 0% 100%;
+        --card: 0 0% 12%;
+        --card-foreground: 0 0% 100%;
+        --primary: 0 0% 100%;
+        --primary-foreground: 0 0% 4%;
+        --secondary: 0 0% 15%;
+        --secondary-foreground: 0 0% 100%;
+        --muted: 0 0% 15%;
+        --muted-foreground: 0 0% 65%;
+        --accent: 0 0% 18%;
+        --accent-foreground: 0 0% 100%;
+        --border: 0 0% 20%;
+        --input: 0 0% 20%;
+        --ring: 0 0% 80%;
+    }
+
     * {
-        border-color: #3f3f46;
+        border-color: hsl(var(--border));
     }
 
     body {
-        @apply bg-background text-gray-50 antialiased;
+        background-color: hsl(var(--background));
+        color: hsl(var(--foreground));
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
         font-feature-settings: "rlig" 1, "calt" 1;
     }
 
@@ -18,21 +59,23 @@
 }
 
 @layer utilities {
+    /* Hexagonal Network background pattern - tech honeycomb with nodes */
     .grid-pattern {
-        background-image: linear-gradient(
-                rgba(63, 63, 70, 0.5) 1px,
-                transparent 1px
-            ),
-            linear-gradient(
-                90deg,
-                rgba(63, 63, 70, 0.5) 1px,
-                transparent 1px
-            );
-        background-size: 50px 50px;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='92' viewBox='0 0 80 92'%3E%3Cpath d='M40 4 L70 23 L70 69 L40 88 L10 69 L10 23 Z' fill='none' stroke='%23000' stroke-opacity='0.04' stroke-width='1'/%3E%3Ccircle cx='40' cy='4' r='2' fill='%23000' fill-opacity='0.06'/%3E%3Ccircle cx='70' cy='23' r='2' fill='%23000' fill-opacity='0.06'/%3E%3Ccircle cx='70' cy='69' r='2' fill='%23000' fill-opacity='0.06'/%3E%3Ccircle cx='40' cy='88' r='2' fill='%23000' fill-opacity='0.06'/%3E%3Ccircle cx='10' cy='69' r='2' fill='%23000' fill-opacity='0.06'/%3E%3Ccircle cx='10' cy='23' r='2' fill='%23000' fill-opacity='0.06'/%3E%3Ccircle cx='40' cy='46' r='2.5' fill='%23000' fill-opacity='0.07'/%3E%3Cpath d='M40 4 L40 46 M70 23 L40 46 M70 69 L40 46 M40 88 L40 46 M10 69 L40 46 M10 23 L40 46' fill='none' stroke='%23000' stroke-opacity='0.03' stroke-width='0.5'/%3E%3C/svg%3E");
+        background-size: 80px 92px;
+    }
+
+    .dark .grid-pattern {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='92' viewBox='0 0 80 92'%3E%3Cpath d='M40 4 L70 23 L70 69 L40 88 L10 69 L10 23 Z' fill='none' stroke='%23fff' stroke-opacity='0.04' stroke-width='1'/%3E%3Ccircle cx='40' cy='4' r='2' fill='%23fff' fill-opacity='0.06'/%3E%3Ccircle cx='70' cy='23' r='2' fill='%23fff' fill-opacity='0.06'/%3E%3Ccircle cx='70' cy='69' r='2' fill='%23fff' fill-opacity='0.06'/%3E%3Ccircle cx='40' cy='88' r='2' fill='%23fff' fill-opacity='0.06'/%3E%3Ccircle cx='10' cy='69' r='2' fill='%23fff' fill-opacity='0.06'/%3E%3Ccircle cx='10' cy='23' r='2' fill='%23fff' fill-opacity='0.06'/%3E%3Ccircle cx='40' cy='46' r='2.5' fill='%23fff' fill-opacity='0.07'/%3E%3Cpath d='M40 4 L40 46 M70 23 L40 46 M70 69 L40 46 M40 88 L40 46 M10 69 L40 46 M10 23 L40 46' fill='none' stroke='%23fff' stroke-opacity='0.03' stroke-width='0.5'/%3E%3C/svg%3E");
     }
 
     .text-gradient {
-        @apply bg-gradient-to-r from-gray-50 via-gray-200 to-gray-400 bg-clip-text text-transparent;
+        @apply bg-gradient-to-r from-foreground via-muted-foreground to-muted-foreground bg-clip-text text-transparent;
+    }
+
+    /* Gradient text for highlights - monochrome theme */
+    .gradient-text {
+        @apply text-foreground font-semibold;
     }
 
     /* Infinite scroll animations for integration logos */

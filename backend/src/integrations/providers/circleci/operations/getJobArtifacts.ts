@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { CircleCIArtifactOutput } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { CircleCIClient } from "../client/CircleCIClient";
@@ -17,7 +16,6 @@ export const getJobArtifactsOperation: OperationDefinition = {
     description: "Get artifacts from a completed CircleCI job",
     category: "jobs",
     inputSchema: getJobArtifactsSchema,
-    inputSchemaJSON: toJSONSchema(getJobArtifactsSchema),
     retryable: true,
     timeout: 30000
 };

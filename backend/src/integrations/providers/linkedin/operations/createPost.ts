@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { LinkedInClient } from "../client/LinkedInClient";
 import { PostContentSchema, AuthorUrnSchema, VisibilitySchema } from "../schemas";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -30,7 +29,6 @@ export const createPostOperation: OperationDefinition = (() => {
                 "Create a new text post on LinkedIn. Use the author URN from getProfile (urn:li:person:xxx) or an organization URN.",
             category: "posts",
             inputSchema: createPostSchema,
-            inputSchemaJSON: toJSONSchema(createPostSchema),
             retryable: false, // Don't retry to avoid duplicate posts
             timeout: 15000
         };

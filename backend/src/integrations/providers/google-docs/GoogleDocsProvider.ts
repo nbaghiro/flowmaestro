@@ -1,4 +1,5 @@
 import { config as appConfig, getOAuthRedirectUri } from "../../../core/config";
+import { toJSONSchema } from "../../../core/utils/zod-to-json-schema";
 import { BaseProvider } from "../../core/BaseProvider";
 import { GoogleDocsClient } from "./client/GoogleDocsClient";
 import {
@@ -194,7 +195,7 @@ export class GoogleDocsProvider extends BaseProvider {
         return this.getOperations().map((op) => ({
             name: `google_docs_${op.id}`,
             description: op.description,
-            inputSchema: op.inputSchemaJSON
+            inputSchema: toJSONSchema(op.inputSchema)
         }));
     }
 

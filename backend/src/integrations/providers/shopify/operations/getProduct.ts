@@ -1,5 +1,4 @@
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { ShopifyClient } from "../client/ShopifyClient";
 import { GetProductSchema, type GetProductParams } from "../schemas";
 import type { ShopifyProductResponse } from "./types";
@@ -19,7 +18,6 @@ export const getProductOperation: OperationDefinition = (() => {
                 "Retrieve a single product by its ID with full details including variants and images",
             category: "products",
             inputSchema: GetProductSchema,
-            inputSchemaJSON: toJSONSchema(GetProductSchema),
             retryable: true,
             timeout: 15000
         };

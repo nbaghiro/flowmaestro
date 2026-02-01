@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { SendGridListOutput } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { SendGridClient } from "../client/SendGridClient";
@@ -16,7 +15,6 @@ export const getListOperation: OperationDefinition = {
     description: "Get a single contact list by ID from SendGrid",
     category: "lists",
     inputSchema: getListSchema,
-    inputSchemaJSON: toJSONSchema(getListSchema),
     retryable: true,
     timeout: 10000
 };

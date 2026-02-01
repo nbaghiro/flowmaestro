@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { HubspotClient } from "../../client/HubspotClient";
 import type { HubspotListResponse } from "../types";
@@ -38,7 +37,6 @@ export const listOwnersOperation: OperationDefinition = {
     description: "List all owners in HubSpot CRM with pagination",
     category: "crm",
     inputSchema: listOwnersSchema,
-    inputSchemaJSON: toJSONSchema(listOwnersSchema),
     retryable: true,
     timeout: 10000
 };

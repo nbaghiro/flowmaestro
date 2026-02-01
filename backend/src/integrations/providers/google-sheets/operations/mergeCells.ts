@@ -30,31 +30,7 @@ export const mergeCellsOperation: OperationDefinition = {
     description: "Merge cells in a range",
     category: "formatting",
     retryable: true,
-    inputSchema: mergeCellsSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            spreadsheetId: { type: "string", description: "Spreadsheet ID" },
-            sheetId: { type: "number", description: "Sheet ID (gid)" },
-            startRowIndex: { type: "number", description: "Start row index (0-based)" },
-            endRowIndex: { type: "number", description: "End row index (exclusive)" },
-            startColumnIndex: { type: "number", description: "Start column index (0-based)" },
-            endColumnIndex: { type: "number", description: "End column index (exclusive)" },
-            mergeType: {
-                type: "string",
-                enum: ["MERGE_ALL", "MERGE_COLUMNS", "MERGE_ROWS"],
-                description: "How to merge cells (default: MERGE_ALL)"
-            }
-        },
-        required: [
-            "spreadsheetId",
-            "sheetId",
-            "startRowIndex",
-            "endRowIndex",
-            "startColumnIndex",
-            "endColumnIndex"
-        ]
-    }
+    inputSchema: mergeCellsSchema
 };
 
 /**

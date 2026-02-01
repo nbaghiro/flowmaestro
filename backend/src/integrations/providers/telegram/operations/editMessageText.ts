@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { TelegramClient } from "../client/TelegramClient";
 import {
     TelegramChatIdSchema,
@@ -36,7 +35,6 @@ export const editMessageTextOperation: OperationDefinition = (() => {
             description: "Edit the text of a previously sent message",
             category: "messaging",
             inputSchema: editMessageTextSchema,
-            inputSchemaJSON: toJSONSchema(editMessageTextSchema),
             retryable: true,
             timeout: 10000
         };

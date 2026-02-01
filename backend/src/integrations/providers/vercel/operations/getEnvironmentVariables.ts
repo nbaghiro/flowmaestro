@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { VercelEnvVarOutput } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { VercelClient } from "../client/VercelClient";
@@ -20,7 +19,6 @@ export const getEnvironmentVariablesOperation: OperationDefinition = {
     description: "Get all environment variables for a Vercel project",
     category: "environment",
     inputSchema: getEnvironmentVariablesSchema,
-    inputSchemaJSON: toJSONSchema(getEnvironmentVariablesSchema),
     retryable: true,
     timeout: 30000
 };

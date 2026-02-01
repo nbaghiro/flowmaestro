@@ -102,38 +102,18 @@ export function KBSettingsSection({ kb, onUpdate }: KBSettingsSectionProps) {
 
     return (
         <div className="space-y-6">
-            {/* Edit/Save Actions */}
-            {onUpdate && (
-                <div className="flex justify-end gap-2">
-                    {isEditing ? (
-                        <>
-                            <Button variant="ghost" onClick={handleCancel} disabled={isSaving}>
-                                <X className="w-4 h-4" />
-                                Cancel
-                            </Button>
-                            <Button
-                                variant="primary"
-                                onClick={handleSave}
-                                loading={isSaving}
-                                disabled={!formData.name.trim()}
-                            >
-                                <Save className="w-4 h-4" />
-                                Save Changes
-                            </Button>
-                        </>
-                    ) : (
-                        <Button variant="secondary" onClick={handleStartEdit}>
+            {/* General Information */}
+            <div className="bg-card border border-border rounded-lg p-6">
+                <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                        <BookOpen className="w-5 h-5 text-primary" />
+                        <h3 className="font-semibold text-foreground">General Information</h3>
+                    </div>
+                    {onUpdate && !isEditing && (
+                        <Button variant="secondary" size="sm" onClick={handleStartEdit}>
                             Edit Settings
                         </Button>
                     )}
-                </div>
-            )}
-
-            {/* General Information */}
-            <div className="bg-card border border-border rounded-lg p-6">
-                <div className="flex items-center gap-2 mb-4">
-                    <BookOpen className="w-5 h-5 text-primary" />
-                    <h3 className="font-semibold text-foreground">General Information</h3>
                 </div>
 
                 <div className="space-y-4">
@@ -332,6 +312,25 @@ export function KBSettingsSection({ kb, onUpdate }: KBSettingsSectionProps) {
                     </p>
                 </div>
             </div>
+
+            {/* Save/Cancel Actions when editing */}
+            {isEditing && onUpdate && (
+                <div className="flex justify-end gap-2 pt-2">
+                    <Button variant="ghost" onClick={handleCancel} disabled={isSaving}>
+                        <X className="w-4 h-4" />
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="primary"
+                        onClick={handleSave}
+                        loading={isSaving}
+                        disabled={!formData.name.trim()}
+                    >
+                        <Save className="w-4 h-4" />
+                        Save Changes
+                    </Button>
+                </div>
+            )}
         </div>
     );
 }

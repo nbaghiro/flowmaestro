@@ -24,7 +24,6 @@ import {
     isDatabaseConnectionData
 } from "@flowmaestro/shared";
 
-// Re-export for convenience
 export type {
     ConnectionMethod,
     ConnectionStatus,

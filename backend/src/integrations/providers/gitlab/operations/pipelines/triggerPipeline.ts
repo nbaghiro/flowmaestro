@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { GitLabClient } from "../../client/GitLabClient";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { GitLabPipeline } from "../types";
@@ -40,7 +39,6 @@ export const triggerPipelineOperation: OperationDefinition = {
     category: "pipelines",
     actionType: "write",
     inputSchema: triggerPipelineSchema,
-    inputSchemaJSON: toJSONSchema(triggerPipelineSchema),
     retryable: false,
     timeout: 30000
 };

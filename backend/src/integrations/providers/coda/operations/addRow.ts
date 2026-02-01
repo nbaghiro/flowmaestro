@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { CodaClient } from "../client/CodaClient";
 import { CodaDocIdSchema, CodaTableIdSchema } from "../schemas";
 import type { CodaAddRowResponse } from "./types";
@@ -25,7 +24,6 @@ export const addRowOperation: OperationDefinition = {
     description: "Add a new row to a Coda table",
     category: "data",
     inputSchema: addRowSchema,
-    inputSchemaJSON: toJSONSchema(addRowSchema),
     retryable: true,
     timeout: 10000
 };

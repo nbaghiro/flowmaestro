@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { DatadogClient } from "../client/DatadogClient";
 
@@ -17,7 +16,6 @@ export const muteMonitorOperation: OperationDefinition = {
     description: "Mute a monitor (silence alerts)",
     category: "monitors",
     inputSchema: muteMonitorSchema,
-    inputSchemaJSON: toJSONSchema(muteMonitorSchema),
     retryable: false,
     timeout: 30000
 };

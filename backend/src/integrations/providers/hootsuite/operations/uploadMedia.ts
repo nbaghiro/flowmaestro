@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { HootsuiteClient } from "../client/HootsuiteClient";
 import type { HootsuiteMediaUpload } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -29,7 +28,6 @@ export const uploadMediaOperation: OperationDefinition = (() => {
                 "Create a media upload URL in Hootsuite. Returns an upload URL to PUT your media file to.",
             category: "media",
             inputSchema: uploadMediaSchema,
-            inputSchemaJSON: toJSONSchema(uploadMediaSchema),
             retryable: true,
             timeout: 15000
         };

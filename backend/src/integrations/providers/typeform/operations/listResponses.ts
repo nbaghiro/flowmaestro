@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { TypeformClient } from "../client/TypeformClient";
 import { ListResponsesSchema } from "../schemas";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -16,7 +15,6 @@ export const listResponsesOperation: OperationDefinition = {
         "Get responses (submissions) for a specific typeform. Supports filtering by date range, completion status, and pagination.",
     category: "responses",
     inputSchema: listResponsesSchema,
-    inputSchemaJSON: toJSONSchema(listResponsesSchema),
     retryable: true,
     timeout: 60000 // Responses can be large, allow more time
 };

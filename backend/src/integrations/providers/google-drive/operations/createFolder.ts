@@ -22,25 +22,7 @@ export const createFolderOperation: OperationDefinition = {
     description: "Create a new folder in Google Drive, optionally within a parent folder",
     category: "folders",
     retryable: true,
-    inputSchema: createFolderSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            folderName: {
-                type: "string",
-                description: "Folder name"
-            },
-            parentFolderId: {
-                type: "string",
-                description: "Parent folder ID (omit for root directory)"
-            },
-            description: {
-                type: "string",
-                description: "Folder description"
-            }
-        },
-        required: ["folderName"]
-    }
+    inputSchema: createFolderSchema
 };
 
 /**

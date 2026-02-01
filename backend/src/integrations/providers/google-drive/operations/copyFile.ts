@@ -26,25 +26,7 @@ export const copyFileOperation: OperationDefinition = {
         "Create a copy of a file in Google Drive, optionally with a new name and/or location",
     category: "organization",
     retryable: true,
-    inputSchema: copyFileSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            fileId: {
-                type: "string",
-                description: "File ID to copy"
-            },
-            newName: {
-                type: "string",
-                description: "Name for the copy (optional, defaults to 'Copy of [original name]')"
-            },
-            parentFolderId: {
-                type: "string",
-                description: "Parent folder ID for the copy (optional)"
-            }
-        },
-        required: ["fileId"]
-    }
+    inputSchema: copyFileSchema
 };
 
 /**

@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { HelloSignClient } from "../client/HelloSignClient";
 import { HelloSignTemplateIdSchema } from "../schemas";
 import type { HelloSignCreateResponse } from "./types";
@@ -70,7 +69,6 @@ export const createFromTemplateOperation: OperationDefinition = (() => {
             description: "Create a signature request using a pre-defined template",
             category: "signature_requests",
             inputSchema: createFromTemplateSchema,
-            inputSchemaJSON: toJSONSchema(createFromTemplateSchema),
             retryable: false,
             timeout: 60000
         };

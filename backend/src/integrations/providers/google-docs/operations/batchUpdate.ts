@@ -26,26 +26,7 @@ export const batchUpdateOperation: OperationDefinition = {
         "Apply multiple updates to a document atomically. Supports all Google Docs API request types including insertText, deleteContentRange, insertInlineImage, createParagraphBullets, and more.",
     category: "documents",
     retryable: true,
-    inputSchema: batchUpdateSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            documentId: {
-                type: "string",
-                description: "The ID of the document to update"
-            },
-            requests: {
-                type: "array",
-                items: {
-                    type: "object",
-                    description:
-                        "A single update request. Common types: insertText, deleteContentRange, insertInlineImage, updateTextStyle, replaceAllText, insertTable, insertTableRow, deleteTableRow, insertPageBreak"
-                },
-                description: "Array of update requests to apply atomically"
-            }
-        },
-        required: ["documentId", "requests"]
-    }
+    inputSchema: batchUpdateSchema
 };
 
 interface BatchUpdateResponse {

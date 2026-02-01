@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { TelegramClient } from "../client/TelegramClient";
 import {
     TelegramChatIdSchema,
@@ -44,7 +43,6 @@ export const sendDocumentOperation: OperationDefinition = (() => {
             description: "Send a file/document to a Telegram chat",
             category: "media",
             inputSchema: sendDocumentSchema,
-            inputSchemaJSON: toJSONSchema(sendDocumentSchema),
             retryable: true,
             timeout: 60000
         };

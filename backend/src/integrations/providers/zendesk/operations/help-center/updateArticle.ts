@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { ZendeskClient } from "../../client/ZendeskClient";
 import type { ArticleResponse } from "../../types";
@@ -30,7 +29,6 @@ export const updateArticleOperation: OperationDefinition = {
     description: "Update an existing Help Center article",
     category: "help-center",
     inputSchema: updateArticleSchema,
-    inputSchemaJSON: toJSONSchema(updateArticleSchema),
     retryable: true,
     timeout: 15000
 };

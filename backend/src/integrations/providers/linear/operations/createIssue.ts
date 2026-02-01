@@ -31,43 +31,21 @@ export const createIssueOperation: OperationDefinition = {
     description: "Create a new issue in Linear",
     category: "issues",
     retryable: true,
-    inputSchema: createIssueSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            teamId: {
-                type: "string",
-                description: "Team ID where issue will be created"
-            },
-            title: {
-                type: "string",
-                description: "Issue title"
-            },
-            description: {
-                type: "string",
-                description: "Issue description (markdown)"
-            },
-            assigneeId: {
-                type: "string",
-                description: "Assignee user ID"
-            },
-            priority: {
-                type: "number",
-                description: "Priority (0=None, 1=Urgent, 2=High, 3=Normal, 4=Low)"
-            },
-            stateId: {
-                type: "string",
-                description: "Workflow state ID"
-            },
-            labelIds: {
-                type: "array",
-                items: { type: "string" },
-                description: "Array of label IDs"
-            }
-        },
-        required: ["teamId", "title"]
-    }
+    inputSchema: createIssueSchema
 };
+
+interface CreateIssueResponse {
+    issueCreate: {
+        success: boolean;
+        issue: {
+            id: string;
+            title: string;
+            identifier: string;
+            url: string;
+            createdAt: string;
+        };
+    };
+}
 
 /**
  * Execute create issue operation
@@ -77,11 +55,30 @@ export async function executeCreateIssue(
     params: CreateIssueParams
 ): Promise<OperationResult> {
     try {
-        const response = await client.createIssue(params);
+        const response = (await client.createIssue(params)) as CreateIssueResponse;
+
+        // Normalize the GraphQL response to extract the issue data
+        const issue = response.issueCreate?.issue;
+        if (!issue) {
+            return {
+                success: false,
+                error: {
+                    type: "server_error",
+                    message: "Linear API returned unexpected response format",
+                    retryable: false
+                }
+            };
+        }
 
         return {
             success: true,
-            data: response
+            data: {
+                id: issue.id,
+                title: issue.title,
+                identifier: issue.identifier,
+                url: issue.url,
+                createdAt: issue.createdAt
+            }
         };
     } catch (error) {
         return {

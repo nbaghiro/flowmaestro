@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { HubspotClient } from "../../client/HubspotClient";
 import type { HubspotTicket, HubspotListResponse } from "../types";
@@ -25,7 +24,6 @@ export const listTicketsOperation: OperationDefinition = {
     description: "List all tickets with pagination",
     category: "crm",
     inputSchema: listTicketsSchema,
-    inputSchemaJSON: toJSONSchema(listTicketsSchema),
     retryable: true,
     timeout: 10000
 };

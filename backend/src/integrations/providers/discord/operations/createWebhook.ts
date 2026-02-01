@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { DiscordClient } from "../client/DiscordClient";
 import type { DiscordWebhookResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -29,7 +28,6 @@ export const createWebhookOperation: OperationDefinition = (() => {
             description: "Create a webhook in a Discord channel",
             category: "management",
             inputSchema: createWebhookSchema,
-            inputSchemaJSON: toJSONSchema(createWebhookSchema),
             retryable: false,
             timeout: 15000
         };

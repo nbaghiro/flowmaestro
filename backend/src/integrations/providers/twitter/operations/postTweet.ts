@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { TwitterClient } from "../client/TwitterClient";
 import { TweetTextSchema, TweetIdSchema } from "../schemas";
 import type { CreateTweetResponse } from "./types";
@@ -30,7 +29,6 @@ export const postTweetOperation: OperationDefinition = (() => {
             description: "Create a new tweet on X. Can optionally reply to or quote another tweet.",
             category: "tweets",
             inputSchema: postTweetSchema,
-            inputSchemaJSON: toJSONSchema(postTweetSchema),
             retryable: false, // Don't retry to avoid duplicate tweets
             timeout: 15000
         };

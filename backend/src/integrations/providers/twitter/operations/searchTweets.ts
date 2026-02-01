@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { TwitterClient } from "../client/TwitterClient";
 import { SearchQuerySchema, MaxResultsSchema, PaginationTokenSchema } from "../schemas";
 import type { TweetsResponse } from "./types";
@@ -33,7 +32,6 @@ export const searchTweetsOperation: OperationDefinition = (() => {
                 "Search for tweets from the last 7 days. Supports advanced search operators.",
             category: "tweets",
             inputSchema: searchTweetsSchema,
-            inputSchemaJSON: toJSONSchema(searchTweetsSchema),
             retryable: true,
             timeout: 15000
         };

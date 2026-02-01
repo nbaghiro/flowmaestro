@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { getUserInputSchema, type GetUserInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { AsanaClient } from "../../client/AsanaClient";
@@ -9,7 +8,6 @@ export const getUserOperation: OperationDefinition = {
     description: "Retrieve a specific user from Asana by their GID.",
     category: "users",
     inputSchema: getUserInputSchema,
-    inputSchemaJSON: toJSONSchema(getUserInputSchema),
     retryable: true,
     timeout: 10000
 };

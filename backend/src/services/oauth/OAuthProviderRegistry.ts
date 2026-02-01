@@ -337,6 +337,55 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
         refreshable: true
     },
 
+    "google-slides": {
+        name: "google-slides",
+        displayName: "Google Slides",
+        authUrl: "https://accounts.google.com/o/oauth2/v2/auth",
+        tokenUrl: "https://oauth2.googleapis.com/token",
+        scopes: [
+            "https://www.googleapis.com/auth/presentations",
+            "https://www.googleapis.com/auth/drive.file"
+        ],
+        authParams: {
+            access_type: "offline",
+            prompt: "consent"
+        },
+        clientId: config.oauth.google.clientId,
+        clientSecret: config.oauth.google.clientSecret,
+        redirectUri: getOAuthRedirectUri("google"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`
+                    }
+                });
+
+                const data = (await response.json()) as {
+                    email?: string;
+                    name?: string;
+                    picture?: string;
+                    id?: string;
+                };
+
+                return {
+                    email: data.email,
+                    name: data.name,
+                    picture: data.picture,
+                    userId: data.id
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get Google Slides user info");
+                return {
+                    email: "unknown@google",
+                    name: "Google User"
+                };
+            }
+        },
+        revokeUrl: "https://oauth2.googleapis.com/revoke",
+        refreshable: true
+    },
+
     "google-forms": {
         name: "google-forms",
         displayName: "Google Forms",
@@ -1327,6 +1376,54 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
         refreshable: true
     },
 
+    "microsoft-powerpoint": {
+        name: "microsoft-powerpoint",
+        displayName: "Microsoft PowerPoint",
+        authUrl: "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
+        tokenUrl: "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+        scopes: ["User.Read", "Files.ReadWrite", "offline_access"],
+        authParams: {
+            response_mode: "query",
+            prompt: "consent"
+        },
+        clientId: config.oauth.microsoft.clientId,
+        clientSecret: config.oauth.microsoft.clientSecret,
+        redirectUri: getOAuthRedirectUri("microsoft"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://graph.microsoft.com/v1.0/me", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    id?: string;
+                    displayName?: string;
+                    mail?: string;
+                    userPrincipalName?: string;
+                };
+
+                return {
+                    userId: data.id,
+                    email: data.mail || data.userPrincipalName,
+                    name: data.displayName
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get PowerPoint user info");
+                return {
+                    email: "unknown@microsoft",
+                    name: "Microsoft User"
+                };
+            }
+        },
+        refreshable: true
+    },
+
     "microsoft-teams": {
         name: "microsoft-teams",
         displayName: "Microsoft Teams",
@@ -1378,6 +1475,62 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
                 };
             } catch (error) {
                 logger.error({ err: error }, "Failed to get Teams user info");
+                return {
+                    email: "unknown@microsoft",
+                    name: "Microsoft User"
+                };
+            }
+        },
+        refreshable: true
+    },
+
+    "microsoft-outlook": {
+        name: "microsoft-outlook",
+        displayName: "Microsoft Outlook",
+        authUrl: "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
+        tokenUrl: "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+        scopes: [
+            "User.Read",
+            "Mail.Read",
+            "Mail.ReadWrite",
+            "Mail.Send",
+            "Calendars.Read",
+            "Calendars.ReadWrite",
+            "offline_access"
+        ],
+        authParams: {
+            response_mode: "query",
+            prompt: "consent"
+        },
+        clientId: config.oauth.microsoft.clientId,
+        clientSecret: config.oauth.microsoft.clientSecret,
+        redirectUri: getOAuthRedirectUri("microsoft"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://graph.microsoft.com/v1.0/me", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    id?: string;
+                    displayName?: string;
+                    mail?: string;
+                    userPrincipalName?: string;
+                };
+
+                return {
+                    userId: data.id,
+                    email: data.mail || data.userPrincipalName,
+                    name: data.displayName
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get Outlook user info");
                 return {
                     email: "unknown@microsoft",
                     name: "Microsoft User"
@@ -3272,6 +3425,233 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
             }
         },
         refreshable: true
+    },
+
+    quickbooks: {
+        name: "quickbooks",
+        displayName: "QuickBooks",
+        authUrl: "https://appcenter.intuit.com/connect/oauth2",
+        tokenUrl: "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer",
+        scopes: ["com.intuit.quickbooks.accounting"],
+        clientId: config.oauth.quickbooks.clientId,
+        clientSecret: config.oauth.quickbooks.clientSecret,
+        redirectUri: getOAuthRedirectUri("quickbooks"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                // QuickBooks doesn't have a user info endpoint, but we get company info
+                // The realmId is provided in the callback URL, not from an API call
+                // We'll return minimal info here; realmId is captured during token exchange
+                const response = await fetch(
+                    "https://accounts.platform.intuit.com/v1/openid_connect/userinfo",
+                    {
+                        headers: {
+                            Authorization: `Bearer ${accessToken}`,
+                            Accept: "application/json"
+                        }
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    sub?: string;
+                    email?: string;
+                    emailVerified?: boolean;
+                    givenName?: string;
+                    familyName?: string;
+                    phoneNumber?: string;
+                };
+
+                return {
+                    userId: data.sub || "unknown",
+                    email: data.email || "unknown@quickbooks",
+                    name:
+                        data.givenName && data.familyName
+                            ? `${data.givenName} ${data.familyName}`
+                            : "QuickBooks User"
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get QuickBooks user info");
+                return {
+                    userId: "unknown",
+                    email: "unknown@quickbooks",
+                    name: "QuickBooks User"
+                };
+            }
+        },
+        refreshable: true
+    },
+
+    freshbooks: {
+        name: "freshbooks",
+        displayName: "FreshBooks",
+        authUrl: "https://auth.freshbooks.com/oauth/authorize",
+        tokenUrl: "https://api.freshbooks.com/auth/oauth/token",
+        scopes: [
+            "user:profile:read",
+            "user:clients:read",
+            "user:clients:write",
+            "user:invoices:read",
+            "user:invoices:write",
+            "user:expenses:read",
+            "user:expenses:write"
+        ],
+        clientId: config.oauth.freshbooks.clientId,
+        clientSecret: config.oauth.freshbooks.clientSecret,
+        redirectUri: getOAuthRedirectUri("freshbooks"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://api.freshbooks.com/auth/api/v1/users/me", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                        "Content-Type": "application/json"
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    response?: {
+                        id?: number;
+                        first_name?: string;
+                        last_name?: string;
+                        email?: string;
+                        business_memberships?: Array<{
+                            business?: {
+                                id?: number;
+                                name?: string;
+                                account_id?: string;
+                            };
+                        }>;
+                    };
+                };
+
+                const user = data.response;
+                const business = user?.business_memberships?.[0]?.business;
+
+                return {
+                    userId: user?.id?.toString() || "unknown",
+                    email: user?.email || "unknown@freshbooks",
+                    name:
+                        user?.first_name && user?.last_name
+                            ? `${user.first_name} ${user.last_name}`
+                            : "FreshBooks User",
+                    accountId: business?.account_id,
+                    businessName: business?.name
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get FreshBooks user info");
+                return {
+                    userId: "unknown",
+                    email: "unknown@freshbooks",
+                    name: "FreshBooks User"
+                };
+            }
+        },
+        refreshable: true
+    },
+
+    workday: {
+        name: "workday",
+        displayName: "Workday",
+        // Note: Workday URLs are tenant-specific. The tenant is collected via oauthSettings
+        // and substituted at runtime by the OAuth service. Default placeholder used here.
+        authUrl: "https://TENANT.workday.com/oauth2/TENANT/authorize",
+        tokenUrl: "https://TENANT.workday.com/ccx/oauth2/TENANT/token",
+        scopes: ["staffing", "system", "absenceManagement"],
+        clientId: config.oauth.workday.clientId,
+        clientSecret: config.oauth.workday.clientSecret,
+        redirectUri: getOAuthRedirectUri("workday"),
+        refreshable: true,
+        pkceEnabled: false
+    },
+
+    rippling: {
+        name: "rippling",
+        displayName: "Rippling",
+        authUrl: "https://api.rippling.com/o/authorize/",
+        tokenUrl: "https://api.rippling.com/o/token/",
+        scopes: [
+            "employee:read",
+            "department:read",
+            "company:read",
+            "leave_request:read",
+            "leave_request:write"
+        ],
+        clientId: config.oauth.rippling.clientId,
+        clientSecret: config.oauth.rippling.clientSecret,
+        redirectUri: getOAuthRedirectUri("rippling"),
+        refreshable: true,
+        pkceEnabled: false
+    },
+
+    // ==========================================================================
+    // Square - Payment Processing
+    // Uses OAuth 2.0 with standard flow
+    // ==========================================================================
+
+    square: {
+        name: "square",
+        displayName: "Square",
+        authUrl: "https://connect.squareup.com/oauth2/authorize",
+        tokenUrl: "https://connect.squareup.com/oauth2/token",
+        scopes: [
+            "PAYMENTS_READ",
+            "PAYMENTS_WRITE",
+            "CUSTOMERS_READ",
+            "CUSTOMERS_WRITE",
+            "ORDERS_READ",
+            "ORDERS_WRITE"
+        ],
+        clientId: config.oauth.square.clientId,
+        clientSecret: config.oauth.square.clientSecret,
+        redirectUri: getOAuthRedirectUri("square"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                // Get merchant info using the Merchants API
+                const response = await fetch("https://connect.squareup.com/v2/merchants/me", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                        "Content-Type": "application/json",
+                        "Square-Version": "2025-01-23"
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    merchant?: {
+                        id?: string;
+                        business_name?: string;
+                        country?: string;
+                        currency?: string;
+                        status?: string;
+                    };
+                };
+
+                return {
+                    merchantId: data.merchant?.id || "unknown",
+                    businessName: data.merchant?.business_name || "Square Merchant",
+                    country: data.merchant?.country,
+                    currency: data.merchant?.currency,
+                    status: data.merchant?.status
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get Square merchant info");
+                return {
+                    merchantId: "unknown",
+                    businessName: "Square Merchant"
+                };
+            }
+        },
+        refreshable: true,
+        pkceEnabled: false
     }
 };
 

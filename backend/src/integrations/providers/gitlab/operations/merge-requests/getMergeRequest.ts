@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { GitLabClient } from "../../client/GitLabClient";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { GitLabMergeRequest } from "../types";
@@ -25,7 +24,6 @@ export const getMergeRequestOperation: OperationDefinition = {
     description: "Get details of a specific merge request in a GitLab project",
     category: "merge-requests",
     inputSchema: getMergeRequestSchema,
-    inputSchemaJSON: toJSONSchema(getMergeRequestSchema),
     retryable: true,
     timeout: 30000
 };

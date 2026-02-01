@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { KlaviyoClient } from "../client/KlaviyoClient";
 
@@ -21,7 +20,6 @@ export const getProfileOperation: OperationDefinition = {
     description: "Get a single profile by ID",
     category: "profiles",
     inputSchema: getProfileSchema,
-    inputSchemaJSON: toJSONSchema(getProfileSchema),
     retryable: true,
     timeout: 10000
 };

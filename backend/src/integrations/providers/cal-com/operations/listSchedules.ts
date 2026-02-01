@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { CalComClient } from "../client/CalComClient";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 
@@ -25,7 +24,6 @@ export const listSchedulesOperation: OperationDefinition = (() => {
             category: "data",
             actionType: "read",
             inputSchema: listSchedulesSchema,
-            inputSchemaJSON: toJSONSchema(listSchedulesSchema),
             retryable: true,
             timeout: 10000
         };

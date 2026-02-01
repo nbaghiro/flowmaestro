@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { MailchimpTemplateOutput } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { MailchimpClient } from "../client/MailchimpClient";
@@ -30,7 +29,6 @@ export const getTemplatesOperation: OperationDefinition = {
     description: "Get all email templates from Mailchimp",
     category: "templates",
     inputSchema: getTemplatesSchema,
-    inputSchemaJSON: toJSONSchema(getTemplatesSchema),
     retryable: true,
     timeout: 15000
 };

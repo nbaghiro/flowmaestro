@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { DUPLICATE_GROUP } from "../../graphql/mutations";
 import { duplicateGroupInputSchema, type DuplicateGroupInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
@@ -10,7 +9,6 @@ export const duplicateGroupOperation: OperationDefinition = {
     description: "Duplicate a group on a Monday.com board.",
     category: "groups",
     inputSchema: duplicateGroupInputSchema,
-    inputSchemaJSON: toJSONSchema(duplicateGroupInputSchema),
     retryable: true,
     timeout: 10000
 };

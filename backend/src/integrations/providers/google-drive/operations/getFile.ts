@@ -26,22 +26,7 @@ export const getFileOperation: OperationDefinition = {
     description: "Get metadata for a specific file or folder in Google Drive",
     category: "files",
     retryable: true,
-    inputSchema: getFileSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            fileId: {
-                type: "string",
-                description: "File ID"
-            },
-            fields: {
-                type: "string",
-                description:
-                    "Comma-separated list of fields to include (e.g., 'id,name,mimeType,size')"
-            }
-        },
-        required: ["fileId"]
-    }
+    inputSchema: getFileSchema
 };
 
 /**

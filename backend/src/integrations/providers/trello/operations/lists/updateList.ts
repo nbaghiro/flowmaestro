@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { TrelloClient } from "../../client/TrelloClient";
 import { TrelloListIdSchema } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
@@ -30,7 +29,6 @@ export const updateListOperation: OperationDefinition = {
     category: "lists",
     actionType: "write",
     inputSchema: updateListSchema,
-    inputSchemaJSON: toJSONSchema(updateListSchema),
     retryable: false,
     timeout: 10000
 };

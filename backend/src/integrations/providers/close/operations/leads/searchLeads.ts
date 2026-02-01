@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { CloseClient } from "../../client/CloseClient";
 import type { CloseListResponse, CloseLead } from "../types";
@@ -25,7 +24,6 @@ export const searchLeadsOperation: OperationDefinition = {
     description: "Search leads using advanced query language",
     category: "leads",
     inputSchema: searchLeadsSchema,
-    inputSchemaJSON: toJSONSchema(searchLeadsSchema),
     retryable: true,
     timeout: 15000
 };

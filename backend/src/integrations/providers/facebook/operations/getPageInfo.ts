@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { FacebookClient } from "../client/FacebookClient";
 import type { MessengerPageResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -27,7 +26,6 @@ export const getPageInfoOperation: OperationDefinition = (() => {
             description: "Get information about a Facebook Page",
             category: "page",
             inputSchema: getPageInfoSchema,
-            inputSchemaJSON: toJSONSchema(getPageInfoSchema),
             retryable: true,
             timeout: 15000
         };

@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { CloseClient } from "../../client/CloseClient";
 import type { CloseNote } from "../types";
@@ -23,7 +22,6 @@ export const createNoteOperation: OperationDefinition = {
     description: "Add a note to a lead",
     category: "activities",
     inputSchema: createNoteSchema,
-    inputSchemaJSON: toJSONSchema(createNoteSchema),
     retryable: false,
     timeout: 10000
 };

@@ -21,17 +21,7 @@ export const removeFromPlaylistOperation: OperationDefinition = {
         "Remove a video from a YouTube playlist by its playlist item ID (use listPlaylistItems to get the ID)",
     category: "playlists",
     retryable: false,
-    inputSchema: removeFromPlaylistSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            playlistItemId: {
-                type: "string",
-                description: "The playlist item ID to remove (not the video ID)"
-            }
-        },
-        required: ["playlistItemId"]
-    }
+    inputSchema: removeFromPlaylistSchema
 };
 
 /**

@@ -18,27 +18,6 @@ export const getFileNodesOperation: OperationDefinition = {
             .describe("Tree depth to retrieve (limits nesting levels)"),
         includeGeometry: z.boolean().optional().describe("Include vector path geometry data")
     }),
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            fileKey: { type: "string", description: "Figma file key from URL" },
-            nodeIds: {
-                type: "array",
-                items: { type: "string" },
-                description: "Node IDs to retrieve (e.g., ['1:2', '1:3'])"
-            },
-            version: { type: "string", description: "Specific version ID to retrieve" },
-            depth: {
-                type: "number",
-                description: "Tree depth to retrieve (limits nesting levels)"
-            },
-            includeGeometry: {
-                type: "boolean",
-                description: "Include vector path geometry data"
-            }
-        },
-        required: ["fileKey", "nodeIds"]
-    },
     retryable: true
 };
 

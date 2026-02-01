@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { getIssueInputSchema, type GetIssueInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { JiraClient } from "../../client/JiraClient";
@@ -10,7 +9,6 @@ export const getIssueOperation: OperationDefinition = {
         "Get details of a specific issue by ID or key. Supports field filtering and expansion.",
     category: "issues",
     inputSchema: getIssueInputSchema,
-    inputSchemaJSON: toJSONSchema(getIssueInputSchema),
     retryable: true,
     timeout: 10000
 };

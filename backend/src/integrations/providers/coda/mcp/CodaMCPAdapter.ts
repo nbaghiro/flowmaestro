@@ -1,3 +1,4 @@
+import { toJSONSchema } from "../../../../core/utils/zod-to-json-schema";
 import { CodaClient } from "../client/CodaClient";
 import { executeAddRow } from "../operations/addRow";
 import { executeGetTables } from "../operations/getTables";
@@ -17,7 +18,7 @@ export class CodaMCPAdapter {
         return Array.from(this.operations.values()).map((op) => ({
             name: `coda_${op.id}`,
             description: op.description,
-            inputSchema: op.inputSchemaJSON,
+            inputSchema: toJSONSchema(op.inputSchema),
             executeRef: op.id
         }));
     }

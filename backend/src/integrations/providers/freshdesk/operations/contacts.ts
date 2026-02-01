@@ -3,7 +3,6 @@
  */
 
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { FreshdeskClient } from "../client/FreshdeskClient";
 import type { FreshdeskContact, FreshdeskSearchResponse } from "../types";
@@ -29,7 +28,6 @@ export const createContactOperation: OperationDefinition = {
     description: "Create a new contact",
     category: "data",
     inputSchema: createContactSchema,
-    inputSchemaJSON: toJSONSchema(createContactSchema),
     retryable: false,
     timeout: 10000
 };
@@ -83,7 +81,6 @@ export const getContactOperation: OperationDefinition = {
     description: "Retrieve a specific contact",
     category: "data",
     inputSchema: getContactSchema,
-    inputSchemaJSON: toJSONSchema(getContactSchema),
     retryable: true,
     timeout: 10000
 };
@@ -131,7 +128,6 @@ export const updateContactOperation: OperationDefinition = {
     description: "Update an existing contact",
     category: "data",
     inputSchema: updateContactSchema,
-    inputSchemaJSON: toJSONSchema(updateContactSchema),
     retryable: false,
     timeout: 10000
 };
@@ -186,7 +182,6 @@ export const listContactsOperation: OperationDefinition = {
     description: "List all contacts",
     category: "data",
     inputSchema: listContactsSchema,
-    inputSchemaJSON: toJSONSchema(listContactsSchema),
     retryable: true,
     timeout: 30000
 };
@@ -232,7 +227,6 @@ export const searchContactsOperation: OperationDefinition = {
     description: "Search contacts using query",
     category: "data",
     inputSchema: searchContactsSchema,
-    inputSchemaJSON: toJSONSchema(searchContactsSchema),
     retryable: true,
     timeout: 30000
 };

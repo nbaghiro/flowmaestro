@@ -24,19 +24,7 @@ export const describeObjectOperation: OperationDefinition = {
         "Get metadata about a Salesforce object including its fields, relationships, and picklist values",
     category: "metadata",
     retryable: true,
-    inputSchema: describeObjectSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            objectType: {
-                type: "string",
-                minLength: 1,
-                description:
-                    "Salesforce object type to describe (e.g., Account, Contact, Lead, Custom__c)"
-            }
-        },
-        required: ["objectType"]
-    }
+    inputSchema: describeObjectSchema
 };
 
 /**

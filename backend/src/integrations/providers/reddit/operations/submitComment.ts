@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { createServiceLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { RedditClient } from "../client/RedditClient";
 import { FullnameSchema, CommentTextSchema } from "../schemas";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -30,7 +29,6 @@ export const submitCommentOperation: OperationDefinition = (() => {
             description: "Submit a comment on a post or reply to another comment.",
             category: "comments",
             inputSchema: submitCommentSchema,
-            inputSchemaJSON: toJSONSchema(submitCommentSchema),
             retryable: false, // Don't retry to avoid duplicate comments
             timeout: 15000
         };

@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { GitHubClient } from "../../client/GitHubClient";
 import { GitHubOwnerSchema, GitHubRepoNameSchema, GitHubIssueNumberSchema } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
@@ -25,7 +24,6 @@ export const getPullRequestOperation: OperationDefinition = {
     description: "Get details about a specific pull request",
     category: "pull_requests",
     inputSchema: getPullRequestSchema,
-    inputSchemaJSON: toJSONSchema(getPullRequestSchema),
     retryable: true,
     timeout: 15000
 };

@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { UPDATE_GROUP } from "../../graphql/mutations";
 import { updateGroupInputSchema, type UpdateGroupInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
@@ -10,7 +9,6 @@ export const updateGroupOperation: OperationDefinition = {
     description: "Update a group's title, color, or position in Monday.com.",
     category: "groups",
     inputSchema: updateGroupInputSchema,
-    inputSchemaJSON: toJSONSchema(updateGroupInputSchema),
     retryable: true,
     timeout: 10000
 };

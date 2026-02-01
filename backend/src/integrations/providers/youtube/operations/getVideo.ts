@@ -36,35 +36,7 @@ export const getVideoOperation: OperationDefinition = {
     description: "Get detailed information about a specific YouTube video by ID",
     category: "videos",
     retryable: true,
-    inputSchema: getVideoSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            videoId: {
-                type: "string",
-                description: "The YouTube video ID"
-            },
-            part: {
-                type: "array",
-                items: {
-                    type: "string",
-                    enum: [
-                        "snippet",
-                        "contentDetails",
-                        "status",
-                        "statistics",
-                        "player",
-                        "topicDetails",
-                        "recordingDetails",
-                        "liveStreamingDetails"
-                    ]
-                },
-                description: "Video resource parts to include",
-                default: ["snippet", "contentDetails", "statistics", "status"]
-            }
-        },
-        required: ["videoId"]
-    }
+    inputSchema: getVideoSchema
 };
 
 /**

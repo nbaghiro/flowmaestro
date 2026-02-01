@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../core/schema-utils";
 import { deleteContactInputSchema, type DeleteContactInput } from "../schemas";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { ApolloClient } from "../client/ApolloClient";
@@ -9,7 +8,6 @@ export const deleteContactOperation: OperationDefinition = {
     description: "Delete a contact from Apollo",
     category: "contacts",
     inputSchema: deleteContactInputSchema,
-    inputSchemaJSON: toJSONSchema(deleteContactInputSchema),
     retryable: false,
     timeout: 30000
 };

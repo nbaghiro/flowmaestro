@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { assignIssueInputSchema, type AssignIssueInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { JiraClient } from "../../client/JiraClient";
@@ -9,7 +8,6 @@ export const assignIssueOperation: OperationDefinition = {
     description: "Assign an issue to a user. Pass null as accountId to unassign the issue.",
     category: "issues",
     inputSchema: assignIssueInputSchema,
-    inputSchemaJSON: toJSONSchema(assignIssueInputSchema),
     retryable: true,
     timeout: 10000
 };

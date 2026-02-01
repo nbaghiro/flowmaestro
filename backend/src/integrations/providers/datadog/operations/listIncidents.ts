@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { DatadogIncidentOutput } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { DatadogClient } from "../client/DatadogClient";
@@ -17,7 +16,6 @@ export const listIncidentsOperation: OperationDefinition = {
     description: "Get all incidents from Datadog",
     category: "incidents",
     inputSchema: listIncidentsSchema,
-    inputSchemaJSON: toJSONSchema(listIncidentsSchema),
     retryable: true,
     timeout: 30000
 };

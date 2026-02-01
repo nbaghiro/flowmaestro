@@ -1,3 +1,4 @@
+import { toJSONSchema } from "../../../../core/utils/zod-to-json-schema";
 import {
     // Board Operations
     executeCreateBoard,
@@ -67,7 +68,7 @@ export class MondayMCPAdapter {
         return Array.from(this.operations.values()).map((op) => ({
             name: `monday_${op.id}`,
             description: op.description,
-            inputSchema: op.inputSchemaJSON
+            inputSchema: toJSONSchema(op.inputSchema)
         }));
     }
 

@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { CodaClient } from "../client/CodaClient";
 import { CodaDocIdSchema, CodaLimitSchema } from "../schemas";
 import type { CodaTablesResponse } from "./types";
@@ -24,7 +23,6 @@ export const getTablesOperation: OperationDefinition = {
     description: "Get all tables in a Coda document",
     category: "data",
     inputSchema: getTablesSchema,
-    inputSchemaJSON: toJSONSchema(getTablesSchema),
     retryable: true,
     timeout: 10000
 };

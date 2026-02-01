@@ -29,27 +29,7 @@ export const batchGetValuesOperation: OperationDefinition = {
     description: "Get values from multiple ranges in a spreadsheet",
     category: "values",
     retryable: true,
-    inputSchema: batchGetValuesSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            spreadsheetId: {
-                type: "string",
-                description: "Spreadsheet ID"
-            },
-            ranges: {
-                type: "array",
-                items: { type: "string" },
-                description: "Array of A1 notation ranges (e.g., ['Sheet1!A1:B10', 'Sheet2!C1:D5'])"
-            },
-            valueRenderOption: {
-                type: "string",
-                enum: ["FORMATTED_VALUE", "UNFORMATTED_VALUE", "FORMULA"],
-                description: "How values should be represented (default: FORMATTED_VALUE)"
-            }
-        },
-        required: ["spreadsheetId", "ranges"]
-    }
+    inputSchema: batchGetValuesSchema
 };
 
 /**

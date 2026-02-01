@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { HubspotClient } from "../../client/HubspotClient";
 import type { HubspotContact, HubspotBatchResponse } from "../types";
@@ -26,7 +25,6 @@ export const batchCreateContactsOperation: OperationDefinition = {
     description: "Create multiple contacts at once (max 100)",
     category: "crm",
     inputSchema: batchCreateContactsSchema,
-    inputSchemaJSON: toJSONSchema(batchCreateContactsSchema),
     retryable: true,
     timeout: 10000
 };
@@ -80,7 +78,6 @@ export const batchUpdateContactsOperation: OperationDefinition = {
     description: "Update multiple contacts at once (max 100)",
     category: "crm",
     inputSchema: batchUpdateContactsSchema,
-    inputSchemaJSON: toJSONSchema(batchUpdateContactsSchema),
     retryable: true,
     timeout: 10000
 };
@@ -134,7 +131,6 @@ export const batchReadContactsOperation: OperationDefinition = {
     description: "Read multiple contacts by IDs (max 100)",
     category: "crm",
     inputSchema: batchReadContactsSchema,
-    inputSchemaJSON: toJSONSchema(batchReadContactsSchema),
     retryable: true,
     timeout: 10000
 };
@@ -192,7 +188,6 @@ export const batchUpsertContactsOperation: OperationDefinition = {
     description: "Create or update multiple contacts at once (max 100)",
     category: "crm",
     inputSchema: batchUpsertContactsSchema,
-    inputSchemaJSON: toJSONSchema(batchUpsertContactsSchema),
     retryable: true,
     timeout: 10000
 };

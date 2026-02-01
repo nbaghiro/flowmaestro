@@ -6,6 +6,8 @@
  * frontend and backend contexts.
  */
 
+import { ALL_PROVIDERS } from "./providers";
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -33,14 +35,20 @@ export interface NodePosition {
 /** Horizontal spacing between levels (columns) */
 export const HORIZONTAL_SPACING = 380;
 
-/** Vertical spacing between nodes at the same level */
+/** Base vertical spacing between nodes at the same level */
 export const VERTICAL_SPACING = 200;
+
+/** Minimum vertical spacing for dense levels */
+export const MIN_VERTICAL_SPACING = 180;
+
+/** Maximum vertical spacing for sparse levels (better fan-out) */
+export const MAX_VERTICAL_SPACING = 280;
 
 /** Starting X coordinate for the leftmost nodes */
 export const START_X = 100;
 
-/** Starting Y coordinate (vertical center) */
-export const START_Y = 100;
+/** Starting Y coordinate (vertical center) - higher for better visual balance */
+export const START_Y = 350;
 
 /** Gap between disconnected components */
 export const COMPONENT_GAP = 350;
@@ -50,6 +58,52 @@ export const ENTRY_NODE_TYPES = ["trigger", "input", "files", "url", "audioInput
 
 /** Node types that should be positioned last (rightmost) */
 export const EXIT_NODE_TYPES = ["output", "templateOutput", "audioOutput"];
+
+/** Priority order for sourceHandle values (determines vertical ordering of branches) */
+const HANDLE_PRIORITY: Record<string, number> = {
+    // Boolean conditions - true on top
+    true: 0,
+    false: 1,
+    // Common router values - positive outcomes higher
+    publish: 0,
+    approve: 0,
+    approved: 0,
+    success: 0,
+    high: 0,
+    urgent: 0,
+    revise: 1,
+    reject: 1,
+    rejected: 1,
+    review: 1,
+    medium: 1,
+    low: 2,
+    fail: 2,
+    failed: 2,
+    skip: 2,
+    default: 3
+};
+
+/**
+ * Get dynamic vertical spacing based on number of nodes at a level
+ * More nodes = slightly tighter spacing, fewer nodes = more spread
+ */
+function getDynamicVerticalSpacing(nodeCount: number): number {
+    if (nodeCount <= 1) return VERTICAL_SPACING;
+    if (nodeCount <= 2) return MAX_VERTICAL_SPACING;
+    if (nodeCount <= 3) return 220;
+    if (nodeCount <= 4) return VERTICAL_SPACING;
+    // For very dense levels, compress slightly
+    return Math.max(MIN_VERTICAL_SPACING, VERTICAL_SPACING - (nodeCount - 4) * 10);
+}
+
+/**
+ * Get handle priority for sorting branches
+ */
+function getHandlePriority(handle: string | null | undefined): number {
+    if (!handle) return 50;
+    const lowerHandle = handle.toLowerCase();
+    return HANDLE_PRIORITY[lowerHandle] ?? HANDLE_PRIORITY[handle] ?? 50;
+}
 
 // ============================================================================
 // MAIN LAYOUT FUNCTIONS
@@ -121,22 +175,24 @@ export function autoLayoutWorkflow(
         }
     }
 
-    // Keep comment nodes at their original positions
-    for (const comment of commentNodes) {
-        positions.set(comment.id, comment.position);
-    }
-
     // Apply wave effect to linear sections to avoid boring straight lines
     applyWaveEffect(positions);
 
     // Normalize positions to ensure they start from a reasonable origin
     normalizePositions(positions);
 
+    // Keep comment nodes at their original positions (added AFTER normalization
+    // so they don't get shifted)
+    for (const comment of commentNodes) {
+        positions.set(comment.id, comment.position);
+    }
+
     return positions;
 }
 
 /**
  * Simpler auto-layout for generated workflows (uses BFS-based level assignment)
+ * Enhanced with dynamic spacing and handle-priority ordering
  *
  * @param nodes - Array of nodes with id and type
  * @param edges - Array of edges with source, target, and optional sourceHandle
@@ -159,33 +215,45 @@ export function autoLayoutNodes(
     // Group nodes by level
     const nodesByLevel = groupNodesByLevelSimple(nodes, levels);
 
+    // Calculate complexity-aware center Y
+    const totalNodes = nodes.length;
+    const centerY = totalNodes > 12 ? 400 : totalNodes > 6 ? 350 : START_Y;
+
+    // Build edge map for branch detection
+    const edgesByTarget = new Map<
+        string,
+        Array<{ source: string; sourceHandle?: string | null }>
+    >();
+    for (const edge of edges) {
+        const targetEdges = edgesByTarget.get(edge.target) || [];
+        targetEdges.push({ source: edge.source, sourceHandle: edge.sourceHandle });
+        edgesByTarget.set(edge.target, targetEdges);
+    }
+
     // Calculate positions for each level
     for (const [level, levelNodes] of nodesByLevel.entries()) {
         const x = START_X + level * HORIZONTAL_SPACING;
 
-        // Check if any nodes in this level are branching targets
-        const branchInfo = getBranchInfo(levelNodes, edges);
+        // Use dynamic vertical spacing based on level density
+        const verticalSpacing = getDynamicVerticalSpacing(levelNodes.length);
 
-        levelNodes.forEach((node, index) => {
-            let y = START_Y;
-
-            if (branchInfo.has(node.id)) {
-                // This is a branch target - offset based on branch type
-                const branch = branchInfo.get(node.id)!;
-                if (branch.handle === "true") {
-                    y = START_Y - VERTICAL_SPACING;
-                } else if (branch.handle === "false") {
-                    y = START_Y + VERTICAL_SPACING;
-                } else {
-                    // Switch node or other multi-output
-                    y = START_Y + (index - levelNodes.length / 2) * VERTICAL_SPACING;
-                }
-            } else {
-                // Regular node - stack vertically if multiple at same level
-                const offset = (index - Math.floor(levelNodes.length / 2)) * VERTICAL_SPACING;
-                y = START_Y + offset;
+        // Sort nodes by handle priority for better branch visualization
+        const nodesWithPriority = levelNodes.map((node) => {
+            const incomingEdges = edgesByTarget.get(node.id) || [];
+            let minPriority = 50;
+            for (const inEdge of incomingEdges) {
+                minPriority = Math.min(minPriority, getHandlePriority(inEdge.sourceHandle));
             }
+            return { node, priority: minPriority };
+        });
+        nodesWithPriority.sort((a, b) => a.priority - b.priority);
 
+        // Calculate vertical positions centered around centerY
+        const levelHeight = (nodesWithPriority.length - 1) * verticalSpacing;
+        const levelStartY = centerY - levelHeight / 2;
+
+        nodesWithPriority.forEach(({ node }, index) => {
+            const y = levelStartY + index * verticalSpacing;
             positions.set(node.id, { x, y });
         });
     }
@@ -528,6 +596,7 @@ function minimizeEdgeCrossings(
 
 /**
  * Order nodes in a level based on barycenter of connected nodes in adjacent level
+ * Enhanced to consider handle priorities for better branch ordering
  */
 function orderLevelByBarycenter(
     nodesByLevel: Map<number, Array<{ id: string; type?: string }>>,
@@ -547,18 +616,31 @@ function orderLevelByBarycenter(
         adjacentPositions.set(node.id, index);
     });
 
-    // Calculate barycenter for each node in current level
-    const barycenters: Array<{ node: { id: string; type?: string }; barycenter: number }> = [];
+    // Calculate barycenter for each node in current level, also tracking handle priority
+    const barycenters: Array<{
+        node: { id: string; type?: string };
+        barycenter: number;
+        handlePriority: number;
+        parentId: string | null;
+    }> = [];
 
     for (const node of currentNodes) {
         let sum = 0;
         let count = 0;
+        let minHandlePriority = 50;
+        let primaryParent: string | null = null;
 
         for (const edge of edges) {
             let connectedId: string | null = null;
 
             if (direction === "forward" && edge.target === node.id) {
                 connectedId = edge.source;
+                // Track handle priority for forward direction (incoming edges)
+                minHandlePriority = Math.min(
+                    minHandlePriority,
+                    getHandlePriority(edge.sourceHandle)
+                );
+                primaryParent = edge.source;
             } else if (direction === "backward" && edge.source === node.id) {
                 connectedId = edge.target;
             }
@@ -570,11 +652,25 @@ function orderLevelByBarycenter(
         }
 
         const barycenter = count > 0 ? sum / count : currentNodes.indexOf(node);
-        barycenters.push({ node, barycenter });
+        barycenters.push({
+            node,
+            barycenter,
+            handlePriority: minHandlePriority,
+            parentId: primaryParent
+        });
     }
 
-    // Sort by barycenter
-    barycenters.sort((a, b) => a.barycenter - b.barycenter);
+    // Sort by barycenter, then by handle priority for siblings from same parent
+    barycenters.sort((a, b) => {
+        // If same parent (siblings from a router/conditional), use handle priority
+        if (a.parentId && a.parentId === b.parentId) {
+            if (a.handlePriority !== b.handlePriority) {
+                return a.handlePriority - b.handlePriority;
+            }
+        }
+        // Otherwise sort by barycenter
+        return a.barycenter - b.barycenter;
+    });
 
     // Update the level with sorted nodes
     nodesByLevel.set(
@@ -628,7 +724,7 @@ function layoutComponent(
 }
 
 /**
- * Calculate final positions for all nodes
+ * Calculate final positions for all nodes with dynamic spacing
  */
 function calculatePositions(
     nodesByLevel: Map<number, Array<{ id: string; type?: string }>>,
@@ -649,33 +745,52 @@ function calculatePositions(
         edgesByTarget.set(edge.target, targetEdges);
     }
 
+    // Calculate total node count for complexity-aware centering
+    let totalNodes = 0;
+    for (const levelNodes of nodesByLevel.values()) {
+        totalNodes += levelNodes.length;
+    }
+
+    // Adjust center Y based on workflow complexity
+    const centerY =
+        totalNodes > 12 ? Math.max(startY, 400) : totalNodes > 6 ? Math.max(startY, 350) : startY;
+
     for (const level of levels) {
         const levelNodes = nodesByLevel.get(level) || [];
         const x = START_X + level * HORIZONTAL_SPACING;
 
-        // Calculate vertical positions
-        const levelHeight = levelNodes.length * VERTICAL_SPACING;
-        const levelStartY = startY - levelHeight / 2 + VERTICAL_SPACING / 2;
+        // Use dynamic vertical spacing based on level density
+        const verticalSpacing = getDynamicVerticalSpacing(levelNodes.length);
 
-        for (let i = 0; i < levelNodes.length; i++) {
-            const node = levelNodes[i];
-            let y = levelStartY + i * VERTICAL_SPACING;
+        // Calculate vertical positions centered around centerY
+        const levelHeight = (levelNodes.length - 1) * verticalSpacing;
+        const levelStartY = centerY - levelHeight / 2;
 
-            // Check for branch offset (conditional true/false)
+        // Sort nodes within level by handle priority for better branch visualization
+        const nodesWithPriority = levelNodes.map((node) => {
+            const incomingEdges = edgesByTarget.get(node.id) || [];
+            let minPriority = 50;
+            for (const inEdge of incomingEdges) {
+                const priority = getHandlePriority(inEdge.sourceHandle);
+                minPriority = Math.min(minPriority, priority);
+            }
+            return { node, priority: minPriority };
+        });
+        nodesWithPriority.sort((a, b) => a.priority - b.priority);
+
+        for (let i = 0; i < nodesWithPriority.length; i++) {
+            const { node } = nodesWithPriority[i];
+            let y = levelStartY + i * verticalSpacing;
+
+            // Additional offset for specific branch types
             const incomingEdges = edgesByTarget.get(node.id) || [];
             for (const inEdge of incomingEdges) {
-                if (inEdge.sourceHandle === "true") {
-                    // True branch - offset up
-                    y = Math.min(y, startY - VERTICAL_SPACING / 2);
-                } else if (inEdge.sourceHandle === "false") {
-                    // False branch - offset down
-                    y = Math.max(y, startY + VERTICAL_SPACING / 2);
-                } else if (inEdge.sourceHandle && inEdge.sourceHandle.startsWith("case_")) {
+                if (inEdge.sourceHandle && inEdge.sourceHandle.startsWith("case_")) {
                     // Switch case - spread vertically based on case number
                     const caseMatch = inEdge.sourceHandle.match(/case_(\d+)/);
                     if (caseMatch) {
                         const caseIndex = parseInt(caseMatch[1], 10);
-                        y = startY + (caseIndex - 1) * VERTICAL_SPACING;
+                        y = centerY + (caseIndex - 1) * verticalSpacing;
                     }
                 }
             }
@@ -717,29 +832,7 @@ function adjustForOverlaps(
     }
 }
 
-/**
- * Get branch information for nodes (which nodes are targets of conditional branches)
- */
-function getBranchInfo(
-    levelNodes: LayoutNode[],
-    edges: LayoutEdge[]
-): Map<string, { handle: string }> {
-    const branchInfo = new Map<string, { handle: string }>();
-
-    levelNodes.forEach((node) => {
-        // Find edges that target this node
-        const incomingEdges = edges.filter((edge) => edge.target === node.id);
-
-        // Check if any incoming edge has a sourceHandle (indicating a branch)
-        incomingEdges.forEach((edge) => {
-            if (edge.sourceHandle && edge.sourceHandle !== "output") {
-                branchInfo.set(node.id, { handle: edge.sourceHandle });
-            }
-        });
-    });
-
-    return branchInfo;
-}
+// Note: getBranchInfo was replaced by getHandlePriority for better branch ordering
 
 // ============================================================================
 // VISUAL REFINEMENTS
@@ -933,16 +1026,26 @@ export function convertToReactFlowFormat(
 
     // Convert to React Flow format
     // Spread config directly into data (not nested) to match how nodes are saved
-    const nodes: ReactFlowNode[] = generatedNodes.map((node) => ({
-        id: node.id,
-        type: node.type,
-        position: positions.get(node.id) || { x: 0, y: 0 },
-        data: {
-            label: node.label,
-            ...node.config,
-            status: "idle"
-        }
-    }));
+    const nodes: ReactFlowNode[] = generatedNodes.map((node) => {
+        // Look up provider logoUrl if node has a provider in config
+        const providerId = node.config?.provider as string | undefined;
+        const providerInfo = providerId
+            ? ALL_PROVIDERS.find((p) => p.provider === providerId)
+            : undefined;
+
+        return {
+            id: node.id,
+            type: node.type,
+            position: positions.get(node.id) || { x: 0, y: 0 },
+            data: {
+                label: node.label,
+                ...node.config,
+                // Add logoUrl if provider has one
+                ...(providerInfo?.logoUrl && { logoUrl: providerInfo.logoUrl }),
+                status: "idle"
+            }
+        };
+    });
 
     const edges: ReactFlowEdge[] = generatedEdges.map((edge, index) => ({
         id: `edge-${index}`,

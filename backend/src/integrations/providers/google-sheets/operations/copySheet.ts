@@ -25,25 +25,7 @@ export const copySheetOperation: OperationDefinition = {
     description: "Copy a sheet to another spreadsheet or within the same spreadsheet",
     category: "sheets",
     retryable: true,
-    inputSchema: copySheetSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            spreadsheetId: {
-                type: "string",
-                description: "Source spreadsheet ID"
-            },
-            sheetId: {
-                type: "number",
-                description: "Sheet ID to copy (gid)"
-            },
-            destinationSpreadsheetId: {
-                type: "string",
-                description: "Destination spreadsheet ID (can be same as source)"
-            }
-        },
-        required: ["spreadsheetId", "sheetId", "destinationSpreadsheetId"]
-    }
+    inputSchema: copySheetSchema
 };
 
 /**

@@ -34,41 +34,7 @@ export const listPlaylistItemsOperation: OperationDefinition = {
     description: "List videos in a YouTube playlist with pagination support",
     category: "playlists",
     retryable: true,
-    inputSchema: listPlaylistItemsSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            playlistId: {
-                type: "string",
-                description: "The playlist ID to get items from"
-            },
-            maxResults: {
-                type: "number",
-                description: "Maximum number of results",
-                minimum: 1,
-                maximum: 50,
-                default: 25
-            },
-            pageToken: {
-                type: "string",
-                description: "Token for pagination"
-            },
-            videoId: {
-                type: "string",
-                description: "Filter by specific video ID in the playlist"
-            },
-            part: {
-                type: "array",
-                items: {
-                    type: "string",
-                    enum: ["snippet", "contentDetails", "status"]
-                },
-                description: "Playlist item resource parts to include",
-                default: ["snippet", "contentDetails"]
-            }
-        },
-        required: ["playlistId"]
-    }
+    inputSchema: listPlaylistItemsSchema
 };
 
 /**

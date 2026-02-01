@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { TwitterClient } from "../client/TwitterClient";
 import { TweetIdSchema } from "../schemas";
 import type { DeleteTweetResponse } from "./types";
@@ -28,7 +27,6 @@ export const deleteTweetOperation: OperationDefinition = (() => {
             description: "Delete a tweet by its ID. Only the author can delete their own tweets.",
             category: "tweets",
             inputSchema: deleteTweetSchema,
-            inputSchemaJSON: toJSONSchema(deleteTweetSchema),
             retryable: false, // Don't retry deletes
             timeout: 10000
         };

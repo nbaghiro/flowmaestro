@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { DiscordClient } from "../client/DiscordClient";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 
@@ -83,7 +82,6 @@ export const executeWebhookOperation: OperationDefinition = (() => {
             description: "Send a message via Discord webhook",
             category: "messaging",
             inputSchema: executeWebhookSchema,
-            inputSchemaJSON: toJSONSchema(executeWebhookSchema),
             retryable: true,
             timeout: 10000
         };

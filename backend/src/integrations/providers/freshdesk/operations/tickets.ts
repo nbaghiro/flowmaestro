@@ -3,7 +3,6 @@
  */
 
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { FreshdeskClient } from "../client/FreshdeskClient";
 import type { FreshdeskTicket, FreshdeskConversation, FreshdeskSearchResponse } from "../types";
@@ -38,7 +37,6 @@ export const createTicketOperation: OperationDefinition = {
     description: "Create a new support ticket",
     category: "tickets",
     inputSchema: createTicketSchema,
-    inputSchemaJSON: toJSONSchema(createTicketSchema),
     retryable: false,
     timeout: 10000
 };
@@ -99,7 +97,6 @@ export const getTicketOperation: OperationDefinition = {
     description: "Retrieve a specific ticket",
     category: "tickets",
     inputSchema: getTicketSchema,
-    inputSchemaJSON: toJSONSchema(getTicketSchema),
     retryable: true,
     timeout: 10000
 };
@@ -156,7 +153,6 @@ export const updateTicketOperation: OperationDefinition = {
     description: "Update an existing ticket",
     category: "tickets",
     inputSchema: updateTicketSchema,
-    inputSchemaJSON: toJSONSchema(updateTicketSchema),
     retryable: false,
     timeout: 10000
 };
@@ -210,7 +206,6 @@ export const deleteTicketOperation: OperationDefinition = {
     description: "Delete a ticket (moves to trash)",
     category: "tickets",
     inputSchema: deleteTicketSchema,
-    inputSchemaJSON: toJSONSchema(deleteTicketSchema),
     retryable: false,
     timeout: 10000
 };
@@ -263,7 +258,6 @@ export const listTicketsOperation: OperationDefinition = {
     description: "List tickets with optional filters",
     category: "tickets",
     inputSchema: listTicketsSchema,
-    inputSchemaJSON: toJSONSchema(listTicketsSchema),
     retryable: true,
     timeout: 30000
 };
@@ -309,7 +303,6 @@ export const searchTicketsOperation: OperationDefinition = {
     description: "Search tickets using query",
     category: "tickets",
     inputSchema: searchTicketsSchema,
-    inputSchemaJSON: toJSONSchema(searchTicketsSchema),
     retryable: true,
     timeout: 30000
 };
@@ -360,7 +353,6 @@ export const addTicketReplyOperation: OperationDefinition = {
     description: "Add a reply to a ticket",
     category: "tickets",
     inputSchema: addTicketReplySchema,
-    inputSchemaJSON: toJSONSchema(addTicketReplySchema),
     retryable: false,
     timeout: 10000
 };
@@ -413,7 +405,6 @@ export const addTicketNoteOperation: OperationDefinition = {
     description: "Add a private note to a ticket",
     category: "tickets",
     inputSchema: addTicketNoteSchema,
-    inputSchemaJSON: toJSONSchema(addTicketNoteSchema),
     retryable: false,
     timeout: 10000
 };

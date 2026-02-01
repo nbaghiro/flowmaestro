@@ -1,12 +1,12 @@
 import { Play } from "lucide-react";
 import { memo, useState } from "react";
 import { NodeProps } from "reactflow";
-import { ALL_PROVIDERS } from "@flowmaestro/shared";
+import { ALL_PROVIDERS, type NodeExecutionStatus } from "@flowmaestro/shared";
 import { BaseNode } from "./BaseNode";
 
 interface ActionNodeData {
     label: string;
-    status?: "idle" | "pending" | "running" | "success" | "error";
+    status?: NodeExecutionStatus;
     provider?: string;
     providerName?: string;
     operation?: string;
@@ -52,6 +52,7 @@ function ActionNode({ data, selected }: NodeProps<ActionNodeData>) {
             status={data.status}
             category="outputs"
             selected={selected}
+            hasOutputHandle={false}
         >
             <div className="space-y-1.5">
                 {hasProvider ? (

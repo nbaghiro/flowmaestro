@@ -1,4 +1,4 @@
-import { Plus, FileText, Sparkles, Trash2, FolderInput, FolderMinus, Search } from "lucide-react";
+import { Plus, Sparkles, Trash2, FolderInput, FolderMinus, Search } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -20,6 +20,7 @@ import { PageHeader } from "../components/common/PageHeader";
 import { SkeletonGrid } from "../components/common/SkeletonGrid";
 import { SortDropdown } from "../components/common/SortDropdown";
 import { CreateWorkflowDialog } from "../components/CreateWorkflowDialog";
+import { EmptyStateWithGhostCards } from "../components/empty-states";
 import {
     CreateFolderDialog,
     MoveToFolderDialog,
@@ -28,7 +29,6 @@ import {
 } from "../components/folders";
 import { DuplicateItemWarningDialog } from "../components/folders/dialogs/DuplicateItemWarningDialog";
 import { WorkflowCardSkeleton } from "../components/skeletons";
-import { WorkflowGenerationChatPanel } from "../components/WorkflowGenerationChatPanel";
 import { useFolderManagement } from "../hooks/useFolderManagement";
 import { useSearch } from "../hooks/useSearch";
 import { useSort, WORKFLOW_SORT_FIELDS } from "../hooks/useSort";
@@ -702,25 +702,12 @@ export function Workflows() {
                             </Button>
                         </div>
                     ) : workflows.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed border-border rounded-lg bg-card">
-                            <FileText className="w-12 h-12 text-muted-foreground mb-4" />
-                            <h3 className="text-lg font-semibold text-foreground mb-2">
-                                {currentFolder ? "No workflows in this folder" : "No workflows yet"}
-                            </h3>
-                            <p className="text-sm text-muted-foreground mb-6 text-center max-w-md">
-                                {currentFolder
-                                    ? "Move workflows here or create a new one."
-                                    : "Get started by creating your first workflow. Build complex AI-powered workflows with our drag-and-drop canvas."}
-                            </p>
-                            <Button
-                                variant="primary"
-                                onClick={() => setIsDialogOpen(true)}
-                                size="lg"
-                            >
-                                <Plus className="w-4 h-4" />
-                                {currentFolder ? "Create Workflow" : "Create Your First Workflow"}
-                            </Button>
-                        </div>
+                        <EmptyStateWithGhostCards
+                            entityType="workflow"
+                            onCreateClick={() => setIsDialogOpen(true)}
+                            onAIGenerateClick={() => setIsAIDialogOpen(true)}
+                            isInFolder={!!currentFolder}
+                        />
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {filteredWorkflows.map((workflow) => (
@@ -839,9 +826,6 @@ export function Workflows() {
                 }
                 onClose={closeContextMenu}
             />
-
-            {/* Workflow Generation Chat Panel */}
-            <WorkflowGenerationChatPanel />
         </div>
     );
 }

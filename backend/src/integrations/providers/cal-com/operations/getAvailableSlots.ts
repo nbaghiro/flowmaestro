@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { CalComClient } from "../client/CalComClient";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 
@@ -30,7 +29,6 @@ export const getAvailableSlotsOperation: OperationDefinition = (() => {
             category: "scheduling",
             actionType: "read",
             inputSchema: getAvailableSlotsSchema,
-            inputSchemaJSON: toJSONSchema(getAvailableSlotsSchema),
             retryable: true,
             timeout: 15000
         };

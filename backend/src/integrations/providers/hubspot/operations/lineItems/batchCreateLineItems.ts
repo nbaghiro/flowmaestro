@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { HubspotClient } from "../../client/HubspotClient";
 import type { HubspotBatchResponse, HubspotObject } from "../types";
@@ -41,7 +40,6 @@ export const batchCreateLineItemsOperation: OperationDefinition = {
     description: "Create multiple line items in HubSpot CRM in a single request",
     category: "crm",
     inputSchema: batchCreateLineItemsSchema,
-    inputSchemaJSON: toJSONSchema(batchCreateLineItemsSchema),
     retryable: true,
     timeout: 30000
 };

@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { PipedriveClient } from "../../client/PipedriveClient";
 import type { PipedriveListResponse, PipedriveActivity } from "../types";
@@ -28,7 +27,6 @@ export const listActivitiesOperation: OperationDefinition = {
     description: "Get all activities (calls, meetings, tasks) with optional filtering",
     category: "activities",
     inputSchema: listActivitiesSchema,
-    inputSchemaJSON: toJSONSchema(listActivitiesSchema),
     retryable: true,
     timeout: 15000
 };

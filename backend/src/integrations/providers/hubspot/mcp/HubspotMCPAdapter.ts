@@ -1,3 +1,4 @@
+import { toJSONSchema } from "../../../../core/utils/zod-to-json-schema";
 import type { MCPTool, OperationDefinition } from "../../../core/types";
 import type { HubspotClient } from "../client/HubspotClient";
 
@@ -24,7 +25,7 @@ export class HubspotMCPAdapter {
             tools.push({
                 name: `hubspot_${id}`,
                 description: operation.description,
-                inputSchema: operation.inputSchemaJSON
+                inputSchema: toJSONSchema(operation.inputSchema)
             });
         }
 

@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { WhatsAppClient } from "../client/WhatsAppClient";
 import type { WhatsAppSendResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -34,7 +33,6 @@ export const sendTextMessageOperation: OperationDefinition = (() => {
             description: "Send a text message to a WhatsApp user",
             category: "messaging",
             inputSchema: sendTextMessageSchema,
-            inputSchemaJSON: toJSONSchema(sendTextMessageSchema),
             retryable: true,
             timeout: 15000
         };

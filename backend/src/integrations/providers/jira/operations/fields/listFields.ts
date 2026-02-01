@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { listFieldsInputSchema, type ListFieldsInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { JiraClient } from "../../client/JiraClient";
@@ -9,7 +8,6 @@ export const listFieldsOperation: OperationDefinition = {
     description: "Get all fields in Jira, including custom fields. Results are cached for 1 hour.",
     category: "fields",
     inputSchema: listFieldsInputSchema,
-    inputSchemaJSON: toJSONSchema(listFieldsInputSchema),
     retryable: true,
     timeout: 10000
 };

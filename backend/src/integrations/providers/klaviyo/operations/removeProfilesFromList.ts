@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { KlaviyoClient } from "../client/KlaviyoClient";
 
@@ -27,7 +26,6 @@ export const removeProfilesFromListOperation: OperationDefinition = {
     category: "lists",
     actionType: "write",
     inputSchema: removeProfilesFromListSchema,
-    inputSchemaJSON: toJSONSchema(removeProfilesFromListSchema),
     retryable: true,
     timeout: 15000
 };

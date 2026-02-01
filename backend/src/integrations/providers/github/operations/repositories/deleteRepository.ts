@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { GitHubClient } from "../../client/GitHubClient";
 import { GitHubOwnerSchema, GitHubRepoNameSchema } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
@@ -23,7 +22,6 @@ export const deleteRepositoryOperation: OperationDefinition = {
     description: "Delete a repository (requires admin permissions)",
     category: "repositories",
     inputSchema: deleteRepositorySchema,
-    inputSchemaJSON: toJSONSchema(deleteRepositorySchema),
     retryable: false,
     timeout: 15000
 };

@@ -1,3 +1,4 @@
+import { toJSONSchema } from "../../../../core/utils/zod-to-json-schema";
 import { NotionClient } from "../client/NotionClient";
 import { executeCreatePage } from "../operations/createPage";
 import { executeGetPage } from "../operations/getPage";
@@ -19,7 +20,7 @@ export class NotionMCPAdapter {
         return Array.from(this.operations.values()).map((op) => ({
             name: `notion_${op.id}`,
             description: op.description,
-            inputSchema: op.inputSchemaJSON,
+            inputSchema: toJSONSchema(op.inputSchema),
             executeRef: op.id
         }));
     }

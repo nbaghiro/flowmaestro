@@ -15,14 +15,6 @@ export const getChannelOperation: OperationDefinition = {
     description: "Get details of a specific channel",
     category: "channels",
     inputSchema: getChannelSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["teamId", "channelId"],
-        properties: {
-            teamId: { type: "string", description: "ID of the team" },
-            channelId: { type: "string", description: "ID of the channel" }
-        }
-    },
     retryable: true
 };
 

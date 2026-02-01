@@ -21,17 +21,7 @@ export const deleteFileOperation: OperationDefinition = {
         "Permanently delete a file or folder from Google Drive (cannot be recovered). Use trashFile for soft delete.",
     category: "files",
     retryable: false,
-    inputSchema: deleteFileSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            fileId: {
-                type: "string",
-                description: "File or folder ID to delete permanently"
-            }
-        },
-        required: ["fileId"]
-    }
+    inputSchema: deleteFileSchema
 };
 
 /**

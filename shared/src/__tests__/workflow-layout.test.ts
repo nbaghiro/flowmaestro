@@ -4,7 +4,6 @@ import {
     autoLayoutNodes,
     convertToReactFlowFormat,
     HORIZONTAL_SPACING,
-    VERTICAL_SPACING,
     START_X,
     START_Y,
     type LayoutNode,
@@ -224,8 +223,13 @@ describe("autoLayoutNodes", () => {
 
         const result = autoLayoutNodes(nodes, edges, "A");
 
-        expect(result.get("B")?.y).toBe(START_Y - VERTICAL_SPACING);
-        expect(result.get("C")?.y).toBe(START_Y + VERTICAL_SPACING);
+        // For 2 nodes at a level, getDynamicVerticalSpacing returns MAX_VERTICAL_SPACING (280)
+        // levelHeight = (2-1) * 280 = 280
+        // levelStartY = centerY - 140 = 350 - 140 = 210
+        // B (true, priority 0) is first at 210
+        // C (false, priority 1) is second at 210 + 280 = 490
+        expect(result.get("B")?.y).toBe(210);
+        expect(result.get("C")?.y).toBe(490);
     });
 
     it("should handle empty nodes array", () => {

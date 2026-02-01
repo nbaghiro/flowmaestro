@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { TrelloClient } from "../../client/TrelloClient";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { TrelloBoard } from "../types";
@@ -40,7 +39,6 @@ export const createBoardOperation: OperationDefinition = {
     category: "boards",
     actionType: "write",
     inputSchema: createBoardSchema,
-    inputSchemaJSON: toJSONSchema(createBoardSchema),
     retryable: false,
     timeout: 15000
 };

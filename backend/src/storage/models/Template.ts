@@ -41,12 +41,15 @@ export interface TemplateModel {
     published_at: Date | null;
 }
 
+export type TemplateSortBy = "default" | "complexity" | "popularity" | "newest";
+
 export interface TemplateListOptions {
     category?: TemplateCategory;
     tags?: string[];
     featured?: boolean;
     search?: string;
     status?: TemplateStatus;
+    sortBy?: TemplateSortBy;
     limit?: number;
     offset?: number;
 }

@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { CHANGE_COLUMN_VALUE } from "../../graphql/mutations";
 import { changeColumnValueInputSchema, type ChangeColumnValueInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
@@ -10,7 +9,6 @@ export const changeColumnValueOperation: OperationDefinition = {
     description: "Change a column value for an item using JSON format.",
     category: "columns",
     inputSchema: changeColumnValueInputSchema,
-    inputSchemaJSON: toJSONSchema(changeColumnValueInputSchema),
     retryable: true,
     timeout: 10000
 };

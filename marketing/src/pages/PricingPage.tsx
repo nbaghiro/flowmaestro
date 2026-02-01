@@ -118,9 +118,9 @@ const plans: PricingPlan[] = [
         tagline: "For power users",
         basePrice: 29,
         baseCredits: 25000,
-        icon: <Users className="w-5 h-5" />,
-        color: "bg-blue-500",
-        borderColor: "border-blue-500/50",
+        icon: <Users className="w-5 h-5 text-background" />,
+        color: "bg-foreground",
+        borderColor: "border-foreground/50",
         cta: "Start Trial",
         popular: true,
         features: [
@@ -175,13 +175,13 @@ const PricingCard: React.FC<PricingCardProps> = ({ plan, selectedCredits, isAnnu
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className={`relative rounded-2xl bg-background-surface backdrop-blur-sm border ${
-                plan.popular ? plan.borderColor : "border-stroke"
+            className={`relative rounded-2xl bg-card backdrop-blur-sm border ${
+                plan.popular ? plan.borderColor : "border-border"
             } p-6 flex flex-col h-full`}
         >
             {plan.popular && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <span className="px-3 py-1 text-xs font-medium bg-blue-500 text-white rounded-full">
+                    <span className="px-3 py-1 text-xs font-medium bg-foreground text-background rounded-full">
                         Most Popular
                     </span>
                 </div>
@@ -194,31 +194,33 @@ const PricingCard: React.FC<PricingCardProps> = ({ plan, selectedCredits, isAnnu
                 >
                     {plan.icon}
                 </div>
-                <h3 className="text-xl font-bold text-white">{plan.name}</h3>
-                <p className="text-sm text-gray-400">{plan.tagline}</p>
+                <h3 className="text-xl font-bold text-foreground">{plan.name}</h3>
+                <p className="text-sm text-muted-foreground">{plan.tagline}</p>
             </div>
 
             {/* Price */}
             <div className="mb-6">
                 {plan.basePrice === 0 ? (
                     <div className="flex items-baseline gap-1">
-                        <span className="text-4xl font-bold text-white">Free</span>
+                        <span className="text-4xl font-bold text-foreground">Free</span>
                     </div>
                 ) : (
                     <div className="flex items-baseline gap-1">
-                        <span className="text-4xl font-bold text-white">${displayPrice}</span>
-                        <span className="text-gray-400">/ month</span>
+                        <span className="text-4xl font-bold text-foreground">${displayPrice}</span>
+                        <span className="text-muted-foreground">/ month</span>
                     </div>
                 )}
-                <p className="text-sm text-gray-500 mt-1">{creditsDisplay}+ credits/month</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                    {creditsDisplay}+ credits/month
+                </p>
             </div>
 
             {/* Features */}
             <ul className="space-y-3 mb-6 flex-grow">
                 {plan.features.map((feature, index) => (
                     <li key={index} className="flex items-start gap-2">
-                        <Check className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
-                        <span className="text-sm text-gray-300">{feature.text}</span>
+                        <Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                        <span className="text-sm text-muted-foreground">{feature.text}</span>
                     </li>
                 ))}
             </ul>
@@ -228,8 +230,8 @@ const PricingCard: React.FC<PricingCardProps> = ({ plan, selectedCredits, isAnnu
                 href={import.meta.env.VITE_APP_URL || "http://localhost:3000"}
                 className={`w-full py-3 rounded-lg font-semibold text-center transition-all duration-200 ${
                     plan.popular
-                        ? "bg-white text-black hover:bg-gray-100"
-                        : "bg-background-elevated text-white hover:bg-border border border-stroke"
+                        ? "bg-foreground text-background hover:opacity-90"
+                        : "bg-secondary text-foreground hover:bg-accent border border-border"
                 }`}
             >
                 {plan.cta}
@@ -245,215 +247,247 @@ export const PricingPage: React.FC = () => {
     const selectedCredits = sliderToCredits(sliderValue);
 
     return (
-        <div className="min-h-screen bg-background text-gray-50">
-            <Navigation />
+        <div className="min-h-screen bg-background text-foreground relative">
+            {/* Full-page background pattern */}
+            <div className="fixed inset-0 grid-pattern opacity-50 pointer-events-none" />
+            <div className="relative z-10">
+                <Navigation />
 
-            {/* Hero Section */}
-            <section className="relative pt-32 pb-8 px-4 sm:px-6 lg:px-8">
-                <div className="absolute inset-0 grid-pattern opacity-30"></div>
-                <div className="relative z-10 max-w-5xl mx-auto text-center">
-                    <motion.div
-                        initial={{ opacity: 0, y: 30 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6 }}
-                    >
-                        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-4">
-                            Pricing that scales
-                            <span className="gradient-text"> with you</span>
-                        </h1>
-                        <p className="text-xl text-gray-400">Easy to start, easy to grow</p>
-                    </motion.div>
-                </div>
-            </section>
-
-            {/* Billing Toggle */}
-            <section className="relative px-4 sm:px-6 lg:px-8 pb-8">
-                <div className="max-w-5xl mx-auto">
-                    <div className="flex justify-center items-center gap-3">
-                        <button
-                            onClick={() => setIsAnnual(false)}
-                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                                !isAnnual ? "bg-white text-black" : "text-gray-400 hover:text-white"
-                            }`}
+                {/* Hero Section */}
+                <section className="relative pt-32 pb-8 px-4 sm:px-6 lg:px-8">
+                    <div className="relative z-10 max-w-5xl mx-auto text-center">
+                        <motion.div
+                            initial={{ opacity: 0, y: 30 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.6 }}
                         >
-                            Monthly
-                        </button>
-                        <button
-                            onClick={() => setIsAnnual(true)}
-                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
-                                isAnnual ? "bg-white text-black" : "text-gray-400 hover:text-white"
-                            }`}
-                        >
-                            Annually
-                            <span className="px-2 py-0.5 text-xs font-bold bg-green-500 text-white rounded-full">
-                                20% OFF
-                            </span>
-                        </button>
+                            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-4">
+                                Pricing that scales
+                                <span className="gradient-text"> with you</span>
+                            </h1>
+                            <p className="text-xl text-muted-foreground">
+                                Easy to start, easy to grow
+                            </p>
+                        </motion.div>
                     </div>
-                </div>
-            </section>
+                </section>
 
-            {/* Credit Slider */}
-            <section className="relative px-4 sm:px-6 lg:px-8 pb-12">
-                <div className="max-w-5xl mx-auto">
-                    <div className="bg-background-surface backdrop-blur-sm border border-stroke rounded-2xl p-8">
-                        <div className="flex items-baseline gap-2 mb-6">
-                            <span className="text-gray-400">I need</span>
-                            <span className="text-4xl font-bold text-white font-mono">
-                                {selectedCredits.toLocaleString()}
-                            </span>
-                            <span className="text-gray-400">credits per month</span>
+                {/* Billing Toggle */}
+                <section className="relative px-4 sm:px-6 lg:px-8 pb-8">
+                    <div className="max-w-5xl mx-auto">
+                        <div className="flex justify-center items-center gap-3">
+                            <button
+                                onClick={() => setIsAnnual(false)}
+                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                                    !isAnnual
+                                        ? "bg-foreground text-background"
+                                        : "text-muted-foreground hover:text-foreground"
+                                }`}
+                            >
+                                Monthly
+                            </button>
+                            <button
+                                onClick={() => setIsAnnual(true)}
+                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
+                                    isAnnual
+                                        ? "bg-foreground text-background"
+                                        : "text-muted-foreground hover:text-foreground"
+                                }`}
+                            >
+                                Annually
+                                <span className="px-2 py-0.5 text-xs font-bold bg-green-500 text-white rounded-full">
+                                    20% OFF
+                                </span>
+                            </button>
                         </div>
+                    </div>
+                </section>
 
-                        {/* Slider */}
-                        <div className="relative">
-                            <input
-                                type="range"
-                                min={0}
-                                max={100}
-                                step={0.5}
-                                value={sliderValue}
-                                onChange={(e) => setSliderValue(Number(e.target.value))}
-                                className="w-full h-2 bg-border rounded-lg appearance-none cursor-pointer slider"
-                            />
-
-                            {/* Tick marks with absolute positioning */}
-                            <div className="relative mt-2 h-6">
-                                {CREDIT_TIERS.map((tier) => {
-                                    const position = getTierSliderPosition(tier.value);
-                                    const isActive =
-                                        Math.abs(selectedCredits - tier.value) < tier.value * 0.1;
-                                    return (
-                                        <button
-                                            key={tier.value}
-                                            onClick={() =>
-                                                setSliderValue(creditsToSlider(tier.value))
-                                            }
-                                            className={`absolute text-xs font-mono transition-colors -translate-x-1/2 ${
-                                                isActive
-                                                    ? "text-white font-semibold"
-                                                    : "text-gray-500 hover:text-gray-300"
-                                            }`}
-                                            style={{ left: `${position}%` }}
-                                        >
-                                            {tier.label}
-                                        </button>
-                                    );
-                                })}
+                {/* Credit Slider */}
+                <section className="relative px-4 sm:px-6 lg:px-8 pb-12">
+                    <div className="max-w-5xl mx-auto">
+                        <div className="bg-card backdrop-blur-sm border border-border rounded-2xl p-8">
+                            <div className="flex items-baseline gap-2 mb-6">
+                                <span className="text-muted-foreground">I need</span>
+                                <span className="text-4xl font-bold text-foreground font-mono">
+                                    {selectedCredits.toLocaleString()}
+                                </span>
+                                <span className="text-muted-foreground">credits per month</span>
                             </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
 
-            {/* Pricing Cards */}
-            <section className="relative px-4 sm:px-6 lg:px-8 pb-24">
-                <div className="max-w-5xl mx-auto">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        {plans.map((plan) => (
-                            <PricingCard
-                                key={plan.name}
-                                plan={plan}
-                                selectedCredits={selectedCredits}
-                                isAnnual={isAnnual}
-                            />
-                        ))}
-                    </div>
+                            {/* Slider */}
+                            <div className="relative">
+                                <input
+                                    type="range"
+                                    min={0}
+                                    max={100}
+                                    step={0.5}
+                                    value={sliderValue}
+                                    onChange={(e) => setSliderValue(Number(e.target.value))}
+                                    className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer slider"
+                                />
 
-                    {/* Enterprise Card */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.3 }}
-                        className="mt-8 rounded-2xl bg-background-surface backdrop-blur-sm border border-stroke p-8"
-                    >
-                        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 mb-8">
-                            <div>
-                                <div className="w-10 h-10 rounded-lg bg-gray-700 flex items-center justify-center mb-3">
-                                    <Building2 className="w-5 h-5 text-white" />
+                                {/* Tick marks with absolute positioning */}
+                                <div className="relative mt-2 h-6">
+                                    {CREDIT_TIERS.map((tier) => {
+                                        const position = getTierSliderPosition(tier.value);
+                                        const isActive =
+                                            Math.abs(selectedCredits - tier.value) <
+                                            tier.value * 0.1;
+                                        return (
+                                            <button
+                                                key={tier.value}
+                                                onClick={() =>
+                                                    setSliderValue(creditsToSlider(tier.value))
+                                                }
+                                                className={`absolute text-xs font-mono transition-colors -translate-x-1/2 ${
+                                                    isActive
+                                                        ? "text-foreground font-semibold"
+                                                        : "text-muted-foreground hover:text-foreground"
+                                                }`}
+                                                style={{ left: `${position}%` }}
+                                            >
+                                                {tier.label}
+                                            </button>
+                                        );
+                                    })}
                                 </div>
-                                <h3 className="text-2xl font-bold text-white">Enterprise</h3>
-                                <p className="text-gray-400">Teams looking to scale</p>
-                            </div>
-                            <div className="text-right">
-                                <span className="text-3xl font-bold text-primary-400">
-                                    Custom Pricing
-                                </span>
                             </div>
                         </div>
+                    </div>
+                </section>
 
-                        <p className="text-gray-400 mb-6">Everything included in Team, plus:</p>
-
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-4 mb-8">
-                            <div className="flex items-center gap-3">
-                                <Shield className="w-4 h-4 text-gray-400" />
-                                <span className="text-sm text-gray-300">
-                                    Role Based Access Control
-                                </span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <Key className="w-4 h-4 text-gray-400" />
-                                <span className="text-sm text-gray-300">SCIM/SAML Support</span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <LayoutDashboard className="w-4 h-4 text-gray-400" />
-                                <span className="text-sm text-gray-300">Admin Dashboard</span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <FileText className="w-4 h-4 text-gray-400" />
-                                <span className="text-sm text-gray-300">Audit Logs</span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <Database className="w-4 h-4 text-gray-400" />
-                                <span className="text-sm text-gray-300">Custom Data Retention</span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <FileCheck className="w-4 h-4 text-gray-400" />
-                                <span className="text-sm text-gray-300">
-                                    Regular Security Reports
-                                </span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <Download className="w-4 h-4 text-gray-400" />
-                                <span className="text-sm text-gray-300">Data Exports</span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <EyeOff className="w-4 h-4 text-gray-400" />
-                                <span className="text-sm text-gray-300">Incognito Mode</span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <Bot className="w-4 h-4 text-gray-400" />
-                                <span className="text-sm text-gray-300">
-                                    AI Model Access Control
-                                </span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <Cloud className="w-4 h-4 text-gray-400" />
-                                <span className="text-sm text-gray-300">Virtual Private Cloud</span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <ListOrdered className="w-4 h-4 text-gray-400" />
-                                <span className="text-sm text-gray-300">Flow Queuing</span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <Users className="w-4 h-4 text-gray-400" />
-                                <span className="text-sm text-gray-300">Dedicated Support</span>
-                            </div>
+                {/* Pricing Cards */}
+                <section className="relative px-4 sm:px-6 lg:px-8 pb-24">
+                    <div className="max-w-5xl mx-auto">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            {plans.map((plan) => (
+                                <PricingCard
+                                    key={plan.name}
+                                    plan={plan}
+                                    selectedCredits={selectedCredits}
+                                    isAnnual={isAnnual}
+                                />
+                            ))}
                         </div>
 
-                        <a
-                            href="https://cal.com/naib-baghirov-o5surn/30min"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="block w-full py-3 rounded-lg font-semibold text-center bg-gray-800 text-white hover:bg-gray-700 transition-all duration-200"
+                        {/* Enterprise Card */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.3 }}
+                            className="mt-8 rounded-2xl bg-card backdrop-blur-sm border border-border p-8"
                         >
-                            Contact Sales
-                        </a>
-                    </motion.div>
-                </div>
-            </section>
+                            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 mb-8">
+                                <div>
+                                    <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center mb-3">
+                                        <Building2 className="w-5 h-5 text-foreground" />
+                                    </div>
+                                    <h3 className="text-2xl font-bold text-foreground">
+                                        Enterprise
+                                    </h3>
+                                    <p className="text-muted-foreground">Teams looking to scale</p>
+                                </div>
+                                <div className="text-right">
+                                    <span className="text-3xl font-bold text-foreground">
+                                        Custom Pricing
+                                    </span>
+                                </div>
+                            </div>
 
-            <Footer />
+                            <p className="text-muted-foreground mb-6">
+                                Everything included in Team, plus:
+                            </p>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-4 mb-8">
+                                <div className="flex items-center gap-3">
+                                    <Shield className="w-4 h-4 text-muted-foreground" />
+                                    <span className="text-sm text-muted-foreground">
+                                        Role Based Access Control
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <Key className="w-4 h-4 text-muted-foreground" />
+                                    <span className="text-sm text-muted-foreground">
+                                        SCIM/SAML Support
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <LayoutDashboard className="w-4 h-4 text-muted-foreground" />
+                                    <span className="text-sm text-muted-foreground">
+                                        Admin Dashboard
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <FileText className="w-4 h-4 text-muted-foreground" />
+                                    <span className="text-sm text-muted-foreground">
+                                        Audit Logs
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <Database className="w-4 h-4 text-muted-foreground" />
+                                    <span className="text-sm text-muted-foreground">
+                                        Custom Data Retention
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <FileCheck className="w-4 h-4 text-muted-foreground" />
+                                    <span className="text-sm text-muted-foreground">
+                                        Regular Security Reports
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <Download className="w-4 h-4 text-muted-foreground" />
+                                    <span className="text-sm text-muted-foreground">
+                                        Data Exports
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <EyeOff className="w-4 h-4 text-muted-foreground" />
+                                    <span className="text-sm text-muted-foreground">
+                                        Incognito Mode
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <Bot className="w-4 h-4 text-muted-foreground" />
+                                    <span className="text-sm text-muted-foreground">
+                                        AI Model Access Control
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <Cloud className="w-4 h-4 text-muted-foreground" />
+                                    <span className="text-sm text-muted-foreground">
+                                        Virtual Private Cloud
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <ListOrdered className="w-4 h-4 text-muted-foreground" />
+                                    <span className="text-sm text-muted-foreground">
+                                        Flow Queuing
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <Users className="w-4 h-4 text-muted-foreground" />
+                                    <span className="text-sm text-muted-foreground">
+                                        Dedicated Support
+                                    </span>
+                                </div>
+                            </div>
+
+                            <a
+                                href="https://cal.com/naib-baghirov-o5surn/30min"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="block w-full py-3 rounded-lg font-semibold text-center bg-foreground text-background hover:opacity-90 transition-all duration-200"
+                            >
+                                Contact Sales
+                            </a>
+                        </motion.div>
+                    </div>
+                </section>
+
+                <Footer />
+            </div>
 
             {/* Custom slider styles */}
             <style>{`

@@ -91,6 +91,9 @@ backend/src/integrations/providers/[provider-id]/
 │   └── index.ts                # Export all operations
 ├── mcp/
 │   └── [Provider]MCPAdapter.ts # MCP tool adapter
+├── __tests__/
+│   ├── fixtures.ts             # Sandbox test fixtures (REQUIRED)
+│   └── [provider-id].test.ts   # Provider unit tests
 └── schemas.ts                  # Shared Zod schemas (optional)
 ```
 
@@ -176,22 +179,248 @@ Add to `shared/src/providers.ts`:
 
 ### 6. Secret Management (OAuth providers only)
 
+**IMPORTANT:** This step is REQUIRED for all OAuth providers. Without it, the integration will not work in production.
+
 #### Add to Pulumi Config
 
-Add to `infra/pulumi/Pulumi.production.yaml` in the `secrets` JSON array:
+Add to `infra/pulumi/Pulumi.production.yaml` in the `flowmaestro-infrastructure:secrets` JSON array:
 
 ```json
 {"name":"[provider-id]-client-id","envVar":"[PROVIDER]_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"[Display Name] OAuth client ID"},
 {"name":"[provider-id]-client-secret","envVar":"[PROVIDER]_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"[Display Name] OAuth client secret"}
 ```
 
+**Secret Definition Fields:**
+
+- `name`: kebab-case identifier (becomes GCP secret name: `flowmaestro-app-{name}`)
+- `envVar`: SCREAMING_SNAKE_CASE environment variable name (must match config/index.ts)
+- `category`: Use `oauth` for OAuth credentials (groups into K8s `oauth-secrets`)
+- `deployments`: Use `["api"]` for OAuth (only API server needs these)
+- `required`: Use `false` for optional integrations
+- `description`: Human-readable description shown in setup prompts
+
 #### After Pulumi Deployment
 
-1. Run `pulumi up` to create empty GCP secrets
-2. Run `./infra/scripts/setup-secrets-gcp.sh` to set the secret values
-3. Wait for External Secrets Operator to sync (or force sync)
+1. Run `cd infra/pulumi && pulumi up` to create empty GCP secrets + K8s ExternalSecrets
+2. Run `./infra/scripts/setup-secrets-gcp.sh` to interactively set the secret values
+3. Wait for External Secrets Operator to sync (~5 minutes) or force sync:
+    ```bash
+    kubectl annotate externalsecret -n flowmaestro --all force-sync=$(date +%s)
+    kubectl rollout restart deployment/api-server -n flowmaestro
+    ```
 
-### 7. Type Checking
+#### For Local Development
+
+After setting GCP secrets, sync to your local `.env`:
+
+```bash
+./infra/scripts/sync-secrets-local.sh
+```
+
+### 7. Sandbox Test Fixtures
+
+**IMPORTANT:** Every new provider MUST include sandbox fixtures. These enable:
+
+- Agent integration tests to run without real API credentials
+- Test connections in the UI to work properly
+- Deterministic testing of MCP tool execution
+
+#### Create Fixture Files
+
+Create the `__tests__` directory with fixtures:
+
+```
+backend/src/integrations/providers/[provider-id]/
+└── __tests__/
+    ├── fixtures.ts           # Test fixtures for all operations
+    └── [provider-id].test.ts # Unit tests for the provider
+```
+
+#### Fixture File Template
+
+```typescript
+// backend/src/integrations/providers/[provider-id]/__tests__/fixtures.ts
+/**
+ * [Provider] Provider Test Fixtures
+ *
+ * Based on official [Provider] API documentation:
+ * - [link to API docs for operation 1]
+ * - [link to API docs for operation 2]
+ */
+
+import type { TestFixture } from "../../../sandbox";
+
+// ============================================================================
+// SAMPLE DATA (for list operations with filtering/pagination)
+// ============================================================================
+
+const sampleRecords = [
+    {
+        id: "rec-001",
+        name: "Sample Record 1",
+        status: "active",
+        createdAt: "2024-01-15T10:30:00Z",
+        // Add internal filter fields prefixed with underscore
+        _type: "type_a"
+    },
+    {
+        id: "rec-002",
+        name: "Sample Record 2",
+        status: "inactive",
+        createdAt: "2024-01-16T14:20:00Z",
+        _type: "type_b"
+    }
+    // Add 5-10 realistic sample records
+];
+
+// ============================================================================
+// OPERATION FIXTURES
+// ============================================================================
+
+/**
+ * Fixture for [operationName] operation
+ */
+export const [operationName]Fixture: TestFixture = {
+    operationId: "[operationName]",
+    provider: "[provider-id]",
+    validCases: [
+        {
+            name: "basic_success",
+            description: "Successfully [describes what operation does]",
+            input: {
+                // Minimal valid input
+                requiredParam: "value"
+            },
+            expectedOutput: {
+                // Expected response shape
+                id: "result-123",
+                status: "success"
+            }
+        },
+        {
+            name: "with_optional_params",
+            description: "[Operation] with all optional parameters",
+            input: {
+                requiredParam: "value",
+                optionalParam: "extra"
+            },
+            expectedOutput: {
+                id: "result-456",
+                status: "success",
+                extra: "data"
+            }
+        }
+    ],
+    errorCases: [
+        {
+            name: "not_found",
+            description: "Resource not found error",
+            input: {
+                requiredParam: "nonexistent-id"
+            },
+            expectedError: {
+                type: "not_found",
+                message: "[Resource] not found",
+                retryable: false
+            }
+        },
+        {
+            name: "invalid_input",
+            description: "Invalid input parameters",
+            input: {
+                requiredParam: ""  // Empty/invalid value
+            },
+            expectedError: {
+                type: "validation",
+                message: "Invalid [parameter]",
+                retryable: false
+            }
+        }
+    ]
+};
+
+/**
+ * Fixture for list operation with filtering support
+ */
+export const list[Resource]sFixture: TestFixture = {
+    operationId: "list[Resource]s",
+    provider: "[provider-id]",
+    validCases: [
+        {
+            name: "list_all",
+            description: "List all [resources]",
+            input: {},
+            expectedOutput: {
+                records: sampleRecords.slice(0, 5),
+                total: sampleRecords.length
+            }
+        }
+    ],
+    errorCases: [],
+    // Enable dynamic filtering for list operations
+    filterableData: {
+        records: sampleRecords,
+        recordsField: "records",       // Field name in response
+        defaultPageSize: 10,
+        maxPageSize: 100,
+        pageSizeParam: "limit",        // Param name for page size
+        offsetParam: "offset",         // Param name for offset
+        filterConfig: {
+            type: "generic",
+            filterableFields: ["status", "type"]
+        }
+    }
+};
+
+// ============================================================================
+// EXPORTS
+// ============================================================================
+
+export const [providerId]Fixtures = {
+    [operationName]: [operationName]Fixture,
+    list[Resource]s: list[Resource]sFixture
+};
+
+export default [providerId]Fixtures;
+```
+
+#### Provider Test File Template
+
+```typescript
+// backend/src/integrations/providers/[provider-id]/__tests__/[provider-id].test.ts
+import { [providerId]Fixtures } from "./fixtures";
+
+describe("[Provider] Fixtures", () => {
+    it("should have fixtures for all operations", () => {
+        expect([providerId]Fixtures).toBeDefined();
+        expect(Object.keys([providerId]Fixtures).length).toBeGreaterThan(0);
+    });
+
+    // Add operation-specific tests if needed
+});
+```
+
+#### Register Fixtures
+
+Add to `backend/src/integrations/sandbox/FixtureRegistry.ts`:
+
+```typescript
+// In the imports section
+import { [providerId]Fixtures } from "../providers/[provider-id]/__tests__/fixtures";
+
+// In the registerAllFixtures() method
+this.registerProviderFixtures("[provider-id]", [providerId]Fixtures);
+```
+
+#### Fixture Guidelines
+
+1. **Realistic Data**: Use realistic-looking sample data (not "test123")
+2. **Error Cases**: Include at least `not_found` and `validation` error cases
+3. **Filterable Data**: For list operations, provide 5-10 sample records
+4. **Documentation Links**: Reference official API docs at the top of fixtures
+5. **Cover All Operations**: Every operation in the provider must have a fixture
+
+### 8. Type Checking
 
 After implementation, run:
 
@@ -666,25 +895,30 @@ If the provider requires user input before OAuth (like Zendesk subdomain), add t
 
 ## Key Files Reference
 
-| File                                                  | Purpose                             |
-| ----------------------------------------------------- | ----------------------------------- |
-| `backend/src/integrations/providers/[provider-id]/`   | Provider implementation directory   |
-| `backend/src/integrations/registry.ts`                | Register provider (add entry here)  |
-| `backend/src/services/oauth/OAuthProviderRegistry.ts` | OAuth config (OAuth providers only) |
-| `backend/src/core/config/index.ts`                    | Environment variable config         |
-| `shared/src/providers.ts`                             | Frontend provider definitions       |
-| `shared/src/connections.ts`                           | Connection data types               |
-| `infra/pulumi/Pulumi.production.yaml`                 | Secret definitions                  |
-| `infra/scripts/setup-secrets-gcp.sh`                  | Set secret values                   |
+| File                                                                     | Purpose                                      |
+| ------------------------------------------------------------------------ | -------------------------------------------- |
+| `backend/src/integrations/providers/[provider-id]/`                      | Provider implementation directory            |
+| `backend/src/integrations/providers/[provider-id]/__tests__/fixtures.ts` | Sandbox test fixtures (REQUIRED)             |
+| `backend/src/integrations/sandbox/FixtureRegistry.ts`                    | Register provider fixtures here              |
+| `backend/src/integrations/registry.ts`                                   | Register provider (add entry here)           |
+| `backend/src/services/oauth/OAuthProviderRegistry.ts`                    | OAuth config (OAuth providers only)          |
+| `backend/src/core/config/index.ts`                                       | Environment variable config + callback paths |
+| `shared/src/providers.ts`                                                | Frontend provider definitions + logo domains |
+| `shared/src/connections.ts`                                              | Connection data types                        |
+| `infra/pulumi/Pulumi.production.yaml`                                    | Secret definitions (REQUIRED for OAuth)      |
+| `infra/scripts/setup-secrets-gcp.sh`                                     | Interactive script to set GCP secret values  |
+| `infra/scripts/sync-secrets-local.sh`                                    | Sync GCP secrets to local .env file          |
 
 ---
 
 ## Testing the Integration
 
-1. **Create connection via UI**: Go to Connections page, add new connection
-2. **Test in workflow**: Create a workflow with an Integration node using the new provider
-3. **Test in agent**: Add the integration as a tool to an agent and test via chat
-4. **Verify MCP tools**: Check that operations appear as tools in the agent's tool list
+1. **Run unit tests**: `npm test -- --testPathPattern="providers/[provider-id]"`
+2. **Run agent integration tests**: `npm run test:integration -- --testPathPattern="integration/agents"` (verifies sandbox fixtures work)
+3. **Create connection via UI**: Go to Connections page, add new connection
+4. **Test in workflow**: Create a workflow with an Integration node using the new provider
+5. **Test in agent**: Add the integration as a tool to an agent and test via chat
+6. **Verify MCP tools**: Check that operations appear as tools in the agent's tool list
 
 ---
 
@@ -695,5 +929,10 @@ If the provider requires user input before OAuth (like Zendesk subdomain), add t
 3. **Token Refresh**: OAuth tokens expire - ensure refresh logic works
 4. **Rate Limits**: Configure appropriate rate limits to avoid API throttling
 5. **Type Safety**: Run `npx tsc --noEmit` before committing
-6. **Secret Sync**: After adding Pulumi secrets, wait for ESO sync or force it
-7. **Environment Variables**: Use SCREAMING_SNAKE_CASE for env var names
+6. **Pulumi Secrets**: ALWAYS add OAuth credentials to `Pulumi.production.yaml` - without this, the integration won't work in production
+7. **Secret Sync**: After adding Pulumi secrets, run `pulumi up` then wait for ESO sync (~5 min) or force it
+8. **Environment Variables**: Use SCREAMING_SNAKE_CASE for env var names, must match between config/index.ts and Pulumi.production.yaml
+9. **Local Development**: After setting GCP secrets, run `sync-secrets-local.sh` to update your `.env` file
+10. **Sandbox Fixtures**: ALWAYS create `__tests__/fixtures.ts` with test data for all operations - agent integration tests depend on this
+11. **Fixture Registration**: Don't forget to register fixtures in `FixtureRegistry.ts` - unregistered fixtures won't be used by the sandbox
+12. **Realistic Fixtures**: Use realistic sample data in fixtures (real-looking IDs, names, timestamps) - this helps catch edge cases

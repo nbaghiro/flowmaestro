@@ -22,26 +22,7 @@ export const addToPlaylistOperation: OperationDefinition = {
     description: "Add a video to a YouTube playlist at an optional position",
     category: "playlists",
     retryable: false,
-    inputSchema: addToPlaylistSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            playlistId: {
-                type: "string",
-                description: "The playlist ID to add the video to"
-            },
-            videoId: {
-                type: "string",
-                description: "The video ID to add"
-            },
-            position: {
-                type: "number",
-                description: "Position in the playlist (0-based)",
-                minimum: 0
-            }
-        },
-        required: ["playlistId", "videoId"]
-    }
+    inputSchema: addToPlaylistSchema
 };
 
 /**

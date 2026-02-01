@@ -1,3 +1,4 @@
+import { toJSONSchema } from "../../../../core/utils/zod-to-json-schema";
 import { TrelloClient } from "../client/TrelloClient";
 
 // Import all execute functions
@@ -34,7 +35,7 @@ export class TrelloMCPAdapter {
         return Array.from(this.operations.values()).map((op) => ({
             name: `trello_${op.id}`,
             description: op.description,
-            inputSchema: op.inputSchemaJSON,
+            inputSchema: toJSONSchema(op.inputSchema),
             executeRef: op.id
         }));
     }

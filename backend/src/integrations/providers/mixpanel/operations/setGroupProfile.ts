@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { MixpanelClient } from "../client/MixpanelClient";
 import { MixpanelGroupKeySchema, MixpanelGroupIdSchema } from "../schemas";
 import type { MixpanelGroupResponse } from "./types";
@@ -35,7 +34,6 @@ export const setGroupProfileOperation: OperationDefinition = {
     category: "groups",
     actionType: "write",
     inputSchema: setGroupProfileSchema,
-    inputSchemaJSON: toJSONSchema(setGroupProfileSchema),
     retryable: true,
     timeout: 10000
 };

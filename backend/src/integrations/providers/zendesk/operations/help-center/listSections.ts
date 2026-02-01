@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { ZendeskClient } from "../../client/ZendeskClient";
 import type { SectionsResponse } from "../../types";
@@ -30,7 +29,6 @@ export const listSectionsOperation: OperationDefinition = {
     description: "List Help Center sections with optional filtering by category",
     category: "help-center",
     inputSchema: listSectionsSchema,
-    inputSchemaJSON: toJSONSchema(listSectionsSchema),
     retryable: true,
     timeout: 30000
 };

@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { addTaskToProjectInputSchema, type AddTaskToProjectInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { AsanaClient } from "../../client/AsanaClient";
@@ -9,7 +8,6 @@ export const addTaskToProjectOperation: OperationDefinition = {
     description: "Add an existing task to a project. Optionally specify a section and position.",
     category: "tasks",
     inputSchema: addTaskToProjectInputSchema,
-    inputSchemaJSON: toJSONSchema(addTaskToProjectInputSchema),
     retryable: true,
     timeout: 10000
 };

@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { PostHogClient } from "../client/PostHogClient";
 import {
     PostHogDistinctIdSchema,
@@ -34,7 +33,6 @@ export const captureEventOperation: OperationDefinition = {
     category: "events",
     actionType: "write",
     inputSchema: captureEventSchema,
-    inputSchemaJSON: toJSONSchema(captureEventSchema),
     retryable: true,
     timeout: 10000
 };

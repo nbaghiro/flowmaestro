@@ -7,8 +7,8 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { Bot, Code2, Database, Globe } from "lucide-react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { NodeExecutionStatus } from "@flowmaestro/shared";
 import { BaseNode } from "../nodes/BaseNode";
-import type { NodeStatus } from "../nodes/BaseNode";
 
 // Mock React Flow hooks
 vi.mock("reactflow", () => ({
@@ -120,12 +120,14 @@ describe("BaseNode", () => {
     });
 
     describe("Status Indicator", () => {
-        const statusCases: Array<{ status: NodeStatus; expectedClass: string }> = [
+        const statusCases: Array<{ status: NodeExecutionStatus; expectedClass: string }> = [
             { status: "idle", expectedClass: "bg-gray-300" },
             { status: "pending", expectedClass: "bg-yellow-400" },
-            { status: "running", expectedClass: "bg-blue-500" },
-            { status: "success", expectedClass: "bg-green-500" },
-            { status: "error", expectedClass: "bg-red-500" }
+            { status: "ready", expectedClass: "bg-yellow-400" },
+            { status: "executing", expectedClass: "bg-blue-500" },
+            { status: "completed", expectedClass: "bg-green-500" },
+            { status: "failed", expectedClass: "bg-red-500" },
+            { status: "skipped", expectedClass: "bg-gray-300" }
         ];
 
         statusCases.forEach(({ status, expectedClass }) => {
@@ -142,7 +144,7 @@ describe("BaseNode", () => {
 
         it("shows running status with pulse animation", () => {
             const { container } = render(
-                <BaseNode icon={Bot} label="Test Node" status="running" />
+                <BaseNode icon={Bot} label="Test Node" status="executing" />
             );
 
             const statusDot = container.querySelector(".animate-pulse");
@@ -247,7 +249,7 @@ describe("BaseNode", () => {
     describe("Interactions", () => {
         it("has a status indicator visible", () => {
             const { container } = render(
-                <BaseNode icon={Bot} label="Test Node" status="success" />
+                <BaseNode icon={Bot} label="Test Node" status="completed" />
             );
 
             // Status indicator should be present
@@ -330,10 +332,10 @@ describe("BaseNode", () => {
 
         it("includes status in title attribute", () => {
             const { container } = render(
-                <BaseNode icon={Bot} label="Test Node" status="success" />
+                <BaseNode icon={Bot} label="Test Node" status="completed" />
             );
 
-            const statusDot = container.querySelector('[title*="Success"]');
+            const statusDot = container.querySelector('[title*="Completed"]');
             expect(statusDot).toBeInTheDocument();
         });
     });

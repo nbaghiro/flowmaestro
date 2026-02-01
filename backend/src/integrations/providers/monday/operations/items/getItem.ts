@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { GET_ITEM } from "../../graphql/queries";
 import { getItemInputSchema, type GetItemInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
@@ -10,7 +9,6 @@ export const getItemOperation: OperationDefinition = {
     description: "Retrieve a specific item from Monday.com by its ID, including column values.",
     category: "items",
     inputSchema: getItemInputSchema,
-    inputSchemaJSON: toJSONSchema(getItemInputSchema),
     retryable: true,
     timeout: 10000
 };

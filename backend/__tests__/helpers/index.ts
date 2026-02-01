@@ -21,3 +21,15 @@ export * from "./temporal-test-env";
 
 // Re-export assertion helpers if they exist
 // export * from "./assertion-helpers";
+
+// Provider Test Utilities (for integration testing)
+export * from "./provider-test-utils";
+
+// Agent Test Environment (for agent integration testing)
+export * from "./agent-test-env";
+
+// LLM Mock Client (for deterministic LLM responses)
+export * from "./llm-mock-client";
+
+// Agent Test Fixtures (reusable configurations)
+export * from "./agent-test-fixtures";

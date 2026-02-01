@@ -20,17 +20,7 @@ export const getPageOperation: OperationDefinition = {
     description: "Retrieve a Notion page by ID",
     category: "read",
     retryable: true,
-    inputSchema: getPageSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            page_id: {
-                type: "string",
-                description: "Page ID to retrieve"
-            }
-        },
-        required: ["page_id"]
-    }
+    inputSchema: getPageSchema
 };
 
 /**

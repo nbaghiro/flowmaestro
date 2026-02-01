@@ -29,28 +29,7 @@ export const deleteEventOperation: OperationDefinition = {
     description: "Delete a calendar event",
     category: "events",
     retryable: true,
-    inputSchema: deleteEventSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            calendarId: {
-                type: "string",
-                description: "Calendar identifier (use 'primary' for main calendar)",
-                default: "primary"
-            },
-            eventId: {
-                type: "string",
-                description: "Event identifier"
-            },
-            sendUpdates: {
-                type: "string",
-                enum: ["all", "externalOnly", "none"],
-                description:
-                    "Whether to send notifications about the deletion (all, externalOnly, or none)"
-            }
-        },
-        required: ["eventId"]
-    }
+    inputSchema: deleteEventSchema
 };
 
 /**

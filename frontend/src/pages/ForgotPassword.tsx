@@ -1,5 +1,6 @@
 import { useState, FormEvent } from "react";
 import { Link } from "react-router-dom";
+import { AbstractBackground } from "../components/common/AbstractBackground";
 import { Alert } from "../components/common/Alert";
 import { Button } from "../components/common/Button";
 import { Input } from "../components/common/Input";
@@ -32,7 +33,7 @@ export function ForgotPassword() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-background dark:bg-[#222222] px-4">
+        <AbstractBackground variant="auth" className="flex items-center justify-center px-4">
             <div className="w-full max-w-md">
                 <div className="bg-card rounded-lg shadow-lg border border-border p-8">
                     {/* Logo and Title */}
@@ -107,6 +108,6 @@ export function ForgotPassword() {
                     </div>
                 </div>
             </div>
-        </div>
+        </AbstractBackground>
     );
 }

@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { AirtableClient } from "../client/AirtableClient";
 import { baseIdSchema, tableIdSchema, recordIdSchema, fieldsSchema } from "../schemas";
 import type { AirtableRecord } from "./types";
@@ -28,7 +27,6 @@ export const batchUpdateRecordsOperation: OperationDefinition = {
     description: "Update up to 10 records at once",
     category: "data",
     inputSchema: batchUpdateRecordsSchema,
-    inputSchemaJSON: toJSONSchema(batchUpdateRecordsSchema),
     retryable: true,
     timeout: 30000
 };

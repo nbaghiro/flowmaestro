@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { FacebookClient } from "../client/FacebookClient";
 import type { MessengerActionResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -29,7 +28,6 @@ export const sendTypingIndicatorOperation: OperationDefinition = (() => {
             description: "Show or hide the typing indicator (three dots) in the conversation",
             category: "messaging",
             inputSchema: sendTypingIndicatorSchema,
-            inputSchemaJSON: toJSONSchema(sendTypingIndicatorSchema),
             retryable: true,
             timeout: 5000
         };

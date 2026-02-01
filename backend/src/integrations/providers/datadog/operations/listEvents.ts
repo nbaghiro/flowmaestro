@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { DatadogEventOutput } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { DatadogClient } from "../client/DatadogClient";
@@ -20,7 +19,6 @@ export const listEventsOperation: OperationDefinition = {
     description: "Query events from the Datadog event stream",
     category: "events",
     inputSchema: listEventsSchema,
-    inputSchemaJSON: toJSONSchema(listEventsSchema),
     retryable: true,
     timeout: 30000
 };

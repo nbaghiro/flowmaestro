@@ -30,40 +30,7 @@ export const getFreeBusyOperation: OperationDefinition = {
     description: "Query free/busy (availability) information for a set of calendars",
     category: "availability",
     retryable: true,
-    inputSchema: getFreeBusySchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            timeMin: {
-                type: "string",
-                description: "Start of the interval (RFC3339 timestamp)"
-            },
-            timeMax: {
-                type: "string",
-                description: "End of the interval (RFC3339 timestamp)"
-            },
-            items: {
-                type: "array",
-                items: {
-                    type: "object",
-                    properties: {
-                        id: {
-                            type: "string",
-                            description: "Calendar identifier"
-                        }
-                    },
-                    required: ["id"]
-                },
-                description: "List of calendars to query",
-                minItems: 1
-            },
-            timeZone: {
-                type: "string",
-                description: "Time zone for the query (e.g., America/Los_Angeles)"
-            }
-        },
-        required: ["timeMin", "timeMax", "items"]
-    }
+    inputSchema: getFreeBusySchema
 };
 
 /**

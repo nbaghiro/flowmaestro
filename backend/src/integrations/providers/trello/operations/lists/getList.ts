@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { TrelloClient } from "../../client/TrelloClient";
 import { TrelloListIdSchema } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
@@ -23,7 +22,6 @@ export const getListOperation: OperationDefinition = {
     description: "Get detailed information about a specific Trello list",
     category: "lists",
     inputSchema: getListSchema,
-    inputSchemaJSON: toJSONSchema(getListSchema),
     retryable: true,
     timeout: 10000
 };

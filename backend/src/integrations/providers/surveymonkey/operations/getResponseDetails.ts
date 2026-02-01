@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { SurveyMonkeyClient } from "../client/SurveyMonkeyClient";
 import { GetResponseDetailsSchema } from "../schemas";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -16,7 +15,6 @@ export const getResponseDetailsOperation: OperationDefinition = {
         "Get full response details with all answers. Note: This operation requires the responses_read_detail scope, which requires a paid SurveyMonkey plan.",
     category: "responses",
     inputSchema: getResponseDetailsSchema,
-    inputSchemaJSON: toJSONSchema(getResponseDetailsSchema),
     retryable: true,
     timeout: 60000
 };

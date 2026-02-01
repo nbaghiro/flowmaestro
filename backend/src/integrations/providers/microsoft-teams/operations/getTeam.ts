@@ -14,13 +14,6 @@ export const getTeamOperation: OperationDefinition = {
     description: "Get details of a specific Microsoft Team",
     category: "teams",
     inputSchema: getTeamSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["teamId"],
-        properties: {
-            teamId: { type: "string", description: "ID of the team" }
-        }
-    },
     retryable: true
 };
 

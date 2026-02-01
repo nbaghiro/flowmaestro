@@ -374,26 +374,26 @@ describe("workflowStore", () => {
 
             it("updates node execution state", () => {
                 useWorkflowStore.getState().updateNodeState("node-1", {
-                    status: "running",
+                    status: "executing",
                     startedAt: new Date()
                 });
 
                 const nodeState = useWorkflowStore
                     .getState()
                     .currentExecution?.nodeStates.get("node-1");
-                expect(nodeState?.status).toBe("running");
+                expect(nodeState?.status).toBe("executing");
             });
 
             it("calculates duration when completed", () => {
                 const startedAt = new Date(Date.now() - 1000);
 
                 useWorkflowStore.getState().updateNodeState("node-1", {
-                    status: "running",
+                    status: "executing",
                     startedAt
                 });
 
                 useWorkflowStore.getState().updateNodeState("node-1", {
-                    status: "success",
+                    status: "completed",
                     completedAt: new Date()
                 });
 
@@ -405,7 +405,7 @@ describe("workflowStore", () => {
 
             it("preserves existing state when updating", () => {
                 useWorkflowStore.getState().updateNodeState("node-1", {
-                    status: "running",
+                    status: "executing",
                     startedAt: new Date()
                 });
 
@@ -416,7 +416,7 @@ describe("workflowStore", () => {
                 const nodeState = useWorkflowStore
                     .getState()
                     .currentExecution?.nodeStates.get("node-1");
-                expect(nodeState?.status).toBe("running");
+                expect(nodeState?.status).toBe("executing");
                 expect(nodeState?.output).toEqual({ result: "test" });
             });
         });

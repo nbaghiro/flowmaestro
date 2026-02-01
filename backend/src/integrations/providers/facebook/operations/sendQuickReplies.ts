@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { FacebookClient } from "../client/FacebookClient";
 import type { MessengerSendResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -59,7 +58,6 @@ export const sendQuickRepliesOperation: OperationDefinition = (() => {
             description: "Send a message with quick reply buttons to a Messenger user",
             category: "messaging",
             inputSchema: sendQuickRepliesSchema,
-            inputSchemaJSON: toJSONSchema(sendQuickRepliesSchema),
             retryable: true,
             timeout: 15000
         };

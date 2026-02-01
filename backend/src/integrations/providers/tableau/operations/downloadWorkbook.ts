@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { TableauClient } from "../client/TableauClient";
 import {
     TableauWorkbookIdSchema,
@@ -30,7 +29,6 @@ export const downloadWorkbookOperation: OperationDefinition = {
     description: "Download a workbook as PDF or PowerPoint",
     category: "workbooks",
     inputSchema: downloadWorkbookSchema,
-    inputSchemaJSON: toJSONSchema(downloadWorkbookSchema),
     retryable: true,
     timeout: 120000
 };

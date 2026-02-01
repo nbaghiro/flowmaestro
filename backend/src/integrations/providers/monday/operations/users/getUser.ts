@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { GET_USER } from "../../graphql/queries";
 import { getUserInputSchema, type GetUserInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
@@ -10,7 +9,6 @@ export const getUserOperation: OperationDefinition = {
     description: "Get a specific Monday.com user by ID.",
     category: "users",
     inputSchema: getUserInputSchema,
-    inputSchemaJSON: toJSONSchema(getUserInputSchema),
     retryable: true,
     timeout: 10000
 };

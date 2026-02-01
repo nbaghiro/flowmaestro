@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { GET_CURRENT_USER } from "../../graphql/queries";
 import { getCurrentUserInputSchema, type GetCurrentUserInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
@@ -10,7 +9,6 @@ export const getCurrentUserOperation: OperationDefinition = {
     description: "Get the currently authenticated Monday.com user.",
     category: "users",
     inputSchema: getCurrentUserInputSchema,
-    inputSchemaJSON: toJSONSchema(getCurrentUserInputSchema),
     retryable: true,
     timeout: 10000
 };

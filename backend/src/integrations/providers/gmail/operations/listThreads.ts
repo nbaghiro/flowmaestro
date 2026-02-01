@@ -42,38 +42,7 @@ export const listThreadsOperation: OperationDefinition = {
     description: "List conversation threads in the user's Gmail mailbox with optional filters",
     category: "threads",
     retryable: true,
-    inputSchema: listThreadsSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            query: {
-                type: "string",
-                description: "Gmail search query"
-            },
-            maxResults: {
-                type: "number",
-                description: "Maximum number of threads to return (1-500, default 100)",
-                minimum: 1,
-                maximum: 500,
-                default: 100
-            },
-            pageToken: {
-                type: "string",
-                description: "Token for next page of results"
-            },
-            labelIds: {
-                type: "array",
-                items: { type: "string" },
-                description: "Filter by label IDs"
-            },
-            includeSpamTrash: {
-                type: "boolean",
-                description: "Include threads from SPAM and TRASH",
-                default: false
-            }
-        },
-        required: []
-    }
+    inputSchema: listThreadsSchema
 };
 
 /**

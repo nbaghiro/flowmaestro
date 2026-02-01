@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { FacebookClient } from "../client/FacebookClient";
 import type { MessengerActionResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -28,7 +27,6 @@ export const markAsSeenOperation: OperationDefinition = (() => {
             description: "Mark the conversation as seen (shows the blue checkmarks)",
             category: "messaging",
             inputSchema: markAsSeenSchema,
-            inputSchemaJSON: toJSONSchema(markAsSeenSchema),
             retryable: true,
             timeout: 5000
         };

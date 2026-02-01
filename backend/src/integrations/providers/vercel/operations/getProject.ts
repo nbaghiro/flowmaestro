@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { VercelProjectOutput } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { VercelClient } from "../client/VercelClient";
@@ -16,7 +15,6 @@ export const getProjectOperation: OperationDefinition = {
     description: "Get details of a specific Vercel project by ID or name",
     category: "projects",
     inputSchema: getProjectSchema,
-    inputSchemaJSON: toJSONSchema(getProjectSchema),
     retryable: true,
     timeout: 30000
 };

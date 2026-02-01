@@ -27,29 +27,7 @@ export const replaceTextOperation: OperationDefinition = {
     description: "Find and replace all occurrences of text in a Google Docs document",
     category: "documents",
     retryable: true,
-    inputSchema: replaceTextSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            documentId: {
-                type: "string",
-                description: "The ID of the document"
-            },
-            find: {
-                type: "string",
-                description: "The text to find"
-            },
-            replace: {
-                type: "string",
-                description: "The text to replace with (can be empty to delete)"
-            },
-            matchCase: {
-                type: "boolean",
-                description: "Whether to match case when finding text (default: false)"
-            }
-        },
-        required: ["documentId", "find", "replace"]
-    }
+    inputSchema: replaceTextSchema
 };
 
 interface BatchUpdateResponse {

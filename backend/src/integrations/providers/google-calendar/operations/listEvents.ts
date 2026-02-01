@@ -48,45 +48,7 @@ export const listEventsOperation: OperationDefinition = {
     description: "List events from a Google Calendar with optional filtering by time range",
     category: "events",
     retryable: true,
-    inputSchema: listEventsSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            calendarId: {
-                type: "string",
-                description: "Calendar identifier (use 'primary' for main calendar)",
-                default: "primary"
-            },
-            timeMin: {
-                type: "string",
-                description: "Lower bound (inclusive) for event's start time (RFC3339 timestamp)"
-            },
-            timeMax: {
-                type: "string",
-                description: "Upper bound (exclusive) for event's end time (RFC3339 timestamp)"
-            },
-            maxResults: {
-                type: "number",
-                description: "Maximum number of events to return (default 250)",
-                minimum: 1,
-                maximum: 2500
-            },
-            orderBy: {
-                type: "string",
-                enum: ["startTime", "updated"],
-                description: "Order of events (requires singleEvents=true for startTime)"
-            },
-            q: {
-                type: "string",
-                description: "Free text search query"
-            },
-            singleEvents: {
-                type: "boolean",
-                description: "Whether to expand recurring events into instances (default false)"
-            }
-        },
-        required: []
-    }
+    inputSchema: listEventsSchema
 };
 
 /**

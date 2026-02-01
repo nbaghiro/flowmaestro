@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { MailchimpCampaignOutput } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { MailchimpClient } from "../client/MailchimpClient";
@@ -16,7 +15,6 @@ export const getCampaignOperation: OperationDefinition = {
     description: "Get a single campaign by ID from Mailchimp",
     category: "campaigns",
     inputSchema: getCampaignSchema,
-    inputSchemaJSON: toJSONSchema(getCampaignSchema),
     retryable: true,
     timeout: 10000
 };

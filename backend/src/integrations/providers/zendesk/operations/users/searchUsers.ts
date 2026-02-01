@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { ZendeskClient } from "../../client/ZendeskClient";
 import type { ZendeskSearchResult, ZendeskUser } from "../../types";
@@ -29,7 +28,6 @@ export const searchUsersOperation: OperationDefinition = {
         "Search for users using Zendesk search syntax (e.g., email:john@example.com, role:agent)",
     category: "users",
     inputSchema: searchUsersSchema,
-    inputSchemaJSON: toJSONSchema(searchUsersSchema),
     retryable: true,
     timeout: 30000
 };

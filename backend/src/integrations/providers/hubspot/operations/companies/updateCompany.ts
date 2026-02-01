@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { HubspotClient } from "../../client/HubspotClient";
 import type { HubspotCompany } from "../types";
@@ -28,7 +27,6 @@ export const updateCompanyOperation: OperationDefinition = {
     description: "Update a company's properties by ID or domain",
     category: "crm",
     inputSchema: updateCompanySchema,
-    inputSchemaJSON: toJSONSchema(updateCompanySchema),
     retryable: true,
     timeout: 10000
 };

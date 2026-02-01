@@ -14,13 +14,6 @@ export const listChatMembersOperation: OperationDefinition = {
     description: "List members of a Microsoft Teams chat",
     category: "chats",
     inputSchema: listChatMembersSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["chatId"],
-        properties: {
-            chatId: { type: "string", description: "ID of the chat" }
-        }
-    },
     retryable: true
 };
 

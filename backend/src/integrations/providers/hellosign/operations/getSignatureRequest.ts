@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { HelloSignClient } from "../client/HelloSignClient";
 import { HelloSignRequestIdSchema } from "../schemas";
 import type { HelloSignSignatureRequest } from "./types";
@@ -28,7 +27,6 @@ export const getSignatureRequestOperation: OperationDefinition = (() => {
             description: "Get the status and details of a signature request",
             category: "signature_requests",
             inputSchema: getSignatureRequestSchema,
-            inputSchemaJSON: toJSONSchema(getSignatureRequestSchema),
             retryable: true,
             timeout: 30000
         };

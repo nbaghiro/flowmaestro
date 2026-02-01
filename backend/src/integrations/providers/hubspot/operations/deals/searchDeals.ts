@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { HubspotClient } from "../../client/HubspotClient";
 import type { HubspotDeal, HubspotSearchRequest, HubspotListResponse } from "../types";
@@ -54,7 +53,6 @@ export const searchDealsOperation: OperationDefinition = {
     description: "Search deals with filters and sorting",
     category: "crm",
     inputSchema: searchDealsSchema,
-    inputSchemaJSON: toJSONSchema(searchDealsSchema),
     retryable: true,
     timeout: 10000
 };

@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { LinkedInClient } from "../client/LinkedInClient";
 import { PostIdSchema, AuthorUrnSchema, ReactionTypeSchema } from "../schemas";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -30,7 +29,6 @@ export const addReactionOperation: OperationDefinition = (() => {
                 "Add a reaction (like, celebrate, support, love, insightful, or funny) to a LinkedIn post.",
             category: "engagement",
             inputSchema: addReactionSchema,
-            inputSchemaJSON: toJSONSchema(addReactionSchema),
             retryable: false,
             timeout: 15000
         };

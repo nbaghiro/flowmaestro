@@ -1,5 +1,4 @@
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { ShopifyClient } from "../client/ShopifyClient";
 import { CreateWebhookSchema, type CreateWebhookParams } from "../schemas";
 import type { ShopifyWebhookResponse } from "./types";
@@ -18,7 +17,6 @@ export const createWebhookOperation: OperationDefinition = (() => {
             description: "Register a new webhook subscription for Shopify events",
             category: "webhooks",
             inputSchema: CreateWebhookSchema,
-            inputSchemaJSON: toJSONSchema(CreateWebhookSchema),
             retryable: false, // Creation should not be retried to avoid duplicates
             timeout: 15000
         };

@@ -22,25 +22,7 @@ export const updateFileOperation: OperationDefinition = {
     description: "Update the name and/or description of a file or folder in Google Drive",
     category: "organization",
     retryable: true,
-    inputSchema: updateFileSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            fileId: {
-                type: "string",
-                description: "File or folder ID to update"
-            },
-            name: {
-                type: "string",
-                description: "New name for the file or folder"
-            },
-            description: {
-                type: "string",
-                description: "New description for the file or folder"
-            }
-        },
-        required: ["fileId"]
-    }
+    inputSchema: updateFileSchema
 };
 
 /**

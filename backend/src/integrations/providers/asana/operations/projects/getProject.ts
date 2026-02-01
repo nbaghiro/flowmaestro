@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { getProjectInputSchema, type GetProjectInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { AsanaClient } from "../../client/AsanaClient";
@@ -9,7 +8,6 @@ export const getProjectOperation: OperationDefinition = {
     description: "Retrieve a specific project from Asana by its GID.",
     category: "projects",
     inputSchema: getProjectInputSchema,
-    inputSchemaJSON: toJSONSchema(getProjectInputSchema),
     retryable: true,
     timeout: 10000
 };

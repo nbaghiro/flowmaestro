@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { listWorkspacesInputSchema, type ListWorkspacesInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { AsanaClient } from "../../client/AsanaClient";
@@ -9,7 +8,6 @@ export const listWorkspacesOperation: OperationDefinition = {
     description: "List all workspaces the authenticated user has access to.",
     category: "users",
     inputSchema: listWorkspacesInputSchema,
-    inputSchemaJSON: toJSONSchema(listWorkspacesInputSchema),
     retryable: true,
     timeout: 30000
 };

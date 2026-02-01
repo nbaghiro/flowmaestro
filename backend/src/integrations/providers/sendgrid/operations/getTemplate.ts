@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { SendGridTemplateOutput } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { SendGridClient } from "../client/SendGridClient";
@@ -16,7 +15,6 @@ export const getTemplateOperation: OperationDefinition = {
     description: "Get a single email template by ID from SendGrid",
     category: "templates",
     inputSchema: getTemplateSchema,
-    inputSchemaJSON: toJSONSchema(getTemplateSchema),
     retryable: true,
     timeout: 10000
 };

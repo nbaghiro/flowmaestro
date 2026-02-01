@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { BufferClient } from "../client/BufferClient";
 import type { BufferProfile } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -25,7 +24,6 @@ export const listProfilesOperation: OperationDefinition = (() => {
             description: "List all connected social media profiles in Buffer",
             category: "profiles",
             inputSchema: listProfilesSchema,
-            inputSchemaJSON: toJSONSchema(listProfilesSchema),
             retryable: true,
             timeout: 10000
         };

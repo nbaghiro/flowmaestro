@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { EvernoteClient } from "../client/EvernoteClient";
 
@@ -46,7 +45,6 @@ Combine multiple terms for complex queries.`,
     category: "notes",
     actionType: "read",
     inputSchema: searchNotesSchema,
-    inputSchemaJSON: toJSONSchema(searchNotesSchema),
     retryable: true,
     timeout: 30000
 };

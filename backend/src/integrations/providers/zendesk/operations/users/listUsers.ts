@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { ZendeskClient } from "../../client/ZendeskClient";
 import type { UsersResponse } from "../../types";
@@ -24,7 +23,6 @@ export const listUsersOperation: OperationDefinition = {
     description: "List all users in Zendesk with pagination",
     category: "users",
     inputSchema: listUsersSchema,
-    inputSchemaJSON: toJSONSchema(listUsersSchema),
     retryable: true,
     timeout: 30000
 };

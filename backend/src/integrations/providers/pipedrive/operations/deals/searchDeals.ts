@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { PipedriveClient } from "../../client/PipedriveClient";
 import type { PipedriveSearchResult, PipedriveDeal } from "../types";
@@ -29,7 +28,6 @@ export const searchDealsOperation: OperationDefinition = {
     description: "Search deals by title, notes, or custom fields",
     category: "deals",
     inputSchema: searchDealsSchema,
-    inputSchemaJSON: toJSONSchema(searchDealsSchema),
     retryable: true,
     timeout: 15000
 };

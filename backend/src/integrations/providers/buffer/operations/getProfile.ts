@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { BufferClient } from "../client/BufferClient";
 import { BufferProfileIdSchema } from "../schemas";
 import type { BufferProfile } from "./types";
@@ -28,7 +27,6 @@ export const getProfileOperation: OperationDefinition = (() => {
             description: "Get details of a specific Buffer profile",
             category: "profiles",
             inputSchema: getProfileSchema,
-            inputSchemaJSON: toJSONSchema(getProfileSchema),
             retryable: true,
             timeout: 10000
         };

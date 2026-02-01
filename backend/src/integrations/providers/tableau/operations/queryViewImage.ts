@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { TableauClient } from "../client/TableauClient";
 import {
     TableauViewIdSchema,
@@ -30,7 +29,6 @@ export const queryViewImageOperation: OperationDefinition = {
     description: "Get the view as a PNG image",
     category: "views",
     inputSchema: queryViewImageSchema,
-    inputSchemaJSON: toJSONSchema(queryViewImageSchema),
     retryable: true,
     timeout: 120000
 };

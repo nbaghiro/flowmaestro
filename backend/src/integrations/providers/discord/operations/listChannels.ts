@@ -2,7 +2,6 @@ import { z } from "zod";
 import type { DiscordChannel } from "@flowmaestro/shared";
 import { DiscordChannelType } from "@flowmaestro/shared";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { DiscordClient } from "../client/DiscordClient";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 
@@ -33,7 +32,6 @@ export const listChannelsOperation: OperationDefinition = (() => {
             description: "List channels in a Discord server",
             category: "discovery",
             inputSchema: listChannelsSchema,
-            inputSchemaJSON: toJSONSchema(listChannelsSchema),
             retryable: true,
             timeout: 15000
         };

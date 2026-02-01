@@ -1,3 +1,4 @@
+import { toJSONSchema } from "../../../../core/utils/zod-to-json-schema";
 import {
     // Email Operations
     executeSendEmail,
@@ -51,7 +52,7 @@ export class SendGridMCPAdapter {
             tools.push({
                 name: `sendgrid_${id}`,
                 description: operation.description,
-                inputSchema: operation.inputSchemaJSON
+                inputSchema: toJSONSchema(operation.inputSchema)
             });
         }
 

@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { KlaviyoClient } from "../client/KlaviyoClient";
 
@@ -35,7 +34,6 @@ export const getCampaignsOperation: OperationDefinition = {
     description: "List campaigns with optional filters and pagination",
     category: "campaigns",
     inputSchema: getCampaignsSchema,
-    inputSchemaJSON: toJSONSchema(getCampaignsSchema),
     retryable: true,
     timeout: 15000
 };

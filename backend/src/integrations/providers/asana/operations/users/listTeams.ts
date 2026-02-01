@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { listTeamsInputSchema, type ListTeamsInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { AsanaClient } from "../../client/AsanaClient";
@@ -9,7 +8,6 @@ export const listTeamsOperation: OperationDefinition = {
     description: "List all teams in an organization workspace.",
     category: "users",
     inputSchema: listTeamsInputSchema,
-    inputSchemaJSON: toJSONSchema(listTeamsInputSchema),
     retryable: true,
     timeout: 30000
 };

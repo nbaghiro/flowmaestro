@@ -3,7 +3,6 @@
  */
 
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { IntercomClient } from "../client/IntercomClient";
 import type { IntercomTag, IntercomListResponse } from "../types";
@@ -22,7 +21,6 @@ export const listTagsOperation: OperationDefinition = {
     description: "List all tags in workspace",
     category: "data",
     inputSchema: listTagsSchema,
-    inputSchemaJSON: toJSONSchema(listTagsSchema),
     retryable: true,
     timeout: 10000
 };
@@ -69,7 +67,6 @@ export const tagContactOperation: OperationDefinition = {
     description: "Add a tag to a contact",
     category: "data",
     inputSchema: tagContactSchema,
-    inputSchemaJSON: toJSONSchema(tagContactSchema),
     retryable: false,
     timeout: 10000
 };
@@ -115,7 +112,6 @@ export const tagConversationOperation: OperationDefinition = {
     description: "Add a tag to a conversation",
     category: "messaging",
     inputSchema: tagConversationSchema,
-    inputSchemaJSON: toJSONSchema(tagConversationSchema),
     retryable: false,
     timeout: 10000
 };

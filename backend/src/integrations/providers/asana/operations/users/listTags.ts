@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { listTagsInputSchema, type ListTagsInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { AsanaClient } from "../../client/AsanaClient";
@@ -9,7 +8,6 @@ export const listTagsOperation: OperationDefinition = {
     description: "List all tags in a workspace.",
     category: "users",
     inputSchema: listTagsInputSchema,
-    inputSchemaJSON: toJSONSchema(listTagsInputSchema),
     retryable: true,
     timeout: 30000
 };

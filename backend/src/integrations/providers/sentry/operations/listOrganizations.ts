@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import type { SentryOrganizationOutput } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
 import type { SentryClient } from "../client/SentryClient";
@@ -14,7 +13,6 @@ export const listOrganizationsOperation: OperationDefinition = {
     description: "List all organizations accessible to the token",
     category: "organizations",
     inputSchema: listOrganizationsSchema,
-    inputSchemaJSON: toJSONSchema(listOrganizationsSchema),
     retryable: true,
     timeout: 30000
 };

@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { CloseClient } from "../../client/CloseClient";
 import type { CloseContact } from "../types";
@@ -60,7 +59,6 @@ export const updateContactOperation: OperationDefinition = {
     description: "Update an existing contact",
     category: "contacts",
     inputSchema: updateContactSchema,
-    inputSchemaJSON: toJSONSchema(updateContactSchema),
     retryable: false,
     timeout: 10000
 };

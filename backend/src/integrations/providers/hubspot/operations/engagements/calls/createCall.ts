@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../../core/schema-utils";
 import type { OperationDefinition, OperationResult } from "../../../../../core/types";
 import type { HubspotClient } from "../../../client/HubspotClient";
 import type { HubspotEngagement } from "../../types";
@@ -35,7 +34,6 @@ export const createCallOperation: OperationDefinition = {
     description: "Create a new call engagement in HubSpot CRM",
     category: "crm",
     inputSchema: createCallSchema,
-    inputSchemaJSON: toJSONSchema(createCallSchema),
     retryable: true,
     timeout: 10000
 };

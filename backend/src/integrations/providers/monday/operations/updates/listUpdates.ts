@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { LIST_UPDATES } from "../../graphql/queries";
 import { listUpdatesInputSchema, type ListUpdatesInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
@@ -10,7 +9,6 @@ export const listUpdatesOperation: OperationDefinition = {
     description: "List all updates (comments) on an item.",
     category: "updates",
     inputSchema: listUpdatesInputSchema,
-    inputSchemaJSON: toJSONSchema(listUpdatesInputSchema),
     retryable: true,
     timeout: 15000
 };

@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { deleteIssueInputSchema, type DeleteIssueInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { JiraClient } from "../../client/JiraClient";
@@ -9,7 +8,6 @@ export const deleteIssueOperation: OperationDefinition = {
     description: "Delete an issue. Optionally delete subtasks as well.",
     category: "issues",
     inputSchema: deleteIssueInputSchema,
-    inputSchemaJSON: toJSONSchema(deleteIssueInputSchema),
     retryable: false, // Deletion should not be retried
     timeout: 10000
 };

@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { CHANGE_SIMPLE_COLUMN_VALUE } from "../../graphql/mutations";
 import {
     changeSimpleColumnValueInputSchema,
@@ -13,7 +12,6 @@ export const changeSimpleColumnValueOperation: OperationDefinition = {
     description: "Change a column value for an item using a simple string value.",
     category: "columns",
     inputSchema: changeSimpleColumnValueInputSchema,
-    inputSchemaJSON: toJSONSchema(changeSimpleColumnValueInputSchema),
     retryable: true,
     timeout: 10000
 };

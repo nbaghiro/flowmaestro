@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { UPDATE_BOARD } from "../../graphql/mutations";
 import { updateBoardInputSchema, type UpdateBoardInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
@@ -10,7 +9,6 @@ export const updateBoardOperation: OperationDefinition = {
     description: "Update a board's name, description, or communication settings in Monday.com.",
     category: "boards",
     inputSchema: updateBoardInputSchema,
-    inputSchemaJSON: toJSONSchema(updateBoardInputSchema),
     retryable: true,
     timeout: 10000
 };

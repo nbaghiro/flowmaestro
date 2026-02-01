@@ -1,3 +1,4 @@
+import { toJSONSchema } from "../../../../core/utils/zod-to-json-schema";
 import { GitHubClient } from "../client/GitHubClient";
 import {
     // Repository executors
@@ -46,7 +47,7 @@ export class GitHubMCPAdapter {
         return Array.from(this.operations.values()).map((op) => ({
             name: `github_${op.id}`,
             description: op.description,
-            inputSchema: op.inputSchemaJSON,
+            inputSchema: toJSONSchema(op.inputSchema),
             executeRef: op.id
         }));
     }

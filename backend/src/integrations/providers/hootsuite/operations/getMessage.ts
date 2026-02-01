@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { HootsuiteClient } from "../client/HootsuiteClient";
 import { HootsuiteMessageIdSchema } from "../schemas";
 import type { HootsuiteMessage } from "./types";
@@ -28,7 +27,6 @@ export const getMessageOperation: OperationDefinition = (() => {
             description: "Get details of a specific Hootsuite message",
             category: "messages",
             inputSchema: getMessageSchema,
-            inputSchemaJSON: toJSONSchema(getMessageSchema),
             retryable: true,
             timeout: 10000
         };

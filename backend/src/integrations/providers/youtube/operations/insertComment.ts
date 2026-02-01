@@ -21,22 +21,7 @@ export const insertCommentOperation: OperationDefinition = {
     description: "Post a new comment on a YouTube video",
     category: "comments",
     retryable: false,
-    inputSchema: insertCommentSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            videoId: {
-                type: "string",
-                description: "Video ID to comment on"
-            },
-            text: {
-                type: "string",
-                description: "Comment text",
-                maxLength: 10000
-            }
-        },
-        required: ["videoId", "text"]
-    }
+    inputSchema: insertCommentSchema
 };
 
 /**

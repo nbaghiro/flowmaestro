@@ -21,21 +21,6 @@ export const sendChannelMessageOperation: OperationDefinition = {
     description: "Send a message to a Microsoft Teams channel",
     category: "messaging",
     inputSchema: sendChannelMessageSchema,
-    inputSchemaJSON: {
-        type: "object",
-        required: ["teamId", "channelId", "content"],
-        properties: {
-            teamId: { type: "string", description: "ID of the team" },
-            channelId: { type: "string", description: "ID of the channel" },
-            content: { type: "string", description: "Message content" },
-            contentType: {
-                type: "string",
-                enum: ["text", "html"],
-                default: "text",
-                description: "Content type"
-            }
-        }
-    },
     retryable: true
 };
 

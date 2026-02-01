@@ -22,25 +22,7 @@ export const updatePageOperation: OperationDefinition = {
     description: "Update an existing Notion page",
     category: "write",
     retryable: true,
-    inputSchema: updatePageSchema,
-    inputSchemaJSON: {
-        type: "object",
-        properties: {
-            page_id: {
-                type: "string",
-                description: "Page ID to update"
-            },
-            properties: {
-                type: "object",
-                description: "Properties to update"
-            },
-            archived: {
-                type: "boolean",
-                description: "Archive the page"
-            }
-        },
-        required: ["page_id", "properties"]
-    }
+    inputSchema: updatePageSchema
 };
 
 /**

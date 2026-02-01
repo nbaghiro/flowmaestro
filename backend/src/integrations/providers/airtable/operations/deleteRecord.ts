@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { AirtableClient } from "../client/AirtableClient";
 import { baseIdSchema, tableIdSchema, recordIdSchema } from "../schemas";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -18,7 +17,6 @@ export const deleteRecordOperation: OperationDefinition = {
     description: "Delete a record by ID",
     category: "data",
     inputSchema: deleteRecordSchema,
-    inputSchemaJSON: toJSONSchema(deleteRecordSchema),
     retryable: false, // Don't retry deletes
     timeout: 10000
 };

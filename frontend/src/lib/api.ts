@@ -1506,6 +1506,8 @@ export interface Connection {
             username?: string;
             workspace?: string;
         };
+        /** When true, operations return mock/test data instead of real API calls */
+        isTestConnection?: boolean;
     };
     capabilities: JsonObject;
     last_used_at: string | null;
@@ -3345,6 +3347,7 @@ export async function getTemplates(
     if (params?.tags && params.tags.length > 0) queryParams.set("tags", params.tags.join(","));
     if (params?.featured !== undefined) queryParams.set("featured", params.featured.toString());
     if (params?.search) queryParams.set("search", params.search);
+    if (params?.sortBy) queryParams.set("sortBy", params.sortBy);
     if (params?.limit) queryParams.set("limit", params.limit.toString());
     if (params?.offset) queryParams.set("offset", params.offset.toString());
 

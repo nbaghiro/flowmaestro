@@ -1,4 +1,3 @@
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { createSectionInputSchema, type CreateSectionInput } from "../../schemas";
 import type { OperationDefinition, OperationResult } from "../../../../core/types";
 import type { AsanaClient } from "../../client/AsanaClient";
@@ -9,7 +8,6 @@ export const createSectionOperation: OperationDefinition = {
     description: "Create a new section in a project. Sections can be used to organize tasks.",
     category: "sections",
     inputSchema: createSectionInputSchema,
-    inputSchemaJSON: toJSONSchema(createSectionInputSchema),
     retryable: true,
     timeout: 10000
 };

@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { LookerClient } from "../client/LookerClient";
 import { LookerFolderIdSchema, LookerFieldsSchema } from "./schemas";
 import type { LookerLook } from "./types";
@@ -24,7 +23,6 @@ export const listLooksOperation: OperationDefinition = {
     description: "Get all Looks (saved queries) in the Looker instance",
     category: "looks",
     inputSchema: listLooksSchema,
-    inputSchemaJSON: toJSONSchema(listLooksSchema),
     retryable: true,
     timeout: 30000
 };

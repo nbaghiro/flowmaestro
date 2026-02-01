@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { WhatsAppClient } from "../client/WhatsAppClient";
 import type { WhatsAppSendResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -84,7 +83,6 @@ export const sendTemplateMessageOperation: OperationDefinition = (() => {
                 "Send a pre-approved message template to a WhatsApp user (required for initiating conversations)",
             category: "messaging",
             inputSchema: sendTemplateMessageSchema,
-            inputSchemaJSON: toJSONSchema(sendTemplateMessageSchema),
             retryable: true,
             timeout: 15000
         };

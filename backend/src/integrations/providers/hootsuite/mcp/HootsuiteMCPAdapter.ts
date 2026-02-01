@@ -1,3 +1,4 @@
+import { toJSONSchema } from "../../../../core/utils/zod-to-json-schema";
 import { HootsuiteClient } from "../client/HootsuiteClient";
 import { executeDeleteMessage } from "../operations/deleteMessage";
 import { executeGetMessage } from "../operations/getMessage";
@@ -19,7 +20,7 @@ export class HootsuiteMCPAdapter {
         return Array.from(this.operations.values()).map((op) => ({
             name: `hootsuite_${op.id}`,
             description: op.description,
-            inputSchema: op.inputSchemaJSON,
+            inputSchema: toJSONSchema(op.inputSchema),
             executeRef: op.id
         }));
     }

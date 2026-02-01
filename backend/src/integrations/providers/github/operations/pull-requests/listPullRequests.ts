@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { GitHubClient } from "../../client/GitHubClient";
 import {
     GitHubOwnerSchema,
@@ -39,7 +38,6 @@ export const listPullRequestsOperation: OperationDefinition = {
     description: "List pull requests in a repository",
     category: "pull_requests",
     inputSchema: listPullRequestsSchema,
-    inputSchemaJSON: toJSONSchema(listPullRequestsSchema),
     retryable: true,
     timeout: 30000
 };

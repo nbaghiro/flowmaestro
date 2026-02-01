@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { LookerClient } from "../client/LookerClient";
 import {
     LookerModelSchema,
@@ -39,7 +38,6 @@ export const createQueryOperation: OperationDefinition = {
     category: "queries",
     actionType: "write",
     inputSchema: createQuerySchema,
-    inputSchemaJSON: toJSONSchema(createQuerySchema),
     retryable: true,
     timeout: 30000
 };

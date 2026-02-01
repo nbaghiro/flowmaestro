@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../../core/schema-utils";
 import { GitHubClient } from "../../client/GitHubClient";
 import {
     GitHubOwnerSchema,
@@ -36,7 +35,6 @@ export const createIssueOperation: OperationDefinition = {
     description: "Create a new issue in a repository",
     category: "issues",
     inputSchema: createIssueSchema,
-    inputSchemaJSON: toJSONSchema(createIssueSchema),
     retryable: false,
     timeout: 15000
 };
@@ -70,9 +68,9 @@ export async function executeCreateIssue(
                 number: issue.number,
                 title: issue.title,
                 body: issue.body,
-                html_url: issue.html_url,
+                url: issue.html_url,
                 state: issue.state,
-                created_at: issue.created_at
+                createdAt: issue.created_at
             }
         };
     } catch (error) {

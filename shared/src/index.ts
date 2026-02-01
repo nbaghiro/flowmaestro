@@ -29,3 +29,4 @@ export * from "./agent-patterns";
 export * from "./workflow-layout";
 export * from "./extension";
 export * from "./persona";
+export * from "./kb-categories";

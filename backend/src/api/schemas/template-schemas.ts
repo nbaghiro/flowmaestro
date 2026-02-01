@@ -7,6 +7,9 @@ export const templateCategorySchema = z.enum(TEMPLATE_CATEGORIES);
 // Template status enum
 export const templateStatusSchema = z.enum(TEMPLATE_STATUSES);
 
+// Template sort options
+export const templateSortBySchema = z.enum(["default", "complexity", "popularity", "newest"]);
+
 // Query parameters for listing templates
 export const listTemplatesQuerySchema = z.object({
     category: templateCategorySchema.optional(),
@@ -20,6 +23,7 @@ export const listTemplatesQuerySchema = z.object({
         .optional(),
     search: z.string().max(100).optional(),
     status: templateStatusSchema.optional(),
+    sortBy: templateSortBySchema.optional(),
     limit: z
         .string()
         .transform((val) => parseInt(val))

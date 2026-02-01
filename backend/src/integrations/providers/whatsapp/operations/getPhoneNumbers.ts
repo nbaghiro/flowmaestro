@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { getLogger } from "../../../../core/logging";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { WhatsAppClient } from "../client/WhatsAppClient";
 import type { WhatsAppPhoneNumberResponse } from "./types";
 import type { OperationDefinition, OperationResult } from "../../../core/types";
@@ -27,7 +26,6 @@ export const getPhoneNumbersOperation: OperationDefinition = (() => {
             description: "List all phone numbers associated with a WhatsApp Business Account",
             category: "account",
             inputSchema: getPhoneNumbersSchema,
-            inputSchemaJSON: toJSONSchema(getPhoneNumbersSchema),
             retryable: true,
             timeout: 10000
         };

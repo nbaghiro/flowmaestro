@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { toJSONSchema } from "../../../core/schema-utils";
 import { LookerClient } from "../client/LookerClient";
 import { LookerDashboardIdSchema } from "./schemas";
 import type { LookerDashboard } from "./types";
@@ -23,7 +22,6 @@ export const getDashboardOperation: OperationDefinition = {
     description: "Get a specific dashboard by ID with all details including elements and filters",
     category: "dashboards",
     inputSchema: getDashboardSchema,
-    inputSchemaJSON: toJSONSchema(getDashboardSchema),
     retryable: true,
     timeout: 30000
 };
