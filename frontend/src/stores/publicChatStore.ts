@@ -2,7 +2,8 @@ import { create } from "zustand";
 import type {
     PublicChatInterface,
     PublicChatMessage,
-    ChatSessionResponse
+    ChatSessionResponse,
+    ChatMessageAttachment
 } from "@flowmaestro/shared";
 import {
     getPublicChatInterface,
@@ -46,8 +47,12 @@ interface PublicChatStore {
 
     // Actions - Messages
     loadMessages: () => Promise<boolean>;
-    sendMessage: (message: string) => Promise<boolean>;
+    sendMessage: (message: string, attachments?: ChatMessageAttachment[]) => Promise<boolean>;
     addLocalMessage: (message: PublicChatMessage) => void;
+    updateMessageContent: (messageId: string, content: string, isStreaming?: boolean) => void;
+    uploadFile: (
+        file: File
+    ) => Promise<{ success: boolean; data: ChatMessageAttachment; error?: string }>;
 
     // Actions - Input
     setInputValue: (value: string) => void;
@@ -64,21 +69,30 @@ interface PublicChatStore {
     reset: () => void;
 }
 
-// Helper to get persistence token from localStorage
-function getPersistenceToken(slug: string): string | null {
+// Helper to get persistence token based on persistence type
+function getPersistenceToken(
+    slug: string,
+    persistenceType: "session" | "local_storage"
+): string | null {
     try {
-        return localStorage.getItem(`${PERSISTENCE_TOKEN_PREFIX}${slug}`);
+        const storage = persistenceType === "session" ? sessionStorage : localStorage;
+        return storage.getItem(`${PERSISTENCE_TOKEN_PREFIX}${slug}`);
     } catch {
         return null;
     }
 }
 
-// Helper to save persistence token to localStorage
-function savePersistenceToken(slug: string, token: string): void {
+// Helper to save persistence token based on persistence type
+function savePersistenceToken(
+    slug: string,
+    token: string,
+    persistenceType: "session" | "local_storage"
+): void {
     try {
-        localStorage.setItem(`${PERSISTENCE_TOKEN_PREFIX}${slug}`, token);
+        const storage = persistenceType === "session" ? sessionStorage : localStorage;
+        storage.setItem(`${PERSISTENCE_TOKEN_PREFIX}${slug}`, token);
     } catch {
-        // localStorage not available
+        // Storage not available
     }
 }
 
@@ -172,11 +186,8 @@ export const usePublicChatStore = create<PublicChatStore>((set, get) => ({
         set({ isCreatingSession: true, error: null });
 
         try {
-            // Check for existing persistence token
-            const persistenceToken =
-                chatInterface.persistenceType === "local_storage"
-                    ? getPersistenceToken(slug)
-                    : undefined;
+            // Check for existing persistence token (both session and local_storage types)
+            const persistenceToken = getPersistenceToken(slug, chatInterface.persistenceType);
 
             const response = await createChatSession(slug, {
                 browserFingerprint: generateBrowserFingerprint(),
@@ -187,9 +198,13 @@ export const usePublicChatStore = create<PublicChatStore>((set, get) => ({
             if (response.success && response.data) {
                 const session = response.data;
 
-                // Save persistence token if provided
+                // Save persistence token if provided (to sessionStorage or localStorage)
                 if (session.persistenceToken) {
-                    savePersistenceToken(slug, session.persistenceToken);
+                    savePersistenceToken(
+                        slug,
+                        session.persistenceToken,
+                        chatInterface.persistenceType
+                    );
                 }
 
                 // Load existing messages if resuming
@@ -255,14 +270,17 @@ export const usePublicChatStore = create<PublicChatStore>((set, get) => ({
     },
 
     // Send a message
-    sendMessage: async (message) => {
+    sendMessage: async (message, attachments = []) => {
+        // Prevent double-click race condition
+        if (get().isSending) return false;
+
         const { session, chatInterface, messages } = get();
         if (!session || !chatInterface) {
             set({ error: "Session not initialized" });
             return false;
         }
 
-        if (!message.trim()) {
+        if (!message.trim() && attachments.length === 0) {
             return false;
         }
 
@@ -273,7 +291,13 @@ export const usePublicChatStore = create<PublicChatStore>((set, get) => ({
             id: `temp_${Date.now()}`,
             role: "user",
             content: message.trim(),
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            attachments: attachments.map((a) => ({
+                fileName: a.fileName || "unknown",
+                fileSize: a.fileSize || 0,
+                mimeType: a.mimeType || "application/octet-stream",
+                url: a.url || ""
+            }))
         };
 
         set({
@@ -284,21 +308,31 @@ export const usePublicChatStore = create<PublicChatStore>((set, get) => ({
         try {
             const response = await sendChatMessageAPI(chatInterface.slug, {
                 sessionToken: session.sessionToken,
-                message: message.trim()
+                message: message.trim(),
+                attachments
             });
 
             if (response.success && response.data) {
-                // Update user message with actual ID
-                const updatedMessages = get().messages.map((m) =>
-                    m.id === userMessage.id ? { ...m, id: response.data.messageId } : m
-                );
+                const currentSession = get().session;
 
+                // Update session with threadId if this was the first message
+                if (currentSession && response.data.threadId && !currentSession.threadId) {
+                    set({
+                        session: {
+                            ...currentSession,
+                            threadId: response.data.threadId
+                        }
+                    });
+                }
+
+                // Keep user message as-is, add placeholder for assistant response
+                // The SSE stream will populate the assistant message
                 set({
-                    messages: updatedMessages,
                     isSending: false
                 });
 
-                // Phase 2 will add: listening to SSE stream for assistant response
+                // Stream connection will be established by ChatContainer
+                // when it detects threadId is now available
 
                 return true;
             } else {
@@ -325,10 +359,43 @@ export const usePublicChatStore = create<PublicChatStore>((set, get) => ({
         }
     },
 
+    // Upload a file
+    uploadFile: async (file: File) => {
+        const { session, chatInterface } = get();
+        if (!session || !chatInterface) {
+            throw new Error("Session not initialized");
+        }
+
+        // Import dynamically to avoid circular dependency issues if any
+        const { uploadChatInterfaceFile } = await import("../lib/api");
+
+        return await uploadChatInterfaceFile(chatInterface.slug, session.sessionToken, file);
+    },
+
     // Add a local message (for SSE streaming in Phase 2)
     addLocalMessage: (message) => {
         const { messages } = get();
+        // Check if message with same ID already exists (deduplication)
+        if (messages.some((m) => m.id === message.id)) {
+            // If streaming update (same ID), replace or update content?
+            // Usually streaming sends chunks.
+            // If it's a new full message, add it.
+            // If we are accumulating tokens, we need a different action: updateMessageContent
+            return;
+        }
         set({ messages: [...messages, message] });
+    },
+
+    // Update existing message (e.g. streaming tokens)
+    updateMessageContent: (messageId, content, _isStreaming = false) => {
+        const { messages } = get();
+        set({
+            messages: messages.map((m) =>
+                m.id === messageId
+                    ? { ...m, content: m.content + content } // Append content
+                    : m
+            )
+        });
     },
 
     // Update input value

@@ -1,5 +1,6 @@
-import { Send, Loader2, Paperclip } from "lucide-react";
-import { useRef, KeyboardEvent, ChangeEvent } from "react";
+import { Send, Loader2, Paperclip, X, File as FileIcon } from "lucide-react";
+import { useRef, KeyboardEvent, ChangeEvent, useEffect } from "react";
+import { ChatMessageAttachment } from "@flowmaestro/shared";
 
 interface MessageInputProps {
     value: string;
@@ -9,6 +10,9 @@ interface MessageInputProps {
     isSending: boolean;
     allowFileUpload?: boolean;
     onFileSelect?: (files: FileList) => void;
+    attachments?: ChatMessageAttachment[];
+    onRemoveAttachment?: (attachmentId: string) => void;
+    uploadError?: string | null;
 }
 
 export function MessageInput({
@@ -18,23 +22,39 @@ export function MessageInput({
     placeholder,
     isSending,
     allowFileUpload = false,
-    onFileSelect
+    onFileSelect,
+    attachments = [],
+    onRemoveAttachment,
+    uploadError
 }: MessageInputProps) {
-    const inputRef = useRef<HTMLInputElement>(null);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
         if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
-            if (value.trim() && !isSending) {
+            if ((value.trim() || attachments.length > 0) && !isSending) {
                 onSend();
             }
         }
+        // Shift+Enter is handled naturally by textarea - it creates a new line
     };
 
-    const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const handleChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
         onChange(e.target.value);
     };
+
+    // Auto-resize textarea based on content
+    useEffect(() => {
+        const textarea = textareaRef.current;
+        if (textarea) {
+            // Reset height to auto to get the correct scrollHeight
+            textarea.style.height = "auto";
+            // Set height based on scrollHeight, with a max of 120px (roughly 5 lines)
+            const maxHeight = 120;
+            textarea.style.height = `${Math.min(textarea.scrollHeight, maxHeight)}px`;
+        }
+    }, [value]);
 
     const handleFileClick = () => {
         fileInputRef.current?.click();
@@ -47,10 +67,53 @@ export function MessageInput({
         }
     };
 
-    const canSend = value.trim().length > 0 && !isSending;
+    const canSend = (value.trim().length > 0 || attachments.length > 0) && !isSending;
 
     return (
-        <div className="border-t border-border px-4 py-3 flex-shrink-0">
+        <div className="border-t border-border px-4 py-3 flex-shrink-0 bg-background">
+            {/* Attachments preview */}
+            {attachments.length > 0 && (
+                <div className="flex gap-2 mb-3 overflow-x-auto pb-2">
+                    {attachments.map((att, index) => (
+                        <div
+                            key={att.id || index}
+                            className="relative flex items-center gap-2 bg-muted p-2 rounded-lg border border-border text-xs flex-shrink-0"
+                        >
+                            <div className="w-8 h-8 flex items-center justify-center bg-background rounded border border-border">
+                                {att.mimeType?.startsWith("image/") ? (
+                                    <img
+                                        src={att.url || att.downloadUrl}
+                                        alt={att.fileName}
+                                        className="w-full h-full object-cover rounded"
+                                    />
+                                ) : (
+                                    <FileIcon className="w-4 h-4 text-muted-foreground" />
+                                )}
+                            </div>
+                            <div className="flex flex-col max-w-[120px]">
+                                <span className="truncate font-medium">{att.fileName}</span>
+                                <span className="text-[10px] text-muted-foreground">
+                                    {(att.fileSize ? att.fileSize / 1024 : 0).toFixed(0)}KB
+                                </span>
+                            </div>
+                            <button
+                                onClick={() => onRemoveAttachment?.(att.id || "")}
+                                className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground rounded-full p-0.5 shadow-sm hover:bg-destructive/90"
+                            >
+                                <X className="w-3 h-3" />
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* Upload error message */}
+            {uploadError && (
+                <div className="mb-2 px-3 py-2 text-xs text-red-600 bg-red-50 rounded-lg border border-red-200">
+                    {uploadError}
+                </div>
+            )}
+
             <div className="flex gap-2 items-center">
                 {/* File upload button */}
                 {allowFileUpload && (
@@ -58,7 +121,8 @@ export function MessageInput({
                         <button
                             type="button"
                             onClick={handleFileClick}
-                            className="flex-shrink-0 p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                            disabled={isSending}
+                            className="flex-shrink-0 p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
                             aria-label="Attach file"
                         >
                             <Paperclip className="w-5 h-5" />
@@ -74,15 +138,16 @@ export function MessageInput({
                 )}
 
                 {/* Text input */}
-                <input
-                    ref={inputRef}
-                    type="text"
+                <textarea
+                    ref={textareaRef}
                     value={value}
                     onChange={handleChange}
                     onKeyDown={handleKeyDown}
                     placeholder={placeholder}
                     disabled={isSending}
-                    className="flex-1 px-3 py-2 rounded-lg bg-muted border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                    rows={1}
+                    className="flex-1 px-3 py-2 rounded-lg bg-muted border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 resize-none overflow-y-auto"
+                    autoComplete="off"
                 />
 
                 {/* Send button */}

@@ -33,6 +33,7 @@ import { ResetPassword } from "./pages/ResetPassword";
 import { Settings } from "./pages/Settings";
 import { Templates } from "./pages/Templates";
 import { VerifyEmail } from "./pages/VerifyEmail";
+import { WidgetChatPage } from "./pages/WidgetChatPage";
 import { Workflows } from "./pages/Workflows";
 import { Workspace } from "./pages/Workspace";
 import { WorkspaceSettings } from "./pages/WorkspaceSettings";
@@ -204,6 +205,9 @@ function App() {
 
                 {/* Embedded chat interface for iframe (no auth required) */}
                 <Route path="/embed/:slug" element={<EmbedChatPage />} />
+
+                {/* Widget chat interface for external websites (no auth required) */}
+                <Route path="/widget/:slug" element={<WidgetChatPage />} />
 
                 {/* Catch all - redirect to root */}
                 <Route path="*" element={<Navigate to="/" replace />} />
