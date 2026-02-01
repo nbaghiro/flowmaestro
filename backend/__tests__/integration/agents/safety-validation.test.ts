@@ -16,7 +16,7 @@ import {
     STRICT_SAFETY_CONFIG
 } from "../../helpers/agent-test-fixtures";
 import { createCompletionResponse, createToolSequence } from "../../helpers/llm-mock-client";
-import type { SafetyConfig } from "../../../src/storage/models/Agent";
+import type { SafetyConfig } from "../../../src/core/safety/types";
 import type { AgentTestEnvironment } from "../../helpers/agent-test-env";
 
 // Increase test timeout for Temporal workflows

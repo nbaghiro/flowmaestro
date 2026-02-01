@@ -229,7 +229,8 @@ vi.mock("@flowmaestro/shared", () => ({
             logoUrl: "https://example.com/slack.png",
             methods: ["oauth2"]
         }
-    ]
+    ],
+    supportsOAuth: (methods: string[]) => methods.includes("oauth2") || methods.includes("oauth1")
 }));
 
 describe("ActionNodeConfig", () => {

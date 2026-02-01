@@ -2,17 +2,14 @@ import { describe, it, expect } from "vitest";
 import {
     autoLayoutNodes,
     convertToReactFlowFormat,
+    HORIZONTAL_SPACING,
+    START_X,
+    START_Y,
     type LayoutNode,
     type LayoutEdge,
     type GeneratedWorkflowNode,
     type GeneratedWorkflowEdge
-} from "../workflowLayout";
-
-// Constants from the source file
-const HORIZONTAL_SPACING = 380;
-const VERTICAL_SPACING = 200;
-const START_X = 100;
-const START_Y = 100;
+} from "@flowmaestro/shared";
 
 describe("autoLayoutNodes", () => {
     it("should position single node at start position", () => {
@@ -60,10 +57,14 @@ describe("autoLayoutNodes", () => {
 
         const result = autoLayoutNodes(nodes, edges, "A");
 
-        // True branch should be above center (negative offset)
-        expect(result.get("B")?.y).toBe(START_Y - VERTICAL_SPACING);
-        // False branch should be below center (positive offset)
-        expect(result.get("C")?.y).toBe(START_Y + VERTICAL_SPACING);
+        // B and C are at level 1 with 2 nodes, so they use MAX_VERTICAL_SPACING (280)
+        // They are centered around START_Y (350):
+        // levelHeight = (2-1) * 280 = 280
+        // levelStartY = 350 - 280/2 = 210
+        // B (sorted first by handle priority "true"): y = 210
+        // C (sorted second by handle priority "false"): y = 210 + 280 = 490
+        expect(result.get("B")?.y).toBe(210);
+        expect(result.get("C")?.y).toBe(490);
     });
 
     it("should stack multiple nodes at same level vertically", () => {

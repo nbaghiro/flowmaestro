@@ -576,57 +576,11 @@ export function createMockTransformOutput(result: JsonObject): JsonObject {
 }
 
 // ============================================================================
-// PATTERN VALIDATION
-// ============================================================================
-
-// ============================================================================
-// LEGACY API - Aliases for backwards compatibility with existing tests
+// PATTERN HELPER FUNCTIONS
 // ============================================================================
 
 /**
- * Alias for simulatePatternExecution (legacy API)
- */
-export const testPattern = simulatePatternExecution;
-
-/**
- * Test pattern and assert success (legacy API)
- */
-export async function testPatternAndAssert(config: PatternTestConfig): Promise<PatternTestResult> {
-    const result = await simulatePatternExecution(config);
-    assertPatternSuccess(result);
-    return result;
-}
-
-/**
- * Alias for createMockLLMOutput (legacy API)
- */
-export const createLLMOutput = createMockLLMOutput;
-
-/**
- * Create input output (legacy API)
- */
-export function createInputOutput(
-    variableName: string,
-    value: JsonObject | string | number | boolean | null
-): JsonObject {
-    return {
-        [variableName]: value,
-        value
-    };
-}
-
-/**
- * Alias for createMockConditionalOutput (legacy API)
- */
-export const createConditionalOutput = createMockConditionalOutput;
-
-/**
- * Alias for createMockHTTPOutput (legacy API)
- */
-export const createHTTPOutput = createMockHTTPOutput;
-
-/**
- * Create knowledge base query output (legacy API)
+ * Create knowledge base query output
  */
 export function createKBQueryOutput(results: JsonObject[], metadata?: JsonObject): JsonObject {
     return {
@@ -638,7 +592,7 @@ export function createKBQueryOutput(results: JsonObject[], metadata?: JsonObject
 }
 
 /**
- * Get pattern node IDs (legacy API)
+ * Get pattern node IDs
  */
 export function getPatternNodeIds(patternId: string): string[] {
     const pattern = loadPattern(patternId);
@@ -646,7 +600,7 @@ export function getPatternNodeIds(patternId: string): string[] {
 }
 
 /**
- * Get pattern nodes by type (legacy API)
+ * Get pattern nodes by type
  */
 export function getPatternNodesByType(
     patternId: string,
@@ -665,7 +619,7 @@ export function getPatternNodesByType(
 }
 
 /**
- * Create human review output (legacy API)
+ * Create human review output
  */
 export function createHumanReviewOutput(approved: boolean, feedback?: string): JsonObject {
     return {

@@ -7,7 +7,7 @@
  * - Workflows (direct function import)
  */
 
-import type { JSONSchema } from "../integrations/core/types";
+import type { JSONSchema } from "../core/utils/zod-to-json-schema";
 import type { ZodSchema } from "zod";
 
 /**

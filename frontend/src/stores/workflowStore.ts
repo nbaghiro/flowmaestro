@@ -62,9 +62,6 @@ function debouncedWorkflowValidation(get: () => WorkflowStore): void {
 export const INITIAL_NODE_WIDTH = 260;
 export const INITIAL_NODE_HEIGHT = 160;
 
-// Re-export for convenience
-export type { NodeExecutionStatus };
-
 export interface NodeExecutionState {
     status: NodeExecutionStatus;
     startedAt: Date | null;

@@ -2,7 +2,6 @@ import type { JSONSchema } from "../../core/utils/zod-to-json-schema";
 import type { ConnectionWithData, ConnectionMethod } from "../../storage/models/Connection";
 import type { z } from "zod";
 
-// Re-export JSONSchema for backward compatibility
 export type { JSONSchema };
 
 /**

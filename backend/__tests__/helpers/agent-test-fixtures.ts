@@ -5,7 +5,8 @@
  * Provides standard fixtures that align with sandbox data infrastructure.
  */
 
-import type { Tool, SafetyConfig, MemoryConfig } from "../../src/storage/models/Agent";
+import type { SafetyConfig } from "../../src/core/safety/types";
+import type { Tool, MemoryConfig } from "../../src/storage/models/Agent";
 import type { AgentConfig } from "../../src/temporal/workflows/agent-orchestrator";
 
 // ============================================================================
