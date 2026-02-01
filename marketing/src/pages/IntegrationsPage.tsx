@@ -31,7 +31,8 @@ const workflowExamples: WorkflowExample[] = [
         id: "whatsapp-support",
         screenshotBase: "workflow-whatsapp-support",
         title: "WhatsApp Customer Support Bot",
-        description: "Omnichannel support: WhatsApp/Telegram messages, enrich from HubSpot/Salesforce"
+        description:
+            "Omnichannel support: WhatsApp/Telegram messages, enrich from HubSpot/Salesforce"
     },
     {
         id: "social-media-hub",
@@ -43,13 +44,15 @@ const workflowExamples: WorkflowExample[] = [
         id: "calendly-meeting-prep",
         screenshotBase: "workflow-calendly-meeting-prep",
         title: "Calendly Meeting Prep",
-        description: "Lookup attendees in HubSpot/Apollo, research company, generate personalized briefs"
+        description:
+            "Lookup attendees in HubSpot/Apollo, research company, generate personalized briefs"
     },
     {
         id: "data-infrastructure",
         screenshotBase: "workflow-data-infrastructure",
         title: "Data Infrastructure Monitor",
-        description: "Monitor MongoDB/PostgreSQL pipelines, AI anomaly detection, auto-create alerts"
+        description:
+            "Monitor MongoDB/PostgreSQL pipelines, AI anomaly detection, auto-create alerts"
     },
     {
         id: "github-pr-reviewer",
@@ -180,8 +183,8 @@ export const IntegrationsPage: React.FC = () => {
                             <Cpu className="w-5 h-5 text-foreground" />
                             <span className="text-sm text-muted-foreground">
                                 All integrations are auto-wrapped as{" "}
-                                <span className="text-foreground font-medium">MCP Tools</span> for AI
-                                agents
+                                <span className="text-foreground font-medium">MCP Tools</span> for
+                                AI agents
                             </span>
                         </div>
                     </motion.div>

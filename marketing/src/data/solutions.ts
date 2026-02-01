@@ -15,6 +15,7 @@ export interface WorkflowExample {
     title: string;
     description: string;
     integrations: string[]; // Provider slugs to show icons
+    screenshotBase?: string; // Base name for screenshot (e.g., "workflow-sales-meeting-prep")
 }
 
 // Solution category type

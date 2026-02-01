@@ -29,9 +29,9 @@ export const SolutionPage: React.FC = () => {
         <div className="min-h-screen bg-background text-foreground">
             <Navigation />
             <SolutionHero solution={solution} />
+            <WorkflowExamples solution={solution} />
             <IntegrationShowcase providers={providers} solution={solution} />
             <PainPointsComparison solution={solution} />
-            <WorkflowExamples solution={solution} />
             <SolutionCTA solution={solution} />
             <Footer />
         </div>

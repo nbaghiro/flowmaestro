@@ -210,7 +210,9 @@ const PricingCard: React.FC<PricingCardProps> = ({ plan, selectedCredits, isAnnu
                         <span className="text-muted-foreground">/ month</span>
                     </div>
                 )}
-                <p className="text-sm text-muted-foreground mt-1">{creditsDisplay}+ credits/month</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                    {creditsDisplay}+ credits/month
+                </p>
             </div>
 
             {/* Features */}
@@ -386,7 +388,9 @@ export const PricingPage: React.FC = () => {
                             </div>
                         </div>
 
-                        <p className="text-muted-foreground mb-6">Everything included in Team, plus:</p>
+                        <p className="text-muted-foreground mb-6">
+                            Everything included in Team, plus:
+                        </p>
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-4 mb-8">
                             <div className="flex items-center gap-3">
@@ -397,11 +401,15 @@ export const PricingPage: React.FC = () => {
                             </div>
                             <div className="flex items-center gap-3">
                                 <Key className="w-4 h-4 text-muted-foreground" />
-                                <span className="text-sm text-muted-foreground">SCIM/SAML Support</span>
+                                <span className="text-sm text-muted-foreground">
+                                    SCIM/SAML Support
+                                </span>
                             </div>
                             <div className="flex items-center gap-3">
                                 <LayoutDashboard className="w-4 h-4 text-muted-foreground" />
-                                <span className="text-sm text-muted-foreground">Admin Dashboard</span>
+                                <span className="text-sm text-muted-foreground">
+                                    Admin Dashboard
+                                </span>
                             </div>
                             <div className="flex items-center gap-3">
                                 <FileText className="w-4 h-4 text-muted-foreground" />
@@ -409,7 +417,9 @@ export const PricingPage: React.FC = () => {
                             </div>
                             <div className="flex items-center gap-3">
                                 <Database className="w-4 h-4 text-muted-foreground" />
-                                <span className="text-sm text-muted-foreground">Custom Data Retention</span>
+                                <span className="text-sm text-muted-foreground">
+                                    Custom Data Retention
+                                </span>
                             </div>
                             <div className="flex items-center gap-3">
                                 <FileCheck className="w-4 h-4 text-muted-foreground" />
@@ -423,7 +433,9 @@ export const PricingPage: React.FC = () => {
                             </div>
                             <div className="flex items-center gap-3">
                                 <EyeOff className="w-4 h-4 text-muted-foreground" />
-                                <span className="text-sm text-muted-foreground">Incognito Mode</span>
+                                <span className="text-sm text-muted-foreground">
+                                    Incognito Mode
+                                </span>
                             </div>
                             <div className="flex items-center gap-3">
                                 <Bot className="w-4 h-4 text-muted-foreground" />
@@ -433,7 +445,9 @@ export const PricingPage: React.FC = () => {
                             </div>
                             <div className="flex items-center gap-3">
                                 <Cloud className="w-4 h-4 text-muted-foreground" />
-                                <span className="text-sm text-muted-foreground">Virtual Private Cloud</span>
+                                <span className="text-sm text-muted-foreground">
+                                    Virtual Private Cloud
+                                </span>
                             </div>
                             <div className="flex items-center gap-3">
                                 <ListOrdered className="w-4 h-4 text-muted-foreground" />
@@ -441,7 +455,9 @@ export const PricingPage: React.FC = () => {
                             </div>
                             <div className="flex items-center gap-3">
                                 <Users className="w-4 h-4 text-muted-foreground" />
-                                <span className="text-sm text-muted-foreground">Dedicated Support</span>
+                                <span className="text-sm text-muted-foreground">
+                                    Dedicated Support
+                                </span>
                             </div>
                         </div>
 
