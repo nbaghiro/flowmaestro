@@ -541,7 +541,7 @@ const parallelAnalyzerPattern: WorkflowPattern = {
                     maxTokens: 1024,
                     outputVariable: "technicalAnalysis"
                 },
-                position: { x: 480, y: 500 }
+                position: { x: 480, y: 550 }
             },
             "llm-business": {
                 type: "llm",
@@ -556,7 +556,7 @@ const parallelAnalyzerPattern: WorkflowPattern = {
                     maxTokens: 1024,
                     outputVariable: "businessAnalysis"
                 },
-                position: { x: 480, y: 340 }
+                position: { x: 480, y: 300 }
             },
             "llm-risk": {
                 type: "llm",
@@ -571,7 +571,7 @@ const parallelAnalyzerPattern: WorkflowPattern = {
                     maxTokens: 1024,
                     outputVariable: "riskAnalysis"
                 },
-                position: { x: 480, y: 100 }
+                position: { x: 480, y: 50 }
             },
             "llm-synthesize": {
                 type: "llm",
@@ -5263,6 +5263,1078 @@ const multiChannelPublisherPattern: WorkflowPattern = {
 };
 
 // ============================================================================
+// ADDITIONAL INTERMEDIATE PATTERNS (4 new)
+// ============================================================================
+
+// Intermediate Pattern: Notion Knowledge Base Builder
+const notionKnowledgeBasePattern: WorkflowPattern = {
+    id: "notion-knowledge-base",
+    name: "Notion Knowledge Base Builder",
+    description:
+        "Extract content from documents and conversations, structure with AI, and build a searchable knowledge base in Notion",
+    useCase: "Knowledge management",
+    icon: "BookOpen",
+    nodeCount: 10,
+    category: "intermediate",
+    integrations: ["notion", "google-drive", "slack"],
+    definition: {
+        name: "Notion Knowledge Base Builder",
+        nodes: {
+            "trigger-1": {
+                type: "trigger",
+                name: "Content Added",
+                config: {
+                    triggerType: "webhook",
+                    webhookProvider: "google-drive",
+                    description: "Triggered when new document is added"
+                },
+                position: { x: 100, y: 300 }
+            },
+            "action-gdrive": {
+                type: "integration",
+                name: "Fetch Document",
+                config: {
+                    provider: "google-drive",
+                    action: "getFile",
+                    fileId: "{{trigger.fileId}}",
+                    outputVariable: "documentContent"
+                },
+                position: { x: 480, y: 300 }
+            },
+            "llm-extract": {
+                type: "llm",
+                name: "Extract Key Information",
+                config: {
+                    provider: "openai",
+                    model: "gpt-4o",
+                    systemPrompt:
+                        "You are a knowledge extraction specialist. Extract structured information from documents.",
+                    prompt: 'Extract from this document:\n\n{{documentContent}}\n\nReturn JSON: {"title": "", "summary": "", "keyTopics": [], "entities": [], "actionItems": []}',
+                    temperature: 0.2,
+                    maxTokens: 2000,
+                    outputVariable: "extractedInfo"
+                },
+                position: { x: 860, y: 300 }
+            },
+            "llm-categorize": {
+                type: "llm",
+                name: "Categorize Content",
+                config: {
+                    provider: "openai",
+                    model: "gpt-4o-mini",
+                    systemPrompt: "Categorize content into knowledge base taxonomy.",
+                    prompt: "Categorize:\n{{extractedInfo.text}}\n\nCategories: Engineering, Product, Sales, Marketing, Operations, HR, Legal, Finance.",
+                    temperature: 0.1,
+                    maxTokens: 200,
+                    outputVariable: "category"
+                },
+                position: { x: 1240, y: 200 }
+            },
+            "llm-format": {
+                type: "llm",
+                name: "Format for Notion",
+                config: {
+                    provider: "openai",
+                    model: "gpt-4o",
+                    systemPrompt:
+                        "Format content for Notion knowledge base with proper structure and markdown.",
+                    prompt: "Format this for a Notion knowledge base page:\n\n{{extractedInfo.text}}\n\nUse headers, bullet points, callouts, and proper markdown.",
+                    temperature: 0.3,
+                    maxTokens: 2000,
+                    outputVariable: "formattedContent"
+                },
+                position: { x: 1240, y: 400 }
+            },
+            "action-notion-search": {
+                type: "integration",
+                name: "Check Existing",
+                config: {
+                    provider: "notion",
+                    action: "searchPages",
+                    query: "{{extractedInfo.title}}",
+                    outputVariable: "existingPages"
+                },
+                position: { x: 1620, y: 300 }
+            },
+            "conditional-exists": {
+                type: "conditional",
+                name: "Page Exists?",
+                config: {
+                    condition: "existingPages.results.length > 0",
+                    outputVariable: "pageExists"
+                },
+                position: { x: 2000, y: 300 }
+            },
+            "action-notion-create": {
+                type: "integration",
+                name: "Create Page",
+                config: {
+                    provider: "notion",
+                    action: "createPage",
+                    parentId: "{{env.NOTION_KB_DATABASE}}",
+                    properties: {
+                        title: "{{extractedInfo.title}}",
+                        category: "{{category.text}}",
+                        content: "{{formattedContent.text}}"
+                    },
+                    outputVariable: "newPage"
+                },
+                position: { x: 2380, y: 200 }
+            },
+            "action-notion-update": {
+                type: "integration",
+                name: "Update Page",
+                config: {
+                    provider: "notion",
+                    action: "updatePage",
+                    pageId: "{{existingPages.results[0].id}}",
+                    content: "{{formattedContent.text}}",
+                    outputVariable: "updatedPage"
+                },
+                position: { x: 2380, y: 400 }
+            },
+            "action-slack": {
+                type: "integration",
+                name: "Notify Team",
+                config: {
+                    provider: "slack",
+                    action: "sendMessage",
+                    channel: "#knowledge-updates",
+                    message: "Knowledge base updated: {{extractedInfo.title}}",
+                    outputVariable: "slackNotification"
+                },
+                position: { x: 2760, y: 300 }
+            }
+        },
+        edges: [
+            { id: "edge-1", source: "trigger-1", target: "action-gdrive" },
+            { id: "edge-2", source: "action-gdrive", target: "llm-extract" },
+            { id: "edge-3", source: "llm-extract", target: "llm-categorize" },
+            { id: "edge-4", source: "llm-extract", target: "llm-format" },
+            { id: "edge-5", source: "llm-categorize", target: "action-notion-search" },
+            { id: "edge-6", source: "llm-format", target: "action-notion-search" },
+            { id: "edge-7", source: "action-notion-search", target: "conditional-exists" },
+            {
+                id: "edge-8",
+                source: "conditional-exists",
+                target: "action-notion-create",
+                sourceHandle: "false"
+            },
+            {
+                id: "edge-9",
+                source: "conditional-exists",
+                target: "action-notion-update",
+                sourceHandle: "true"
+            },
+            { id: "edge-10", source: "action-notion-create", target: "action-slack" },
+            { id: "edge-11", source: "action-notion-update", target: "action-slack" }
+        ],
+        entryPoint: "trigger-1"
+    }
+};
+
+// Intermediate Pattern: Slack Daily Standup Bot
+const slackStandupPattern: WorkflowPattern = {
+    id: "slack-standup-bot",
+    name: "Slack Daily Standup Bot",
+    description:
+        "Collect daily standups from team members via Slack, summarize with AI, and post digest to team channel",
+    useCase: "Team coordination",
+    icon: "Users",
+    nodeCount: 9,
+    category: "intermediate",
+    integrations: ["slack", "notion"],
+    definition: {
+        name: "Slack Daily Standup Bot",
+        nodes: {
+            "trigger-1": {
+                type: "trigger",
+                name: "Standup Time",
+                config: {
+                    triggerType: "cron",
+                    schedule: "0 9 * * 1-5",
+                    timezone: "America/New_York",
+                    description: "Every weekday at 9 AM"
+                },
+                position: { x: 100, y: 300 }
+            },
+            "action-slack-prompt": {
+                type: "integration",
+                name: "Send Standup Prompts",
+                config: {
+                    provider: "slack",
+                    action: "sendMessage",
+                    channel: "#engineering",
+                    message:
+                        "Good morning! Time for standup.\n\n1. What did you accomplish yesterday?\n2. What are you working on today?\n3. Any blockers?",
+                    outputVariable: "promptSent"
+                },
+                position: { x: 480, y: 300 }
+            },
+            "wait-1": {
+                type: "wait",
+                name: "Wait for Responses",
+                config: {
+                    waitType: "duration",
+                    duration: 3600,
+                    description: "Wait 1 hour for responses"
+                },
+                position: { x: 860, y: 300 }
+            },
+            "action-slack-collect": {
+                type: "integration",
+                name: "Collect Responses",
+                config: {
+                    provider: "slack",
+                    action: "getChannelHistory",
+                    channel: "#engineering",
+                    since: "{{trigger.timestamp}}",
+                    outputVariable: "responses"
+                },
+                position: { x: 1240, y: 300 }
+            },
+            "llm-parse": {
+                type: "llm",
+                name: "Parse Standups",
+                config: {
+                    provider: "openai",
+                    model: "gpt-4o",
+                    systemPrompt: "Parse standup messages and extract structured information.",
+                    prompt: 'Parse these standup responses:\n\n{{responses}}\n\nReturn JSON array: [{"user": "", "yesterday": "", "today": "", "blockers": []}]',
+                    temperature: 0.1,
+                    maxTokens: 2000,
+                    outputVariable: "parsedStandups"
+                },
+                position: { x: 1620, y: 300 }
+            },
+            "llm-summarize": {
+                type: "llm",
+                name: "Summarize Standups",
+                config: {
+                    provider: "openai",
+                    model: "gpt-4o",
+                    systemPrompt:
+                        "Create executive standup summaries highlighting key activities and blockers.",
+                    prompt: "Summarize these standups:\n\n{{parsedStandups.text}}\n\nHighlight: team focus areas, notable progress, blockers needing attention.",
+                    temperature: 0.3,
+                    maxTokens: 1000,
+                    outputVariable: "summary"
+                },
+                position: { x: 2000, y: 300 }
+            },
+            "action-slack-digest": {
+                type: "integration",
+                name: "Post Digest",
+                config: {
+                    provider: "slack",
+                    action: "sendMessage",
+                    channel: "#engineering",
+                    message: "Daily Standup Summary\n\n{{summary.text}}",
+                    outputVariable: "digestPosted"
+                },
+                position: { x: 2380, y: 200 }
+            },
+            "action-notion": {
+                type: "integration",
+                name: "Archive to Notion",
+                config: {
+                    provider: "notion",
+                    action: "createPage",
+                    parentId: "{{env.NOTION_STANDUPS_DB}}",
+                    properties: {
+                        title: "Standup - {{$now}}",
+                        content: "{{parsedStandups.text}}"
+                    },
+                    outputVariable: "notionArchive"
+                },
+                position: { x: 2380, y: 400 }
+            },
+            "output-1": {
+                type: "output",
+                name: "Complete",
+                config: {
+                    outputName: "standupComplete",
+                    value: "Standup collected and summarized",
+                    format: "string"
+                },
+                position: { x: 2760, y: 300 }
+            }
+        },
+        edges: [
+            { id: "edge-1", source: "trigger-1", target: "action-slack-prompt" },
+            { id: "edge-2", source: "action-slack-prompt", target: "wait-1" },
+            { id: "edge-3", source: "wait-1", target: "action-slack-collect" },
+            { id: "edge-4", source: "action-slack-collect", target: "llm-parse" },
+            { id: "edge-5", source: "llm-parse", target: "llm-summarize" },
+            { id: "edge-6", source: "llm-summarize", target: "action-slack-digest" },
+            { id: "edge-7", source: "llm-summarize", target: "action-notion" },
+            { id: "edge-8", source: "action-slack-digest", target: "output-1" },
+            { id: "edge-9", source: "action-notion", target: "output-1" }
+        ],
+        entryPoint: "trigger-1"
+    }
+};
+
+// Intermediate Pattern: Airtable Data Pipeline
+const airtableDataPipelinePattern: WorkflowPattern = {
+    id: "airtable-data-pipeline",
+    name: "Airtable Data Pipeline",
+    description:
+        "ETL-style workflow that extracts data from multiple sources, transforms with AI, and loads into Airtable",
+    useCase: "Data integration",
+    icon: "Database",
+    nodeCount: 11,
+    category: "intermediate",
+    integrations: ["airtable", "google-sheets", "hubspot"],
+    definition: {
+        name: "Airtable Data Pipeline",
+        nodes: {
+            "trigger-1": {
+                type: "trigger",
+                name: "Sync Schedule",
+                config: {
+                    triggerType: "cron",
+                    schedule: "0 */6 * * *",
+                    description: "Every 6 hours"
+                },
+                position: { x: 100, y: 350 }
+            },
+            "action-sheets": {
+                type: "integration",
+                name: "Extract from Sheets",
+                config: {
+                    provider: "google-sheets",
+                    action: "getValues",
+                    spreadsheetId: "{{env.SOURCE_SHEET_ID}}",
+                    range: "Data!A:Z",
+                    outputVariable: "sheetsData"
+                },
+                position: { x: 480, y: 200 }
+            },
+            "action-hubspot": {
+                type: "integration",
+                name: "Extract from HubSpot",
+                config: {
+                    provider: "hubspot",
+                    action: "listContacts",
+                    limit: 100,
+                    properties: ["email", "company", "lifecycle_stage"],
+                    outputVariable: "hubspotData"
+                },
+                position: { x: 480, y: 500 }
+            },
+            "transform-normalize": {
+                type: "transform",
+                name: "Normalize Data",
+                config: {
+                    transformType: "merge",
+                    sources: ["sheetsData", "hubspotData"],
+                    outputVariable: "rawData"
+                },
+                position: { x: 860, y: 350 }
+            },
+            "llm-clean": {
+                type: "llm",
+                name: "Clean & Validate",
+                config: {
+                    provider: "openai",
+                    model: "gpt-4o-mini",
+                    systemPrompt:
+                        "Clean and validate data. Fix formatting issues, standardize values, flag anomalies.",
+                    prompt: "Clean this data:\n\n{{rawData}}\n\nStandardize: dates to ISO format, phone numbers to E.164, emails lowercase.",
+                    temperature: 0.1,
+                    maxTokens: 3000,
+                    outputVariable: "cleanedData"
+                },
+                position: { x: 1240, y: 350 }
+            },
+            "llm-enrich": {
+                type: "llm",
+                name: "Enrich Data",
+                config: {
+                    provider: "openai",
+                    model: "gpt-4o",
+                    systemPrompt: "Enrich data records with derived insights and categorizations.",
+                    prompt: "Enrich these records:\n\n{{cleanedData.text}}\n\nAdd: industry classification, company size estimate, engagement score.",
+                    temperature: 0.2,
+                    maxTokens: 3000,
+                    outputVariable: "enrichedData"
+                },
+                position: { x: 1620, y: 350 }
+            },
+            "action-airtable-clear": {
+                type: "integration",
+                name: "Clear Old Records",
+                config: {
+                    provider: "airtable",
+                    action: "deleteRecords",
+                    baseId: "{{env.AIRTABLE_BASE}}",
+                    tableId: "Synced Data",
+                    outputVariable: "cleared"
+                },
+                position: { x: 2000, y: 200 }
+            },
+            "action-airtable-load": {
+                type: "integration",
+                name: "Load to Airtable",
+                config: {
+                    provider: "airtable",
+                    action: "createRecords",
+                    baseId: "{{env.AIRTABLE_BASE}}",
+                    tableId: "Synced Data",
+                    records: "{{enrichedData.text}}",
+                    outputVariable: "loadedRecords"
+                },
+                position: { x: 2000, y: 500 }
+            },
+            "transform-stats": {
+                type: "transform",
+                name: "Calculate Stats",
+                config: {
+                    transformType: "aggregate",
+                    operations: ["count", "groupBy"],
+                    outputVariable: "syncStats"
+                },
+                position: { x: 2380, y: 350 }
+            },
+            "action-slack": {
+                type: "integration",
+                name: "Report Sync",
+                config: {
+                    provider: "slack",
+                    action: "sendMessage",
+                    channel: "#data-ops",
+                    message: "Data sync complete: {{syncStats.count}} records processed",
+                    outputVariable: "reported"
+                },
+                position: { x: 2760, y: 350 }
+            },
+            "output-1": {
+                type: "output",
+                name: "Sync Complete",
+                config: {
+                    outputName: "syncResult",
+                    value: "{{syncStats}}",
+                    format: "json"
+                },
+                position: { x: 3140, y: 350 }
+            }
+        },
+        edges: [
+            { id: "edge-1", source: "trigger-1", target: "action-sheets" },
+            { id: "edge-2", source: "trigger-1", target: "action-hubspot" },
+            { id: "edge-3", source: "action-sheets", target: "transform-normalize" },
+            { id: "edge-4", source: "action-hubspot", target: "transform-normalize" },
+            { id: "edge-5", source: "transform-normalize", target: "llm-clean" },
+            { id: "edge-6", source: "llm-clean", target: "llm-enrich" },
+            { id: "edge-7", source: "llm-enrich", target: "action-airtable-clear" },
+            { id: "edge-8", source: "llm-enrich", target: "action-airtable-load" },
+            { id: "edge-9", source: "action-airtable-clear", target: "transform-stats" },
+            { id: "edge-10", source: "action-airtable-load", target: "transform-stats" },
+            { id: "edge-11", source: "transform-stats", target: "action-slack" },
+            { id: "edge-12", source: "action-slack", target: "output-1" }
+        ],
+        entryPoint: "trigger-1"
+    }
+};
+
+// Intermediate Pattern: Google Sheets Report Generator
+const sheetsReportPattern: WorkflowPattern = {
+    id: "sheets-report-generator",
+    name: "Google Sheets Report Generator",
+    description:
+        "Aggregate data from multiple sources, generate AI insights, and create formatted reports in Google Sheets",
+    useCase: "Business reporting",
+    icon: "FileSpreadsheet",
+    nodeCount: 10,
+    category: "intermediate",
+    integrations: ["google-sheets", "hubspot", "stripe"],
+    definition: {
+        name: "Google Sheets Report Generator",
+        nodes: {
+            "trigger-1": {
+                type: "trigger",
+                name: "Weekly Report",
+                config: {
+                    triggerType: "cron",
+                    schedule: "0 8 * * 1",
+                    timezone: "America/New_York",
+                    description: "Every Monday at 8 AM"
+                },
+                position: { x: 100, y: 350 }
+            },
+            "action-hubspot": {
+                type: "integration",
+                name: "Get Sales Data",
+                config: {
+                    provider: "hubspot",
+                    action: "listDeals",
+                    outputVariable: "salesData"
+                },
+                position: { x: 480, y: 200 }
+            },
+            "action-stripe": {
+                type: "integration",
+                name: "Get Revenue Data",
+                config: {
+                    provider: "stripe",
+                    action: "listCharges",
+                    outputVariable: "revenueData"
+                },
+                position: { x: 480, y: 500 }
+            },
+            "transform-aggregate": {
+                type: "transform",
+                name: "Aggregate Metrics",
+                config: {
+                    transformType: "aggregate",
+                    operations: ["sum", "count", "average"],
+                    outputVariable: "metrics"
+                },
+                position: { x: 860, y: 350 }
+            },
+            "llm-analyze": {
+                type: "llm",
+                name: "Analyze Trends",
+                config: {
+                    provider: "openai",
+                    model: "gpt-4o",
+                    systemPrompt:
+                        "You are a business analyst. Analyze metrics and identify trends, opportunities, and concerns.",
+                    prompt: "Analyze these weekly metrics:\n\nSales: {{salesData}}\nRevenue: {{revenueData}}\n\nProvide: key insights, week-over-week changes, notable deals, concerns.",
+                    temperature: 0.3,
+                    maxTokens: 1500,
+                    outputVariable: "analysis"
+                },
+                position: { x: 1240, y: 350 }
+            },
+            "llm-executive": {
+                type: "llm",
+                name: "Executive Summary",
+                config: {
+                    provider: "openai",
+                    model: "gpt-4o",
+                    systemPrompt: "Write concise executive summaries for C-level readers.",
+                    prompt: "Create a 3-paragraph executive summary from:\n\n{{analysis.text}}\n\nFocus on: bottom line impact, strategic implications, recommended actions.",
+                    temperature: 0.4,
+                    maxTokens: 500,
+                    outputVariable: "executiveSummary"
+                },
+                position: { x: 1620, y: 350 }
+            },
+            "action-sheets-data": {
+                type: "integration",
+                name: "Update Data Sheet",
+                config: {
+                    provider: "google-sheets",
+                    action: "appendRow",
+                    spreadsheetId: "{{env.REPORT_SHEET_ID}}",
+                    sheetName: "Weekly Data",
+                    outputVariable: "dataUpdated"
+                },
+                position: { x: 2000, y: 200 }
+            },
+            "action-sheets-summary": {
+                type: "integration",
+                name: "Update Summary",
+                config: {
+                    provider: "google-sheets",
+                    action: "updateRange",
+                    spreadsheetId: "{{env.REPORT_SHEET_ID}}",
+                    range: "Summary!A2:B10",
+                    values: "{{executiveSummary.text}}",
+                    outputVariable: "summaryUpdated"
+                },
+                position: { x: 2000, y: 500 }
+            },
+            "action-gmail": {
+                type: "integration",
+                name: "Email Report",
+                config: {
+                    provider: "gmail",
+                    action: "sendEmail",
+                    to: "{{env.LEADERSHIP_EMAIL}}",
+                    subject: "Weekly Business Report",
+                    body: "{{executiveSummary.text}}",
+                    outputVariable: "emailSent"
+                },
+                position: { x: 2380, y: 350 }
+            },
+            "output-1": {
+                type: "output",
+                name: "Report Complete",
+                config: {
+                    outputName: "reportUrl",
+                    value: "{{env.REPORT_SHEET_URL}}",
+                    format: "string"
+                },
+                position: { x: 2760, y: 350 }
+            }
+        },
+        edges: [
+            { id: "edge-1", source: "trigger-1", target: "action-hubspot" },
+            { id: "edge-2", source: "trigger-1", target: "action-stripe" },
+            { id: "edge-3", source: "action-hubspot", target: "transform-aggregate" },
+            { id: "edge-4", source: "action-stripe", target: "transform-aggregate" },
+            { id: "edge-5", source: "transform-aggregate", target: "llm-analyze" },
+            { id: "edge-6", source: "llm-analyze", target: "llm-executive" },
+            { id: "edge-7", source: "llm-executive", target: "action-sheets-data" },
+            { id: "edge-8", source: "llm-executive", target: "action-sheets-summary" },
+            { id: "edge-9", source: "action-sheets-data", target: "action-gmail" },
+            { id: "edge-10", source: "action-sheets-summary", target: "action-gmail" },
+            { id: "edge-11", source: "action-gmail", target: "output-1" }
+        ],
+        entryPoint: "trigger-1"
+    }
+};
+
+// ============================================================================
+// ADDITIONAL ADVANCED PATTERNS (2 new)
+// ============================================================================
+
+// Advanced Pattern: Zendesk Ticket Intelligence
+const zendeskTicketIntelligencePattern: WorkflowPattern = {
+    id: "zendesk-ticket-intelligence",
+    name: "Zendesk Ticket Intelligence",
+    description:
+        "AI-powered ticket routing with sentiment analysis, automated responses for common issues, escalation prediction, and SLA monitoring",
+    useCase: "Customer support automation",
+    icon: "Headphones",
+    nodeCount: 14,
+    category: "advanced",
+    integrations: ["zendesk", "slack", "notion"],
+    definition: {
+        name: "Zendesk Ticket Intelligence",
+        nodes: {
+            "trigger-1": {
+                type: "trigger",
+                name: "New Ticket",
+                config: {
+                    triggerType: "webhook",
+                    webhookProvider: "zendesk",
+                    description: "Triggered on new support ticket"
+                },
+                position: { x: 100, y: 400 }
+            },
+            "llm-classify": {
+                type: "llm",
+                name: "Classify Ticket",
+                config: {
+                    provider: "openai",
+                    model: "gpt-4o",
+                    systemPrompt: "Classify support tickets by category, urgency, and complexity.",
+                    prompt: 'Classify this ticket:\n\nSubject: {{trigger.subject}}\nBody: {{trigger.body}}\n\nReturn JSON: {"category": "billing/technical/product/account", "urgency": "critical/high/medium/low", "complexity": "simple/moderate/complex"}',
+                    temperature: 0.1,
+                    maxTokens: 500,
+                    outputVariable: "classification"
+                },
+                position: { x: 480, y: 300 }
+            },
+            "llm-sentiment": {
+                type: "llm",
+                name: "Analyze Sentiment",
+                config: {
+                    provider: "openai",
+                    model: "gpt-4o-mini",
+                    systemPrompt: "Analyze customer sentiment and frustration level.",
+                    prompt: 'Analyze sentiment:\n\n{{trigger.body}}\n\nReturn JSON: {"sentiment": "positive/neutral/negative/angry", "frustration_level": 1-10, "churn_risk": "high/medium/low"}',
+                    temperature: 0.1,
+                    maxTokens: 300,
+                    outputVariable: "sentiment"
+                },
+                position: { x: 480, y: 500 }
+            },
+            "action-zendesk-history": {
+                type: "integration",
+                name: "Get Customer History",
+                config: {
+                    provider: "zendesk",
+                    action: "searchTickets",
+                    query: "requester:{{trigger.customerEmail}}",
+                    outputVariable: "customerHistory"
+                },
+                position: { x: 860, y: 400 }
+            },
+            "llm-context": {
+                type: "llm",
+                name: "Build Context",
+                config: {
+                    provider: "openai",
+                    model: "gpt-4o",
+                    systemPrompt:
+                        "Build customer context from ticket history for personalized support.",
+                    prompt: "Build context from:\n\nCurrent: {{classification.text}}\nSentiment: {{sentiment.text}}\nHistory: {{customerHistory}}\n\nReturn: customer tier, previous issues, resolution preferences.",
+                    temperature: 0.2,
+                    maxTokens: 800,
+                    outputVariable: "customerContext"
+                },
+                position: { x: 1240, y: 400 }
+            },
+            "router-urgency": {
+                type: "router",
+                name: "Route by Urgency",
+                config: {
+                    provider: "openai",
+                    model: "gpt-4o-mini",
+                    prompt: "Route based on urgency and sentiment",
+                    routes: [
+                        {
+                            value: "escalate",
+                            label: "Escalate",
+                            description: "Immediate escalation"
+                        },
+                        {
+                            value: "priority",
+                            label: "Priority",
+                            description: "High priority handling"
+                        },
+                        { value: "standard", label: "Standard", description: "Normal queue" },
+                        {
+                            value: "automate",
+                            label: "Automate",
+                            description: "Can be auto-resolved"
+                        }
+                    ],
+                    outputVariable: "routeDecision"
+                },
+                position: { x: 1620, y: 400 }
+            },
+            "llm-auto-response": {
+                type: "llm",
+                name: "Generate Auto Response",
+                config: {
+                    provider: "openai",
+                    model: "gpt-4o",
+                    systemPrompt:
+                        "Generate helpful, empathetic auto-responses for common support issues.",
+                    prompt: "Generate response for:\n\nIssue: {{classification.text}}\nContext: {{customerContext.text}}\n\nBe helpful, empathetic, and provide clear next steps.",
+                    temperature: 0.4,
+                    maxTokens: 600,
+                    outputVariable: "autoResponse"
+                },
+                position: { x: 2000, y: 550 }
+            },
+            "action-zendesk-respond": {
+                type: "integration",
+                name: "Send Auto Response",
+                config: {
+                    provider: "zendesk",
+                    action: "addComment",
+                    ticketId: "{{trigger.ticketId}}",
+                    comment: "{{autoResponse.text}}",
+                    outputVariable: "responseSent"
+                },
+                position: { x: 2380, y: 550 }
+            },
+            "action-zendesk-assign": {
+                type: "integration",
+                name: "Assign to Team",
+                config: {
+                    provider: "zendesk",
+                    action: "updateTicket",
+                    ticketId: "{{trigger.ticketId}}",
+                    priority: "{{classification.urgency}}",
+                    outputVariable: "ticketAssigned"
+                },
+                position: { x: 2000, y: 300 }
+            },
+            "action-slack-escalate": {
+                type: "integration",
+                name: "Escalation Alert",
+                config: {
+                    provider: "slack",
+                    action: "sendMessage",
+                    channel: "#support-escalations",
+                    message:
+                        "Escalation Required - Ticket: {{trigger.ticketId}}\nCustomer: {{trigger.customerEmail}}\nSentiment: {{sentiment.sentiment}}",
+                    outputVariable: "escalationSent"
+                },
+                position: { x: 2000, y: 150 }
+            },
+            "action-zendesk-tag": {
+                type: "integration",
+                name: "Apply Tags",
+                config: {
+                    provider: "zendesk",
+                    action: "updateTicket",
+                    ticketId: "{{trigger.ticketId}}",
+                    tags: ["ai-classified", "{{classification.category}}"],
+                    outputVariable: "tagsApplied"
+                },
+                position: { x: 2380, y: 300 }
+            },
+            "action-notion-log": {
+                type: "integration",
+                name: "Log to Notion",
+                config: {
+                    provider: "notion",
+                    action: "createPage",
+                    parentId: "{{env.NOTION_SUPPORT_LOG}}",
+                    properties: {
+                        title: "Ticket {{trigger.ticketId}}",
+                        classification: "{{classification.text}}"
+                    },
+                    outputVariable: "notionLog"
+                },
+                position: { x: 2760, y: 400 }
+            },
+            "output-1": {
+                type: "output",
+                name: "Processing Complete",
+                config: {
+                    outputName: "ticketProcessed",
+                    value: "Ticket processed via {{routeDecision}}",
+                    format: "string"
+                },
+                position: { x: 3140, y: 400 }
+            }
+        },
+        edges: [
+            { id: "edge-1", source: "trigger-1", target: "llm-classify" },
+            { id: "edge-2", source: "trigger-1", target: "llm-sentiment" },
+            { id: "edge-3", source: "llm-classify", target: "action-zendesk-history" },
+            { id: "edge-4", source: "llm-sentiment", target: "action-zendesk-history" },
+            { id: "edge-5", source: "action-zendesk-history", target: "llm-context" },
+            { id: "edge-6", source: "llm-context", target: "router-urgency" },
+            {
+                id: "edge-7",
+                source: "router-urgency",
+                target: "action-slack-escalate",
+                sourceHandle: "escalate"
+            },
+            {
+                id: "edge-8",
+                source: "router-urgency",
+                target: "action-zendesk-assign",
+                sourceHandle: "priority"
+            },
+            {
+                id: "edge-9",
+                source: "router-urgency",
+                target: "action-zendesk-assign",
+                sourceHandle: "standard"
+            },
+            {
+                id: "edge-10",
+                source: "router-urgency",
+                target: "llm-auto-response",
+                sourceHandle: "automate"
+            },
+            { id: "edge-11", source: "llm-auto-response", target: "action-zendesk-respond" },
+            { id: "edge-12", source: "action-zendesk-respond", target: "action-zendesk-tag" },
+            { id: "edge-13", source: "action-zendesk-assign", target: "action-zendesk-tag" },
+            { id: "edge-14", source: "action-slack-escalate", target: "action-zendesk-tag" },
+            { id: "edge-15", source: "action-zendesk-tag", target: "action-notion-log" },
+            { id: "edge-16", source: "action-notion-log", target: "output-1" }
+        ],
+        entryPoint: "trigger-1"
+    }
+};
+
+// Advanced Pattern: Salesforce Opportunity Analyzer
+const salesforceOpportunityPattern: WorkflowPattern = {
+    id: "salesforce-opportunity-analyzer",
+    name: "Salesforce Opportunity Analyzer",
+    description:
+        "Multi-source deal analysis with competitive intelligence, win probability prediction, recommended actions, and pipeline forecasting",
+    useCase: "Sales intelligence",
+    icon: "TrendingUp",
+    nodeCount: 13,
+    category: "advanced",
+    integrations: ["salesforce", "hubspot", "slack", "google-sheets"],
+    definition: {
+        name: "Salesforce Opportunity Analyzer",
+        nodes: {
+            "trigger-1": {
+                type: "trigger",
+                name: "Deal Stage Change",
+                config: {
+                    triggerType: "webhook",
+                    webhookProvider: "salesforce",
+                    description: "Triggered when opportunity stage changes"
+                },
+                position: { x: 100, y: 400 }
+            },
+            "action-sf-opportunity": {
+                type: "integration",
+                name: "Get Opportunity Details",
+                config: {
+                    provider: "salesforce",
+                    action: "getOpportunity",
+                    opportunityId: "{{trigger.opportunityId}}",
+                    outputVariable: "opportunity"
+                },
+                position: { x: 480, y: 400 }
+            },
+            "action-sf-account": {
+                type: "integration",
+                name: "Get Account Info",
+                config: {
+                    provider: "salesforce",
+                    action: "getAccount",
+                    accountId: "{{opportunity.AccountId}}",
+                    outputVariable: "account"
+                },
+                position: { x: 860, y: 250 }
+            },
+            "action-sf-activities": {
+                type: "integration",
+                name: "Get Activities",
+                config: {
+                    provider: "salesforce",
+                    action: "listActivities",
+                    whatId: "{{trigger.opportunityId}}",
+                    outputVariable: "activities"
+                },
+                position: { x: 860, y: 550 }
+            },
+            "action-hubspot-engagement": {
+                type: "integration",
+                name: "Get Engagement Data",
+                config: {
+                    provider: "hubspot",
+                    action: "getEngagements",
+                    objectType: "company",
+                    outputVariable: "engagementData"
+                },
+                position: { x: 1240, y: 250 }
+            },
+            "llm-competitive": {
+                type: "llm",
+                name: "Competitive Analysis",
+                config: {
+                    provider: "openai",
+                    model: "gpt-4o",
+                    systemPrompt: "Analyze competitive positioning for sales opportunities.",
+                    prompt: "Analyze competitive landscape for:\n\nAccount: {{account}}\nOpportunity: {{opportunity}}\n\nIdentify: likely competitors, our advantages, potential objections, win themes.",
+                    temperature: 0.3,
+                    maxTokens: 1000,
+                    outputVariable: "competitiveAnalysis"
+                },
+                position: { x: 1240, y: 550 }
+            },
+            "llm-win-probability": {
+                type: "llm",
+                name: "Predict Win Probability",
+                config: {
+                    provider: "openai",
+                    model: "gpt-4o",
+                    systemPrompt:
+                        "Predict deal win probability based on signals and historical patterns.",
+                    prompt: 'Predict win probability:\n\nOpportunity: {{opportunity}}\nActivities: {{activities}}\nEngagement: {{engagementData}}\nCompetitive: {{competitiveAnalysis.text}}\n\nReturn JSON: {"probability": 0-100, "confidence": "high/medium/low", "key_factors": [], "risks": []}',
+                    temperature: 0.2,
+                    maxTokens: 800,
+                    outputVariable: "winPrediction"
+                },
+                position: { x: 1620, y: 400 }
+            },
+            "llm-recommendations": {
+                type: "llm",
+                name: "Generate Recommendations",
+                config: {
+                    provider: "openai",
+                    model: "gpt-4o",
+                    systemPrompt:
+                        "Generate actionable sales recommendations based on deal analysis.",
+                    prompt: "Generate next best actions:\n\nDeal: {{opportunity}}\nWin Analysis: {{winPrediction.text}}\n\nProvide: immediate actions, stakeholder strategy, risk mitigation.",
+                    temperature: 0.4,
+                    maxTokens: 1000,
+                    outputVariable: "recommendations"
+                },
+                position: { x: 2000, y: 400 }
+            },
+            "action-sf-update": {
+                type: "integration",
+                name: "Update Opportunity",
+                config: {
+                    provider: "salesforce",
+                    action: "updateOpportunity",
+                    opportunityId: "{{trigger.opportunityId}}",
+                    fields: {
+                        AI_Win_Probability: "{{winPrediction.probability}}",
+                        AI_Recommendations: "{{recommendations.text}}"
+                    },
+                    outputVariable: "sfUpdated"
+                },
+                position: { x: 2380, y: 300 }
+            },
+            "action-sheets-forecast": {
+                type: "integration",
+                name: "Update Forecast",
+                config: {
+                    provider: "google-sheets",
+                    action: "updateRow",
+                    spreadsheetId: "{{env.FORECAST_SHEET}}",
+                    range: "Pipeline!A:F",
+                    outputVariable: "forecastUpdated"
+                },
+                position: { x: 2380, y: 500 }
+            },
+            "conditional-risk": {
+                type: "conditional",
+                name: "At Risk?",
+                config: {
+                    condition: "winPrediction.probability < 30",
+                    outputVariable: "isAtRisk"
+                },
+                position: { x: 2760, y: 400 }
+            },
+            "action-slack-risk": {
+                type: "integration",
+                name: "Risk Alert",
+                config: {
+                    provider: "slack",
+                    action: "sendMessage",
+                    channel: "#sales-leadership",
+                    message:
+                        "At-Risk Deal Alert: {{opportunity.Name}}\nWin Probability: {{winPrediction.probability}}%\nRisks: {{winPrediction.risks}}",
+                    outputVariable: "riskAlert"
+                },
+                position: { x: 3140, y: 300 }
+            },
+            "output-1": {
+                type: "output",
+                name: "Analysis Complete",
+                config: {
+                    outputName: "dealAnalysis",
+                    value: "Deal analyzed - Win probability: {{winPrediction.probability}}%",
+                    format: "string"
+                },
+                position: { x: 3140, y: 500 }
+            }
+        },
+        edges: [
+            { id: "edge-1", source: "trigger-1", target: "action-sf-opportunity" },
+            { id: "edge-2", source: "action-sf-opportunity", target: "action-sf-account" },
+            { id: "edge-3", source: "action-sf-opportunity", target: "action-sf-activities" },
+            { id: "edge-4", source: "action-sf-account", target: "action-hubspot-engagement" },
+            { id: "edge-5", source: "action-sf-activities", target: "llm-competitive" },
+            { id: "edge-6", source: "action-hubspot-engagement", target: "llm-win-probability" },
+            { id: "edge-7", source: "llm-competitive", target: "llm-win-probability" },
+            { id: "edge-8", source: "llm-win-probability", target: "llm-recommendations" },
+            { id: "edge-9", source: "llm-recommendations", target: "action-sf-update" },
+            { id: "edge-10", source: "llm-recommendations", target: "action-sheets-forecast" },
+            { id: "edge-11", source: "action-sf-update", target: "conditional-risk" },
+            { id: "edge-12", source: "action-sheets-forecast", target: "conditional-risk" },
+            {
+                id: "edge-13",
+                source: "conditional-risk",
+                target: "action-slack-risk",
+                sourceHandle: "true"
+            },
+            {
+                id: "edge-14",
+                source: "conditional-risk",
+                target: "output-1",
+                sourceHandle: "false"
+            },
+            { id: "edge-15", source: "action-slack-risk", target: "output-1" }
+        ],
+        entryPoint: "trigger-1"
+    }
+};
+
+// ============================================================================
 // PATTERN ARRAYS AND EXPORTS
 // ============================================================================
 
@@ -5285,7 +6357,11 @@ export const INTERMEDIATE_WORKFLOW_PATTERNS: WorkflowPattern[] = [
     leadEnrichmentPattern,
     figmaDesignHandoffPattern,
     trelloProjectSyncPattern,
-    calendlyMeetingPrepPattern
+    calendlyMeetingPrepPattern,
+    notionKnowledgeBasePattern,
+    slackStandupPattern,
+    airtableDataPipelinePattern,
+    sheetsReportPattern
 ];
 
 export const ADVANCED_WORKFLOW_PATTERNS: WorkflowPattern[] = [
@@ -5296,7 +6372,9 @@ export const ADVANCED_WORKFLOW_PATTERNS: WorkflowPattern[] = [
     teamsSalesStandupPattern,
     stripeReconciliationPattern,
     intercomAnalyzerPattern,
-    multiChannelPublisherPattern
+    multiChannelPublisherPattern,
+    zendeskTicketIntelligencePattern,
+    salesforceOpportunityPattern
 ];
 
 // Helper functions
