@@ -47,13 +47,40 @@ export interface FilterableDataConfig {
 }
 
 /**
- * Provider-specific filter configuration
+ * Simple filter configuration with type and filterable fields
  */
-export interface FilterConfig {
+export interface SimpleFilterConfig {
     /** Filter type determines how filters are applied */
     type: "airtable" | "hubspot" | "generic";
     /** Fields that can be filtered on */
     filterableFields?: string[];
+}
+
+/**
+ * Per-field filter definition for advanced filtering
+ */
+export interface FieldFilterConfig {
+    type: "enum" | "text" | "number" | "date" | "boolean";
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    field: string | ((record: any, value?: any) => any);
+}
+
+/**
+ * Advanced filter configuration with per-field definitions
+ */
+export type AdvancedFilterConfig = Record<string, FieldFilterConfig>;
+
+/**
+ * Provider-specific filter configuration
+ * Supports both simple type-based config and advanced per-field config
+ */
+export type FilterConfig = SimpleFilterConfig | AdvancedFilterConfig;
+
+/**
+ * Type guard to check if filter config is a simple filter config
+ */
+export function isSimpleFilterConfig(config: FilterConfig): config is SimpleFilterConfig {
+    return "type" in config && ["airtable", "hubspot", "generic"].includes(config.type as string);
 }
 
 /**

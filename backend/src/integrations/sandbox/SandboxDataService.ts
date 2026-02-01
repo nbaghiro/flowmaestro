@@ -7,6 +7,7 @@
  */
 
 import { fixtureRegistry } from "./FixtureRegistry";
+import { isSimpleFilterConfig } from "./types";
 import type { FilterableDataConfig, SandboxScenario, TestFixture } from "./types";
 import type { OperationResult } from "../core/types";
 
@@ -360,15 +361,51 @@ export class SandboxDataService {
         params: Record<string, unknown>,
         config: FilterableDataConfig
     ): Record<string, unknown>[] {
-        const filterableFields = config.filterConfig?.filterableFields || [];
+        const filterConfig = config.filterConfig;
 
+        // If no filter config, return all records
+        if (!filterConfig) {
+            return records;
+        }
+
+        // Handle simple filter config (type + filterableFields)
+        if (isSimpleFilterConfig(filterConfig)) {
+            const filterableFields = filterConfig.filterableFields || [];
+            return records.filter((record) => {
+                for (const field of filterableFields) {
+                    if (params[field] !== undefined) {
+                        const recordValue = (record as Record<string, unknown>)[field];
+                        if (recordValue !== params[field]) {
+                            return false;
+                        }
+                    }
+                }
+                return true;
+            });
+        }
+
+        // Handle advanced filter config (per-field definitions)
         return records.filter((record) => {
-            // Check each filterable field
-            for (const field of filterableFields) {
-                if (params[field] !== undefined) {
-                    const recordValue = (record as Record<string, unknown>)[field];
-                    if (recordValue !== params[field]) {
-                        return false;
+            for (const [paramName, fieldConfig] of Object.entries(filterConfig)) {
+                if (params[paramName] !== undefined) {
+                    const paramValue = params[paramName];
+
+                    // If field is a function, call it
+                    if (typeof fieldConfig.field === "function") {
+                        const result = fieldConfig.field(record, paramValue);
+                        if (result === false) {
+                            return false;
+                        }
+                        // For computed fields that return a value, compare with param
+                        if (typeof result !== "boolean" && result !== paramValue) {
+                            return false;
+                        }
+                    } else {
+                        // Field is a string, use as property name
+                        const recordValue = (record as Record<string, unknown>)[fieldConfig.field];
+                        if (recordValue !== paramValue) {
+                            return false;
+                        }
                     }
                 }
             }

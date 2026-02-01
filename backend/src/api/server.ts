@@ -37,6 +37,7 @@ import { publicChatInterfaceQueryRoutes } from "./routes/public/chat-interface-q
 import { publicChatInterfaceStreamRoutes } from "./routes/public/chat-interface-stream";
 import { publicChatInterfaceRoutes } from "./routes/public/chat-interfaces";
 import { publicFormInterfaceRoutes } from "./routes/public/form-interfaces";
+import { sandboxRoutes } from "./routes/sandbox";
 import { templateRoutes } from "./routes/templates";
 import { threadRoutes } from "./routes/threads";
 import { toolRoutes } from "./routes/tools";
@@ -193,6 +194,7 @@ export async function buildServer() {
     await fastify.register(extensionRoutes, { prefix: "/extension" });
     await fastify.register(personaRoutes, { prefix: "/personas" });
     await fastify.register(personaInstanceRoutes, { prefix: "/persona-instances" });
+    await fastify.register(sandboxRoutes, { prefix: "/sandbox" });
 
     // Public routes (widgets and public API - CORS allows any origin via dynamic origin check)
     await fastify.register(publicFormInterfaceRoutes, { prefix: "/public/form-interfaces" });
