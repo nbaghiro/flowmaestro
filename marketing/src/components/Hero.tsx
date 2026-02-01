@@ -28,9 +28,9 @@ export const Hero: React.FC = () => {
             <InteractiveBackground />
 
             {/* Content */}
-            <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center pt-24 pb-12">
+            <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center pt-12 sm:pt-24 pb-8 sm:pb-12">
                 {/* Badge */}
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary border border-border mb-8">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary border border-border mb-4 sm:mb-8">
                     <span className="text-sm text-muted-foreground">
                         AI-powered automation for enterprises
                     </span>
@@ -38,12 +38,13 @@ export const Hero: React.FC = () => {
                 </div>
 
                 {/* Main Heading - Using serif font like Resend */}
-                <h1 className="text-6xl sm:text-7xl lg:text-8xl font-serif font-normal mb-6 leading-tight text-foreground">
-                    Automate
-                    <br />
-                    everything with
-                    <br />
-                    AI agents & workflows
+                <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-8xl font-serif font-normal mb-6 leading-tight text-foreground">
+                    Automate everything
+                    <br className="hidden sm:block" />
+                    <span className="sm:hidden"> </span>
+                    with AI agents
+                    <br className="hidden sm:block" />
+                    <span className="sm:hidden"> </span>& workflows
                 </h1>
 
                 {/* Subheading */}
@@ -58,7 +59,7 @@ export const Hero: React.FC = () => {
                 initial={{ opacity: 0, y: 40 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.3 }}
-                className="relative z-10 w-full max-w-5xl mx-auto px-4 pb-16"
+                className="relative z-10 w-full max-w-5xl mx-auto px-4 pb-8 sm:pb-16"
             >
                 <div className="relative group" style={{ perspective: "1000px" }}>
                     {/* Ambient glow effect - theme aware */}
