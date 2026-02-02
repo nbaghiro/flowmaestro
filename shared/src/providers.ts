@@ -165,7 +165,10 @@ export const PROVIDER_LOGO_DOMAINS: Record<string, string> = {
     vercel: "vercel.com",
     circleci: "circleci.com",
     quickbooks: "quickbooks.intuit.com",
-    freshbooks: "freshbooks.com"
+    freshbooks: "freshbooks.com",
+    "aws-s3": "aws.amazon.com",
+    "google-cloud-storage": "cloud.google.com",
+    "azure-storage": "azure.microsoft.com"
 };
 
 /**
@@ -1615,33 +1618,105 @@ export const ALL_PROVIDERS: Provider[] = [
         comingSoon: true
     },
 
-    // Cloud Storage (Additional)
+    // Cloud Storage
     {
         provider: "aws-s3",
         displayName: "AWS S3",
-        description: "Amazon cloud storage",
+        description: "Amazon Simple Storage Service for scalable cloud object storage",
         logoUrl: getBrandLogo("aws.amazon.com"),
         category: "File Storage",
         methods: ["api_key"],
-        comingSoon: true
+        apiKeySettings: {
+            keyLabel: "Access Key ID",
+            keyPlaceholder: "AKIAIOSFODNN7EXAMPLE",
+            requiresSecret: true,
+            secretLabel: "Secret Access Key",
+            secretPlaceholder: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+            helpText: "Create an IAM user with S3 permissions and generate access keys",
+            helpUrl:
+                "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html"
+        },
+        oauthSettings: [
+            {
+                name: "region",
+                label: "AWS Region",
+                type: "select",
+                required: true,
+                options: [
+                    { value: "us-east-1", label: "US East (N. Virginia)" },
+                    { value: "us-east-2", label: "US East (Ohio)" },
+                    { value: "us-west-1", label: "US West (N. California)" },
+                    { value: "us-west-2", label: "US West (Oregon)" },
+                    { value: "eu-west-1", label: "Europe (Ireland)" },
+                    { value: "eu-west-2", label: "Europe (London)" },
+                    { value: "eu-west-3", label: "Europe (Paris)" },
+                    { value: "eu-central-1", label: "Europe (Frankfurt)" },
+                    { value: "eu-north-1", label: "Europe (Stockholm)" },
+                    { value: "ap-northeast-1", label: "Asia Pacific (Tokyo)" },
+                    { value: "ap-northeast-2", label: "Asia Pacific (Seoul)" },
+                    { value: "ap-southeast-1", label: "Asia Pacific (Singapore)" },
+                    { value: "ap-southeast-2", label: "Asia Pacific (Sydney)" },
+                    { value: "ap-south-1", label: "Asia Pacific (Mumbai)" },
+                    { value: "sa-east-1", label: "South America (São Paulo)" },
+                    { value: "ca-central-1", label: "Canada (Central)" }
+                ],
+                helpText: "Select the AWS region where your S3 buckets are located"
+            }
+        ]
     },
     {
         provider: "google-cloud-storage",
         displayName: "Google Cloud Storage",
-        description: "Google cloud storage",
+        description: "Google Cloud Storage for unified object storage with global edge-caching",
         logoUrl: getBrandLogo("cloud.google.com"),
         category: "File Storage",
         methods: ["oauth2"],
-        comingSoon: true
+        oauthSettings: [
+            {
+                name: "projectId",
+                label: "Google Cloud Project ID",
+                placeholder: "my-project-123",
+                helpText:
+                    "Your Google Cloud project ID (found in Google Cloud Console > Project Settings)",
+                required: true,
+                type: "text",
+                pattern: "^[a-z][a-z0-9-]{4,28}[a-z0-9]$",
+                patternError:
+                    "Project ID must be 6-30 characters, lowercase letters, digits, hyphens"
+            }
+        ]
     },
     {
         provider: "azure-storage",
-        displayName: "Azure Storage",
-        description: "Microsoft cloud storage",
+        displayName: "Azure Blob Storage",
+        description: "Microsoft Azure Blob Storage for massively scalable object storage",
         logoUrl: getBrandLogo("azure.microsoft.com"),
         category: "File Storage",
         methods: ["api_key"],
-        comingSoon: true
+        apiKeySettings: {
+            keyLabel: "Storage Account Name",
+            keyPlaceholder: "mystorageaccount",
+            requiresSecret: true,
+            secretLabel: "Account Key",
+            secretPlaceholder: "Base64 encoded key from Azure Portal...",
+            helpText: "Find these in Azure Portal > Storage Account > Access Keys",
+            helpUrl:
+                "https://learn.microsoft.com/en-us/azure/storage/common/storage-account-keys-manage"
+        },
+        oauthSettings: [
+            {
+                name: "endpointSuffix",
+                label: "Endpoint Suffix",
+                type: "select",
+                required: false,
+                options: [
+                    { value: "core.windows.net", label: "Azure Public (default)" },
+                    { value: "core.chinacloudapi.cn", label: "Azure China" },
+                    { value: "core.usgovcloudapi.net", label: "Azure Government" }
+                ],
+                helpText: "Select Azure cloud environment (default: Azure Public)"
+            }
+        ]
     },
 
     // Social Media (Additional)

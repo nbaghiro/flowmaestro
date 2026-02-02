@@ -1139,5 +1139,51 @@ const squareEntry: ProviderRegistryEntry = {
 
 providerRegistry.register(squareEntry);
 
+// Register Google Cloud Storage provider
+const googleCloudStorageEntry: ProviderRegistryEntry = {
+    name: "google-cloud-storage",
+    displayName: "Google Cloud Storage",
+    authMethod: "oauth2",
+    category: "file_storage",
+    loader: async () => {
+        const { GoogleCloudStorageProvider } = await import(
+            "./providers/google-cloud-storage/GoogleCloudStorageProvider"
+        );
+        return new GoogleCloudStorageProvider();
+    }
+};
+
+providerRegistry.register(googleCloudStorageEntry);
+
+// Register AWS S3 provider
+const awsS3Entry: ProviderRegistryEntry = {
+    name: "aws-s3",
+    displayName: "AWS S3",
+    authMethod: "api_key",
+    category: "file_storage",
+    loader: async () => {
+        const { AWSS3Provider } = await import("./providers/aws-s3/AWSS3Provider");
+        return new AWSS3Provider();
+    }
+};
+
+providerRegistry.register(awsS3Entry);
+
+// Register Azure Blob Storage provider
+const azureStorageEntry: ProviderRegistryEntry = {
+    name: "azure-storage",
+    displayName: "Azure Blob Storage",
+    authMethod: "api_key",
+    category: "file_storage",
+    loader: async () => {
+        const { AzureStorageProvider } = await import(
+            "./providers/azure-storage/AzureStorageProvider"
+        );
+        return new AzureStorageProvider();
+    }
+};
+
+providerRegistry.register(azureStorageEntry);
+
 // Export for use in application
 export { providerRegistry };
