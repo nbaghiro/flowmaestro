@@ -291,7 +291,7 @@ export function AIChatPanel({ workflowId, onClose }: AIChatPanelProps) {
     // Update context when panel mounts or workflow changes
     useEffect(() => {
         handleRefreshContext();
-        // eslint-disable-next-line
+        // eslint-disable-next-line -- handleRefreshContext intentionally excluded to prevent infinite loops
     }, [nodes.length, edges.length, selectedNode]);
 
     // Calculate smart position for new nodes

@@ -9,6 +9,41 @@ import { z } from "zod";
 import { createServiceLogger } from "../../core/logging";
 import type { BuiltInTool, ToolExecutionContext, ToolExecutionResult } from "../types";
 
+/**
+ * pdf-parse type definitions
+ * The @types/pdf-parse package has incomplete types (uses `any` for info/metadata),
+ * so we define proper types here based on actual PDF metadata fields.
+ */
+interface PdfParseInfo {
+    Title?: string;
+    Author?: string;
+    Subject?: string;
+    Creator?: string;
+    Producer?: string;
+    CreationDate?: string;
+    ModDate?: string;
+    [key: string]: string | undefined;
+}
+
+interface PdfParseResult {
+    numpages: number;
+    numrender: number;
+    info: PdfParseInfo;
+    metadata: Record<string, unknown> | null;
+    text: string;
+}
+
+interface PdfParseOptions {
+    pagerender?: (pageData: {
+        pageIndex: number;
+        getTextContent: () => Promise<{ items: Array<{ str: string }> }>;
+    }) => Promise<string>;
+    max?: number;
+    password?: string;
+}
+
+type PdfParseFunction = (buffer: Buffer, options?: PdfParseOptions) => Promise<PdfParseResult>;
+
 const logger = createServiceLogger("PDFExtractTool");
 
 /**
@@ -232,21 +267,15 @@ async function executePDFExtract(
             throw error;
         }
 
-        // Dynamic import for pdf-parse
-        // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-explicit-any
-        const pdfParseModule = (await import("pdf-parse")) as any;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const pdfParse: (buffer: Buffer, options?: any) => Promise<any> =
-            pdfParseModule.default || pdfParseModule;
+        // Dynamic import for pdf-parse (CommonJS module with ESM interop)
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const pdfParseModule = (await import("pdf-parse")) as unknown as {
+            default: PdfParseFunction;
+        };
+        const pdfParse: PdfParseFunction = pdfParseModule.default;
 
         // Parse options
-        const options: {
-            pagerender?: (pageData: {
-                pageIndex: number;
-                getTextContent: () => Promise<{ items: Array<{ str: string }> }>;
-            }) => Promise<string>;
-            password?: string;
-        } = {};
+        const options: PdfParseOptions = {};
 
         // Handle password-protected PDFs
         if (input.password) {

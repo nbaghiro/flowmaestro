@@ -1192,18 +1192,6 @@ export const trelloFixtures: TestFixture[] = [
                     initials: "JS",
                     profileUrl: "https://trello.com/johnsmith"
                 }
-            },
-            {
-                name: "get_current_user_minimal",
-                description: "Get user with minimal profile",
-                input: {},
-                expectedOutput: {
-                    id: "5f8d3c2b1a9e8d7c6b5a7099",
-                    fullName: "Jane Doe",
-                    username: "janedoe",
-                    initials: "JD",
-                    profileUrl: "https://trello.com/janedoe"
-                }
             }
         ],
         errorCases: [

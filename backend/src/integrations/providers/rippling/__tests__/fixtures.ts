@@ -192,30 +192,6 @@ export const ripplingFixtures: TestFixture[] = [
                     employeeCount: 150,
                     foundedYear: 2018
                 }
-            },
-            {
-                name: "get_company_minimal_info",
-                description: "Get company with minimal optional fields populated",
-                input: {},
-                expectedOutput: {
-                    id: "comp_01H8X9KPZN4Q5R6S7T8U9V0W2Y",
-                    name: "Startup Inc",
-                    legalName: "Startup Inc.",
-                    ein: null,
-                    address: {
-                        street1: "456 Innovation Way",
-                        street2: null,
-                        city: "Austin",
-                        state: "TX",
-                        postalCode: "78701",
-                        country: "US"
-                    },
-                    phone: null,
-                    website: null,
-                    industry: null,
-                    employeeCount: 25,
-                    foundedYear: 2023
-                }
             }
         ],
         errorCases: [

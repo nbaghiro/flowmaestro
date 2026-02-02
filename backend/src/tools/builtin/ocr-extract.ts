@@ -5,6 +5,7 @@
  */
 
 import { readFile, access, constants } from "fs/promises";
+import { PSM } from "tesseract.js";
 import { z } from "zod";
 import { createServiceLogger } from "../../core/logging";
 import type { BuiltInTool, ToolExecutionContext, ToolExecutionResult } from "../types";
@@ -171,10 +172,9 @@ async function executeOCRExtract(
 
         try {
             // Set PSM (Page Segmentation Mode)
-            // PSM values: 0-13, cast to the enum type expected by tesseract.js
+            // PSM enum values are strings '0'-'13', convert number to string
             await worker.setParameters({
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                tessedit_pageseg_mode: input.psm as any
+                tessedit_pageseg_mode: String(input.psm) as PSM
             });
 
             // Read image

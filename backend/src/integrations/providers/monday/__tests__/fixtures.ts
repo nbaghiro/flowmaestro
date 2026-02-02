@@ -2260,26 +2260,6 @@ export const mondayFixtures: TestFixture[] = [
                         ]
                     }
                 }
-            },
-            {
-                name: "get_current_user_minimal",
-                description: "Get user with minimal profile",
-                input: {},
-                expectedOutput: {
-                    user: {
-                        id: "12345679",
-                        name: "Jane Doe",
-                        email: "jane@example.com",
-                        photo_thumb: null,
-                        title: null,
-                        account: {
-                            id: "98765",
-                            name: "Acme Corp",
-                            slug: "acme-corp"
-                        },
-                        teams: []
-                    }
-                }
             }
         ],
         errorCases: [

@@ -569,17 +569,6 @@ export const telegramFixtures: TestFixture[] = [
                     username: "flowmaestro_bot",
                     languageCode: "en"
                 }
-            },
-            {
-                name: "get_bot_info_minimal",
-                description: "Get basic bot information (no optional fields)",
-                input: {},
-                expectedOutput: {
-                    id: 9876543210,
-                    isBot: true,
-                    firstName: "Notification",
-                    username: "notification_service_bot"
-                }
             }
         ],
         errorCases: [

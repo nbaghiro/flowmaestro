@@ -43,14 +43,22 @@ export class SandboxDataService {
                 return this.getFilteredResponse(fixture, params);
             }
 
-            // Find a matching test case or use the first one
-            for (const testCase of fixture.validCases) {
-                if (this.matchesParams(testCase.input as Record<string, unknown>, params)) {
-                    return {
-                        success: true,
-                        data: testCase.expectedOutput
-                    };
-                }
+            // Find the best matching test case (most specific match wins)
+            // Sort by number of matching parameters (more specific matches first)
+            const matchedCases = fixture.validCases
+                .map((testCase) => ({
+                    testCase,
+                    input: testCase.input as Record<string, unknown>,
+                    specificity: Object.keys(testCase.input as Record<string, unknown>).length
+                }))
+                .filter(({ input }) => this.matchesParams(input, params))
+                .sort((a, b) => b.specificity - a.specificity);
+
+            if (matchedCases.length > 0) {
+                return {
+                    success: true,
+                    data: matchedCases[0].testCase.expectedOutput
+                };
             }
             // Default to first valid case
             return {
@@ -431,7 +439,11 @@ export class SandboxDataService {
 
         // Parse offset to get start index
         let startIndex = 0;
-        const offsetValue = params[offsetParam] as string | undefined;
+        const rawOffsetValue = params[offsetParam];
+        const offsetValue =
+            rawOffsetValue !== undefined && rawOffsetValue !== null
+                ? String(rawOffsetValue)
+                : undefined;
         if (offsetValue) {
             // For Airtable-style offsets (itrXXX/recXXX), extract the record ID
             const recordIdMatch = offsetValue.match(/\/rec([A-Za-z0-9]+)$/);
