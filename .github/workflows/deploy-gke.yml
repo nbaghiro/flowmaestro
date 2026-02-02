@@ -130,6 +130,10 @@ jobs:
           file: infra/docker/marketing/Dockerfile
           platforms: linux/amd64
           push: true
+          build-args: |
+            VITE_GA_MEASUREMENT_ID=${{ vars.VITE_GA_MEASUREMENT_ID }}
+            VITE_APP_URL=${{ vars.VITE_APP_URL }}
+            VITE_DOCS_URL=${{ vars.VITE_DOCS_URL }}
           tags: |
             ${{ env.ARTIFACT_REGISTRY }}/marketing:${{ env.IMAGE_TAG }}
             ${{ env.ARTIFACT_REGISTRY }}/marketing:latest
