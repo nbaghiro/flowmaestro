@@ -171,6 +171,36 @@ describe("Fixture Completeness", () => {
             expect(invalidCases).toEqual([]);
         });
 
+        it("validCases have expectedOutput or fixture has filterableData", () => {
+            const providers = fixtureRegistry.getProviders();
+            const invalidCases: string[] = [];
+
+            for (const provider of providers) {
+                const fixtures = fixtureRegistry.getByProvider(provider);
+                for (const fixture of fixtures) {
+                    const hasFilterableData = !!fixture.filterableData;
+
+                    for (const testCase of fixture.validCases) {
+                        const hasExpectedOutput = testCase.expectedOutput !== undefined;
+
+                        if (!hasExpectedOutput && !hasFilterableData) {
+                            invalidCases.push(
+                                `${provider}:${fixture.operationId}.${testCase.name} (missing expectedOutput and no filterableData)`
+                            );
+                        }
+                    }
+                }
+            }
+
+            if (invalidCases.length > 0) {
+                console.error(
+                    `validCases without expectedOutput or filterableData: ${invalidCases.join("; ")}`
+                );
+            }
+
+            expect(invalidCases).toEqual([]);
+        });
+
         it("errorCases have required fields (name, input, expectedError)", () => {
             const providers = fixtureRegistry.getProviders();
             const invalidCases: string[] = [];
