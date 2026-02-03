@@ -785,6 +785,19 @@ export function NewConnectionDialog({
                                     {isSubmitting ? "Creating..." : "Create connection"}
                                 </Button>
                             </div>
+
+                            {/* Test Connection Option - subtle link */}
+                            <div className="pt-4 text-center border-t border-border mt-4">
+                                <button
+                                    onClick={handleTestConnectionCreate}
+                                    disabled={isSubmitting}
+                                    className="text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1.5"
+                                    type="button"
+                                >
+                                    <FlaskConical className="w-3 h-3" />
+                                    <span>Or create a test connection with mock data</span>
+                                </button>
+                            </div>
                         </form>
                     )}
 

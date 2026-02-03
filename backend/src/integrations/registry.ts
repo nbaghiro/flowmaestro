@@ -1155,6 +1155,52 @@ const googleCloudStorageEntry: ProviderRegistryEntry = {
 
 providerRegistry.register(googleCloudStorageEntry);
 
+// Register AWS provider (unified Lambda, CloudWatch, ECS)
+const awsEntry: ProviderRegistryEntry = {
+    name: "aws",
+    displayName: "AWS",
+    authMethod: "api_key",
+    category: "developer_tools",
+    loader: async () => {
+        const { AWSProvider } = await import("./providers/aws/AWSProvider");
+        return new AWSProvider();
+    }
+};
+
+providerRegistry.register(awsEntry);
+
+// Register Google Cloud provider (unified Cloud Build, Secret Manager, Compute Engine, Cloud Run)
+const googleCloudEntry: ProviderRegistryEntry = {
+    name: "google-cloud",
+    displayName: "Google Cloud",
+    authMethod: "oauth2",
+    category: "developer_tools",
+    loader: async () => {
+        const { GoogleCloudProvider } = await import(
+            "./providers/google-cloud/GoogleCloudProvider"
+        );
+        return new GoogleCloudProvider();
+    }
+};
+
+providerRegistry.register(googleCloudEntry);
+
+// Register Azure DevOps provider (unified Work Items, Repos, Pipelines, Releases, Test Plans)
+const azureDevOpsEntry: ProviderRegistryEntry = {
+    name: "azure-devops",
+    displayName: "Azure DevOps",
+    authMethod: "oauth2",
+    category: "developer_tools",
+    loader: async () => {
+        const { AzureDevOpsProvider } = await import(
+            "./providers/azure-devops/AzureDevOpsProvider"
+        );
+        return new AzureDevOpsProvider();
+    }
+};
+
+providerRegistry.register(azureDevOpsEntry);
+
 // Register AWS S3 provider
 const awsS3Entry: ProviderRegistryEntry = {
     name: "aws-s3",
@@ -1184,6 +1230,64 @@ const azureStorageEntry: ProviderRegistryEntry = {
 };
 
 providerRegistry.register(azureStorageEntry);
+
+// Register WooCommerce provider
+const woocommerceEntry: ProviderRegistryEntry = {
+    name: "woocommerce",
+    displayName: "WooCommerce",
+    authMethod: "api_key",
+    category: "ecommerce",
+    loader: async () => {
+        const { WooCommerceProvider } = await import("./providers/woocommerce/WooCommerceProvider");
+        return new WooCommerceProvider();
+    }
+};
+
+providerRegistry.register(woocommerceEntry);
+
+// Register BigCommerce provider
+const bigcommerceEntry: ProviderRegistryEntry = {
+    name: "bigcommerce",
+    displayName: "BigCommerce",
+    authMethod: "api_key",
+    category: "ecommerce",
+    loader: async () => {
+        const { BigCommerceProvider } = await import("./providers/bigcommerce/BigCommerceProvider");
+        return new BigCommerceProvider();
+    }
+};
+
+providerRegistry.register(bigcommerceEntry);
+
+// Register Google Analytics provider
+const googleAnalyticsEntry: ProviderRegistryEntry = {
+    name: "google-analytics",
+    displayName: "Google Analytics",
+    authMethod: "oauth2",
+    category: "analytics",
+    loader: async () => {
+        const { GoogleAnalyticsProvider } = await import(
+            "./providers/google-analytics/GoogleAnalyticsProvider"
+        );
+        return new GoogleAnalyticsProvider();
+    }
+};
+
+providerRegistry.register(googleAnalyticsEntry);
+
+// Register Power BI provider
+const powerBIEntry: ProviderRegistryEntry = {
+    name: "power-bi",
+    displayName: "Power BI",
+    authMethod: "oauth2",
+    category: "analytics",
+    loader: async () => {
+        const { PowerBIProvider } = await import("./providers/power-bi/PowerBIProvider");
+        return new PowerBIProvider();
+    }
+};
+
+providerRegistry.register(powerBIEntry);
 
 // Export for use in application
 export { providerRegistry };

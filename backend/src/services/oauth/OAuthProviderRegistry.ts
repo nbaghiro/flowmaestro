@@ -435,6 +435,52 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
         refreshable: true
     },
 
+    "google-analytics": {
+        name: "google-analytics",
+        displayName: "Google Analytics",
+        authUrl: "https://accounts.google.com/o/oauth2/v2/auth",
+        tokenUrl: "https://oauth2.googleapis.com/token",
+        scopes: ["https://www.googleapis.com/auth/analytics.readonly"],
+        authParams: {
+            access_type: "offline",
+            prompt: "consent"
+        },
+        clientId: config.oauth.google.clientId,
+        clientSecret: config.oauth.google.clientSecret,
+        redirectUri: getOAuthRedirectUri("google"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`
+                    }
+                });
+
+                const data = (await response.json()) as {
+                    email?: string;
+                    name?: string;
+                    picture?: string;
+                    id?: string;
+                };
+
+                return {
+                    email: data.email,
+                    name: data.name,
+                    picture: data.picture,
+                    userId: data.id
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get Google Analytics user info");
+                return {
+                    email: "unknown@google",
+                    name: "Google User"
+                };
+            }
+        },
+        revokeUrl: "https://oauth2.googleapis.com/revoke",
+        refreshable: true
+    },
+
     notion: {
         name: "notion",
         displayName: "Notion",
@@ -1577,6 +1623,61 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
                 };
             } catch (error) {
                 logger.error({ err: error }, "Failed to get Outlook user info");
+                return {
+                    email: "unknown@microsoft",
+                    name: "Microsoft User"
+                };
+            }
+        },
+        refreshable: true
+    },
+
+    "power-bi": {
+        name: "power-bi",
+        displayName: "Power BI",
+        authUrl: "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
+        tokenUrl: "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+        scopes: [
+            "User.Read",
+            "https://analysis.windows.net/powerbi/api/Report.Read.All",
+            "https://analysis.windows.net/powerbi/api/Dataset.Read.All",
+            "https://analysis.windows.net/powerbi/api/Dashboard.Read.All",
+            "https://analysis.windows.net/powerbi/api/Workspace.Read.All",
+            "offline_access"
+        ],
+        authParams: {
+            response_mode: "query",
+            prompt: "consent"
+        },
+        clientId: config.oauth.microsoft.clientId,
+        clientSecret: config.oauth.microsoft.clientSecret,
+        redirectUri: getOAuthRedirectUri("microsoft"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://graph.microsoft.com/v1.0/me", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    id?: string;
+                    displayName?: string;
+                    mail?: string;
+                    userPrincipalName?: string;
+                };
+
+                return {
+                    userId: data.id,
+                    email: data.mail || data.userPrincipalName,
+                    name: data.displayName
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get Power BI user info");
                 return {
                     email: "unknown@microsoft",
                     name: "Microsoft User"

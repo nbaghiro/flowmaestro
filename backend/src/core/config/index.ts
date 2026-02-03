@@ -516,6 +516,8 @@ export function getOAuthRedirectUri(provider: string): string {
         "google-slides": "/oauth/google/callback",
         "google-forms": "/oauth/google/callback",
         gmail: "/oauth/google/callback",
+        "google-analytics": "/oauth/google/callback",
+        "google-cloud-storage": "/oauth/google/callback",
 
         // Microsoft services all use the same callback
         microsoft: "/oauth/microsoft/callback",
@@ -525,6 +527,8 @@ export function getOAuthRedirectUri(provider: string): string {
         "microsoft-word": "/oauth/microsoft/callback",
         "microsoft-powerpoint": "/oauth/microsoft/callback",
         "microsoft-teams": "/oauth/microsoft/callback",
+        "microsoft-outlook": "/oauth/microsoft/callback",
+        "power-bi": "/oauth/microsoft/callback",
 
         // Meta services all use the same callback
         whatsapp: "/oauth/meta/callback",
@@ -601,6 +605,8 @@ export function getOAuthCredentials(provider: string): { clientId: string; clien
         "google-slides": "google",
         "google-forms": "google",
         gmail: "google",
+        "google-analytics": "google",
+        "google-cloud-storage": "google",
 
         // Microsoft services
         microsoft: "microsoft",
@@ -610,6 +616,8 @@ export function getOAuthCredentials(provider: string): { clientId: string; clien
         "microsoft-word": "microsoft",
         "microsoft-powerpoint": "microsoft",
         "microsoft-teams": "microsoft",
+        "microsoft-outlook": "microsoft",
+        "power-bi": "microsoft",
 
         // Meta services - special handling
         whatsapp: "meta",

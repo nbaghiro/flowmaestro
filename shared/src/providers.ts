@@ -142,6 +142,8 @@ export const PROVIDER_LOGO_DOMAINS: Record<string, string> = {
     pinterest: "pinterest.com",
     amplitude: "amplitude.com",
     mixpanel: "mixpanel.com",
+    "google-analytics": "analytics.google.com",
+    "power-bi": "powerbi.microsoft.com",
     segment: "segment.com",
     hellosign: "hellosign.com",
     docusign: "docusign.com",
@@ -166,9 +168,14 @@ export const PROVIDER_LOGO_DOMAINS: Record<string, string> = {
     circleci: "circleci.com",
     quickbooks: "quickbooks.intuit.com",
     freshbooks: "freshbooks.com",
+    aws: "aws.amazon.com",
     "aws-s3": "aws.amazon.com",
+    "google-cloud": "cloud.google.com",
     "google-cloud-storage": "cloud.google.com",
-    "azure-storage": "azure.microsoft.com"
+    "azure-devops": "dev.azure.com",
+    "azure-storage": "azure.microsoft.com",
+    woocommerce: "woocommerce.com",
+    bigcommerce: "bigcommerce.com"
 };
 
 /**
@@ -625,8 +632,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Track and analyze website traffic",
         logoUrl: getBrandLogo("analytics.google.com"),
         category: "Analytics",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "mixpanel",
@@ -960,11 +966,32 @@ export const ALL_PROVIDERS: Provider[] = [
     {
         provider: "woocommerce",
         displayName: "WooCommerce",
-        description: "WordPress e-commerce plugin",
+        description: "Manage products, orders, customers, and inventory in your WooCommerce store",
         logoUrl: getBrandLogo("woocommerce.com"),
         category: "E-commerce",
         methods: ["api_key"],
-        comingSoon: true
+        apiKeySettings: {
+            keyLabel: "Consumer Key",
+            keyPlaceholder: "ck_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            requiresSecret: true,
+            secretLabel: "Consumer Secret",
+            secretPlaceholder: "cs_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            helpText: "Generate REST API keys in WooCommerce > Settings > Advanced > REST API",
+            helpUrl: "https://woocommerce.com/document/woocommerce-rest-api/"
+        },
+        oauthSettings: [
+            {
+                name: "storeUrl",
+                label: "Store URL",
+                placeholder: "https://mystore.com",
+                helpText:
+                    "Your WooCommerce store URL (must use HTTPS and have pretty permalinks enabled)",
+                required: true,
+                type: "text",
+                pattern: "^https://",
+                patternError: "Store URL must use HTTPS"
+            }
+        ]
     },
     {
         provider: "magento",
@@ -978,11 +1005,20 @@ export const ALL_PROVIDERS: Provider[] = [
     {
         provider: "bigcommerce",
         displayName: "BigCommerce",
-        description: "E-commerce platform",
+        description: "Manage products, orders, customers, and inventory in your BigCommerce store",
         logoUrl: getBrandLogo("bigcommerce.com"),
         category: "E-commerce",
         methods: ["api_key"],
-        comingSoon: true
+        apiKeySettings: {
+            keyLabel: "Access Token",
+            keyPlaceholder: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            requiresSecret: true,
+            secretLabel: "Store Hash",
+            secretPlaceholder: "abc123xyz",
+            helpText:
+                "Create an API Account in BigCommerce Control Panel > Advanced Settings > API Accounts",
+            helpUrl: "https://developer.bigcommerce.com/docs/start/authentication/api-accounts"
+        }
     },
     {
         provider: "square",
@@ -1540,22 +1576,95 @@ export const ALL_PROVIDERS: Provider[] = [
         comingSoon: true
     },
     {
+        provider: "aws",
+        displayName: "AWS",
+        description:
+            "Cloud platform for Lambda, CloudWatch, and ECS - manage serverless functions, monitor metrics and logs, orchestrate containers",
+        logoUrl: getBrandLogo("aws.amazon.com"),
+        category: "Developer Tools",
+        methods: ["api_key"],
+        apiKeySettings: {
+            keyLabel: "Access Key ID",
+            keyPlaceholder: "AKIAIOSFODNN7EXAMPLE",
+            requiresSecret: true,
+            secretLabel: "Secret Access Key",
+            secretPlaceholder: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+            helpText:
+                "Create an IAM user with appropriate permissions for Lambda, CloudWatch, and ECS",
+            helpUrl:
+                "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html"
+        },
+        oauthSettings: [
+            {
+                name: "region",
+                label: "AWS Region",
+                type: "select",
+                required: true,
+                placeholder: "Select region",
+                helpText: "The AWS region where your resources are located",
+                options: [
+                    { value: "us-east-1", label: "US East (N. Virginia)" },
+                    { value: "us-east-2", label: "US East (Ohio)" },
+                    { value: "us-west-1", label: "US West (N. California)" },
+                    { value: "us-west-2", label: "US West (Oregon)" },
+                    { value: "eu-west-1", label: "Europe (Ireland)" },
+                    { value: "eu-west-2", label: "Europe (London)" },
+                    { value: "eu-west-3", label: "Europe (Paris)" },
+                    { value: "eu-central-1", label: "Europe (Frankfurt)" },
+                    { value: "eu-north-1", label: "Europe (Stockholm)" },
+                    { value: "ap-southeast-1", label: "Asia Pacific (Singapore)" },
+                    { value: "ap-southeast-2", label: "Asia Pacific (Sydney)" },
+                    { value: "ap-northeast-1", label: "Asia Pacific (Tokyo)" },
+                    { value: "ap-northeast-2", label: "Asia Pacific (Seoul)" },
+                    { value: "ap-south-1", label: "Asia Pacific (Mumbai)" },
+                    { value: "sa-east-1", label: "South America (São Paulo)" },
+                    { value: "ca-central-1", label: "Canada (Central)" }
+                ]
+            }
+        ]
+    },
+    {
         provider: "google-cloud",
-        displayName: "Google Cloud Platform",
-        description: "Google cloud services",
+        displayName: "Google Cloud",
+        description:
+            "Cloud platform for Cloud Build, Secret Manager, Compute Engine, and Cloud Run - CI/CD automation, secret management, VM and container orchestration",
         logoUrl: getBrandLogo("cloud.google.com"),
         category: "Developer Tools",
         methods: ["oauth2"],
-        comingSoon: true
+        oauthSettings: [
+            {
+                name: "projectId",
+                label: "GCP Project ID",
+                type: "text",
+                required: true,
+                placeholder: "my-project-123456",
+                helpText: "Enter your Google Cloud Project ID",
+                pattern: "^[a-z][a-z0-9-]{4,28}[a-z0-9]$",
+                patternError:
+                    "Project ID must be 6-30 characters, lowercase letters, numbers, and hyphens only"
+            }
+        ]
     },
     {
-        provider: "azure",
-        displayName: "Microsoft Azure",
-        description: "Microsoft cloud platform",
-        logoUrl: getBrandLogo("azure.microsoft.com"),
+        provider: "azure-devops",
+        displayName: "Azure DevOps",
+        description:
+            "DevOps platform covering work items, repos, pipelines, releases, and test plans - complete CI/CD and project management automation",
+        logoUrl: getBrandLogo("dev.azure.com"),
         category: "Developer Tools",
         methods: ["oauth2"],
-        comingSoon: true
+        oauthSettings: [
+            {
+                name: "organization",
+                label: "Azure DevOps Organization",
+                type: "text",
+                required: true,
+                placeholder: "my-organization",
+                helpText: "Enter your Azure DevOps organization name (from dev.azure.com/YOUR-ORG)",
+                pattern: "^[a-zA-Z0-9-]+$",
+                patternError: "Organization name can only contain letters, numbers, and hyphens"
+            }
+        ]
     },
     {
         provider: "circleci",
@@ -2192,8 +2301,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Microsoft business analytics",
         logoUrl: getBrandLogo("powerbi.microsoft.com"),
         category: "Analytics",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
 
     // Content Management
