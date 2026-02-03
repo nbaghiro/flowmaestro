@@ -1139,6 +1139,20 @@ const squareEntry: ProviderRegistryEntry = {
 
 providerRegistry.register(squareEntry);
 
+// Register PayPal provider
+const paypalEntry: ProviderRegistryEntry = {
+    name: "paypal",
+    displayName: "PayPal",
+    authMethod: "oauth2",
+    category: "payments",
+    loader: async () => {
+        const { PaypalProvider } = await import("./providers/paypal/PaypalProvider");
+        return new PaypalProvider();
+    }
+};
+
+providerRegistry.register(paypalEntry);
+
 // Register Google Cloud Storage provider
 const googleCloudStorageEntry: ProviderRegistryEntry = {
     name: "google-cloud-storage",

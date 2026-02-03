@@ -1034,8 +1034,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Payment processing platform",
         logoUrl: getBrandLogo("paypal.com"),
         category: "Payment Processing",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "amazon-seller-central",

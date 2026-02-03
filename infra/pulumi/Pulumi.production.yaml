@@ -163,5 +163,7 @@ config:
       {"name":"rippling-client-id","envVar":"RIPPLING_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Rippling OAuth client ID"},
       {"name":"rippling-client-secret","envVar":"RIPPLING_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Rippling OAuth client secret"},
       {"name":"amazon-seller-central-client-id","envVar":"AMAZON_SELLER_CENTRAL_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Amazon Seller Central OAuth client ID (Login with Amazon)"},
-      {"name":"amazon-seller-central-client-secret","envVar":"AMAZON_SELLER_CENTRAL_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Amazon Seller Central OAuth client secret (Login with Amazon)"}
+      {"name":"amazon-seller-central-client-secret","envVar":"AMAZON_SELLER_CENTRAL_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Amazon Seller Central OAuth client secret (Login with Amazon)"},
+      {"name":"paypal-client-id","envVar":"PAYPAL_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"PayPal OAuth client ID"},
+      {"name":"paypal-client-secret","envVar":"PAYPAL_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"PayPal OAuth client secret"}
     ]

@@ -235,19 +235,31 @@ export class OAuthService {
         logger.info({ provider }, "Refreshing token");
 
         try {
+            const usesBasicAuth = config.tokenAuthMethod === "basic";
+
             const params: Record<string, string> = {
-                client_id: config.clientId,
-                client_secret: config.clientSecret,
                 refresh_token: refreshToken,
                 grant_type: "refresh_token"
             };
 
+            const headers: Record<string, string> = {
+                "Content-Type": "application/x-www-form-urlencoded",
+                Accept: "application/json"
+            };
+
+            if (usesBasicAuth) {
+                const credentials = Buffer.from(
+                    `${config.clientId}:${config.clientSecret}`
+                ).toString("base64");
+                headers["Authorization"] = `Basic ${credentials}`;
+            } else {
+                params.client_id = config.clientId;
+                params.client_secret = config.clientSecret;
+            }
+
             const response = await fetch(config.tokenUrl, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/x-www-form-urlencoded",
-                    Accept: "application/json"
-                },
+                headers,
                 body: new URLSearchParams(params).toString()
             });
 
@@ -343,9 +355,9 @@ export class OAuthService {
             params.client_secret = config.clientSecret;
         }
 
-        // Notion requires Basic Auth instead of client_id/client_secret in body
+        // Some providers require Basic Auth instead of client_id/client_secret in body
         const isNotion = config.name === "notion";
-        const usesBasicAuth = isNotion || config.pkceEnabled;
+        const usesBasicAuth = config.tokenAuthMethod === "basic" || isNotion || config.pkceEnabled;
 
         const headers: Record<string, string> = {
             "Content-Type": "application/x-www-form-urlencoded",

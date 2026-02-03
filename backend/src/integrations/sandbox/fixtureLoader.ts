@@ -89,6 +89,7 @@ export async function loadAllFixtures(): Promise<void> {
         "mongodb",
         "notion",
         "pagerduty",
+        "paypal",
         "pipedrive",
         "postgresql",
         "posthog",

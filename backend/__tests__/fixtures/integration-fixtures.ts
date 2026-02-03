@@ -73,6 +73,7 @@ import { mondayFixtures } from "../../src/integrations/providers/monday/__tests_
 import { mongodbFixtures } from "../../src/integrations/providers/mongodb/__tests__/fixtures";
 import { notionFixtures } from "../../src/integrations/providers/notion/__tests__/fixtures";
 import { pagerdutyFixtures } from "../../src/integrations/providers/pagerduty/__tests__/fixtures";
+import { paypalFixtures } from "../../src/integrations/providers/paypal/__tests__/fixtures";
 import { pipedriveFixtures } from "../../src/integrations/providers/pipedrive/__tests__/fixtures";
 import { postgresqlFixtures } from "../../src/integrations/providers/postgresql/__tests__/fixtures";
 import { posthogFixtures } from "../../src/integrations/providers/posthog/__tests__/fixtures";
@@ -170,6 +171,7 @@ fixtureRegistry.registerAll(mondayFixtures);
 fixtureRegistry.registerAll(mongodbFixtures);
 fixtureRegistry.registerAll(notionFixtures);
 fixtureRegistry.registerAll(pagerdutyFixtures);
+fixtureRegistry.registerAll(paypalFixtures);
 fixtureRegistry.registerAll(pipedriveFixtures);
 fixtureRegistry.registerAll(postgresqlFixtures);
 fixtureRegistry.registerAll(posthogFixtures);

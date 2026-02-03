@@ -494,6 +494,12 @@ export const config = {
             clientSecret: process.env.SQUARE_CLIENT_SECRET || ""
         },
 
+        // PayPal
+        paypal: {
+            clientId: process.env.PAYPAL_CLIENT_ID || "",
+            clientSecret: process.env.PAYPAL_CLIENT_SECRET || ""
+        },
+
         // DigitalOcean
         digitalocean: {
             clientId: process.env.DIGITALOCEAN_CLIENT_ID || "",
@@ -592,6 +598,7 @@ export function getOAuthRedirectUri(provider: string): string {
         workday: "/oauth/workday/callback",
         rippling: "/oauth/rippling/callback",
         square: "/oauth/square/callback",
+        paypal: "/oauth/paypal/callback",
         digitalocean: "/oauth/digitalocean/callback",
         "amazon-seller-central": "/oauth/amazon-seller-central/callback",
 
@@ -682,6 +689,7 @@ export function getOAuthCredentials(provider: string): { clientId: string; clien
         freshbooks: "freshbooks",
         workday: "workday",
         rippling: "rippling",
+        paypal: "paypal",
         "amazon-seller-central": "amazonSellerCentral"
     };
 

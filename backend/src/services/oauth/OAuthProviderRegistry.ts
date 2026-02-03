@@ -24,6 +24,7 @@ export interface OAuthProvider {
     revokeUrl?: string;
     refreshable?: boolean;
     pkceEnabled?: boolean; // Enable PKCE (Proof Key for Code Exchange)
+    tokenAuthMethod?: "basic" | "body"; // How to send credentials during token exchange (default: "body")
 }
 
 /**
@@ -3794,6 +3795,72 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
                 return {
                     merchantId: "unknown",
                     businessName: "Square Merchant"
+                };
+            }
+        },
+        refreshable: true,
+        pkceEnabled: false
+    },
+
+    // ==========================================================================
+    // PayPal
+    // ==========================================================================
+
+    paypal: {
+        name: "paypal",
+        displayName: "PayPal",
+        authUrl: "https://www.paypal.com/signin/authorize",
+        tokenUrl: "https://api-m.paypal.com/v1/oauth2/token",
+        tokenAuthMethod: "basic",
+        scopes: [
+            "openid",
+            "email",
+            "https://uri.paypal.com/services/payments/payment",
+            "https://uri.paypal.com/services/payments/refund",
+            "https://uri.paypal.com/services/reporting/search/read",
+            "https://uri.paypal.com/services/invoicing",
+            "https://uri.paypal.com/services/payments/payouts"
+        ],
+        clientId: config.oauth.paypal.clientId,
+        clientSecret: config.oauth.paypal.clientSecret,
+        redirectUri: getOAuthRedirectUri("paypal"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch(
+                    "https://api-m.paypal.com/v1/identity/openidconnect/userinfo?schema=openid",
+                    {
+                        headers: {
+                            Authorization: `Bearer ${accessToken}`,
+                            "Content-Type": "application/json"
+                        }
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    user_id?: string;
+                    name?: string;
+                    email?: string;
+                    verified_account?: boolean;
+                    payer_id?: string;
+                };
+
+                return {
+                    userId: data.user_id || "unknown",
+                    name: data.name || "PayPal User",
+                    email: data.email || "unknown@paypal",
+                    verifiedAccount: data.verified_account,
+                    payerId: data.payer_id
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get PayPal user info");
+                return {
+                    userId: "unknown",
+                    name: "PayPal User",
+                    email: "unknown@paypal"
                 };
             }
         },
