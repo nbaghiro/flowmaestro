@@ -3799,6 +3799,62 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
         },
         refreshable: true,
         pkceEnabled: false
+    },
+
+    // ==========================================================================
+    // DigitalOcean
+    // ==========================================================================
+
+    digitalocean: {
+        name: "digitalocean",
+        displayName: "DigitalOcean",
+        authUrl: "https://cloud.digitalocean.com/v1/oauth/authorize",
+        tokenUrl: "https://cloud.digitalocean.com/v1/oauth/token",
+        scopes: ["read", "write"],
+        clientId: config.oauth.digitalocean.clientId,
+        clientSecret: config.oauth.digitalocean.clientSecret,
+        redirectUri: getOAuthRedirectUri("digitalocean"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://api.digitalocean.com/v2/account", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                        "Content-Type": "application/json"
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    account?: {
+                        uuid?: string;
+                        email?: string;
+                        name?: string;
+                        team?: {
+                            uuid?: string;
+                            name?: string;
+                        };
+                    };
+                };
+
+                return {
+                    userId: data.account?.uuid,
+                    email: data.account?.email,
+                    name: data.account?.name || data.account?.email,
+                    team: data.account?.team
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get DigitalOcean account info");
+                return {
+                    email: "unknown@digitalocean",
+                    name: "DigitalOcean User"
+                };
+            }
+        },
+        refreshable: true,
+        pkceEnabled: false
     }
 };
 

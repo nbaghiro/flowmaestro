@@ -1289,5 +1289,35 @@ const powerBIEntry: ProviderRegistryEntry = {
 
 providerRegistry.register(powerBIEntry);
 
+// Register Cloudflare provider
+const cloudflareEntry: ProviderRegistryEntry = {
+    name: "cloudflare",
+    displayName: "Cloudflare",
+    authMethod: "api_key",
+    category: "developer_tools",
+    loader: async () => {
+        const { CloudflareProvider } = await import("./providers/cloudflare/CloudflareProvider");
+        return new CloudflareProvider();
+    }
+};
+
+providerRegistry.register(cloudflareEntry);
+
+// Register DigitalOcean provider
+const digitaloceanEntry: ProviderRegistryEntry = {
+    name: "digitalocean",
+    displayName: "DigitalOcean",
+    authMethod: "oauth2",
+    category: "developer_tools",
+    loader: async () => {
+        const { DigitalOceanProvider } = await import(
+            "./providers/digitalocean/DigitalOceanProvider"
+        );
+        return new DigitalOceanProvider();
+    }
+};
+
+providerRegistry.register(digitaloceanEntry);
+
 // Export for use in application
 export { providerRegistry };

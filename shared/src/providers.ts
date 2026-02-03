@@ -1684,20 +1684,38 @@ export const ALL_PROVIDERS: Provider[] = [
     {
         provider: "cloudflare",
         displayName: "Cloudflare",
-        description: "CDN and security platform",
+        description:
+            "Manage DNS records, Workers, KV storage, and zones - CDN and edge computing platform",
         logoUrl: getBrandLogo("cloudflare.com"),
         category: "Developer Tools",
         methods: ["api_key"],
-        comingSoon: true
+        apiKeySettings: {
+            keyLabel: "API Token",
+            keyPlaceholder: "Enter your Cloudflare API Token",
+            helpText: "Create an API Token with appropriate permissions in Cloudflare dashboard",
+            helpUrl: "https://developers.cloudflare.com/fundamentals/api/get-started/create-token/"
+        },
+        oauthSettings: [
+            {
+                name: "accountId",
+                label: "Account ID",
+                type: "text",
+                required: true,
+                placeholder: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                helpText: "Find your Account ID on the Cloudflare dashboard Overview page",
+                pattern: "^[a-f0-9]{32}$",
+                patternError: "Account ID must be a 32-character hex string"
+            }
+        ]
     },
     {
         provider: "digitalocean",
         displayName: "DigitalOcean",
-        description: "Cloud infrastructure provider",
+        description:
+            "Cloud platform for Droplets, Kubernetes, App Platform, Databases, and Load Balancers - manage cloud infrastructure and deployments",
         logoUrl: getBrandLogo("digitalocean.com"),
         category: "Developer Tools",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "heroku",

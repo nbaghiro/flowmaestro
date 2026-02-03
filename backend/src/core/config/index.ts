@@ -492,6 +492,12 @@ export const config = {
         square: {
             clientId: process.env.SQUARE_CLIENT_ID || "",
             clientSecret: process.env.SQUARE_CLIENT_SECRET || ""
+        },
+
+        // DigitalOcean
+        digitalocean: {
+            clientId: process.env.DIGITALOCEAN_CLIENT_ID || "",
+            clientSecret: process.env.DIGITALOCEAN_CLIENT_SECRET || ""
         }
     }
 };
@@ -580,6 +586,7 @@ export function getOAuthRedirectUri(provider: string): string {
         workday: "/oauth/workday/callback",
         rippling: "/oauth/rippling/callback",
         square: "/oauth/square/callback",
+        digitalocean: "/oauth/digitalocean/callback",
 
         // OAuth 1.0a providers
         evernote: "/oauth1/evernote/callback"
