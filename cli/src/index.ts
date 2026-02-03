@@ -16,19 +16,22 @@ import { registerWhoamiCommand } from "./commands/whoami";
 import { registerWorkflowsCommand } from "./commands/workflows";
 import { registerWorkspaceCommand } from "./commands/workspace";
 import { loadConfig, type OutputFormat } from "./config";
+import { BANNER } from "./utils/banner";
 import { handleError } from "./utils/errors";
 
+const VERSION = "1.0.0";
 const program = new Command();
 
 program
     .name("fm")
     .description("FlowMaestro CLI - Manage workflows, agents, and automations")
-    .version("1.0.0")
     .option("-w, --workspace <id>", "Override workspace ID")
     .option("-k, --api-key <key>", "Override API key")
     .option("-o, --output <format>", "Output format (json, table, yaml)", "table")
     .option("-q, --quiet", "Suppress non-essential output")
-    .option("-v, --verbose", "Verbose output for debugging");
+    .option("-v, --verbose", "Verbose output for debugging")
+    .option("-V, --version", "Display version")
+    .addHelpText("beforeAll", chalk.cyan(BANNER));
 
 export interface GlobalOptions {
     workspace?: string;
@@ -73,8 +76,17 @@ program.on("command:*", () => {
 
 async function main(): Promise<void> {
     try {
+        // Handle version flag manually to show banner
+        if (process.argv.includes("-V") || process.argv.includes("--version")) {
+            console.log(chalk.cyan(BANNER));
+            console.log(chalk.dim(`  v${VERSION}`));
+            console.log();
+            process.exit(0);
+        }
+
         await program.parseAsync(process.argv);
 
+        // Show help if no command provided
         if (process.argv.length === 2) {
             program.help();
         }

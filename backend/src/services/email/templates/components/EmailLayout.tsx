@@ -4,6 +4,7 @@ import React from "react";
 interface EmailLayoutProps {
     preview: string;
     heading: string;
+    // Using any due to React types version mismatch between @types/react and @react-email/components
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     children: any;
 }

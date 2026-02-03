@@ -57,7 +57,10 @@ export interface SimpleFilterConfig {
 }
 
 /**
- * Per-field filter definition for advanced filtering
+ * Per-field filter definition for advanced filtering.
+ * The field accessor function uses `any` because each filter field can work with
+ * different record types determined at runtime by the provider/operation being used.
+ * TypeScript's function contravariance prevents using `unknown` here.
  */
 export interface FieldFilterConfig {
     type: "enum" | "text" | "number" | "date" | "boolean";
