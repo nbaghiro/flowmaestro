@@ -510,6 +510,42 @@ export const config = {
         amazonSellerCentral: {
             clientId: process.env.AMAZON_SELLER_CENTRAL_CLIENT_ID || "",
             clientSecret: process.env.AMAZON_SELLER_CENTRAL_CLIENT_SECRET || ""
+        },
+
+        // Canva
+        canva: {
+            clientId: process.env.CANVA_CLIENT_ID || "",
+            clientSecret: process.env.CANVA_CLIENT_SECRET || ""
+        },
+
+        // Miro
+        miro: {
+            clientId: process.env.MIRO_CLIENT_ID || "",
+            clientSecret: process.env.MIRO_CLIENT_SECRET || ""
+        },
+
+        // Confluence (Atlassian - separate from Jira)
+        confluence: {
+            clientId: process.env.CONFLUENCE_CLIENT_ID || "",
+            clientSecret: process.env.CONFLUENCE_CLIENT_SECRET || ""
+        },
+
+        // Help Scout
+        helpscout: {
+            clientId: process.env.HELPSCOUT_CLIENT_ID || "",
+            clientSecret: process.env.HELPSCOUT_CLIENT_SECRET || ""
+        },
+
+        // LiveChat
+        livechat: {
+            clientId: process.env.LIVECHAT_CLIENT_ID || "",
+            clientSecret: process.env.LIVECHAT_CLIENT_SECRET || ""
+        },
+
+        // Drift
+        drift: {
+            clientId: process.env.DRIFT_CLIENT_ID || "",
+            clientSecret: process.env.DRIFT_CLIENT_SECRET || ""
         }
     }
 };
@@ -601,6 +637,13 @@ export function getOAuthRedirectUri(provider: string): string {
         paypal: "/oauth/paypal/callback",
         digitalocean: "/oauth/digitalocean/callback",
         "amazon-seller-central": "/oauth/amazon-seller-central/callback",
+        canva: "/oauth/canva/callback",
+        miro: "/oauth/miro/callback",
+        confluence: "/oauth/confluence/callback",
+        sharepoint: "/oauth/microsoft/callback",
+        helpscout: "/oauth/helpscout/callback",
+        livechat: "/oauth/livechat/callback",
+        drift: "/oauth/drift/callback",
 
         // OAuth 1.0a providers
         evernote: "/oauth1/evernote/callback"
@@ -690,7 +733,14 @@ export function getOAuthCredentials(provider: string): { clientId: string; clien
         workday: "workday",
         rippling: "rippling",
         paypal: "paypal",
-        "amazon-seller-central": "amazonSellerCentral"
+        "amazon-seller-central": "amazonSellerCentral",
+        canva: "canva",
+        miro: "miro",
+        confluence: "confluence",
+        sharepoint: "microsoft",
+        helpscout: "helpscout",
+        livechat: "livechat",
+        drift: "drift"
     };
 
     const configKey = providerMap[provider];

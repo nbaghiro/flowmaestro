@@ -3994,6 +3994,397 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
         },
         refreshable: true,
         pkceEnabled: false
+    },
+
+    canva: {
+        name: "canva",
+        displayName: "Canva",
+        authUrl: "https://api.canva.com/oauth/authorize",
+        tokenUrl: "https://api.canva.com/rest/v1/oauth/token",
+        scopes: [
+            "design:content:read",
+            "design:meta:read",
+            "design:content:write",
+            "folder:read",
+            "folder:write",
+            "asset:read",
+            "asset:write"
+        ],
+        clientId: config.oauth.canva.clientId,
+        clientSecret: config.oauth.canva.clientSecret,
+        redirectUri: getOAuthRedirectUri("canva"),
+        pkceEnabled: true,
+        tokenAuthMethod: "basic",
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://api.canva.com/rest/v1/users/me", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    id?: string;
+                    display_name?: string;
+                };
+
+                return {
+                    userId: data.id || "unknown",
+                    name: data.display_name || "Canva User",
+                    email: "unknown@canva.com"
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get Canva user info");
+                return {
+                    userId: "unknown",
+                    name: "Canva User",
+                    email: "unknown@canva.com"
+                };
+            }
+        },
+        refreshable: true
+    },
+
+    miro: {
+        name: "miro",
+        displayName: "Miro",
+        authUrl: "https://miro.com/oauth/authorize",
+        tokenUrl: "https://api.miro.com/v1/oauth/token",
+        scopes: ["boards:read", "boards:write"],
+        clientId: config.oauth.miro.clientId,
+        clientSecret: config.oauth.miro.clientSecret,
+        redirectUri: getOAuthRedirectUri("miro"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://api.miro.com/v1/oauth-token", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    user?: {
+                        id?: string;
+                        name?: string;
+                    };
+                    team?: {
+                        id?: string;
+                        name?: string;
+                    };
+                };
+
+                return {
+                    userId: data.user?.id || "unknown",
+                    name: data.user?.name || "Miro User",
+                    email: "unknown@miro.com",
+                    teamId: data.team?.id,
+                    teamName: data.team?.name
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get Miro user info");
+                return {
+                    userId: "unknown",
+                    name: "Miro User",
+                    email: "unknown@miro.com"
+                };
+            }
+        },
+        refreshable: true
+    },
+
+    confluence: {
+        name: "confluence",
+        displayName: "Confluence",
+        authUrl: "https://auth.atlassian.com/authorize",
+        tokenUrl: "https://auth.atlassian.com/oauth/token",
+        scopes: [
+            "read:confluence-content.all",
+            "write:confluence-content",
+            "read:confluence-space.summary",
+            "write:confluence-space",
+            "read:confluence-user",
+            "offline_access"
+        ],
+        authParams: {
+            audience: "api.atlassian.com",
+            prompt: "consent"
+        },
+        clientId: config.oauth.confluence.clientId,
+        clientSecret: config.oauth.confluence.clientSecret,
+        redirectUri: getOAuthRedirectUri("confluence"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch(
+                    "https://api.atlassian.com/oauth/token/accessible-resources",
+                    {
+                        headers: {
+                            Authorization: `Bearer ${accessToken}`,
+                            Accept: "application/json"
+                        }
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const sites = (await response.json()) as Array<{
+                    id: string;
+                    url: string;
+                    name: string;
+                    scopes: string[];
+                    avatarUrl?: string;
+                }>;
+
+                return {
+                    sites: sites.map((s) => ({
+                        cloudId: s.id,
+                        url: s.url,
+                        name: s.name,
+                        scopes: s.scopes,
+                        avatarUrl: s.avatarUrl
+                    }))
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get Confluence accessible resources");
+                return {
+                    sites: []
+                };
+            }
+        },
+        refreshable: true,
+        pkceEnabled: false
+    },
+
+    // ==========================================================================
+    // Help Scout
+    // ==========================================================================
+
+    helpscout: {
+        name: "helpscout",
+        displayName: "Help Scout",
+        authUrl: "https://secure.helpscout.net/authentication/authorizeClientApplication",
+        tokenUrl: "https://api.helpscout.net/v2/oauth2/token",
+        scopes: [],
+        clientId: config.oauth.helpscout.clientId,
+        clientSecret: config.oauth.helpscout.clientSecret,
+        redirectUri: getOAuthRedirectUri("helpscout"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://api.helpscout.net/v2/users/me", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                        "Content-Type": "application/json"
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    id?: number;
+                    firstName?: string;
+                    lastName?: string;
+                    email?: string;
+                };
+
+                return {
+                    userId: data.id ? String(data.id) : "unknown",
+                    name:
+                        data.firstName && data.lastName
+                            ? `${data.firstName} ${data.lastName}`
+                            : "Help Scout User",
+                    email: data.email || "unknown@helpscout"
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get Help Scout user info");
+                return {
+                    userId: "unknown",
+                    name: "Help Scout User",
+                    email: "unknown@helpscout"
+                };
+            }
+        },
+        refreshable: true,
+        pkceEnabled: false
+    },
+
+    // ==========================================================================
+    // LiveChat
+    // ==========================================================================
+
+    livechat: {
+        name: "livechat",
+        displayName: "LiveChat",
+        authUrl: "https://accounts.livechat.com/",
+        tokenUrl: "https://accounts.livechat.com/v2/token",
+        scopes: [
+            "chats--all:ro",
+            "chats--access:rw",
+            "chats--all:rw",
+            "agents--all:ro",
+            "agents--my:ro",
+            "customers:ro",
+            "customers:rw",
+            "tags--all:ro",
+            "tags--all:rw",
+            "groups--all:ro"
+        ],
+        clientId: config.oauth.livechat.clientId,
+        clientSecret: config.oauth.livechat.clientSecret,
+        redirectUri: getOAuthRedirectUri("livechat"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://accounts.livechat.com/v2/accounts/me", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                        "Content-Type": "application/json"
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    account_id?: string;
+                    name?: string;
+                    email?: string;
+                };
+
+                return {
+                    userId: data.account_id || "unknown",
+                    name: data.name || "LiveChat User",
+                    email: data.email || "unknown@livechat"
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get LiveChat user info");
+                return {
+                    userId: "unknown",
+                    name: "LiveChat User",
+                    email: "unknown@livechat"
+                };
+            }
+        },
+        refreshable: true,
+        pkceEnabled: true
+    },
+
+    // ==========================================================================
+    // Drift
+    // ==========================================================================
+
+    drift: {
+        name: "drift",
+        displayName: "Drift",
+        authUrl: "https://dev.drift.com/authorize",
+        tokenUrl: "https://driftapi.com/oauth2/token",
+        scopes: [
+            "contact_read",
+            "contact_write",
+            "conversation_read",
+            "conversation_write",
+            "user_read",
+            "user_write"
+        ],
+        clientId: config.oauth.drift.clientId,
+        clientSecret: config.oauth.drift.clientSecret,
+        redirectUri: getOAuthRedirectUri("drift"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://driftapi.com/users/list", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                        "Content-Type": "application/json"
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    data?: Array<{
+                        id?: number;
+                        name?: string;
+                        email?: string;
+                    }>;
+                };
+
+                const user = data.data?.[0];
+                return {
+                    userId: user?.id ? String(user.id) : "unknown",
+                    name: user?.name || "Drift User",
+                    email: user?.email || "unknown@drift"
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get Drift user info");
+                return {
+                    userId: "unknown",
+                    name: "Drift User",
+                    email: "unknown@drift"
+                };
+            }
+        },
+        refreshable: true,
+        pkceEnabled: false
+    },
+
+    sharepoint: {
+        name: "sharepoint",
+        displayName: "SharePoint",
+        authUrl: "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
+        tokenUrl: "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+        scopes: ["User.Read", "Sites.ReadWrite.All", "offline_access"],
+        authParams: {
+            response_mode: "query",
+            prompt: "consent"
+        },
+        clientId: config.oauth.microsoft.clientId,
+        clientSecret: config.oauth.microsoft.clientSecret,
+        redirectUri: getOAuthRedirectUri("microsoft"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://graph.microsoft.com/v1.0/me", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    id?: string;
+                    displayName?: string;
+                    mail?: string;
+                    userPrincipalName?: string;
+                };
+
+                return {
+                    userId: data.id,
+                    email: data.mail || data.userPrincipalName,
+                    name: data.displayName
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get SharePoint user info");
+                return {
+                    email: "unknown@microsoft",
+                    name: "Microsoft User"
+                };
+            }
+        },
+        refreshable: true
     }
 };
 

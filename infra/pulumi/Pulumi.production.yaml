@@ -165,5 +165,17 @@ config:
       {"name":"amazon-seller-central-client-id","envVar":"AMAZON_SELLER_CENTRAL_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Amazon Seller Central OAuth client ID (Login with Amazon)"},
       {"name":"amazon-seller-central-client-secret","envVar":"AMAZON_SELLER_CENTRAL_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Amazon Seller Central OAuth client secret (Login with Amazon)"},
       {"name":"paypal-client-id","envVar":"PAYPAL_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"PayPal OAuth client ID"},
-      {"name":"paypal-client-secret","envVar":"PAYPAL_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"PayPal OAuth client secret"}
+      {"name":"paypal-client-secret","envVar":"PAYPAL_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"PayPal OAuth client secret"},
+      {"name":"canva-client-id","envVar":"CANVA_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Canva OAuth client ID"},
+      {"name":"canva-client-secret","envVar":"CANVA_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Canva OAuth client secret"},
+      {"name":"miro-client-id","envVar":"MIRO_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Miro OAuth client ID"},
+      {"name":"miro-client-secret","envVar":"MIRO_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Miro OAuth client secret"},
+      {"name":"confluence-client-id","envVar":"CONFLUENCE_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Confluence OAuth client ID"},
+      {"name":"confluence-client-secret","envVar":"CONFLUENCE_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Confluence OAuth client secret"},
+      {"name":"helpscout-client-id","envVar":"HELPSCOUT_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Help Scout OAuth client ID"},
+      {"name":"helpscout-client-secret","envVar":"HELPSCOUT_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Help Scout OAuth client secret"},
+      {"name":"livechat-client-id","envVar":"LIVECHAT_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"LiveChat OAuth client ID"},
+      {"name":"livechat-client-secret","envVar":"LIVECHAT_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"LiveChat OAuth client secret"},
+      {"name":"drift-client-id","envVar":"DRIFT_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Drift OAuth client ID"},
+      {"name":"drift-client-secret","envVar":"DRIFT_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Drift OAuth client secret"}
     ]

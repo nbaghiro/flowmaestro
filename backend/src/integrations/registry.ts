@@ -1153,6 +1153,62 @@ const paypalEntry: ProviderRegistryEntry = {
 
 providerRegistry.register(paypalEntry);
 
+// Register Canva provider
+const canvaEntry: ProviderRegistryEntry = {
+    name: "canva",
+    displayName: "Canva",
+    authMethod: "oauth2",
+    category: "productivity",
+    loader: async () => {
+        const { CanvaProvider } = await import("./providers/canva/CanvaProvider");
+        return new CanvaProvider();
+    }
+};
+
+providerRegistry.register(canvaEntry);
+
+// Register Miro provider
+const miroEntry: ProviderRegistryEntry = {
+    name: "miro",
+    displayName: "Miro",
+    authMethod: "oauth2",
+    category: "productivity",
+    loader: async () => {
+        const { MiroProvider } = await import("./providers/miro/MiroProvider");
+        return new MiroProvider();
+    }
+};
+
+providerRegistry.register(miroEntry);
+
+// Register Confluence provider
+const confluenceEntry: ProviderRegistryEntry = {
+    name: "confluence",
+    displayName: "Confluence",
+    authMethod: "oauth2",
+    category: "productivity",
+    loader: async () => {
+        const { ConfluenceProvider } = await import("./providers/confluence/ConfluenceProvider");
+        return new ConfluenceProvider();
+    }
+};
+
+providerRegistry.register(confluenceEntry);
+
+// Register SharePoint provider
+const sharepointEntry: ProviderRegistryEntry = {
+    name: "sharepoint",
+    displayName: "SharePoint",
+    authMethod: "oauth2",
+    category: "productivity",
+    loader: async () => {
+        const { SharePointProvider } = await import("./providers/sharepoint/SharePointProvider");
+        return new SharePointProvider();
+    }
+};
+
+providerRegistry.register(sharepointEntry);
+
 // Register Google Cloud Storage provider
 const googleCloudStorageEntry: ProviderRegistryEntry = {
     name: "google-cloud-storage",
@@ -1348,6 +1404,48 @@ const amazonSellerCentralEntry: ProviderRegistryEntry = {
 };
 
 providerRegistry.register(amazonSellerCentralEntry);
+
+// Register Help Scout provider
+const helpscoutEntry: ProviderRegistryEntry = {
+    name: "helpscout",
+    displayName: "Help Scout",
+    authMethod: "oauth2",
+    category: "customer_support",
+    loader: async () => {
+        const { HelpScoutProvider } = await import("./providers/helpscout/HelpScoutProvider");
+        return new HelpScoutProvider();
+    }
+};
+
+providerRegistry.register(helpscoutEntry);
+
+// Register LiveChat provider
+const livechatEntry: ProviderRegistryEntry = {
+    name: "livechat",
+    displayName: "LiveChat",
+    authMethod: "oauth2",
+    category: "customer_support",
+    loader: async () => {
+        const { LiveChatProvider } = await import("./providers/livechat/LiveChatProvider");
+        return new LiveChatProvider();
+    }
+};
+
+providerRegistry.register(livechatEntry);
+
+// Register Drift provider
+const driftEntry: ProviderRegistryEntry = {
+    name: "drift",
+    displayName: "Drift",
+    authMethod: "oauth2",
+    category: "customer_support",
+    loader: async () => {
+        const { DriftProvider } = await import("./providers/drift/DriftProvider");
+        return new DriftProvider();
+    }
+};
+
+providerRegistry.register(driftEntry);
 
 // Export for use in application
 export { providerRegistry };

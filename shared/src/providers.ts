@@ -922,8 +922,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Help desk software",
         logoUrl: getBrandLogo("helpscout.com"),
         category: "Customer Support",
-        methods: ["api_key"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "livechat",
@@ -931,8 +930,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Live chat customer service",
         logoUrl: getBrandLogo("livechat.com"),
         category: "Customer Support",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "drift",
@@ -940,8 +938,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Conversational marketing platform",
         logoUrl: getBrandLogo("drift.com"),
         category: "Customer Support",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "crisp",
@@ -1318,8 +1315,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Online whiteboard platform",
         logoUrl: getBrandLogo("miro.com"),
         category: "Productivity",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "confluence",
@@ -1327,8 +1323,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Team workspace by Atlassian",
         logoUrl: getBrandLogo("atlassian.com/confluence"),
         category: "Productivity",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "sharepoint",
@@ -1336,8 +1331,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Microsoft document management",
         logoUrl: getBrandLogo("sharepoint.com"),
         category: "Productivity",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "evernote",
@@ -1361,8 +1355,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Graphic design platform",
         logoUrl: getBrandLogo("canva.com"),
         category: "Productivity",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
 
     // Video & Communication
