@@ -35,6 +35,10 @@ const lambda_listFunctions: TestFixture = {
             description: "List functions with pagination",
             input: {
                 maxResults: 10
+            },
+            expectedOutput: {
+                functions: [],
+                region: "us-east-1"
             }
         }
     ],
