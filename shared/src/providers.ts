@@ -1040,11 +1040,10 @@ export const ALL_PROVIDERS: Provider[] = [
     {
         provider: "amazon-seller-central",
         displayName: "Amazon Seller Central",
-        description: "Amazon marketplace management",
+        description: "Manage orders, catalog items, inventory, and pricing on Amazon marketplaces",
         logoUrl: getBrandLogo("sellercentral.amazon.com"),
         category: "E-commerce",
-        methods: ["api_key"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "printful",

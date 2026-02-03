@@ -7,6 +7,7 @@
 
 // Import all provider fixtures
 import { airtableFixtures } from "../../src/integrations/providers/airtable/__tests__/fixtures";
+import { amazonSellerCentralFixtures } from "../../src/integrations/providers/amazon-seller-central/__tests__/fixtures";
 import { amplitudeFixtures } from "../../src/integrations/providers/amplitude/__tests__/fixtures";
 import { apolloFixtures } from "../../src/integrations/providers/apollo/__tests__/fixtures";
 import { asanaFixtures } from "../../src/integrations/providers/asana/__tests__/fixtures";
@@ -103,6 +104,7 @@ import { fixtureRegistry } from "../../src/integrations/sandbox";
 
 // Register all fixtures
 fixtureRegistry.registerAll(airtableFixtures);
+fixtureRegistry.registerAll(amazonSellerCentralFixtures);
 fixtureRegistry.registerAll(amplitudeFixtures);
 fixtureRegistry.registerAll(apolloFixtures);
 fixtureRegistry.registerAll(asanaFixtures);

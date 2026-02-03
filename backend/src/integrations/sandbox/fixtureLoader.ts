@@ -23,6 +23,7 @@ export async function loadAllFixtures(): Promise<void> {
 
     const providers = [
         "airtable",
+        "amazon-seller-central",
         "amplitude",
         "apollo",
         "asana",

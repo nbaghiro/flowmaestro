@@ -498,6 +498,12 @@ export const config = {
         digitalocean: {
             clientId: process.env.DIGITALOCEAN_CLIENT_ID || "",
             clientSecret: process.env.DIGITALOCEAN_CLIENT_SECRET || ""
+        },
+
+        // Amazon Seller Central
+        amazonSellerCentral: {
+            clientId: process.env.AMAZON_SELLER_CENTRAL_CLIENT_ID || "",
+            clientSecret: process.env.AMAZON_SELLER_CENTRAL_CLIENT_SECRET || ""
         }
     }
 };
@@ -587,6 +593,7 @@ export function getOAuthRedirectUri(provider: string): string {
         rippling: "/oauth/rippling/callback",
         square: "/oauth/square/callback",
         digitalocean: "/oauth/digitalocean/callback",
+        "amazon-seller-central": "/oauth/amazon-seller-central/callback",
 
         // OAuth 1.0a providers
         evernote: "/oauth1/evernote/callback"
@@ -674,7 +681,8 @@ export function getOAuthCredentials(provider: string): { clientId: string; clien
         quickbooks: "quickbooks",
         freshbooks: "freshbooks",
         workday: "workday",
-        rippling: "rippling"
+        rippling: "rippling",
+        "amazon-seller-central": "amazonSellerCentral"
     };
 
     const configKey = providerMap[provider];

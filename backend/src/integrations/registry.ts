@@ -1319,5 +1319,21 @@ const digitaloceanEntry: ProviderRegistryEntry = {
 
 providerRegistry.register(digitaloceanEntry);
 
+// Register Amazon Seller Central provider
+const amazonSellerCentralEntry: ProviderRegistryEntry = {
+    name: "amazon-seller-central",
+    displayName: "Amazon Seller Central",
+    authMethod: "oauth2",
+    category: "ecommerce",
+    loader: async () => {
+        const { AmazonSellerCentralProvider } = await import(
+            "./providers/amazon-seller-central/AmazonSellerCentralProvider"
+        );
+        return new AmazonSellerCentralProvider();
+    }
+};
+
+providerRegistry.register(amazonSellerCentralEntry);
+
 // Export for use in application
 export { providerRegistry };

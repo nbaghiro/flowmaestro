@@ -3855,6 +3855,78 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
         },
         refreshable: true,
         pkceEnabled: false
+    },
+
+    // ==========================================================================
+    // Amazon Seller Central (Login with Amazon / SP-API)
+    // ==========================================================================
+
+    "amazon-seller-central": {
+        name: "amazon-seller-central",
+        displayName: "Amazon Seller Central",
+        authUrl: "https://sellercentral.amazon.com/apps/authorize/consent",
+        tokenUrl: "https://api.amazon.com/auth/o2/token",
+        scopes: ["sellingpartnerapi::migration"],
+        clientId: config.oauth.amazonSellerCentral.clientId,
+        clientSecret: config.oauth.amazonSellerCentral.clientSecret,
+        redirectUri: getOAuthRedirectUri("amazon-seller-central"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch(
+                    "https://sellingpartnerapi-na.amazon.com/sellers/v1/marketplaceParticipations",
+                    {
+                        headers: {
+                            "x-amz-access-token": accessToken,
+                            "Content-Type": "application/json"
+                        }
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    payload?: Array<{
+                        marketplace?: {
+                            id?: string;
+                            name?: string;
+                            countryCode?: string;
+                        };
+                        participation?: {
+                            isParticipating?: boolean;
+                        };
+                    }>;
+                };
+
+                const marketplaces =
+                    data.payload
+                        ?.filter((p) => p.participation?.isParticipating)
+                        .map((p) => ({
+                            id: p.marketplace?.id,
+                            name: p.marketplace?.name,
+                            countryCode: p.marketplace?.countryCode
+                        })) || [];
+
+                return {
+                    sellerId: "amazon-seller",
+                    marketplaces,
+                    marketplaceCount: marketplaces.length
+                };
+            } catch (error) {
+                logger.error(
+                    { err: error },
+                    "Failed to get Amazon Seller Central marketplace info"
+                );
+                return {
+                    sellerId: "unknown",
+                    marketplaces: [],
+                    marketplaceCount: 0
+                };
+            }
+        },
+        refreshable: true,
+        pkceEnabled: false
     }
 };
 
