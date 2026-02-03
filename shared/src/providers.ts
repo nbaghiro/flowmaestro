@@ -1568,15 +1568,6 @@ export const ALL_PROVIDERS: Provider[] = [
     {
         provider: "aws",
         displayName: "AWS",
-        description: "Amazon Web Services cloud platform",
-        logoUrl: getBrandLogo("aws.amazon.com"),
-        category: "Developer Tools",
-        methods: ["api_key"],
-        comingSoon: true
-    },
-    {
-        provider: "aws",
-        displayName: "AWS",
         description:
             "Cloud platform for Lambda, CloudWatch, and ECS - manage serverless functions, monitor metrics and logs, orchestrate containers",
         logoUrl: getBrandLogo("aws.amazon.com"),
