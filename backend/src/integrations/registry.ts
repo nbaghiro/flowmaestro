@@ -92,6 +92,18 @@ const postgresqlEntry: ProviderRegistryEntry = {
     }
 };
 
+// Register Supabase provider
+const supabaseEntry: ProviderRegistryEntry = {
+    name: "supabase",
+    displayName: "Supabase",
+    authMethod: "api_key",
+    category: "database",
+    loader: async () => {
+        const { SupabaseProvider } = await import("./providers/supabase/SupabaseProvider");
+        return new SupabaseProvider();
+    }
+};
+
 // Register MongoDB provider
 const mongodbEntry: ProviderRegistryEntry = {
     name: "mongodb",
@@ -382,6 +394,7 @@ providerRegistry.register(airtableEntry);
 providerRegistry.register(hubspotEntry);
 providerRegistry.register(salesforceEntry);
 providerRegistry.register(postgresqlEntry);
+providerRegistry.register(supabaseEntry);
 providerRegistry.register(mongodbEntry);
 providerRegistry.register(githubEntry);
 providerRegistry.register(linearEntry);
@@ -742,6 +755,20 @@ const posthogEntry: ProviderRegistryEntry = {
 };
 
 providerRegistry.register(posthogEntry);
+
+// Register Hotjar provider
+const hotjarEntry: ProviderRegistryEntry = {
+    name: "hotjar",
+    displayName: "Hotjar",
+    authMethod: "api_key",
+    category: "analytics",
+    loader: async () => {
+        const { HotjarProvider } = await import("./providers/hotjar/HotjarProvider");
+        return new HotjarProvider();
+    }
+};
+
+providerRegistry.register(hotjarEntry);
 
 // Register HelloSign provider
 const hellosignEntry: ProviderRegistryEntry = {

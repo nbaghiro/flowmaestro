@@ -177,7 +177,8 @@ export const PROVIDER_LOGO_DOMAINS: Record<string, string> = {
     woocommerce: "woocommerce.com",
     bigcommerce: "bigcommerce.com",
     zoom: "zoom.us",
-    "google-meet": "meet.google.com"
+    "google-meet": "meet.google.com",
+    supabase: "supabase.com"
 };
 
 /**
@@ -688,7 +689,16 @@ export const ALL_PROVIDERS: Provider[] = [
         logoUrl: getBrandLogo("hotjar.com"),
         category: "Analytics",
         methods: ["api_key"],
-        comingSoon: true
+        apiKeySettings: {
+            keyLabel: "Client ID",
+            keyPlaceholder: "Enter your Hotjar Client ID",
+            requiresSecret: true,
+            secretLabel: "Client Secret",
+            secretPlaceholder: "Enter your Hotjar Client Secret",
+            helpText: "Generate API keys in Hotjar under Organization Settings > API Keys",
+            helpUrl:
+                "https://help.hotjar.com/hc/en-us/articles/36819965653009-How-to-Set-Up-the-Hotjar-API"
+        }
     },
     {
         provider: "heap",
@@ -860,6 +870,60 @@ export const ALL_PROVIDERS: Provider[] = [
         logoUrl: getBrandLogo("rippling.com"),
         category: "HR",
         methods: ["oauth2"]
+    },
+    {
+        provider: "bamboohr",
+        displayName: "BambooHR",
+        description: "HR management for SMBs",
+        logoUrl: getBrandLogo("bamboohr.com"),
+        category: "HR",
+        methods: ["oauth2"],
+        comingSoon: true
+    },
+    {
+        provider: "hibob",
+        displayName: "HiBob",
+        description: "Modern HR for mid-market",
+        logoUrl: getBrandLogo("hibob.com"),
+        category: "HR",
+        methods: ["api_key"],
+        comingSoon: true
+    },
+    {
+        provider: "deel",
+        displayName: "Deel",
+        description: "Global HR and payroll",
+        logoUrl: getBrandLogo("deel.com"),
+        category: "HR",
+        methods: ["api_key", "oauth2"],
+        comingSoon: true
+    },
+    {
+        provider: "personio",
+        displayName: "Personio",
+        description: "European HR platform",
+        logoUrl: getBrandLogo("personio.com"),
+        category: "HR",
+        methods: ["api_key"],
+        comingSoon: true
+    },
+    {
+        provider: "sap-successfactors",
+        displayName: "SAP SuccessFactors",
+        description: "Enterprise HCM suite",
+        logoUrl: getBrandLogo("sap.com"),
+        category: "HR",
+        methods: ["oauth2"],
+        comingSoon: true
+    },
+    {
+        provider: "lattice",
+        displayName: "Lattice",
+        description: "Performance and engagement",
+        logoUrl: getBrandLogo("lattice.com"),
+        category: "HR",
+        methods: ["oauth2"],
+        comingSoon: true
     },
 
     // Customer Support
@@ -1870,6 +1934,23 @@ export const ALL_PROVIDERS: Provider[] = [
         logoUrl: getBrandLogo("mongodb.com"),
         category: "Databases",
         methods: ["api_key"]
+    },
+    {
+        provider: "supabase",
+        displayName: "Supabase",
+        description: "Open source Firebase alternative",
+        logoUrl: getBrandLogo("supabase.com"),
+        category: "Databases",
+        methods: ["api_key"],
+        apiKeySettings: {
+            keyLabel: "Service Role Key",
+            keyPlaceholder: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+            requiresSecret: true,
+            secretLabel: "Project URL",
+            secretPlaceholder: "https://your-project.supabase.co",
+            helpText: "Find these in your Supabase dashboard under Settings > API",
+            helpUrl: "https://supabase.com/docs/guides/api#api-url-and-keys"
+        }
     },
     {
         provider: "postgresql",
