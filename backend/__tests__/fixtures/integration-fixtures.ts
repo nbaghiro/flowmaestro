@@ -79,6 +79,7 @@ import { miroFixtures } from "../../src/integrations/providers/miro/__tests__/fi
 import { mixpanelFixtures } from "../../src/integrations/providers/mixpanel/__tests__/fixtures";
 import { mondayFixtures } from "../../src/integrations/providers/monday/__tests__/fixtures";
 import { mongodbFixtures } from "../../src/integrations/providers/mongodb/__tests__/fixtures";
+import { mysqlFixtures } from "../../src/integrations/providers/mysql/__tests__/fixtures";
 import { notionFixtures } from "../../src/integrations/providers/notion/__tests__/fixtures";
 import { pagerdutyFixtures } from "../../src/integrations/providers/pagerduty/__tests__/fixtures";
 import { paypalFixtures } from "../../src/integrations/providers/paypal/__tests__/fixtures";
@@ -188,6 +189,7 @@ fixtureRegistry.registerAll(mixpanelFixtures);
 fixtureRegistry.registerAll(miroFixtures);
 fixtureRegistry.registerAll(mondayFixtures);
 fixtureRegistry.registerAll(mongodbFixtures);
+fixtureRegistry.registerAll(mysqlFixtures);
 fixtureRegistry.registerAll(notionFixtures);
 fixtureRegistry.registerAll(pagerdutyFixtures);
 fixtureRegistry.registerAll(paypalFixtures);

@@ -1966,8 +1966,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Relational database",
         logoUrl: getBrandLogo("mysql.com"),
         category: "Databases",
-        methods: ["api_key"],
-        comingSoon: true
+        methods: ["api_key"]
     },
     {
         provider: "redis",

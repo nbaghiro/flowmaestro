@@ -104,6 +104,18 @@ const supabaseEntry: ProviderRegistryEntry = {
     }
 };
 
+// Register MySQL provider
+const mysqlEntry: ProviderRegistryEntry = {
+    name: "mysql",
+    displayName: "MySQL",
+    authMethod: "api_key",
+    category: "database",
+    loader: async () => {
+        const { MysqlProvider } = await import("./providers/mysql/MysqlProvider");
+        return new MysqlProvider();
+    }
+};
+
 // Register MongoDB provider
 const mongodbEntry: ProviderRegistryEntry = {
     name: "mongodb",
@@ -395,6 +407,7 @@ providerRegistry.register(hubspotEntry);
 providerRegistry.register(salesforceEntry);
 providerRegistry.register(postgresqlEntry);
 providerRegistry.register(supabaseEntry);
+providerRegistry.register(mysqlEntry);
 providerRegistry.register(mongodbEntry);
 providerRegistry.register(githubEntry);
 providerRegistry.register(linearEntry);

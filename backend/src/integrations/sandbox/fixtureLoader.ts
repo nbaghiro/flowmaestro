@@ -95,6 +95,7 @@ export async function loadAllFixtures(): Promise<void> {
         "miro",
         "monday",
         "mongodb",
+        "mysql",
         "notion",
         "pagerduty",
         "paypal",
