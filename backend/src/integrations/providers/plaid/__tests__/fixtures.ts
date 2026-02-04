@@ -20,7 +20,7 @@ export const plaidFixtures: TestFixture[] = [
                 name: "checking_and_savings",
                 description: "Get checking and savings accounts",
                 input: {
-                    accessToken: "access-sandbox-12345678-abcd-efgh-ijkl-mnopqrstuvwx"
+                    accessToken: "test-plaid-token-placeholder"
                 },
                 expectedOutput: {
                     accounts: [
@@ -74,7 +74,7 @@ export const plaidFixtures: TestFixture[] = [
                 name: "invalid_access_token",
                 description: "Access token is invalid or expired",
                 input: {
-                    accessToken: "access-invalid-token"
+                    accessToken: "test-plaid-invalid-token"
                 },
                 expectedError: {
                     type: "permission",
@@ -87,7 +87,7 @@ export const plaidFixtures: TestFixture[] = [
                 name: "rate_limited",
                 description: "Rate limit exceeded",
                 input: {
-                    accessToken: "access-sandbox-12345678-abcd-efgh-ijkl-mnopqrstuvwx"
+                    accessToken: "test-plaid-token-placeholder"
                 },
                 expectedError: {
                     type: "rate_limit",
@@ -105,7 +105,7 @@ export const plaidFixtures: TestFixture[] = [
                 name: "real_time_balances",
                 description: "Get real-time balance information",
                 input: {
-                    accessToken: "access-sandbox-12345678-abcd-efgh-ijkl-mnopqrstuvwx"
+                    accessToken: "test-plaid-token-placeholder"
                 },
                 expectedOutput: {
                     balances: [
@@ -137,7 +137,7 @@ export const plaidFixtures: TestFixture[] = [
                 name: "invalid_access_token",
                 description: "Access token is invalid",
                 input: {
-                    accessToken: "access-invalid-token"
+                    accessToken: "test-plaid-invalid-token"
                 },
                 expectedError: {
                     type: "permission",
@@ -150,7 +150,7 @@ export const plaidFixtures: TestFixture[] = [
                 name: "rate_limited",
                 description: "Rate limit exceeded",
                 input: {
-                    accessToken: "access-sandbox-12345678-abcd-efgh-ijkl-mnopqrstuvwx"
+                    accessToken: "test-plaid-token-placeholder"
                 },
                 expectedError: {
                     type: "rate_limit",
@@ -168,7 +168,7 @@ export const plaidFixtures: TestFixture[] = [
                 name: "recent_transactions",
                 description: "Get recent transactions for a date range",
                 input: {
-                    accessToken: "access-sandbox-12345678-abcd-efgh-ijkl-mnopqrstuvwx",
+                    accessToken: "test-plaid-token-placeholder",
                     startDate: "2024-01-01",
                     endDate: "2024-01-31"
                 },
@@ -226,7 +226,7 @@ export const plaidFixtures: TestFixture[] = [
                 name: "invalid_date_range",
                 description: "Start date is after end date",
                 input: {
-                    accessToken: "access-sandbox-12345678-abcd-efgh-ijkl-mnopqrstuvwx",
+                    accessToken: "test-plaid-token-placeholder",
                     startDate: "2024-01-31",
                     endDate: "2024-01-01"
                 },
@@ -240,7 +240,7 @@ export const plaidFixtures: TestFixture[] = [
                 name: "invalid_access_token",
                 description: "Access token is invalid",
                 input: {
-                    accessToken: "access-invalid-token",
+                    accessToken: "test-plaid-invalid-token",
                     startDate: "2024-01-01",
                     endDate: "2024-01-31"
                 },
@@ -255,7 +255,7 @@ export const plaidFixtures: TestFixture[] = [
                 name: "rate_limited",
                 description: "Rate limit exceeded",
                 input: {
-                    accessToken: "access-sandbox-12345678-abcd-efgh-ijkl-mnopqrstuvwx",
+                    accessToken: "test-plaid-token-placeholder",
                     startDate: "2024-01-01",
                     endDate: "2024-01-31"
                 },
@@ -322,7 +322,7 @@ export const plaidFixtures: TestFixture[] = [
                 name: "account_holder_identity",
                 description: "Get identity information for account holders",
                 input: {
-                    accessToken: "access-sandbox-12345678-abcd-efgh-ijkl-mnopqrstuvwx"
+                    accessToken: "test-plaid-token-placeholder"
                 },
                 expectedOutput: {
                     identities: [
@@ -370,7 +370,7 @@ export const plaidFixtures: TestFixture[] = [
                 name: "product_not_enabled",
                 description: "Identity product not enabled for this item",
                 input: {
-                    accessToken: "access-sandbox-no-identity"
+                    accessToken: "test-plaid-no-identity"
                 },
                 expectedError: {
                     type: "validation",
@@ -382,7 +382,7 @@ export const plaidFixtures: TestFixture[] = [
                 name: "rate_limited",
                 description: "Rate limit exceeded",
                 input: {
-                    accessToken: "access-sandbox-12345678-abcd-efgh-ijkl-mnopqrstuvwx"
+                    accessToken: "test-plaid-token-placeholder"
                 },
                 expectedError: {
                     type: "rate_limit",
