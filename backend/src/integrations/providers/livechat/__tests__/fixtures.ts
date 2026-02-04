@@ -340,7 +340,18 @@ export const livechatFixtures: TestFixture[] = [
                 }
             }
         ],
-        errorCases: []
+        errorCases: [
+            {
+                name: "not_found",
+                description: "Customer does not exist",
+                input: { id: "00000000-0000-0000-0000-000000000000", days: 1 },
+                expectedError: {
+                    type: "not_found",
+                    message: "LiveChat API error: customer_not_found - Customer not found",
+                    retryable: false
+                }
+            }
+        ]
     },
 
     // ============================================================================
@@ -437,7 +448,18 @@ export const livechatFixtures: TestFixture[] = [
                 }
             }
         ],
-        errorCases: []
+        errorCases: [
+            {
+                name: "not_found",
+                description: "Chat does not exist",
+                input: { chat_id: "NONEXISTENT", thread_id: "K600PKZON8", tag: "vip-customer" },
+                expectedError: {
+                    type: "not_found",
+                    message: "LiveChat API error: chat_not_found - Chat not found",
+                    retryable: false
+                }
+            }
+        ]
     },
     {
         operationId: "untagThread",
@@ -459,6 +481,17 @@ export const livechatFixtures: TestFixture[] = [
                 }
             }
         ],
-        errorCases: []
+        errorCases: [
+            {
+                name: "not_found",
+                description: "Chat does not exist",
+                input: { chat_id: "NONEXISTENT", thread_id: "K600PKZON8", tag: "vip-customer" },
+                expectedError: {
+                    type: "not_found",
+                    message: "LiveChat API error: chat_not_found - Chat not found",
+                    retryable: false
+                }
+            }
+        ]
     }
 ];

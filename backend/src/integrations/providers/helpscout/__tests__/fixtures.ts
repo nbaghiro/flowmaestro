@@ -281,7 +281,18 @@ export const helpscoutFixtures: TestFixture[] = [
                 }
             }
         ],
-        errorCases: []
+        errorCases: [
+            {
+                name: "not_found",
+                description: "Conversation does not exist",
+                input: { conversation_id: 99999, text: "Test note" },
+                expectedError: {
+                    type: "not_found",
+                    message: "Help Scout API error: Resource not found",
+                    retryable: false
+                }
+            }
+        ]
     },
 
     {
@@ -417,7 +428,18 @@ export const helpscoutFixtures: TestFixture[] = [
                 }
             }
         ],
-        errorCases: []
+        errorCases: [
+            {
+                name: "validation_error",
+                description: "Missing required email",
+                input: { firstName: "Alice", lastName: "Johnson" },
+                expectedError: {
+                    type: "validation",
+                    message: "Help Scout API error: Validation failed",
+                    retryable: false
+                }
+            }
+        ]
     },
 
     {
@@ -563,7 +585,18 @@ export const helpscoutFixtures: TestFixture[] = [
                 }
             }
         ],
-        errorCases: []
+        errorCases: [
+            {
+                name: "not_found",
+                description: "Mailbox does not exist",
+                input: { mailbox_id: 99999 },
+                expectedError: {
+                    type: "not_found",
+                    message: "Help Scout API error: Resource not found",
+                    retryable: false
+                }
+            }
+        ]
     },
 
     // ============================================================================

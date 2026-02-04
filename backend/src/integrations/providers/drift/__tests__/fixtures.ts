@@ -169,7 +169,18 @@ export const driftFixtures: TestFixture[] = [
                 }
             }
         ],
-        errorCases: []
+        errorCases: [
+            {
+                name: "not_found",
+                description: "Contact does not exist",
+                input: { contact_id: 99999 },
+                expectedError: {
+                    type: "not_found",
+                    message: "Drift API error: not_found - Contact not found",
+                    retryable: false
+                }
+            }
+        ]
     },
 
     // ============================================================================
@@ -308,7 +319,18 @@ export const driftFixtures: TestFixture[] = [
                 }
             }
         ],
-        errorCases: []
+        errorCases: [
+            {
+                name: "not_found",
+                description: "Conversation does not exist",
+                input: { conversation_id: 99999 },
+                expectedError: {
+                    type: "not_found",
+                    message: "Drift API error: not_found - Conversation not found",
+                    retryable: false
+                }
+            }
+        ]
     },
     {
         operationId: "sendMessage",
@@ -405,7 +427,18 @@ export const driftFixtures: TestFixture[] = [
                 }
             }
         ],
-        errorCases: []
+        errorCases: [
+            {
+                name: "not_found",
+                description: "User does not exist",
+                input: { user_id: 99999 },
+                expectedError: {
+                    type: "not_found",
+                    message: "Drift API error: not_found - User not found",
+                    retryable: false
+                }
+            }
+        ]
     },
 
     // ============================================================================
