@@ -410,6 +410,12 @@ export const config = {
             clientSecret: process.env.DOCUSIGN_CLIENT_SECRET || ""
         },
 
+        // PandaDoc
+        pandadoc: {
+            clientId: process.env.PANDADOC_CLIENT_ID || "",
+            clientSecret: process.env.PANDADOC_CLIENT_SECRET || ""
+        },
+
         // SurveyMonkey
         surveymonkey: {
             clientId: process.env.SURVEYMONKEY_CLIENT_ID || "",
@@ -488,6 +494,24 @@ export const config = {
             clientSecret: process.env.RIPPLING_CLIENT_SECRET || ""
         },
 
+        // BambooHR
+        bamboohr: {
+            clientId: process.env.BAMBOOHR_CLIENT_ID || "",
+            clientSecret: process.env.BAMBOOHR_CLIENT_SECRET || ""
+        },
+
+        // ADP
+        adp: {
+            clientId: process.env.ADP_CLIENT_ID || "",
+            clientSecret: process.env.ADP_CLIENT_SECRET || ""
+        },
+
+        // Gusto
+        gusto: {
+            clientId: process.env.GUSTO_CLIENT_ID || "",
+            clientSecret: process.env.GUSTO_CLIENT_SECRET || ""
+        },
+
         // Square
         square: {
             clientId: process.env.SQUARE_CLIENT_ID || "",
@@ -552,6 +576,24 @@ export const config = {
         zoom: {
             clientId: process.env.ZOOM_CLIENT_ID || "",
             clientSecret: process.env.ZOOM_CLIENT_SECRET || ""
+        },
+
+        // SAP
+        sap: {
+            clientId: process.env.SAP_CLIENT_ID || "",
+            clientSecret: process.env.SAP_CLIENT_SECRET || ""
+        },
+
+        // NetSuite
+        netsuite: {
+            clientId: process.env.NETSUITE_CLIENT_ID || "",
+            clientSecret: process.env.NETSUITE_CLIENT_SECRET || ""
+        },
+
+        // Xero
+        xero: {
+            clientId: process.env.XERO_CLIENT_ID || "",
+            clientSecret: process.env.XERO_CLIENT_SECRET || ""
         }
     }
 };
@@ -626,6 +668,7 @@ export function getOAuthRedirectUri(provider: string): string {
         pinterest: "/oauth/pinterest/callback",
         hellosign: "/oauth/hellosign/callback",
         docusign: "/oauth/docusign/callback",
+        pandadoc: "/oauth/pandadoc/callback",
         surveymonkey: "/oauth/surveymonkey/callback",
         intercom: "/oauth/intercom/callback",
         buffer: "/oauth/buffer/callback",
@@ -639,6 +682,9 @@ export function getOAuthRedirectUri(provider: string): string {
         freshbooks: "/oauth/freshbooks/callback",
         workday: "/oauth/workday/callback",
         rippling: "/oauth/rippling/callback",
+        adp: "/oauth/adp/callback",
+        gusto: "/oauth/gusto/callback",
+        bamboohr: "/oauth/bamboohr/callback",
         square: "/oauth/square/callback",
         paypal: "/oauth/paypal/callback",
         digitalocean: "/oauth/digitalocean/callback",
@@ -652,6 +698,9 @@ export function getOAuthRedirectUri(provider: string): string {
         drift: "/oauth/drift/callback",
         zoom: "/oauth/zoom/callback",
         "google-meet": "/oauth/google/callback",
+        sap: "/oauth/sap/callback",
+        netsuite: "/oauth/netsuite/callback",
+        xero: "/oauth/xero/callback",
 
         // OAuth 1.0a providers
         evernote: "/oauth1/evernote/callback"
@@ -727,6 +776,7 @@ export function getOAuthCredentials(provider: string): { clientId: string; clien
         pinterest: "pinterest",
         hellosign: "hellosign",
         docusign: "docusign",
+        pandadoc: "pandadoc",
         surveymonkey: "surveymonkey",
         intercom: "intercom",
         buffer: "buffer",
@@ -740,6 +790,9 @@ export function getOAuthCredentials(provider: string): { clientId: string; clien
         freshbooks: "freshbooks",
         workday: "workday",
         rippling: "rippling",
+        adp: "adp",
+        gusto: "gusto",
+        bamboohr: "bamboohr",
         paypal: "paypal",
         "amazon-seller-central": "amazonSellerCentral",
         canva: "canva",
@@ -750,7 +803,10 @@ export function getOAuthCredentials(provider: string): { clientId: string; clien
         livechat: "livechat",
         drift: "drift",
         zoom: "zoom",
-        "google-meet": "google"
+        "google-meet": "google",
+        sap: "sap",
+        netsuite: "netsuite",
+        xero: "xero"
     };
 
     const configKey = providerMap[provider];

@@ -109,6 +109,7 @@ export const PROVIDER_LOGO_DOMAINS: Record<string, string> = {
     notion: "notion.so",
     figma: "figma.com",
     salesforce: "salesforce.com",
+    pandadoc: "pandadoc.com",
     twitter: "x.com",
     linkedin: "linkedin.com",
     facebook: "facebook.com",
@@ -749,8 +750,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Cloud accounting software",
         logoUrl: getBrandLogo("xero.com"),
         category: "Accounting",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "stripe",
@@ -767,7 +767,15 @@ export const ALL_PROVIDERS: Provider[] = [
         logoUrl: getBrandLogo("plaid.com"),
         category: "Accounting",
         methods: ["api_key"],
-        comingSoon: true
+        apiKeySettings: {
+            keyLabel: "Client ID",
+            keyPlaceholder: "Enter your Plaid client ID",
+            requiresSecret: true,
+            secretLabel: "Secret",
+            secretPlaceholder: "Enter your Plaid secret",
+            helpText: "Find your credentials in the Plaid Dashboard under Team Settings > Keys",
+            helpUrl: "https://dashboard.plaid.com/team/keys"
+        }
     },
     {
         provider: "sage",
@@ -851,8 +859,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Payroll and HR management",
         logoUrl: getBrandLogo("adp.com"),
         category: "HR",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "gusto",
@@ -860,8 +867,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Payroll and benefits platform",
         logoUrl: getBrandLogo("gusto.com"),
         category: "HR",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "rippling",
@@ -878,7 +884,19 @@ export const ALL_PROVIDERS: Provider[] = [
         logoUrl: getBrandLogo("bamboohr.com"),
         category: "HR",
         methods: ["oauth2"],
-        comingSoon: true
+        oauthSettings: [
+            {
+                name: "companyDomain",
+                label: "Company Subdomain",
+                placeholder: "your-company",
+                helpText:
+                    "Enter your BambooHR company subdomain (found in your URL, e.g., 'acme' from acme.bamboohr.com)",
+                required: true,
+                type: "text",
+                pattern: "^[a-zA-Z0-9][a-zA-Z0-9_-]*[a-zA-Z0-9]$",
+                patternError: "Subdomain must start and end with a letter or number"
+            }
+        ]
     },
     {
         provider: "hibob",
@@ -922,8 +940,13 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Performance and engagement",
         logoUrl: getBrandLogo("lattice.com"),
         category: "HR",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["api_key"],
+        apiKeySettings: {
+            keyLabel: "API Key",
+            keyPlaceholder: "lat_...",
+            helpText: "Generate an API key from your Lattice admin dashboard under Integrations",
+            helpUrl: "https://lattice.com"
+        }
     },
 
     // Customer Support
@@ -1974,8 +1997,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "In-memory data store",
         logoUrl: getBrandLogo("redis.io"),
         category: "Databases",
-        methods: ["api_key"],
-        comingSoon: true
+        methods: ["api_key"]
     },
     {
         provider: "snowflake",
@@ -1983,8 +2005,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Cloud data warehouse",
         logoUrl: getBrandLogo("snowflake.com"),
         category: "Databases",
-        methods: ["api_key"],
-        comingSoon: true
+        methods: ["api_key"]
     },
     {
         provider: "bigquery",
@@ -2090,7 +2111,20 @@ export const ALL_PROVIDERS: Provider[] = [
         logoUrl: getBrandLogo("sap.com"),
         category: "ERP",
         methods: ["oauth2"],
-        comingSoon: true
+        oauthSettings: [
+            {
+                name: "host",
+                label: "SAP API Hostname",
+                placeholder: "my12345.s4hana.cloud.sap",
+                helpText:
+                    "Enter your SAP S/4HANA Cloud API hostname (e.g., 'my12345.s4hana.cloud.sap')",
+                required: true,
+                type: "text",
+                pattern: "^[a-zA-Z0-9][a-zA-Z0-9.-]+[a-zA-Z0-9]$",
+                patternError:
+                    "Hostname must start and end with a letter or number, and can contain dots and hyphens"
+            }
+        ]
     },
     {
         provider: "netsuite",
@@ -2099,7 +2133,20 @@ export const ALL_PROVIDERS: Provider[] = [
         logoUrl: getBrandLogo("netsuite.com"),
         category: "ERP",
         methods: ["oauth2"],
-        comingSoon: true
+        oauthSettings: [
+            {
+                name: "accountId",
+                label: "NetSuite Account ID",
+                placeholder: "TSTDRV1234567",
+                helpText:
+                    "Enter your NetSuite account ID (e.g., 'TSTDRV1234567'). Found in Setup > Company > Company Information.",
+                required: true,
+                type: "text",
+                pattern: "^[a-zA-Z0-9_-]+$",
+                patternError:
+                    "Account ID must contain only letters, numbers, hyphens, and underscores"
+            }
+        ]
     },
     {
         provider: "odoo",
@@ -2164,8 +2211,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Document workflow automation",
         logoUrl: getBrandLogo("pandadoc.com"),
         category: "Legal & Contracts",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "hellosign",
@@ -2400,8 +2446,17 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Headless CMS platform",
         logoUrl: getBrandLogo("contentful.com"),
         category: "Content Management",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["api_key"],
+        apiKeySettings: {
+            keyLabel: "Personal Access Token",
+            keyPlaceholder: "CFPAT-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            requiresSecret: true,
+            secretLabel: "Space ID",
+            secretPlaceholder: "your-space-id",
+            helpText:
+                "Generate a Personal Access Token from Settings > CMA tokens in your Contentful space",
+            helpUrl: "https://app.contentful.com/account/profile/cma_tokens"
+        }
     },
     {
         provider: "ghost",
@@ -2410,7 +2465,15 @@ export const ALL_PROVIDERS: Provider[] = [
         logoUrl: getBrandLogo("ghost.org"),
         category: "Content Management",
         methods: ["api_key"],
-        comingSoon: true
+        apiKeySettings: {
+            keyLabel: "Admin API Key",
+            keyPlaceholder: "64f3c1e82a:8b4f2a1d3e5c7f9a0b2d4e6f8a0c2e4f6a8b0d2e4f6a",
+            requiresSecret: true,
+            secretLabel: "Site URL",
+            secretPlaceholder: "https://your-site.ghost.io",
+            helpText: "Create a Custom Integration in Ghost Admin > Settings > Integrations",
+            helpUrl: "https://ghost.org/docs/admin-api/#token-authentication"
+        }
     },
 
     {

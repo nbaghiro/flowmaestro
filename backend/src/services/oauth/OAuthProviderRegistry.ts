@@ -3195,6 +3195,66 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
         pkceEnabled: true
     },
 
+    // ==========================================================================
+    // PandaDoc
+    // ==========================================================================
+
+    pandadoc: {
+        name: "pandadoc",
+        displayName: "PandaDoc",
+        authUrl: "https://app.pandadoc.com/oauth2/authorize",
+        tokenUrl: "https://api.pandadoc.com/oauth2/access_token",
+        scopes: ["read+write"],
+        clientId: config.oauth.pandadoc.clientId,
+        clientSecret: config.oauth.pandadoc.clientSecret,
+        redirectUri: getOAuthRedirectUri("pandadoc"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://api.pandadoc.com/public/v1/members/current", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                        "Content-Type": "application/json"
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    user_id?: string;
+                    email?: string;
+                    first_name?: string;
+                    last_name?: string;
+                    workspace_name?: string;
+                    membership_id?: string;
+                };
+
+                const fullName =
+                    data.first_name && data.last_name
+                        ? `${data.first_name} ${data.last_name}`
+                        : "PandaDoc User";
+
+                return {
+                    userId: data.user_id || data.membership_id || "unknown",
+                    email: data.email || "unknown@pandadoc",
+                    name: fullName,
+                    user: fullName,
+                    workspace: data.workspace_name
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get PandaDoc user info");
+                return {
+                    userId: "unknown",
+                    email: "unknown@pandadoc",
+                    name: "PandaDoc User",
+                    user: "PandaDoc User"
+                };
+            }
+        },
+        refreshable: true
+    },
+
     surveymonkey: {
         name: "surveymonkey",
         displayName: "SurveyMonkey",
@@ -3703,6 +3763,68 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
         refreshable: true
     },
 
+    xero: {
+        name: "xero",
+        displayName: "Xero",
+        authUrl: "https://login.xero.com/identity/connect/authorize",
+        tokenUrl: "https://identity.xero.com/connect/token",
+        scopes: [
+            "openid",
+            "profile",
+            "email",
+            "offline_access",
+            "accounting.transactions",
+            "accounting.contacts",
+            "accounting.settings"
+        ],
+        clientId: config.oauth.xero.clientId,
+        clientSecret: config.oauth.xero.clientSecret,
+        redirectUri: getOAuthRedirectUri("xero"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                // Xero requires fetching /connections to get tenant ID
+                const response = await fetch("https://api.xero.com/connections", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                        "Content-Type": "application/json"
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const connections = (await response.json()) as Array<{
+                    id?: string;
+                    tenantId?: string;
+                    tenantType?: string;
+                    tenantName?: string;
+                    createdDateUtc?: string;
+                    updatedDateUtc?: string;
+                }>;
+
+                const firstConnection = connections[0];
+
+                return {
+                    userId: firstConnection?.id || "unknown",
+                    email: "unknown@xero",
+                    name: firstConnection?.tenantName || "Xero Organisation",
+                    tenantId: firstConnection?.tenantId,
+                    tenantName: firstConnection?.tenantName,
+                    tenantType: firstConnection?.tenantType
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get Xero connection info");
+                return {
+                    userId: "unknown",
+                    email: "unknown@xero",
+                    name: "Xero Organisation"
+                };
+            }
+        },
+        refreshable: true
+    },
+
     workday: {
         name: "workday",
         displayName: "Workday",
@@ -3733,6 +3855,58 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
         clientId: config.oauth.rippling.clientId,
         clientSecret: config.oauth.rippling.clientSecret,
         redirectUri: getOAuthRedirectUri("rippling"),
+        refreshable: true,
+        pkceEnabled: false
+    },
+
+    bamboohr: {
+        name: "bamboohr",
+        displayName: "BambooHR",
+        // Note: BambooHR URLs are subdomain-specific. The companyDomain is collected via oauthSettings
+        // and substituted at runtime by the OAuth service. Default placeholder used here.
+        authUrl: "https://COMPANY_DOMAIN.bamboohr.com/authorize.php",
+        tokenUrl: "https://COMPANY_DOMAIN.bamboohr.com/token.php",
+        scopes: ["offline_access"],
+        clientId: config.oauth.bamboohr.clientId,
+        clientSecret: config.oauth.bamboohr.clientSecret,
+        redirectUri: getOAuthRedirectUri("bamboohr"),
+        refreshable: true,
+        pkceEnabled: false
+    },
+
+    // ==========================================================================
+    // ADP - HR and Payroll
+    // Uses OAuth 2.0 with standard flow
+    // ==========================================================================
+
+    adp: {
+        name: "adp",
+        displayName: "ADP",
+        authUrl: "https://accounts.adp.com/auth/oauth/v2/authorize",
+        tokenUrl: "https://accounts.adp.com/auth/oauth/v2/token",
+        scopes: ["api"],
+        clientId: config.oauth.adp.clientId,
+        clientSecret: config.oauth.adp.clientSecret,
+        redirectUri: getOAuthRedirectUri("adp"),
+        refreshable: true,
+        pkceEnabled: false
+    },
+
+    // ==========================================================================
+    // Gusto - Payroll and Benefits
+    // Uses OAuth 2.0 with standard flow
+    // Refresh tokens are single-use but never expire
+    // ==========================================================================
+
+    gusto: {
+        name: "gusto",
+        displayName: "Gusto",
+        authUrl: "https://api.gusto.com/oauth/authorize",
+        tokenUrl: "https://api.gusto.com/oauth/token",
+        scopes: ["employees:read", "companies:read", "payrolls:read", "benefits:read"],
+        clientId: config.oauth.gusto.clientId,
+        clientSecret: config.oauth.gusto.clientSecret,
+        redirectUri: getOAuthRedirectUri("gusto"),
         refreshable: true,
         pkceEnabled: false
     },
@@ -4495,6 +4669,124 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
             }
         },
         refreshable: true
+    },
+
+    // ==========================================================================
+    // SAP S/4HANA Cloud
+    // ==========================================================================
+
+    sap: {
+        name: "sap",
+        displayName: "SAP",
+        // Template URLs - {host} must be replaced at runtime
+        authUrl: "https://{host}/sap/bc/sec/oauth2/authorize",
+        tokenUrl: "https://{host}/sap/bc/sec/oauth2/token",
+        scopes: [
+            "API_BUSINESS_PARTNER",
+            "API_SALES_ORDER_SRV",
+            "API_PURCHASEORDER_PROCESS_SRV",
+            "API_BILLING_DOCUMENT_SRV",
+            "API_PRODUCT_SRV"
+        ],
+        clientId: config.oauth.sap.clientId,
+        clientSecret: config.oauth.sap.clientSecret,
+        redirectUri: getOAuthRedirectUri("sap"),
+        getUserInfo: async (accessToken: string, host?: string) => {
+            try {
+                if (!host) {
+                    throw new Error("SAP host is required");
+                }
+
+                const response = await fetch(
+                    `https://${host}/sap/opu/odata/sap/API_BUSINESS_PARTNER/A_BusinessPartner?$top=1&$format=json`,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${accessToken}`,
+                            Accept: "application/json"
+                        }
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                return {
+                    userId: "sap-user",
+                    name: "SAP User",
+                    email: "unknown@sap",
+                    host
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get SAP user info");
+                return {
+                    userId: "unknown",
+                    name: "SAP User",
+                    email: "unknown@sap",
+                    host
+                };
+            }
+        },
+        refreshable: true,
+        pkceEnabled: false,
+        tokenAuthMethod: "basic"
+    },
+
+    // ==========================================================================
+    // NetSuite
+    // ==========================================================================
+
+    netsuite: {
+        name: "netsuite",
+        displayName: "NetSuite",
+        // Template URLs - {accountId} must be replaced at runtime
+        authUrl:
+            "https://{accountId}.suitetalk.api.netsuite.com/services/rest/auth/oauth2/v1/authorize",
+        tokenUrl:
+            "https://{accountId}.suitetalk.api.netsuite.com/services/rest/auth/oauth2/v1/token",
+        scopes: ["rest_webservices", "restlets"],
+        clientId: config.oauth.netsuite.clientId,
+        clientSecret: config.oauth.netsuite.clientSecret,
+        redirectUri: getOAuthRedirectUri("netsuite"),
+        getUserInfo: async (accessToken: string, accountId?: string) => {
+            try {
+                if (!accountId) {
+                    throw new Error("NetSuite account ID is required");
+                }
+
+                const response = await fetch(
+                    `https://${accountId}.suitetalk.api.netsuite.com/services/rest/record/v1/employee?limit=1`,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${accessToken}`,
+                            Accept: "application/json"
+                        }
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                return {
+                    userId: "netsuite-user",
+                    name: "NetSuite User",
+                    email: "unknown@netsuite",
+                    accountId
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get NetSuite user info");
+                return {
+                    userId: "unknown",
+                    name: "NetSuite User",
+                    email: "unknown@netsuite",
+                    accountId
+                };
+            }
+        },
+        refreshable: true,
+        pkceEnabled: false,
+        tokenAuthMethod: "body"
     }
 };
 
