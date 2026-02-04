@@ -1,5 +1,5 @@
 import * as Popover from "@radix-ui/react-popover";
-import { Check, ChevronsUpDown, Plus, Building2, Users, Crown, Loader2, User } from "lucide-react";
+import { Check, ChevronsUpDown, Plus, Building2, Users, Loader2, User } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { WorkspaceWithStats } from "@flowmaestro/shared";
@@ -40,12 +40,10 @@ function WorkspaceIcon({ category }: { category: string }) {
 function WorkspaceItem({
     workspace,
     isSelected,
-    isOwned,
     onClick
 }: {
     workspace: WorkspaceWithStats;
     isSelected: boolean;
-    isOwned: boolean;
     onClick: () => void;
 }) {
     return (
@@ -62,7 +60,6 @@ function WorkspaceItem({
             <div className="flex-1 text-left min-w-0">
                 <div className="flex items-center gap-1.5">
                     <span className="font-medium truncate max-w-[120px]">{workspace.name}</span>
-                    {isOwned && <Crown className="h-3 w-3 text-amber-500 flex-shrink-0" />}
                 </div>
                 <WorkspaceTypeBadge type={workspace.type} />
             </div>
@@ -105,7 +102,6 @@ function WorkspaceDropdownContent({
                                 key={workspace.id}
                                 workspace={workspace}
                                 isSelected={workspace.id === currentWorkspaceId}
-                                isOwned={true}
                                 onClick={() => onSelectWorkspace(workspace.id)}
                             />
                         ))}
@@ -123,7 +119,6 @@ function WorkspaceDropdownContent({
                                 key={workspace.id}
                                 workspace={workspace}
                                 isSelected={workspace.id === currentWorkspaceId}
-                                isOwned={false}
                                 onClick={() => onSelectWorkspace(workspace.id)}
                             />
                         ))}
