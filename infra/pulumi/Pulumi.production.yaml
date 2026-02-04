@@ -177,5 +177,7 @@ config:
       {"name":"livechat-client-id","envVar":"LIVECHAT_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"LiveChat OAuth client ID"},
       {"name":"livechat-client-secret","envVar":"LIVECHAT_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"LiveChat OAuth client secret"},
       {"name":"drift-client-id","envVar":"DRIFT_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Drift OAuth client ID"},
-      {"name":"drift-client-secret","envVar":"DRIFT_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Drift OAuth client secret"}
+      {"name":"drift-client-secret","envVar":"DRIFT_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Drift OAuth client secret"},
+      {"name":"zoom-client-id","envVar":"ZOOM_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Zoom OAuth client ID"},
+      {"name":"zoom-client-secret","envVar":"ZOOM_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Zoom OAuth client secret"}
     ]

@@ -4385,6 +4385,116 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
             }
         },
         refreshable: true
+    },
+
+    // ==========================================================================
+    // Zoom
+    // ==========================================================================
+
+    zoom: {
+        name: "zoom",
+        displayName: "Zoom",
+        authUrl: "https://zoom.us/oauth/authorize",
+        tokenUrl: "https://zoom.us/oauth/token",
+        tokenAuthMethod: "basic",
+        scopes: ["meeting:read", "meeting:write", "user:read", "cloud_recording:read"],
+        clientId: config.oauth.zoom.clientId,
+        clientSecret: config.oauth.zoom.clientSecret,
+        redirectUri: getOAuthRedirectUri("zoom"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://api.zoom.us/v2/users/me", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                        "Content-Type": "application/json"
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    id?: string;
+                    first_name?: string;
+                    last_name?: string;
+                    email?: string;
+                    type?: number;
+                    pic_url?: string;
+                    account_id?: string;
+                };
+
+                return {
+                    userId: data.id || "unknown",
+                    name:
+                        [data.first_name, data.last_name].filter(Boolean).join(" ") || "Zoom User",
+                    email: data.email || "unknown@zoom",
+                    picture: data.pic_url,
+                    accountId: data.account_id
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get Zoom user info");
+                return {
+                    userId: "unknown",
+                    name: "Zoom User",
+                    email: "unknown@zoom"
+                };
+            }
+        },
+        refreshable: true,
+        pkceEnabled: false
+    },
+
+    // ==========================================================================
+    // Google Meet (shared Google OAuth)
+    // ==========================================================================
+
+    "google-meet": {
+        name: "google-meet",
+        displayName: "Google Meet",
+        authUrl: "https://accounts.google.com/o/oauth2/v2/auth",
+        tokenUrl: "https://oauth2.googleapis.com/token",
+        scopes: [
+            "https://www.googleapis.com/auth/meetings.space.created",
+            "https://www.googleapis.com/auth/meetings.space.readonly"
+        ],
+        authParams: {
+            access_type: "offline",
+            prompt: "consent"
+        },
+        clientId: config.oauth.google.clientId,
+        clientSecret: config.oauth.google.clientSecret,
+        redirectUri: getOAuthRedirectUri("google"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`
+                    }
+                });
+
+                const data = (await response.json()) as {
+                    email?: string;
+                    name?: string;
+                    picture?: string;
+                    id?: string;
+                };
+
+                return {
+                    email: data.email,
+                    name: data.name,
+                    picture: data.picture,
+                    googleId: data.id
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get Google Meet user info");
+                return {
+                    email: "unknown@google",
+                    name: "Google User"
+                };
+            }
+        },
+        refreshable: true
     }
 };
 

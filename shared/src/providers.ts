@@ -175,7 +175,9 @@ export const PROVIDER_LOGO_DOMAINS: Record<string, string> = {
     "azure-devops": "dev.azure.com",
     "azure-storage": "azure.microsoft.com",
     woocommerce: "woocommerce.com",
-    bigcommerce: "bigcommerce.com"
+    bigcommerce: "bigcommerce.com",
+    zoom: "zoom.us",
+    "google-meet": "meet.google.com"
 };
 
 /**
@@ -1365,8 +1367,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Video conferencing platform",
         logoUrl: getBrandLogo("zoom.us"),
         category: "Communication",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "calendly",
@@ -1409,8 +1410,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Video conferencing by Google",
         logoUrl: getBrandLogo("meet.google.com"),
         category: "Communication",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "front",

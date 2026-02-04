@@ -546,6 +546,12 @@ export const config = {
         drift: {
             clientId: process.env.DRIFT_CLIENT_ID || "",
             clientSecret: process.env.DRIFT_CLIENT_SECRET || ""
+        },
+
+        // Zoom
+        zoom: {
+            clientId: process.env.ZOOM_CLIENT_ID || "",
+            clientSecret: process.env.ZOOM_CLIENT_SECRET || ""
         }
     }
 };
@@ -644,6 +650,8 @@ export function getOAuthRedirectUri(provider: string): string {
         helpscout: "/oauth/helpscout/callback",
         livechat: "/oauth/livechat/callback",
         drift: "/oauth/drift/callback",
+        zoom: "/oauth/zoom/callback",
+        "google-meet": "/oauth/google/callback",
 
         // OAuth 1.0a providers
         evernote: "/oauth1/evernote/callback"
@@ -740,7 +748,9 @@ export function getOAuthCredentials(provider: string): { clientId: string; clien
         sharepoint: "microsoft",
         helpscout: "helpscout",
         livechat: "livechat",
-        drift: "drift"
+        drift: "drift",
+        zoom: "zoom",
+        "google-meet": "google"
     };
 
     const configKey = providerMap[provider];

@@ -60,6 +60,7 @@ export async function loadAllFixtures(): Promise<void> {
         "gmail",
         "google-analytics",
         "google-calendar",
+        "google-meet",
         "google-cloud",
         "google-cloud-storage",
         "google-docs",
@@ -123,7 +124,8 @@ export async function loadAllFixtures(): Promise<void> {
         "woocommerce",
         "workday",
         "youtube",
-        "zendesk"
+        "zendesk",
+        "zoom"
     ];
 
     let loadedCount = 0;

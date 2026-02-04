@@ -1447,5 +1447,33 @@ const driftEntry: ProviderRegistryEntry = {
 
 providerRegistry.register(driftEntry);
 
+// Register Google Meet provider
+const googleMeetEntry: ProviderRegistryEntry = {
+    name: "google-meet",
+    displayName: "Google Meet",
+    authMethod: "oauth2",
+    category: "communication",
+    loader: async () => {
+        const { GoogleMeetProvider } = await import("./providers/google-meet/GoogleMeetProvider");
+        return new GoogleMeetProvider();
+    }
+};
+
+providerRegistry.register(googleMeetEntry);
+
+// Register Zoom provider
+const zoomEntry: ProviderRegistryEntry = {
+    name: "zoom",
+    displayName: "Zoom",
+    authMethod: "oauth2",
+    category: "communication",
+    loader: async () => {
+        const { ZoomProvider } = await import("./providers/zoom/ZoomProvider");
+        return new ZoomProvider();
+    }
+};
+
+providerRegistry.register(zoomEntry);
+
 // Export for use in application
 export { providerRegistry };
