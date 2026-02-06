@@ -88,7 +88,7 @@ export class AgentTemplateRepository {
         const query = `
             SELECT * FROM flowmaestro.agent_templates
             ${whereClause}
-            ORDER BY featured DESC, sort_order ASC, use_count DESC, created_at DESC
+            ORDER BY jsonb_array_length(available_tools) DESC, featured DESC, sort_order ASC, use_count DESC, created_at DESC
             LIMIT $${paramIndex++} OFFSET $${paramIndex}
         `;
 
@@ -119,7 +119,7 @@ export class AgentTemplateRepository {
         const query = `
             SELECT * FROM flowmaestro.agent_templates
             WHERE category = $1 AND status = 'active'
-            ORDER BY featured DESC, sort_order ASC, use_count DESC
+            ORDER BY jsonb_array_length(available_tools) DESC, featured DESC, sort_order ASC, use_count DESC
         `;
 
         const result = await db.query<AgentTemplateRow>(query, [category]);
@@ -226,7 +226,7 @@ export class AgentTemplateRepository {
         const query = `
             SELECT * FROM flowmaestro.agent_templates
             WHERE status = 'active' AND featured = true
-            ORDER BY sort_order ASC, use_count DESC
+            ORDER BY jsonb_array_length(available_tools) DESC, sort_order ASC, use_count DESC
             LIMIT $1
         `;
 

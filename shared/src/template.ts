@@ -7,6 +7,8 @@ export const TEMPLATE_CATEGORIES = [
     "engineering",
     "support",
     "ecommerce",
+    "hr",
+    "finance",
     "saas",
     "healthcare"
 ] as const;
@@ -111,6 +113,18 @@ export const TEMPLATE_CATEGORY_META: Record<
         icon: "ShoppingCart",
         color: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300",
         bgColor: "bg-orange-500"
+    },
+    hr: {
+        label: "HR & People",
+        icon: "Users",
+        color: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300",
+        bgColor: "bg-indigo-500"
+    },
+    finance: {
+        label: "Finance & Legal",
+        icon: "DollarSign",
+        color: "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300",
+        bgColor: "bg-teal-500"
     },
     saas: {
         label: "SaaS",

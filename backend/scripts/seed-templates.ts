@@ -15877,6 +15877,4063 @@ const templates: TemplateData[] = [
                 { id: "e8", source: "integration-slack", target: "output-1" }
             ]
         }
+    },
+
+    // ========================================================================
+    // MICROSOFT ECOSYSTEM (4 templates)
+    // ========================================================================
+
+    // Microsoft Ecosystem: Teams Meeting Intelligence Hub (Featured)
+    {
+        name: "Teams Meeting Intelligence Hub",
+        description:
+            "Automatically process Teams meeting transcripts with AI. Categorize by meeting type (strategy, standup, client, other), extract action items, save notes to SharePoint, and send follow-up emails via Outlook.",
+        category: "operations",
+        tags: ["microsoft", "teams", "meetings", "ai", "transcription", "automation"],
+        required_integrations: [
+            "microsoft-teams",
+            "microsoft-outlook",
+            "sharepoint",
+            "notion",
+            "slack"
+        ],
+        featured: true,
+        definition: {
+            name: "Teams Meeting Intelligence Hub",
+            nodes: [
+                {
+                    id: "trigger-1",
+                    type: "trigger",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Teams Meeting Ended",
+                        triggerType: "webhook",
+                        provider: "microsoft-teams",
+                        event: "meeting.ended",
+                        description: "Triggered when a Teams meeting ends"
+                    }
+                },
+                {
+                    id: "integration-teams-transcript",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Get Transcript",
+                        provider: "microsoft-teams",
+                        operation: "getTranscript",
+                        outputVariable: "transcript"
+                    }
+                },
+                {
+                    id: "llm-summarize",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Summary",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Analyze this meeting transcript and generate a comprehensive summary:\n\n{{transcript}}\n\nInclude: key discussion points, decisions made, action items with owners, and next steps.",
+                        outputVariable: "summary"
+                    }
+                },
+                {
+                    id: "router-content",
+                    type: "router",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Content Type Router",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Based on this meeting summary, classify the meeting type:\n\n{{summary.text}}\n\nCategories: strategy (planning, roadmap), standup (daily sync, blockers), client (external stakeholders), other (general)",
+                        routes: [
+                            {
+                                value: "strategy",
+                                label: "Strategy Meeting",
+                                description: "Planning and roadmap discussions"
+                            },
+                            {
+                                value: "standup",
+                                label: "Standup",
+                                description: "Daily sync and blockers"
+                            },
+                            {
+                                value: "client",
+                                label: "Client Meeting",
+                                description: "External stakeholders"
+                            },
+                            { value: "other", label: "Other", description: "General meetings" }
+                        ],
+                        defaultRoute: "other",
+                        outputVariable: "meetingType"
+                    }
+                },
+                {
+                    id: "llm-strategy",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Extract Decisions",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Extract strategic decisions and roadmap items from this strategy meeting:\n\n{{summary.text}}\n\nFormat as: Decision, Rationale, Owner, Timeline",
+                        outputVariable: "strategyNotes"
+                    }
+                },
+                {
+                    id: "llm-standup",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Extract Blockers",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Extract blockers and updates from this standup:\n\n{{summary.text}}\n\nFormat as: Person, Yesterday, Today, Blockers",
+                        outputVariable: "standupNotes"
+                    }
+                },
+                {
+                    id: "llm-client",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Extract CRM Updates",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Extract client-related updates from this meeting:\n\n{{summary.text}}\n\nFormat as: Client concerns, Commitments made, Follow-up required, Relationship notes",
+                        outputVariable: "clientNotes"
+                    }
+                },
+                {
+                    id: "llm-general",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Basic Notes",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Create concise meeting notes from:\n\n{{summary.text}}\n\nFormat as: Attendees, Topics discussed, Key points, Action items",
+                        outputVariable: "generalNotes"
+                    }
+                },
+                {
+                    id: "router-actions",
+                    type: "router",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Has Actions?",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Does this summary contain action items that need follow-up?\n\n{{summary.text}}",
+                        routes: [
+                            {
+                                value: "yes",
+                                label: "Has Actions",
+                                description: "Action items identified"
+                            },
+                            { value: "no", label: "No Actions", description: "No follow-up needed" }
+                        ],
+                        defaultRoute: "no",
+                        outputVariable: "hasActions"
+                    }
+                },
+                {
+                    id: "sharepoint-save",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Save Notes",
+                        provider: "sharepoint",
+                        operation: "uploadFile"
+                    }
+                },
+                {
+                    id: "outlook-send",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Send Follow-up",
+                        provider: "microsoft-outlook",
+                        operation: "sendEmail"
+                    }
+                },
+                {
+                    id: "notion-tasks",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Create Tasks",
+                        provider: "notion",
+                        operation: "createPage",
+                        database: "Action Items"
+                    }
+                },
+                {
+                    id: "sharepoint-archive",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Archive Notes",
+                        provider: "sharepoint",
+                        operation: "uploadFile"
+                    }
+                },
+                {
+                    id: "teams-post",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Post Summary",
+                        provider: "microsoft-teams",
+                        operation: "sendMessage",
+                        channel: "#meeting-notes"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Meeting Processed",
+                        outputName: "result",
+                        value: "{{summary}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "trigger-1", target: "integration-teams-transcript" },
+                { id: "e2", source: "integration-teams-transcript", target: "llm-summarize" },
+                { id: "e3", source: "llm-summarize", target: "router-content" },
+                {
+                    id: "e4",
+                    source: "router-content",
+                    target: "llm-strategy",
+                    sourceHandle: "strategy"
+                },
+                {
+                    id: "e5",
+                    source: "router-content",
+                    target: "llm-standup",
+                    sourceHandle: "standup"
+                },
+                {
+                    id: "e6",
+                    source: "router-content",
+                    target: "llm-client",
+                    sourceHandle: "client"
+                },
+                {
+                    id: "e7",
+                    source: "router-content",
+                    target: "llm-general",
+                    sourceHandle: "other"
+                },
+                { id: "e8", source: "llm-strategy", target: "router-actions" },
+                { id: "e9", source: "llm-standup", target: "router-actions" },
+                { id: "e10", source: "llm-client", target: "router-actions" },
+                { id: "e11", source: "llm-general", target: "sharepoint-archive" },
+                {
+                    id: "e12",
+                    source: "router-actions",
+                    target: "sharepoint-save",
+                    sourceHandle: "yes"
+                },
+                {
+                    id: "e13",
+                    source: "router-actions",
+                    target: "outlook-send",
+                    sourceHandle: "yes"
+                },
+                {
+                    id: "e14",
+                    source: "router-actions",
+                    target: "notion-tasks",
+                    sourceHandle: "yes"
+                },
+                {
+                    id: "e15",
+                    source: "router-actions",
+                    target: "sharepoint-archive",
+                    sourceHandle: "no"
+                },
+                { id: "e16", source: "sharepoint-save", target: "teams-post" },
+                { id: "e17", source: "outlook-send", target: "teams-post" },
+                { id: "e18", source: "notion-tasks", target: "teams-post" },
+                { id: "e19", source: "sharepoint-archive", target: "teams-post" },
+                { id: "e20", source: "teams-post", target: "output-1" }
+            ]
+        }
+    },
+
+    // Microsoft Ecosystem: Microsoft 365 Document Approval Hub
+    {
+        name: "Microsoft 365 Document Approval Hub",
+        description:
+            "Route SharePoint documents through AI classification and department-specific approval workflows. Contracts go to legal, policies to HR, technical docs to engineering, with automated Teams notifications.",
+        category: "operations",
+        tags: ["microsoft", "sharepoint", "approval", "documents", "workflow"],
+        required_integrations: [
+            "sharepoint",
+            "microsoft-teams",
+            "microsoft-outlook",
+            "microsoft-onedrive"
+        ],
+        featured: false,
+        definition: {
+            name: "Microsoft 365 Document Approval Hub",
+            nodes: [
+                {
+                    id: "trigger-1",
+                    type: "trigger",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "SharePoint New File",
+                        triggerType: "webhook",
+                        provider: "sharepoint",
+                        event: "file.created",
+                        description: "Triggered when a new file is uploaded"
+                    }
+                },
+                {
+                    id: "integration-sharepoint-get",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Get Metadata",
+                        provider: "sharepoint",
+                        operation: "getFile",
+                        outputVariable: "fileMetadata"
+                    }
+                },
+                {
+                    id: "llm-classify",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Classify Document",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Analyze this document metadata and classify it:\n\nFilename: {{fileMetadata.name}}\nPath: {{fileMetadata.path}}\n\nClassify as: contract, policy, technical, general",
+                        outputVariable: "classification"
+                    }
+                },
+                {
+                    id: "router-type",
+                    type: "router",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Document Type",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Route this document based on classification:\n\n{{classification.text}}",
+                        routes: [
+                            {
+                                value: "contract",
+                                label: "Contract",
+                                description: "Legal documents"
+                            },
+                            { value: "policy", label: "Policy", description: "HR policies" },
+                            {
+                                value: "technical",
+                                label: "Technical",
+                                description: "Engineering docs"
+                            },
+                            { value: "general", label: "General", description: "Other documents" }
+                        ],
+                        defaultRoute: "general",
+                        outputVariable: "docType"
+                    }
+                },
+                {
+                    id: "teams-legal",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Notify Legal",
+                        provider: "microsoft-teams",
+                        operation: "sendMessage",
+                        channel: "#legal"
+                    }
+                },
+                {
+                    id: "teams-hr",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Notify HR",
+                        provider: "microsoft-teams",
+                        operation: "sendMessage",
+                        channel: "#hr"
+                    }
+                },
+                {
+                    id: "teams-eng",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Notify Engineering",
+                        provider: "microsoft-teams",
+                        operation: "sendMessage",
+                        channel: "#engineering"
+                    }
+                },
+                {
+                    id: "teams-ops",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Notify Operations",
+                        provider: "microsoft-teams",
+                        operation: "sendMessage",
+                        channel: "#operations"
+                    }
+                },
+                {
+                    id: "humanReview-1",
+                    type: "humanReview",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Approve/Reject",
+                        reviewPrompt: "Review document for approval",
+                        outputVariable: "reviewDecision"
+                    }
+                },
+                {
+                    id: "router-decision",
+                    type: "router",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Decision Router",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Route based on review decision:\n\n{{reviewDecision}}",
+                        routes: [
+                            {
+                                value: "approve",
+                                label: "Approved",
+                                description: "Document approved"
+                            },
+                            { value: "reject", label: "Rejected", description: "Document rejected" }
+                        ],
+                        defaultRoute: "approve",
+                        outputVariable: "finalDecision"
+                    }
+                },
+                {
+                    id: "onedrive-move",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Move to Approved",
+                        provider: "microsoft-onedrive",
+                        operation: "moveFile"
+                    }
+                },
+                {
+                    id: "outlook-notify",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Notify Author",
+                        provider: "microsoft-outlook",
+                        operation: "sendEmail"
+                    }
+                },
+                {
+                    id: "outlook-revisions",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Request Changes",
+                        provider: "microsoft-outlook",
+                        operation: "sendEmail"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Document Processed",
+                        outputName: "result",
+                        value: "{{finalDecision}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "trigger-1", target: "integration-sharepoint-get" },
+                { id: "e2", source: "integration-sharepoint-get", target: "llm-classify" },
+                { id: "e3", source: "llm-classify", target: "router-type" },
+                {
+                    id: "e4",
+                    source: "router-type",
+                    target: "teams-legal",
+                    sourceHandle: "contract"
+                },
+                { id: "e5", source: "router-type", target: "teams-hr", sourceHandle: "policy" },
+                { id: "e6", source: "router-type", target: "teams-eng", sourceHandle: "technical" },
+                { id: "e7", source: "router-type", target: "teams-ops", sourceHandle: "general" },
+                { id: "e8", source: "teams-legal", target: "humanReview-1" },
+                { id: "e9", source: "teams-hr", target: "humanReview-1" },
+                { id: "e10", source: "teams-eng", target: "humanReview-1" },
+                { id: "e11", source: "teams-ops", target: "humanReview-1" },
+                { id: "e12", source: "humanReview-1", target: "router-decision" },
+                {
+                    id: "e13",
+                    source: "router-decision",
+                    target: "onedrive-move",
+                    sourceHandle: "approve"
+                },
+                {
+                    id: "e14",
+                    source: "router-decision",
+                    target: "outlook-notify",
+                    sourceHandle: "approve"
+                },
+                {
+                    id: "e15",
+                    source: "router-decision",
+                    target: "outlook-revisions",
+                    sourceHandle: "reject"
+                },
+                { id: "e16", source: "onedrive-move", target: "output-1" },
+                { id: "e17", source: "outlook-notify", target: "output-1" },
+                { id: "e18", source: "outlook-revisions", target: "output-1" }
+            ]
+        }
+    },
+
+    // Microsoft Ecosystem: Outlook Smart Inbox Manager
+    {
+        name: "Outlook Smart Inbox Manager",
+        description:
+            "AI-powered email triage for shared mailboxes. Categorize incoming emails by intent and urgency, route to appropriate Teams channels, draft responses, and log interactions to SharePoint.",
+        category: "support",
+        tags: ["microsoft", "outlook", "email", "triage", "ai", "automation"],
+        required_integrations: ["microsoft-outlook", "microsoft-teams", "sharepoint", "hubspot"],
+        featured: false,
+        definition: {
+            name: "Outlook Smart Inbox Manager",
+            nodes: [
+                {
+                    id: "trigger-1",
+                    type: "trigger",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "New Email",
+                        triggerType: "webhook",
+                        provider: "microsoft-outlook",
+                        event: "mail.received",
+                        description: "New email in shared mailbox"
+                    }
+                },
+                {
+                    id: "llm-analyze",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Analyze Email",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Analyze this email and determine:\n1. Category: support, sales, billing, inquiry, spam\n2. Urgency: urgent, normal\n3. Sentiment: positive, neutral, negative\n\nEmail: {{trigger.email}}",
+                        outputVariable: "analysis"
+                    }
+                },
+                {
+                    id: "router-category",
+                    type: "router",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Email Category",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Route this email based on analysis:\n\n{{analysis.text}}",
+                        routes: [
+                            { value: "support", label: "Support", description: "Support requests" },
+                            { value: "sales", label: "Sales", description: "Sales inquiries" },
+                            { value: "billing", label: "Billing", description: "Billing issues" },
+                            {
+                                value: "inquiry",
+                                label: "Inquiry",
+                                description: "General questions"
+                            },
+                            { value: "spam", label: "Spam", description: "Junk mail" }
+                        ],
+                        defaultRoute: "inquiry",
+                        outputVariable: "category"
+                    }
+                },
+                {
+                    id: "router-urgency",
+                    type: "router",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Support Urgency",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Is this support request urgent?\n\n{{analysis.text}}",
+                        routes: [
+                            {
+                                value: "urgent",
+                                label: "Urgent",
+                                description: "Requires immediate attention"
+                            },
+                            { value: "normal", label: "Normal", description: "Standard priority" }
+                        ],
+                        defaultRoute: "normal",
+                        outputVariable: "urgency"
+                    }
+                },
+                {
+                    id: "hubspot-lead",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Create Lead",
+                        provider: "hubspot",
+                        operation: "createContact"
+                    }
+                },
+                {
+                    id: "teams-finance",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Notify Finance",
+                        provider: "microsoft-teams",
+                        operation: "sendMessage",
+                        channel: "#finance"
+                    }
+                },
+                {
+                    id: "teams-info",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "General Info",
+                        provider: "microsoft-teams",
+                        operation: "sendMessage",
+                        channel: "#general"
+                    }
+                },
+                {
+                    id: "outlook-archive",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Archive Spam",
+                        provider: "microsoft-outlook",
+                        operation: "moveEmail"
+                    }
+                },
+                {
+                    id: "teams-urgent",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Urgent Support",
+                        provider: "microsoft-teams",
+                        operation: "sendMessage",
+                        channel: "#support-urgent"
+                    }
+                },
+                {
+                    id: "teams-support",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Normal Support",
+                        provider: "microsoft-teams",
+                        operation: "sendMessage",
+                        channel: "#support"
+                    }
+                },
+                {
+                    id: "llm-draft",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Draft Response",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Draft a professional response to this email:\n\n{{trigger.email}}\n\nAnalysis: {{analysis.text}}",
+                        outputVariable: "draftResponse"
+                    }
+                },
+                {
+                    id: "humanReview-1",
+                    type: "humanReview",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Review & Edit",
+                        reviewPrompt: "Review and edit the draft response before sending",
+                        outputVariable: "finalResponse"
+                    }
+                },
+                {
+                    id: "outlook-send",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Send Reply",
+                        provider: "microsoft-outlook",
+                        operation: "sendEmail"
+                    }
+                },
+                {
+                    id: "sharepoint-log",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Log Interaction",
+                        provider: "sharepoint",
+                        operation: "createListItem"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Email Processed",
+                        outputName: "result",
+                        value: "{{category}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "trigger-1", target: "llm-analyze" },
+                { id: "e2", source: "llm-analyze", target: "router-category" },
+                {
+                    id: "e3",
+                    source: "router-category",
+                    target: "router-urgency",
+                    sourceHandle: "support"
+                },
+                {
+                    id: "e4",
+                    source: "router-category",
+                    target: "hubspot-lead",
+                    sourceHandle: "sales"
+                },
+                {
+                    id: "e5",
+                    source: "router-category",
+                    target: "teams-finance",
+                    sourceHandle: "billing"
+                },
+                {
+                    id: "e6",
+                    source: "router-category",
+                    target: "teams-info",
+                    sourceHandle: "inquiry"
+                },
+                {
+                    id: "e7",
+                    source: "router-category",
+                    target: "outlook-archive",
+                    sourceHandle: "spam"
+                },
+                {
+                    id: "e8",
+                    source: "router-urgency",
+                    target: "teams-urgent",
+                    sourceHandle: "urgent"
+                },
+                {
+                    id: "e9",
+                    source: "router-urgency",
+                    target: "teams-support",
+                    sourceHandle: "normal"
+                },
+                { id: "e10", source: "teams-urgent", target: "llm-draft" },
+                { id: "e11", source: "teams-support", target: "llm-draft" },
+                { id: "e12", source: "llm-draft", target: "humanReview-1" },
+                { id: "e13", source: "humanReview-1", target: "outlook-send" },
+                { id: "e14", source: "outlook-send", target: "sharepoint-log" },
+                { id: "e15", source: "hubspot-lead", target: "output-1" },
+                { id: "e16", source: "teams-finance", target: "output-1" },
+                { id: "e17", source: "teams-info", target: "output-1" },
+                { id: "e18", source: "outlook-archive", target: "output-1" },
+                { id: "e19", source: "sharepoint-log", target: "output-1" }
+            ]
+        }
+    },
+
+    // Microsoft Ecosystem: SharePoint Site Provisioning Orchestrator
+    {
+        name: "SharePoint Site Provisioning Orchestrator",
+        description:
+            "Automate SharePoint site creation with parallel folder setup, Teams channel linking, and personalized welcome guides. Includes notifications to site owners and team announcements.",
+        category: "operations",
+        tags: ["microsoft", "sharepoint", "provisioning", "automation", "teams"],
+        required_integrations: [
+            "sharepoint",
+            "microsoft-onedrive",
+            "microsoft-teams",
+            "microsoft-outlook"
+        ],
+        featured: false,
+        definition: {
+            name: "SharePoint Site Provisioning Orchestrator",
+            nodes: [
+                {
+                    id: "input-1",
+                    type: "input",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Site Request",
+                        inputName: "siteRequest",
+                        inputVariable: "siteRequest",
+                        inputType: "json",
+                        description: '{"name": "", "type": "", "owner": "", "description": ""}'
+                    }
+                },
+                {
+                    id: "llm-plan",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Site Plan",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Generate a site structure plan for:\n\nName: {{siteRequest.name}}\nType: {{siteRequest.type}}\nOwner: {{siteRequest.owner}}\n\nInclude: folder structure, permissions, and recommended document libraries.",
+                        outputVariable: "sitePlan"
+                    }
+                },
+                {
+                    id: "sharepoint-create",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Create Site",
+                        provider: "sharepoint",
+                        operation: "createSite"
+                    }
+                },
+                {
+                    id: "onedrive-folders",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Create Folders",
+                        provider: "microsoft-onedrive",
+                        operation: "createFolder"
+                    }
+                },
+                {
+                    id: "teams-channel",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Link Channel",
+                        provider: "microsoft-teams",
+                        operation: "createChannel"
+                    }
+                },
+                {
+                    id: "transform-compile",
+                    type: "transform",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Compile Details",
+                        transformType: "template",
+                        template:
+                            '{"siteUrl": "{{sharepoint.url}}", "folders": "{{onedrive.folders}}", "channel": "{{teams.channel}}"}',
+                        outputVariable: "siteDetails"
+                    }
+                },
+                {
+                    id: "llm-welcome",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Welcome Guide",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Create a welcome guide for the new SharePoint site:\n\nSite: {{siteRequest.name}}\nDetails: {{siteDetails}}\n\nInclude: getting started steps, key features, and best practices.",
+                        outputVariable: "welcomeGuide"
+                    }
+                },
+                {
+                    id: "outlook-owner",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Email Owner",
+                        provider: "microsoft-outlook",
+                        operation: "sendEmail"
+                    }
+                },
+                {
+                    id: "teams-announce",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Announce Site",
+                        provider: "microsoft-teams",
+                        operation: "sendMessage",
+                        channel: "#announcements"
+                    }
+                },
+                {
+                    id: "sharepoint-doc",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Save Guide",
+                        provider: "sharepoint",
+                        operation: "uploadFile"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Site Provisioned",
+                        outputName: "result",
+                        value: "{{siteDetails}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "input-1", target: "llm-plan" },
+                { id: "e2", source: "llm-plan", target: "sharepoint-create" },
+                { id: "e3", source: "llm-plan", target: "onedrive-folders" },
+                { id: "e4", source: "llm-plan", target: "teams-channel" },
+                { id: "e5", source: "sharepoint-create", target: "transform-compile" },
+                { id: "e6", source: "onedrive-folders", target: "transform-compile" },
+                { id: "e7", source: "teams-channel", target: "transform-compile" },
+                { id: "e8", source: "transform-compile", target: "llm-welcome" },
+                { id: "e9", source: "llm-welcome", target: "outlook-owner" },
+                { id: "e10", source: "llm-welcome", target: "teams-announce" },
+                { id: "e11", source: "llm-welcome", target: "sharepoint-doc" },
+                { id: "e12", source: "outlook-owner", target: "output-1" },
+                { id: "e13", source: "teams-announce", target: "output-1" },
+                { id: "e14", source: "sharepoint-doc", target: "output-1" }
+            ]
+        }
+    },
+
+    // ========================================================================
+    // HR & PEOPLE OPS (4 templates)
+    // ========================================================================
+
+    // HR: BambooHR Employee Lifecycle Hub (Featured)
+    {
+        name: "BambooHR Employee Lifecycle Hub",
+        description:
+            "Comprehensive employee lifecycle automation. Detect status changes (new hire, promotion, termination) and trigger appropriate workflows with onboarding tasks, announcements, and offboarding checklists.",
+        category: "operations",
+        tags: ["hr", "bamboohr", "employee", "lifecycle", "onboarding", "offboarding"],
+        required_integrations: ["bamboohr", "slack", "google-calendar", "gmail", "notion"],
+        featured: true,
+        definition: {
+            name: "BambooHR Employee Lifecycle Hub",
+            nodes: [
+                {
+                    id: "trigger-1",
+                    type: "trigger",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Employee Status Change",
+                        triggerType: "webhook",
+                        provider: "bamboohr",
+                        event: "employee.updated",
+                        description: "Triggered when employee status changes"
+                    }
+                },
+                {
+                    id: "integration-bamboo-get",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Get Employee Details",
+                        provider: "bamboohr",
+                        operation: "getEmployee",
+                        outputVariable: "employee"
+                    }
+                },
+                {
+                    id: "llm-analyze",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Analyze Change Type",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Analyze this employee status change:\n\n{{employee}}\n\nDetermine: Is this a new_hire, promotion, or termination?",
+                        outputVariable: "changeAnalysis"
+                    }
+                },
+                {
+                    id: "router-lifecycle",
+                    type: "router",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Status Type",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Route based on employee lifecycle event:\n\n{{changeAnalysis.text}}",
+                        routes: [
+                            {
+                                value: "new_hire",
+                                label: "New Hire",
+                                description: "Employee onboarding"
+                            },
+                            { value: "promotion", label: "Promotion", description: "Role change" },
+                            {
+                                value: "termination",
+                                label: "Termination",
+                                description: "Offboarding"
+                            }
+                        ],
+                        defaultRoute: "new_hire",
+                        outputVariable: "lifecycleType"
+                    }
+                },
+                {
+                    id: "llm-onboard",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Onboarding Plan",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Create an onboarding plan for:\n\n{{employee}}\n\nInclude: first week schedule, required training, team introductions, equipment setup.",
+                        outputVariable: "onboardingPlan"
+                    }
+                },
+                {
+                    id: "llm-promo",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Transition Plan",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Create a promotion transition plan for:\n\n{{employee}}\n\nInclude: knowledge transfer, new responsibilities, announcement draft.",
+                        outputVariable: "transitionPlan"
+                    }
+                },
+                {
+                    id: "llm-offboard",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Offboarding Plan",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Create an offboarding checklist for:\n\n{{employee}}\n\nInclude: knowledge transfer, access revocation, equipment return, exit interview.",
+                        outputVariable: "offboardingPlan"
+                    }
+                },
+                {
+                    id: "slack-welcome",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Welcome Message",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#general"
+                    }
+                },
+                {
+                    id: "calendar-orient",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Schedule Orientation",
+                        provider: "google-calendar",
+                        operation: "createEvent"
+                    }
+                },
+                {
+                    id: "gmail-welcome",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Welcome Email",
+                        provider: "gmail",
+                        operation: "sendEmail"
+                    }
+                },
+                {
+                    id: "slack-announce",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Announce Promotion",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#announcements"
+                    }
+                },
+                {
+                    id: "gmail-congrats",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Congratulations Email",
+                        provider: "gmail",
+                        operation: "sendEmail"
+                    }
+                },
+                {
+                    id: "slack-it",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "IT Notification",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#it-ops"
+                    }
+                },
+                {
+                    id: "calendar-exit",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Exit Interview",
+                        provider: "google-calendar",
+                        operation: "createEvent"
+                    }
+                },
+                {
+                    id: "notion-checklist",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Offboarding Checklist",
+                        provider: "notion",
+                        operation: "createPage",
+                        database: "Offboarding"
+                    }
+                },
+                {
+                    id: "notion-onboard-tasks",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Onboarding Tasks",
+                        provider: "notion",
+                        operation: "createPage",
+                        database: "Onboarding"
+                    }
+                },
+                {
+                    id: "bamboo-update-promo",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Update Promotion Record",
+                        provider: "bamboohr",
+                        operation: "updateEmployee"
+                    }
+                },
+                {
+                    id: "bamboo-update-term",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Update Term Record",
+                        provider: "bamboohr",
+                        operation: "updateEmployee"
+                    }
+                },
+                {
+                    id: "integration-bamboo-final",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Update Status",
+                        provider: "bamboohr",
+                        operation: "updateEmployee"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Lifecycle Complete",
+                        outputName: "result",
+                        value: "{{lifecycleType}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "trigger-1", target: "integration-bamboo-get" },
+                { id: "e2", source: "integration-bamboo-get", target: "llm-analyze" },
+                { id: "e3", source: "llm-analyze", target: "router-lifecycle" },
+                {
+                    id: "e4",
+                    source: "router-lifecycle",
+                    target: "llm-onboard",
+                    sourceHandle: "new_hire"
+                },
+                {
+                    id: "e5",
+                    source: "router-lifecycle",
+                    target: "llm-promo",
+                    sourceHandle: "promotion"
+                },
+                {
+                    id: "e6",
+                    source: "router-lifecycle",
+                    target: "llm-offboard",
+                    sourceHandle: "termination"
+                },
+                { id: "e7", source: "llm-onboard", target: "slack-welcome" },
+                { id: "e8", source: "llm-onboard", target: "calendar-orient" },
+                { id: "e9", source: "llm-onboard", target: "gmail-welcome" },
+                { id: "e10", source: "llm-promo", target: "slack-announce" },
+                { id: "e11", source: "llm-promo", target: "gmail-congrats" },
+                { id: "e12", source: "llm-offboard", target: "slack-it" },
+                { id: "e13", source: "llm-offboard", target: "calendar-exit" },
+                { id: "e14", source: "llm-offboard", target: "notion-checklist" },
+                { id: "e15", source: "slack-welcome", target: "notion-onboard-tasks" },
+                { id: "e16", source: "calendar-orient", target: "notion-onboard-tasks" },
+                { id: "e17", source: "gmail-welcome", target: "notion-onboard-tasks" },
+                { id: "e18", source: "slack-announce", target: "bamboo-update-promo" },
+                { id: "e19", source: "gmail-congrats", target: "bamboo-update-promo" },
+                { id: "e20", source: "slack-it", target: "bamboo-update-term" },
+                { id: "e21", source: "calendar-exit", target: "bamboo-update-term" },
+                { id: "e22", source: "notion-checklist", target: "bamboo-update-term" },
+                { id: "e23", source: "notion-onboard-tasks", target: "integration-bamboo-final" },
+                { id: "e24", source: "bamboo-update-promo", target: "integration-bamboo-final" },
+                { id: "e25", source: "bamboo-update-term", target: "integration-bamboo-final" },
+                { id: "e26", source: "integration-bamboo-final", target: "output-1" }
+            ]
+        }
+    },
+
+    // HR: Workday Payroll Exception Command Center
+    {
+        name: "Workday Payroll Exception Command Center",
+        description:
+            "Daily payroll exception monitoring with severity-based routing. Critical issues page on-call, high severity alerts go to Slack, and all exceptions are logged with automated daily reports.",
+        category: "operations",
+        tags: ["hr", "workday", "payroll", "monitoring", "alerts", "automation"],
+        required_integrations: ["workday", "slack", "gmail", "google-sheets", "pagerduty"],
+        featured: false,
+        definition: {
+            name: "Workday Payroll Exception Command Center",
+            nodes: [
+                {
+                    id: "trigger-1",
+                    type: "trigger",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Daily Check",
+                        triggerType: "schedule",
+                        schedule: "0 6 * * *",
+                        description: "Runs daily at 6 AM"
+                    }
+                },
+                {
+                    id: "integration-workday",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Get Exceptions",
+                        provider: "workday",
+                        operation: "getPayrollExceptions",
+                        outputVariable: "exceptions"
+                    }
+                },
+                {
+                    id: "router-hasExceptions",
+                    type: "router",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Has Exceptions?",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Are there any payroll exceptions?\n\n{{exceptions}}",
+                        routes: [
+                            {
+                                value: "yes",
+                                label: "Has Exceptions",
+                                description: "Exceptions found"
+                            },
+                            { value: "no", label: "All Clear", description: "No exceptions" }
+                        ],
+                        defaultRoute: "no",
+                        outputVariable: "hasExceptions"
+                    }
+                },
+                {
+                    id: "slack-allclear",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "All Clear",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#payroll"
+                    }
+                },
+                {
+                    id: "llm-categorize",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Categorize & Prioritize",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Categorize these payroll exceptions by severity:\n\n{{exceptions}}\n\nCategories: critical (payment failures), high (missing data), warning (pending approvals), info (notifications)",
+                        outputVariable: "categorized"
+                    }
+                },
+                {
+                    id: "router-severity",
+                    type: "router",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "By Severity",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "What is the highest severity in these exceptions?\n\n{{categorized.text}}",
+                        routes: [
+                            {
+                                value: "critical",
+                                label: "Critical",
+                                description: "Payment failures"
+                            },
+                            { value: "high", label: "High", description: "Missing data" },
+                            {
+                                value: "warning",
+                                label: "Warning",
+                                description: "Pending approvals"
+                            },
+                            { value: "info", label: "Info", description: "Notifications only" }
+                        ],
+                        defaultRoute: "info",
+                        outputVariable: "severity"
+                    }
+                },
+                {
+                    id: "pagerduty",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Page On-Call",
+                        provider: "pagerduty",
+                        operation: "createIncident"
+                    }
+                },
+                {
+                    id: "slack-incident",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Critical Alert",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#payroll-urgent"
+                    }
+                },
+                {
+                    id: "slack-high",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "High Priority",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#payroll"
+                    }
+                },
+                {
+                    id: "slack-warn",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Warning",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#payroll"
+                    }
+                },
+                {
+                    id: "sheets-log",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Log Exceptions",
+                        provider: "google-sheets",
+                        operation: "appendRow"
+                    }
+                },
+                {
+                    id: "gmail-director",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Email HR Director",
+                        provider: "gmail",
+                        operation: "sendEmail"
+                    }
+                },
+                {
+                    id: "llm-report",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Daily Report",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Generate a daily payroll exception report:\n\n{{categorized.text}}\n\nInclude: summary stats, trends, recommended actions.",
+                        outputVariable: "dailyReport"
+                    }
+                },
+                {
+                    id: "slack-summary",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Post Summary",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#payroll"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Check Complete",
+                        outputName: "result",
+                        value: "{{dailyReport}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "trigger-1", target: "integration-workday" },
+                { id: "e2", source: "integration-workday", target: "router-hasExceptions" },
+                {
+                    id: "e3",
+                    source: "router-hasExceptions",
+                    target: "slack-allclear",
+                    sourceHandle: "no"
+                },
+                {
+                    id: "e4",
+                    source: "router-hasExceptions",
+                    target: "llm-categorize",
+                    sourceHandle: "yes"
+                },
+                { id: "e5", source: "llm-categorize", target: "router-severity" },
+                {
+                    id: "e6",
+                    source: "router-severity",
+                    target: "pagerduty",
+                    sourceHandle: "critical"
+                },
+                {
+                    id: "e7",
+                    source: "router-severity",
+                    target: "slack-incident",
+                    sourceHandle: "critical"
+                },
+                { id: "e8", source: "router-severity", target: "slack-high", sourceHandle: "high" },
+                {
+                    id: "e9",
+                    source: "router-severity",
+                    target: "slack-warn",
+                    sourceHandle: "warning"
+                },
+                {
+                    id: "e10",
+                    source: "router-severity",
+                    target: "sheets-log",
+                    sourceHandle: "info"
+                },
+                { id: "e11", source: "pagerduty", target: "gmail-director" },
+                { id: "e12", source: "slack-incident", target: "gmail-director" },
+                { id: "e13", source: "slack-high", target: "sheets-log" },
+                { id: "e14", source: "slack-warn", target: "sheets-log" },
+                { id: "e15", source: "gmail-director", target: "sheets-log" },
+                { id: "e16", source: "sheets-log", target: "llm-report" },
+                { id: "e17", source: "llm-report", target: "slack-summary" },
+                { id: "e18", source: "slack-allclear", target: "output-1" },
+                { id: "e19", source: "slack-summary", target: "output-1" }
+            ]
+        }
+    },
+
+    // HR: Gusto PTO Request Orchestrator
+    {
+        name: "Gusto PTO Request Orchestrator",
+        description:
+            "Streamline PTO approvals with AI-powered coverage analysis. Notify managers, check team availability, route through approval workflow, and automatically update calendars upon approval.",
+        category: "operations",
+        tags: ["hr", "gusto", "pto", "time-off", "approval", "calendar"],
+        required_integrations: ["gusto", "slack", "google-calendar", "gmail", "notion"],
+        featured: false,
+        definition: {
+            name: "Gusto PTO Request Orchestrator",
+            nodes: [
+                {
+                    id: "trigger-1",
+                    type: "trigger",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "PTO Request Submitted",
+                        triggerType: "webhook",
+                        provider: "gusto",
+                        event: "time_off.requested",
+                        description: "Triggered when PTO is requested"
+                    }
+                },
+                {
+                    id: "integration-gusto-get",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Get Request Details",
+                        provider: "gusto",
+                        operation: "getTimeOffRequest",
+                        outputVariable: "ptoRequest"
+                    }
+                },
+                {
+                    id: "llm-coverage",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Analyze Coverage",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Analyze team coverage for this PTO request:\n\n{{ptoRequest}}\n\nCheck: overlapping requests, critical dates, minimum coverage requirements.",
+                        outputVariable: "coverageAnalysis"
+                    }
+                },
+                {
+                    id: "slack-manager",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Notify Manager",
+                        provider: "slack",
+                        operation: "sendMessage"
+                    }
+                },
+                {
+                    id: "notion-log",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Log Request",
+                        provider: "notion",
+                        operation: "createPage",
+                        database: "PTO Requests"
+                    }
+                },
+                {
+                    id: "humanReview-1",
+                    type: "humanReview",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Manager Approval",
+                        reviewPrompt: "Review PTO request with coverage analysis",
+                        outputVariable: "managerDecision"
+                    }
+                },
+                {
+                    id: "router-decision",
+                    type: "router",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Approved?",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Was this PTO request approved?\n\n{{managerDecision}}",
+                        routes: [
+                            {
+                                value: "approved",
+                                label: "Approved",
+                                description: "Request approved"
+                            },
+                            { value: "denied", label: "Denied", description: "Request denied" }
+                        ],
+                        defaultRoute: "approved",
+                        outputVariable: "decision"
+                    }
+                },
+                {
+                    id: "calendar-block",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Block Calendar",
+                        provider: "google-calendar",
+                        operation: "createEvent"
+                    }
+                },
+                {
+                    id: "gmail-confirm",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Confirmation Email",
+                        provider: "gmail",
+                        operation: "sendEmail"
+                    }
+                },
+                {
+                    id: "gmail-deny",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Denial Email",
+                        provider: "gmail",
+                        operation: "sendEmail"
+                    }
+                },
+                {
+                    id: "integration-gusto-approve",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Approve in Gusto",
+                        provider: "gusto",
+                        operation: "approveTimeOff"
+                    }
+                },
+                {
+                    id: "integration-gusto-update",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Update Status",
+                        provider: "gusto",
+                        operation: "updateTimeOff"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Request Processed",
+                        outputName: "result",
+                        value: "{{decision}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "trigger-1", target: "integration-gusto-get" },
+                { id: "e2", source: "integration-gusto-get", target: "llm-coverage" },
+                { id: "e3", source: "llm-coverage", target: "slack-manager" },
+                { id: "e4", source: "llm-coverage", target: "notion-log" },
+                { id: "e5", source: "slack-manager", target: "humanReview-1" },
+                { id: "e6", source: "notion-log", target: "humanReview-1" },
+                { id: "e7", source: "humanReview-1", target: "router-decision" },
+                {
+                    id: "e8",
+                    source: "router-decision",
+                    target: "calendar-block",
+                    sourceHandle: "approved"
+                },
+                {
+                    id: "e9",
+                    source: "router-decision",
+                    target: "gmail-confirm",
+                    sourceHandle: "approved"
+                },
+                {
+                    id: "e10",
+                    source: "router-decision",
+                    target: "gmail-deny",
+                    sourceHandle: "denied"
+                },
+                { id: "e11", source: "calendar-block", target: "integration-gusto-approve" },
+                { id: "e12", source: "gmail-confirm", target: "integration-gusto-approve" },
+                { id: "e13", source: "gmail-deny", target: "integration-gusto-update" },
+                { id: "e14", source: "integration-gusto-approve", target: "output-1" },
+                { id: "e15", source: "integration-gusto-update", target: "output-1" }
+            ]
+        }
+    },
+
+    // HR: Quarterly Review Cycle Coordinator
+    {
+        name: "Quarterly Review Cycle Coordinator",
+        description:
+            "Automate performance review cycles. Create department review pages, notify managers, send reminders for incomplete reviews, and generate leadership summaries when the cycle completes.",
+        category: "operations",
+        tags: ["hr", "performance", "reviews", "quarterly", "automation", "bamboohr"],
+        required_integrations: ["bamboohr", "slack", "gmail", "notion", "google-calendar"],
+        featured: false,
+        definition: {
+            name: "Quarterly Review Cycle Coordinator",
+            nodes: [
+                {
+                    id: "trigger-1",
+                    type: "trigger",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Quarterly Trigger",
+                        triggerType: "schedule",
+                        schedule: "0 9 1 1,4,7,10 *",
+                        description: "Runs quarterly on the 1st"
+                    }
+                },
+                {
+                    id: "integration-bamboo-employees",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Get Active Employees",
+                        provider: "bamboohr",
+                        operation: "listEmployees",
+                        outputVariable: "employees"
+                    }
+                },
+                {
+                    id: "llm-schedule",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Schedule",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Create a review schedule by department:\n\n{{employees}}\n\nGroup by: Engineering, Sales, Operations, Customer Success. Set deadlines 2 weeks out.",
+                        outputVariable: "reviewSchedule"
+                    }
+                },
+                {
+                    id: "notion-eng",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Engineering Reviews",
+                        provider: "notion",
+                        operation: "createPage",
+                        database: "Performance Reviews"
+                    }
+                },
+                {
+                    id: "notion-sales",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Sales Reviews",
+                        provider: "notion",
+                        operation: "createPage",
+                        database: "Performance Reviews"
+                    }
+                },
+                {
+                    id: "notion-ops",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Ops Reviews",
+                        provider: "notion",
+                        operation: "createPage",
+                        database: "Performance Reviews"
+                    }
+                },
+                {
+                    id: "notion-cs",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "CS Reviews",
+                        provider: "notion",
+                        operation: "createPage",
+                        database: "Performance Reviews"
+                    }
+                },
+                {
+                    id: "gmail-eng",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Email Eng Managers",
+                        provider: "gmail",
+                        operation: "sendEmail"
+                    }
+                },
+                {
+                    id: "gmail-sales",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Email Sales Managers",
+                        provider: "gmail",
+                        operation: "sendEmail"
+                    }
+                },
+                {
+                    id: "gmail-ops",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Email Ops Managers",
+                        provider: "gmail",
+                        operation: "sendEmail"
+                    }
+                },
+                {
+                    id: "gmail-cs",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Email CS Managers",
+                        provider: "gmail",
+                        operation: "sendEmail"
+                    }
+                },
+                {
+                    id: "delay-1",
+                    type: "delay",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Wait 2 Weeks",
+                        delayType: "fixed",
+                        duration: 1209600000,
+                        description: "Wait for review completion"
+                    }
+                },
+                {
+                    id: "integration-bamboo-check",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Check Completion",
+                        provider: "bamboohr",
+                        operation: "getPerformanceReviews",
+                        outputVariable: "reviewStatus"
+                    }
+                },
+                {
+                    id: "router-complete",
+                    type: "router",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "All Complete?",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Are all reviews complete?\n\n{{reviewStatus}}",
+                        routes: [
+                            { value: "yes", label: "Complete", description: "All reviews done" },
+                            {
+                                value: "no",
+                                label: "Incomplete",
+                                description: "Some reviews pending"
+                            }
+                        ],
+                        defaultRoute: "no",
+                        outputVariable: "isComplete"
+                    }
+                },
+                {
+                    id: "slack-reminder",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Send Reminders",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#managers"
+                    }
+                },
+                {
+                    id: "llm-report",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Summary",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Generate a quarterly review cycle summary:\n\n{{reviewStatus}}\n\nInclude: completion rates by department, key themes, promotion recommendations.",
+                        outputVariable: "cycleSummary"
+                    }
+                },
+                {
+                    id: "slack-leadership",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Leadership Summary",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#leadership"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Cycle Complete",
+                        outputName: "result",
+                        value: "{{cycleSummary}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "trigger-1", target: "integration-bamboo-employees" },
+                { id: "e2", source: "integration-bamboo-employees", target: "llm-schedule" },
+                { id: "e3", source: "llm-schedule", target: "notion-eng" },
+                { id: "e4", source: "llm-schedule", target: "notion-sales" },
+                { id: "e5", source: "llm-schedule", target: "notion-ops" },
+                { id: "e6", source: "llm-schedule", target: "notion-cs" },
+                { id: "e7", source: "notion-eng", target: "gmail-eng" },
+                { id: "e8", source: "notion-sales", target: "gmail-sales" },
+                { id: "e9", source: "notion-ops", target: "gmail-ops" },
+                { id: "e10", source: "notion-cs", target: "gmail-cs" },
+                { id: "e11", source: "gmail-eng", target: "delay-1" },
+                { id: "e12", source: "gmail-sales", target: "delay-1" },
+                { id: "e13", source: "gmail-ops", target: "delay-1" },
+                { id: "e14", source: "gmail-cs", target: "delay-1" },
+                { id: "e15", source: "delay-1", target: "integration-bamboo-check" },
+                { id: "e16", source: "integration-bamboo-check", target: "router-complete" },
+                {
+                    id: "e17",
+                    source: "router-complete",
+                    target: "slack-reminder",
+                    sourceHandle: "no"
+                },
+                { id: "e18", source: "router-complete", target: "llm-report", sourceHandle: "yes" },
+                { id: "e19", source: "slack-reminder", target: "output-1" },
+                { id: "e20", source: "llm-report", target: "slack-leadership" },
+                { id: "e21", source: "slack-leadership", target: "output-1" }
+            ]
+        }
+    },
+
+    // ========================================================================
+    // FORMS & SURVEYS (4 templates)
+    // ========================================================================
+
+    // Forms: Typeform Lead Intelligence Engine (Featured)
+    {
+        name: "Typeform Lead Intelligence Engine",
+        description:
+            "Transform Typeform submissions into qualified leads. Enrich data with Apollo, score leads with AI, route hot leads to sales immediately, and nurture others with automated sequences.",
+        category: "sales",
+        tags: ["typeform", "leads", "scoring", "apollo", "hubspot", "automation"],
+        required_integrations: ["typeform", "hubspot", "slack", "gmail", "apollo"],
+        featured: true,
+        definition: {
+            name: "Typeform Lead Intelligence Engine",
+            nodes: [
+                {
+                    id: "trigger-1",
+                    type: "trigger",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Typeform Submission",
+                        triggerType: "webhook",
+                        provider: "typeform",
+                        event: "form.submitted",
+                        description: "Triggered when form is submitted"
+                    }
+                },
+                {
+                    id: "integration-typeform",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Get Responses",
+                        provider: "typeform",
+                        operation: "getResponse",
+                        outputVariable: "formData"
+                    }
+                },
+                {
+                    id: "integration-apollo",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Enrich Lead",
+                        provider: "apollo",
+                        operation: "enrichPerson",
+                        outputVariable: "enrichedData"
+                    }
+                },
+                {
+                    id: "llm-score",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Score Lead",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Score this lead 0-100 and analyze intent:\n\nForm Data: {{formData}}\nEnriched Data: {{enrichedData}}\n\nConsider: company size, role seniority, engagement signals, budget indicators.",
+                        outputVariable: "leadScore"
+                    }
+                },
+                {
+                    id: "integration-hubspot-create",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Create Contact",
+                        provider: "hubspot",
+                        operation: "createContact"
+                    }
+                },
+                {
+                    id: "router-score",
+                    type: "router",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Lead Score",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Route this lead based on score:\n\n{{leadScore.text}}\n\nCategories: hot (80+), warm (50-79), cold (20-49), nurture (<20)",
+                        routes: [
+                            { value: "hot", label: "Hot (80+)", description: "High intent leads" },
+                            {
+                                value: "warm",
+                                label: "Warm (50-79)",
+                                description: "Medium interest"
+                            },
+                            { value: "cold", label: "Cold (20-49)", description: "Low interest" },
+                            {
+                                value: "nurture",
+                                label: "Nurture (<20)",
+                                description: "Long-term nurture"
+                            }
+                        ],
+                        defaultRoute: "warm",
+                        outputVariable: "scoreCategory"
+                    }
+                },
+                {
+                    id: "slack-hot",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Alert Sales",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#sales-hot"
+                    }
+                },
+                {
+                    id: "gmail-vip",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "VIP Email",
+                        provider: "gmail",
+                        operation: "sendEmail"
+                    }
+                },
+                {
+                    id: "hubspot-seq",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Nurture Sequence",
+                        provider: "hubspot",
+                        operation: "enrollInSequence"
+                    }
+                },
+                {
+                    id: "hubspot-news",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Add to Newsletter",
+                        provider: "hubspot",
+                        operation: "addToList"
+                    }
+                },
+                {
+                    id: "hubspot-drip",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Long Nurture",
+                        provider: "hubspot",
+                        operation: "enrollInSequence"
+                    }
+                },
+                {
+                    id: "router-enterprise",
+                    type: "router",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Company Size",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Is this an enterprise company (500+ employees)?\n\n{{enrichedData}}",
+                        routes: [
+                            {
+                                value: "enterprise",
+                                label: "Enterprise",
+                                description: "500+ employees"
+                            },
+                            { value: "smb", label: "SMB", description: "Under 500 employees" }
+                        ],
+                        defaultRoute: "smb",
+                        outputVariable: "companySize"
+                    }
+                },
+                {
+                    id: "slack-ae",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Notify AE Team",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#ae-team"
+                    }
+                },
+                {
+                    id: "slack-sdr",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Notify SDR Team",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#sdr-team"
+                    }
+                },
+                {
+                    id: "llm-personalize",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Personalize Thank You",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Create a personalized thank you message for:\n\n{{formData}}\n{{enrichedData}}\n\nMake it warm, relevant to their industry, and include next steps.",
+                        outputVariable: "thankYouMessage"
+                    }
+                },
+                {
+                    id: "gmail-thankyou",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Send Thank You",
+                        provider: "gmail",
+                        operation: "sendEmail"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Lead Processed",
+                        outputName: "result",
+                        value: "{{scoreCategory}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "trigger-1", target: "integration-typeform" },
+                { id: "e2", source: "integration-typeform", target: "integration-apollo" },
+                { id: "e3", source: "integration-apollo", target: "llm-score" },
+                { id: "e4", source: "llm-score", target: "integration-hubspot-create" },
+                { id: "e5", source: "integration-hubspot-create", target: "router-score" },
+                { id: "e6", source: "router-score", target: "slack-hot", sourceHandle: "hot" },
+                { id: "e7", source: "router-score", target: "gmail-vip", sourceHandle: "hot" },
+                { id: "e8", source: "router-score", target: "hubspot-seq", sourceHandle: "warm" },
+                { id: "e9", source: "router-score", target: "hubspot-news", sourceHandle: "cold" },
+                {
+                    id: "e10",
+                    source: "router-score",
+                    target: "hubspot-drip",
+                    sourceHandle: "nurture"
+                },
+                { id: "e11", source: "slack-hot", target: "router-enterprise" },
+                { id: "e12", source: "gmail-vip", target: "router-enterprise" },
+                {
+                    id: "e13",
+                    source: "router-enterprise",
+                    target: "slack-ae",
+                    sourceHandle: "enterprise"
+                },
+                {
+                    id: "e14",
+                    source: "router-enterprise",
+                    target: "slack-sdr",
+                    sourceHandle: "smb"
+                },
+                { id: "e15", source: "slack-ae", target: "llm-personalize" },
+                { id: "e16", source: "slack-sdr", target: "llm-personalize" },
+                { id: "e17", source: "hubspot-seq", target: "llm-personalize" },
+                { id: "e18", source: "hubspot-news", target: "llm-personalize" },
+                { id: "e19", source: "hubspot-drip", target: "llm-personalize" },
+                { id: "e20", source: "llm-personalize", target: "gmail-thankyou" },
+                { id: "e21", source: "gmail-thankyou", target: "output-1" }
+            ]
+        }
+    },
+
+    // Forms: SurveyMonkey NPS Command Center
+    {
+        name: "SurveyMonkey NPS Command Center",
+        description:
+            "Process NPS survey responses with sentiment analysis. Route promoters to referral programs, engage passives with improvement ideas, and trigger recovery workflows for detractors.",
+        category: "support",
+        tags: ["surveymonkey", "nps", "feedback", "sentiment", "customer-success"],
+        required_integrations: [
+            "surveymonkey",
+            "slack",
+            "google-sheets",
+            "gmail",
+            "hubspot",
+            "linear"
+        ],
+        featured: false,
+        definition: {
+            name: "SurveyMonkey NPS Command Center",
+            nodes: [
+                {
+                    id: "trigger-1",
+                    type: "trigger",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Survey Response",
+                        triggerType: "webhook",
+                        provider: "surveymonkey",
+                        event: "response.completed",
+                        description: "Triggered when survey is completed"
+                    }
+                },
+                {
+                    id: "integration-survey",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Get Response",
+                        provider: "surveymonkey",
+                        operation: "getResponse",
+                        outputVariable: "surveyResponse"
+                    }
+                },
+                {
+                    id: "llm-analyze",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Analyze Sentiment",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Analyze this NPS survey response:\n\n{{surveyResponse}}\n\nExtract: NPS score, sentiment, key themes, specific feedback, improvement suggestions.",
+                        outputVariable: "sentimentAnalysis"
+                    }
+                },
+                {
+                    id: "router-nps",
+                    type: "router",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "NPS Category",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Categorize this NPS response:\n\n{{sentimentAnalysis.text}}\n\nCategories: promoter (9-10), passive (7-8), detractor (0-6)",
+                        routes: [
+                            {
+                                value: "promoter",
+                                label: "Promoter (9-10)",
+                                description: "Highly satisfied"
+                            },
+                            {
+                                value: "passive",
+                                label: "Passive (7-8)",
+                                description: "Satisfied but not enthusiastic"
+                            },
+                            {
+                                value: "detractor",
+                                label: "Detractor (0-6)",
+                                description: "Unsatisfied"
+                            }
+                        ],
+                        defaultRoute: "passive",
+                        outputVariable: "npsCategory"
+                    }
+                },
+                {
+                    id: "gmail-ref",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Referral Request",
+                        provider: "gmail",
+                        operation: "sendEmail"
+                    }
+                },
+                {
+                    id: "hubspot-tag",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Tag Promoter",
+                        provider: "hubspot",
+                        operation: "updateContact"
+                    }
+                },
+                {
+                    id: "llm-improve",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Extract Ideas",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Extract actionable improvement ideas from this passive feedback:\n\n{{surveyResponse}}\n\nFormat as feature requests or improvement suggestions.",
+                        outputVariable: "improvementIdeas"
+                    }
+                },
+                {
+                    id: "slack-prod",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Product Ideas",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#product"
+                    }
+                },
+                {
+                    id: "linear-feature",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Create Feature",
+                        provider: "linear",
+                        operation: "createIssue"
+                    }
+                },
+                {
+                    id: "slack-cs",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "CS Alert",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#cs-urgent"
+                    }
+                },
+                {
+                    id: "llm-recovery",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Recovery Strategy",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Create a recovery strategy for this detractor:\n\n{{surveyResponse}}\n{{sentimentAnalysis.text}}\n\nInclude: immediate actions, talking points, compensation options if appropriate.",
+                        outputVariable: "recoveryStrategy"
+                    }
+                },
+                {
+                    id: "gmail-recover",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Recovery Email",
+                        provider: "gmail",
+                        operation: "sendEmail"
+                    }
+                },
+                {
+                    id: "hubspot-task",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "CS Follow-up",
+                        provider: "hubspot",
+                        operation: "createTask"
+                    }
+                },
+                {
+                    id: "sheets-log",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Log Response",
+                        provider: "google-sheets",
+                        operation: "appendRow"
+                    }
+                },
+                {
+                    id: "transform-weekly",
+                    type: "transform",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Aggregate Weekly",
+                        transformType: "template",
+                        template:
+                            '{"npsScore": "{{npsCategory}}", "sentiment": "{{sentimentAnalysis}}"}',
+                        outputVariable: "weeklyData"
+                    }
+                },
+                {
+                    id: "llm-report",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Weekly Report",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Generate a weekly NPS insights report:\n\n{{weeklyData}}\n\nInclude: NPS trend, common themes, top concerns, recommended actions.",
+                        outputVariable: "weeklyReport"
+                    }
+                },
+                {
+                    id: "slack-leadership",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Leadership Report",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#leadership"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Response Processed",
+                        outputName: "result",
+                        value: "{{npsCategory}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "trigger-1", target: "integration-survey" },
+                { id: "e2", source: "integration-survey", target: "llm-analyze" },
+                { id: "e3", source: "llm-analyze", target: "router-nps" },
+                { id: "e4", source: "router-nps", target: "gmail-ref", sourceHandle: "promoter" },
+                { id: "e5", source: "router-nps", target: "hubspot-tag", sourceHandle: "promoter" },
+                { id: "e6", source: "router-nps", target: "llm-improve", sourceHandle: "passive" },
+                { id: "e7", source: "router-nps", target: "slack-prod", sourceHandle: "passive" },
+                { id: "e8", source: "router-nps", target: "slack-cs", sourceHandle: "detractor" },
+                {
+                    id: "e9",
+                    source: "router-nps",
+                    target: "llm-recovery",
+                    sourceHandle: "detractor"
+                },
+                { id: "e10", source: "llm-improve", target: "linear-feature" },
+                { id: "e11", source: "llm-recovery", target: "gmail-recover" },
+                { id: "e12", source: "llm-recovery", target: "hubspot-task" },
+                { id: "e13", source: "gmail-ref", target: "sheets-log" },
+                { id: "e14", source: "hubspot-tag", target: "sheets-log" },
+                { id: "e15", source: "slack-prod", target: "sheets-log" },
+                { id: "e16", source: "linear-feature", target: "sheets-log" },
+                { id: "e17", source: "slack-cs", target: "sheets-log" },
+                { id: "e18", source: "gmail-recover", target: "sheets-log" },
+                { id: "e19", source: "hubspot-task", target: "sheets-log" },
+                { id: "e20", source: "sheets-log", target: "transform-weekly" },
+                { id: "e21", source: "transform-weekly", target: "llm-report" },
+                { id: "e22", source: "llm-report", target: "slack-leadership" },
+                { id: "e23", source: "slack-leadership", target: "output-1" }
+            ]
+        }
+    },
+
+    // Forms: Google Forms Event Registration Hub
+    {
+        name: "Google Forms Event Registration Hub",
+        description:
+            "Automate event registration with capacity management. Send personalized confirmations, add attendees to calendar and Zoom, manage waitlists, and alert organizers when capacity is near.",
+        category: "operations",
+        tags: ["google-forms", "events", "registration", "calendar", "zoom", "automation"],
+        required_integrations: [
+            "google-forms",
+            "google-calendar",
+            "gmail",
+            "slack",
+            "google-sheets",
+            "zoom"
+        ],
+        featured: false,
+        definition: {
+            name: "Google Forms Event Registration Hub",
+            nodes: [
+                {
+                    id: "trigger-1",
+                    type: "trigger",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Form Submission",
+                        triggerType: "webhook",
+                        provider: "google-forms",
+                        event: "form.submitted",
+                        description: "Triggered when registration form is submitted"
+                    }
+                },
+                {
+                    id: "integration-forms",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Get Registration",
+                        provider: "google-forms",
+                        operation: "getResponse",
+                        outputVariable: "registration"
+                    }
+                },
+                {
+                    id: "sheets-attendees",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Add to List",
+                        provider: "google-sheets",
+                        operation: "appendRow"
+                    }
+                },
+                {
+                    id: "llm-personalize",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Personalize Confirmation",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Create a personalized event confirmation for:\n\n{{registration}}\n\nInclude: warm welcome, event details, what to bring, how to prepare.",
+                        outputVariable: "confirmationMessage"
+                    }
+                },
+                {
+                    id: "calendar-invite",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Send Invite",
+                        provider: "google-calendar",
+                        operation: "createEvent"
+                    }
+                },
+                {
+                    id: "gmail-confirm",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Confirmation Email",
+                        provider: "gmail",
+                        operation: "sendEmail"
+                    }
+                },
+                {
+                    id: "zoom-add",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Add to Zoom",
+                        provider: "zoom",
+                        operation: "addRegistrant"
+                    }
+                },
+                {
+                    id: "transform-capacity",
+                    type: "transform",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Check Capacity",
+                        transformType: "template",
+                        template:
+                            '{"currentCount": {{sheets.rowCount}}, "maxCapacity": 100, "percentFull": {{sheets.rowCount / 100 * 100}}}',
+                        outputVariable: "capacityStatus"
+                    }
+                },
+                {
+                    id: "router-capacity",
+                    type: "router",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Capacity Status",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Determine capacity status:\n\n{{capacityStatus}}\n\nCategories: available (<80%), near_full (80-99%), waitlist (100%)",
+                        routes: [
+                            {
+                                value: "available",
+                                label: "Available",
+                                description: "Spots available"
+                            },
+                            {
+                                value: "near_full",
+                                label: "Near Full",
+                                description: "80-99% capacity"
+                            },
+                            { value: "waitlist", label: "Waitlist", description: "At capacity" }
+                        ],
+                        defaultRoute: "available",
+                        outputVariable: "capacityCategory"
+                    }
+                },
+                {
+                    id: "slack-organizer",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Alert Organizer",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#events"
+                    }
+                },
+                {
+                    id: "sheets-status",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Update Status",
+                        provider: "google-sheets",
+                        operation: "updateCell"
+                    }
+                },
+                {
+                    id: "gmail-waitlist",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Waitlist Email",
+                        provider: "gmail",
+                        operation: "sendEmail"
+                    }
+                },
+                {
+                    id: "sheets-waitlist",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Add to Waitlist",
+                        provider: "google-sheets",
+                        operation: "appendRow"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Registration Complete",
+                        outputName: "result",
+                        value: "{{capacityCategory}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "trigger-1", target: "integration-forms" },
+                { id: "e2", source: "integration-forms", target: "sheets-attendees" },
+                { id: "e3", source: "sheets-attendees", target: "llm-personalize" },
+                { id: "e4", source: "llm-personalize", target: "calendar-invite" },
+                { id: "e5", source: "llm-personalize", target: "gmail-confirm" },
+                { id: "e6", source: "llm-personalize", target: "zoom-add" },
+                { id: "e7", source: "calendar-invite", target: "transform-capacity" },
+                { id: "e8", source: "gmail-confirm", target: "transform-capacity" },
+                { id: "e9", source: "zoom-add", target: "transform-capacity" },
+                { id: "e10", source: "transform-capacity", target: "router-capacity" },
+                {
+                    id: "e11",
+                    source: "router-capacity",
+                    target: "output-1",
+                    sourceHandle: "available"
+                },
+                {
+                    id: "e12",
+                    source: "router-capacity",
+                    target: "slack-organizer",
+                    sourceHandle: "near_full"
+                },
+                {
+                    id: "e13",
+                    source: "router-capacity",
+                    target: "gmail-waitlist",
+                    sourceHandle: "waitlist"
+                },
+                { id: "e14", source: "slack-organizer", target: "sheets-status" },
+                { id: "e15", source: "gmail-waitlist", target: "sheets-waitlist" },
+                { id: "e16", source: "sheets-status", target: "output-1" },
+                { id: "e17", source: "sheets-waitlist", target: "output-1" }
+            ]
+        }
+    },
+
+    // Forms: Multi-Channel Feedback Aggregator
+    {
+        name: "Multi-Channel Feedback Aggregator",
+        description:
+            "Aggregate feedback from Typeform, SurveyMonkey, and Google Forms into a unified database. AI categorizes and extracts themes, routes critical feedback to support, and generates daily insights.",
+        category: "support",
+        tags: ["feedback", "aggregation", "typeform", "surveymonkey", "google-forms", "insights"],
+        required_integrations: [
+            "typeform",
+            "surveymonkey",
+            "google-forms",
+            "notion",
+            "slack",
+            "linear"
+        ],
+        featured: false,
+        definition: {
+            name: "Multi-Channel Feedback Aggregator",
+            nodes: [
+                {
+                    id: "trigger-1",
+                    type: "trigger",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Daily Aggregation",
+                        triggerType: "schedule",
+                        schedule: "0 8 * * *",
+                        description: "Runs daily at 8 AM"
+                    }
+                },
+                {
+                    id: "integration-typeform",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Fetch Typeform",
+                        provider: "typeform",
+                        operation: "listResponses",
+                        outputVariable: "typeformResponses"
+                    }
+                },
+                {
+                    id: "integration-survey",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Fetch SurveyMonkey",
+                        provider: "surveymonkey",
+                        operation: "listResponses",
+                        outputVariable: "surveyResponses"
+                    }
+                },
+                {
+                    id: "integration-forms",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Fetch Google Forms",
+                        provider: "google-forms",
+                        operation: "listResponses",
+                        outputVariable: "formsResponses"
+                    }
+                },
+                {
+                    id: "transform-normalize",
+                    type: "transform",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Unify Format",
+                        transformType: "template",
+                        template:
+                            '{"allFeedback": [{{typeformResponses}}, {{surveyResponses}}, {{formsResponses}}]}',
+                        outputVariable: "unifiedFeedback"
+                    }
+                },
+                {
+                    id: "llm-categorize",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Categorize & Theme",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Categorize and extract themes from this feedback:\n\n{{unifiedFeedback}}\n\nFor each item: category (critical, feature, normal), sentiment, key theme, actionable insight.",
+                        outputVariable: "categorizedFeedback"
+                    }
+                },
+                {
+                    id: "notion-database",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Update Database",
+                        provider: "notion",
+                        operation: "createPage",
+                        database: "Feedback"
+                    }
+                },
+                {
+                    id: "router-critical",
+                    type: "router",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Has Critical?",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Does this feedback contain critical issues, feature requests, or just normal feedback?\n\n{{categorizedFeedback.text}}",
+                        routes: [
+                            { value: "critical", label: "Critical", description: "Urgent issues" },
+                            { value: "feature", label: "Feature", description: "Feature requests" },
+                            { value: "normal", label: "Normal", description: "Regular feedback" }
+                        ],
+                        defaultRoute: "normal",
+                        outputVariable: "feedbackType"
+                    }
+                },
+                {
+                    id: "slack-urgent",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Urgent Alert",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#support-urgent"
+                    }
+                },
+                {
+                    id: "llm-escalate",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Escalation Brief",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Create an escalation brief for critical feedback:\n\n{{categorizedFeedback.text}}\n\nInclude: issue summary, customer impact, recommended resolution.",
+                        outputVariable: "escalationBrief"
+                    }
+                },
+                {
+                    id: "linear-feature",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Create Feature",
+                        provider: "linear",
+                        operation: "createIssue"
+                    }
+                },
+                {
+                    id: "slack-product",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Product Ideas",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#product-ideas"
+                    }
+                },
+                {
+                    id: "notion-archive",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Archive Normal",
+                        provider: "notion",
+                        operation: "updatePage"
+                    }
+                },
+                {
+                    id: "llm-insights",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Daily Insights",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Generate daily feedback insights:\n\n{{categorizedFeedback.text}}\n\nInclude: volume stats, trending themes, sentiment distribution, top requests.",
+                        outputVariable: "dailyInsights"
+                    }
+                },
+                {
+                    id: "slack-insights",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Post Insights",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#product-insights"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Aggregation Complete",
+                        outputName: "result",
+                        value: "{{dailyInsights}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "trigger-1", target: "integration-typeform" },
+                { id: "e2", source: "trigger-1", target: "integration-survey" },
+                { id: "e3", source: "trigger-1", target: "integration-forms" },
+                { id: "e4", source: "integration-typeform", target: "transform-normalize" },
+                { id: "e5", source: "integration-survey", target: "transform-normalize" },
+                { id: "e6", source: "integration-forms", target: "transform-normalize" },
+                { id: "e7", source: "transform-normalize", target: "llm-categorize" },
+                { id: "e8", source: "llm-categorize", target: "notion-database" },
+                { id: "e9", source: "notion-database", target: "router-critical" },
+                {
+                    id: "e10",
+                    source: "router-critical",
+                    target: "slack-urgent",
+                    sourceHandle: "critical"
+                },
+                {
+                    id: "e11",
+                    source: "router-critical",
+                    target: "linear-feature",
+                    sourceHandle: "feature"
+                },
+                {
+                    id: "e12",
+                    source: "router-critical",
+                    target: "notion-archive",
+                    sourceHandle: "normal"
+                },
+                { id: "e13", source: "slack-urgent", target: "llm-escalate" },
+                { id: "e14", source: "linear-feature", target: "slack-product" },
+                { id: "e15", source: "llm-escalate", target: "llm-insights" },
+                { id: "e16", source: "slack-product", target: "llm-insights" },
+                { id: "e17", source: "notion-archive", target: "llm-insights" },
+                { id: "e18", source: "llm-insights", target: "slack-insights" },
+                { id: "e19", source: "slack-insights", target: "output-1" }
+            ]
+        }
+    },
+
+    // ========================================================================
+    // ALTERNATIVE DEVOPS (4 templates)
+    // ========================================================================
+
+    // DevOps: GitLab CI/CD Command Center (Featured)
+    {
+        name: "GitLab CI/CD Command Center",
+        description:
+            "Monitor GitLab pipelines with intelligent failure diagnosis. AI analyzes logs, suggests fixes, routes by severity (critical to PagerDuty, others to Slack), and tracks deployment metrics in Datadog.",
+        category: "engineering",
+        tags: ["gitlab", "ci-cd", "devops", "monitoring", "automation", "pagerduty"],
+        required_integrations: ["gitlab", "slack", "pagerduty", "notion", "datadog"],
+        featured: true,
+        definition: {
+            name: "GitLab CI/CD Command Center",
+            nodes: [
+                {
+                    id: "trigger-1",
+                    type: "trigger",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Pipeline Event",
+                        triggerType: "webhook",
+                        provider: "gitlab",
+                        event: "pipeline",
+                        description: "Triggered on pipeline status change"
+                    }
+                },
+                {
+                    id: "integration-gitlab",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Get Pipeline",
+                        provider: "gitlab",
+                        operation: "getPipeline",
+                        outputVariable: "pipelineDetails"
+                    }
+                },
+                {
+                    id: "router-status",
+                    type: "router",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Pipeline Status",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "What is the pipeline status?\n\n{{pipelineDetails}}",
+                        routes: [
+                            { value: "failed", label: "Failed", description: "Pipeline failed" },
+                            {
+                                value: "success",
+                                label: "Success",
+                                description: "Pipeline succeeded"
+                            }
+                        ],
+                        defaultRoute: "success",
+                        outputVariable: "pipelineStatus"
+                    }
+                },
+                {
+                    id: "llm-diagnose",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Diagnose Failure",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Analyze this pipeline failure:\n\n{{pipelineDetails}}\n\nIdentify: root cause, affected jobs, error messages, and recommended fix.",
+                        outputVariable: "diagnosis"
+                    }
+                },
+                {
+                    id: "router-severity",
+                    type: "router",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Failure Severity",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Rate the severity of this failure:\n\n{{diagnosis.text}}\n\nCategories: critical (production down), high (blocking release), low (non-blocking)",
+                        routes: [
+                            {
+                                value: "critical",
+                                label: "Critical",
+                                description: "Production impact"
+                            },
+                            { value: "high", label: "High", description: "Release blocking" },
+                            { value: "low", label: "Low", description: "Non-blocking" }
+                        ],
+                        defaultRoute: "low",
+                        outputVariable: "severity"
+                    }
+                },
+                {
+                    id: "pagerduty",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Page On-Call",
+                        provider: "pagerduty",
+                        operation: "createIncident"
+                    }
+                },
+                {
+                    id: "slack-incident",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Critical Alert",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#incidents"
+                    }
+                },
+                {
+                    id: "slack-eng",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "High Alert",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#engineering"
+                    }
+                },
+                {
+                    id: "slack-team",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Team Notice",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#team"
+                    }
+                },
+                {
+                    id: "notion-incident",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Create Incident",
+                        provider: "notion",
+                        operation: "createPage",
+                        database: "Incidents"
+                    }
+                },
+                {
+                    id: "llm-suggest",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Suggest Fix",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Based on this diagnosis:\n\n{{diagnosis.text}}\n\nSuggest specific code or config changes to fix the issue.",
+                        outputVariable: "suggestedFix"
+                    }
+                },
+                {
+                    id: "gitlab-comment",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Post Fix",
+                        provider: "gitlab",
+                        operation: "createMergeRequestNote"
+                    }
+                },
+                {
+                    id: "slack-oncall",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Notify On-Call",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#oncall"
+                    }
+                },
+                {
+                    id: "datadog-event",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Record Incident",
+                        provider: "datadog",
+                        operation: "createEvent"
+                    }
+                },
+                {
+                    id: "router-env",
+                    type: "router",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Environment",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "What environment was this deployment to?\n\n{{pipelineDetails}}",
+                        routes: [
+                            {
+                                value: "production",
+                                label: "Production",
+                                description: "Prod deploy"
+                            },
+                            { value: "staging", label: "Staging", description: "Staging/preview" }
+                        ],
+                        defaultRoute: "staging",
+                        outputVariable: "environment"
+                    }
+                },
+                {
+                    id: "slack-rel",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Release Announce",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#releases"
+                    }
+                },
+                {
+                    id: "notion-log",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Changelog",
+                        provider: "notion",
+                        operation: "createPage",
+                        database: "Changelog"
+                    }
+                },
+                {
+                    id: "integration-datadog",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Deploy Metric",
+                        provider: "datadog",
+                        operation: "submitMetric"
+                    }
+                },
+                {
+                    id: "github-comment",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Preview URL",
+                        provider: "gitlab",
+                        operation: "createMergeRequestNote"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Pipeline Processed",
+                        outputName: "result",
+                        value: "{{pipelineStatus}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "trigger-1", target: "integration-gitlab" },
+                { id: "e2", source: "integration-gitlab", target: "router-status" },
+                {
+                    id: "e3",
+                    source: "router-status",
+                    target: "llm-diagnose",
+                    sourceHandle: "failed"
+                },
+                {
+                    id: "e4",
+                    source: "router-status",
+                    target: "router-env",
+                    sourceHandle: "success"
+                },
+                { id: "e5", source: "llm-diagnose", target: "router-severity" },
+                {
+                    id: "e6",
+                    source: "router-severity",
+                    target: "pagerduty",
+                    sourceHandle: "critical"
+                },
+                {
+                    id: "e7",
+                    source: "router-severity",
+                    target: "slack-incident",
+                    sourceHandle: "critical"
+                },
+                { id: "e8", source: "router-severity", target: "slack-eng", sourceHandle: "high" },
+                { id: "e9", source: "router-severity", target: "slack-team", sourceHandle: "low" },
+                { id: "e10", source: "pagerduty", target: "notion-incident" },
+                { id: "e11", source: "slack-incident", target: "notion-incident" },
+                { id: "e12", source: "notion-incident", target: "llm-suggest" },
+                { id: "e13", source: "slack-eng", target: "llm-suggest" },
+                { id: "e14", source: "slack-team", target: "llm-suggest" },
+                { id: "e15", source: "llm-suggest", target: "gitlab-comment" },
+                { id: "e16", source: "gitlab-comment", target: "slack-oncall" },
+                { id: "e17", source: "gitlab-comment", target: "datadog-event" },
+                {
+                    id: "e18",
+                    source: "router-env",
+                    target: "slack-rel",
+                    sourceHandle: "production"
+                },
+                {
+                    id: "e19",
+                    source: "router-env",
+                    target: "notion-log",
+                    sourceHandle: "production"
+                },
+                {
+                    id: "e20",
+                    source: "router-env",
+                    target: "github-comment",
+                    sourceHandle: "staging"
+                },
+                { id: "e21", source: "slack-rel", target: "integration-datadog" },
+                { id: "e22", source: "notion-log", target: "integration-datadog" },
+                { id: "e23", source: "slack-oncall", target: "output-1" },
+                { id: "e24", source: "datadog-event", target: "output-1" },
+                { id: "e25", source: "integration-datadog", target: "output-1" },
+                { id: "e26", source: "github-comment", target: "output-1" }
+            ]
+        }
+    },
+
+    // DevOps: CircleCI Build Intelligence Hub
+    {
+        name: "CircleCI Build Intelligence Hub",
+        description:
+            "Diagnose CircleCI build failures with AI-powered analysis. Route by failure type (tests, dependencies, infrastructure, timeouts), suggest fixes, and create Linear issues for recurring problems.",
+        category: "engineering",
+        tags: ["circleci", "ci-cd", "builds", "devops", "automation", "linear"],
+        required_integrations: ["circleci", "github", "slack", "linear", "notion"],
+        featured: false,
+        definition: {
+            name: "CircleCI Build Intelligence Hub",
+            nodes: [
+                {
+                    id: "trigger-1",
+                    type: "trigger",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Build Failed",
+                        triggerType: "webhook",
+                        provider: "circleci",
+                        event: "job.failed",
+                        description: "Triggered when build fails"
+                    }
+                },
+                {
+                    id: "integration-circleci",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Get Build Logs",
+                        provider: "circleci",
+                        operation: "getJob",
+                        outputVariable: "buildDetails"
+                    }
+                },
+                {
+                    id: "llm-diagnose",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Diagnose Failure",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Analyze this build failure:\n\n{{buildDetails}}\n\nIdentify: failure type, root cause, affected tests/modules, and recommended fix.",
+                        outputVariable: "diagnosis"
+                    }
+                },
+                {
+                    id: "router-type",
+                    type: "router",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Failure Type",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "What type of failure is this?\n\n{{diagnosis.text}}\n\nCategories: test_failure, dependency, infra, timeout",
+                        routes: [
+                            {
+                                value: "test_failure",
+                                label: "Test Failure",
+                                description: "Tests failed"
+                            },
+                            {
+                                value: "dependency",
+                                label: "Dependency",
+                                description: "Package issues"
+                            },
+                            {
+                                value: "infra",
+                                label: "Infrastructure",
+                                description: "CI system issue"
+                            },
+                            { value: "timeout", label: "Timeout", description: "Build timeout" }
+                        ],
+                        defaultRoute: "test_failure",
+                        outputVariable: "failureType"
+                    }
+                },
+                {
+                    id: "github-comment",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Comment Tests",
+                        provider: "github",
+                        operation: "createComment"
+                    }
+                },
+                {
+                    id: "slack-author",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Notify Author",
+                        provider: "slack",
+                        operation: "sendMessage"
+                    }
+                },
+                {
+                    id: "linear-task",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Create Task",
+                        provider: "linear",
+                        operation: "createIssue"
+                    }
+                },
+                {
+                    id: "slack-platform",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Platform Alert",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#platform"
+                    }
+                },
+                {
+                    id: "slack-devops",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "DevOps Alert",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#devops"
+                    }
+                },
+                {
+                    id: "slack-platform-timeout",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Timeout Alert",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#platform"
+                    }
+                },
+                {
+                    id: "llm-scale",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Suggest Scaling",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "This build timed out:\n\n{{buildDetails}}\n\nSuggest: resource scaling, parallelization, or optimization strategies.",
+                        outputVariable: "scalingSuggestion"
+                    }
+                },
+                {
+                    id: "llm-fix",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Generate Fix",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Based on this diagnosis:\n\n{{diagnosis.text}}\n\nGenerate a specific code fix or configuration change.",
+                        outputVariable: "suggestedFix"
+                    }
+                },
+                {
+                    id: "github-suggest",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Post Fix",
+                        provider: "github",
+                        operation: "createComment"
+                    }
+                },
+                {
+                    id: "notion-log",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Log Failure",
+                        provider: "notion",
+                        operation: "createPage",
+                        database: "Build Failures"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Build Processed",
+                        outputName: "result",
+                        value: "{{failureType}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "trigger-1", target: "integration-circleci" },
+                { id: "e2", source: "integration-circleci", target: "llm-diagnose" },
+                { id: "e3", source: "llm-diagnose", target: "router-type" },
+                {
+                    id: "e4",
+                    source: "router-type",
+                    target: "github-comment",
+                    sourceHandle: "test_failure"
+                },
+                {
+                    id: "e5",
+                    source: "router-type",
+                    target: "slack-author",
+                    sourceHandle: "test_failure"
+                },
+                {
+                    id: "e6",
+                    source: "router-type",
+                    target: "linear-task",
+                    sourceHandle: "dependency"
+                },
+                {
+                    id: "e7",
+                    source: "router-type",
+                    target: "slack-platform",
+                    sourceHandle: "dependency"
+                },
+                { id: "e8", source: "router-type", target: "slack-devops", sourceHandle: "infra" },
+                {
+                    id: "e9",
+                    source: "router-type",
+                    target: "slack-platform-timeout",
+                    sourceHandle: "timeout"
+                },
+                { id: "e10", source: "slack-platform-timeout", target: "llm-scale" },
+                { id: "e11", source: "github-comment", target: "llm-fix" },
+                { id: "e12", source: "slack-author", target: "llm-fix" },
+                { id: "e13", source: "linear-task", target: "llm-fix" },
+                { id: "e14", source: "slack-platform", target: "llm-fix" },
+                { id: "e15", source: "slack-devops", target: "llm-fix" },
+                { id: "e16", source: "llm-scale", target: "llm-fix" },
+                { id: "e17", source: "llm-fix", target: "github-suggest" },
+                { id: "e18", source: "github-suggest", target: "notion-log" },
+                { id: "e19", source: "notion-log", target: "output-1" }
+            ]
+        }
+    },
+
+    // DevOps: Vercel Deploy Intelligence
+    {
+        name: "Vercel Deploy Intelligence",
+        description:
+            "Track Vercel deployments with environment-aware routing. Post preview URLs to PRs, announce production releases, monitor health metrics, and auto-rollback on degraded performance.",
+        category: "engineering",
+        tags: ["vercel", "deployment", "devops", "monitoring", "preview", "rollback"],
+        required_integrations: ["vercel", "slack", "github", "notion", "datadog"],
+        featured: false,
+        definition: {
+            name: "Vercel Deploy Intelligence",
+            nodes: [
+                {
+                    id: "trigger-1",
+                    type: "trigger",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Deploy Complete",
+                        triggerType: "webhook",
+                        provider: "vercel",
+                        event: "deployment.succeeded",
+                        description: "Triggered when deployment completes"
+                    }
+                },
+                {
+                    id: "integration-vercel",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Get Deployment",
+                        provider: "vercel",
+                        operation: "getDeployment",
+                        outputVariable: "deployDetails"
+                    }
+                },
+                {
+                    id: "llm-analyze",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Analyze Deploy",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Analyze this deployment:\n\n{{deployDetails}}\n\nExtract: environment, changes summary, build time, bundle size changes.",
+                        outputVariable: "deployAnalysis"
+                    }
+                },
+                {
+                    id: "router-env",
+                    type: "router",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Environment",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "What environment is this deployment?\n\n{{deployDetails}}",
+                        routes: [
+                            {
+                                value: "production",
+                                label: "Production",
+                                description: "Prod deploy"
+                            },
+                            { value: "preview", label: "Preview", description: "Preview/staging" },
+                            {
+                                value: "development",
+                                label: "Development",
+                                description: "Dev deploy"
+                            }
+                        ],
+                        defaultRoute: "preview",
+                        outputVariable: "environment"
+                    }
+                },
+                {
+                    id: "slack-release",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Release Announce",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#releases"
+                    }
+                },
+                {
+                    id: "notion-changelog",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Update Changelog",
+                        provider: "notion",
+                        operation: "createPage",
+                        database: "Changelog"
+                    }
+                },
+                {
+                    id: "github-preview",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Post Preview URL",
+                        provider: "github",
+                        operation: "createComment"
+                    }
+                },
+                {
+                    id: "slack-dev",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Dev Notice",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#dev"
+                    }
+                },
+                {
+                    id: "datadog-deploy",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Record Deploy",
+                        provider: "datadog",
+                        operation: "createEvent"
+                    }
+                },
+                {
+                    id: "vercel-analytics",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Get Baseline",
+                        provider: "vercel",
+                        operation: "getAnalytics",
+                        outputVariable: "baseline"
+                    }
+                },
+                {
+                    id: "delay-5min",
+                    type: "delay",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Wait for Traffic",
+                        delayType: "fixed",
+                        duration: 300000,
+                        description: "Wait 5 minutes for metrics"
+                    }
+                },
+                {
+                    id: "integration-datadog-check",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Check Error Rate",
+                        provider: "datadog",
+                        operation: "queryMetrics",
+                        outputVariable: "errorRate"
+                    }
+                },
+                {
+                    id: "router-health",
+                    type: "router",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Health Check",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "Is this deployment healthy based on error rates?\n\nBaseline: {{baseline}}\nCurrent: {{errorRate}}",
+                        routes: [
+                            {
+                                value: "healthy",
+                                label: "Healthy",
+                                description: "Normal error rate"
+                            },
+                            { value: "degraded", label: "Degraded", description: "Elevated errors" }
+                        ],
+                        defaultRoute: "healthy",
+                        outputVariable: "healthStatus"
+                    }
+                },
+                {
+                    id: "notion-success",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Mark Success",
+                        provider: "notion",
+                        operation: "updatePage"
+                    }
+                },
+                {
+                    id: "slack-oncall",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Alert On-Call",
+                        provider: "slack",
+                        operation: "sendMessage",
+                        channel: "#oncall"
+                    }
+                },
+                {
+                    id: "vercel-rollback",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Trigger Rollback",
+                        provider: "vercel",
+                        operation: "rollback"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Deploy Processed",
+                        outputName: "result",
+                        value: "{{healthStatus}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "trigger-1", target: "integration-vercel" },
+                { id: "e2", source: "integration-vercel", target: "llm-analyze" },
+                { id: "e3", source: "llm-analyze", target: "router-env" },
+                {
+                    id: "e4",
+                    source: "router-env",
+                    target: "slack-release",
+                    sourceHandle: "production"
+                },
+                {
+                    id: "e5",
+                    source: "router-env",
+                    target: "notion-changelog",
+                    sourceHandle: "production"
+                },
+                {
+                    id: "e6",
+                    source: "router-env",
+                    target: "github-preview",
+                    sourceHandle: "preview"
+                },
+                {
+                    id: "e7",
+                    source: "router-env",
+                    target: "slack-dev",
+                    sourceHandle: "development"
+                },
+                { id: "e8", source: "slack-release", target: "datadog-deploy" },
+                { id: "e9", source: "notion-changelog", target: "datadog-deploy" },
+                { id: "e10", source: "datadog-deploy", target: "vercel-analytics" },
+                { id: "e11", source: "vercel-analytics", target: "delay-5min" },
+                { id: "e12", source: "delay-5min", target: "integration-datadog-check" },
+                { id: "e13", source: "integration-datadog-check", target: "router-health" },
+                {
+                    id: "e14",
+                    source: "router-health",
+                    target: "notion-success",
+                    sourceHandle: "healthy"
+                },
+                {
+                    id: "e15",
+                    source: "router-health",
+                    target: "slack-oncall",
+                    sourceHandle: "degraded"
+                },
+                {
+                    id: "e16",
+                    source: "router-health",
+                    target: "vercel-rollback",
+                    sourceHandle: "degraded"
+                },
+                { id: "e17", source: "notion-success", target: "output-1" },
+                { id: "e18", source: "slack-oncall", target: "output-1" },
+                { id: "e19", source: "vercel-rollback", target: "output-1" },
+                { id: "e20", source: "github-preview", target: "output-1" },
+                { id: "e21", source: "slack-dev", target: "output-1" }
+            ]
+        }
+    },
+
+    // DevOps: Bitbucket PR Review Orchestrator
+    {
+        name: "Bitbucket PR Review Orchestrator",
+        description:
+            "Streamline Bitbucket PR reviews with AI-powered code analysis. Identify reviewers, send Slack notifications, track review progress with reminders, and escalate stale PRs to managers.",
+        category: "engineering",
+        tags: ["bitbucket", "code-review", "pull-requests", "devops", "automation"],
+        required_integrations: ["bitbucket", "slack", "jira", "gmail", "notion"],
+        featured: false,
+        definition: {
+            name: "Bitbucket PR Review Orchestrator",
+            nodes: [
+                {
+                    id: "trigger-1",
+                    type: "trigger",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "PR Created",
+                        triggerType: "webhook",
+                        provider: "bitbucket",
+                        event: "pullrequest.created",
+                        description: "Triggered when PR is created"
+                    }
+                },
+                {
+                    id: "integration-bitbucket-pr",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Get PR Details",
+                        provider: "bitbucket",
+                        operation: "getPullRequest",
+                        outputVariable: "prDetails"
+                    }
+                },
+                {
+                    id: "llm-analyze",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Analyze Changes",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Analyze this pull request:\n\n{{prDetails}}\n\nDetermine: complexity (1-10), risk areas, test coverage needs, review priority.",
+                        outputVariable: "prAnalysis"
+                    }
+                },
+                {
+                    id: "llm-reviewers",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Identify Reviewers",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Based on the files changed in this PR:\n\n{{prDetails}}\n\nSuggest appropriate reviewers based on code ownership patterns.",
+                        outputVariable: "suggestedReviewers"
+                    }
+                },
+                {
+                    id: "bitbucket-reviewers",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Request Reviews",
+                        provider: "bitbucket",
+                        operation: "addReviewers"
+                    }
+                },
+                {
+                    id: "slack-reviewers",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Notify Reviewers",
+                        provider: "slack",
+                        operation: "sendMessage"
+                    }
+                },
+                {
+                    id: "jira-link",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Link to JIRA",
+                        provider: "jira",
+                        operation: "addComment"
+                    }
+                },
+                {
+                    id: "delay-24h",
+                    type: "delay",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Wait 24 Hours",
+                        delayType: "fixed",
+                        duration: 86400000,
+                        description: "Wait for reviews"
+                    }
+                },
+                {
+                    id: "integration-bitbucket-check",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Check Status",
+                        provider: "bitbucket",
+                        operation: "getPullRequest",
+                        outputVariable: "reviewStatus"
+                    }
+                },
+                {
+                    id: "router-reviewed",
+                    type: "router",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Review Status",
+                        provider: "openai",
+                        model: "gpt-4o-mini",
+                        prompt: "What is the review status?\n\n{{reviewStatus}}\n\nCategories: none (no reviews), some (partial reviews), approved (all approved)",
+                        routes: [
+                            { value: "none", label: "No Reviews", description: "No reviews yet" },
+                            { value: "some", label: "Partial", description: "Some reviews in" },
+                            { value: "approved", label: "Approved", description: "All approved" }
+                        ],
+                        defaultRoute: "none",
+                        outputVariable: "reviewState"
+                    }
+                },
+                {
+                    id: "slack-reminder",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Urgent Reminder",
+                        provider: "slack",
+                        operation: "sendMessage"
+                    }
+                },
+                {
+                    id: "gmail-escalate",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Email Manager",
+                        provider: "gmail",
+                        operation: "sendEmail"
+                    }
+                },
+                {
+                    id: "slack-update",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Progress Update",
+                        provider: "slack",
+                        operation: "sendMessage"
+                    }
+                },
+                {
+                    id: "delay-12h",
+                    type: "delay",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Wait 12 More Hours",
+                        delayType: "fixed",
+                        duration: 43200000,
+                        description: "Additional wait time"
+                    }
+                },
+                {
+                    id: "jira-update",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Ready to Merge",
+                        provider: "jira",
+                        operation: "updateIssue"
+                    }
+                },
+                {
+                    id: "notion-log",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Log Approval",
+                        provider: "notion",
+                        operation: "createPage",
+                        database: "PR Reviews"
+                    }
+                },
+                {
+                    id: "llm-summary",
+                    type: "llm",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Review Summary",
+                        provider: "openai",
+                        model: "gpt-4o",
+                        prompt: "Generate a review summary for this PR:\n\n{{reviewStatus}}\n\nInclude: key feedback themes, approval status, remaining concerns.",
+                        outputVariable: "reviewSummary"
+                    }
+                },
+                {
+                    id: "bitbucket-comment",
+                    type: "integration",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "Post Summary",
+                        provider: "bitbucket",
+                        operation: "createComment"
+                    }
+                },
+                {
+                    id: "output-1",
+                    type: "output",
+                    position: { x: 0, y: 0 },
+                    data: {
+                        label: "PR Processed",
+                        outputName: "result",
+                        value: "{{reviewState}}"
+                    }
+                }
+            ],
+            edges: [
+                { id: "e1", source: "trigger-1", target: "integration-bitbucket-pr" },
+                { id: "e2", source: "integration-bitbucket-pr", target: "llm-analyze" },
+                { id: "e3", source: "llm-analyze", target: "llm-reviewers" },
+                { id: "e4", source: "llm-reviewers", target: "bitbucket-reviewers" },
+                { id: "e5", source: "llm-reviewers", target: "slack-reviewers" },
+                { id: "e6", source: "llm-reviewers", target: "jira-link" },
+                { id: "e7", source: "bitbucket-reviewers", target: "delay-24h" },
+                { id: "e8", source: "slack-reviewers", target: "delay-24h" },
+                { id: "e9", source: "jira-link", target: "delay-24h" },
+                { id: "e10", source: "delay-24h", target: "integration-bitbucket-check" },
+                { id: "e11", source: "integration-bitbucket-check", target: "router-reviewed" },
+                {
+                    id: "e12",
+                    source: "router-reviewed",
+                    target: "slack-reminder",
+                    sourceHandle: "none"
+                },
+                {
+                    id: "e13",
+                    source: "router-reviewed",
+                    target: "slack-update",
+                    sourceHandle: "some"
+                },
+                {
+                    id: "e14",
+                    source: "router-reviewed",
+                    target: "jira-update",
+                    sourceHandle: "approved"
+                },
+                { id: "e15", source: "slack-reminder", target: "gmail-escalate" },
+                { id: "e16", source: "gmail-escalate", target: "llm-summary" },
+                { id: "e17", source: "slack-update", target: "delay-12h" },
+                { id: "e18", source: "delay-12h", target: "llm-summary" },
+                { id: "e19", source: "jira-update", target: "notion-log" },
+                { id: "e20", source: "notion-log", target: "llm-summary" },
+                { id: "e21", source: "llm-summary", target: "bitbucket-comment" },
+                { id: "e22", source: "bitbucket-comment", target: "output-1" }
+            ]
+        }
     }
 ];
 
