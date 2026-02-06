@@ -1655,6 +1655,20 @@ const xeroEntry: ProviderRegistryEntry = {
 
 providerRegistry.register(xeroEntry);
 
+// Register Sage provider
+const sageEntry: ProviderRegistryEntry = {
+    name: "sage",
+    displayName: "Sage",
+    authMethod: "oauth2",
+    category: "accounting",
+    loader: async () => {
+        const { SageProvider } = await import("./providers/sage/SageProvider");
+        return new SageProvider();
+    }
+};
+
+providerRegistry.register(sageEntry);
+
 // Register Plaid provider
 const plaidEntry: ProviderRegistryEntry = {
     name: "plaid",
@@ -1696,6 +1710,90 @@ const ghostEntry: ProviderRegistryEntry = {
 };
 
 providerRegistry.register(ghostEntry);
+
+// Register eBay provider
+const ebayEntry: ProviderRegistryEntry = {
+    name: "ebay",
+    displayName: "eBay",
+    authMethod: "oauth2",
+    category: "ecommerce",
+    loader: async () => {
+        const { EbayProvider } = await import("./providers/ebay/EbayProvider");
+        return new EbayProvider();
+    }
+};
+
+providerRegistry.register(ebayEntry);
+
+// Register Etsy provider
+const etsyEntry: ProviderRegistryEntry = {
+    name: "etsy",
+    displayName: "Etsy",
+    authMethod: "oauth2",
+    category: "ecommerce",
+    loader: async () => {
+        const { EtsyProvider } = await import("./providers/etsy/EtsyProvider");
+        return new EtsyProvider();
+    }
+};
+
+providerRegistry.register(etsyEntry);
+
+// Register Kustomer provider
+const kustomerEntry: ProviderRegistryEntry = {
+    name: "kustomer",
+    displayName: "Kustomer",
+    authMethod: "api_key",
+    category: "customer_support",
+    loader: async () => {
+        const { KustomerProvider } = await import("./providers/kustomer/KustomerProvider");
+        return new KustomerProvider();
+    }
+};
+
+providerRegistry.register(kustomerEntry);
+
+// Register Squarespace provider
+const squarespaceEntry: ProviderRegistryEntry = {
+    name: "squarespace",
+    displayName: "Squarespace",
+    authMethod: "oauth2",
+    category: "ecommerce",
+    loader: async () => {
+        const { SquarespaceProvider } = await import("./providers/squarespace/SquarespaceProvider");
+        return new SquarespaceProvider();
+    }
+};
+
+providerRegistry.register(squarespaceEntry);
+
+// Register Gorgias provider
+const gorgiasEntry: ProviderRegistryEntry = {
+    name: "gorgias",
+    displayName: "Gorgias",
+    authMethod: "oauth2",
+    category: "customer_support",
+    loader: async () => {
+        const { GorgiasProvider } = await import("./providers/gorgias/GorgiasProvider");
+        return new GorgiasProvider();
+    }
+};
+
+providerRegistry.register(gorgiasEntry);
+
+// Register Wix provider
+const wixEntry: ProviderRegistryEntry = {
+    name: "wix",
+    displayName: "Wix",
+    authMethod: "api_key",
+    category: "ecommerce",
+    loader: async () => {
+        const { WixProvider } = await import("./providers/wix/WixProvider");
+        return new WixProvider();
+    }
+};
+
+providerRegistry.register(wixEntry);
 
 // Export for use in application
 export { providerRegistry };

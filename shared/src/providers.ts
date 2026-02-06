@@ -153,6 +153,7 @@ export const PROVIDER_LOGO_DOMAINS: Record<string, string> = {
     tableau: "tableau.com",
     intercom: "intercom.com",
     freshdesk: "freshdesk.com",
+    kustomer: "kustomer.com",
     buffer: "buffer.com",
     hootsuite: "hootsuite.com",
     calendly: "calendly.com",
@@ -175,6 +176,7 @@ export const PROVIDER_LOGO_DOMAINS: Record<string, string> = {
     "google-cloud-storage": "cloud.google.com",
     "azure-devops": "dev.azure.com",
     "azure-storage": "azure.microsoft.com",
+    wix: "wix.com",
     woocommerce: "woocommerce.com",
     bigcommerce: "bigcommerce.com",
     zoom: "zoom.us",
@@ -783,8 +785,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Business accounting software",
         logoUrl: getBrandLogo("sage.com"),
         category: "Accounting",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "freshbooks",
@@ -1030,6 +1031,33 @@ export const ALL_PROVIDERS: Provider[] = [
         methods: ["oauth2"]
     },
     {
+        provider: "kustomer",
+        displayName: "Kustomer",
+        description: "CRM-powered customer service platform",
+        logoUrl: getBrandLogo("kustomer.com"),
+        category: "Customer Support",
+        methods: ["api_key"],
+        oauthSettings: [
+            {
+                name: "orgName",
+                label: "Organization Name",
+                placeholder: "your-org",
+                helpText:
+                    "Enter your Kustomer organization name (e.g., 'acme' from acme.api.kustomerapp.com)",
+                required: true,
+                type: "text",
+                pattern: "^[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]$|^[a-zA-Z0-9]$",
+                patternError: "Organization name must contain only letters, numbers, and hyphens"
+            }
+        ],
+        apiKeySettings: {
+            keyLabel: "API Key",
+            keyPlaceholder: "your-api-key",
+            helpText: "Create an API key in Kustomer Settings > Security > API Keys",
+            helpUrl: "https://help.kustomer.com/api-introduction-BkwVN42zM"
+        }
+    },
+    {
         provider: "crisp",
         displayName: "Crisp",
         description: "Customer messaging platform",
@@ -1041,11 +1069,23 @@ export const ALL_PROVIDERS: Provider[] = [
     {
         provider: "gorgias",
         displayName: "Gorgias",
-        description: "E-commerce helpdesk platform",
+        description:
+            "E-commerce helpdesk platform for managing customer support tickets, customers, and messages",
         logoUrl: getBrandLogo("gorgias.com"),
         category: "Customer Support",
         methods: ["oauth2"],
-        comingSoon: true
+        oauthSettings: [
+            {
+                name: "subdomain",
+                label: "Gorgias Subdomain",
+                placeholder: "your-company",
+                helpText: "Enter your Gorgias subdomain (e.g., 'acme' from acme.gorgias.com)",
+                required: true,
+                type: "text",
+                pattern: "^[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]$|^[a-zA-Z0-9]$",
+                patternError: "Subdomain must contain only letters, numbers, and hyphens"
+            }
+        ]
     },
 
     // E-commerce (Additional)
@@ -1131,13 +1171,55 @@ export const ALL_PROVIDERS: Provider[] = [
         methods: ["oauth2"]
     },
     {
-        provider: "printful",
-        displayName: "Printful",
-        description: "Print-on-demand dropshipping",
-        logoUrl: getBrandLogo("printful.com"),
+        provider: "ebay",
+        displayName: "eBay",
+        description: "Manage listings, orders, and inventory on eBay marketplace",
+        logoUrl: getBrandLogo("ebay.com"),
+        category: "E-commerce",
+        methods: ["oauth2"]
+    },
+    {
+        provider: "etsy",
+        displayName: "Etsy",
+        description: "Manage shop listings, orders, and customers on Etsy marketplace",
+        logoUrl: getBrandLogo("etsy.com"),
         category: "E-commerce",
         methods: ["oauth2"],
-        comingSoon: true
+        comingSoon: false
+    },
+    {
+        provider: "squarespace",
+        displayName: "Squarespace",
+        description: "Manage products, orders, and inventory in your Squarespace store",
+        logoUrl: getBrandLogo("squarespace.com"),
+        category: "E-commerce",
+        methods: ["oauth2"],
+        comingSoon: false
+    },
+    {
+        provider: "wix",
+        displayName: "Wix",
+        description: "Manage products, orders, and customers in your Wix eCommerce store",
+        logoUrl: getBrandLogo("wix.com"),
+        category: "E-commerce",
+        methods: ["api_key"],
+        comingSoon: false,
+        apiKeySettings: {
+            keyLabel: "API Key",
+            keyPlaceholder: "IST.xxxxx.xxxxx",
+            helpText: "Generate an API key in Wix API Keys Manager",
+            helpUrl: "https://manage.wix.com/account/api-keys"
+        },
+        oauthSettings: [
+            {
+                name: "siteId",
+                label: "Site ID",
+                placeholder: "abc123de-f456-7890-gh12-ijklmnopqrst",
+                helpText: "Find your Site ID in your Wix dashboard URL after /dashboard/",
+                required: true,
+                type: "text"
+            }
+        ]
     },
     {
         provider: "shippo",

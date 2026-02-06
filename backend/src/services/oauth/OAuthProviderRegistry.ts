@@ -3763,6 +3763,50 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
         refreshable: true
     },
 
+    sage: {
+        name: "sage",
+        displayName: "Sage",
+        authUrl: "https://www.sageone.com/oauth2/auth/central?filter=apiv3.1",
+        tokenUrl: "https://oauth.accounting.sage.com/token",
+        scopes: ["full_access"],
+        clientId: config.oauth.sage.clientId,
+        clientSecret: config.oauth.sage.clientSecret,
+        redirectUri: getOAuthRedirectUri("sage"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://api.accounting.sage.com/v3.1/business", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                        "Content-Type": "application/json"
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const business = (await response.json()) as {
+                    name?: string;
+                    country_code?: string;
+                };
+
+                return {
+                    userId: "sage-business",
+                    email: "unknown@sage",
+                    name: business.name || "Sage Business"
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get Sage business info");
+                return {
+                    userId: "unknown",
+                    email: "unknown@sage",
+                    name: "Sage Business"
+                };
+            }
+        },
+        refreshable: true
+    },
+
     xero: {
         name: "xero",
         displayName: "Xero",
@@ -4787,6 +4831,240 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
         refreshable: true,
         pkceEnabled: false,
         tokenAuthMethod: "body"
+    },
+
+    // ==========================================================================
+    // Etsy
+    // ==========================================================================
+
+    etsy: {
+        name: "etsy",
+        displayName: "Etsy",
+        authUrl: "https://www.etsy.com/oauth/connect",
+        tokenUrl: "https://api.etsy.com/v3/public/oauth/token",
+        scopes: [
+            "listings_r",
+            "listings_w",
+            "listings_d",
+            "transactions_r",
+            "transactions_w",
+            "shops_r",
+            "shops_w",
+            "email_r"
+        ],
+        clientId: config.oauth.etsy.clientId,
+        clientSecret: config.oauth.etsy.clientSecret,
+        redirectUri: getOAuthRedirectUri("etsy"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                // Etsy access tokens contain the user ID in the format: {user_id}.{token}
+                // Parse the user_id from the token to get shop info
+                const tokenParts = accessToken.split(".");
+                if (tokenParts.length < 2) {
+                    throw new Error("Invalid Etsy access token format");
+                }
+
+                // The API key (client_id) must be sent as x-api-key header
+                const response = await fetch("https://api.etsy.com/v3/application/users/me", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                        "x-api-key": config.oauth.etsy.clientId
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    user_id?: number;
+                    primary_email?: string;
+                    first_name?: string;
+                    last_name?: string;
+                    shop_id?: number;
+                };
+
+                return {
+                    userId: data.user_id?.toString() || "unknown",
+                    email: data.primary_email || "unknown@etsy",
+                    name:
+                        [data.first_name, data.last_name].filter(Boolean).join(" ") || "Etsy User",
+                    shopId: data.shop_id?.toString()
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get Etsy user info");
+                return {
+                    userId: "unknown",
+                    email: "unknown@etsy",
+                    name: "Etsy User"
+                };
+            }
+        },
+        refreshable: true,
+        pkceEnabled: true,
+        tokenAuthMethod: "body"
+    },
+
+    // ==========================================================================
+    // Squarespace E-commerce
+    // ==========================================================================
+
+    squarespace: {
+        name: "squarespace",
+        displayName: "Squarespace",
+        authUrl: "https://login.squarespace.com/api/1/login/oauth/provider/authorize",
+        tokenUrl: "https://login.squarespace.com/api/1/login/oauth/provider/tokens",
+        scopes: [
+            "website.orders",
+            "website.orders.read",
+            "website.products",
+            "website.products.read",
+            "website.inventory",
+            "website.inventory.read",
+            "website.transactions.read"
+        ],
+        clientId: config.oauth.squarespace.clientId,
+        clientSecret: config.oauth.squarespace.clientSecret,
+        redirectUri: getOAuthRedirectUri("squarespace"),
+        getUserInfo: async (_accessToken: string) => {
+            // Squarespace doesn't have a dedicated user info endpoint
+            // The site ID is obtained after OAuth authorization via the token response
+            // Return basic info; site details will be fetched separately using the commerce API
+            return {
+                userId: "squarespace-user",
+                email: "unknown@squarespace",
+                name: "Squarespace User"
+            };
+        },
+        refreshable: true, // Access tokens expire after 30 minutes, refresh tokens after 7 days
+        pkceEnabled: false,
+        tokenAuthMethod: "basic" // Squarespace uses Basic auth for token requests
+    },
+
+    // ==========================================================================
+    // eBay E-commerce
+    // ==========================================================================
+
+    ebay: {
+        name: "ebay",
+        displayName: "eBay",
+        authUrl: "https://auth.ebay.com/oauth2/authorize",
+        tokenUrl: "https://api.ebay.com/identity/v1/oauth2/token",
+        scopes: [
+            "https://api.ebay.com/oauth/api_scope/sell.inventory",
+            "https://api.ebay.com/oauth/api_scope/sell.fulfillment",
+            "https://api.ebay.com/oauth/api_scope/sell.account",
+            "https://api.ebay.com/oauth/api_scope/commerce.identity.readonly"
+        ],
+        clientId: config.oauth.ebay.clientId,
+        clientSecret: config.oauth.ebay.clientSecret,
+        redirectUri: getOAuthRedirectUri("ebay"),
+        getUserInfo: async (accessToken: string) => {
+            try {
+                const response = await fetch("https://apiz.ebay.com/commerce/identity/v1/user/", {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                        "Content-Type": "application/json"
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    userId?: string;
+                    username?: string;
+                    email?: string;
+                };
+
+                return {
+                    userId: data.userId || data.username || "unknown",
+                    email: data.email || "unknown@ebay",
+                    name: data.username || "eBay User"
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get eBay user info");
+                return {
+                    userId: "unknown",
+                    email: "unknown@ebay",
+                    name: "eBay User"
+                };
+            }
+        },
+        refreshable: true,
+        tokenAuthMethod: "basic"
+    },
+
+    // ==========================================================================
+    // Gorgias Customer Support
+    // NOTE: Gorgias requires subdomain in OAuth URLs. The {subdomain} placeholder
+    // is replaced at runtime based on user-provided subdomain.
+    // ==========================================================================
+
+    gorgias: {
+        name: "gorgias",
+        displayName: "Gorgias",
+        // Template URLs - {subdomain} must be replaced at runtime
+        authUrl: "https://{subdomain}.gorgias.com/oauth/authorize",
+        tokenUrl: "https://{subdomain}.gorgias.com/oauth/token",
+        scopes: [
+            "openid",
+            "offline", // For refresh tokens
+            "tickets:read",
+            "tickets:write",
+            "customers:read",
+            "customers:write",
+            "users:read"
+        ],
+        clientId: config.oauth.gorgias.clientId,
+        clientSecret: config.oauth.gorgias.clientSecret,
+        redirectUri: getOAuthRedirectUri("gorgias"),
+        getUserInfo: async (accessToken: string, subdomain?: string) => {
+            try {
+                if (!subdomain) {
+                    throw new Error("Gorgias subdomain is required");
+                }
+
+                const response = await fetch(`https://${subdomain}.gorgias.com/api/users/0`, {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = (await response.json()) as {
+                    id?: number;
+                    name?: string;
+                    email?: string;
+                    firstname?: string;
+                    lastname?: string;
+                };
+
+                return {
+                    userId: data.id?.toString() || "unknown",
+                    name:
+                        data.name ||
+                        `${data.firstname || ""} ${data.lastname || ""}`.trim() ||
+                        "Gorgias User",
+                    email: data.email || "unknown@gorgias",
+                    subdomain
+                };
+            } catch (error) {
+                logger.error({ err: error }, "Failed to get Gorgias user info");
+                return {
+                    userId: "unknown",
+                    name: "Gorgias User",
+                    email: "unknown@gorgias",
+                    subdomain
+                };
+            }
+        },
+        refreshable: true,
+        pkceEnabled: false
     }
 };
 

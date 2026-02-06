@@ -594,6 +594,36 @@ export const config = {
         xero: {
             clientId: process.env.XERO_CLIENT_ID || "",
             clientSecret: process.env.XERO_CLIENT_SECRET || ""
+        },
+
+        // Sage
+        sage: {
+            clientId: process.env.SAGE_CLIENT_ID || "",
+            clientSecret: process.env.SAGE_CLIENT_SECRET || ""
+        },
+
+        // Etsy
+        etsy: {
+            clientId: process.env.ETSY_CLIENT_ID || "",
+            clientSecret: process.env.ETSY_CLIENT_SECRET || ""
+        },
+
+        // Squarespace
+        squarespace: {
+            clientId: process.env.SQUARESPACE_CLIENT_ID || "",
+            clientSecret: process.env.SQUARESPACE_CLIENT_SECRET || ""
+        },
+
+        // eBay
+        ebay: {
+            clientId: process.env.EBAY_CLIENT_ID || "",
+            clientSecret: process.env.EBAY_CLIENT_SECRET || ""
+        },
+
+        // Gorgias
+        gorgias: {
+            clientId: process.env.GORGIAS_CLIENT_ID || "",
+            clientSecret: process.env.GORGIAS_CLIENT_SECRET || ""
         }
     }
 };
@@ -701,6 +731,11 @@ export function getOAuthRedirectUri(provider: string): string {
         sap: "/oauth/sap/callback",
         netsuite: "/oauth/netsuite/callback",
         xero: "/oauth/xero/callback",
+        sage: "/oauth/sage/callback",
+        etsy: "/oauth/etsy/callback",
+        squarespace: "/oauth/squarespace/callback",
+        ebay: "/oauth/ebay/callback",
+        gorgias: "/oauth/gorgias/callback",
 
         // OAuth 1.0a providers
         evernote: "/oauth1/evernote/callback"
@@ -806,7 +841,12 @@ export function getOAuthCredentials(provider: string): { clientId: string; clien
         "google-meet": "google",
         sap: "sap",
         netsuite: "netsuite",
-        xero: "xero"
+        xero: "xero",
+        sage: "sage",
+        etsy: "etsy",
+        squarespace: "squarespace",
+        ebay: "ebay",
+        gorgias: "gorgias"
     };
 
     const configKey = providerMap[provider];

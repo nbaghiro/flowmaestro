@@ -190,8 +190,18 @@ config:
       {"name":"netsuite-client-secret","envVar":"NETSUITE_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"NetSuite OAuth client secret"},
       {"name":"xero-client-id","envVar":"XERO_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Xero OAuth client ID"},
       {"name":"xero-client-secret","envVar":"XERO_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Xero OAuth client secret"},
+      {"name":"sage-client-id","envVar":"SAGE_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Sage OAuth client ID"},
+      {"name":"sage-client-secret","envVar":"SAGE_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Sage OAuth client secret"},
       {"name":"adp-client-id","envVar":"ADP_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"ADP OAuth client ID"},
       {"name":"adp-client-secret","envVar":"ADP_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"ADP OAuth client secret"},
       {"name":"gusto-client-id","envVar":"GUSTO_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Gusto OAuth client ID"},
-      {"name":"gusto-client-secret","envVar":"GUSTO_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Gusto OAuth client secret"}
+      {"name":"gusto-client-secret","envVar":"GUSTO_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Gusto OAuth client secret"},
+      {"name":"etsy-client-id","envVar":"ETSY_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Etsy OAuth client ID (API key)"},
+      {"name":"etsy-client-secret","envVar":"ETSY_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Etsy OAuth client secret"},
+      {"name":"squarespace-client-id","envVar":"SQUARESPACE_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Squarespace OAuth client ID"},
+      {"name":"squarespace-client-secret","envVar":"SQUARESPACE_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Squarespace OAuth client secret"},
+      {"name":"ebay-client-id","envVar":"EBAY_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"eBay OAuth client ID"},
+      {"name":"ebay-client-secret","envVar":"EBAY_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"eBay OAuth client secret"},
+      {"name":"gorgias-client-id","envVar":"GORGIAS_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Gorgias OAuth client ID"},
+      {"name":"gorgias-client-secret","envVar":"GORGIAS_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Gorgias OAuth client secret"}
     ]
