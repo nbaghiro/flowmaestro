@@ -2337,16 +2337,6 @@ export const ALL_PROVIDERS: Provider[] = [
         methods: ["oauth2"]
     },
 
-    {
-        provider: "gitbook",
-        displayName: "GitBook",
-        description: "Documentation platform",
-        logoUrl: getBrandLogo("gitbook.com"),
-        category: "Productivity",
-        methods: ["oauth2"],
-        comingSoon: true
-    },
-
     // Social Media (Management Tools)
     {
         provider: "buffer",
