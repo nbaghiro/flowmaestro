@@ -37,6 +37,7 @@ function createMockFormInterface(overrides?: Record<string, unknown>) {
         targetType: "workflow" as const,
         workflowId: "workflow-123",
         agentId: null,
+        triggerId: null,
         coverType: "color" as const,
         coverValue: "#3B82F6",
         iconUrl: null,

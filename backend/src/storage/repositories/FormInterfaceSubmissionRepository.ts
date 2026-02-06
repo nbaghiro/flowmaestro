@@ -1,7 +1,9 @@
 import type {
     FormInterfaceSubmission,
     FormInterfaceFileAttachment,
-    FormInterfaceUrlAttachment
+    FormInterfaceUrlAttachment,
+    FormSubmissionExecutionStatus,
+    FormSubmissionAttachmentsStatus
 } from "@flowmaestro/shared";
 import { db } from "../database";
 
@@ -14,6 +16,9 @@ interface FormInterfaceSubmissionRow {
     urls: FormInterfaceUrlAttachment[] | string;
     output: string | null;
     output_edited_at: string | Date | null;
+    execution_id: string | null;
+    execution_status: FormSubmissionExecutionStatus;
+    attachments_status: FormSubmissionAttachmentsStatus;
     ip_address: string | null;
     user_agent: string | null;
     submitted_at: string | Date;
@@ -28,6 +33,7 @@ export interface CreateFormInterfaceSubmissionInput {
     urls: FormInterfaceUrlAttachment[];
     ipAddress: string | null;
     userAgent: string | null;
+    executionStatus?: FormSubmissionExecutionStatus;
 }
 
 export class FormInterfaceSubmissionRepository {
@@ -37,8 +43,8 @@ export class FormInterfaceSubmissionRepository {
     async create(input: CreateFormInterfaceSubmissionInput): Promise<FormInterfaceSubmission> {
         const query = `
             INSERT INTO flowmaestro.form_interface_submissions
-                (interface_id, message, files, urls, ip_address, user_agent)
-            VALUES ($1, $2, $3, $4, $5, $6)
+                (interface_id, message, files, urls, ip_address, user_agent, execution_status)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
             RETURNING *
         `;
 
@@ -48,7 +54,8 @@ export class FormInterfaceSubmissionRepository {
             JSON.stringify(input.files),
             JSON.stringify(input.urls),
             input.ipAddress,
-            input.userAgent
+            input.userAgent,
+            input.executionStatus || "pending"
         ];
 
         const result = await db.query(query, values);
@@ -169,6 +176,93 @@ export class FormInterfaceSubmissionRepository {
     }
 
     /**
+     * Update execution status and optionally execution ID
+     */
+    async updateExecutionStatus(
+        id: string,
+        status: FormSubmissionExecutionStatus,
+        executionId?: string,
+        output?: string
+    ): Promise<FormInterfaceSubmission | null> {
+        let query: string;
+        let values: unknown[];
+
+        if (executionId && output) {
+            query = `
+                UPDATE flowmaestro.form_interface_submissions
+                SET execution_status = $2, execution_id = $3, output = $4
+                WHERE id = $1
+                RETURNING *
+            `;
+            values = [id, status, executionId, output];
+        } else if (executionId) {
+            query = `
+                UPDATE flowmaestro.form_interface_submissions
+                SET execution_status = $2, execution_id = $3
+                WHERE id = $1
+                RETURNING *
+            `;
+            values = [id, status, executionId];
+        } else if (output) {
+            query = `
+                UPDATE flowmaestro.form_interface_submissions
+                SET execution_status = $2, output = $3
+                WHERE id = $1
+                RETURNING *
+            `;
+            values = [id, status, output];
+        } else {
+            query = `
+                UPDATE flowmaestro.form_interface_submissions
+                SET execution_status = $2
+                WHERE id = $1
+                RETURNING *
+            `;
+            values = [id, status];
+        }
+
+        const result = await db.query(query, values);
+        return result.rows.length > 0
+            ? this.mapRow(result.rows[0] as FormInterfaceSubmissionRow)
+            : null;
+    }
+
+    /**
+     * Update attachments processing status
+     */
+    async updateAttachmentsStatus(
+        id: string,
+        status: FormSubmissionAttachmentsStatus
+    ): Promise<FormInterfaceSubmission | null> {
+        const query = `
+            UPDATE flowmaestro.form_interface_submissions
+            SET attachments_status = $2
+            WHERE id = $1
+            RETURNING *
+        `;
+
+        const result = await db.query(query, [id, status]);
+        return result.rows.length > 0
+            ? this.mapRow(result.rows[0] as FormInterfaceSubmissionRow)
+            : null;
+    }
+
+    /**
+     * Find submission by execution ID
+     */
+    async findByExecutionId(executionId: string): Promise<FormInterfaceSubmission | null> {
+        const query = `
+            SELECT * FROM flowmaestro.form_interface_submissions
+            WHERE execution_id = $1
+        `;
+
+        const result = await db.query(query, [executionId]);
+        return result.rows.length > 0
+            ? this.mapRow(result.rows[0] as FormInterfaceSubmissionRow)
+            : null;
+    }
+
+    /**
      * Map database row to FormInterfaceSubmission model
      */
     private mapRow(row: FormInterfaceSubmissionRow): FormInterfaceSubmission {
@@ -186,6 +280,9 @@ export class FormInterfaceSubmissionRepository {
                     : row.urls || [],
             output: row.output,
             outputEditedAt: row.output_edited_at ? new Date(row.output_edited_at) : null,
+            executionId: row.execution_id || undefined,
+            executionStatus: row.execution_status || "pending",
+            attachmentsStatus: row.attachments_status || "pending",
             ipAddress: row.ip_address,
             userAgent: row.user_agent,
             submittedAt: new Date(row.submitted_at),

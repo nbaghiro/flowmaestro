@@ -39,6 +39,9 @@ export interface FormInterface {
     workflowId: string | null;
     agentId: string | null;
 
+    // Trigger (auto-created for workflows on publish)
+    triggerId: string | null;
+
     // Branding
     coverType: FormInterfaceCoverType;
     coverValue: string;
@@ -80,6 +83,10 @@ export interface FormInterface {
     updatedAt: Date;
 }
 
+// Execution status types
+export type FormSubmissionExecutionStatus = "pending" | "running" | "completed" | "failed";
+export type FormSubmissionAttachmentsStatus = "pending" | "processing" | "ready" | "failed";
+
 // Form interface submission
 export interface FormInterfaceSubmission {
     id: string;
@@ -93,6 +100,11 @@ export interface FormInterfaceSubmission {
     // Output
     output: string | null;
     outputEditedAt: Date | null;
+
+    // Execution tracking (Phase 2)
+    executionId?: string;
+    executionStatus: FormSubmissionExecutionStatus;
+    attachmentsStatus: FormSubmissionAttachmentsStatus;
 
     // Metadata
     ipAddress: string | null;
@@ -188,4 +200,53 @@ export interface FormInterfaceSubmissionResult {
 export interface FormInterfaceWithTarget extends FormInterface {
     workflowName?: string;
     agentName?: string;
+}
+
+// ============================================================================
+// Phase 2: Execution Types
+// ============================================================================
+
+// Public form submit input (with full file metadata)
+export interface PublicFormSubmitInput {
+    message: string;
+    files?: FormInterfaceFileAttachment[]; // Full metadata from upload
+    urls?: FormInterfaceUrlAttachment[];
+}
+
+// Public form submit response
+export interface PublicFormSubmitResponse {
+    submissionId: string;
+    executionId: string;
+}
+
+// Public file upload response (artifacts bucket is PRIVATE - uses signed URLs)
+export interface PublicFileUploadResponse {
+    gcsUri: string; // Internal reference: gs://bucket/path (stored in DB)
+    downloadUrl: string; // Signed URL valid for 24h (for workflow access)
+    filename: string;
+    size: number;
+    mimeType: string;
+}
+
+// Submission chunk for RAG
+export interface FormInterfaceSubmissionChunk {
+    id: string;
+    submissionId: string;
+    sourceType: "file" | "url";
+    sourceName: string;
+    sourceIndex: number;
+    content: string;
+    chunkIndex: number;
+    metadata: Record<string, unknown>;
+    createdAt: Date;
+}
+
+// Chunk search result
+export interface FormSubmissionChunkSearchResult {
+    id: string;
+    content: string;
+    sourceName: string;
+    sourceType: "file" | "url";
+    similarity: number;
+    metadata: Record<string, unknown>;
 }

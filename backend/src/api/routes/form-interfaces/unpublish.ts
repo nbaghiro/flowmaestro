@@ -1,6 +1,7 @@
 import { FastifyInstance } from "fastify";
 import { createServiceLogger } from "../../../core/logging";
 import { FormInterfaceRepository } from "../../../storage/repositories/FormInterfaceRepository";
+import { TriggerRepository } from "../../../storage/repositories/TriggerRepository";
 import { authMiddleware } from "../../middleware";
 import { workspaceContextMiddleware } from "../../middleware/workspace-context";
 
@@ -46,6 +47,22 @@ export async function unpublishFormInterfaceRoute(fastify: FastifyInstance) {
                         success: false,
                         error: "Failed to unpublish form interface"
                     });
+                }
+
+                // Cleanup auto-created trigger if it exists
+                if (existing.triggerId) {
+                    const triggerRepo = new TriggerRepository();
+                    const trigger = await triggerRepo.findById(existing.triggerId);
+
+                    // Only delete if it's an auto-created trigger (has special naming convention)
+                    if (trigger && trigger.name.startsWith("__form_interface_")) {
+                        await triggerRepo.delete(existing.triggerId);
+                        await formInterfaceRepo.setTriggerId(id, null);
+                        logger.info(
+                            { formInterfaceId: id, triggerId: existing.triggerId },
+                            "Deleted auto-created trigger on unpublish"
+                        );
+                    }
                 }
 
                 logger.info({ formInterfaceId: id, workspaceId }, "Form interface unpublished");
