@@ -1444,7 +1444,17 @@ export const ALL_PROVIDERS: Provider[] = [
         logoUrl: getBrandLogo("copper.com"),
         category: "CRM & Sales",
         methods: ["api_key"],
-        comingSoon: true
+        apiKeySettings: {
+            keyLabel: "API Key",
+            keyPlaceholder: "Your Copper API key",
+            requiresSecret: true,
+            secretLabel: "Email Address",
+            secretPlaceholder: "you@company.com",
+            helpText:
+                "Enter your Copper API key and the email address associated with your Copper account",
+            helpUrl:
+                "https://support.copper.com/hc/en-us/articles/115001212290-How-to-generate-an-API-key"
+        }
     },
     {
         provider: "close",
@@ -1460,8 +1470,17 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "CRM and project management",
         logoUrl: getBrandLogo("insightly.com"),
         category: "CRM & Sales",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["api_key"],
+        apiKeySettings: {
+            keyLabel: "API Key",
+            keyPlaceholder: "Your Insightly API key",
+            requiresSecret: true,
+            secretLabel: "Instance Pod",
+            secretPlaceholder: "na1",
+            helpText:
+                "Enter your API key and pod (na1, eu1, au1). Find these in User Settings > API section",
+            helpUrl: "https://support.insight.ly/en/articles/1795647-find-your-api-key"
+        }
     },
 
     // Collaboration (Additional Productivity)

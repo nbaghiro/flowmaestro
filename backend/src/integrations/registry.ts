@@ -1823,5 +1823,33 @@ const zohoCrmEntry: ProviderRegistryEntry = {
 
 providerRegistry.register(zohoCrmEntry);
 
+// Register Copper CRM provider
+const copperEntry: ProviderRegistryEntry = {
+    name: "copper",
+    displayName: "Copper",
+    authMethod: "api_key",
+    category: "crm",
+    loader: async () => {
+        const { CopperProvider } = await import("./providers/copper/CopperProvider");
+        return new CopperProvider();
+    }
+};
+
+providerRegistry.register(copperEntry);
+
+// Register Insightly CRM provider
+const insightlyEntry: ProviderRegistryEntry = {
+    name: "insightly",
+    displayName: "Insightly",
+    authMethod: "api_key",
+    category: "crm",
+    loader: async () => {
+        const { InsightlyProvider } = await import("./providers/insightly/InsightlyProvider");
+        return new InsightlyProvider();
+    }
+};
+
+providerRegistry.register(insightlyEntry);
+
 // Export for use in application
 export { providerRegistry };
