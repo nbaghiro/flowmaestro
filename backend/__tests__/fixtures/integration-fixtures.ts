@@ -45,6 +45,7 @@ import { figmaFixtures } from "../../src/integrations/providers/figma/__tests__/
 import { freshbooksFixtures } from "../../src/integrations/providers/freshbooks/__tests__/fixtures";
 import { freshdeskFixtures } from "../../src/integrations/providers/freshdesk/__tests__/fixtures";
 import { ghostFixtures } from "../../src/integrations/providers/ghost/__tests__/fixtures";
+import { gitbookFixtures } from "../../src/integrations/providers/gitbook/__tests__/fixtures";
 import { githubFixtures } from "../../src/integrations/providers/github/__tests__/fixtures";
 import { gitlabFixtures } from "../../src/integrations/providers/gitlab/__tests__/fixtures";
 import { gmailFixtures } from "../../src/integrations/providers/gmail/__tests__/fixtures";
@@ -132,6 +133,7 @@ import { workdayFixtures } from "../../src/integrations/providers/workday/__test
 import { xeroFixtures } from "../../src/integrations/providers/xero/__tests__/fixtures";
 import { youtubeFixtures } from "../../src/integrations/providers/youtube/__tests__/fixtures";
 import { zendeskFixtures } from "../../src/integrations/providers/zendesk/__tests__/fixtures";
+import { zohoCrmFixtures } from "../../src/integrations/providers/zoho-crm/__tests__/fixtures";
 import { zoomFixtures } from "../../src/integrations/providers/zoom/__tests__/fixtures";
 import { fixtureRegistry } from "../../src/integrations/sandbox";
 
@@ -175,6 +177,7 @@ fixtureRegistry.registerAll(figmaFixtures);
 fixtureRegistry.registerAll(freshbooksFixtures);
 fixtureRegistry.registerAll(freshdeskFixtures);
 fixtureRegistry.registerAll(ghostFixtures);
+fixtureRegistry.registerAll(gitbookFixtures);
 fixtureRegistry.registerAll(githubFixtures);
 fixtureRegistry.registerAll(gitlabFixtures);
 fixtureRegistry.registerAll(gmailFixtures);
@@ -262,6 +265,7 @@ fixtureRegistry.registerAll(workdayFixtures);
 fixtureRegistry.registerAll(xeroFixtures);
 fixtureRegistry.registerAll(youtubeFixtures);
 fixtureRegistry.registerAll(zendeskFixtures);
+fixtureRegistry.registerAll(zohoCrmFixtures);
 fixtureRegistry.registerAll(zoomFixtures);
 
 // Re-export the registry for convenience

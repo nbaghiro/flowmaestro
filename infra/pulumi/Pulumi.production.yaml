@@ -203,5 +203,7 @@ config:
       {"name":"ebay-client-id","envVar":"EBAY_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"eBay OAuth client ID"},
       {"name":"ebay-client-secret","envVar":"EBAY_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"eBay OAuth client secret"},
       {"name":"gorgias-client-id","envVar":"GORGIAS_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Gorgias OAuth client ID"},
-      {"name":"gorgias-client-secret","envVar":"GORGIAS_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Gorgias OAuth client secret"}
+      {"name":"gorgias-client-secret","envVar":"GORGIAS_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Gorgias OAuth client secret"},
+      {"name":"zoho-crm-client-id","envVar":"ZOHO_CRM_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Zoho CRM OAuth client ID"},
+      {"name":"zoho-crm-client-secret","envVar":"ZOHO_CRM_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Zoho CRM OAuth client secret"}
     ]

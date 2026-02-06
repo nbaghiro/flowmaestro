@@ -1795,5 +1795,33 @@ const wixEntry: ProviderRegistryEntry = {
 
 providerRegistry.register(wixEntry);
 
+// Register GitBook provider
+const gitbookEntry: ProviderRegistryEntry = {
+    name: "gitbook",
+    displayName: "GitBook",
+    authMethod: "api_key",
+    category: "documentation",
+    loader: async () => {
+        const { GitBookProvider } = await import("./providers/gitbook/GitBookProvider");
+        return new GitBookProvider();
+    }
+};
+
+providerRegistry.register(gitbookEntry);
+
+// Register Zoho CRM provider
+const zohoCrmEntry: ProviderRegistryEntry = {
+    name: "zoho-crm",
+    displayName: "Zoho CRM",
+    authMethod: "oauth2",
+    category: "crm",
+    loader: async () => {
+        const { ZohoCrmProvider } = await import("./providers/zoho-crm/ZohoCrmProvider");
+        return new ZohoCrmProvider();
+    }
+};
+
+providerRegistry.register(zohoCrmEntry);
+
 // Export for use in application
 export { providerRegistry };

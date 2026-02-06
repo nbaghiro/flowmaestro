@@ -181,7 +181,8 @@ export const PROVIDER_LOGO_DOMAINS: Record<string, string> = {
     bigcommerce: "bigcommerce.com",
     zoom: "zoom.us",
     "google-meet": "meet.google.com",
-    supabase: "supabase.com"
+    supabase: "supabase.com",
+    gitbook: "gitbook.com"
 };
 
 /**
@@ -337,6 +338,20 @@ export const ALL_PROVIDERS: Provider[] = [
         logoUrl: getBrandLogo("notion.so"),
         category: "Productivity",
         methods: ["oauth2"]
+    },
+    {
+        provider: "gitbook",
+        displayName: "GitBook",
+        description: "Documentation platform for technical content, API docs, and knowledge bases",
+        logoUrl: getBrandLogo("gitbook.com"),
+        category: "Productivity",
+        methods: ["api_key"],
+        apiKeySettings: {
+            keyLabel: "Personal Access Token",
+            keyPlaceholder: "gb_api_...",
+            helpText: "Create a personal access token in your GitBook developer settings",
+            helpUrl: "https://app.gitbook.com/account/developer"
+        }
     },
     {
         provider: "airtable",
@@ -1402,7 +1417,25 @@ export const ALL_PROVIDERS: Provider[] = [
         logoUrl: getBrandLogo("zoho.com"),
         category: "CRM & Sales",
         methods: ["oauth2"],
-        comingSoon: true
+        oauthSettings: [
+            {
+                name: "dataCenter",
+                label: "Data Center Region",
+                placeholder: "Select your Zoho data center",
+                helpText: "Choose the region where your Zoho account is hosted",
+                required: true,
+                type: "select",
+                options: [
+                    { value: "us", label: "United States (zoho.com)" },
+                    { value: "eu", label: "Europe (zoho.eu)" },
+                    { value: "au", label: "Australia (zoho.com.au)" },
+                    { value: "in", label: "India (zoho.in)" },
+                    { value: "jp", label: "Japan (zoho.jp)" },
+                    { value: "cn", label: "China (zoho.com.cn)" },
+                    { value: "ca", label: "Canada (zohocloud.ca)" }
+                ]
+            }
+        ]
     },
     {
         provider: "copper",

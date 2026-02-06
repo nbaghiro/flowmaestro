@@ -61,6 +61,7 @@ export async function loadAllFixtures(): Promise<void> {
         "freshbooks",
         "freshdesk",
         "ghost",
+        "gitbook",
         "github",
         "gitlab",
         "gmail",
@@ -148,6 +149,7 @@ export async function loadAllFixtures(): Promise<void> {
         "xero",
         "youtube",
         "zendesk",
+        "zoho-crm",
         "zoom"
     ];
 

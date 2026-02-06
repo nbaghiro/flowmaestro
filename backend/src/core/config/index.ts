@@ -386,6 +386,12 @@ export const config = {
             clientSecret: process.env.CLOSE_CLIENT_SECRET || ""
         },
 
+        // Zoho CRM
+        zohoCrm: {
+            clientId: process.env.ZOHO_CRM_CLIENT_ID || "",
+            clientSecret: process.env.ZOHO_CRM_CLIENT_SECRET || ""
+        },
+
         // TikTok
         tiktok: {
             clientId: process.env.TIKTOK_CLIENT_ID || "",
@@ -736,6 +742,7 @@ export function getOAuthRedirectUri(provider: string): string {
         squarespace: "/oauth/squarespace/callback",
         ebay: "/oauth/ebay/callback",
         gorgias: "/oauth/gorgias/callback",
+        "zoho-crm": "/oauth/zoho-crm/callback",
 
         // OAuth 1.0a providers
         evernote: "/oauth1/evernote/callback"
@@ -846,7 +853,8 @@ export function getOAuthCredentials(provider: string): { clientId: string; clien
         etsy: "etsy",
         squarespace: "squarespace",
         ebay: "ebay",
-        gorgias: "gorgias"
+        gorgias: "gorgias",
+        "zoho-crm": "zohoCrm"
     };
 
     const configKey = providerMap[provider];
