@@ -205,5 +205,9 @@ config:
       {"name":"gorgias-client-id","envVar":"GORGIAS_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Gorgias OAuth client ID"},
       {"name":"gorgias-client-secret","envVar":"GORGIAS_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Gorgias OAuth client secret"},
       {"name":"zoho-crm-client-id","envVar":"ZOHO_CRM_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Zoho CRM OAuth client ID"},
-      {"name":"zoho-crm-client-secret","envVar":"ZOHO_CRM_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Zoho CRM OAuth client secret"}
+      {"name":"zoho-crm-client-secret","envVar":"ZOHO_CRM_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Zoho CRM OAuth client secret"},
+      {"name":"bill-com-client-id","envVar":"BILL_COM_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Bill.com OAuth client ID"},
+      {"name":"bill-com-client-secret","envVar":"BILL_COM_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Bill.com OAuth client secret"},
+      {"name":"ramp-client-id","envVar":"RAMP_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Ramp OAuth client ID"},
+      {"name":"ramp-client-secret","envVar":"RAMP_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Ramp OAuth client secret"}
     ]

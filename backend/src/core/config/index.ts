@@ -630,6 +630,18 @@ export const config = {
         gorgias: {
             clientId: process.env.GORGIAS_CLIENT_ID || "",
             clientSecret: process.env.GORGIAS_CLIENT_SECRET || ""
+        },
+
+        // Bill.com
+        billCom: {
+            clientId: process.env.BILL_COM_CLIENT_ID || "",
+            clientSecret: process.env.BILL_COM_CLIENT_SECRET || ""
+        },
+
+        // Ramp
+        ramp: {
+            clientId: process.env.RAMP_CLIENT_ID || "",
+            clientSecret: process.env.RAMP_CLIENT_SECRET || ""
         }
     }
 };
@@ -743,6 +755,8 @@ export function getOAuthRedirectUri(provider: string): string {
         ebay: "/oauth/ebay/callback",
         gorgias: "/oauth/gorgias/callback",
         "zoho-crm": "/oauth/zoho-crm/callback",
+        "bill-com": "/oauth/bill-com/callback",
+        ramp: "/oauth/ramp/callback",
 
         // OAuth 1.0a providers
         evernote: "/oauth1/evernote/callback"
@@ -854,7 +868,9 @@ export function getOAuthCredentials(provider: string): { clientId: string; clien
         squarespace: "squarespace",
         ebay: "ebay",
         gorgias: "gorgias",
-        "zoho-crm": "zohoCrm"
+        "zoho-crm": "zohoCrm",
+        "bill-com": "billCom",
+        ramp: "ramp"
     };
 
     const configKey = providerMap[provider];

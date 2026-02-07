@@ -182,7 +182,8 @@ export const PROVIDER_LOGO_DOMAINS: Record<string, string> = {
     zoom: "zoom.us",
     "google-meet": "meet.google.com",
     supabase: "supabase.com",
-    gitbook: "gitbook.com"
+    gitbook: "gitbook.com",
+    "bill-com": "bill.com"
 };
 
 /**
@@ -816,8 +817,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Accounts payable and receivable automation",
         logoUrl: getBrandLogo("bill.com"),
         category: "Accounting",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "expensify",
@@ -826,7 +826,15 @@ export const ALL_PROVIDERS: Provider[] = [
         logoUrl: getBrandLogo("expensify.com"),
         category: "Accounting",
         methods: ["api_key"],
-        comingSoon: true
+        apiKeySettings: {
+            keyLabel: "Partner User ID",
+            keyPlaceholder: "your-partner-user-id",
+            requiresSecret: true,
+            secretLabel: "Partner User Secret",
+            secretPlaceholder: "your-partner-user-secret",
+            helpText: "Get your Partner User ID and Secret from the Expensify Integrations page",
+            helpUrl: "https://www.expensify.com/tools/integrations/"
+        }
     },
     {
         provider: "ramp",
@@ -834,8 +842,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Corporate card and expense management",
         logoUrl: getBrandLogo("ramp.com"),
         category: "Accounting",
-        methods: ["api_key"],
-        comingSoon: true
+        methods: ["oauth2"]
     },
     {
         provider: "wise",
@@ -844,7 +851,12 @@ export const ALL_PROVIDERS: Provider[] = [
         logoUrl: getBrandLogo("wise.com"),
         category: "Accounting",
         methods: ["api_key"],
-        comingSoon: true
+        apiKeySettings: {
+            keyLabel: "API Token",
+            keyPlaceholder: "your-personal-api-token",
+            helpText: "Generate a Personal API Token in your Wise account settings",
+            helpUrl: "https://wise.com/settings/api-tokens"
+        }
     },
 
     // HR & Recruiting
@@ -2156,8 +2168,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Data and AI platform",
         logoUrl: getBrandLogo("databricks.com"),
         category: "Databases",
-        methods: ["api_key"],
-        comingSoon: true
+        methods: ["api_key"]
     },
     {
         provider: "elasticsearch",
@@ -2165,8 +2176,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Search and analytics engine",
         logoUrl: getBrandLogo("elastic.co"),
         category: "Databases",
-        methods: ["api_key"],
-        comingSoon: true
+        methods: ["api_key"]
     },
     {
         provider: "pinecone",
@@ -2607,7 +2617,15 @@ export const ALL_PROVIDERS: Provider[] = [
         logoUrl: getBrandLogo("chargebee.com"),
         category: "Accounting",
         methods: ["api_key"],
-        comingSoon: true
+        apiKeySettings: {
+            keyLabel: "API Key",
+            keyPlaceholder: "test_xxxxxxxxxxxxxxxxxxxxxxxx",
+            requiresSecret: true,
+            secretLabel: "Site Name",
+            secretPlaceholder: "your-site",
+            helpText: "Enter your API key and site name (e.g., 'acme' from acme.chargebee.com)",
+            helpUrl: "https://www.chargebee.com/docs/2.0/api_keys.html"
+        }
     },
 
     {

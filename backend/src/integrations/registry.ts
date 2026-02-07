@@ -1851,5 +1851,105 @@ const insightlyEntry: ProviderRegistryEntry = {
 
 providerRegistry.register(insightlyEntry);
 
+// Register Databricks provider
+const databricksEntry: ProviderRegistryEntry = {
+    name: "databricks",
+    displayName: "Databricks",
+    authMethod: "api_key",
+    category: "database",
+    loader: async () => {
+        const { DatabricksProvider } = await import("./providers/databricks/DatabricksProvider");
+        return new DatabricksProvider();
+    }
+};
+
+providerRegistry.register(databricksEntry);
+
+// Register Elasticsearch provider
+const elasticsearchEntry: ProviderRegistryEntry = {
+    name: "elasticsearch",
+    displayName: "Elasticsearch",
+    authMethod: "api_key",
+    category: "database",
+    loader: async () => {
+        const { ElasticsearchProvider } = await import(
+            "./providers/elasticsearch/ElasticsearchProvider"
+        );
+        return new ElasticsearchProvider();
+    }
+};
+
+providerRegistry.register(elasticsearchEntry);
+
+// Register Bill.com provider
+const billComEntry: ProviderRegistryEntry = {
+    name: "bill-com",
+    displayName: "Bill.com",
+    authMethod: "oauth2",
+    category: "accounting",
+    loader: async () => {
+        const { BillComProvider } = await import("./providers/bill-com/BillComProvider");
+        return new BillComProvider();
+    }
+};
+
+providerRegistry.register(billComEntry);
+
+// Register Expensify provider
+const expensifyEntry: ProviderRegistryEntry = {
+    name: "expensify",
+    displayName: "Expensify",
+    authMethod: "api_key",
+    category: "accounting",
+    loader: async () => {
+        const { ExpensifyProvider } = await import("./providers/expensify/ExpensifyProvider");
+        return new ExpensifyProvider();
+    }
+};
+
+providerRegistry.register(expensifyEntry);
+
+// Register Ramp provider
+const rampEntry: ProviderRegistryEntry = {
+    name: "ramp",
+    displayName: "Ramp",
+    authMethod: "oauth2",
+    category: "accounting",
+    loader: async () => {
+        const { RampProvider } = await import("./providers/ramp/RampProvider");
+        return new RampProvider();
+    }
+};
+
+providerRegistry.register(rampEntry);
+
+// Register Wise provider
+const wiseEntry: ProviderRegistryEntry = {
+    name: "wise",
+    displayName: "Wise",
+    authMethod: "api_key",
+    category: "accounting",
+    loader: async () => {
+        const { WiseProvider } = await import("./providers/wise/WiseProvider");
+        return new WiseProvider();
+    }
+};
+
+providerRegistry.register(wiseEntry);
+
+// Register Chargebee provider
+const chargebeeEntry: ProviderRegistryEntry = {
+    name: "chargebee",
+    displayName: "Chargebee",
+    authMethod: "api_key",
+    category: "accounting",
+    loader: async () => {
+        const { ChargebeeProvider } = await import("./providers/chargebee/ChargebeeProvider");
+        return new ChargebeeProvider();
+    }
+};
+
+providerRegistry.register(chargebeeEntry);
+
 // Export for use in application
 export { providerRegistry };
