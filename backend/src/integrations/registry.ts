@@ -1951,5 +1951,33 @@ const chargebeeEntry: ProviderRegistryEntry = {
 
 providerRegistry.register(chargebeeEntry);
 
+// Register BigQuery provider
+const bigqueryEntry: ProviderRegistryEntry = {
+    name: "bigquery",
+    displayName: "BigQuery",
+    authMethod: "api_key",
+    category: "database",
+    loader: async () => {
+        const { BigQueryProvider } = await import("./providers/bigquery/BigQueryProvider");
+        return new BigQueryProvider();
+    }
+};
+
+providerRegistry.register(bigqueryEntry);
+
+// Register Redshift provider
+const redshiftEntry: ProviderRegistryEntry = {
+    name: "redshift",
+    displayName: "Amazon Redshift",
+    authMethod: "api_key",
+    category: "database",
+    loader: async () => {
+        const { RedshiftProvider } = await import("./providers/redshift/RedshiftProvider");
+        return new RedshiftProvider();
+    }
+};
+
+providerRegistry.register(redshiftEntry);
+
 // Export for use in application
 export { providerRegistry };
