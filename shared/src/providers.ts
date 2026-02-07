@@ -580,11 +580,19 @@ export const ALL_PROVIDERS: Provider[] = [
     {
         provider: "twilio",
         displayName: "Twilio",
-        description: "Send SMS and make calls",
+        description: "Send SMS messages, manage phone numbers, and look up carrier info",
         logoUrl: getBrandLogo("twilio.com"),
         category: "Marketing",
         methods: ["api_key"],
-        comingSoon: true
+        apiKeySettings: {
+            keyLabel: "Account SID",
+            keyPlaceholder: "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            requiresSecret: true,
+            secretLabel: "Auth Token",
+            secretPlaceholder: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            helpText: "Find your Account SID and Auth Token in your Twilio Console",
+            helpUrl: "https://console.twilio.com/"
+        }
     },
 
     // File Storage
@@ -2159,8 +2167,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Google Cloud data warehouse",
         logoUrl: getBrandLogo("cloud.google.com/bigquery"),
         category: "Databases",
-        methods: ["oauth2"],
-        comingSoon: true
+        methods: ["api_key"]
     },
     {
         provider: "databricks",
@@ -2193,8 +2200,7 @@ export const ALL_PROVIDERS: Provider[] = [
         description: "Cloud data warehouse",
         logoUrl: getBrandLogo("aws.amazon.com/redshift"),
         category: "Databases",
-        methods: ["api_key"],
-        comingSoon: true
+        methods: ["api_key"]
     },
 
     // AI & ML (Additional)

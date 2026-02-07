@@ -1979,5 +1979,19 @@ const redshiftEntry: ProviderRegistryEntry = {
 
 providerRegistry.register(redshiftEntry);
 
+// Register Twilio provider
+const twilioEntry: ProviderRegistryEntry = {
+    name: "twilio",
+    displayName: "Twilio",
+    authMethod: "api_key",
+    category: "marketing",
+    loader: async () => {
+        const { TwilioProvider } = await import("./providers/twilio/TwilioProvider");
+        return new TwilioProvider();
+    }
+};
+
+providerRegistry.register(twilioEntry);
+
 // Export for use in application
 export { providerRegistry };
