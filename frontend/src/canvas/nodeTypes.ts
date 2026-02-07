@@ -46,14 +46,19 @@ import VisionNode from "./nodes/VisionNode";
 import WaitNode from "./nodes/WaitNode";
 import WebBrowseNode from "./nodes/WebBrowseNode";
 import WebSearchNode from "./nodes/WebSearchNode";
+import type { ComponentType } from "react";
+import type { NodeProps } from "reactflow";
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type NodeComponent = ComponentType<NodeProps<any>>;
+
 // AI & ML providers use specialized nodes (LLM, Image Generation, etc.), not Integration node
 // Derived from centralized ALL_PROVIDERS in shared package
 const AI_PROVIDER_IDS = getProvidersByCategory("AI & ML");
 
 // Generate integration provider node types dynamically
 // Each provider type maps to the IntegrationNode component
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const integrationProviderNodeTypes: Record<string, any> = {};
+const integrationProviderNodeTypes: Record<string, typeof IntegrationNode> = {};
 ALL_PROVIDERS.filter((p) => !p.comingSoon && !AI_PROVIDER_IDS.includes(p.provider)).forEach(
     (provider) => {
         integrationProviderNodeTypes[provider.provider] = IntegrationNode;
@@ -63,10 +68,8 @@ ALL_PROVIDERS.filter((p) => !p.comingSoon && !AI_PROVIDER_IDS.includes(p.provide
 /**
  * Complete node type registry for workflow canvases
  * Use this for the main WorkflowCanvas that needs all node types including integrations
- * Note: Using 'any' for React 19 compatibility with reactflow's React 18 types
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const nodeTypes: Record<string, any> = {
+export const nodeTypes: Record<string, NodeComponent> = {
     // Core nodes
     comment: CommentNode,
     trigger: TriggerNode,
@@ -137,10 +140,8 @@ export { AI_PROVIDER_IDS };
 /**
  * Preview-only node types (excludes dynamic integrations for smaller bundle in previews)
  * Use this for read-only previews like TemplateCard, PatternPicker, etc.
- * Note: Using 'any' for React 19 compatibility with reactflow's React 18 types
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const previewNodeTypes: Record<string, any> = {
+export const previewNodeTypes: Record<string, NodeComponent> = {
     comment: CommentNode,
     trigger: TriggerNode,
     llm: LLMNode,

@@ -1,6 +1,6 @@
 # Lightweight migrations and seeding image
 # Includes devDependencies needed for migrations (node-pg-migrate, tsx)
-FROM node:24-slim
+FROM node:22-slim
 
 # Install PostgreSQL client for schema creation
 RUN apt-get update && apt-get install -y postgresql-client && rm -rf /var/lib/apt/lists/*

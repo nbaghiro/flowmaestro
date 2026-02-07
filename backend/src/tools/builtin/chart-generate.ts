@@ -285,7 +285,7 @@ async function renderChart(
 ): Promise<{ buffer: Buffer; path: string; filename: string }> {
     // Dynamic imports for optional dependencies
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const canvasModule = await import("@napi-rs/canvas");
+    const canvasModule = await import("canvas");
     const createCanvas = canvasModule.createCanvas;
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const chartModule = await import("chart.js");
@@ -417,7 +417,7 @@ async function executeChartGenerate(
                 success: false,
                 error: {
                     message:
-                        "Chart generation requires the '@napi-rs/canvas' package. Install with: npm install @napi-rs/canvas",
+                        "Chart generation requires the 'canvas' package. Install with: npm install canvas",
                     code: "MISSING_DEPENDENCY",
                     retryable: false
                 },

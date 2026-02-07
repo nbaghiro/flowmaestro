@@ -1,5 +1,5 @@
 # Build stage
-FROM node:24-alpine AS builder
+FROM node:22-alpine AS builder
 
 # Build arguments for environment variables baked into the static build
 ARG VITE_GA_MEASUREMENT_ID=""

@@ -111,8 +111,7 @@ export function SelectItem({ value, children, disabled }: SelectItemProps) {
                     <Check className="w-4 h-4" />
                 </SelectPrimitive.ItemIndicator>
             </span>
-            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-            <SelectPrimitive.ItemText>{children as any}</SelectPrimitive.ItemText>
+            <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
         </SelectPrimitive.Item>
     );
 }

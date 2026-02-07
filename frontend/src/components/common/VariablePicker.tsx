@@ -23,7 +23,7 @@ interface VariablePickerProps {
     /** Callback when a variable is selected */
     onSelect: (variablePath: string) => void;
     /** Custom trigger element (optional) */
-    trigger?: React.ReactElement;
+    trigger?: React.ReactNode;
     /** Whether the picker is disabled */
     disabled?: boolean;
 }

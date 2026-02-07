@@ -3,7 +3,7 @@ import { Bot, Clock, Database, GitBranch, Layers, Workflow } from "lucide-react"
 import React from "react";
 
 interface Feature {
-    icon: React.ReactElement;
+    icon: React.ReactNode;
     title: string;
     description: string;
 }
@@ -71,10 +71,10 @@ const FeatureCard: React.FC<{ feature: Feature; index: number }> = ({ feature, i
                         animate={isInView ? { opacity: 1, scale: 1 } : {}}
                         transition={{ duration: 0.4, delay: index * 0.08 + 0.2 }}
                     >
-                        {React.cloneElement(feature.icon, {
+                        {React.cloneElement(feature.icon as React.ReactElement, {
                             className: "w-6 h-6 text-foreground",
                             strokeWidth: 1.5
-                        } as React.Attributes & { className: string; strokeWidth: number })}
+                        })}
                     </motion.div>
                 </motion.div>
 
