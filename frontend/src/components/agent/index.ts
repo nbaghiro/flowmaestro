@@ -15,11 +15,7 @@ export {
 } from "./sections";
 
 // Controls
-export {
-    LayoutPresetButtons,
-    AgentBuilderConnectionSelector,
-    AgentConnectionSelector
-} from "./controls";
+export { AgentBuilderConnectionSelector, AgentConnectionSelector } from "./controls";
 
 // Dialogs
 export {

@@ -15,7 +15,6 @@ import {
     ModelSection,
     InstructionsSection,
     ToolsSection,
-    LayoutPresetButtons,
     AddBuiltinToolDialog,
     AddKnowledgeBaseDialog,
     AddMCPIntegrationDialog,
@@ -951,11 +950,6 @@ export function AgentBuilder() {
                                 </button>
                             )}
                         </div>
-                    </div>
-
-                    {/* Center section - Layout preset buttons */}
-                    <div className="absolute left-1/2 -translate-x-1/2">
-                        <LayoutPresetButtons onPresetApply={() => setActiveTab("build")} />
                     </div>
 
                     {/* Right section */}
