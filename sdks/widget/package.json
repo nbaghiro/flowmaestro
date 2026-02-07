@@ -43,8 +43,8 @@
         "prepublishOnly": "npm run build"
     },
     "peerDependencies": {
-        "react": ">=17.0.0",
-        "react-dom": ">=17.0.0"
+        "react": ">=17.0.0 || ^19.0.0",
+        "react-dom": ">=17.0.0 || ^19.0.0"
     },
     "peerDependenciesMeta": {
         "react": {
@@ -55,10 +55,10 @@
         }
     },
     "devDependencies": {
-        "@types/react": "^18.2.0",
-        "@types/react-dom": "^18.2.0",
-        "react": "^18.2.0",
-        "react-dom": "^18.2.0",
+        "@types/react": "^19.0.0",
+        "@types/react-dom": "^19.0.0",
+        "react": "^19.0.0",
+        "react-dom": "^19.0.0",
         "tsup": "^8.0.0",
         "typescript": "^5.3.0"
     },

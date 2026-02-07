@@ -7,7 +7,7 @@ interface CheckboxProps extends React.ComponentPropsWithoutRef<typeof CheckboxPr
     label?: string;
 }
 
-export const Checkbox = forwardRef<React.ElementRef<typeof CheckboxPrimitive.Root>, CheckboxProps>(
+export const Checkbox = forwardRef<HTMLButtonElement, CheckboxProps>(
     ({ label, className, id, ...props }, ref) => {
         const checkboxId =
             id || (label ? `checkbox-${label.replace(/\s+/g, "-").toLowerCase()}` : undefined);

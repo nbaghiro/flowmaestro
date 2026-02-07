@@ -16,7 +16,7 @@ interface NodeExecutionPopoverProps {
     executionState: NodeExecutionState;
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    children: React.ReactNode; // Trigger element (status indicator)
+    children: React.ReactElement; // Trigger element (status indicator)
 }
 
 export function NodeExecutionPopover({
@@ -143,7 +143,8 @@ export function NodeExecutionPopover({
 
     return (
         <Popover.Root open={open} onOpenChange={onOpenChange}>
-            <Popover.Trigger asChild>{children}</Popover.Trigger>
+            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+            <Popover.Trigger asChild>{children as any}</Popover.Trigger>
 
             <Popover.Portal>
                 <Popover.Content
