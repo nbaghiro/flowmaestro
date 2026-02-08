@@ -60,11 +60,14 @@ export function VoiceChat({
         if (!isConnected && !isConnecting) {
             connect();
         }
+    }, [isConnected, isConnecting, connect]);
 
+    // Cleanup on unmount
+    useEffect(() => {
         return () => {
             disconnect();
         };
-    }, []);
+    }, [disconnect]);
 
     // Handle microphone button click
     const handleMicClick = useCallback(() => {

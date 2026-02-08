@@ -7,6 +7,7 @@ import type {
 import { AudioCapture } from "../lib/audio/AudioCapture";
 import { AudioPlayback } from "../lib/audio/AudioPlayback";
 import { logger } from "../lib/logger";
+import { useAgentStore } from "../stores/agentStore";
 import { getCurrentWorkspaceId } from "../stores/workspaceStore";
 
 /**
@@ -90,6 +91,11 @@ export function useVoiceSession(config: UseVoiceSessionConfig): UseVoiceSessionR
     const audioCaptureRef = useRef<AudioCapture | null>(null);
     const audioPlaybackRef = useRef<AudioPlayback | null>(null);
 
+    // Internal streaming state refs - track message being streamed for direct store updates
+    const streamingMessageIdRef = useRef<string | null>(null);
+    const streamingThreadIdRef = useRef<string | null>(null);
+    const streamingContentRef = useRef<string>("");
+
     // Callback refs - keep latest callbacks accessible without recreating handlers
     const onExecutionStartedRef = useRef(onExecutionStarted);
     const onAgentTokenRef = useRef(onAgentToken);
@@ -117,6 +123,7 @@ export function useVoiceSession(config: UseVoiceSessionConfig): UseVoiceSessionR
 
     /**
      * Handle WebSocket messages
+     * Uses direct store access for message updates to avoid stale closure issues
      */
     const handleMessage = useCallback(
         (event: MessageEvent) => {
@@ -137,21 +144,48 @@ export function useVoiceSession(config: UseVoiceSessionConfig): UseVoiceSessionR
                         setIsInterimTranscript(!message.isFinal);
                         break;
 
-                    case "execution_started":
-                        // Notify parent component that execution started
-                        // so it can display the user message and prepare for streaming
-                        logger.info("Voice execution_started received", {
-                            executionId: message.executionId,
-                            threadId: message.threadId,
-                            userMessage: message.userMessage,
-                            hasCallback: !!onExecutionStartedRef.current
+                    case "execution_started": {
+                        // Directly update store to add user message and prepare streaming
+                        const store = useAgentStore.getState();
+                        const eventThreadId = message.threadId;
+                        const eventExecutionId = message.executionId;
+
+                        logger.info("Voice execution_started - adding messages to store", {
+                            executionId: eventExecutionId,
+                            threadId: eventThreadId,
+                            userMessage: message.userMessage
                         });
+
+                        // Add user message directly to store
+                        store.addMessageToThread(eventThreadId, {
+                            id: `voice-user-${eventExecutionId}`,
+                            role: "user",
+                            content: message.userMessage,
+                            timestamp: new Date().toISOString()
+                        });
+
+                        // Set up streaming context
+                        const streamingMsgId = `voice-streaming-${eventExecutionId}`;
+                        streamingMessageIdRef.current = streamingMsgId;
+                        streamingThreadIdRef.current = eventThreadId;
+                        streamingContentRef.current = "";
+
+                        // Add placeholder assistant message
+                        store.addMessageToThread(eventThreadId, {
+                            id: streamingMsgId,
+                            role: "assistant",
+                            content: " ",
+                            timestamp: new Date().toISOString()
+                        });
+
+                        // Still call parent callback for any additional handling
                         onExecutionStartedRef.current?.({
-                            executionId: message.executionId,
-                            threadId: message.threadId,
+                            executionId: eventExecutionId,
+                            threadId: eventThreadId,
                             userMessage: message.userMessage
                         });
                         break;
+                    }
 
                     case "agent_thinking":
                         setSessionState("processing");
@@ -162,21 +196,65 @@ export function useVoiceSession(config: UseVoiceSessionConfig): UseVoiceSessionR
                         setIsPlaying(true);
                         break;
 
-                    case "agent_token":
-                        // Forward token to parent for chat display
+                    case "agent_token": {
+                        // Directly update store with token
+                        const msgId = streamingMessageIdRef.current;
+                        const thrdId = streamingThreadIdRef.current;
+
+                        if (msgId && thrdId) {
+                            const store = useAgentStore.getState();
+                            store.updateThreadMessage(thrdId, msgId, (current: string) => {
+                                const cleanCurrent = current.trimStart() || "";
+                                const newContent = cleanCurrent + message.token;
+                                streamingContentRef.current = newContent;
+                                return newContent;
+                            });
+                        } else {
+                            logger.warn("Voice agent_token received but no streaming context", {
+                                hasMessageId: !!msgId,
+                                hasThreadId: !!thrdId
+                            });
+                        }
+
+                        // Still call parent callback for any additional handling
                         onAgentTokenRef.current?.(message.token);
                         break;
+                    }
 
                     case "audio_chunk":
                         // Queue audio for playback
                         audioPlaybackRef.current?.queueAudio(message.data);
                         break;
 
-                    case "agent_done":
+                    case "agent_done": {
+                        // Finalize the message in store
+                        const msgId = streamingMessageIdRef.current;
+                        const thrdId = streamingThreadIdRef.current;
+                        const finalContent = streamingContentRef.current;
+
+                        logger.info("Voice agent_done - finalizing message", {
+                            hasMessageId: !!msgId,
+                            hasThreadId: !!thrdId,
+                            contentLength: finalContent.length
+                        });
+
+                        if (msgId && thrdId && finalContent.trim()) {
+                            const store = useAgentStore.getState();
+                            store.updateThreadMessage(thrdId, msgId, finalContent);
+                        }
+
+                        // Reset streaming context
+                        streamingMessageIdRef.current = null;
+                        streamingThreadIdRef.current = null;
+                        streamingContentRef.current = "";
+
                         setSessionState("ready");
                         setIsPlaying(false);
+
+                        // Still call parent callback for any additional handling
                         onAgentDoneRef.current?.();
                         break;
+                    }
 
                     case "error":
                         setError(message.message);
@@ -188,7 +266,7 @@ export function useVoiceSession(config: UseVoiceSessionConfig): UseVoiceSessionR
                 logger.error("Failed to parse voice message", err);
             }
         },
-        [] // Uses refs for callbacks so no dependencies needed
+        [] // Uses refs and direct store access so no dependencies needed
     );
 
     /**
