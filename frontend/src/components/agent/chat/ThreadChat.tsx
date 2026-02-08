@@ -1,28 +1,34 @@
-import { Send, Bot, User, Loader2, Wrench, CheckCircle2, XCircle, Eye } from "lucide-react";
+/**
+ * ThreadChat Component
+ *
+ * Chat interface for continuing conversations in existing agent threads.
+ * Supports SSE streaming, tool call tracking, and voice mode.
+ * Refactored to use unified chat components.
+ */
+
+import { Bot, Send } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useChatScroll } from "../../../hooks/useChatScroll";
 import * as api from "../../../lib/api";
 import { logger } from "../../../lib/logger";
 import { streamAgentExecution } from "../../../lib/sse";
 import { cn } from "../../../lib/utils";
 import { useAgentStore } from "../../../stores/agentStore";
+import {
+    ChatBubble,
+    ToolCallList,
+    ToolResultDialogContent,
+    type ToolCallInfo
+} from "../../chat/core";
 import { Button } from "../../common/Button";
 import { Dialog } from "../../common/Dialog";
 import { Input } from "../../common/Input";
-import { MarkdownRenderer } from "../../common/MarkdownRenderer";
 import { TypingDots } from "../../common/TypingDots";
 import { AgentConnectionSelector } from "../controls/AgentConnectionSelector";
+import { ToolMessageDisplay } from "./ToolMessageDisplay";
 import { VoiceChat } from "./VoiceChat";
 import { VoiceModeToggle } from "./VoiceModeToggle";
-import type { Agent, Thread, ThreadMessage, JsonObject, ThreadTokenUsage } from "../../../lib/api";
-
-interface ToolCallInfo {
-    id: string;
-    toolName: string;
-    status: "running" | "success" | "failed";
-    arguments?: JsonObject;
-    result?: JsonObject;
-    error?: string;
-}
+import type { Agent, Thread, ThreadMessage, ThreadTokenUsage } from "../../../lib/api";
 
 interface ThreadChatProps {
     agent: Agent;
@@ -72,10 +78,7 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
         normalizeTokenUsage(thread.metadata?.tokenUsage)
     );
     const [toolCalls, setToolCalls] = useState<ToolCallInfo[]>([]);
-    const [selectedToolError, setSelectedToolError] = useState<{
-        toolName: string;
-        error: string;
-    } | null>(null);
+    const [selectedToolCall, setSelectedToolCall] = useState<ToolCallInfo | null>(null);
 
     // Thread-level model override (doesn't save to agent)
     const [overrideConnectionId, setOverrideConnectionId] = useState<string | null>(null);
@@ -84,17 +87,14 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
     // Voice mode state
     const [isVoiceMode, setIsVoiceMode] = useState(false);
 
-    // Voice streaming state
-    const voiceThreadIdRef = useRef<string | null>(null);
-    const voiceStreamingMessageIdRef = useRef<string | null>(null);
-    const voiceStreamingContentRef = useRef<string>("");
-
-    const messagesEndRef = useRef<HTMLDivElement>(null);
     const sseCleanupRef = useRef<(() => void) | null>(null);
     const streamingContentRef = useRef<string>("");
 
     // Get messages for this thread from store
     const messages = threadMessages[thread.id] || [];
+
+    // Auto-scroll when messages or tool calls change
+    const messagesEndRef = useChatScroll([messages, toolCalls]);
 
     const refreshTokenUsage = useCallback(async () => {
         try {
@@ -107,11 +107,6 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
             logger.error("Failed to refresh thread token usage", error);
         }
     }, [thread.id]);
-
-    // Scroll to bottom when messages or tool calls change
-    useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [messages, toolCalls]);
 
     // Load messages when thread changes
     useEffect(() => {
@@ -131,7 +126,6 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
 
     // Start SSE stream when execution starts for this thread
     useEffect(() => {
-        // Only handle SSE if this is the thread with the active execution
         if (!currentExecutionId || currentExecutionStatus !== "running") return;
 
         const executionId = currentExecutionId;
@@ -145,7 +139,6 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
         }
 
         // Reset streaming content and tool calls
-        // Initialize with space to match the placeholder message
         streamingContentRef.current = " ";
         setToolCalls([]);
 
@@ -153,9 +146,7 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
 
         const streamingMessageId = `streaming-${executionId}`;
 
-        // CRITICAL: Create streaming message IMMEDIATELY before starting stream
-        // This prevents race condition where first tokens arrive before message existsgit
-        // Use a single space to ensure message renders empty messages are filtered out
+        // Create streaming message IMMEDIATELY before starting stream
         addMessageToThread(threadId, {
             id: streamingMessageId,
             role: "assistant",
@@ -169,13 +160,9 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
                 logger.debug("SSE connected for execution", { executionId });
             },
             onToken: (token: string) => {
-                // Use function updater pattern for atomic updates like AIChatPanel
-                // This ensures we always append to the current state, not accumulated ref
                 updateThreadMessage(threadId, streamingMessageId, (current: string) => {
-                    // Remove leading space placeholder on first real token
                     const cleanCurrent = current.trimStart() || "";
                     const newContent = cleanCurrent + token;
-                    // Also update ref for onCompleted fallback
                     streamingContentRef.current = newContent;
                     return newContent;
                 });
@@ -186,8 +173,6 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
             },
             onMessage: (message: ThreadMessage) => {
                 logger.debug("Received message", { message });
-                // Ignore assistant messages during streaming they're handled via onToken
-                // Adding them here would create duplicate/incomplete messages
                 if (message.role === "user") {
                     addMessageToThread(threadId, message);
                 }
@@ -231,28 +216,21 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
             onCompleted: (data) => {
                 logger.info("Execution completed", { executionId });
 
-                // ALWAYS use backend finalMessage it's guaranteed complete
-                // The accumulated content may be missing initial tokens
                 const finalContent = data.finalMessage || streamingContentRef.current;
 
                 logger.info("Finalizing message", {
                     hasBackendFinalMessage: !!data.finalMessage,
                     backendLength: data.finalMessage?.length || 0,
-                    accumulatedLength: streamingContentRef.current.length,
-                    accumulatedPreview: streamingContentRef.current.substring(0, 100),
-                    backendPreview: data.finalMessage?.substring(0, 100)
+                    accumulatedLength: streamingContentRef.current.length
                 });
 
                 const store = useAgentStore.getState();
                 const currentMessages = store.threadMessages[threadId] || [];
                 const streamingMsg = currentMessages.find((m) => m.id === streamingMessageId);
 
-                // Update streaming message in place with final content (don't replace)
-                // This prevents the message from disappearing/reappearing
                 if (streamingMsg) {
                     updateThreadMessage(threadId, streamingMessageId, finalContent);
                 } else {
-                    // Message doesn't exist - create final message
                     const filteredMessages = currentMessages.filter(
                         (m) => m.id !== streamingMessageId
                     );
@@ -274,7 +252,6 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
             onError: (error: string) => {
                 logger.error("SSE error", undefined, { error });
 
-                // Remove streaming message
                 const store = useAgentStore.getState();
                 const currentMessages = store.threadMessages[threadId] || [];
                 setThreadMessages(
@@ -349,76 +326,30 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
         }
     };
 
-    // Voice chat callbacks for integrating with the chat view
+    // Voice chat callbacks - message updates are now handled directly by useVoiceSession
+    // These callbacks are kept for logging and additional side effects
     const handleVoiceExecutionStarted = useCallback(
         (data: { executionId: string; threadId: string; userMessage: string }) => {
-            logger.info("Voice execution started", { ...data, currentThreadId: thread.id });
-
-            // Store the thread ID for subsequent callbacks
-            voiceThreadIdRef.current = data.threadId;
-
-            // Add user message to chat
-            const userMessage = {
-                id: `voice-user-${data.executionId}`,
-                role: "user" as const,
-                content: data.userMessage,
-                timestamp: new Date().toISOString()
-            };
-            addMessageToThread(data.threadId, userMessage);
-
-            // Create streaming message for agent response
-            const streamingMessageId = `voice-streaming-${data.executionId}`;
-            voiceStreamingMessageIdRef.current = streamingMessageId;
-            voiceStreamingContentRef.current = "";
-
-            const assistantMessage = {
-                id: streamingMessageId,
-                role: "assistant" as const,
-                content: " ",
-                timestamp: new Date().toISOString()
-            };
-            addMessageToThread(data.threadId, assistantMessage);
-        },
-        [thread.id, addMessageToThread]
-    );
-
-    const handleVoiceAgentToken = useCallback(
-        (token: string) => {
-            const streamingMessageId = voiceStreamingMessageIdRef.current;
-            const threadId = voiceThreadIdRef.current;
-
-            if (!streamingMessageId || !threadId) return;
-
-            updateThreadMessage(threadId, streamingMessageId, (current: string) => {
-                const cleanCurrent = current.trimStart() || "";
-                const newContent = cleanCurrent + token;
-                voiceStreamingContentRef.current = newContent;
-                return newContent;
+            // Messages are now added directly by useVoiceSession hook
+            // Just log for debugging purposes
+            logger.info("Voice execution started (messages added by hook)", {
+                ...data,
+                currentThreadId: thread.id
             });
         },
-        [updateThreadMessage]
+        [thread.id]
     );
 
+    const handleVoiceAgentToken = useCallback((_token: string) => {
+        // Tokens are now handled directly by useVoiceSession hook
+        // Keep callback for potential future analytics or UI updates
+    }, []);
+
     const handleVoiceAgentDone = useCallback(() => {
-        const streamingMessageId = voiceStreamingMessageIdRef.current;
-        const threadId = voiceThreadIdRef.current;
-
-        if (!streamingMessageId || !threadId) return;
-
-        // Finalize the message
-        const finalContent = voiceStreamingContentRef.current || "";
-        if (finalContent.trim()) {
-            updateThreadMessage(threadId, streamingMessageId, finalContent);
-        }
-
-        // Reset voice streaming state
-        voiceThreadIdRef.current = null;
-        voiceStreamingMessageIdRef.current = null;
-        voiceStreamingContentRef.current = "";
-
-        // Refresh token usage
+        // Message finalization is now handled directly by useVoiceSession hook
+        logger.info("Voice agent done");
         refreshTokenUsage();
-    }, [updateThreadMessage, refreshTokenUsage]);
+    }, [refreshTokenUsage]);
 
     const usageLabel =
         tokenUsage && tokenUsage.totalTokens > 0
@@ -480,162 +411,65 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
                 ) : (
                     <>
                         {messages.map((message) => {
-                            // Skip empty assistant messages that only had tool_calls
+                            // Skip empty assistant messages
                             if (message.role === "assistant" && !message.content?.trim()) {
                                 return null;
                             }
 
-                            // Render tool messages with special UI
+                            // Tool messages have special rendering
                             if (message.role === "tool") {
-                                const isError =
-                                    message.content.includes('"error":true') ||
-                                    message.content.includes("Validation errors") ||
-                                    message.content.toLowerCase().includes('"error"');
-
-                                let toolName = message.tool_name || "unknown";
-                                if (toolName === "unknown") {
-                                    try {
-                                        const parsed = JSON.parse(message.content);
-                                        toolName = parsed.toolName || parsed.tool || toolName;
-                                    } catch {
-                                        // Keep "unknown"
-                                    }
-                                }
-
                                 return (
-                                    <div key={message.id} className="flex gap-3">
-                                        <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0">
-                                            <Wrench className="w-4 h-4 text-amber-500" />
-                                        </div>
-                                        <div className="max-w-[80%] rounded-lg px-4 py-3 bg-muted/50 border border-border">
-                                            <div className="flex items-center gap-2 flex-wrap">
-                                                <span className="text-sm font-medium">
-                                                    Using tool - {toolName}
-                                                </span>
-                                                {isError ? (
-                                                    <span className="flex items-center gap-1 text-xs bg-red-500/10 text-red-600 px-2 py-0.5 rounded-full">
-                                                        <XCircle className="w-3 h-3" />
-                                                        Failed
-                                                    </span>
-                                                ) : (
-                                                    <span className="flex items-center gap-1 text-xs bg-green-500/10 text-green-600 px-2 py-0.5 rounded-full">
-                                                        <CheckCircle2 className="w-3 h-3" />
-                                                        Success
-                                                    </span>
-                                                )}
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="text-xs h-auto py-0.5 px-2"
-                                                    onClick={() =>
-                                                        setSelectedToolError({
-                                                            toolName: toolName,
-                                                            error: message.content
-                                                        })
-                                                    }
-                                                >
-                                                    <Eye className="w-3 h-3 mr-1" />
-                                                    {isError ? "View Error" : "View Result"}
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    </div>
+                                    <ToolMessageDisplay
+                                        key={message.id}
+                                        message={message}
+                                        onViewDetails={(content) =>
+                                            setSelectedToolCall({
+                                                id: message.id,
+                                                toolName: message.tool_name || "unknown",
+                                                status: content.includes('"error"')
+                                                    ? "failed"
+                                                    : "success",
+                                                error: content.includes('"error"')
+                                                    ? content
+                                                    : undefined,
+                                                result: !content.includes('"error"')
+                                                    ? JSON.parse(content)
+                                                    : undefined
+                                            })
+                                        }
+                                    />
                                 );
                             }
 
-                            // Render regular messages
+                            // System messages
+                            if (message.role === "system") {
+                                return (
+                                    <ChatBubble
+                                        key={message.id}
+                                        role="system"
+                                        content={message.content}
+                                    />
+                                );
+                            }
+
+                            // User and assistant messages
                             return (
-                                <div
+                                <ChatBubble
                                     key={message.id}
-                                    className={cn(
-                                        "flex gap-3",
-                                        message.role === "user" ? "justify-end" : "justify-start"
-                                    )}
-                                >
-                                    {message.role !== "user" && message.role !== "system" && (
-                                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                                            <Bot className="w-4 h-4 text-primary" />
-                                        </div>
-                                    )}
-                                    <div
-                                        className={cn(
-                                            "max-w-[80%] rounded-lg px-4 py-3",
-                                            message.role === "user"
-                                                ? "bg-primary text-primary-foreground"
-                                                : message.role === "system"
-                                                  ? "bg-muted/50 text-muted-foreground text-sm italic"
-                                                  : "bg-muted text-foreground"
-                                        )}
-                                    >
-                                        {message.role === "system" ? (
-                                            <div className="whitespace-pre-wrap break-words">
-                                                {message.content}
-                                            </div>
-                                        ) : (
-                                            <MarkdownRenderer
-                                                content={message.content}
-                                                className={
-                                                    message.role === "user"
-                                                        ? "prose-invert"
-                                                        : undefined
-                                                }
-                                            />
-                                        )}
-                                    </div>
-                                    {message.role === "user" && (
-                                        <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
-                                            <User className="w-4 h-4 text-secondary-foreground" />
-                                        </div>
-                                    )}
-                                </div>
+                                    role={message.role}
+                                    content={message.content}
+                                    assistantVariant="muted"
+                                />
                             );
                         })}
-                        {/* Tool calls */}
-                        {toolCalls.map((toolCall) => (
-                            <div key={toolCall.id} className="flex gap-3">
-                                <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0">
-                                    <Wrench className="w-4 h-4 text-amber-500" />
-                                </div>
-                                <div className="max-w-[80%] rounded-lg px-4 py-3 bg-muted/50 border border-border">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-sm font-medium">
-                                            Using tool - {toolCall.toolName}
-                                        </span>
-                                        {toolCall.status === "running" && (
-                                            <Loader2 className="w-4 h-4 animate-spin text-amber-500" />
-                                        )}
-                                        {toolCall.status === "success" && (
-                                            <span className="flex items-center gap-1 text-xs bg-green-500/10 text-green-600 px-2 py-0.5 rounded-full">
-                                                <CheckCircle2 className="w-3 h-3" />
-                                                Success
-                                            </span>
-                                        )}
-                                        {toolCall.status === "failed" && (
-                                            <span className="flex items-center gap-1 text-xs bg-red-500/10 text-red-600 px-2 py-0.5 rounded-full">
-                                                <XCircle className="w-3 h-3" />
-                                                Failed
-                                            </span>
-                                        )}
-                                    </div>
-                                    {toolCall.status === "failed" && toolCall.error && (
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="mt-2 text-xs h-auto py-1"
-                                            onClick={() =>
-                                                setSelectedToolError({
-                                                    toolName: toolCall.toolName,
-                                                    error: toolCall.error!
-                                                })
-                                            }
-                                        >
-                                            <Eye className="w-3 h-3 mr-1" />
-                                            View Error
-                                        </Button>
-                                    )}
-                                </div>
-                            </div>
-                        ))}
+
+                        {/* Active tool calls */}
+                        <ToolCallList
+                            toolCalls={toolCalls}
+                            onViewDetails={(tc) => setSelectedToolCall(tc)}
+                        />
+
+                        {/* Typing indicator */}
                         {isSending && toolCalls.length === 0 && (
                             <div className="flex gap-3">
                                 <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -690,27 +524,22 @@ export function ThreadChat({ agent, thread }: ThreadChatProps) {
             </div>
 
             {/* Tool result/error dialog */}
-            {selectedToolError && (
+            {selectedToolCall && (
                 <Dialog
                     isOpen={true}
-                    onClose={() => setSelectedToolError(null)}
-                    title={`Tool Details - ${selectedToolError.toolName}`}
+                    onClose={() => setSelectedToolCall(null)}
+                    title={`Tool Details - ${selectedToolCall.toolName}`}
                 >
                     <div className="space-y-4">
-                        <div className="bg-muted border border-border rounded-lg p-4">
-                            <pre className="text-xs text-foreground whitespace-pre-wrap break-words max-h-96 overflow-y-auto font-mono">
-                                {(() => {
-                                    try {
-                                        const parsed = JSON.parse(selectedToolError.error);
-                                        return JSON.stringify(parsed, null, 2);
-                                    } catch {
-                                        return selectedToolError.error;
-                                    }
-                                })()}
-                            </pre>
-                        </div>
+                        <ToolResultDialogContent
+                            content={
+                                selectedToolCall.error ||
+                                JSON.stringify(selectedToolCall.result, null, 2)
+                            }
+                            isError={selectedToolCall.status === "failed"}
+                        />
                         <div className="flex justify-end">
-                            <Button variant="secondary" onClick={() => setSelectedToolError(null)}>
+                            <Button variant="secondary" onClick={() => setSelectedToolCall(null)}>
                                 Close
                             </Button>
                         </div>

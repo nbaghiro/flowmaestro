@@ -95,9 +95,9 @@ export function PublicChatPage() {
     };
 
     return (
-        <div className="min-h-screen bg-muted/30 flex items-center justify-center p-4">
+        <div className="h-screen bg-muted/30 flex items-center justify-center p-4">
             <div
-                className="w-full max-w-2xl h-[90vh] max-h-[800px] rounded-xl shadow-lg overflow-hidden border border-border"
+                className="w-full max-w-lg h-full max-h-[calc(100vh-4rem)] rounded-xl shadow-lg overflow-hidden border border-border bg-background"
                 style={{ borderRadius: `${chatInterface.borderRadius}px` }}
             >
                 <ChatContainer

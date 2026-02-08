@@ -1,11 +1,18 @@
-import { Send, X, Bot, RotateCcw } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+/**
+ * AIChatPanel Component
+ *
+ * Slide-out chat panel for AI-powered workflow editing assistance.
+ * Refactored to use unified chat components for consistency.
+ */
+
+import { Bot } from "lucide-react";
+import { useEffect, useCallback } from "react";
 import type { JsonObject } from "@flowmaestro/shared";
 import { modelSupportsThinking } from "@flowmaestro/shared";
+import { useChatInput } from "../hooks/useChatInput";
 import { chatWorkflow } from "../lib/api";
 import { logger } from "../lib/logger";
 import { streamChatResponse } from "../lib/sse";
-import { cn } from "../lib/utils";
 import {
     useChatStore,
     type ActionType,
@@ -15,15 +22,16 @@ import {
 import { useWorkflowStore } from "../stores/workflowStore";
 import { ChatMessage } from "./chat/ChatMessage";
 import { ConnectionSelector } from "./chat/ConnectionSelector";
+import {
+    ResizablePanel,
+    ChatMessageList,
+    DefaultEmptyState,
+    ChatInput,
+    ClearChatButton
+} from "./chat/core";
 import { SuggestedQuestions } from "./chat/SuggestedQuestions";
 import { ThinkingBlock } from "./chat/ThinkingBlock";
-import { Button } from "./common/Button";
-import { ConfirmDialog } from "./common/ConfirmDialog";
-import { Input } from "./common/Input";
 import type { Edge } from "reactflow";
-
-const MIN_WIDTH = 400;
-const MAX_WIDTH = 800;
 
 /**
  * Detect if the message is a node modification operation
@@ -77,13 +85,6 @@ export function AIChatPanel({ workflowId, onClose }: AIChatPanelProps) {
         clearChat
     } = useChatStore();
 
-    // Handle close - use external handler if provided
-    const handleClose = () => {
-        if (onClose) {
-            onClose();
-        }
-    };
-
     // Check if current model supports thinking
     const currentModelSupportsThinking = selectedModel
         ? modelSupportsThinking(selectedModel)
@@ -91,224 +92,175 @@ export function AIChatPanel({ workflowId, onClose }: AIChatPanelProps) {
 
     const { nodes, edges, selectedNode } = useWorkflowStore();
 
-    const [input, setInput] = useState("");
-    const [isResizing, setIsResizing] = useState(false);
-    const [showClearConfirm, setShowClearConfirm] = useState(false);
-    const messagesEndRef = useRef<HTMLDivElement>(null);
-    const resizeStartX = useRef(0);
-    const resizeStartWidth = useRef(panelWidth);
-
-    // Auto-scroll to bottom when messages change
-    useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [messages]);
-
-    // Handle resize start
-    const handleResizeStart = (e: React.MouseEvent) => {
-        e.preventDefault();
-        setIsResizing(true);
-        resizeStartX.current = e.clientX;
-        resizeStartWidth.current = panelWidth;
-    };
-
-    // Handle resize
-    useEffect(() => {
-        const handleResize = (e: MouseEvent) => {
-            if (!isResizing) return;
-
-            const deltaX = resizeStartX.current - e.clientX;
-            const newWidth = Math.max(
-                MIN_WIDTH,
-                Math.min(MAX_WIDTH, resizeStartWidth.current + deltaX)
-            );
-
-            setPanelWidth(newWidth);
-        };
-
-        const handleResizeEnd = () => {
-            setIsResizing(false);
-        };
-
-        if (isResizing) {
-            document.addEventListener("mousemove", handleResize);
-            document.addEventListener("mouseup", handleResizeEnd);
-
-            return () => {
-                document.removeEventListener("mousemove", handleResize);
-                document.removeEventListener("mouseup", handleResizeEnd);
-            };
-        }
-
-        return undefined;
-    }, [isResizing, setPanelWidth]);
-
     // Handle send message
-    const handleSend = async () => {
-        if (!input.trim() || isStreaming) return;
-
-        const message = input.trim();
-        setInput("");
-
-        // Add user message
-        addMessage({
-            role: "user",
-            content: message
-        });
-
-        // Add empty assistant message for streaming
-        addMessage({
-            role: "assistant",
-            content: ""
-        });
-
-        // Start streaming state
-        setStreaming(true);
-
-        try {
-            // Detect if this is a node modification operation
-            // Only detects strong signals for add/modify/remove node operations
-            // Everything else returns null for conversational mode
-            const action = detectNodeAction(message, selectedNode !== null);
-
-            // Check if connection is selected
-            if (!selectedConnectionId) {
-                throw new Error(
-                    "No LLM connection configured. Please create an LLM connection in the Connections page first (e.g., OpenAI API key, Claude API key, etc.), then select it from the dropdown in this panel."
-                );
-            }
-
-            // Step 1: Initiate chat execution
-            const response = await chatWorkflow({
-                workflowId,
-                action, // null for conversational, "add"/"modify"/"remove" for node ops
-                message,
-                context: {
-                    nodes,
-                    edges,
-                    selectedNodeId: selectedNode
-                },
-                conversationHistory: messages, // Include conversation history for context
-                connectionId: selectedConnectionId,
-                model: selectedModel || undefined,
-                enableThinking: currentModelSupportsThinking && enableThinking,
-                thinkingBudget: enableThinking ? thinkingBudget : undefined
+    const handleSendMessage = useCallback(
+        async (message: string) => {
+            // Add user message
+            addMessage({
+                role: "user",
+                content: message
             });
 
-            if (!response.success || !response.data?.executionId) {
-                throw new Error(response.error || "Failed to initiate chat");
-            }
+            // Add empty assistant message for streaming
+            addMessage({
+                role: "assistant",
+                content: ""
+            });
 
-            const { executionId } = response.data;
+            // Start streaming state
+            setStreaming(true);
 
-            // Step 2: Open SSE stream
-            // TODO: Store cleanup function for cancellation
-            streamChatResponse(executionId, {
-                onThinkingStart: () => {
-                    // Thinking started - state will be set by appendToThinking
-                },
-                onThinkingToken: (token: string) => {
-                    appendToThinking(token);
-                },
-                onThinkingComplete: (content: string) => {
-                    completeThinking(content);
-                },
-                onToken: (token: string) => {
-                    // Append token to last message
-                    updateLastMessage((current) => current + token);
-                },
-                onComplete: (data) => {
-                    setStreaming(false);
+            try {
+                // Detect if this is a node modification operation
+                const action = detectNodeAction(message, selectedNode !== null);
 
-                    // If there are changes, update message with them
-                    if (data.changes && Array.isArray(data.changes) && data.changes.length > 0) {
-                        const currentMessages = useChatStore.getState().messages;
-                        const messagesWithoutLast = currentMessages.slice(0, -1);
-
-                        useChatStore.setState({
-                            messages: [
-                                ...messagesWithoutLast,
-                                {
-                                    id: currentMessages[currentMessages.length - 1].id,
-                                    role: "assistant" as const,
-                                    content: data.response,
-                                    timestamp: new Date(),
-                                    proposedChanges: data.changes,
-                                    thinking: data.thinking
-                                }
-                            ]
-                        });
-                    }
-                },
-                onError: (error: string) => {
-                    updateLastMessage(`Error: ${error}`);
-                    setStreaming(false);
+                // Check if connection is selected
+                if (!selectedConnectionId) {
+                    throw new Error(
+                        "No LLM connection configured. Please create an LLM connection in the Connections page first (e.g., OpenAI API key, Claude API key, etc.), then select it from the dropdown in this panel."
+                    );
                 }
-            });
-        } catch (error) {
-            logger.error("Chat error", error);
-            updateLastMessage(
-                `Error: ${error instanceof Error ? error.message : "Failed to get AI response. Please make sure you have an active LLM connection set up in the Connections page."}`
-            );
-            setStreaming(false);
-        }
-    };
 
-    // Handle key press
-    const handleKeyPress = (e: React.KeyboardEvent) => {
-        if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            handleSend();
-        }
+                // Initiate chat execution
+                const response = await chatWorkflow({
+                    workflowId,
+                    action,
+                    message,
+                    context: {
+                        nodes,
+                        edges,
+                        selectedNodeId: selectedNode
+                    },
+                    conversationHistory: messages,
+                    connectionId: selectedConnectionId,
+                    model: selectedModel || undefined,
+                    enableThinking: currentModelSupportsThinking && enableThinking,
+                    thinkingBudget: enableThinking ? thinkingBudget : undefined
+                });
+
+                if (!response.success || !response.data?.executionId) {
+                    throw new Error(response.error || "Failed to initiate chat");
+                }
+
+                const { executionId } = response.data;
+
+                // Open SSE stream
+                streamChatResponse(executionId, {
+                    onThinkingStart: () => {
+                        // Thinking started - state will be set by appendToThinking
+                    },
+                    onThinkingToken: (token: string) => {
+                        appendToThinking(token);
+                    },
+                    onThinkingComplete: (content: string) => {
+                        completeThinking(content);
+                    },
+                    onToken: (token: string) => {
+                        updateLastMessage((current) => current + token);
+                    },
+                    onComplete: (data) => {
+                        setStreaming(false);
+
+                        // If there are changes, update message with them
+                        if (
+                            data.changes &&
+                            Array.isArray(data.changes) &&
+                            data.changes.length > 0
+                        ) {
+                            const currentMessages = useChatStore.getState().messages;
+                            const messagesWithoutLast = currentMessages.slice(0, -1);
+
+                            useChatStore.setState({
+                                messages: [
+                                    ...messagesWithoutLast,
+                                    {
+                                        id: currentMessages[currentMessages.length - 1].id,
+                                        role: "assistant" as const,
+                                        content: data.response,
+                                        timestamp: new Date(),
+                                        proposedChanges: data.changes,
+                                        thinking: data.thinking
+                                    }
+                                ]
+                            });
+                        }
+                    },
+                    onError: (error: string) => {
+                        updateLastMessage(`Error: ${error}`);
+                        setStreaming(false);
+                    }
+                });
+            } catch (error) {
+                logger.error("Chat error", error);
+                updateLastMessage(
+                    `Error: ${error instanceof Error ? error.message : "Failed to get AI response. Please make sure you have an active LLM connection set up in the Connections page."}`
+                );
+                setStreaming(false);
+            }
+        },
+        [
+            addMessage,
+            setStreaming,
+            selectedNode,
+            selectedConnectionId,
+            workflowId,
+            nodes,
+            edges,
+            messages,
+            selectedModel,
+            currentModelSupportsThinking,
+            enableThinking,
+            thinkingBudget,
+            appendToThinking,
+            completeThinking,
+            updateLastMessage
+        ]
+    );
+
+    // Use the chat input hook
+    const {
+        value: inputValue,
+        setValue: setInputValue,
+        onChange: handleInputChange,
+        onKeyPress: handleKeyPress,
+        handleSend
+    } = useChatInput({
+        onSend: handleSendMessage,
+        disabled: isStreaming
+    });
+
+    // Handle suggested question click
+    const handleSuggestedQuestion = (question: string) => {
+        setInputValue(question);
+        // Auto-send after a brief delay to allow state to update
+        setTimeout(() => {
+            handleSendMessage(question);
+        }, 50);
     };
 
     // Refresh workflow context
-    const handleRefreshContext = () => {
+    const handleRefreshContext = useCallback(() => {
         setWorkflowContext({
             nodes,
             edges,
             selectedNodeId: selectedNode
         });
-    };
-
-    // Handle suggested question click
-    const handleSuggestedQuestion = (question: string) => {
-        setInput(question);
-        // Auto-send the message
-        setTimeout(() => {
-            const sendButton = document.querySelector(
-                '[data-action="send-chat"]'
-            ) as HTMLButtonElement;
-            sendButton?.click();
-        }, 100);
-    };
-
-    // Handle clear chat with confirmation
-    const handleClearChat = () => {
-        clearChat();
-        setShowClearConfirm(false);
-    };
+    }, [setWorkflowContext, nodes, edges, selectedNode]);
 
     // Update context when panel mounts or workflow changes
     useEffect(() => {
         handleRefreshContext();
-        // eslint-disable-next-line -- handleRefreshContext intentionally excluded to prevent infinite loops
-    }, [nodes.length, edges.length, selectedNode]);
+    }, [nodes.length, edges.length, selectedNode, handleRefreshContext]);
 
     // Calculate smart position for new nodes
     const calculateNodePosition = (index: number): { x: number; y: number } => {
-        const currentNodes = nodes;
-
-        // If no nodes exist, start at a nice position
-        if (currentNodes.length === 0) {
+        if (nodes.length === 0) {
             return { x: 250, y: 200 };
         }
 
-        // Find the rightmost node position
-        const maxX = Math.max(...currentNodes.map((n) => n.position.x));
-        const maxY = Math.max(...currentNodes.map((n) => n.position.y));
+        const maxX = Math.max(...nodes.map((n) => n.position.x));
+        const maxY = Math.max(...nodes.map((n) => n.position.y));
 
-        // Place new nodes to the right of existing workflow
-        // Stagger vertically if multiple nodes being added
         return {
             x: maxX + 300,
             y: maxY + index * 100 - (index > 0 ? index * 50 : 0)
@@ -322,13 +274,9 @@ export function AIChatPanel({ workflowId, onClose }: AIChatPanelProps) {
 
         changes.forEach((change, index) => {
             if (change.type === "add") {
-                // Generate unique node ID
                 const nodeId = `${change.nodeType}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-                // Calculate smart position
                 const position = change.position || calculateNodePosition(index);
 
-                // Create React Flow node
                 const newNode = {
                     id: nodeId,
                     type: change.nodeType,
@@ -341,7 +289,6 @@ export function AIChatPanel({ workflowId, onClose }: AIChatPanelProps) {
 
                 addNode(newNode);
 
-                // Handle connection suggestion
                 if (change.connectTo) {
                     newEdges.push({
                         id: `edge-${change.connectTo}-${nodeId}`,
@@ -351,7 +298,6 @@ export function AIChatPanel({ workflowId, onClose }: AIChatPanelProps) {
                     });
                 }
             } else if (change.type === "modify" && change.nodeId) {
-                // Update existing node
                 const updates: JsonObject = {};
 
                 if (change.updates?.label) {
@@ -372,12 +318,10 @@ export function AIChatPanel({ workflowId, onClose }: AIChatPanelProps) {
                     updateNode(change.nodeId, updates);
                 }
             } else if (change.type === "remove" && change.nodeId) {
-                // Delete node
                 deleteNode(change.nodeId);
             }
         });
 
-        // Add new edges if any were suggested
         if (newEdges.length > 0) {
             const currentEdges = useWorkflowStore.getState().edges;
             setEdges([...currentEdges, ...newEdges]);
@@ -385,17 +329,16 @@ export function AIChatPanel({ workflowId, onClose }: AIChatPanelProps) {
 
         clearProposedChanges();
 
-        // Add success message
         const changeCount = changes.length;
         const edgeCount = newEdges.length;
-        const message =
+        const successMessage =
             edgeCount > 0
-                ? `✓ Successfully applied ${changeCount} change${changeCount !== 1 ? "s" : ""} and ${edgeCount} connection${edgeCount !== 1 ? "s" : ""} to the workflow.`
-                : `✓ Successfully applied ${changeCount} change${changeCount !== 1 ? "s" : ""} to the workflow.`;
+                ? `Successfully applied ${changeCount} change${changeCount !== 1 ? "s" : ""} and ${edgeCount} connection${edgeCount !== 1 ? "s" : ""} to the workflow.`
+                : `Successfully applied ${changeCount} change${changeCount !== 1 ? "s" : ""} to the workflow.`;
 
         addMessage({
             role: "assistant",
-            content: message
+            content: successMessage
         });
     };
 
@@ -404,148 +347,81 @@ export function AIChatPanel({ workflowId, onClose }: AIChatPanelProps) {
         clearProposedChanges();
     };
 
+    // Handle close
+    const handleClose = () => {
+        onClose?.();
+    };
+
     return (
-        <div className="fixed top-0 right-0 bottom-0 z-50" data-right-panel>
-            <div
-                className="h-full bg-card border-l border-border shadow-2xl flex flex-col"
-                style={{ width: panelWidth }}
+        <ResizablePanel
+            header={
+                <>
+                    <Bot className="w-4 h-4 text-primary" />
+                    <h3 className="text-sm font-semibold">AI Workflow Assistant</h3>
+                </>
+            }
+            headerActions={
+                <>
+                    <ConnectionSelector />
+                    <ClearChatButton
+                        onClear={clearChat}
+                        disabled={messages.length === 0 || isStreaming}
+                    />
+                </>
+            }
+            onClose={handleClose}
+            width={panelWidth}
+            onWidthChange={setPanelWidth}
+            minWidth={400}
+            maxWidth={800}
+        >
+            {/* Messages - Scrollable */}
+            <ChatMessageList
+                hasMessages={messages.length > 0}
+                scrollDependencies={[messages]}
+                emptyState={
+                    <DefaultEmptyState
+                        icon={<Bot className="w-12 h-12 mx-auto mb-3 opacity-50" />}
+                        title="Hey! I'm your AI Workflow Assistant."
+                        description="Ask me to explain your workflow, add nodes, debug issues, or optimize your flow."
+                    />
+                }
             >
-                {/* Resize Handle */}
-                <div
-                    className={cn(
-                        "absolute top-0 left-0 bottom-0 w-1 cursor-ew-resize hover:bg-primary/20 transition-colors",
-                        isResizing && "bg-primary/30"
-                    )}
-                    onMouseDown={handleResizeStart}
-                >
-                    <div className="absolute top-0 left-0 bottom-0 w-3 -translate-x-1/2" />
-                </div>
+                {messages.map((message) => (
+                    <MessageWithThinking
+                        key={message.id}
+                        message={message}
+                        isStreaming={
+                            isStreaming && message.id === messages[messages.length - 1]?.id
+                        }
+                        isThinking={isThinking && message.id === messages[messages.length - 1]?.id}
+                        onToggleThinking={() => toggleThinkingExpanded(message.id)}
+                        onApplyChanges={handleApplyChanges}
+                        onRejectChanges={handleRejectChanges}
+                    />
+                ))}
+            </ChatMessageList>
 
-                {/* Header */}
-                <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
-                    <div className="flex items-center gap-2">
-                        <Bot className="w-4 h-4 text-primary" />
-                        <h3 className="text-sm font-semibold">AI Workflow Assistant</h3>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                        <ConnectionSelector />
-                        <button
-                            onClick={() => setShowClearConfirm(true)}
-                            disabled={messages.length === 0 || isStreaming}
-                            className={cn(
-                                "p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors",
-                                "disabled:opacity-30 disabled:cursor-not-allowed"
-                            )}
-                            title="Clear chat history"
-                        >
-                            <RotateCcw className="w-4 h-4" />
-                        </button>
-                        <button
-                            onClick={handleClose}
-                            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
-                            title="Close"
-                        >
-                            <X className="w-4 h-4" />
-                        </button>
-                    </div>
-                </div>
-
-                {/* Messages - Scrollable */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                    {messages.length === 0 ? (
-                        <div className="h-full flex items-center justify-center">
-                            <div className="text-center text-muted-foreground max-w-sm">
-                                <Bot className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                                <p className="text-sm mb-2">Hey! I'm your AI Workflow Assistant.</p>
-                                <p className="text-xs">
-                                    Ask me to explain your workflow, add nodes, debug issues, or
-                                    optimize your flow.
-                                </p>
-                            </div>
-                        </div>
-                    ) : (
-                        <>
-                            {messages.map((message) => (
-                                <MessageWithThinking
-                                    key={message.id}
-                                    message={message}
-                                    isStreaming={
-                                        isStreaming &&
-                                        message.id === messages[messages.length - 1]?.id
-                                    }
-                                    isThinking={
-                                        isThinking &&
-                                        message.id === messages[messages.length - 1]?.id
-                                    }
-                                    onToggleThinking={() => toggleThinkingExpanded(message.id)}
-                                    onApplyChanges={handleApplyChanges}
-                                    onRejectChanges={handleRejectChanges}
-                                />
-                            ))}
-                            <div ref={messagesEndRef} />
-                        </>
-                    )}
-                </div>
-
-                {/* Suggested Questions - Above input */}
-                <SuggestedQuestions
-                    onQuestionClick={handleSuggestedQuestion}
-                    hasNodes={nodes.length > 0}
-                    hasSelectedNode={selectedNode !== null}
-                    disabled={isStreaming}
-                />
-
-                {/* Input - Fixed at bottom */}
-                <div className="border-t border-border p-4 flex-shrink-0">
-                    <div className="flex gap-2">
-                        <Input
-                            type="text"
-                            value={input}
-                            onChange={(e) => setInput(e.target.value)}
-                            onKeyPress={handleKeyPress}
-                            placeholder="Ask about your workflow..."
-                            disabled={isStreaming}
-                            className={cn(
-                                "flex-1 px-4 py-3 rounded-lg",
-                                "bg-muted border border-border",
-                                "text-foreground placeholder:text-muted-foreground",
-                                "focus:outline-none focus:ring-2 focus:ring-primary",
-                                "disabled:opacity-50"
-                            )}
-                        />
-                        <Button
-                            onClick={handleSend}
-                            disabled={!input.trim() || isStreaming}
-                            data-action="send-chat"
-                            className={cn(
-                                "px-4 py-3 rounded-lg",
-                                "bg-primary text-primary-foreground",
-                                "hover:bg-primary/90 transition-colors",
-                                "disabled:opacity-50 disabled:cursor-not-allowed"
-                            )}
-                        >
-                            <Send className="w-5 h-5" />
-                        </Button>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-2 text-center">
-                        Press Enter to send • Shift+Enter for new line
-                    </p>
-                </div>
-            </div>
-
-            {/* Clear Chat Confirmation Dialog */}
-            <ConfirmDialog
-                isOpen={showClearConfirm}
-                onClose={() => setShowClearConfirm(false)}
-                onConfirm={handleClearChat}
-                title="Clear Chat History"
-                message="Are you sure you want to clear all chat messages? This action cannot be undone."
-                confirmText="Clear"
-                cancelText="Cancel"
-                variant="default"
+            {/* Suggested Questions - Above input */}
+            <SuggestedQuestions
+                onQuestionClick={handleSuggestedQuestion}
+                hasNodes={nodes.length > 0}
+                hasSelectedNode={selectedNode !== null}
+                disabled={isStreaming}
             />
-        </div>
+
+            {/* Input - Fixed at bottom */}
+            <ChatInput
+                value={inputValue}
+                onChange={handleInputChange}
+                onSend={handleSend}
+                onKeyPress={handleKeyPress}
+                placeholder="Ask about your workflow..."
+                disabled={isStreaming}
+                isLoading={isStreaming}
+                helperText="Press Enter to send"
+            />
+        </ResizablePanel>
     );
 }
 
