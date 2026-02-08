@@ -22,7 +22,7 @@ export function RecentPersonas({ personas, onPersonaClick, onPersonaLaunch }: Re
 
     return (
         <HorizontalCardRow
-            title="Featured Personas"
+            title="Personas"
             viewAllLink="/personas"
             isEmpty={personas.length === 0}
             emptyState={emptyState}
