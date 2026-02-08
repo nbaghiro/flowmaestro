@@ -48,7 +48,7 @@ export function ConfigPanel({ children, error, onDismissError }: ConfigPanelProp
                         )}
                     </div>
                 )}
-                <div className="p-6 space-y-6">{children}</div>
+                <div className="pt-2 px-6 pb-6 space-y-6">{children}</div>
             </div>
         </Panel>
     );
