@@ -21,5 +21,8 @@ export {
     type UpdatePersonaClarificationStateInput,
     // Messages
     addPersonaMessage,
-    type AddPersonaMessageInput
+    type AddPersonaMessageInput,
+    // Memory summarization
+    summarizeThreadContext,
+    type SummarizeThreadContextInput
 } from "./persona";

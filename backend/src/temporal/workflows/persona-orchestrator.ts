@@ -50,9 +50,10 @@ const {
     updatePersonaInstanceStatus,
     updatePersonaClarificationState,
     getPersonaClarificationState,
-    addPersonaMessage
+    addPersonaMessage,
+    summarizeThreadContext
 } = proxyActivities<typeof activities>({
-    startToCloseTimeout: "30 seconds",
+    startToCloseTimeout: "2 minutes", // Longer timeout for summarization
     retry: {
         maximumAttempts: 3
     }
@@ -80,6 +81,11 @@ export const personaUserMessageSignal = defineSignal<[string]>("personaUserMessa
  * Signal for skipping clarification phase
  */
 export const skipClarificationSignal = defineSignal("skipClarification");
+
+/**
+ * Signal for gracefully cancelling the persona workflow
+ */
+export const cancelPersonaSignal = defineSignal("cancelPersona");
 
 // =============================================================================
 // Types and Interfaces
@@ -124,8 +130,52 @@ interface ClarificationState {
 }
 
 // =============================================================================
-// Clarification Prompt Builder
+// Clarification Tool and Prompt Builder
 // =============================================================================
+
+/**
+ * Tool definition for signaling clarification is complete.
+ * This is used during the clarification phase only.
+ */
+function getClarificationCompleteTool(): {
+    id: string;
+    name: string;
+    description: string;
+    type: "builtin";
+    schema: JsonObject;
+    config: { functionName: string };
+} {
+    return {
+        id: "builtin-clarification_complete",
+        name: "clarification_complete",
+        description:
+            "Call this tool when you have gathered enough information from the user and are ready to begin the main task. Do NOT call this if you still have unanswered questions that are critical to completing the task.",
+        type: "builtin",
+        schema: {
+            type: "object",
+            properties: {
+                summary: {
+                    type: "string",
+                    description:
+                        "Brief summary of what you understood from the clarification discussion"
+                },
+                key_requirements: {
+                    type: "array",
+                    items: { type: "string" },
+                    description: "List of key requirements you gathered"
+                },
+                ready: {
+                    type: "boolean",
+                    description: "Must be true to proceed with the task"
+                }
+            },
+            required: ["summary", "ready"]
+        },
+        config: {
+            functionName: "clarification_complete"
+        }
+    };
+}
 
 function buildClarificationSystemPrompt(personaName: string, taskDescription: string): string {
     return `You are ${personaName}, beginning a new task. Before starting work, you need to clarify the requirements with the user.
@@ -140,28 +190,35 @@ Ask 2-4 focused clarifying questions to ensure you understand:
 3. Key priorities or constraints you should know about
 4. Any specific resources, data, or context you should use
 
-Keep your questions concise and actionable. After the user responds, either ask follow-up questions if critical information is still missing, or confirm your understanding and indicate you're ready to begin.
+Keep your questions concise and actionable. After the user responds, either ask follow-up questions if critical information is still missing, or confirm your understanding and proceed.
 
-When you have enough information, respond with "I'm ready to begin work on this task." to signal that clarification is complete.`;
+## Signaling Completion
+When you have gathered enough information to proceed with the task, you MUST call the \`clarification_complete\` tool with:
+- \`summary\`: A brief summary of what you understood
+- \`ready\`: Set to \`true\` to confirm you're ready
+
+Do NOT call this tool if you still have critical unanswered questions.`;
 }
 
-function shouldEndClarification(assistantMessage: string): boolean {
-    const readyPhrases = [
-        "ready to begin",
-        "ready to start",
-        "i'll begin",
-        "i will begin",
-        "let me start",
-        "i'll get started",
-        "i will get started",
-        "starting now",
-        "proceeding with",
-        "i have enough information",
-        "that's all i need"
-    ];
+/**
+ * Check if the LLM called the clarification_complete tool with ready=true
+ */
+function checkClarificationComplete(
+    toolCalls: Array<{ name: string; arguments: Record<string, unknown> }> | undefined
+): { complete: boolean; summary?: string } {
+    if (!toolCalls || toolCalls.length === 0) {
+        return { complete: false };
+    }
 
-    const lowerMessage = assistantMessage.toLowerCase();
-    return readyPhrases.some((phrase) => lowerMessage.includes(phrase));
+    const clarificationCall = toolCalls.find((tc) => tc.name === "clarification_complete");
+    if (clarificationCall && clarificationCall.arguments?.ready === true) {
+        return {
+            complete: true,
+            summary: clarificationCall.arguments?.summary as string | undefined
+        };
+    }
+
+    return { complete: false };
 }
 
 // =============================================================================
@@ -195,6 +252,9 @@ export async function personaOrchestratorWorkflow(
     let pendingUserMessage: string | null = null;
     let skipClarificationRequested = inputSkipClarification;
 
+    // Cancellation state
+    let cancellationRequested = false;
+
     const logger = createWorkflowLogger({
         executionId,
         workflowName: "PersonaOrchestrator",
@@ -218,6 +278,11 @@ export async function personaOrchestratorWorkflow(
         logger.info("Received skip clarification signal");
         skipClarificationRequested = true;
         clarificationComplete = true;
+    });
+
+    setHandler(cancelPersonaSignal, () => {
+        logger.info("Received cancellation signal");
+        cancellationRequested = true;
     });
 
     // Load persona configuration (includes all tools)
@@ -417,6 +482,42 @@ export async function personaOrchestratorWorkflow(
 
         // Clarification loop
         while (!clarificationComplete && clarificationExchanges < maxClarificationExchanges) {
+            // Check for cancellation
+            if (cancellationRequested) {
+                logger.info("Cancellation requested during clarification");
+                await updatePersonaInstanceStatus({
+                    personaInstanceId,
+                    status: "cancelled",
+                    completionReason: "cancelled",
+                    completedAt: new Date()
+                });
+
+                if (reservedCredits > 0) {
+                    await finalizeCredits({
+                        workspaceId,
+                        userId,
+                        reservedAmount: reservedCredits,
+                        actualAmount: accumulatedCredits,
+                        operationType: "persona_execution",
+                        operationId: executionId,
+                        description: `Persona: ${persona.name} (cancelled during clarification)`,
+                        metadata: {
+                            personaInstanceId,
+                            personaName: persona.name,
+                            cancelled: true
+                        }
+                    });
+                }
+
+                return {
+                    success: false,
+                    serializedThread: messageState,
+                    iterations: 0,
+                    error: "Cancelled by user during clarification",
+                    totalCreditsUsed: accumulatedCredits
+                };
+            }
+
             // Check if skip was requested
             if (skipClarificationRequested) {
                 logger.info("Clarification skipped by user request");
@@ -429,8 +530,11 @@ export async function personaOrchestratorWorkflow(
                 break;
             }
 
-            // Generate clarifying questions (LLM call without tools)
+            // Generate clarifying questions (LLM call with clarification_complete tool)
             logger.info("Generating clarifying questions", { exchange: clarificationExchanges });
+
+            // Provide only the clarification_complete tool during this phase
+            const clarificationTool = getClarificationCompleteTool();
 
             let clarificationResponse: LLMResponse;
             try {
@@ -439,7 +543,7 @@ export async function personaOrchestratorWorkflow(
                     provider: persona.provider,
                     connectionId: persona.connection_id,
                     messages: messageState.messages,
-                    tools: [], // No tools during clarification
+                    tools: [clarificationTool], // Only clarification_complete tool
                     temperature: persona.temperature,
                     maxTokens: 1024, // Shorter for clarification
                     executionId,
@@ -472,6 +576,7 @@ export async function personaOrchestratorWorkflow(
                 id: `asst-clarify-${Date.now()}-${clarificationExchanges}`,
                 role: "assistant",
                 content: clarificationResponse.content,
+                tool_calls: clarificationResponse.tool_calls,
                 timestamp: new Date()
             };
             messageState.messages.push(assistantMessage);
@@ -483,9 +588,35 @@ export async function personaOrchestratorWorkflow(
                 message: assistantMessage
             });
 
-            // Check if persona indicates it's ready to proceed
-            if (shouldEndClarification(clarificationResponse.content)) {
-                logger.info("Persona ready to begin work");
+            // Check if persona called clarification_complete tool with ready=true
+            const clarificationCheck = checkClarificationComplete(clarificationResponse.tool_calls);
+            if (clarificationCheck.complete) {
+                logger.info("Persona signaled ready via clarification_complete tool", {
+                    summary: clarificationCheck.summary
+                });
+
+                // Add a tool result message to acknowledge the tool call
+                if (clarificationResponse.tool_calls?.length) {
+                    const toolCall = clarificationResponse.tool_calls.find(
+                        (tc) => tc.name === "clarification_complete"
+                    );
+                    if (toolCall) {
+                        const toolResultMessage: ThreadMessage = {
+                            id: `tool-clarify-${Date.now()}`,
+                            role: "tool",
+                            content: JSON.stringify({
+                                success: true,
+                                message:
+                                    "Clarification complete. Proceeding to main task execution."
+                            }),
+                            tool_name: "clarification_complete",
+                            tool_call_id: toolCall.id,
+                            timestamp: new Date()
+                        };
+                        messageState.messages.push(toolResultMessage);
+                    }
+                }
+
                 await updatePersonaClarificationState({
                     personaInstanceId,
                     complete: true,
@@ -500,7 +631,10 @@ export async function personaOrchestratorWorkflow(
 
             // Wait up to 24 hours for a response, checking periodically
             const gotResponse = await condition(
-                () => pendingUserMessage !== null || skipClarificationRequested,
+                () =>
+                    pendingUserMessage !== null ||
+                    skipClarificationRequested ||
+                    cancellationRequested,
                 "24 hours"
             );
 
@@ -611,11 +745,76 @@ export async function personaOrchestratorWorkflow(
     const CONTINUE_AS_NEW_THRESHOLD = 50;
     const PROGRESS_UPDATE_INTERVAL = 5;
 
-    // Track failed tools
-    const failedToolNames = new Set<string>();
+    // Track tool failure counts - only blacklist after MAX_TOOL_FAILURES consecutive failures
+    const MAX_TOOL_FAILURES = 3;
+    const toolFailureCounts = new Map<string, number>();
 
     // Main execution loop (ReAct pattern for background execution)
     while (currentIterations < maxIterations) {
+        // Check for cancellation
+        if (cancellationRequested) {
+            logger.info("Cancellation requested, stopping execution");
+
+            const unsavedMessages = getUnsavedMessages(messageState);
+            if (unsavedMessages.length > 0) {
+                await saveThreadIncremental({
+                    executionId,
+                    threadId,
+                    messages: unsavedMessages
+                });
+            }
+
+            await updatePersonaInstanceStatus({
+                personaInstanceId,
+                status: "cancelled",
+                completionReason: "cancelled",
+                completedAt: new Date(),
+                iterationCount: currentIterations,
+                accumulatedCostCredits: accumulatedCredits,
+                progress: {
+                    current_step: currentIterations,
+                    total_steps: maxIterations,
+                    percentage: Math.round((currentIterations / maxIterations) * 100),
+                    current_step_name: "Cancelled",
+                    message: "Execution cancelled by user"
+                }
+            });
+
+            if (personaRunSpanId) {
+                await endSpan({
+                    spanId: personaRunSpanId,
+                    error: new Error("Cancelled by user")
+                });
+            }
+
+            // Finalize credits
+            if (reservedCredits > 0) {
+                await finalizeCredits({
+                    workspaceId,
+                    userId,
+                    reservedAmount: reservedCredits,
+                    actualAmount: accumulatedCredits,
+                    operationType: "persona_execution",
+                    operationId: executionId,
+                    description: `Persona: ${persona.name} (cancelled)`,
+                    metadata: {
+                        personaInstanceId,
+                        personaName: persona.name,
+                        iterations: currentIterations,
+                        cancelled: true
+                    }
+                });
+            }
+
+            return {
+                success: false,
+                serializedThread: messageState,
+                iterations: currentIterations,
+                error: "Cancelled by user",
+                totalCreditsUsed: accumulatedCredits
+            };
+        }
+
         logger.info("Persona iteration", { iteration: currentIterations, maxIterations });
 
         // Check for incoming user messages during execution
@@ -667,10 +866,20 @@ export async function personaOrchestratorWorkflow(
                 unsavedMessages.forEach((msg) => messageState.savedMessageIds.push(msg.id));
             }
 
-            const summarizedState = summarizeMessageState(
-                messageState,
-                persona.memory_config.max_messages
-            );
+            // Use smart summarization to preserve important context
+            const summarizedMessages: ThreadMessage[] = await summarizeThreadContext({
+                messages: messageState.messages,
+                maxMessages: persona.memory_config.max_messages,
+                personaName: persona.name,
+                model: persona.model,
+                provider: persona.provider
+            });
+
+            const summarizedState: SerializedThread = {
+                messages: summarizedMessages,
+                savedMessageIds: summarizedMessages.map((m: ThreadMessage) => m.id),
+                metadata: messageState.metadata
+            };
 
             return continueAsNew<typeof personaOrchestratorWorkflow>({
                 executionId,
@@ -720,9 +929,9 @@ export async function personaOrchestratorWorkflow(
         });
         const iterationSpanId = iterationContext.spanId;
 
-        // Filter out failed tools
+        // Filter out tools that have failed too many times
         const availableTools = persona.available_tools.filter(
-            (tool) => !failedToolNames.has(tool.name)
+            (tool) => (toolFailureCounts.get(tool.name) || 0) < MAX_TOOL_FAILURES
         );
 
         // Call LLM (no streaming for background execution)
@@ -849,9 +1058,88 @@ export async function personaOrchestratorWorkflow(
         };
         messageState.messages.push(assistantMessage);
 
-        // Check if done (no tool calls)
+        // Check if done (explicit task_complete call or no tool calls)
         const hasToolCalls = llmResponse.tool_calls && llmResponse.tool_calls.length > 0;
+        const taskCompleteCall = llmResponse.tool_calls?.find((tc) => tc.name === "task_complete");
 
+        // Handle explicit task completion via tool call
+        if (taskCompleteCall) {
+            const completionSummary =
+                (taskCompleteCall.arguments?.summary as string) || "Task completed";
+
+            const unsavedMessages = getUnsavedMessages(messageState);
+            if (unsavedMessages.length > 0) {
+                await saveThreadIncremental({
+                    executionId,
+                    threadId,
+                    messages: unsavedMessages,
+                    markCompleted: true
+                });
+                unsavedMessages.forEach((msg) => messageState.savedMessageIds.push(msg.id));
+            }
+
+            logger.info("Persona completed task via task_complete tool", {
+                summary: completionSummary.substring(0, 100)
+            });
+
+            await updatePersonaInstanceStatus({
+                personaInstanceId,
+                status: "completed",
+                completionReason: "success",
+                completedAt: new Date(),
+                iterationCount: currentIterations,
+                accumulatedCostCredits: accumulatedCredits,
+                progress: {
+                    current_step: currentIterations,
+                    total_steps: currentIterations,
+                    percentage: 100,
+                    current_step_name: "Completed",
+                    message: completionSummary
+                }
+            });
+
+            await endSpan({
+                spanId: iterationSpanId,
+                output: { completed: true, viaTaskCompleteTool: true, summary: completionSummary }
+            });
+
+            if (personaRunSpanId) {
+                await endSpan({
+                    spanId: personaRunSpanId,
+                    output: { success: true, iterations: currentIterations }
+                });
+            }
+
+            // Finalize credits
+            if (reservedCredits > 0) {
+                await finalizeCredits({
+                    workspaceId,
+                    userId,
+                    reservedAmount: reservedCredits,
+                    actualAmount: accumulatedCredits,
+                    operationType: "persona_execution",
+                    operationId: executionId,
+                    description: `Persona: ${persona.name}`,
+                    metadata: {
+                        personaInstanceId,
+                        personaName: persona.name,
+                        iterations: currentIterations,
+                        success: true,
+                        completedViaToolCall: true
+                    }
+                });
+            }
+
+            return {
+                success: true,
+                serializedThread: messageState,
+                iterations: currentIterations,
+                finalMessage: completionSummary,
+                totalCreditsUsed: accumulatedCredits
+            };
+        }
+
+        // Handle implicit completion (no tool calls)
         if (!hasToolCalls) {
             // Persona task completed
             const unsavedMessages = getUnsavedMessages(messageState);
@@ -950,6 +1238,9 @@ export async function personaOrchestratorWorkflow(
                     }
                 });
 
+                // Reset failure count on success
+                toolFailureCounts.delete(toolCall.name);
+
                 const toolMessage: ThreadMessage = {
                     id: `tool-${Date.now()}-${toolCall.id}`,
                     role: "tool",
@@ -967,20 +1258,35 @@ export async function personaOrchestratorWorkflow(
                 });
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : "Unknown tool error";
+
+                // Increment failure count
+                const currentFailures = (toolFailureCounts.get(toolCall.name) || 0) + 1;
+                toolFailureCounts.set(toolCall.name, currentFailures);
+                const isBlacklisted = currentFailures >= MAX_TOOL_FAILURES;
+
                 logger.error(
                     "Tool execution failed",
                     error instanceof Error ? error : new Error(errorMessage),
                     {
-                        toolName: toolCall.name
+                        toolName: toolCall.name,
+                        failureCount: currentFailures,
+                        isBlacklisted
                     }
                 );
 
-                failedToolNames.add(toolCall.name);
-
+                // Provide informative error message to the LLM
                 const toolMessage: ThreadMessage = {
                     id: `tool-${Date.now()}-${toolCall.id}`,
                     role: "tool",
-                    content: JSON.stringify({ error: errorMessage }),
+                    content: JSON.stringify({
+                        error: errorMessage,
+                        failure_count: currentFailures,
+                        max_failures: MAX_TOOL_FAILURES,
+                        is_blacklisted: isBlacklisted,
+                        suggestion: isBlacklisted
+                            ? `This tool has failed ${currentFailures} times and is now disabled. Please try an alternative approach or use a different tool.`
+                            : `Tool failed (attempt ${currentFailures}/${MAX_TOOL_FAILURES}). You may retry or try a different approach.`
+                    }),
                     tool_name: toolCall.name,
                     tool_call_id: toolCall.id,
                     timestamp: new Date()
@@ -1079,30 +1385,4 @@ export async function personaOrchestratorWorkflow(
 function getUnsavedMessages(state: WorkflowMessageState): ThreadMessage[] {
     const savedIds = new Set(state.savedMessageIds);
     return state.messages.filter((msg) => !savedIds.has(msg.id));
-}
-
-function summarizeMessageState(state: WorkflowMessageState, maxMessages: number): SerializedThread {
-    if (state.messages.length <= maxMessages) {
-        return {
-            messages: state.messages,
-            savedMessageIds: state.savedMessageIds,
-            metadata: state.metadata
-        };
-    }
-
-    const systemPrompt = state.messages.find((msg) => msg.role === "system");
-    const recentMessages = state.messages.slice(-(maxMessages - 1));
-
-    const summarizedMessages = systemPrompt
-        ? [systemPrompt, ...recentMessages.filter((msg) => msg.id !== systemPrompt.id)]
-        : recentMessages;
-
-    const keptMessageIds = new Set(summarizedMessages.map((m) => m.id));
-    const savedIds = state.savedMessageIds.filter((id) => keptMessageIds.has(id));
-
-    return {
-        messages: summarizedMessages,
-        savedMessageIds: savedIds,
-        metadata: state.metadata
-    };
 }

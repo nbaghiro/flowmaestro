@@ -17,7 +17,9 @@ import { pdfExtractTool } from "./pdf-extract";
 import { pdfGenerateTool } from "./pdf-generate";
 import { screenshotCaptureTool } from "./screenshot-capture";
 import { spreadsheetGenerateTool } from "./spreadsheet-generate";
+import { taskCompleteTool } from "./task-complete";
 import { textToSpeechTool } from "./text-to-speech";
+import { updateProgressTool } from "./update-progress";
 import { webBrowseTool } from "./web-browse";
 import { webSearchTool } from "./web-search";
 import type { BuiltInTool, ToolCategory } from "../types";
@@ -51,7 +53,11 @@ export const builtInTools: BuiltInTool[] = [
     pdfGenerateTool,
     audioTranscribeTool,
     ocrExtractTool,
-    textToSpeechTool
+    textToSpeechTool,
+
+    // Workflow/status tools (for persona execution)
+    taskCompleteTool,
+    updateProgressTool
 ];
 
 /**
@@ -116,7 +122,9 @@ export { pdfExtractTool } from "./pdf-extract";
 export { pdfGenerateTool } from "./pdf-generate";
 export { screenshotCaptureTool } from "./screenshot-capture";
 export { spreadsheetGenerateTool } from "./spreadsheet-generate";
+export { taskCompleteTool } from "./task-complete";
 export { textToSpeechTool } from "./text-to-speech";
+export { updateProgressTool } from "./update-progress";
 export { webBrowseTool } from "./web-browse";
 export { webSearchTool } from "./web-search";
 

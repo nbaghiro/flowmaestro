@@ -72,6 +72,14 @@ export interface AddPersonaMessageInput {
     message: ThreadMessage;
 }
 
+export interface SummarizeThreadContextInput {
+    messages: ThreadMessage[];
+    maxMessages: number;
+    personaName: string;
+    model: string;
+    provider: string;
+}
+
 // =============================================================================
 // Helper Functions
 // =============================================================================
@@ -467,4 +475,200 @@ export async function addPersonaMessage(input: AddPersonaMessageInput): Promise<
         tool_name: message.tool_name,
         tool_call_id: message.tool_call_id
     });
+}
+
+/**
+ * Summarize thread context using LLM
+ *
+ * When message history exceeds maxMessages, this activity uses an LLM to
+ * create a summary of older messages, preserving important context while
+ * reducing message count for continue-as-new operations.
+ */
+export async function summarizeThreadContext(
+    input: SummarizeThreadContextInput
+): Promise<ThreadMessage[]> {
+    const { messages, maxMessages, personaName } = input;
+
+    // If messages are within limit, return as-is
+    if (messages.length <= maxMessages) {
+        activityLogger.debug("No summarization needed", {
+            messageCount: messages.length,
+            maxMessages
+        });
+        return messages;
+    }
+
+    activityLogger.info("Summarizing thread context", {
+        messageCount: messages.length,
+        maxMessages,
+        personaName
+    });
+
+    // Find system prompt (should be first message)
+    const systemPrompt = messages.find((m) => m.role === "system");
+
+    // Keep recent messages (last maxMessages - 10 to leave room for summary)
+    const recentCount = Math.max(maxMessages - 10, 20);
+    const recentMessages = messages.slice(-recentCount);
+
+    // Get messages to summarize (between system prompt and recent messages)
+    const startIndex = systemPrompt ? 1 : 0;
+    const endIndex = messages.length - recentCount;
+
+    if (endIndex <= startIndex) {
+        // Nothing to summarize
+        return messages;
+    }
+
+    const messagesToSummarize = messages.slice(startIndex, endIndex);
+
+    activityLogger.debug("Summarizing messages", {
+        summarizeCount: messagesToSummarize.length,
+        recentCount: recentMessages.length
+    });
+
+    try {
+        // For now, create a structured summary without LLM
+        // This can be enhanced later to use actual LLM summarization
+        const summaryContent = createStructuredSummary(messagesToSummarize, personaName);
+
+        // Create summary message
+        const summaryMessage: ThreadMessage = {
+            id: `summary-${Date.now()}`,
+            role: "system",
+            content: `[CONTEXT SUMMARY - Earlier conversation with ${personaName}]\n\n${summaryContent}`,
+            timestamp: new Date()
+        };
+
+        // Combine: system prompt + summary + recent messages
+        const result: ThreadMessage[] = [];
+
+        if (systemPrompt) {
+            result.push(systemPrompt);
+        }
+
+        result.push(summaryMessage);
+
+        // Add recent messages, excluding the system prompt if it's in there
+        for (const msg of recentMessages) {
+            if (msg.id !== systemPrompt?.id) {
+                result.push(msg);
+            }
+        }
+
+        activityLogger.info("Thread context summarized", {
+            originalCount: messages.length,
+            summarizedCount: result.length,
+            summarizedMessages: messagesToSummarize.length
+        });
+
+        return result;
+    } catch (error) {
+        activityLogger.error(
+            "Failed to summarize thread context",
+            error instanceof Error ? error : new Error("Unknown error")
+        );
+
+        // Fall back to naive truncation
+        const fallbackResult: ThreadMessage[] = [];
+        if (systemPrompt) {
+            fallbackResult.push(systemPrompt);
+        }
+        for (const msg of recentMessages) {
+            if (msg.id !== systemPrompt?.id) {
+                fallbackResult.push(msg);
+            }
+        }
+        return fallbackResult;
+    }
+}
+
+/**
+ * Create a structured summary of messages without LLM
+ * Extracts key information like tool calls, findings, and decisions
+ */
+function createStructuredSummary(messages: ThreadMessage[], personaName: string): string {
+    const toolsUsed = new Set<string>();
+    const toolResults: string[] = [];
+    const keyDecisions: string[] = [];
+    let lastAssistantMessage = "";
+
+    for (const msg of messages) {
+        if (msg.tool_calls) {
+            for (const tc of msg.tool_calls) {
+                toolsUsed.add(tc.name);
+            }
+        }
+
+        if (msg.role === "tool" && msg.tool_name && msg.content) {
+            try {
+                const result = JSON.parse(msg.content);
+                if (result.success !== false && !result.error) {
+                    const summary =
+                        typeof result.data === "object"
+                            ? JSON.stringify(result.data).substring(0, 200)
+                            : String(result.data || result.message || "").substring(0, 200);
+                    if (summary) {
+                        toolResults.push(`${msg.tool_name}: ${summary}`);
+                    }
+                }
+            } catch {
+                // Ignore JSON parse errors
+            }
+        }
+
+        if (msg.role === "assistant" && msg.content) {
+            lastAssistantMessage = msg.content;
+            // Look for decision-like statements
+            const lines = msg.content.split("\n");
+            for (const line of lines) {
+                const lowerLine = line.toLowerCase();
+                if (
+                    lowerLine.includes("will ") ||
+                    lowerLine.includes("decided") ||
+                    lowerLine.includes("found that") ||
+                    lowerLine.includes("discovered") ||
+                    lowerLine.includes("completed")
+                ) {
+                    if (line.trim().length > 20 && line.trim().length < 200) {
+                        keyDecisions.push(line.trim());
+                    }
+                }
+            }
+        }
+    }
+
+    const sections: string[] = [];
+
+    if (toolsUsed.size > 0) {
+        sections.push(`**Tools Used:** ${Array.from(toolsUsed).join(", ")}`);
+    }
+
+    if (toolResults.length > 0) {
+        sections.push(
+            `**Key Tool Results:**\n${toolResults
+                .slice(0, 5)
+                .map((r) => `- ${r}`)
+                .join("\n")}`
+        );
+    }
+
+    if (keyDecisions.length > 0) {
+        sections.push(
+            `**Key Progress:**\n${keyDecisions
+                .slice(0, 5)
+                .map((d) => `- ${d}`)
+                .join("\n")}`
+        );
+    }
+
+    if (lastAssistantMessage && lastAssistantMessage.length > 50) {
+        sections.push(
+            `**Last Status:** ${lastAssistantMessage.substring(0, 300)}${lastAssistantMessage.length > 300 ? "..." : ""}`
+        );
+    }
+
+    return sections.length > 0
+        ? sections.join("\n\n")
+        : `${personaName} has been working on the task. ${messages.length} messages were summarized.`;
 }
