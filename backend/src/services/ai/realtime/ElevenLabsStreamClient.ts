@@ -67,13 +67,13 @@ export class ElevenLabsStreamClient {
                 this.handleMessage(data);
             });
 
-            this.socket.on("error", (error) => {
+            this.socket.on("error", (error: Error) => {
                 logger.error({ err: error }, "ElevenLabs WebSocket error");
                 this.onError?.(`ElevenLabs connection error: ${error.message}`);
                 reject(error);
             });
 
-            this.socket.on("close", (code, reason) => {
+            this.socket.on("close", (code: number, reason: Buffer) => {
                 logger.info({ code, reason: reason.toString() }, "ElevenLabs WebSocket closed");
                 this.isConnected = false;
                 this.onClose?.();

@@ -46,11 +46,14 @@ RUN npm run build --workspace=shared
 # Clean any stale build artifacts before building
 RUN rm -rf backend/dist
 
-# Build backend
-RUN npm run build --workspace=backend
+# Build backend (increase Node memory for TypeScript compilation)
+RUN NODE_OPTIONS="--max-old-space-size=4096" npm run build --workspace=backend
 
 # Production image
 FROM node:22-slim
+
+# Create non-root user early (before any file operations)
+RUN groupadd -g 1001 nodejs && useradd -r -u 1001 -g nodejs nodejs
 
 WORKDIR /app
 
@@ -85,18 +88,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     # Fonts for proper text rendering
     fonts-liberation \
     fonts-noto-color-emoji \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && chown nodejs:nodejs /app
 
-# Copy root package files
-COPY package*.json ./
+# Copy root package files (as nodejs user)
+COPY --chown=nodejs:nodejs package*.json ./
 
 # Copy workspace package files
-COPY backend/package*.json ./backend/
-COPY shared/package*.json ./shared/
+COPY --chown=nodejs:nodejs backend/package*.json ./backend/
+COPY --chown=nodejs:nodejs shared/package*.json ./shared/
 
-# Copy built files from builder stage first (before npm install)
-COPY --from=builder /app/backend/dist ./backend/dist
-COPY --from=builder /app/shared/dist ./shared/dist
+# Copy built files from builder stage (as nodejs user)
+COPY --chown=nodejs:nodejs --from=builder /app/backend/dist ./backend/dist
+COPY --chown=nodejs:nodejs --from=builder /app/shared/dist ./shared/dist
 
 # Fix shared package.json to point to dist instead of src for production
 RUN sed -i 's|"main": "src/index.ts"|"main": "dist/index.js"|g' ./shared/package.json && \
@@ -110,17 +114,14 @@ RUN npm ci --workspace=backend --workspace=shared --omit=dev --ignore-scripts
 RUN npm rebuild --workspace=backend --workspace=shared || true
 
 # Install Playwright browsers (Chromium only for screenshot capture)
-# This downloads the browser binary to a shared location
 RUN ./node_modules/.bin/playwright install chromium || true
 
 # Copy migrations
-COPY backend/migrations ./backend/migrations
+COPY --chown=nodejs:nodejs backend/migrations ./backend/migrations
 
-# Create non-root user
-RUN groupadd -g 1001 nodejs && useradd -r -u 1001 -g nodejs nodejs
-
-# Change ownership
-RUN chown -R nodejs:nodejs /app
+# Only chown app-specific directories (not node_modules - Node.js can read root-owned files)
+# This is much faster than chown -R on the entire /app directory
+RUN chown -R nodejs:nodejs /app/backend /app/shared
 
 # Switch to non-root user
 USER nodejs

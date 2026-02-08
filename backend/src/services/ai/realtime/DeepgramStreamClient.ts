@@ -76,13 +76,13 @@ export class DeepgramStreamClient {
                 this.handleMessage(data);
             });
 
-            this.socket.on("error", (error) => {
+            this.socket.on("error", (error: Error) => {
                 logger.error({ err: error }, "Deepgram WebSocket error");
                 this.onError?.(`Deepgram connection error: ${error.message}`);
                 reject(error);
             });
 
-            this.socket.on("close", (code, reason) => {
+            this.socket.on("close", (code: number, reason: Buffer) => {
                 logger.info({ code, reason: reason.toString() }, "Deepgram WebSocket closed");
                 this.isConnected = false;
                 this.stopKeepAlive();
