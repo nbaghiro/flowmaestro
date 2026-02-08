@@ -11,12 +11,15 @@ ADD COLUMN IF NOT EXISTS attachments JSONB DEFAULT '[]';
 
 -- Ensure vector extension exists at the database level
 -- This may require superuser privileges
-DO $$ 
-BEGIN 
-    CREATE EXTENSION IF NOT EXISTS vector SCHEMA public;
-EXCEPTION 
-    WHEN insufficient_privilege THEN 
+-- Note: In Cloud SQL, the extension may be installed in the flowmaestro schema
+DO $$
+BEGIN
+    CREATE EXTENSION IF NOT EXISTS vector;
+EXCEPTION
+    WHEN insufficient_privilege THEN
         RAISE NOTICE 'Insufficient privilege to create extension; assuming it exists or is being handled by an admin.';
+    WHEN duplicate_object THEN
+        RAISE NOTICE 'Extension vector already exists.';
 END $$;
 
 -- Add columns to sessions
@@ -47,8 +50,9 @@ CREATE TABLE IF NOT EXISTS flowmaestro.chat_interface_message_chunks (
     content TEXT NOT NULL,
     chunk_index INTEGER NOT NULL,
 
-    -- Embedding ( OpenAI text-embedding-3-small dimension)
-    embedding public.vector(1536),
+    -- Embedding (OpenAI text-embedding-3-small dimension)
+    -- Note: vector type from pgvector extension (may be in flowmaestro schema on Cloud SQL)
+    embedding vector(1536),
 
     -- Metadata
     metadata JSONB DEFAULT '{}',
@@ -65,13 +69,12 @@ CREATE INDEX IF NOT EXISTS idx_chat_message_chunks_thread_id
 ON flowmaestro.chat_interface_message_chunks(thread_id);
 
 -- Vector similarity index (HNSW for fast approximate search)
--- We use public.vector_cosine_ops explicitly
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_class WHERE relname = 'idx_chat_message_chunks_embedding') THEN
         CREATE INDEX idx_chat_message_chunks_embedding
         ON flowmaestro.chat_interface_message_chunks
-        USING hnsw (embedding public.vector_cosine_ops)
+        USING hnsw (embedding vector_cosine_ops)
         WITH (m = 16, ef_construction = 64);
     END IF;
 END $$;
