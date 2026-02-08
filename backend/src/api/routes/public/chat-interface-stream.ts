@@ -1,9 +1,11 @@
 import { FastifyPluginAsync } from "fastify";
 import { ThreadStreamingEvent } from "@flowmaestro/shared";
 import { redisEventBus } from "../../../services/events/RedisEventBus";
+import { AgentExecutionRepository } from "../../../storage/repositories/AgentExecutionRepository";
 import { ChatInterfaceSessionRepository } from "../../../storage/repositories/ChatInterfaceSessionRepository";
 
 const chatInterfaceSessionRepo = new ChatInterfaceSessionRepository();
+const agentExecutionRepo = new AgentExecutionRepository();
 
 export const publicChatInterfaceStreamRoutes: FastifyPluginAsync = async (fastify) => {
     fastify.get<{
@@ -39,6 +41,62 @@ export const publicChatInterfaceStreamRoutes: FastifyPluginAsync = async (fastif
 
         // 4. Send initial connection event
         reply.raw.write(`data: ${JSON.stringify({ type: "connection:established" })}\n\n`);
+
+        // 4.5. Replay any messages that might have been missed due to race condition
+        // This handles the case where the agent completes before SSE connects
+        try {
+            const messages = await agentExecutionRepo.getMessagesByThread(threadId);
+            // Find the most recent user message and check if there's an assistant response after it
+            let lastUserMessageIndex = -1;
+            for (let i = messages.length - 1; i >= 0; i--) {
+                if (messages[i].role === "user") {
+                    lastUserMessageIndex = i;
+                    break;
+                }
+            }
+
+            // If there are assistant messages after the last user message, replay them
+            if (lastUserMessageIndex >= 0 && lastUserMessageIndex < messages.length - 1) {
+                const missedMessages = messages.slice(lastUserMessageIndex + 1);
+                for (const msg of missedMessages) {
+                    if (msg.role === "assistant" && msg.content) {
+                        const executionId = msg.execution_id || "";
+                        const timestamp = Date.now();
+
+                        // Send the full content as a token event
+                        const tokenEvent: ThreadStreamingEvent = {
+                            type: "agent:token",
+                            token: msg.content,
+                            timestamp,
+                            executionId
+                        };
+                        reply.raw.write(`data: ${JSON.stringify(tokenEvent)}\n\n`);
+
+                        // Send completion event
+                        const completeEvent: ThreadStreamingEvent = {
+                            type: "agent:execution:completed",
+                            executionId,
+                            timestamp,
+                            threadId,
+                            status: "completed",
+                            finalMessage: msg.content,
+                            iterations: 1
+                        };
+                        reply.raw.write(`data: ${JSON.stringify(completeEvent)}\n\n`);
+
+                        request.log.info(
+                            { threadId, messageId: msg.id },
+                            "Replayed missed assistant message on SSE connect"
+                        );
+                    }
+                }
+            }
+        } catch (replayError) {
+            request.log.warn(
+                { err: replayError, threadId },
+                "Failed to replay missed messages (continuing with live stream)"
+            );
+        }
 
         // 5. Start keepalive heartbeat (15s interval to prevent proxy timeouts)
         const keepaliveInterval = setInterval(() => {
