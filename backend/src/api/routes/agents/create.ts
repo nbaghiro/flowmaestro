@@ -16,7 +16,7 @@ const createAgentSchema = z.object({
     name: z.string().min(1).max(100),
     description: z.string().optional(),
     model: z.string().min(1),
-    provider: z.enum(["openai", "anthropic", "google", "cohere", "huggingface"]),
+    provider: z.enum(["openai", "anthropic", "google", "xai", "cohere", "huggingface"]),
     connection_id: z.string().uuid().nullable().optional(),
     system_prompt: z.string().default("You are a helpful AI assistant."),
     temperature: z.number().min(0).max(2).default(0.7),

@@ -1968,6 +1968,7 @@ export interface Agent {
     max_iterations: number;
     available_tools: Tool[];
     memory_config: MemoryConfig;
+    metadata?: JsonObject;
     created_at: string;
     updated_at: string;
     deleted_at: string | null;
@@ -1999,6 +2000,7 @@ export interface UpdateAgentRequest {
     max_iterations?: number;
     available_tools?: Tool[];
     memory_config?: MemoryConfig;
+    metadata?: JsonObject;
 }
 
 // Thread types

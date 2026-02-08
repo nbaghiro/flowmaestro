@@ -62,6 +62,8 @@ config:
       {"name":"cohere-api-key","envVar":"COHERE_API_KEY","category":"llm","deployments":["api","worker"],"required":false,"description":"Cohere API key"},
       {"name":"huggingface-api-key","envVar":"HUGGINGFACE_API_KEY","category":"llm","deployments":["api","worker"],"required":false,"description":"Hugging Face API key"},
       {"name":"xai-api-key","envVar":"XAI_API_KEY","category":"llm","deployments":["api","worker"],"required":false,"description":"x.ai (Grok) API key for Grok models"},
+      {"name":"deepgram-api-key","envVar":"DEEPGRAM_API_KEY","category":"llm","deployments":["api","worker"],"required":false,"description":"Deepgram API key for real-time speech-to-text"},
+      {"name":"elevenlabs-api-key","envVar":"ELEVENLABS_API_KEY","category":"llm","deployments":["api","worker"],"required":false,"description":"ElevenLabs API key for text-to-speech"},
       {"name":"slack-client-id","envVar":"SLACK_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Slack OAuth client ID"},
       {"name":"slack-client-secret","envVar":"SLACK_CLIENT_SECRET","category":"oauth","deployments":["api"],"required":false,"description":"Slack OAuth client secret"},
       {"name":"google-client-id","envVar":"GOOGLE_CLIENT_ID","category":"oauth","deployments":["api"],"required":false,"description":"Google OAuth client ID"},

@@ -1,7 +1,5 @@
 import { Send, Loader2, Bot, User, Wrench, CheckCircle2, XCircle, Eye } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import * as api from "../../../lib/api";
 import { logger } from "../../../lib/logger";
 import { streamAgentExecution } from "../../../lib/sse";
@@ -10,9 +8,12 @@ import { useAgentStore } from "../../../stores/agentStore";
 import { Button } from "../../common/Button";
 import { Dialog } from "../../common/Dialog";
 import { Input } from "../../common/Input";
+import { MarkdownRenderer } from "../../common/MarkdownRenderer";
 import { MediaOutput, hasMediaContent } from "../../common/MediaOutput";
 import { TypingDots } from "../../common/TypingDots";
 import { AgentConnectionSelector } from "../controls/AgentConnectionSelector";
+import { VoiceChat } from "./VoiceChat";
+import { VoiceModeToggle } from "./VoiceModeToggle";
 import type { Agent, ThreadMessage, JsonObject, ThreadTokenUsage } from "../../../lib/api";
 
 interface ToolCallInfo {
@@ -79,6 +80,14 @@ export function AgentChat({ agent }: AgentChatProps) {
     // Thread-level model override (doesn't save to agent)
     const [overrideConnectionId, setOverrideConnectionId] = useState<string | null>(null);
     const [overrideModel, setOverrideModel] = useState<string | null>(null);
+
+    // Voice mode state
+    const [isVoiceMode, setIsVoiceMode] = useState(false);
+
+    // Voice streaming state - track thread ID from execution_started
+    const voiceThreadIdRef = useRef<string | null>(null);
+    const voiceStreamingMessageIdRef = useRef<string | null>(null);
+    const voiceStreamingContentRef = useRef<string>("");
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const sseCleanupRef = useRef<(() => void) | null>(null);
@@ -364,6 +373,100 @@ export function AgentChat({ agent }: AgentChatProps) {
         }
     };
 
+    // Voice chat callbacks for integrating with the chat view
+    const handleVoiceExecutionStarted = useCallback(
+        (data: { executionId: string; threadId: string; userMessage: string }) => {
+            logger.info("Voice execution started", {
+                ...data,
+                currentThreadId: currentThread?.id,
+                activeThreadId
+            });
+
+            // Store the thread ID for subsequent callbacks
+            voiceThreadIdRef.current = data.threadId;
+
+            // Add user message to chat
+            const userMessage = {
+                id: `voice-user-${data.executionId}`,
+                role: "user" as const,
+                content: data.userMessage,
+                timestamp: new Date().toISOString()
+            };
+            logger.info("Adding voice user message to thread", {
+                threadId: data.threadId,
+                messageId: userMessage.id
+            });
+            addMessageToThread(data.threadId, userMessage);
+
+            // Create streaming message for agent response
+            const streamingMessageId = `voice-streaming-${data.executionId}`;
+            voiceStreamingMessageIdRef.current = streamingMessageId;
+            voiceStreamingContentRef.current = "";
+
+            const assistantMessage = {
+                id: streamingMessageId,
+                role: "assistant" as const,
+                content: " ", // Placeholder
+                timestamp: new Date().toISOString()
+            };
+            logger.info("Adding voice streaming message to thread", {
+                threadId: data.threadId,
+                messageId: streamingMessageId
+            });
+            addMessageToThread(data.threadId, assistantMessage);
+        },
+        [addMessageToThread, currentThread?.id, activeThreadId]
+    );
+
+    const handleVoiceAgentToken = useCallback(
+        (token: string) => {
+            const streamingMessageId = voiceStreamingMessageIdRef.current;
+            const threadId = voiceThreadIdRef.current;
+
+            if (!streamingMessageId || !threadId) {
+                logger.warn("Voice token received but no streaming context", {
+                    hasMessageId: !!streamingMessageId,
+                    hasThreadId: !!threadId
+                });
+                return;
+            }
+
+            updateThreadMessage(threadId, streamingMessageId, (current: string) => {
+                const cleanCurrent = current.trimStart() || "";
+                const newContent = cleanCurrent + token;
+                voiceStreamingContentRef.current = newContent;
+                return newContent;
+            });
+        },
+        [updateThreadMessage]
+    );
+
+    const handleVoiceAgentDone = useCallback(() => {
+        const streamingMessageId = voiceStreamingMessageIdRef.current;
+        const threadId = voiceThreadIdRef.current;
+
+        if (!streamingMessageId || !threadId) {
+            logger.warn("Voice done received but no streaming context");
+            return;
+        }
+
+        logger.info("Voice agent done, finalizing message");
+
+        // Finalize the message
+        const finalContent = voiceStreamingContentRef.current || "";
+        if (finalContent.trim()) {
+            updateThreadMessage(threadId, streamingMessageId, finalContent);
+        }
+
+        // Reset voice streaming state
+        voiceThreadIdRef.current = null;
+        voiceStreamingMessageIdRef.current = null;
+        voiceStreamingContentRef.current = "";
+
+        // Refresh token usage
+        refreshTokenUsage();
+    }, [updateThreadMessage, refreshTokenUsage]);
+
     const usageLabel =
         tokenUsage && tokenUsage.totalTokens > 0
             ? `${tokenUsage.totalTokens.toLocaleString()} tokens${
@@ -388,6 +491,14 @@ export function AgentChat({ agent }: AgentChatProps) {
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
+                    {(agent.metadata as { voice?: { enabled?: boolean } } | null)?.voice
+                        ?.enabled && (
+                        <VoiceModeToggle
+                            isVoiceMode={isVoiceMode}
+                            onToggle={() => setIsVoiceMode(!isVoiceMode)}
+                            disabled={isSending}
+                        />
+                    )}
                     <AgentConnectionSelector
                         agent={agent}
                         overrideConnectionId={overrideConnectionId}
@@ -400,7 +511,7 @@ export function AgentChat({ agent }: AgentChatProps) {
                 </div>
             </div>
 
-            {/* Messages - Scrollable */}
+            {/* Messages - Always visible */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-background">
                 {messages.length === 0 ? (
                     <div className="h-full flex items-center justify-center">
@@ -500,70 +611,7 @@ export function AgentChat({ agent }: AgentChatProps) {
                                         )}
                                     >
                                         {message.role === "assistant" ? (
-                                            <div className="text-sm prose prose-sm max-w-none dark:prose-invert">
-                                                <ReactMarkdown
-                                                    remarkPlugins={[remarkGfm]}
-                                                    components={{
-                                                        h1: ({ children }) => (
-                                                            <h1 className="text-lg font-bold mt-4 mb-2 pb-2 border-b border-border">
-                                                                {children}
-                                                            </h1>
-                                                        ),
-                                                        h2: ({ children }) => (
-                                                            <h2 className="text-base font-bold mt-3 mb-2 pb-1 border-b border-border">
-                                                                {children}
-                                                            </h2>
-                                                        ),
-                                                        h3: ({ children }) => (
-                                                            <h3 className="text-sm font-bold mt-2 mb-1">
-                                                                {children}
-                                                            </h3>
-                                                        ),
-                                                        ul: ({ children }) => (
-                                                            <ul className="list-disc list-inside my-2 space-y-1">
-                                                                {children}
-                                                            </ul>
-                                                        ),
-                                                        ol: ({ children }) => (
-                                                            <ol className="list-decimal list-inside my-2 space-y-1">
-                                                                {children}
-                                                            </ol>
-                                                        ),
-                                                        li: ({ children }) => (
-                                                            <li className="ml-2 [&>p]:inline [&>p]:my-0">
-                                                                {children}
-                                                            </li>
-                                                        ),
-                                                        p: ({ children }) => (
-                                                            <p className="my-1.5">{children}</p>
-                                                        ),
-                                                        strong: ({ children }) => (
-                                                            <strong className="font-semibold">
-                                                                {children}
-                                                            </strong>
-                                                        ),
-                                                        code: ({ children, className }) => {
-                                                            const isInline = !className;
-                                                            return isInline ? (
-                                                                <code className="px-1.5 py-0.5 rounded bg-muted-foreground/10 text-foreground font-mono text-xs">
-                                                                    {children}
-                                                                </code>
-                                                            ) : (
-                                                                <code className="block px-3 py-2 rounded bg-muted-foreground/10 text-foreground font-mono text-xs overflow-x-auto">
-                                                                    {children}
-                                                                </code>
-                                                            );
-                                                        },
-                                                        blockquote: ({ children }) => (
-                                                            <blockquote className="border-l-2 border-primary pl-3 italic my-2">
-                                                                {children}
-                                                            </blockquote>
-                                                        )
-                                                    }}
-                                                >
-                                                    {message.content}
-                                                </ReactMarkdown>
-                                            </div>
+                                            <MarkdownRenderer content={message.content} />
                                         ) : (
                                             <div className="whitespace-pre-wrap break-words">
                                                 {message.content}
@@ -649,30 +697,52 @@ export function AgentChat({ agent }: AgentChatProps) {
                 )}
             </div>
 
-            {/* Input - Fixed at bottom */}
+            {/* Input Area - Fixed at bottom */}
             <div className="border-t border-border p-4 flex-shrink-0 bg-card">
-                <div className="flex gap-2">
-                    <Input
-                        type="text"
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        onKeyPress={handleKeyPress}
-                        placeholder="What can your Agent do for you today?"
-                        disabled={isSending}
-                        className={cn("flex-1 px-4 py-3", "bg-muted")}
+                {isVoiceMode && currentThread?.id ? (
+                    /* Voice Controls */
+                    <VoiceChat
+                        agentId={agent.id}
+                        threadId={currentThread.id}
+                        onClose={() => {
+                            setIsVoiceMode(false);
+                            // Refresh thread messages to show any voice messages
+                            if (currentThread?.id) {
+                                fetchThreadMessages(currentThread.id);
+                            }
+                        }}
+                        compact={true}
+                        onExecutionStarted={handleVoiceExecutionStarted}
+                        onAgentToken={handleVoiceAgentToken}
+                        onAgentDone={handleVoiceAgentDone}
                     />
-                    <Button
-                        variant="primary"
-                        onClick={handleSend}
-                        disabled={!input.trim() || isSending}
-                        className="px-4 py-3"
-                    >
-                        <Send className="w-5 h-5" />
-                    </Button>
-                </div>
-                <p className="text-xs text-muted-foreground mt-2 text-center">
-                    Having trouble? Report your issue to our team
-                </p>
+                ) : (
+                    /* Text Input */
+                    <>
+                        <div className="flex gap-2">
+                            <Input
+                                type="text"
+                                value={input}
+                                onChange={(e) => setInput(e.target.value)}
+                                onKeyPress={handleKeyPress}
+                                placeholder="What can your Agent do for you today?"
+                                disabled={isSending}
+                                className={cn("flex-1 px-4 py-3", "bg-muted")}
+                            />
+                            <Button
+                                variant="primary"
+                                onClick={handleSend}
+                                disabled={!input.trim() || isSending}
+                                className="px-4 py-3"
+                            >
+                                <Send className="w-5 h-5" />
+                            </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-2 text-center">
+                            Having trouble? Report your issue to our team
+                        </p>
+                    </>
+                )}
             </div>
 
             {/* Tool result/error dialog */}

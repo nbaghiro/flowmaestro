@@ -57,7 +57,7 @@ Built for TypeScript developers who need both visual workflow orchestration and 
 
 ### Prerequisites
 
-- Node.js 20+
+- Node.js 22+
 - PostgreSQL 15+ (with pgvector extension)
 - Redis 7+
 - Temporal Server 1.23+

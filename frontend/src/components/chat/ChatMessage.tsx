@@ -1,7 +1,6 @@
 import { Bot, User } from "lucide-react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { cn } from "../../lib/utils";
+import { MarkdownRenderer } from "../common/MarkdownRenderer";
 import { TypingDots } from "../common/TypingDots";
 import type { ChatMessage as ChatMessageType, NodeChange } from "../../stores/chatStore";
 
@@ -34,9 +33,7 @@ export function ChatMessage({
         return (
             <div className="flex gap-3 justify-end">
                 <div className="max-w-[80%] rounded-lg px-4 py-3 bg-primary text-primary-foreground">
-                    <div className="text-sm prose prose-invert prose-sm max-w-none">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
-                    </div>
+                    <MarkdownRenderer content={message.content} className="prose-invert" />
                 </div>
                 <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
                     <User className="w-4 h-4 text-secondary-foreground" />
@@ -56,62 +53,7 @@ export function ChatMessage({
                     {isStreaming && !message.content ? (
                         <TypingDots />
                     ) : (
-                        <div className="text-sm prose prose-sm max-w-none dark:prose-invert">
-                            <ReactMarkdown
-                                remarkPlugins={[remarkGfm]}
-                                components={{
-                                    h1: ({ children }) => (
-                                        <h1 className="text-lg font-bold mt-4 mb-2 pb-2 border-b border-border">
-                                            {children}
-                                        </h1>
-                                    ),
-                                    h2: ({ children }) => (
-                                        <h2 className="text-base font-bold mt-3 mb-2 pb-1 border-b border-border">
-                                            {children}
-                                        </h2>
-                                    ),
-                                    h3: ({ children }) => (
-                                        <h3 className="text-sm font-bold mt-2 mb-1">{children}</h3>
-                                    ),
-                                    ul: ({ children }) => (
-                                        <ul className="list-disc list-inside my-2 space-y-1">
-                                            {children}
-                                        </ul>
-                                    ),
-                                    ol: ({ children }) => (
-                                        <ol className="list-decimal list-inside my-2 space-y-1">
-                                            {children}
-                                        </ol>
-                                    ),
-                                    li: ({ children }) => (
-                                        <li className="ml-2 [&>p]:inline [&>p]:my-0">{children}</li>
-                                    ),
-                                    p: ({ children }) => <p className="my-1.5">{children}</p>,
-                                    strong: ({ children }) => (
-                                        <strong className="font-semibold">{children}</strong>
-                                    ),
-                                    code: ({ children, className }) => {
-                                        const isInline = !className;
-                                        return isInline ? (
-                                            <code className="px-1.5 py-0.5 rounded bg-muted-foreground/10 text-foreground font-mono text-xs">
-                                                {children}
-                                            </code>
-                                        ) : (
-                                            <code className="block px-3 py-2 rounded bg-muted-foreground/10 text-foreground font-mono text-xs overflow-x-auto">
-                                                {children}
-                                            </code>
-                                        );
-                                    },
-                                    blockquote: ({ children }) => (
-                                        <blockquote className="border-l-2 border-primary pl-3 italic my-2">
-                                            {children}
-                                        </blockquote>
-                                    )
-                                }}
-                            >
-                                {message.content}
-                            </ReactMarkdown>
-                        </div>
+                        <MarkdownRenderer content={message.content} />
                     )}
                 </div>
 

@@ -186,6 +186,36 @@ export const config = {
     },
 
     // ==========================================================================
+    // Voice Chat Configuration
+    // ==========================================================================
+    voice: {
+        // Deepgram STT settings
+        deepgram: {
+            model: (process.env.DEEPGRAM_MODEL as "nova-2" | "nova-3") || "nova-2",
+            language: process.env.DEEPGRAM_LANGUAGE || "en-US",
+            sampleRate: parseInt(process.env.DEEPGRAM_SAMPLE_RATE || "16000"),
+            endpointing: parseInt(process.env.DEEPGRAM_ENDPOINTING || "300") // ms of silence
+        },
+        // ElevenLabs TTS settings
+        elevenlabs: {
+            defaultVoiceId: process.env.ELEVENLABS_DEFAULT_VOICE_ID || "21m00Tcm4TlvDq8ikWAM",
+            model:
+                (process.env.ELEVENLABS_MODEL as
+                    | "eleven_turbo_v2_5"
+                    | "eleven_multilingual_v2"
+                    | "eleven_flash_v2_5") || "eleven_turbo_v2_5",
+            stability: parseFloat(process.env.ELEVENLABS_STABILITY || "0.5"),
+            similarityBoost: parseFloat(process.env.ELEVENLABS_SIMILARITY_BOOST || "0.75"),
+            outputFormat:
+                (process.env.ELEVENLABS_OUTPUT_FORMAT as
+                    | "mp3_44100_128"
+                    | "mp3_22050_32"
+                    | "pcm_16000"
+                    | "pcm_22050") || "mp3_44100_128"
+        }
+    },
+
+    // ==========================================================================
     // Email Services
     // ==========================================================================
     resend: {

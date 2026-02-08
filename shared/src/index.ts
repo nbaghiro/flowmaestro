@@ -30,3 +30,4 @@ export * from "./workflow-layout";
 export * from "./extension";
 export * from "./persona";
 export * from "./kb-categories";
+export * from "./voice";

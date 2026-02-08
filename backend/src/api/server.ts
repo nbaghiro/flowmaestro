@@ -1,10 +1,12 @@
 import cors from "@fastify/cors";
 import jwt from "@fastify/jwt";
 import multipart from "@fastify/multipart";
+import websocket from "@fastify/websocket";
 import Fastify from "fastify";
 import { config } from "../core/config";
 import { initializeLogger, shutdownLogger } from "../core/logging";
 import { initializeOTel, shutdownOTel } from "../core/observability";
+import { voiceSessionManager } from "../services/ai";
 import { redisEventBus } from "../services/events/RedisEventBus";
 import { credentialRefreshScheduler } from "../services/oauth/CredentialRefreshScheduler";
 import { connectRedis, redis } from "../services/redis";
@@ -46,6 +48,7 @@ import { publicApiV1Routes } from "./routes/v1";
 import { webhookRoutes } from "./routes/webhooks";
 import { workflowRoutes } from "./routes/workflows";
 import { workspaceRoutes } from "./routes/workspaces";
+import { voiceWebSocketRoutes } from "./websocket";
 
 export async function buildServer() {
     // Initialize centralized logger
@@ -108,6 +111,13 @@ export async function buildServer() {
     await fastify.register(multipart, {
         limits: {
             fileSize: 50 * 1024 * 1024 // 50MB limit
+        }
+    });
+
+    // Register WebSocket support for real-time voice chat
+    await fastify.register(websocket, {
+        options: {
+            maxPayload: 1024 * 1024 // 1MB max payload for audio chunks
         }
     });
 
@@ -204,6 +214,9 @@ export async function buildServer() {
     await fastify.register(publicChatInterfaceQueryRoutes, { prefix: "/public/chat-interfaces" });
     await fastify.register(publicApiV1Routes, { prefix: "/api/v1" });
 
+    // WebSocket routes for real-time voice chat
+    await fastify.register(voiceWebSocketRoutes);
+
     // Error handler (must be last)
     fastify.setErrorHandler(errorHandler);
 
@@ -239,6 +252,9 @@ export async function startServer() {
         process.on(signal, async () => {
             fastify.log.info(`Received ${signal}, closing server...`);
             await fastify.close();
+
+            // Close all voice sessions
+            await voiceSessionManager.closeAllSessions();
 
             // Stop credential refresh scheduler
             credentialRefreshScheduler.stop();
