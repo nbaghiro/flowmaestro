@@ -1,0 +1,71 @@
+# Dependencies - these are installed fresh in Docker
+node_modules
+*/node_modules
+**/node_modules
+
+# Build outputs - rebuilt in Docker
+dist
+*/dist
+**/dist
+.next
+out
+
+# Development files
+.git
+.gitignore
+.env
+.env.*
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE and editor files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Test and coverage
+coverage
+.nyc_output
+*.test.ts
+*.spec.ts
+# Note: Can't exclude __tests__ because backend/src/tools/index.ts imports from it
+
+# Documentation (not needed for builds)
+*.md
+!README.md
+.docs
+
+# TypeScript build info
+tsconfig.tsbuildinfo
+*/tsconfig.tsbuildinfo
+
+# Infra files not needed for app builds
+infra/pulumi
+infra/k8s
+infra/scripts
+infra/docker/*/.dockerignore
+
+# Frontend not needed for backend builds (and vice versa in their respective builds)
+# Note: We can't exclude these here since both frontend and backend builds use root context
+# This is handled by selective COPY in Dockerfiles
+
+# Other packages not needed
+cli
+documentation
+marketing
+examples
+extensions
+sdks
+
+# Playwright browsers (large, downloaded fresh)
+.playwright
+
+# Misc
+*.tgz
+*.tar.gz
+.turbo
