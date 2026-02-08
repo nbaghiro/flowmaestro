@@ -748,7 +748,7 @@ function ProviderCard({ provider, connectionCount, onClick }: ProviderCardProps)
                             Soon
                         </span>
                     ) : connectionCount > 0 ? (
-                        <span className="inline-flex items-center px-2.5 py-1 text-xs font-medium bg-green-900/30 text-green-400 rounded-md">
+                        <span className="inline-flex items-center px-2.5 py-1 text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 rounded-md">
                             Connected
                         </span>
                     ) : null}
