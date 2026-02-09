@@ -244,7 +244,17 @@ export const gorgiasFixtures: TestFixture[] = [
                 }
             }
         ],
-        errorCases: []
+        errorCases: [
+            {
+                name: "rate_limit",
+                input: { status: "open" },
+                expectedError: {
+                    type: "rate_limit",
+                    message: "Gorgias rate limit exceeded. Please try again later.",
+                    retryable: true
+                }
+            }
+        ]
     },
 
     // ============================================
@@ -278,7 +288,17 @@ export const gorgiasFixtures: TestFixture[] = [
                 }
             }
         ],
-        errorCases: []
+        errorCases: [
+            {
+                name: "rate_limit",
+                input: {},
+                expectedError: {
+                    type: "rate_limit",
+                    message: "Gorgias rate limit exceeded. Please try again later.",
+                    retryable: true
+                }
+            }
+        ]
     },
 
     // ============================================
