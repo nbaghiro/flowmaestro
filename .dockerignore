@@ -54,13 +54,12 @@ infra/docker/*/.dockerignore
 # Note: We can't exclude these here since both frontend and backend builds use root context
 # This is handled by selective COPY in Dockerfiles
 
-# Other packages not needed
+# Other packages not needed in most builds
+# Note: marketing and sdks are needed for their respective Docker builds
 cli
 documentation
-marketing
 examples
 extensions
-sdks
 
 # Playwright browsers (large, downloaded fresh)
 .playwright
