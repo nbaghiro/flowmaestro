@@ -10,7 +10,6 @@ import { PersonaInstanceMessageRepository } from "../../../storage/repositories/
 import { PersonaInstanceRepository } from "../../../storage/repositories/PersonaInstanceRepository";
 import { getAllToolsForUser, isBuiltInTool } from "../../../tools";
 import { activityLogger } from "../../core";
-import { personaWorkflowTools } from "../../workflows/persona-tools";
 import { injectThreadMemoryTool } from "../agents/memory";
 import type { Tool } from "../../../storage/models/Agent";
 import type { ThreadMessage } from "../../../storage/models/AgentExecution";
@@ -169,20 +168,54 @@ function buildPersonaSystemPrompt(
         });
     }
 
-    // Add execution rules for tool usage
-    prompt += `\n\n## Execution Rules
+    // Add workflow communication instructions
+    prompt += `\n\n## Workflow Communication
 
-You MUST follow these rules during task execution:
+You communicate workflow state by including JSON signal blocks in your response.
+These blocks must be enclosed in triple backticks with the language \`workflow-signal\`.
 
-1. **Always Use Tools**: Every response should include at least one tool call until your task is complete. Do not respond with only text unless you are providing a brief status update alongside tool calls.
+### Progress Updates
+When starting a new phase or completing a milestone:
+\`\`\`workflow-signal
+{
+    "type": "progress",
+    "current_step": "Analyzing competitor websites",
+    "completed_steps": ["Gathered requirements"],
+    "remaining_steps": ["Create report"],
+    "percentage": 40
+}
+\`\`\`
 
-2. **Create Deliverables**: Use the \`deliverable_create\` tool for ALL outputs (reports, data files, code) that the user should receive. The user expects tangible results from your work.
+### Creating Deliverables
+When producing output files for the user:
+\`\`\`workflow-signal
+{
+    "type": "deliverable",
+    "name": "competitive-analysis",
+    "deliverable_type": "markdown",
+    "content": "# Competitive Analysis\\n\\n## Overview\\n...",
+    "description": "Analysis of competitor landscape"
+}
+\`\`\`
 
-3. **Track Progress**: Call \`update_progress\` when starting each major phase of work. This helps the user understand what you're working on.
+### Task Completion
+When ALL work is finished and deliverables created:
+\`\`\`workflow-signal
+{
+    "type": "complete",
+    "summary": "Completed competitive analysis",
+    "deliverables_created": ["competitive-analysis"],
+    "key_findings": ["Competitor X has 40% market share"],
+    "recommendations": ["Focus on feature Y"]
+}
+\`\`\`
 
-4. **Signal Completion**: When you have finished ALL work and created all deliverables, call \`task_complete\` with a summary of what was accomplished.
-
-IMPORTANT: Do not respond with only text without tool calls. If you have nothing left to do, call task_complete.`;
+**Rules:**
+1. Include multiple signals in one response if needed
+2. Always include explanatory text alongside signals
+3. Continue using tools (web_search, etc.) for actual work
+4. Only signal complete when ALL work is done
+5. Every response should either include tool calls for work OR a completion signal when finished`;
 
     return prompt;
 }
@@ -279,9 +312,8 @@ export async function getPersonaConfig(input: GetPersonaConfigInput): Promise<Ag
     // Inject thread memory tool for semantic search
     const toolsWithMemory = injectThreadMemoryTool(availableTools);
 
-    // Inject persona workflow control tools (task_complete, update_progress, deliverable_create)
-    // These are handled directly by the workflow, not via executeToolCall
-    const toolsWithWorkflowControls = [...toolsWithMemory, ...personaWorkflowTools];
+    // Note: Workflow control signals (progress, deliverable, complete) are now handled
+    // via structured output parsing in persona-signals.ts, not as injected tools
 
     // Build the system prompt with task context
     const systemPrompt = buildPersonaSystemPrompt(
@@ -301,7 +333,7 @@ export async function getPersonaConfig(input: GetPersonaConfigInput): Promise<Ag
         temperature: persona.temperature,
         max_tokens: persona.max_tokens,
         max_iterations: 100, // Personas have higher iteration limit for complex tasks
-        available_tools: toolsWithWorkflowControls,
+        available_tools: toolsWithMemory,
         memory_config: {
             type: "buffer",
             max_messages: 50 // Higher for long-running tasks
@@ -322,8 +354,7 @@ export async function getPersonaConfig(input: GetPersonaConfigInput): Promise<Ag
 
     activityLogger.info("Persona config built successfully", {
         personaName: persona.name,
-        toolCount: toolsWithWorkflowControls.length,
-        workflowControlTools: personaWorkflowTools.length,
+        toolCount: toolsWithMemory.length,
         maxIterations: config.max_iterations
     });
 

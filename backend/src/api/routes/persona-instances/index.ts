@@ -22,6 +22,7 @@ import { getPersonaInstanceHandler } from "./get";
 import { listPersonaInstancesHandler } from "./list";
 import { sendPersonaInstanceMessageHandler } from "./message";
 import { skipClarificationHandler } from "./skip-clarification";
+import { streamPersonaInstanceRoute } from "./stream";
 
 export async function personaInstanceRoutes(fastify: FastifyInstance) {
     // All persona instance routes require authentication and workspace context
@@ -57,4 +58,7 @@ export async function personaInstanceRoutes(fastify: FastifyInstance) {
     fastify.get("/:id/deliverables/:deliverableId", getDeliverable);
     fastify.get("/:id/deliverables/:deliverableId/download", downloadDeliverable);
     fastify.delete("/:id/deliverables/:deliverableId", deleteDeliverable);
+
+    // Real-time streaming
+    await fastify.register(streamPersonaInstanceRoute);
 }

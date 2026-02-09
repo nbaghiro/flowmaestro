@@ -144,6 +144,12 @@ export {
     addPersonaMessage,
     summarizeThreadContext,
     createPersonaDeliverable,
+    // Real-time event emission
+    emitPersonaStarted,
+    emitPersonaProgress,
+    emitPersonaDeliverable,
+    emitPersonaCompleted,
+    emitPersonaFailed,
     type GetPersonaConfigInput,
     type UpdatePersonaInstanceProgressInput,
     type UpdatePersonaInstanceStatusInput,
@@ -153,5 +159,10 @@ export {
     type AddPersonaMessageInput,
     type SummarizeThreadContextInput,
     type CreatePersonaDeliverableInput,
-    type CreatePersonaDeliverableResult
+    type CreatePersonaDeliverableResult,
+    type EmitPersonaStartedInput,
+    type EmitPersonaProgressInput,
+    type EmitPersonaDeliverableInput,
+    type EmitPersonaCompletedInput,
+    type EmitPersonaFailedInput
 } from "./personas";

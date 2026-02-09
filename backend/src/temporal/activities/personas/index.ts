@@ -30,3 +30,17 @@ export {
     type CreatePersonaDeliverableInput,
     type CreatePersonaDeliverableResult
 } from "./persona";
+
+// Real-time event emission
+export {
+    emitPersonaStarted,
+    emitPersonaProgress,
+    emitPersonaDeliverable,
+    emitPersonaCompleted,
+    emitPersonaFailed,
+    type EmitPersonaStartedInput,
+    type EmitPersonaProgressInput,
+    type EmitPersonaDeliverableInput,
+    type EmitPersonaCompletedInput,
+    type EmitPersonaFailedInput
+} from "./events";

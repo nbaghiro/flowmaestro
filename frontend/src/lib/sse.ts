@@ -777,3 +777,148 @@ export function streamGenerationChatResponse(
         eventSource.close();
     };
 }
+
+// ============================================================================
+// Persona Instance Streaming
+// ============================================================================
+
+export interface PersonaInstanceStreamCallbacks {
+    onConnected?: (data: {
+        instanceId: string;
+        status: string;
+        progress?: {
+            current_step: number;
+            total_steps: number;
+            current_step_name: string;
+            percentage: number;
+            message?: string;
+        };
+        isTerminal: boolean;
+    }) => void;
+    onProgress?: (data: {
+        instanceId: string;
+        progress: {
+            current_step: number;
+            total_steps: number;
+            current_step_name: string;
+            percentage: number;
+            message?: string;
+        };
+        iterationCount: number;
+        accumulatedCost: number;
+    }) => void;
+    onDeliverable?: (data: {
+        instanceId: string;
+        deliverable: {
+            id: string;
+            name: string;
+            type: string;
+            description: string | null;
+        };
+    }) => void;
+    onCompleted?: (data: {
+        instanceId: string;
+        completionReason: string;
+        deliverableCount: number;
+        durationSeconds: number;
+        totalCost: number;
+    }) => void;
+    onFailed?: (data: { instanceId: string; error: string }) => void;
+    onError?: (error: string) => void;
+}
+
+/**
+ * Stream persona instance events via SSE
+ * Returns a cleanup function to close the connection.
+ */
+export function streamPersonaInstance(
+    instanceId: string,
+    callbacks: PersonaInstanceStreamCallbacks
+): () => void {
+    const token = getAuthToken();
+    if (!token) {
+        callbacks.onError?.("Authentication required");
+        return () => {};
+    }
+
+    const workspaceId = getCurrentWorkspaceId();
+    if (!workspaceId) {
+        callbacks.onError?.("Workspace context required");
+        return () => {};
+    }
+
+    const url = `${API_BASE_URL}/persona-instances/${instanceId}/stream?token=${encodeURIComponent(token)}&workspaceId=${encodeURIComponent(workspaceId)}`;
+
+    const eventSource = new EventSource(url, {
+        withCredentials: true
+    });
+
+    let intentionallyClosed = false;
+
+    eventSource.addEventListener("connected", (event) => {
+        try {
+            const data = JSON.parse(event.data);
+            callbacks.onConnected?.(data);
+
+            // If already in terminal state, close connection
+            if (data.isTerminal) {
+                intentionallyClosed = true;
+                eventSource.close();
+            }
+        } catch {
+            // Silently ignore parsing errors
+        }
+    });
+
+    eventSource.addEventListener("persona:instance:progress", (event) => {
+        try {
+            const data = JSON.parse(event.data);
+            callbacks.onProgress?.(data);
+        } catch {
+            // Silently ignore parsing errors
+        }
+    });
+
+    eventSource.addEventListener("persona:instance:deliverable", (event) => {
+        try {
+            const data = JSON.parse(event.data);
+            callbacks.onDeliverable?.(data);
+        } catch {
+            // Silently ignore parsing errors
+        }
+    });
+
+    eventSource.addEventListener("persona:instance:completed", (event) => {
+        try {
+            const data = JSON.parse(event.data);
+            callbacks.onCompleted?.(data);
+            intentionallyClosed = true;
+            eventSource.close();
+        } catch {
+            // Silently ignore parsing errors
+        }
+    });
+
+    eventSource.addEventListener("persona:instance:failed", (event) => {
+        try {
+            const data = JSON.parse(event.data);
+            callbacks.onFailed?.(data);
+            intentionallyClosed = true;
+            eventSource.close();
+        } catch {
+            // Silently ignore parsing errors
+        }
+    });
+
+    eventSource.onerror = () => {
+        if (intentionallyClosed || eventSource.readyState === EventSource.CLOSED) {
+            return;
+        }
+        callbacks.onError?.("Stream connection failed");
+    };
+
+    return () => {
+        intentionallyClosed = true;
+        eventSource.close();
+    };
+}

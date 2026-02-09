@@ -136,6 +136,7 @@ export interface KnowledgeBase {
     user_id: string;
     name: string;
     description: string | null;
+    category: string | null;
     config: {
         embeddingModel: string;
         embeddingProvider: string;
@@ -188,6 +189,7 @@ export interface ChunkSearchResult {
 export interface CreateKnowledgeBaseInput {
     name: string;
     description?: string;
+    category?: string;
     config?: Partial<KnowledgeBase["config"]>;
 }
 
