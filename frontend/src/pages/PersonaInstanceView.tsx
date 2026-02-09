@@ -17,14 +17,14 @@ import {
     Wifi,
     WifiOff
 } from "lucide-react";
-import React, { useEffect, useState, useRef, useMemo, useCallback } from "react";
+import React, { useEffect, useState, useRef, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ConfirmDialog } from "../components/common/ConfirmDialog";
-import { Toast, ToastType } from "../components/common/Toast";
 import { DeliverableCard } from "../components/personas/cards/DeliverableCard";
 import { ClarifyingPhaseUI } from "../components/personas/clarification";
 import { ContinueWorkDialog } from "../components/personas/modals/ContinueWorkDialog";
 import { usePersonaStream } from "../hooks/usePersonaStream";
+import { useToast } from "../hooks/useToast";
 import { usePersonaStore } from "../stores/personaStore";
 import type {
     PersonaCategory,
@@ -161,15 +161,8 @@ export const PersonaInstanceView: React.FC = () => {
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
     const [showContinueDialog, setShowContinueDialog] = useState(false);
     const [clarificationError, setClarificationError] = useState<string | null>(null);
-    const [toast, setToast] = useState<{
-        isOpen: boolean;
-        type: ToastType;
-        title: string;
-    } | null>(null);
 
-    const showToast = useCallback((type: ToastType, title: string) => {
-        setToast({ isOpen: true, type, title });
-    }, []);
+    const toast = useToast();
 
     // Determine if instance is active (for streaming)
     const instanceIsActive = currentInstance
@@ -265,9 +258,9 @@ export const PersonaInstanceView: React.FC = () => {
         try {
             await cancelInstance(id);
             setShowCancelDialog(false);
-            showToast("success", "Task cancelled");
+            toast.success("Task cancelled");
         } catch (_error) {
-            showToast("error", "Failed to cancel task");
+            toast.error("Failed to cancel task");
         }
     };
 
@@ -275,9 +268,9 @@ export const PersonaInstanceView: React.FC = () => {
         if (!id) return;
         try {
             await completeInstance(id);
-            showToast("success", "Task marked as complete");
+            toast.success("Task marked as complete");
         } catch (_error) {
-            showToast("error", "Failed to complete task");
+            toast.error("Failed to complete task");
         }
     };
 
@@ -285,10 +278,10 @@ export const PersonaInstanceView: React.FC = () => {
         if (!id) return;
         try {
             await deleteInstance(id);
-            showToast("success", "Task deleted");
+            toast.success("Task deleted");
             navigate("/persona-instances");
         } catch (_error) {
-            showToast("error", "Failed to delete task");
+            toast.error("Failed to delete task");
         }
     };
 
@@ -814,16 +807,6 @@ export const PersonaInstanceView: React.FC = () => {
                 isOpen={showContinueDialog}
                 onClose={() => setShowContinueDialog(false)}
             />
-
-            {/* Toast Notifications */}
-            {toast && (
-                <Toast
-                    isOpen={toast.isOpen}
-                    onClose={() => setToast(null)}
-                    type={toast.type}
-                    title={toast.title}
-                />
-            )}
         </div>
     );
 };

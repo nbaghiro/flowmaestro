@@ -1,8 +1,8 @@
 import { ArrowLeft, Plus, Play, CheckCircle, Archive, Eye } from "lucide-react";
-import React, { useEffect, useState, useMemo, useCallback } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Toast, ToastType } from "../components/common/Toast";
 import { InstanceCard } from "../components/persona-instances/InstanceCard";
+import { useToast } from "../hooks/useToast";
 import { usePersonaStore } from "../stores/personaStore";
 import type { PersonaInstanceStatus } from "../lib/api";
 
@@ -45,19 +45,11 @@ const statusGroups: Record<FilterStatus, PersonaInstanceStatus[]> = {
 
 export const PersonaInstances: React.FC = () => {
     const navigate = useNavigate();
+    const toast = useToast();
     const { dashboard, isLoadingInstances, instancesError, fetchDashboard, cancelInstance } =
         usePersonaStore();
 
     const [filter, setFilter] = useState<FilterStatus>("all");
-    const [toast, setToast] = useState<{
-        isOpen: boolean;
-        type: ToastType;
-        title: string;
-    } | null>(null);
-
-    const showToast = useCallback((type: ToastType, title: string) => {
-        setToast({ isOpen: true, type, title });
-    }, []);
 
     useEffect(() => {
         fetchDashboard();
@@ -117,9 +109,9 @@ export const PersonaInstances: React.FC = () => {
     const handleCancel = async (id: string) => {
         try {
             await cancelInstance(id);
-            showToast("success", "Task cancelled");
+            toast.success("Task cancelled");
         } catch (_error) {
-            showToast("error", "Failed to cancel task");
+            toast.error("Failed to cancel task");
         }
     };
 
@@ -290,16 +282,6 @@ export const PersonaInstances: React.FC = () => {
                     </div>
                 )}
             </div>
-
-            {/* Toast Notifications */}
-            {toast && (
-                <Toast
-                    isOpen={toast.isOpen}
-                    onClose={() => setToast(null)}
-                    type={toast.type}
-                    title={toast.title}
-                />
-            )}
         </div>
     );
 };
