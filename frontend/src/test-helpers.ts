@@ -3,7 +3,7 @@
  */
 
 import { vi } from "vitest";
-import type { ApiUser } from "../api";
+import type { ApiUser } from "./lib/api";
 
 /**
  * Create a mock fetch response
@@ -209,9 +209,9 @@ export function createMockStreamEvent(type: string, data: Record<string, unknown
  */
 export async function resetStores() {
     // Import stores dynamically to avoid circular dependencies
-    const { useAuthStore } = await import("../../stores/authStore");
-    const { useWorkflowStore } = await import("../../stores/workflowStore");
-    const { useWorkspaceStore } = await import("../../stores/workspaceStore");
+    const { useAuthStore } = await import("./stores/authStore");
+    const { useWorkflowStore } = await import("./stores/workflowStore");
+    const { useWorkspaceStore } = await import("./stores/workspaceStore");
 
     // Reset to initial state
     useAuthStore.setState({

@@ -13,7 +13,7 @@ import {
     createMockUser,
     createMockAuthToken,
     mockFetchOnce
-} from "../../lib/__tests__/test-helpers";
+} from "../../test-helpers";
 import { windowMock } from "../../test-setup";
 import { useAuthStore, getAuthState } from "../authStore";
 

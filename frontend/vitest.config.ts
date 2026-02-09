@@ -29,7 +29,7 @@ export default defineConfig({
                 "src/**/*.test.ts",
                 "src/**/*.test.tsx",
                 "src/test-setup.ts",
-                "src/lib/__tests__/test-helpers.ts",
+                "src/test-helpers.ts",
                 "src/canvas/__mocks__/**",
                 "src/canvas/__tests__/test-utils.tsx"
             ]

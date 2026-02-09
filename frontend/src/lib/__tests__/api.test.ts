@@ -6,6 +6,14 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
+    createMockFetchResponse,
+    createMockApiResponse,
+    createMockApiError,
+    createMockUser,
+    createMockAuthToken,
+    mockFetchOnce
+} from "../../test-helpers";
+import {
     login,
     register,
     getCurrentUser,
@@ -110,14 +118,6 @@ import {
     deleteCheckpoint,
     renameCheckpoint
 } from "../api";
-import {
-    createMockFetchResponse,
-    createMockApiResponse,
-    createMockApiError,
-    createMockUser,
-    createMockAuthToken,
-    mockFetchOnce
-} from "./test-helpers";
 
 describe("API Client", () => {
     beforeEach(() => {
