@@ -12,12 +12,12 @@ export async function getExecutionHandler(
     request: FastifyRequest,
     reply: FastifyReply
 ): Promise<void> {
-    const userId = request.user!.id;
+    const workspaceId = request.workspace!.id;
     const { executionId } = getExecutionParamsSchema.parse(request.params);
 
     const executionRepo = new AgentExecutionRepository();
 
-    const execution = await executionRepo.findByIdAndUserId(executionId, userId);
+    const execution = await executionRepo.findByIdAndWorkspaceId(executionId, workspaceId);
 
     if (!execution) {
         throw new NotFoundError("Agent execution not found");

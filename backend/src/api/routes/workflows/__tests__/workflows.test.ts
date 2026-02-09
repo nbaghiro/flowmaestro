@@ -17,8 +17,8 @@ import { v4 as uuidv4 } from "uuid";
 
 // Mock workflow repository
 const mockWorkflowRepo = {
-    findByUserId: jest.fn(),
     findByWorkspaceId: jest.fn(),
+    findByIdAndWorkspaceId: jest.fn(),
     findById: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
@@ -118,8 +118,8 @@ function resetAllMocks() {
     jest.clearAllMocks();
 
     // Reset default behaviors
-    mockWorkflowRepo.findByUserId.mockResolvedValue({ workflows: [], total: 0 });
     mockWorkflowRepo.findByWorkspaceId.mockResolvedValue({ workflows: [], total: 0 });
+    mockWorkflowRepo.findByIdAndWorkspaceId.mockResolvedValue(null);
     mockWorkflowRepo.findById.mockResolvedValue(null);
     mockWorkflowRepo.create.mockImplementation((data) =>
         Promise.resolve(createMockWorkflow({ ...data, id: uuidv4() }))

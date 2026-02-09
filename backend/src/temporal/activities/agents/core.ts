@@ -49,6 +49,7 @@ const safetyLogger = createActivityLogger({ component: "SafetyActivity" });
 export interface GetAgentConfigInput {
     agentId: string;
     userId: string;
+    workspaceId?: string;
 }
 
 /**
@@ -244,9 +245,12 @@ interface ExecuteSearchThreadMemoryInput {
 // =============================================================================
 
 export async function getAgentConfig(input: GetAgentConfigInput): Promise<AgentConfig> {
-    const { agentId, userId } = input;
+    const { agentId, workspaceId } = input;
 
-    const agent = await agentRepo.findByIdAndUserId(agentId, userId);
+    // Use workspace-scoped lookup when workspaceId is available
+    const agent = workspaceId
+        ? await agentRepo.findByIdAndWorkspaceId(agentId, workspaceId)
+        : await agentRepo.findById(agentId);
     if (!agent) {
         throw new Error(`Agent ${agentId} not found or access denied`);
     }
@@ -682,12 +686,12 @@ export function generateAgentToolName(agentName: string): string {
 }
 
 /**
- * Generate agent tools for all agents owned by a user
+ * Generate agent tools for all agents in a workspace
  *
  * This allows creating a "team" of agents that can call each other.
  */
-export async function generateAgentToolsForUser(
-    userId: string,
+export async function generateAgentToolsForWorkspace(
+    workspaceId: string,
     options?: {
         excludeAgentId?: string; // Exclude specific agent (e.g., the calling agent)
         includeAgentIds?: string[]; // Only include specific agents
@@ -695,8 +699,8 @@ export async function generateAgentToolsForUser(
 ): Promise<Tool[]> {
     const { excludeAgentId, includeAgentIds } = options || {};
 
-    // Get all agents for user
-    const result = await agentRepo.findByUserId(userId);
+    // Get all agents for workspace
+    const result = await agentRepo.findByWorkspaceId(workspaceId);
     let filteredAgents = result.agents;
 
     // Filter agents
@@ -715,8 +719,11 @@ export async function generateAgentToolsForUser(
 /**
  * Generate a tool definition for a specific agent by ID
  */
-export async function generateAgentToolById(agentId: string, userId: string): Promise<Tool | null> {
-    const agent = await agentRepo.findByIdAndUserId(agentId, userId);
+export async function generateAgentToolById(
+    agentId: string,
+    workspaceId: string
+): Promise<Tool | null> {
+    const agent = await agentRepo.findByIdAndWorkspaceId(agentId, workspaceId);
     if (!agent) {
         return null;
     }
@@ -731,11 +738,11 @@ export async function generateAgentToolById(agentId: string, userId: string): Pr
  */
 export async function injectAgentTools(
     existingTools: Tool[],
-    userId: string,
+    workspaceId: string,
     currentAgentId?: string
 ): Promise<Tool[]> {
-    // Generate tools for all other agents
-    const agentTools = await generateAgentToolsForUser(userId, {
+    // Generate tools for all other agents in the workspace
+    const agentTools = await generateAgentToolsForWorkspace(workspaceId, {
         excludeAgentId: currentAgentId // Don't allow agent to call itself
     });
 

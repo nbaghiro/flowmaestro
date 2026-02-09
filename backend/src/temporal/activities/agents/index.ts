@@ -29,7 +29,7 @@ export {
     // Multi-agent orchestration
     generateAgentTool,
     generateAgentToolName,
-    generateAgentToolsForUser,
+    generateAgentToolsForWorkspace,
     generateAgentToolById,
     injectAgentTools,
     isAgentTool,

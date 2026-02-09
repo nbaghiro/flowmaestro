@@ -221,19 +221,21 @@ describe("AgentRepository", () => {
         });
     });
 
-    describe("findByIdAndUserId", () => {
-        it("should find agent by id and user id (deprecated)", async () => {
+    describe("findByIdAndWorkspaceId", () => {
+        it("should find agent by id and workspace id", async () => {
             const agentId = generateId();
-            const userId = generateId();
-            const mockRow = generateAgentRow({ id: agentId, user_id: userId });
+            const workspaceId = generateId();
+            const mockRow = generateAgentRow({ id: agentId, workspace_id: workspaceId });
 
             mockQuery.mockResolvedValueOnce(mockRows([mockRow]));
 
-            const result = await repository.findByIdAndUserId(agentId, userId);
+            const result = await repository.findByIdAndWorkspaceId(agentId, workspaceId);
 
             expect(mockQuery).toHaveBeenCalledWith(
-                expect.stringContaining("WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL"),
-                [agentId, userId]
+                expect.stringContaining(
+                    "WHERE id = $1 AND workspace_id = $2 AND deleted_at IS NULL"
+                ),
+                [agentId, workspaceId]
             );
             expect(result?.id).toBe(agentId);
         });

@@ -29,7 +29,7 @@ export async function listExecutionsHandler(fastify: FastifyInstance): Promise<v
             request: FastifyRequest<{ Querystring: ListExecutionsQuery }>,
             reply: FastifyReply
         ) => {
-            const userId = request.apiKeyUserId!;
+            const workspaceId = request.apiKeyWorkspaceId!;
             const { page, per_page, offset } = parsePaginationQuery(
                 request.query as Record<string, unknown>
             );
@@ -40,8 +40,11 @@ export async function listExecutionsHandler(fastify: FastifyInstance): Promise<v
 
             // If a specific workflow_id is provided, verify ownership and fetch its executions
             if (workflow_id) {
-                const workflow = await workflowRepo.findById(workflow_id);
-                if (!workflow || workflow.user_id !== userId) {
+                const workflow = await workflowRepo.findByIdAndWorkspaceId(
+                    workflow_id,
+                    workspaceId
+                );
+                if (!workflow) {
                     return sendPaginated(reply, [], {
                         page,
                         per_page,
@@ -81,8 +84,10 @@ export async function listExecutionsHandler(fastify: FastifyInstance): Promise<v
                 });
             }
 
-            // Get all user's workflows first
-            const { workflows } = await workflowRepo.findByUserId(userId, { limit: 1000 });
+            // Get all workspace's workflows first
+            const { workflows } = await workflowRepo.findByWorkspaceId(workspaceId, {
+                limit: 1000
+            });
             const workflowIds = new Set(workflows.map((w) => w.id));
 
             // Get all executions filtered by status if provided

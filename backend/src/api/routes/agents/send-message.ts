@@ -18,14 +18,14 @@ export async function sendMessageHandler(
     request: FastifyRequest,
     reply: FastifyReply
 ): Promise<void> {
-    const userId = request.user!.id;
+    const workspaceId = request.workspace!.id;
     const { executionId } = sendMessageParamsSchema.parse(request.params);
     const { message } = sendMessageSchema.parse(request.body);
 
     const executionRepo = new AgentExecutionRepository();
 
-    // Check if execution exists and belongs to user
-    const execution = await executionRepo.findByIdAndUserId(executionId, userId);
+    // Check if execution exists and belongs to workspace
+    const execution = await executionRepo.findByIdAndWorkspaceId(executionId, workspaceId);
     if (!execution) {
         throw new NotFoundError("Agent execution not found");
     }
