@@ -4,7 +4,7 @@ export function AgentCardSkeleton() {
     return (
         <div className="bg-card border border-border rounded-lg overflow-hidden flex flex-col h-full">
             {/* DNA Preview */}
-            <Skeleton className="h-32 rounded-none" />
+            <Skeleton className="h-24 rounded-none" />
 
             {/* Main Content */}
             <div className="flex-1 px-5 pt-5">

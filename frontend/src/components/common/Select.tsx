@@ -39,11 +39,14 @@ export function Select({
                     "focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent",
                     "disabled:opacity-50 disabled:cursor-not-allowed",
                     "data-[placeholder]:text-muted-foreground",
+                    "min-w-0",
                     className
                 )}
             >
-                <SelectPrimitive.Value placeholder={placeholder} />
-                <SelectPrimitive.Icon className="ml-2">
+                <span className="truncate">
+                    <SelectPrimitive.Value placeholder={placeholder} />
+                </span>
+                <SelectPrimitive.Icon className="ml-2 flex-shrink-0">
                     <ChevronDown className="w-4 h-4" />
                 </SelectPrimitive.Icon>
             </SelectPrimitive.Trigger>
