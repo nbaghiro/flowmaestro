@@ -98,11 +98,8 @@ COPY --chown=nodejs:nodejs package*.json ./
 COPY --chown=nodejs:nodejs backend/package*.json ./backend/
 COPY --chown=nodejs:nodejs shared/package*.json ./shared/
 
-# Copy built files from builder stage (as nodejs user)
-COPY --chown=nodejs:nodejs --from=builder /app/backend/dist ./backend/dist
-COPY --chown=nodejs:nodejs --from=builder /app/shared/dist ./shared/dist
-
 # Fix shared package.json to point to dist instead of src for production
+# This must happen before npm ci so the exports resolve correctly
 RUN sed -i 's|"main": "src/index.ts"|"main": "dist/index.js"|g' ./shared/package.json && \
     sed -i 's|"types": "src/index.ts"|"types": "dist/index.d.ts"|g' ./shared/package.json && \
     sed -i 's|"\.": "\./src/index\.ts"|".": "./dist/index.js"|g' ./shared/package.json
@@ -113,8 +110,19 @@ RUN npm ci --workspace=backend --workspace=shared --omit=dev --ignore-scripts
 # Rebuild native modules to ensure binaries are set up correctly
 RUN npm rebuild --workspace=backend --workspace=shared || true
 
+# Set Playwright browsers path to a shared location accessible by all users
+ENV PLAYWRIGHT_BROWSERS_PATH=/app/.playwright-browsers
+
 # Install Playwright browsers (Chromium only for screenshot capture)
-RUN ./node_modules/.bin/playwright install chromium || true
+# IMPORTANT: This is placed BEFORE copying built code so that code changes
+# don't invalidate this expensive layer (~250MB Chromium download)
+# Playwright is installed in backend/node_modules due to workspace resolution
+RUN node ./backend/node_modules/playwright/cli.js install chromium || node ./node_modules/playwright/cli.js install chromium || true
+
+# Copy built files from builder stage (as nodejs user)
+# This layer changes frequently but is cheap since it's just copying files
+COPY --chown=nodejs:nodejs --from=builder /app/backend/dist ./backend/dist
+COPY --chown=nodejs:nodejs --from=builder /app/shared/dist ./shared/dist
 
 # Copy migrations
 COPY --chown=nodejs:nodejs backend/migrations ./backend/migrations
