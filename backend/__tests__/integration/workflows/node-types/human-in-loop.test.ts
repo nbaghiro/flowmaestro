@@ -317,7 +317,9 @@ describe("Human-in-the-Loop Integration Tests", () => {
         worker = await Worker.create({
             connection: testEnv.nativeConnection,
             taskQueue: "test-workflow-queue",
-            workflowsPath: require.resolve("../../../src/temporal/workflows/workflow-orchestrator"),
+            workflowsPath: require.resolve(
+                "../../../../src/temporal/workflows/workflow-orchestrator"
+            ),
             activities: mockActivities
         });
     });
@@ -601,10 +603,9 @@ describe("Human-in-the-Loop Integration Tests", () => {
     });
 
     describe("input validation", () => {
-        it("should support different input types", async () => {
-            const inputTypes = ["string", "number", "boolean", "json"];
-
-            for (const inputType of inputTypes) {
+        it.each(["string", "number", "boolean", "json"])(
+            "should support %s input type",
+            async (inputType) => {
                 const workflowDef = createWorkflowDefinition(
                     [
                         { id: "input", type: "input", name: "Input" },
@@ -645,7 +646,7 @@ describe("Human-in-the-Loop Integration Tests", () => {
 
                 expect(result.success).toBe(true);
             }
-        });
+        );
     });
 
     describe("timeout handling", () => {

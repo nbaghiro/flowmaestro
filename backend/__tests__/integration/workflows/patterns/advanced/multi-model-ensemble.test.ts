@@ -412,9 +412,9 @@ function createCostOptimizedDefinition(): WorkflowDefinition {
         type: "conditional",
         name: "QualityCheck",
         config: {
-            condition: "{{cheap_model.qualityScore}}",
+            leftValue: "{{cheap_model.qualityScore}}",
             operator: "gte",
-            value: 0.8
+            rightValue: "0.8"
         },
         position: { x: 400, y: 100 }
     };

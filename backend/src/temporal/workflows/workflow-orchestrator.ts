@@ -884,16 +884,23 @@ function condContains(value: JsonValue, searchValue: JsonValue): boolean {
 function evaluateCondition(left: JsonValue, operator: string, right: JsonValue): boolean {
     switch (operator) {
         case "==":
+        case "eq":
             return condEquals(left, right);
         case "!=":
+        case "neq":
+        case "ne":
             return !condEquals(left, right);
         case ">":
+        case "gt":
             return condCompare(left, right) > 0;
         case "<":
+        case "lt":
             return condCompare(left, right) < 0;
         case ">=":
+        case "gte":
             return condCompare(left, right) >= 0;
         case "<=":
+        case "lte":
             return condCompare(left, right) <= 0;
         case "contains":
             return condContains(left, right);
@@ -921,10 +928,24 @@ function evaluateConditionalNode(node: ExecutableNode, context: JsonObject): Jso
     const rightValue = typeof node.config.rightValue === "string" ? node.config.rightValue : "";
     const operator = typeof node.config.operator === "string" ? node.config.operator : "==";
 
-    // Variable interpolation
+    // Variable interpolation with nested path support
     const interpolate = (str: string): string => {
         return str.replace(/\{\{([^}]+)\}\}/g, (_, key) => {
-            const value = context[key.trim()];
+            const path = key.trim();
+            // Support nested paths like "cheap_model.qualityScore"
+            const parts = path.split(".");
+            let value: unknown = context;
+            for (const part of parts) {
+                if (
+                    value &&
+                    typeof value === "object" &&
+                    part in (value as Record<string, unknown>)
+                ) {
+                    value = (value as Record<string, unknown>)[part];
+                } else {
+                    return "";
+                }
+            }
             return value !== undefined ? String(value) : "";
         });
     };

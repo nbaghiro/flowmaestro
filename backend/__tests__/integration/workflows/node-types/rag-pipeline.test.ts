@@ -458,7 +458,9 @@ describe("RAG Pipeline Integration Tests", () => {
         worker = await Worker.create({
             connection: testEnv.nativeConnection,
             taskQueue: "test-workflow-queue",
-            workflowsPath: require.resolve("../../../src/temporal/workflows/workflow-orchestrator"),
+            workflowsPath: require.resolve(
+                "../../../../src/temporal/workflows/workflow-orchestrator"
+            ),
             activities: mockActivities
         });
     });
