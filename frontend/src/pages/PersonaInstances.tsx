@@ -90,16 +90,6 @@ export const PersonaInstances: React.FC = () => {
         navigate(`/persona-instances/${id}`);
     };
 
-    const handleApprove = (id: string) => {
-        // Navigate to instance detail for approval workflow
-        navigate(`/persona-instances/${id}`);
-    };
-
-    const handleDeny = (id: string) => {
-        // Navigate to instance detail for denial workflow
-        navigate(`/persona-instances/${id}`);
-    };
-
     const handleCancel = async (id: string) => {
         try {
             await cancelInstance(id);
@@ -228,8 +218,6 @@ export const PersonaInstances: React.FC = () => {
                                             key={instance.id}
                                             instance={instance}
                                             onClick={() => handleInstanceClick(instance.id)}
-                                            onApprove={() => handleApprove(instance.id)}
-                                            onDeny={() => handleDeny(instance.id)}
                                         />
                                     ))}
                                 </div>
