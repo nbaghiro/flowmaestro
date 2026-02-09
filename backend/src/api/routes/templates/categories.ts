@@ -1,5 +1,5 @@
 import { FastifyInstance } from "fastify";
-import { TEMPLATE_CATEGORY_META, TemplateCategory } from "../../../storage/models/Template";
+import { TEMPLATE_CATEGORY_META, type TemplateCategory } from "@flowmaestro/shared";
 import { TemplateRepository } from "../../../storage/repositories";
 
 export async function getCategoriesRoute(fastify: FastifyInstance) {

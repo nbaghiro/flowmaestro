@@ -1,5 +1,5 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Search, FileText, AlertCircle, Bot } from "lucide-react";
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
+import { Search, FileText, AlertCircle, Bot, Loader2 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Template, TemplateCategory, CategoryInfo, AgentTemplate } from "@flowmaestro/shared";
@@ -14,6 +14,7 @@ import { TemplateCard } from "../components/templates/cards/TemplateCard";
 import { AgentTemplatePreviewDialog } from "../components/templates/dialogs/AgentTemplatePreviewDialog";
 import { TemplatePreviewDialog } from "../components/templates/dialogs/TemplatePreviewDialog";
 import { TemplateTypeToggle, type TemplateType } from "../components/templates/TemplateTypeToggle";
+import { useInfiniteScroll } from "../hooks/useInfiniteScroll";
 import {
     getTemplates,
     getTemplateCategories,
@@ -48,35 +49,51 @@ export function Templates() {
         enabled: templateType === "agents"
     });
 
-    // Fetch workflow templates
+    // Fetch workflow templates with infinite scroll
+    const PAGE_SIZE = 24;
+
     const {
         data: workflowTemplatesData,
         isLoading: workflowTemplatesLoading,
-        error: workflowTemplatesError
-    } = useQuery({
+        error: workflowTemplatesError,
+        fetchNextPage: fetchNextWorkflowPage,
+        hasNextPage: hasNextWorkflowPage,
+        isFetchingNextPage: isFetchingNextWorkflowPage
+    } = useInfiniteQuery({
         queryKey: ["templates", selectedCategory, searchQuery],
-        queryFn: () =>
+        queryFn: ({ pageParam = 0 }) =>
             getTemplates({
                 category: selectedCategory || undefined,
                 search: searchQuery || undefined,
-                limit: 50
+                limit: PAGE_SIZE,
+                offset: pageParam
             }),
+        getNextPageParam: (lastPage) =>
+            lastPage.data.hasMore ? lastPage.data.page * lastPage.data.pageSize : undefined,
+        initialPageParam: 0,
         enabled: templateType === "workflows"
     });
 
-    // Fetch agent templates
+    // Fetch agent templates with infinite scroll
     const {
         data: agentTemplatesData,
         isLoading: agentTemplatesLoading,
-        error: agentTemplatesError
-    } = useQuery({
+        error: agentTemplatesError,
+        fetchNextPage: fetchNextAgentPage,
+        hasNextPage: hasNextAgentPage,
+        isFetchingNextPage: isFetchingNextAgentPage
+    } = useInfiniteQuery({
         queryKey: ["agent-templates", selectedCategory, searchQuery],
-        queryFn: () =>
+        queryFn: ({ pageParam = 0 }) =>
             getAgentTemplates({
                 category: selectedCategory || undefined,
                 search: searchQuery || undefined,
-                limit: 50
+                limit: PAGE_SIZE,
+                offset: pageParam
             }),
+        getNextPageParam: (lastPage) =>
+            lastPage.data.hasMore ? lastPage.data.page * lastPage.data.pageSize : undefined,
+        initialPageParam: 0,
         enabled: templateType === "agents"
     });
 
@@ -109,20 +126,24 @@ export function Templates() {
         return data.data.filter((cat: CategoryInfo) => TEMPLATE_CATEGORY_META[cat.category]);
     }, [templateType, workflowCategoriesData, agentCategoriesData]);
 
-    // Parse templates with fallback - filter to only known categories
+    // Parse templates by flattening paginated data - filter to only known categories
     const workflowTemplates: Template[] = useMemo(() => {
-        if (!workflowTemplatesData?.data?.items) return [];
-        return workflowTemplatesData.data.items.filter(
-            (t: Template) => TEMPLATE_CATEGORY_META[t.category]
-        );
+        if (!workflowTemplatesData?.pages) return [];
+        return workflowTemplatesData.pages
+            .flatMap((page) => page.data.items)
+            .filter((t: Template) => TEMPLATE_CATEGORY_META[t.category]);
     }, [workflowTemplatesData]);
 
     const agentTemplates: AgentTemplate[] = useMemo(() => {
-        if (!agentTemplatesData?.data?.items) return [];
-        return agentTemplatesData.data.items.filter(
-            (t: AgentTemplate) => TEMPLATE_CATEGORY_META[t.category]
-        );
+        if (!agentTemplatesData?.pages) return [];
+        return agentTemplatesData.pages
+            .flatMap((page) => page.data.items)
+            .filter((t: AgentTemplate) => TEMPLATE_CATEGORY_META[t.category]);
     }, [agentTemplatesData]);
+
+    // Get total count from the first page
+    const workflowTemplatesTotal = workflowTemplatesData?.pages?.[0]?.data?.total ?? 0;
+    const agentTemplatesTotal = agentTemplatesData?.pages?.[0]?.data?.total ?? 0;
 
     // Handlers
     const handleTemplateTypeChange = (type: TemplateType) => {
@@ -163,8 +184,19 @@ export function Templates() {
         templateType === "workflows" ? workflowTemplatesError : agentTemplatesError;
     const isLoading = categoriesLoading || templatesLoading;
 
-    const templates = templateType === "workflows" ? workflowTemplates : agentTemplates;
-    const templateCount = templates.length;
+    const templateTotal =
+        templateType === "workflows" ? workflowTemplatesTotal : agentTemplatesTotal;
+    const isFetchingNextPage =
+        templateType === "workflows" ? isFetchingNextWorkflowPage : isFetchingNextAgentPage;
+    const hasNextPage = templateType === "workflows" ? hasNextWorkflowPage : hasNextAgentPage;
+    const fetchNextPage = templateType === "workflows" ? fetchNextWorkflowPage : fetchNextAgentPage;
+
+    // Infinite scroll hook
+    const sentinelRef = useInfiniteScroll({
+        onLoadMore: fetchNextPage,
+        hasMore: hasNextPage ?? false,
+        isLoading: isFetchingNextPage
+    });
 
     return (
         <div className="max-w-7xl mx-auto px-4 py-6 md:px-6 md:py-8">
@@ -205,7 +237,7 @@ export function Templates() {
                             label: `${TEMPLATE_CATEGORY_META[cat.category]?.label || cat.category} (${cat.count})`
                         }))
                     ]}
-                    className="sm:w-[200px] sm:flex-shrink-0"
+                    className="sm:w-[220px] sm:flex-shrink-0"
                 />
             </div>
 
@@ -224,7 +256,7 @@ export function Templates() {
                             : "An error occurred"}
                     </p>
                 </div>
-            ) : templateCount === 0 ? (
+            ) : templateTotal === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed border-border dark:border-border rounded-lg bg-muted/30 dark:bg-card">
                     {templateType === "workflows" ? (
                         <FileText className="w-12 h-12 text-muted-foreground dark:text-muted-foreground mb-4" />
@@ -246,8 +278,8 @@ export function Templates() {
                 <>
                     {/* Results count */}
                     <div className="mb-6 text-sm text-muted-foreground dark:text-muted-foreground">
-                        {templateCount} {templateType === "workflows" ? "workflow" : "agent"}{" "}
-                        template{templateCount !== 1 ? "s" : ""}
+                        {templateTotal} {templateType === "workflows" ? "workflow" : "agent"}{" "}
+                        template{templateTotal !== 1 ? "s" : ""}
                         {selectedCategory &&
                             TEMPLATE_CATEGORY_META[selectedCategory] &&
                             ` in ${TEMPLATE_CATEGORY_META[selectedCategory].label}`}
@@ -271,6 +303,13 @@ export function Templates() {
                                       onClick={handleAgentCardClick}
                                   />
                               ))}
+                    </div>
+
+                    {/* Infinite scroll sentinel */}
+                    <div ref={sentinelRef} className="h-10 flex items-center justify-center mt-6">
+                        {isFetchingNextPage && (
+                            <Loader2 className="w-6 h-6 text-muted-foreground animate-spin" />
+                        )}
                     </div>
                 </>
             )}

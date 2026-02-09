@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { TEMPLATE_CATEGORIES, TEMPLATE_STATUSES } from "../../storage/models/Template";
+import { TEMPLATE_CATEGORIES } from "@flowmaestro/shared";
+import { TEMPLATE_STATUSES } from "../../storage/models/Template";
 
 // Template categories enum
 export const templateCategorySchema = z.enum(TEMPLATE_CATEGORIES);
@@ -27,7 +28,7 @@ export const listTemplatesQuerySchema = z.object({
     limit: z
         .string()
         .transform((val) => parseInt(val))
-        .pipe(z.number().min(1).max(50))
+        .pipe(z.number().min(1).max(200))
         .optional(),
     offset: z
         .string()
