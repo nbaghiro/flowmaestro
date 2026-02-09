@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import {
     Upload,
     FileJson,
@@ -32,7 +32,7 @@ import {
     Loader2,
     type LucideIcon
 } from "lucide-react";
-import { useState, FormEvent, useMemo } from "react";
+import { useState, FormEvent, useMemo, useRef } from "react";
 import {
     getAdvancedPatterns,
     getIntermediatePatterns,
@@ -44,6 +44,7 @@ import {
     ALL_PROVIDERS,
     getProviderLogo
 } from "@flowmaestro/shared";
+import { useInfiniteScroll } from "../hooks/useInfiniteScroll";
 import { getTemplates, getTemplateCategories } from "../lib/api";
 import { cn } from "../lib/utils";
 import { Alert } from "./common/Alert";
@@ -208,16 +209,38 @@ export function CreateWorkflowDialog({ isOpen, onClose, onCreate }: CreateWorkfl
     const intermediatePatterns = useMemo(() => getIntermediatePatterns(), []);
     const advancedPatterns = useMemo(() => getAdvancedPatterns(), []);
 
-    // Fetch templates when templates tab is active
-    const { data: templatesData, isLoading: templatesLoading } = useQuery({
+    // Fetch templates when templates tab is active (with infinite scroll)
+    const PAGE_SIZE = 24;
+    const {
+        data: templatesData,
+        isLoading: templatesLoading,
+        fetchNextPage,
+        hasNextPage,
+        isFetchingNextPage
+    } = useInfiniteQuery({
         queryKey: ["templates-dialog", templateCategory, templateSearch],
-        queryFn: () =>
+        queryFn: ({ pageParam = 0 }) =>
             getTemplates({
                 category: templateCategory || undefined,
                 search: templateSearch || undefined,
-                limit: 50
+                limit: PAGE_SIZE,
+                offset: pageParam
             }),
+        getNextPageParam: (lastPage) =>
+            lastPage.data.hasMore ? lastPage.data.page * lastPage.data.pageSize : undefined,
+        initialPageParam: 0,
         enabled: isOpen && activeTab === "templates"
+    });
+
+    // Reference to the scrollable container for the IntersectionObserver root
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+    // Infinite scroll hook
+    const sentinelRef = useInfiniteScroll({
+        onLoadMore: fetchNextPage,
+        hasMore: hasNextPage ?? false,
+        isLoading: isFetchingNextPage,
+        root: scrollContainerRef.current
     });
 
     // Fetch template categories
@@ -227,11 +250,16 @@ export function CreateWorkflowDialog({ isOpen, onClose, onCreate }: CreateWorkfl
         enabled: isOpen && activeTab === "templates"
     });
 
-    // Parse templates
+    // Parse templates by flattening paginated data
     const templates: Template[] = useMemo(() => {
-        if (!templatesData?.data?.items) return [];
-        return templatesData.data.items.filter((t: Template) => TEMPLATE_CATEGORY_META[t.category]);
+        if (!templatesData?.pages) return [];
+        return templatesData.pages
+            .flatMap((page) => page.data.items)
+            .filter((t: Template) => TEMPLATE_CATEGORY_META[t.category]);
     }, [templatesData]);
+
+    // Get total count from the first page
+    const templatesTotal = templatesData?.pages?.[0]?.data?.total ?? 0;
 
     // Parse categories
     const categories = useMemo(() => {
@@ -604,13 +632,16 @@ export function CreateWorkflowDialog({ isOpen, onClose, onCreate }: CreateWorkfl
                                       ? intermediatePatterns.length
                                       : activeTab === "advanced"
                                         ? advancedPatterns.length
-                                        : templates.length}{" "}
+                                        : templatesTotal}{" "}
                                 {activeTab === "templates" ? "templates" : "patterns"}
                             </span>
                         </div>
 
                         {/* Scrollable grid area */}
-                        <div className="max-h-[60vh] overflow-y-auto pr-2">
+                        <div
+                            ref={activeTab === "templates" ? scrollContainerRef : undefined}
+                            className="max-h-[60vh] overflow-y-auto pr-2"
+                        >
                             {activeTab === "templates" ? (
                                 <>
                                     {/* Category filter and search for templates */}
@@ -662,105 +693,117 @@ export function CreateWorkflowDialog({ isOpen, onClose, onCreate }: CreateWorkfl
                                             </p>
                                         </div>
                                     ) : (
-                                        <div className="grid grid-cols-3 gap-4">
-                                            {templates.map((template) => {
-                                                const category =
-                                                    TEMPLATE_CATEGORY_META[template.category];
-                                                const isSelected =
-                                                    selectedTemplate?.id === template.id;
-                                                return (
-                                                    <div
-                                                        key={template.id}
-                                                        onClick={() =>
-                                                            handleTemplateSelect(template)
-                                                        }
-                                                        className={cn(
-                                                            "bg-card rounded-xl border cursor-pointer overflow-hidden transition-all duration-200",
-                                                            isSelected
-                                                                ? "border-primary ring-2 ring-primary/20"
-                                                                : "border-border hover:border-border/60 hover:shadow-lg"
-                                                        )}
-                                                    >
-                                                        {/* Preview */}
-                                                        <div className="h-32 relative overflow-hidden bg-muted/30">
-                                                            <WorkflowCanvasPreview
-                                                                definition={
-                                                                    template.definition as WorkflowDefinition
-                                                                }
-                                                                height="h-full"
-                                                                className="!shadow-none"
-                                                            />
-                                                            {/* Category badge */}
-                                                            <div className="absolute top-2 left-2 z-10">
-                                                                <span
-                                                                    className={cn(
-                                                                        "px-2 py-0.5 rounded-full text-[10px] font-semibold",
-                                                                        category?.color
-                                                                    )}
-                                                                >
-                                                                    {category?.label}
-                                                                </span>
-                                                            </div>
-                                                            {/* Selected indicator */}
-                                                            {isSelected && (
-                                                                <div className="absolute top-2 right-2 z-10">
-                                                                    <div className="w-5 h-5 bg-primary rounded-full flex items-center justify-center">
-                                                                        <CheckCircle className="w-3 h-3 text-primary-foreground" />
-                                                                    </div>
-                                                                </div>
+                                        <>
+                                            <div className="grid grid-cols-3 gap-4">
+                                                {templates.map((template) => {
+                                                    const category =
+                                                        TEMPLATE_CATEGORY_META[template.category];
+                                                    const isSelected =
+                                                        selectedTemplate?.id === template.id;
+                                                    return (
+                                                        <div
+                                                            key={template.id}
+                                                            onClick={() =>
+                                                                handleTemplateSelect(template)
+                                                            }
+                                                            className={cn(
+                                                                "bg-card rounded-xl border cursor-pointer overflow-hidden transition-all duration-200",
+                                                                isSelected
+                                                                    ? "border-primary ring-2 ring-primary/20"
+                                                                    : "border-border hover:border-border/60 hover:shadow-lg"
                                                             )}
-                                                        </div>
-
-                                                        {/* Content */}
-                                                        <div className="p-3">
-                                                            {/* Integrations */}
-                                                            <div className="flex items-center gap-1.5 mb-2">
-                                                                {template.required_integrations
-                                                                    .slice(0, 4)
-                                                                    .map((integration) => (
-                                                                        <img
-                                                                            key={integration}
-                                                                            src={getIntegrationLogo(
-                                                                                integration
-                                                                            )}
-                                                                            alt={integration}
-                                                                            title={integration}
-                                                                            className="w-4 h-4 object-contain"
-                                                                            onError={(e) => {
-                                                                                (
-                                                                                    e.target as HTMLImageElement
-                                                                                ).style.display =
-                                                                                    "none";
-                                                                            }}
-                                                                        />
-                                                                    ))}
-                                                                {template.required_integrations
-                                                                    .length > 4 && (
-                                                                    <span className="text-[10px] text-muted-foreground">
-                                                                        +
-                                                                        {template
-                                                                            .required_integrations
-                                                                            .length - 4}
+                                                        >
+                                                            {/* Preview */}
+                                                            <div className="h-32 relative overflow-hidden bg-muted/30">
+                                                                <WorkflowCanvasPreview
+                                                                    definition={
+                                                                        template.definition as WorkflowDefinition
+                                                                    }
+                                                                    height="h-full"
+                                                                    className="!shadow-none"
+                                                                />
+                                                                {/* Category badge */}
+                                                                <div className="absolute top-2 left-2 z-10">
+                                                                    <span
+                                                                        className={cn(
+                                                                            "px-2 py-0.5 rounded-full text-[10px] font-semibold",
+                                                                            category?.color
+                                                                        )}
+                                                                    >
+                                                                        {category?.label}
                                                                     </span>
+                                                                </div>
+                                                                {/* Selected indicator */}
+                                                                {isSelected && (
+                                                                    <div className="absolute top-2 right-2 z-10">
+                                                                        <div className="w-5 h-5 bg-primary rounded-full flex items-center justify-center">
+                                                                            <CheckCircle className="w-3 h-3 text-primary-foreground" />
+                                                                        </div>
+                                                                    </div>
                                                                 )}
                                                             </div>
 
-                                                            {/* Title */}
-                                                            <h3 className="font-medium text-sm text-foreground line-clamp-1 mb-1">
-                                                                {template.name}
-                                                            </h3>
+                                                            {/* Content */}
+                                                            <div className="p-3">
+                                                                {/* Integrations */}
+                                                                <div className="flex items-center gap-1.5 mb-2">
+                                                                    {template.required_integrations
+                                                                        .slice(0, 4)
+                                                                        .map((integration) => (
+                                                                            <img
+                                                                                key={integration}
+                                                                                src={getIntegrationLogo(
+                                                                                    integration
+                                                                                )}
+                                                                                alt={integration}
+                                                                                title={integration}
+                                                                                className="w-4 h-4 object-contain"
+                                                                                onError={(e) => {
+                                                                                    (
+                                                                                        e.target as HTMLImageElement
+                                                                                    ).style.display =
+                                                                                        "none";
+                                                                                }}
+                                                                            />
+                                                                        ))}
+                                                                    {template.required_integrations
+                                                                        .length > 4 && (
+                                                                        <span className="text-[10px] text-muted-foreground">
+                                                                            +
+                                                                            {template
+                                                                                .required_integrations
+                                                                                .length - 4}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
 
-                                                            {/* Description */}
-                                                            {template.description && (
-                                                                <p className="text-xs text-muted-foreground line-clamp-2">
-                                                                    {template.description}
-                                                                </p>
-                                                            )}
+                                                                {/* Title */}
+                                                                <h3 className="font-medium text-sm text-foreground line-clamp-1 mb-1">
+                                                                    {template.name}
+                                                                </h3>
+
+                                                                {/* Description */}
+                                                                {template.description && (
+                                                                    <p className="text-xs text-muted-foreground line-clamp-2">
+                                                                        {template.description}
+                                                                    </p>
+                                                                )}
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+
+                                            {/* Infinite scroll sentinel */}
+                                            <div
+                                                ref={sentinelRef}
+                                                className="h-10 flex items-center justify-center mt-4"
+                                            >
+                                                {isFetchingNextPage && (
+                                                    <Loader2 className="w-5 h-5 text-muted-foreground animate-spin" />
+                                                )}
+                                            </div>
+                                        </>
                                     )}
                                 </>
                             ) : (
