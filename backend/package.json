@@ -4,7 +4,7 @@
     "description": "FlowMaestro Backend API and Orchestrator",
     "main": "dist/backend/src/index.js",
     "scripts": {
-        "dev": "tsx watch src/index.ts",
+        "dev": "tsx watch --include ../shared/src src/index.ts",
         "build": "tsc",
         "start": "node dist/backend/src/index.js",
         "test": "jest",
@@ -18,7 +18,7 @@
         "db:migrate:create": "dotenv -e .env -- node-pg-migrate create --migrations-table flowmaestro.pgmigrations --migration-file-language sql",
         "db:migrate:status": "docker exec flowmaestro-postgres psql -U flowmaestro -d flowmaestro -c 'SELECT * FROM flowmaestro.\"flowmaestro.pgmigrations\" ORDER BY run_on DESC;'",
         "worker": "npm run build && node dist/backend/src/temporal/worker.js",
-        "worker:dev": "tsx watch src/temporal/worker.ts",
+        "worker:dev": "tsx watch --include ../shared/src src/temporal/worker.ts",
         "worker:start": "tsx src/temporal/worker.ts",
         "db:seed:test-workflows": "tsx tests/fixtures/workflows/seed-workflows.ts",
         "db:seed:agent-templates": "tsx scripts/seed-agent-templates.ts",
