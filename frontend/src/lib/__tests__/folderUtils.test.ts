@@ -24,7 +24,11 @@ vi.mock("../logger", () => ({
 
 import type { FolderWithCounts } from "@flowmaestro/shared";
 import { getFolderContents } from "../api";
-import { checkItemsInFolder, getFolderCountIncludingSubfolders } from "../folderUtils";
+import {
+    checkItemsInFolder,
+    extractFolderIdFromPath,
+    getFolderCountIncludingSubfolders
+} from "../folderUtils";
 
 // Mock data factories
 function createMockFolder(overrides?: Record<string, unknown>): FolderWithCounts {
@@ -506,6 +510,27 @@ describe("folderUtils", () => {
             );
 
             expect(result.found).toBe(true);
+        });
+    });
+
+    // ===== extractFolderIdFromPath =====
+    describe("extractFolderIdFromPath", () => {
+        it("extracts folder ID from /folders/:id path", () => {
+            expect(extractFolderIdFromPath("/folders/abc-123")).toBe("abc-123");
+        });
+
+        it("extracts folder ID from /folders/:id/items path", () => {
+            expect(extractFolderIdFromPath("/folders/abc-123/items")).toBe("abc-123");
+        });
+
+        it("returns null for non-folder paths", () => {
+            expect(extractFolderIdFromPath("/workflows")).toBeNull();
+            expect(extractFolderIdFromPath("/agents")).toBeNull();
+            expect(extractFolderIdFromPath("/")).toBeNull();
+        });
+
+        it("returns null for /folders/ with no ID", () => {
+            expect(extractFolderIdFromPath("/folders/")).toBeNull();
         });
     });
 });
