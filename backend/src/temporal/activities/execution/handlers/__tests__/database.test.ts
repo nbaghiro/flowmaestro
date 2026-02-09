@@ -459,6 +459,145 @@ describe("DatabaseNodeHandler", () => {
             expect(result.success).toBe(true);
             expect((result.data as JsonObject).insertId).toBe(42);
         });
+
+        it("executes MySQL UPDATE query", async () => {
+            mockExecuteOperation.mockResolvedValue({
+                success: true,
+                data: {
+                    affectedRows: 3,
+                    changedRows: 2
+                }
+            });
+
+            const input = createHandlerInput({
+                nodeConfig: {
+                    connectionId: "conn-mysql",
+                    provider: "mysql",
+                    operation: "update",
+                    parameters: {
+                        sql: "UPDATE products SET price = price * 1.1 WHERE category = ?",
+                        values: ["electronics"]
+                    }
+                }
+            });
+
+            const output = await handler.execute(input);
+            const result = output.result as JsonObject;
+
+            expect(result.success).toBe(true);
+            expect((result.data as JsonObject).affectedRows).toBe(3);
+            expect((result.data as JsonObject).changedRows).toBe(2);
+        });
+
+        it("executes MySQL DELETE query", async () => {
+            mockExecuteOperation.mockResolvedValue({
+                success: true,
+                data: {
+                    affectedRows: 5
+                }
+            });
+
+            const input = createHandlerInput({
+                nodeConfig: {
+                    connectionId: "conn-mysql",
+                    provider: "mysql",
+                    operation: "delete",
+                    parameters: {
+                        sql: "DELETE FROM products WHERE discontinued = ?",
+                        values: [true]
+                    }
+                }
+            });
+
+            const output = await handler.execute(input);
+            const result = output.result as JsonObject;
+
+            expect(result.success).toBe(true);
+            expect((result.data as JsonObject).affectedRows).toBe(5);
+        });
+
+        it("lists tables in MySQL database", async () => {
+            mockExecuteOperation.mockResolvedValue({
+                success: true,
+                data: {
+                    rows: [
+                        { Tables_in_testdb: "products" },
+                        { Tables_in_testdb: "orders" },
+                        { Tables_in_testdb: "customers" }
+                    ]
+                }
+            });
+
+            const input = createHandlerInput({
+                nodeConfig: {
+                    connectionId: "conn-mysql",
+                    provider: "mysql",
+                    operation: "listTables",
+                    parameters: {}
+                }
+            });
+
+            const output = await handler.execute(input);
+            const result = output.result as JsonObject;
+
+            expect(result.success).toBe(true);
+            expect((result.data as JsonObject).rows).toHaveLength(3);
+        });
+
+        it("handles MySQL UPDATE with no matching rows", async () => {
+            mockExecuteOperation.mockResolvedValue({
+                success: true,
+                data: {
+                    affectedRows: 0,
+                    changedRows: 0
+                }
+            });
+
+            const input = createHandlerInput({
+                nodeConfig: {
+                    connectionId: "conn-mysql",
+                    provider: "mysql",
+                    operation: "update",
+                    parameters: {
+                        sql: "UPDATE products SET active = 0 WHERE id = ?",
+                        values: [99999] // Non-existent ID
+                    }
+                }
+            });
+
+            const output = await handler.execute(input);
+            const result = output.result as JsonObject;
+
+            expect(result.success).toBe(true);
+            expect((result.data as JsonObject).affectedRows).toBe(0);
+        });
+
+        it("handles MySQL DELETE with no matching rows", async () => {
+            mockExecuteOperation.mockResolvedValue({
+                success: true,
+                data: {
+                    affectedRows: 0
+                }
+            });
+
+            const input = createHandlerInput({
+                nodeConfig: {
+                    connectionId: "conn-mysql",
+                    provider: "mysql",
+                    operation: "delete",
+                    parameters: {
+                        sql: "DELETE FROM products WHERE id = ?",
+                        values: [99999] // Non-existent ID
+                    }
+                }
+            });
+
+            const output = await handler.execute(input);
+            const result = output.result as JsonObject;
+
+            expect(result.success).toBe(true);
+            expect((result.data as JsonObject).affectedRows).toBe(0);
+        });
     });
 
     describe("MongoDB operations", () => {

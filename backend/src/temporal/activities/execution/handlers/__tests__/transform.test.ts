@@ -568,6 +568,189 @@ describe("TransformNodeHandler", () => {
             // JSONata evaluates against the context, result varies by implementation
             expect(output.result.total).toBeDefined();
         });
+
+        it("evaluates JSONata with $map function", async () => {
+            const input = createHandlerInputWithUpstream({
+                nodeType: "transform",
+                nodeConfig: {
+                    operation: "custom",
+                    inputData: varRef("data", "items"),
+                    expression: "$map(items, function($v) { $v * 2 })",
+                    outputVariable: "doubled"
+                },
+                upstreamOutputs: {
+                    data: { items: [1, 2, 3, 4, 5] }
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            assertSuccessOutput(output, ["doubled"]);
+            // JSONata returns special array objects, normalize for comparison
+            const doubled = JSON.parse(JSON.stringify(output.result.doubled));
+            expect(doubled).toEqual([2, 4, 6, 8, 10]);
+        });
+
+        it("evaluates JSONata with $filter function", async () => {
+            const input = createHandlerInputWithUpstream({
+                nodeType: "transform",
+                nodeConfig: {
+                    operation: "custom",
+                    inputData: varRef("data", "items"),
+                    expression: "$filter(items, function($v) { $v > 3 })",
+                    outputVariable: "filtered"
+                },
+                upstreamOutputs: {
+                    data: { items: [1, 2, 3, 4, 5, 6] }
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            assertSuccessOutput(output, ["filtered"]);
+            // JSONata returns special array objects, normalize for comparison
+            const filtered = JSON.parse(JSON.stringify(output.result.filtered));
+            expect(filtered).toEqual([4, 5, 6]);
+        });
+
+        it("evaluates JSONata with nested object access", async () => {
+            const input = createHandlerInputWithUpstream({
+                nodeType: "transform",
+                nodeConfig: {
+                    operation: "custom",
+                    inputData: varRef("data", "order"),
+                    expression: "order.items.price",
+                    outputVariable: "prices"
+                },
+                upstreamOutputs: {
+                    data: {
+                        order: {
+                            items: [
+                                { name: "A", price: 10 },
+                                { name: "B", price: 20 }
+                            ]
+                        }
+                    }
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            assertSuccessOutput(output, ["prices"]);
+            // JSONata returns special array objects, normalize for comparison
+            const prices = JSON.parse(JSON.stringify(output.result.prices));
+            expect(prices).toEqual([10, 20]);
+        });
+
+        it("evaluates JSONata with $string function", async () => {
+            const input = createHandlerInputWithUpstream({
+                nodeType: "transform",
+                nodeConfig: {
+                    operation: "custom",
+                    inputData: varRef("data", "num"),
+                    expression: "$string(num)",
+                    outputVariable: "str"
+                },
+                upstreamOutputs: {
+                    data: { num: 42 }
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            assertSuccessOutput(output, ["str"]);
+            expect(output.result.str).toBe("42");
+        });
+
+        it("evaluates JSONata with conditional expression", async () => {
+            const input = createHandlerInputWithUpstream({
+                nodeType: "transform",
+                nodeConfig: {
+                    operation: "custom",
+                    inputData: varRef("data", "value"),
+                    expression: "value > 50 ? 'high' : 'low'",
+                    outputVariable: "level"
+                },
+                upstreamOutputs: {
+                    data: { value: 75 }
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            assertSuccessOutput(output, ["level"]);
+            expect(output.result.level).toBe("high");
+        });
+
+        it("evaluates JSONata with $reduce function", async () => {
+            const input = createHandlerInputWithUpstream({
+                nodeType: "transform",
+                nodeConfig: {
+                    operation: "custom",
+                    inputData: varRef("data", "items"),
+                    expression: "$reduce(items, function($acc, $val) { $acc + $val }, 0)",
+                    outputVariable: "sum"
+                },
+                upstreamOutputs: {
+                    data: { items: [1, 2, 3, 4, 5] }
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            assertSuccessOutput(output, ["sum"]);
+            expect(output.result.sum).toBe(15);
+        });
+    });
+
+    describe("sort error handling", () => {
+        it("throws error when sorting non-array input", async () => {
+            const input = createHandlerInputWithUpstream({
+                nodeType: "transform",
+                nodeConfig: CommonConfigs.transform.sort(
+                    varRef("data", "value"),
+                    "(a, b) => a - b",
+                    "sorted"
+                ),
+                upstreamOutputs: {
+                    data: { value: "not an array" }
+                }
+            });
+
+            await expect(handler.execute(input)).rejects.toThrow(/array|sort/i);
+        });
+
+        it("throws error when sorting object input", async () => {
+            const input = createHandlerInputWithUpstream({
+                nodeType: "transform",
+                nodeConfig: CommonConfigs.transform.sort(
+                    varRef("data", "obj"),
+                    "(a, b) => a - b",
+                    "sorted"
+                ),
+                upstreamOutputs: {
+                    data: { obj: { a: 1, b: 2 } }
+                }
+            });
+
+            await expect(handler.execute(input)).rejects.toThrow(/array|sort/i);
+        });
+
+        it("throws error when sorting null input", async () => {
+            const input = createHandlerInputWithUpstream({
+                nodeType: "transform",
+                nodeConfig: CommonConfigs.transform.sort(
+                    varRef("data", "nullVal"),
+                    "(a, b) => a - b",
+                    "sorted"
+                ),
+                upstreamOutputs: {
+                    data: { nullVal: null }
+                }
+            });
+
+            await expect(handler.execute(input)).rejects.toThrow();
+        });
     });
 
     describe("passthrough operation", () => {

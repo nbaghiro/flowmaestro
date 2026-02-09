@@ -375,6 +375,195 @@ describe("LoopNodeHandler", () => {
         });
     });
 
+    describe("repeat loop type", () => {
+        it("handles repeat nodeType with count loopType", async () => {
+            const input = createHandlerInput({
+                nodeType: "repeat",
+                nodeConfig: {
+                    loopType: "count",
+                    count: 5
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            assertValidOutput(output);
+            expect(output.result.iterations).toBe(5);
+        });
+
+        it("handles loop nodeType with count loopType", async () => {
+            const input = createHandlerInput({
+                nodeType: "loop",
+                nodeConfig: {
+                    loopType: "count",
+                    count: 3
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            expect(output.result.iterations).toBe(3);
+        });
+    });
+
+    describe("breakCondition handling", () => {
+        it("stores breakCondition in loop metadata", async () => {
+            const context = createTestContext({
+                nodeOutputs: {
+                    source: { items: [1, 2, 3, 4, 5] }
+                }
+            });
+
+            const input = createHandlerInput({
+                nodeType: "loop",
+                nodeConfig: {
+                    loopType: "forEach",
+                    arrayPath: "items",
+                    breakCondition: "{{currentItem}} > 3"
+                },
+                context
+            });
+
+            const output = await handler.execute(input);
+
+            assertValidOutput(output);
+            // Break condition stored for orchestrator to evaluate
+            expect(output.signals.loopMetadata).toBeDefined();
+        });
+
+        it("sets up break trigger flag as false initially", async () => {
+            const context = createTestContext({
+                nodeOutputs: {
+                    source: { items: [1, 2, 3] }
+                }
+            });
+
+            const input = createHandlerInput({
+                nodeType: "loop",
+                nodeConfig: {
+                    loopType: "forEach",
+                    arrayPath: "items",
+                    breakCondition: "{{currentItem}} === 2"
+                },
+                context
+            });
+
+            const output = await handler.execute(input);
+
+            expect(output.signals.loopMetadata?.wasBreakTriggered).toBe(false);
+        });
+
+        it("handles break condition for while loop", async () => {
+            const input = createHandlerInput({
+                nodeType: "loop",
+                nodeConfig: {
+                    loopType: "while",
+                    condition: "{{counter}} < 10",
+                    breakCondition: "{{errorOccurred}} === true",
+                    maxIterations: 100
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            assertValidOutput(output);
+            expect(output.signals.loopMetadata?.wasBreakTriggered).toBe(false);
+        });
+
+        it("handles break condition for count loop", async () => {
+            const input = createHandlerInput({
+                nodeType: "loop",
+                nodeConfig: {
+                    loopType: "count",
+                    count: 100,
+                    breakCondition: "{{result.status}} === 'error'"
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            assertValidOutput(output);
+            expect(output.signals.loopMetadata?.wasBreakTriggered).toBe(false);
+        });
+    });
+
+    describe("maxIterations config", () => {
+        // Note: maxIterations is used by the orchestrator during loop execution,
+        // not directly exposed in loop metadata. These tests verify config acceptance.
+        it("accepts maxIterations config for while loop", async () => {
+            const input = createHandlerInput({
+                nodeType: "loop",
+                nodeConfig: {
+                    loopType: "while",
+                    condition: "true",
+                    maxIterations: 100
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            // While loop should execute and return metadata
+            expect(output.signals.loopMetadata).toBeDefined();
+            expect(output.signals.loopMetadata?.shouldContinue).toBeDefined();
+        });
+
+        it("executes while loop with default maxIterations", async () => {
+            const input = createHandlerInput({
+                nodeType: "loop",
+                nodeConfig: {
+                    loopType: "while",
+                    condition: "{{counter}} < 10"
+                    // maxIterations not specified - uses default
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            // Should execute without error
+            expect(output.signals.loopMetadata).toBeDefined();
+        });
+
+        it("executes count loop with high count", async () => {
+            const input = createHandlerInput({
+                nodeType: "loop",
+                nodeConfig: {
+                    loopType: "count",
+                    count: 1000
+                }
+            });
+
+            const output = await handler.execute(input);
+
+            // Count loop prepares all iterations
+            expect(output.result.iterations).toBe(1000);
+            expect(output.signals.loopMetadata?.totalItems).toBe(1000);
+        });
+
+        it("accepts maxIterations config for forEach loop", async () => {
+            const context = createTestContext({
+                nodeOutputs: {
+                    source: { items: Array.from({ length: 10 }, (_, i) => i) }
+                }
+            });
+
+            const input = createHandlerInput({
+                nodeType: "loop",
+                nodeConfig: {
+                    loopType: "forEach",
+                    arrayPath: "items",
+                    maxIterations: 5
+                },
+                context
+            });
+
+            const output = await handler.execute(input);
+
+            // Loop handler prepares loop metadata
+            expect(output.signals.loopMetadata).toBeDefined();
+            expect(output.signals.loopMetadata?.totalItems).toBe(10);
+        });
+    });
+
     describe("loop metadata signals", () => {
         it("includes accumulatedResults as empty array", async () => {
             const context = createTestContext({
