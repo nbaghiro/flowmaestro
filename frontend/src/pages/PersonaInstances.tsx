@@ -1,9 +1,18 @@
-import { ArrowLeft, Plus, AlertCircle, Play, CheckCircle, Archive } from "lucide-react";
-import React, { useEffect, useState, useMemo } from "react";
+import { ArrowLeft, Plus, Play, CheckCircle, Archive, Eye } from "lucide-react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { Toast, ToastType } from "../components/common/Toast";
 import { InstanceCard } from "../components/persona-instances/InstanceCard";
 import { usePersonaStore } from "../stores/personaStore";
 import type { PersonaInstanceStatus } from "../lib/api";
+
+function isWithin24Hours(dateString: string | null | undefined): boolean {
+    if (!dateString) return false;
+    const completedAt = new Date(dateString);
+    const now = new Date();
+    const hoursDiff = (now.getTime() - completedAt.getTime()) / (1000 * 60 * 60);
+    return hoursDiff <= 24;
+}
 
 type FilterStatus = "all" | "active" | "needs_attention" | "completed";
 
@@ -12,8 +21,8 @@ const filterOptions: { value: FilterStatus; label: string; icon: React.ReactNode
     { value: "active", label: "Active", icon: <Play className="w-4 h-4" /> },
     {
         value: "needs_attention",
-        label: "Needs Attention",
-        icon: <AlertCircle className="w-4 h-4" />
+        label: "Ready for Review",
+        icon: <Eye className="w-4 h-4" />
     },
     { value: "completed", label: "Completed", icon: <CheckCircle className="w-4 h-4" /> }
 ];
@@ -30,7 +39,7 @@ const statusGroups: Record<FilterStatus, PersonaInstanceStatus[]> = {
         "timeout"
     ],
     active: ["initializing", "clarifying", "running", "waiting_approval"],
-    needs_attention: ["waiting_approval"],
+    needs_attention: ["waiting_approval", "completed"],
     completed: ["completed", "cancelled", "failed", "timeout"]
 };
 
@@ -40,6 +49,15 @@ export const PersonaInstances: React.FC = () => {
         usePersonaStore();
 
     const [filter, setFilter] = useState<FilterStatus>("all");
+    const [toast, setToast] = useState<{
+        isOpen: boolean;
+        type: ToastType;
+        title: string;
+    } | null>(null);
+
+    const showToast = useCallback((type: ToastType, title: string) => {
+        setToast({ isOpen: true, type, title });
+    }, []);
 
     useEffect(() => {
         fetchDashboard();
@@ -75,12 +93,18 @@ export const PersonaInstances: React.FC = () => {
     // Group instances by status for display
     const groupedInstances = useMemo(() => {
         const groups = {
-            needs_attention: filteredInstances.filter((i) => i.status === "waiting_approval"),
+            needs_attention: filteredInstances.filter(
+                (i) =>
+                    i.status === "waiting_approval" ||
+                    (i.status === "completed" && isWithin24Hours(i.completed_at))
+            ),
             running: filteredInstances.filter((i) =>
                 ["initializing", "clarifying", "running"].includes(i.status)
             ),
-            completed: filteredInstances.filter((i) =>
-                ["completed", "cancelled", "failed", "timeout"].includes(i.status)
+            completed: filteredInstances.filter(
+                (i) =>
+                    ["cancelled", "failed", "timeout"].includes(i.status) ||
+                    (i.status === "completed" && !isWithin24Hours(i.completed_at))
             )
         };
         return groups;
@@ -93,8 +117,9 @@ export const PersonaInstances: React.FC = () => {
     const handleCancel = async (id: string) => {
         try {
             await cancelInstance(id);
+            showToast("success", "Task cancelled");
         } catch (_error) {
-            // Error is handled in store
+            showToast("error", "Failed to cancel task");
         }
     };
 
@@ -180,7 +205,7 @@ export const PersonaInstances: React.FC = () => {
                             {filter === "all"
                                 ? "No tasks yet"
                                 : filter === "needs_attention"
-                                  ? "No tasks need attention"
+                                  ? "No tasks ready for review"
                                   : filter === "active"
                                     ? "No active tasks"
                                     : "No completed tasks"}
@@ -205,12 +230,12 @@ export const PersonaInstances: React.FC = () => {
                 {/* Instance List */}
                 {!isLoadingInstances && !instancesError && filteredInstances.length > 0 && (
                     <div className="space-y-8">
-                        {/* Needs Attention Section */}
+                        {/* Ready for Review Section */}
                         {groupedInstances.needs_attention.length > 0 && (
                             <section>
                                 <h2 className="flex items-center gap-2 text-sm font-semibold text-amber-600 dark:text-amber-400 mb-4">
-                                    <AlertCircle className="w-4 h-4" />
-                                    NEEDS ATTENTION ({groupedInstances.needs_attention.length})
+                                    <Eye className="w-4 h-4" />
+                                    READY FOR REVIEW ({groupedInstances.needs_attention.length})
                                 </h2>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                     {groupedInstances.needs_attention.map((instance) => (
@@ -265,6 +290,16 @@ export const PersonaInstances: React.FC = () => {
                     </div>
                 )}
             </div>
+
+            {/* Toast Notifications */}
+            {toast && (
+                <Toast
+                    isOpen={toast.isOpen}
+                    onClose={() => setToast(null)}
+                    type={toast.type}
+                    title={toast.title}
+                />
+            )}
         </div>
     );
 };
