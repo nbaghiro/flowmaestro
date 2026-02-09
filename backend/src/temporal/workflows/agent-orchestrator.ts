@@ -206,7 +206,7 @@ export async function agentOrchestratorWorkflow(
     logger.info("Starting agent orchestrator", { agentId, threadId, iteration: iterations });
 
     // Load agent configuration
-    const agent = await getAgentConfig({ agentId, userId });
+    const agent = await getAgentConfig({ agentId, userId, workspaceId });
 
     // Credit check and reservation (only on first run)
     if (iterations === 0 && !skipCreditCheck && workspaceId) {

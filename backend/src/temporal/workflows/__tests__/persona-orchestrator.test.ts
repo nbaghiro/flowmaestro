@@ -1528,52 +1528,68 @@ describe("Persona Orchestrator Workflow", () => {
 // ============================================================================
 
 describe("checkClarificationComplete", () => {
-    // Import or inline the function for testing
-    function checkClarificationComplete(
-        toolCalls: Array<{ name: string; arguments: Record<string, unknown> }> | undefined,
-        content?: string
-    ): { complete: boolean; summary?: string; viaText?: boolean } {
-        // Check tool call first (preferred method)
-        if (toolCalls && toolCalls.length > 0) {
-            const clarificationCall = toolCalls.find((tc) => tc.name === "clarification_complete");
-            if (clarificationCall && clarificationCall.arguments?.ready === true) {
-                return {
-                    complete: true,
-                    summary: clarificationCall.arguments?.summary as string | undefined
-                };
+    // Import the signal parser for testing
+    const SIGNAL_BLOCK_REGEX = /```workflow-signal\s*\n([\s\S]*?)```/g;
+
+    // Inline version of the updated function for testing
+    function checkClarificationComplete(content: string): {
+        complete: boolean;
+        summary?: string;
+        viaText?: boolean;
+    } {
+        // Parse for clarification_complete signal (preferred method)
+        const regex = new RegExp(SIGNAL_BLOCK_REGEX.source, "g");
+        let match: RegExpExecArray | null;
+
+        while ((match = regex.exec(content)) !== null) {
+            try {
+                const parsed = JSON.parse(match[1].trim());
+                if (
+                    parsed.type === "clarification_complete" &&
+                    parsed.ready === true &&
+                    typeof parsed.summary === "string"
+                ) {
+                    return {
+                        complete: true,
+                        summary: parsed.summary
+                    };
+                }
+            } catch {
+                // Ignore parse errors
             }
         }
 
         // Check text content for readiness indicators (fallback)
-        if (content) {
-            const readyPatterns = [
-                /i (?:now )?(?:fully )?understand/i,
-                /ready to (?:proceed|start|begin)/i,
-                /let'?s (?:proceed|start|begin|get started)/i,
-                /have (?:enough|sufficient|all the) (?:information|context|details)/i,
-                /clear on (?:the|your) requirements/i,
-                /i have all (?:the )?(?:information|details) i need/i
-            ];
+        const readyPatterns = [
+            /i (?:now )?(?:fully )?understand/i,
+            /ready to (?:proceed|start|begin)/i,
+            /let'?s (?:proceed|start|begin|get started)/i,
+            /have (?:enough|sufficient|all the) (?:information|context|details)/i,
+            /clear on (?:the|your) requirements/i,
+            /i have all (?:the )?(?:information|details) i need/i
+        ];
 
-            const textIndicatesReady = readyPatterns.some((pattern) => pattern.test(content));
-            if (textIndicatesReady) {
-                return { complete: true, viaText: true };
-            }
+        const textIndicatesReady = readyPatterns.some((pattern) => pattern.test(content));
+        if (textIndicatesReady) {
+            return { complete: true, viaText: true };
         }
 
         return { complete: false };
     }
 
-    describe("tool-based detection", () => {
-        it("should detect completion via clarification_complete tool with ready=true", () => {
-            const toolCalls = [
-                {
-                    name: "clarification_complete",
-                    arguments: { ready: true, summary: "I understand the task" }
-                }
-            ];
+    describe("signal-based detection", () => {
+        it("should detect completion via clarification_complete signal with ready=true", () => {
+            const content = `I've gathered enough information.
 
-            const result = checkClarificationComplete(toolCalls);
+\`\`\`workflow-signal
+{
+    "type": "clarification_complete",
+    "summary": "I understand the task",
+    "ready": true
+}
+\`\`\``;
+
+            const result = checkClarificationComplete(content);
 
             expect(result.complete).toBe(true);
             expect(result.summary).toBe("I understand the task");
@@ -1581,39 +1597,44 @@ describe("checkClarificationComplete", () => {
         });
 
         it("should not complete if ready=false", () => {
-            const toolCalls = [
-                {
-                    name: "clarification_complete",
-                    arguments: { ready: false }
-                }
-            ];
+            const content = `\`\`\`workflow-signal
+{
+    "type": "clarification_complete",
+    "summary": "Need more info",
+    "ready": false
+}
+\`\`\``;
 
-            const result = checkClarificationComplete(toolCalls);
-
-            expect(result.complete).toBe(false);
-        });
-
-        it("should not complete for other tool calls", () => {
-            const toolCalls = [
-                {
-                    name: "web_search",
-                    arguments: { query: "test" }
-                }
-            ];
-
-            const result = checkClarificationComplete(toolCalls);
+            const result = checkClarificationComplete(content);
 
             expect(result.complete).toBe(false);
         });
 
-        it("should handle empty tool calls array", () => {
-            const result = checkClarificationComplete([]);
+        it("should not complete for other signal types", () => {
+            const content = `\`\`\`workflow-signal
+{
+    "type": "progress",
+    "current_step": "Analyzing"
+}
+\`\`\``;
+
+            const result = checkClarificationComplete(content);
 
             expect(result.complete).toBe(false);
         });
 
-        it("should handle undefined tool calls", () => {
-            const result = checkClarificationComplete(undefined);
+        it("should handle malformed JSON", () => {
+            const content = `\`\`\`workflow-signal
+{ invalid json }
+\`\`\``;
+
+            const result = checkClarificationComplete(content);
+
+            expect(result.complete).toBe(false);
+        });
+
+        it("should handle empty content", () => {
+            const result = checkClarificationComplete("");
 
             expect(result.complete).toBe(false);
         });
@@ -1621,103 +1642,82 @@ describe("checkClarificationComplete", () => {
 
     describe("text-based detection", () => {
         it("should detect 'I understand' pattern", () => {
-            const result = checkClarificationComplete(undefined, "I understand your requirements.");
+            const result = checkClarificationComplete("I understand your requirements.");
 
             expect(result.complete).toBe(true);
             expect(result.viaText).toBe(true);
         });
 
         it("should detect 'I now understand' pattern", () => {
-            const result = checkClarificationComplete(undefined, "I now understand what you need.");
+            const result = checkClarificationComplete("I now understand what you need.");
 
             expect(result.complete).toBe(true);
             expect(result.viaText).toBe(true);
         });
 
         it("should detect 'I fully understand' pattern", () => {
-            const result = checkClarificationComplete(undefined, "I fully understand the scope.");
+            const result = checkClarificationComplete("I fully understand the scope.");
 
             expect(result.complete).toBe(true);
             expect(result.viaText).toBe(true);
         });
 
         it("should detect 'ready to proceed' pattern", () => {
-            const result = checkClarificationComplete(
-                undefined,
-                "I am ready to proceed with the task."
-            );
+            const result = checkClarificationComplete("I am ready to proceed with the task.");
 
             expect(result.complete).toBe(true);
             expect(result.viaText).toBe(true);
         });
 
         it("should detect 'let's proceed' pattern", () => {
-            const result = checkClarificationComplete(
-                undefined,
-                "Let's proceed with the analysis."
-            );
+            const result = checkClarificationComplete("Let's proceed with the analysis.");
 
             expect(result.complete).toBe(true);
             expect(result.viaText).toBe(true);
         });
 
         it("should detect 'let's get started' pattern", () => {
-            const result = checkClarificationComplete(undefined, "Let's get started on this.");
+            const result = checkClarificationComplete("Let's get started on this.");
 
             expect(result.complete).toBe(true);
             expect(result.viaText).toBe(true);
         });
 
         it("should detect 'have enough information' pattern", () => {
-            const result = checkClarificationComplete(
-                undefined,
-                "I have enough information to begin."
-            );
+            const result = checkClarificationComplete("I have enough information to begin.");
 
             expect(result.complete).toBe(true);
             expect(result.viaText).toBe(true);
         });
 
         it("should detect 'have all the information I need' pattern", () => {
-            const result = checkClarificationComplete(
-                undefined,
-                "I have all the information I need."
-            );
+            const result = checkClarificationComplete("I have all the information I need.");
 
             expect(result.complete).toBe(true);
             expect(result.viaText).toBe(true);
         });
 
         it("should detect 'clear on your requirements' pattern", () => {
-            const result = checkClarificationComplete(
-                undefined,
-                "I'm clear on your requirements now."
-            );
+            const result = checkClarificationComplete("I'm clear on your requirements now.");
 
             expect(result.complete).toBe(true);
             expect(result.viaText).toBe(true);
         });
 
         it("should not complete for generic text", () => {
-            const result = checkClarificationComplete(
-                undefined,
-                "What format do you prefer for the report?"
-            );
+            const result = checkClarificationComplete("What format do you prefer for the report?");
 
             expect(result.complete).toBe(false);
         });
 
         it("should not complete for questions", () => {
-            const result = checkClarificationComplete(
-                undefined,
-                "Can you clarify the scope further?"
-            );
+            const result = checkClarificationComplete("Can you clarify the scope further?");
 
             expect(result.complete).toBe(false);
         });
 
         it("should be case insensitive", () => {
-            const result = checkClarificationComplete(undefined, "I UNDERSTAND THE TASK");
+            const result = checkClarificationComplete("I UNDERSTAND THE TASK");
 
             expect(result.complete).toBe(true);
             expect(result.viaText).toBe(true);
@@ -1725,31 +1725,36 @@ describe("checkClarificationComplete", () => {
     });
 
     describe("priority", () => {
-        it("should prefer tool detection over text detection", () => {
-            const toolCalls = [
-                {
-                    name: "clarification_complete",
-                    arguments: { ready: true, summary: "Via tool" }
-                }
-            ];
+        it("should prefer signal detection over text detection", () => {
+            const content = `I understand the task
 
-            const result = checkClarificationComplete(toolCalls, "I understand the task");
+\`\`\`workflow-signal
+{
+    "type": "clarification_complete",
+    "summary": "Via signal",
+    "ready": true
+}
+\`\`\``;
 
-            // Should complete via tool, not text
+            const result = checkClarificationComplete(content);
+
+            // Should complete via signal, not text
             expect(result.complete).toBe(true);
-            expect(result.summary).toBe("Via tool");
+            expect(result.summary).toBe("Via signal");
             expect(result.viaText).toBeUndefined();
         });
 
-        it("should fall back to text if tool call is not clarification_complete", () => {
-            const toolCalls = [
-                {
-                    name: "web_search",
-                    arguments: { query: "test" }
-                }
-            ];
+        it("should fall back to text if no valid signal present", () => {
+            const content = `I understand the task
 
-            const result = checkClarificationComplete(toolCalls, "I understand the task");
+\`\`\`workflow-signal
+{
+    "type": "progress",
+    "current_step": "Analyzing"
+}
+\`\`\``;
+
+            const result = checkClarificationComplete(content);
 
             expect(result.complete).toBe(true);
             expect(result.viaText).toBe(true);
