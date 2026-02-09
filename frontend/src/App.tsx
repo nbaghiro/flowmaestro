@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { AppLayout } from "./components/layout/AppLayout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { ThemeProvider } from "./components/ThemeProvider";
+import { ToastProvider } from "./hooks/useToast";
 import { AcceptInvitation } from "./pages/AcceptInvitation";
 import { Account } from "./pages/Account";
 import { AgentBuilder } from "./pages/AgentBuilder";
@@ -41,177 +42,179 @@ import { WorkspaceSettings } from "./pages/WorkspaceSettings";
 function App() {
     return (
         <ThemeProvider>
-            <Routes>
-                {/* Auth routes */}
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/forgot-password" element={<ForgotPassword />} />
-                <Route path="/reset-password" element={<ResetPassword />} />
-                <Route path="/verify-email" element={<VerifyEmail />} />
-                <Route path="/accept-invitation" element={<AcceptInvitation />} />
+            <ToastProvider>
+                <Routes>
+                    {/* Auth routes */}
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/register" element={<Register />} />
+                    <Route path="/forgot-password" element={<ForgotPassword />} />
+                    <Route path="/reset-password" element={<ResetPassword />} />
+                    <Route path="/verify-email" element={<VerifyEmail />} />
+                    <Route path="/accept-invitation" element={<AcceptInvitation />} />
 
-                {/* Protected routes with sidebar layout */}
-                <Route
-                    path="/"
-                    element={
-                        <ProtectedRoute>
-                            <AppLayout />
-                        </ProtectedRoute>
-                    }
-                >
-                    <Route index element={<Home />} />
-                    <Route path="workflows" element={<Workflows />} />
-                    <Route path="agents" element={<Agents />} />
-                    <Route path="form-interfaces" element={<FormInterfaces />} />
+                    {/* Protected routes with sidebar layout */}
                     <Route
-                        path="form-interfaces/:id/submissions"
-                        element={<FormInterfaceSubmissions />}
+                        path="/"
+                        element={
+                            <ProtectedRoute>
+                                <AppLayout />
+                            </ProtectedRoute>
+                        }
+                    >
+                        <Route index element={<Home />} />
+                        <Route path="workflows" element={<Workflows />} />
+                        <Route path="agents" element={<Agents />} />
+                        <Route path="form-interfaces" element={<FormInterfaces />} />
+                        <Route
+                            path="form-interfaces/:id/submissions"
+                            element={<FormInterfaceSubmissions />}
+                        />
+                        <Route path="chat-interfaces" element={<ChatInterfacesPage />} />
+                        <Route path="analytics" element={<Analytics />} />
+                        <Route path="connections" element={<Connections />} />
+                        <Route path="knowledge-bases" element={<KnowledgeBases />} />
+                        <Route path="templates" element={<Templates />} />
+                        <Route path="personas" element={<Personas />} />
+                        <Route path="persona-instances" element={<PersonaInstances />} />
+                        <Route path="settings" element={<Settings />} />
+                        <Route path="account" element={<Account />} />
+                        <Route path="workspace" element={<Workspace />} />
+                        <Route path="workspace/settings" element={<WorkspaceSettings />} />
+                        <Route path="folders/:folderId" element={<FolderContentsPage />} />
+                    </Route>
+
+                    {/* Full-screen knowledge base detail without sidebar */}
+                    <Route
+                        path="/knowledge-bases/:id"
+                        element={
+                            <ProtectedRoute>
+                                <KnowledgeBaseDetail />
+                            </ProtectedRoute>
+                        }
                     />
-                    <Route path="chat-interfaces" element={<ChatInterfacesPage />} />
-                    <Route path="analytics" element={<Analytics />} />
-                    <Route path="connections" element={<Connections />} />
-                    <Route path="knowledge-bases" element={<KnowledgeBases />} />
-                    <Route path="templates" element={<Templates />} />
-                    <Route path="personas" element={<Personas />} />
-                    <Route path="persona-instances" element={<PersonaInstances />} />
-                    <Route path="settings" element={<Settings />} />
-                    <Route path="account" element={<Account />} />
-                    <Route path="workspace" element={<Workspace />} />
-                    <Route path="workspace/settings" element={<WorkspaceSettings />} />
-                    <Route path="folders/:folderId" element={<FolderContentsPage />} />
-                </Route>
 
-                {/* Full-screen knowledge base detail without sidebar */}
-                <Route
-                    path="/knowledge-bases/:id"
-                    element={
-                        <ProtectedRoute>
-                            <KnowledgeBaseDetail />
-                        </ProtectedRoute>
-                    }
-                />
+                    {/* Full-screen builder without sidebar */}
+                    <Route
+                        path="/builder/:workflowId"
+                        element={
+                            <ProtectedRoute>
+                                <FlowBuilder />
+                            </ProtectedRoute>
+                        }
+                    />
 
-                {/* Full-screen builder without sidebar */}
-                <Route
-                    path="/builder/:workflowId"
-                    element={
-                        <ProtectedRoute>
-                            <FlowBuilder />
-                        </ProtectedRoute>
-                    }
-                />
+                    {/* Full-screen agent builder without sidebar */}
+                    <Route
+                        path="/agents/:agentId"
+                        element={
+                            <ProtectedRoute>
+                                <AgentBuilder />
+                            </ProtectedRoute>
+                        }
+                    />
 
-                {/* Full-screen agent builder without sidebar */}
-                <Route
-                    path="/agents/:agentId"
-                    element={
-                        <ProtectedRoute>
-                            <AgentBuilder />
-                        </ProtectedRoute>
-                    }
-                />
+                    <Route
+                        path="/agents/:agentId/build"
+                        element={
+                            <ProtectedRoute>
+                                <AgentBuilder />
+                            </ProtectedRoute>
+                        }
+                    />
 
-                <Route
-                    path="/agents/:agentId/build"
-                    element={
-                        <ProtectedRoute>
-                            <AgentBuilder />
-                        </ProtectedRoute>
-                    }
-                />
+                    <Route
+                        path="/agents/:agentId/threads"
+                        element={
+                            <ProtectedRoute>
+                                <AgentBuilder />
+                            </ProtectedRoute>
+                        }
+                    />
 
-                <Route
-                    path="/agents/:agentId/threads"
-                    element={
-                        <ProtectedRoute>
-                            <AgentBuilder />
-                        </ProtectedRoute>
-                    }
-                />
+                    <Route
+                        path="/agents/:agentId/threads/:threadId"
+                        element={
+                            <ProtectedRoute>
+                                <AgentBuilder />
+                            </ProtectedRoute>
+                        }
+                    />
 
-                <Route
-                    path="/agents/:agentId/threads/:threadId"
-                    element={
-                        <ProtectedRoute>
-                            <AgentBuilder />
-                        </ProtectedRoute>
-                    }
-                />
+                    <Route
+                        path="/agents/:agentId/settings"
+                        element={
+                            <ProtectedRoute>
+                                <AgentBuilder />
+                            </ProtectedRoute>
+                        }
+                    />
 
-                <Route
-                    path="/agents/:agentId/settings"
-                    element={
-                        <ProtectedRoute>
-                            <AgentBuilder />
-                        </ProtectedRoute>
-                    }
-                />
+                    {/* Full-screen persona instance view without sidebar */}
+                    <Route
+                        path="/persona-instances/:id"
+                        element={
+                            <ProtectedRoute>
+                                <PersonaInstanceView />
+                            </ProtectedRoute>
+                        }
+                    />
 
-                {/* Full-screen persona instance view without sidebar */}
-                <Route
-                    path="/persona-instances/:id"
-                    element={
-                        <ProtectedRoute>
-                            <PersonaInstanceView />
-                        </ProtectedRoute>
-                    }
-                />
+                    {/* Full-screen form interface editor without sidebar */}
+                    <Route
+                        path="/form-interfaces/:id/edit"
+                        element={
+                            <ProtectedRoute>
+                                <FormInterfaceEditor />
+                            </ProtectedRoute>
+                        }
+                    />
 
-                {/* Full-screen form interface editor without sidebar */}
-                <Route
-                    path="/form-interfaces/:id/edit"
-                    element={
-                        <ProtectedRoute>
-                            <FormInterfaceEditor />
-                        </ProtectedRoute>
-                    }
-                />
+                    {/* Full-screen chat interface editor without sidebar */}
+                    <Route
+                        path="/chat-interfaces/:id/edit"
+                        element={
+                            <ProtectedRoute>
+                                <ChatInterfaceEditorPage />
+                            </ProtectedRoute>
+                        }
+                    />
 
-                {/* Full-screen chat interface editor without sidebar */}
-                <Route
-                    path="/chat-interfaces/:id/edit"
-                    element={
-                        <ProtectedRoute>
-                            <ChatInterfaceEditorPage />
-                        </ProtectedRoute>
-                    }
-                />
+                    {/* Full-screen chat interface preview without sidebar */}
+                    <Route
+                        path="/chat-interfaces/:id/preview"
+                        element={
+                            <ProtectedRoute>
+                                <ChatInterfacePreviewPage />
+                            </ProtectedRoute>
+                        }
+                    />
 
-                {/* Full-screen chat interface preview without sidebar */}
-                <Route
-                    path="/chat-interfaces/:id/preview"
-                    element={
-                        <ProtectedRoute>
-                            <ChatInterfacePreviewPage />
-                        </ProtectedRoute>
-                    }
-                />
+                    {/* Chat interface sessions page */}
+                    <Route
+                        path="/chat-interfaces/:id/sessions"
+                        element={
+                            <ProtectedRoute>
+                                <ChatInterfaceSessionsPage />
+                            </ProtectedRoute>
+                        }
+                    />
 
-                {/* Chat interface sessions page */}
-                <Route
-                    path="/chat-interfaces/:id/sessions"
-                    element={
-                        <ProtectedRoute>
-                            <ChatInterfaceSessionsPage />
-                        </ProtectedRoute>
-                    }
-                />
+                    {/* Public form interface (no auth required) */}
+                    <Route path="/i/:slug" element={<PublicFormInterfacePage />} />
 
-                {/* Public form interface (no auth required) */}
-                <Route path="/i/:slug" element={<PublicFormInterfacePage />} />
+                    {/* Public chat interface (no auth required) */}
+                    <Route path="/c/:slug" element={<PublicChatPage />} />
 
-                {/* Public chat interface (no auth required) */}
-                <Route path="/c/:slug" element={<PublicChatPage />} />
+                    {/* Embedded chat interface for iframe (no auth required) */}
+                    <Route path="/embed/:slug" element={<EmbedChatPage />} />
 
-                {/* Embedded chat interface for iframe (no auth required) */}
-                <Route path="/embed/:slug" element={<EmbedChatPage />} />
+                    {/* Widget chat interface for external websites (no auth required) */}
+                    <Route path="/widget/:slug" element={<WidgetChatPage />} />
 
-                {/* Widget chat interface for external websites (no auth required) */}
-                <Route path="/widget/:slug" element={<WidgetChatPage />} />
-
-                {/* Catch all - redirect to root */}
-                <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
+                    {/* Catch all - redirect to root */}
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+            </ToastProvider>
         </ThemeProvider>
     );
 }
