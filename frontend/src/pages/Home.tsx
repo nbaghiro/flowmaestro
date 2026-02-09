@@ -16,7 +16,6 @@ import { TEMPLATE_CATEGORY_META } from "@flowmaestro/shared";
 import { CreateChatInterfaceDialog } from "../components/chat/builder/CreateChatInterfaceDialog";
 import { CreateAgentDialog } from "../components/CreateAgentDialog";
 import { CreateWorkflowDialog } from "../components/CreateWorkflowDialog";
-import { GetStartedPanel } from "../components/empty-states";
 import { CreateFormInterfaceDialog } from "../components/forms/CreateFormInterfaceDialog";
 import {
     HomePageSkeleton,
@@ -515,48 +514,31 @@ export function Home() {
         <div className="max-w-7xl mx-auto px-4 py-6 md:px-6 md:py-8">
             <WelcomeSection />
 
-            {isAllEmpty ? (
+            {/* Quick Create CTAs */}
+            <QuickCreateRow
+                onCreateWorkflow={() => setIsCreateWorkflowOpen(true)}
+                onCreateAgent={() => setIsCreateAgentOpen(true)}
+                onCreateChat={() => setIsCreateChatInterfaceOpen(true)}
+                onCreateForm={() => setIsCreateFormInterfaceOpen(true)}
+                onCreateKnowledgeBase={() => setIsCreateKnowledgeBaseOpen(true)}
+            />
+
+            {/* Featured content for inspiration */}
+            <RecentPersonas
+                personas={allPersonas}
+                onPersonaClick={handlePersonaClick}
+                onPersonaLaunch={handlePersonaLaunch}
+            />
+
+            <MixedTemplates
+                templates={mixedTemplates}
+                onWorkflowTemplateClick={handleWorkflowTemplateClick}
+                onAgentTemplateClick={handleAgentTemplateClick}
+            />
+
+            {/* Recent work section - only show when user has items */}
+            {!isAllEmpty && (
                 <>
-                    {/* Show GetStartedPanel when no workflows or agents */}
-                    <GetStartedPanel
-                        onCreateWorkflow={() => setIsCreateWorkflowOpen(true)}
-                        onCreateAgent={() => setIsCreateAgentOpen(true)}
-                        onCreateChatInterface={() => setIsCreateChatInterfaceOpen(true)}
-                        onCreateFormInterface={() => setIsCreateFormInterfaceOpen(true)}
-                        className="mb-8"
-                    />
-
-                    {/* Still show templates for inspiration */}
-                    <MixedTemplates
-                        templates={mixedTemplates}
-                        onWorkflowTemplateClick={handleWorkflowTemplateClick}
-                        onAgentTemplateClick={handleAgentTemplateClick}
-                    />
-                </>
-            ) : (
-                <>
-                    {/* Quick Create CTAs */}
-                    <QuickCreateRow
-                        onCreateWorkflow={() => setIsCreateWorkflowOpen(true)}
-                        onCreateAgent={() => setIsCreateAgentOpen(true)}
-                        onCreateChat={() => setIsCreateChatInterfaceOpen(true)}
-                        onCreateForm={() => setIsCreateFormInterfaceOpen(true)}
-                        onCreateKnowledgeBase={() => setIsCreateKnowledgeBaseOpen(true)}
-                    />
-
-                    {/* Featured content for inspiration */}
-                    <RecentPersonas
-                        personas={allPersonas}
-                        onPersonaClick={handlePersonaClick}
-                        onPersonaLaunch={handlePersonaLaunch}
-                    />
-
-                    <MixedTemplates
-                        templates={mixedTemplates}
-                        onWorkflowTemplateClick={handleWorkflowTemplateClick}
-                        onAgentTemplateClick={handleAgentTemplateClick}
-                    />
-
                     {/* Divider between inspiration and user's work */}
                     <SectionDivider label="Your Recent Work" />
 
