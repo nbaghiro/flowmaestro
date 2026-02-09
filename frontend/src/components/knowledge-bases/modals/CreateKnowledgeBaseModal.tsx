@@ -11,7 +11,7 @@ import { KBChunkMosaicPreview } from "../KBChunkMosaicPreview";
 interface CreateKnowledgeBaseModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSubmit: (name: string, description?: string) => Promise<void>;
+    onSubmit: (name: string, description?: string, category?: string) => Promise<void>;
 }
 
 type Step = "category" | "details";
@@ -67,7 +67,7 @@ export function CreateKnowledgeBaseModal({
 
         setIsSubmitting(true);
         try {
-            await onSubmit(name, description || undefined);
+            await onSubmit(name, description || undefined, selectedCategoryId || undefined);
             // Reset handled by useEffect on next open
         } finally {
             setIsSubmitting(false);

@@ -11,8 +11,7 @@ import {
     HardDrive
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
-import type { KnowledgeBaseSummary } from "@flowmaestro/shared";
-import { KBChunkMosaicPreview } from "../knowledge-bases/KBChunkMosaicPreview";
+import { getKBCategoryById, type KnowledgeBaseSummary } from "@flowmaestro/shared";
 
 export interface KnowledgeBaseCardProps {
     knowledgeBase: KnowledgeBaseSummary;
@@ -44,7 +43,7 @@ function formatFileSize(bytes: number): string {
     return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
 }
 
-// Generate a consistent color based on the KB id
+// Generate a consistent color based on the KB id (fallback for KBs without category)
 function getColorFromId(id: string): string {
     const colors = ["blue", "emerald", "violet", "amber", "cyan", "rose", "orange", "purple"];
     // Use a simple sum of char codes multiplied by position for better distribution
@@ -53,6 +52,35 @@ function getColorFromId(id: string): string {
         hash += id.charCodeAt(i) * (i + 1);
     }
     return colors[hash % colors.length];
+}
+
+// Get color from category, falling back to ID-based color
+function getColorForKB(kb: KnowledgeBaseSummary): string {
+    if (kb.category) {
+        const category = getKBCategoryById(kb.category);
+        if (category) {
+            return category.color;
+        }
+    }
+    // Fallback to ID-based color for KBs without category
+    return getColorFromId(kb.id);
+}
+
+// Map color names to Tailwind background classes
+// Using same *-500 shade as the mosaic preview tiles
+function getAccentColorClass(color: string): string {
+    const colorMap: Record<string, string> = {
+        blue: "bg-blue-500",
+        emerald: "bg-emerald-500",
+        violet: "bg-violet-500",
+        amber: "bg-amber-500",
+        cyan: "bg-cyan-500",
+        rose: "bg-rose-500",
+        orange: "bg-orange-500",
+        purple: "bg-purple-500",
+        gray: "bg-gray-500"
+    };
+    return colorMap[color] || "bg-blue-500";
 }
 
 export function KnowledgeBaseCard({
@@ -70,7 +98,7 @@ export function KnowledgeBaseCard({
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
 
-    const color = getColorFromId(kb.id);
+    const color = getColorForKB(kb);
 
     // Close menu when clicking outside
     useEffect(() => {
@@ -88,7 +116,7 @@ export function KnowledgeBaseCard({
 
     return (
         <div
-            className={`bg-card border rounded-lg overflow-hidden hover:shadow-md transition-all group relative flex flex-col h-full cursor-pointer select-none ${
+            className={`bg-card border rounded-lg overflow-hidden hover:shadow-md transition-all group relative flex h-full cursor-pointer select-none ${
                 isSelected
                     ? "border-primary ring-2 ring-primary/30"
                     : "border-border hover:border-primary"
@@ -98,14 +126,8 @@ export function KnowledgeBaseCard({
             onClick={onClick}
             onContextMenu={onContextMenu}
         >
-            {/* Mosaic Preview */}
-            <KBChunkMosaicPreview
-                categoryId={kb.id}
-                color={color}
-                height="h-24"
-                animated={isSelected}
-                className="rounded-none"
-            />
+            {/* Left color accent bar */}
+            <div className={`w-1 flex-shrink-0 ${getAccentColorClass(color)}`} />
 
             {/* Content */}
             <div className="p-4 flex flex-col flex-1">

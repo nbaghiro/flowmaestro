@@ -46,6 +46,7 @@ function createMockKnowledgeBase(overrides?: Record<string, unknown>) {
         user_id: "user-123",
         name: "Test Knowledge Base",
         description: "A test KB",
+        category: null,
         config: {
             embeddingModel: "text-embedding-3-small",
             embeddingProvider: "openai",

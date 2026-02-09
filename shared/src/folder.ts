@@ -124,6 +124,7 @@ export interface KnowledgeBaseSummary {
     id: string;
     name: string;
     description: string | null;
+    category: string | null;
     documentCount: number;
     embeddingModel?: string;
     chunkCount?: number;
