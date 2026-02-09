@@ -1,13 +1,16 @@
 /**
  * Built-in Tools Registry
  *
- * Exports all built-in tools and provides a registry for tool lookup
+ * Exports all built-in tools and provides a registry for tool lookup.
+ *
+ * NOTE: Persona workflow control tools (task_complete, update_progress, deliverable_create)
+ * have been moved to backend/src/temporal/workflows/persona-tools.ts since they are
+ * workflow control mechanisms, not general-purpose tools.
  */
 
 // Import all built-in tools
 import { audioTranscribeTool } from "./audio-transcribe";
 import { chartGenerateTool } from "./chart-generate";
-import { deliverableCreateTool } from "./deliverable-create";
 import { fileDownloadTool } from "./file-download";
 import { fileReadTool } from "./file-read";
 import { fileWriteTool } from "./file-write";
@@ -17,9 +20,7 @@ import { pdfExtractTool } from "./pdf-extract";
 import { pdfGenerateTool } from "./pdf-generate";
 import { screenshotCaptureTool } from "./screenshot-capture";
 import { spreadsheetGenerateTool } from "./spreadsheet-generate";
-import { taskCompleteTool } from "./task-complete";
 import { textToSpeechTool } from "./text-to-speech";
-import { updateProgressTool } from "./update-progress";
 import { webBrowseTool } from "./web-browse";
 import { webSearchTool } from "./web-search";
 import type { BuiltInTool, ToolCategory } from "../types";
@@ -30,6 +31,9 @@ import type { BuiltInTool, ToolCategory } from "../types";
  * Note: code_execute and data_analyze tools have been removed as they require
  * a sandboxed code execution environment (E2B) to run safely. They can be
  * re-added when E2B integration is implemented.
+ *
+ * Note: Persona workflow tools (task_complete, update_progress, deliverable_create)
+ * have been moved to persona-tools.ts as they are workflow control mechanisms.
  */
 export const builtInTools: BuiltInTool[] = [
     // Web tools
@@ -41,7 +45,6 @@ export const builtInTools: BuiltInTool[] = [
     fileReadTool,
     fileWriteTool,
     fileDownloadTool,
-    deliverableCreateTool,
 
     // Data tools
     chartGenerateTool,
@@ -53,11 +56,7 @@ export const builtInTools: BuiltInTool[] = [
     pdfGenerateTool,
     audioTranscribeTool,
     ocrExtractTool,
-    textToSpeechTool,
-
-    // Workflow/status tools (for persona execution)
-    taskCompleteTool,
-    updateProgressTool
+    textToSpeechTool
 ];
 
 /**
@@ -112,7 +111,6 @@ export function isBuiltInToolName(name: string): boolean {
 // Re-export individual tools for direct import
 export { audioTranscribeTool } from "./audio-transcribe";
 export { chartGenerateTool } from "./chart-generate";
-export { deliverableCreateTool } from "./deliverable-create";
 export { fileDownloadTool } from "./file-download";
 export { fileReadTool } from "./file-read";
 export { fileWriteTool } from "./file-write";
@@ -122,11 +120,11 @@ export { pdfExtractTool } from "./pdf-extract";
 export { pdfGenerateTool } from "./pdf-generate";
 export { screenshotCaptureTool } from "./screenshot-capture";
 export { spreadsheetGenerateTool } from "./spreadsheet-generate";
-export { taskCompleteTool } from "./task-complete";
 export { textToSpeechTool } from "./text-to-speech";
-export { updateProgressTool } from "./update-progress";
 export { webBrowseTool } from "./web-browse";
 export { webSearchTool } from "./web-search";
+
+// Note: task_complete, update_progress, deliverable_create moved to persona-tools.ts
 
 // Re-export input types for direct use in workflows
 export type { AudioTranscribeInput } from "./audio-transcribe";

@@ -123,6 +123,9 @@ export interface AgentConfig {
         promptInjectionAction: "allow" | "block" | "redact" | "warn";
         contentModerationThreshold?: number;
     };
+    // Optional limits for persona execution
+    max_cost_credits?: number;
+    max_duration_hours?: number;
 }
 
 export interface LLMResponse {

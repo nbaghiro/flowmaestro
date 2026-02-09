@@ -24,5 +24,9 @@ export {
     type AddPersonaMessageInput,
     // Memory summarization
     summarizeThreadContext,
-    type SummarizeThreadContextInput
+    type SummarizeThreadContextInput,
+    // Workflow control tools (handled directly, not via executeToolCall)
+    createPersonaDeliverable,
+    type CreatePersonaDeliverableInput,
+    type CreatePersonaDeliverableResult
 } from "./persona";

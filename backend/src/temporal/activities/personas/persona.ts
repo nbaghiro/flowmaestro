@@ -2,13 +2,15 @@
  * Persona Activities - Configuration and execution support for persona instances
  */
 
-import type { JsonObject, PersonaInstanceProgress } from "@flowmaestro/shared";
+import type { DeliverableType, JsonObject, PersonaInstanceProgress } from "@flowmaestro/shared";
 import { PersonaDefinitionRepository } from "../../../storage/repositories/PersonaDefinitionRepository";
 import { PersonaInstanceConnectionRepository } from "../../../storage/repositories/PersonaInstanceConnectionRepository";
+import { PersonaInstanceDeliverableRepository } from "../../../storage/repositories/PersonaInstanceDeliverableRepository";
 import { PersonaInstanceMessageRepository } from "../../../storage/repositories/PersonaInstanceMessageRepository";
 import { PersonaInstanceRepository } from "../../../storage/repositories/PersonaInstanceRepository";
 import { getAllToolsForUser, isBuiltInTool } from "../../../tools";
 import { activityLogger } from "../../core";
+import { personaWorkflowTools } from "../../workflows/persona-tools";
 import { injectThreadMemoryTool } from "../agents/memory";
 import type { Tool } from "../../../storage/models/Agent";
 import type { ThreadMessage } from "../../../storage/models/AgentExecution";
@@ -167,6 +169,21 @@ function buildPersonaSystemPrompt(
         });
     }
 
+    // Add execution rules for tool usage
+    prompt += `\n\n## Execution Rules
+
+You MUST follow these rules during task execution:
+
+1. **Always Use Tools**: Every response should include at least one tool call until your task is complete. Do not respond with only text unless you are providing a brief status update alongside tool calls.
+
+2. **Create Deliverables**: Use the \`deliverable_create\` tool for ALL outputs (reports, data files, code) that the user should receive. The user expects tangible results from your work.
+
+3. **Track Progress**: Call \`update_progress\` when starting each major phase of work. This helps the user understand what you're working on.
+
+4. **Signal Completion**: When you have finished ALL work and created all deliverables, call \`task_complete\` with a summary of what was accomplished.
+
+IMPORTANT: Do not respond with only text without tool calls. If you have nothing left to do, call task_complete.`;
+
     return prompt;
 }
 
@@ -262,6 +279,10 @@ export async function getPersonaConfig(input: GetPersonaConfigInput): Promise<Ag
     // Inject thread memory tool for semantic search
     const toolsWithMemory = injectThreadMemoryTool(availableTools);
 
+    // Inject persona workflow control tools (task_complete, update_progress, deliverable_create)
+    // These are handled directly by the workflow, not via executeToolCall
+    const toolsWithWorkflowControls = [...toolsWithMemory, ...personaWorkflowTools];
+
     // Build the system prompt with task context
     const systemPrompt = buildPersonaSystemPrompt(
         persona,
@@ -280,7 +301,7 @@ export async function getPersonaConfig(input: GetPersonaConfigInput): Promise<Ag
         temperature: persona.temperature,
         max_tokens: persona.max_tokens,
         max_iterations: 100, // Personas have higher iteration limit for complex tasks
-        available_tools: toolsWithMemory,
+        available_tools: toolsWithWorkflowControls,
         memory_config: {
             type: "buffer",
             max_messages: 50 // Higher for long-running tasks
@@ -291,12 +312,18 @@ export async function getPersonaConfig(input: GetPersonaConfigInput): Promise<Ag
             enableContentModeration: true,
             piiRedactionEnabled: true,
             promptInjectionAction: "block"
-        }
+        },
+        // Cost and duration limits (from instance, with persona defaults as fallback)
+        max_cost_credits:
+            instance.max_cost_credits ?? persona.default_max_cost_credits ?? undefined,
+        max_duration_hours:
+            instance.max_duration_hours ?? persona.default_max_duration_hours ?? undefined
     };
 
     activityLogger.info("Persona config built successfully", {
         personaName: persona.name,
-        toolCount: toolsWithMemory.length,
+        toolCount: toolsWithWorkflowControls.length,
+        workflowControlTools: personaWorkflowTools.length,
         maxIterations: config.max_iterations
     });
 
@@ -591,6 +618,7 @@ function createStructuredSummary(messages: ThreadMessage[], personaName: string)
     const toolsUsed = new Set<string>();
     const toolResults: string[] = [];
     const keyDecisions: string[] = [];
+    const userRequirements: string[] = [];
     let lastAssistantMessage = "";
 
     for (const msg of messages) {
@@ -617,6 +645,31 @@ function createStructuredSummary(messages: ThreadMessage[], personaName: string)
             }
         }
 
+        // Extract user requirements from user messages
+        if (msg.role === "user" && msg.content) {
+            const lines = msg.content.split("\n");
+            for (const line of lines) {
+                const trimmed = line.trim();
+                // Look for requirement-like statements (not too short, not too long)
+                if (trimmed.length >= 15 && trimmed.length <= 200) {
+                    const lowerLine = trimmed.toLowerCase();
+                    // Prioritize lines that look like requirements or requests
+                    if (
+                        lowerLine.includes("need") ||
+                        lowerLine.includes("want") ||
+                        lowerLine.includes("should") ||
+                        lowerLine.includes("must") ||
+                        lowerLine.includes("please") ||
+                        lowerLine.includes("require") ||
+                        lowerLine.startsWith("- ") ||
+                        /^\d+\./.test(trimmed)
+                    ) {
+                        userRequirements.push(trimmed);
+                    }
+                }
+            }
+        }
+
         if (msg.role === "assistant" && msg.content) {
             lastAssistantMessage = msg.content;
             // Look for decision-like statements
@@ -628,7 +681,10 @@ function createStructuredSummary(messages: ThreadMessage[], personaName: string)
                     lowerLine.includes("decided") ||
                     lowerLine.includes("found that") ||
                     lowerLine.includes("discovered") ||
-                    lowerLine.includes("completed")
+                    lowerLine.includes("completed") ||
+                    lowerLine.includes("identified") ||
+                    lowerLine.includes("determined") ||
+                    lowerLine.includes("conclusion")
                 ) {
                     if (line.trim().length > 20 && line.trim().length < 200) {
                         keyDecisions.push(line.trim());
@@ -644,10 +700,20 @@ function createStructuredSummary(messages: ThreadMessage[], personaName: string)
         sections.push(`**Tools Used:** ${Array.from(toolsUsed).join(", ")}`);
     }
 
+    // Include user requirements to preserve task context
+    if (userRequirements.length > 0) {
+        sections.push(
+            `**User Requirements:**\n${userRequirements
+                .slice(0, 8)
+                .map((r) => `- ${r}`)
+                .join("\n")}`
+        );
+    }
+
     if (toolResults.length > 0) {
         sections.push(
             `**Key Tool Results:**\n${toolResults
-                .slice(0, 5)
+                .slice(0, 10)
                 .map((r) => `- ${r}`)
                 .join("\n")}`
         );
@@ -656,7 +722,7 @@ function createStructuredSummary(messages: ThreadMessage[], personaName: string)
     if (keyDecisions.length > 0) {
         sections.push(
             `**Key Progress:**\n${keyDecisions
-                .slice(0, 5)
+                .slice(0, 10)
                 .map((d) => `- ${d}`)
                 .join("\n")}`
         );
@@ -664,11 +730,112 @@ function createStructuredSummary(messages: ThreadMessage[], personaName: string)
 
     if (lastAssistantMessage && lastAssistantMessage.length > 50) {
         sections.push(
-            `**Last Status:** ${lastAssistantMessage.substring(0, 300)}${lastAssistantMessage.length > 300 ? "..." : ""}`
+            `**Last Status:** ${lastAssistantMessage.substring(0, 400)}${lastAssistantMessage.length > 400 ? "..." : ""}`
         );
     }
 
     return sections.length > 0
         ? sections.join("\n\n")
         : `${personaName} has been working on the task. ${messages.length} messages were summarized.`;
+}
+
+// =============================================================================
+// Persona Workflow Tool Activities
+// =============================================================================
+
+export interface CreatePersonaDeliverableInput {
+    personaInstanceId: string;
+    name: string;
+    type: string;
+    content: string;
+    description?: string;
+    fileExtension?: string;
+}
+
+export interface CreatePersonaDeliverableResult {
+    success: boolean;
+    id?: string;
+    name?: string;
+    fileExtension?: string;
+    fileSizeBytes?: number;
+    error?: string;
+}
+
+/**
+ * Create a deliverable for a persona instance
+ *
+ * This activity is called when the persona uses the deliverable_create workflow tool.
+ * It saves the deliverable content to the database.
+ */
+export async function createPersonaDeliverable(
+    input: CreatePersonaDeliverableInput
+): Promise<CreatePersonaDeliverableResult> {
+    const { personaInstanceId, name, type, content, description, fileExtension } = input;
+
+    activityLogger.info("Creating persona deliverable", {
+        personaInstanceId,
+        name,
+        type,
+        contentLength: content.length
+    });
+
+    try {
+        // Determine file extension
+        const extension = getDeliverableExtension(type, fileExtension);
+
+        const repo = new PersonaInstanceDeliverableRepository();
+        const deliverable = await repo.create({
+            instance_id: personaInstanceId,
+            name: name.trim(),
+            description: description?.trim(),
+            type: type as DeliverableType,
+            content,
+            file_extension: extension
+        });
+
+        activityLogger.info("Persona deliverable created", {
+            personaInstanceId,
+            deliverableId: deliverable.id,
+            name: deliverable.name,
+            type: deliverable.type
+        });
+
+        return {
+            success: true,
+            id: deliverable.id,
+            name: deliverable.name,
+            fileExtension: deliverable.file_extension || extension,
+            fileSizeBytes: deliverable.file_size_bytes || content.length
+        };
+    } catch (error) {
+        activityLogger.error(
+            "Failed to create persona deliverable",
+            error instanceof Error ? error : new Error("Unknown error")
+        );
+
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : "Unknown error"
+        };
+    }
+}
+
+/**
+ * Get file extension for a deliverable type
+ */
+function getDeliverableExtension(type: string, customExtension?: string): string {
+    if (customExtension) {
+        return customExtension.startsWith(".") ? customExtension.slice(1) : customExtension;
+    }
+
+    const extensions: Record<string, string> = {
+        markdown: "md",
+        csv: "csv",
+        json: "json",
+        code: "txt",
+        html: "html",
+        pdf: "pdf",
+        image: "png"
+    };
+    return extensions[type] || "txt";
 }

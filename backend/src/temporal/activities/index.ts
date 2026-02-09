@@ -143,6 +143,7 @@ export {
     updatePersonaClarificationState,
     addPersonaMessage,
     summarizeThreadContext,
+    createPersonaDeliverable,
     type GetPersonaConfigInput,
     type UpdatePersonaInstanceProgressInput,
     type UpdatePersonaInstanceStatusInput,
@@ -150,5 +151,7 @@ export {
     type PersonaClarificationState,
     type UpdatePersonaClarificationStateInput,
     type AddPersonaMessageInput,
-    type SummarizeThreadContextInput
+    type SummarizeThreadContextInput,
+    type CreatePersonaDeliverableInput,
+    type CreatePersonaDeliverableResult
 } from "./personas";
