@@ -1,12 +1,13 @@
 /**
- * Tests for inline node evaluation functions in workflow-orchestrator.ts
+ * Node Evaluators Unit Tests
  *
- * These tests verify the behavior of special node types that bypass handlers
- * and are evaluated inline within the workflow orchestrator.
+ * Tests for pure evaluation functions used by the workflow orchestrator.
+ * These functions evaluate conditional and loop nodes synchronously
+ * (inline) rather than dispatching to activity handlers.
  *
  * These tests exist to:
- * 1. Verify correct behavior of inline evaluation functions
- * 2. Catch regressions if the inline code changes
+ * 1. Verify correct behavior of node evaluation functions
+ * 2. Catch regressions if the evaluation logic changes
  * 3. Ensure parity with corresponding handlers
  */
 
